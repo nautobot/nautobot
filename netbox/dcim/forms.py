@@ -106,7 +106,7 @@ class RackForm(forms.ModelForm, BootstrapMixin):
 class RackFromCSVForm(forms.ModelForm):
     site = forms.ModelChoiceField(queryset=Site.objects.all(), to_field_name='name',
                                   error_messages={'invalid_choice': 'Site not found.'})
-    group = forms.ModelChoiceField(queryset=RackGroup.objects.all(), to_field_name='name',
+    group = forms.ModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name='name',
                                    error_messages={'invalid_choice': 'Group not found.'})
 
     class Meta:
