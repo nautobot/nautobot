@@ -57,7 +57,11 @@
                 <tr>
                     <td>Group</td>
                     <td>
-                        <a href="{% url 'dcim:rack_list' %}?site={{ rack.site.slug }}&group={{ rack.group.slug }}">{{ rack.group }}</a>
+                        {% if rack.group %}
+                            <a href="{% url 'dcim:rack_list' %}?site={{ rack.site.slug }}&group={{ rack.group.slug }}">{{ rack.group }}</a>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
                     </td>
                 </tr>
                 <tr>
