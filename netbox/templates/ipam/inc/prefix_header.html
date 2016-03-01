@@ -1,0 +1,44 @@
+<div class="row">
+    <div class="col-md-9">
+        <ol class="breadcrumb">
+            {% if prefix.site %}
+                <li><a href="{% url 'dcim:site' slug=prefix.site.slug %}">{{ prefix.site }}</a></li>
+                <li><a href="{% url 'ipam:prefix_list' %}?site={{ prefix.site.slug }}">Prefixes</a></li>
+            {% else %}
+                <li><a href="{% url 'ipam:prefix_list' %}">Prefixes</a></li>
+            {% endif %}
+            <li>{{ prefix }}</li>
+        </ol>
+    </div>
+    <div class="col-md-3">
+        <form action="{% url 'ipam:prefix_list' %}" method="get">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Network or IP" />
+                <span class="input-group-btn">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+                    </button>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="pull-right">
+    {% if perms.ipam.change_prefix %}
+		<a href="{% url 'ipam:prefix_edit' pk=prefix.pk %}" class="btn btn-warning">
+			<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+			Edit this prefix
+		</a>
+    {% endif %}
+    {% if perms.ipam.delete_prefix %}
+		<a href="{% url 'ipam:prefix_delete' pk=prefix.pk %}" class="btn btn-danger">
+			<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+			Delete this prefix
+		</a>
+    {% endif %}
+</div>
+<h1>{{ prefix }}</h1>
+<ul class="nav nav-tabs" style="margin-bottom: 20px">
+    <li role="presentation"{% if active_tab == 'prefix' %} class="active"{% endif %}><a href="{% url 'ipam:prefix' pk=prefix.pk %}">Prefix</a></li>
+    <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}><a href="{% url 'ipam:prefix_ipaddresses' pk=prefix.pk %}">IP Addresses</a></li>
+</ul>

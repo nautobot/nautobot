@@ -1,0 +1,61 @@
+{% extends '_base.html' %}
+{% load form_helpers %}
+
+{% block title %}{% if rack %}Editing rack {{ rack }}{% else %}Add a rack{% endif %}{% endblock %}
+
+{% block content %}
+{% if rack %}
+	<h1>Rack {{ rack }}</h1>
+{% else %}
+	<h1>Add a Rack</h1>
+{% endif %}
+<form action="." method="post" class="form form-horizontal">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            {% if form.non_field_errors %}
+                <div class="panel panel-danger">
+                    <div class="panel-heading"><strong>Errors</strong></div>
+                    <div class="panel-body">
+                        {{ form.non_field_errors }}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Rack</strong></div>
+                <div class="panel-body">
+                    {% render_field form.site %}
+                    {% render_field form.group %}
+                    {% render_field form.name %}
+                    {% render_field form.facility_id %}
+                    {% render_field form.u_height %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Comments</strong></div>
+                <div class="panel-body">
+                    {% render_field form.comments %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 text-right">
+            {% if rack %}
+                <button type="submit" name="_update" class="btn btn-primary">Update</button>
+                <a href="{% url 'dcim:rack' pk=rack.pk %}" class="btn btn-default">Cancel</a>
+            {% else %}
+                <button type="submit" name="_create" class="btn btn-primary">Create</button>
+                <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
+                <a href="{% url 'dcim:rack_list' %}" class="btn btn-default">Cancel</a>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endblock %}

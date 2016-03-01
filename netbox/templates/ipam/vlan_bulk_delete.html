@@ -1,0 +1,15 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Delete VLANs?{% endblock %}
+
+{% block message %}
+    <p>
+        Are you sure you want to delete these VLANs?
+    </p>
+    <ul>
+        {% for vlan in selected_objects %}
+            <li><a href="{% url 'ipam:vlan' pk=vlan.pk %}">{{ vlan }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends '_base.html' %}
+{% load form_helpers %}
+
+{% block content %}
+<h1>{% block title %}{% endblock %}</h1>
+<form action="." method="post" class="form form-horizontal">
+    {% csrf_token %}
+    {% for hidden in form.hidden_fields %}
+        {{ hidden }}
+    {% endfor %}
+    <div class="row">
+        <div class="col-md-7">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>{% block selected_objects_title %}Selected For Editing{% endblock %}</strong></div>
+                <table class="panel-body table table-hover">
+                    {% block select_objects_table %}{% endblock %}
+                </table>
+            </div>
+        </div>
+        <div class="col-md-5">
+            {% if form.non_field_errors %}
+                <div class="panel panel-danger">
+                    <div class="panel-heading"><strong>Errors</strong></div>
+                    <div class="panel-body">
+                        {{ form.non_field_errors }}
+                    </div>
+                </div>
+            {% endif %}
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>{% block form_title %}Attributes{% endblock %}</strong></div>
+                <div class="panel-body">
+                    {% render_form form %}
+                </div>
+            </div>
+		    <div class="form-group text-right">
+                <div class="col-md-12">
+                    <button type="submit" name="_apply" class="btn btn-primary">Apply</button>
+                    <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                </div>
+		    </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

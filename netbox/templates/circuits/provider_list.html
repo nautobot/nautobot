@@ -1,0 +1,33 @@
+{% extends '_base.html' %}
+
+{% block title %}Providers{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.circuits.add_provider %}
+		<a href="{% url 'circuits:provider_add' %}" class="btn btn-primary">
+			<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+			Add a provider
+		</a>
+    {% endif %}
+    {% if export_templates %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
+                Export providers <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% for et in export_templates %}
+                    <li><a href="{% url 'circuits:provider_list' %}{% if request.GET %}?{{ request.GET.urlencode }}&{% else %}?{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+<h1>Providers</h1>
+<div class="row">
+    <div class="col-md-12">
+        {% include 'circuits/inc/provider_table.html' with table=provider_table %}
+    </div>
+</div>
+{% endblock %}

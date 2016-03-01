@@ -1,0 +1,102 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}{{ circuit.provider }} Circuit {{ circuit.cid }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <ol class="breadcrumb">
+            <li><a href="{% url 'dcim:site' slug=circuit.site.slug %}">{{ circuit.site }}</a></li>
+            <li><a href="{% url 'circuits:circuit_list' %}?site={{ circuit.site.slug }}">Circuits</a></li>
+            <li>{{ circuit }}</li>
+        </ol>
+    </div>
+</div>
+<div class="pull-right">
+    {% if perms.circuits.change_circuit %}
+		<a href="{% url 'circuits:circuit_edit' pk=circuit.pk %}" class="btn btn-warning">
+			<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+			Edit this circuit
+		</a>
+    {% endif %}
+    {% if perms.circuits.delete_circuit %}
+		<a href="{% url 'circuits:circuit_delete' pk=circuit.pk %}" class="btn btn-danger">
+			<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+			Delete this circuit
+		</a>
+    {% endif %}
+</div>
+<h1>{{ circuit.provider }} Circuit {{ circuit.cid }}</h1>
+<div class="row">
+	<div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Details</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                <tr>
+                    <td>Provider</td>
+                    <td>
+                        <a href="{% url 'circuits:provider' slug=circuit.provider.slug %}">{{ circuit.provider }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Circuit ID</td>
+                    <td>{{ circuit.cid }}</td>
+                </tr>
+                <tr>
+                    <td>Site</td>
+                    <td>
+                        <a href="{% url 'dcim:site' slug=circuit.site.slug %}">{{ circuit.site }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Termination</td>
+                    <td>
+                        {% if circuit.interface %}
+                            <span><a href="{% url 'dcim:device' pk=circuit.interface.device.pk %}">{{ circuit.interface.device }}</a> {{ circuit.interface }}</span>
+                        {% else %}
+                            <span class="text-muted">Not defined</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Install Date</td>
+                    <td>{{ circuit.install_date }}</td>
+                </tr>
+                <tr>
+                    <td>Port Speed</td>
+                    <td>{{ circuit.get_port_speed_display }}</td>
+                </tr>
+                <tr>
+                    <td>Commit Rate</td>
+                    <td>{{ circuit.commit_rate }}</td>
+                </tr>
+                <tr>
+                    <td>Cross-Connect</td>
+                    <td>{{ circuit.xconnect_id }}</td>
+                </tr>
+                <tr>
+                    <td>Patch Panel/Port</td>
+                    <td>{{ circuit.pp_info }}</td>
+                </tr>
+            </table>
+        </div>
+	</div>
+	<div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body">
+                {% if circuit.comments  %}
+                    {{ circuit.comments|gfm }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

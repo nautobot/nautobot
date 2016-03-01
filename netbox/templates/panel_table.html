@@ -1,0 +1,25 @@
+{% extends 'django_tables2/table.html' %}
+{% load django_tables2 %}
+{% load i18n %}
+
+{# Wraps a table inside a Bootstrap panel and includes custom pagination rendering #}
+
+{% block table %}
+<div class="panel panel-{{ panel_class|default:'default' }}">
+    {% if heading %}
+        <div class="panel-heading">
+            <strong>{{ heading }}</strong>
+        </div>
+    {% endif %}
+    {% if table.rows %}
+        {{ block.super }}
+    {% else %}
+        <div class="panel-body text-muted">None</div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block pagination %}
+    {% include 'paginator.html' %}
+{% endblock pagination %}
+

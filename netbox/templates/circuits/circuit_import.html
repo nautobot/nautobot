@@ -1,0 +1,82 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+{% load form_helpers %}
+
+{% block title %}Circuit Import{% endblock %}
+
+{% block content %}
+<h1>Circuit Import</h1>
+<div class="row">
+	<div class="col-md-6">
+		<form action="." method="post" class="form">
+		    {% csrf_token %}
+		    {% render_form form %}
+		    <div class="form-group">
+		        <button type="submit" class="btn btn-primary">Submit</button>
+		        <a href="{% url obj_list_url %}" class="btn btn-default">Cancel</a>
+		    </div>
+		</form>
+	</div>
+	<div class="col-md-6">
+		<h4>CSV Format</h4>
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Field</th>
+					<th>Description</th>
+					<th>Example</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Circuit ID</td>
+					<td>Alphanumeric circuit identifier</td>
+					<td>IC-603122</td>
+				</tr>
+				<tr>
+					<td>Provider</td>
+					<td>Name of circuit provider</td>
+					<td>TeliaSonera</td>
+				</tr>
+				<tr>
+					<td>Type</td>
+					<td>Circuit type</td>
+					<td>Transit</td>
+				</tr>
+				<tr>
+					<td>Site</td>
+					<td>Site name</td>
+					<td>ASH-4</td>
+				</tr>
+				<tr>
+					<td>Install Date</td>
+					<td>Date in YYYY-MM-DD format (optional)</td>
+					<td>2016-02-23</td>
+				</tr>
+				<tr>
+					<td>Port Speed</td>
+					<td>Speed in Mbps (optional)</td>
+					<td>10000</td>
+				</tr>
+				<tr>
+					<td>Commit rate</td>
+					<td>Speed in Mbps (optional)</td>
+					<td>2000</td>
+				</tr>
+				<tr>
+					<td>Cross-connect ID</td>
+					<td>ID of cross-connect (optional)</td>
+					<td>937649</td>
+				</tr>
+				<tr>
+					<td>Patch Panel</td>
+					<td>Patch panel/port ID (optional)</td>
+					<td>PP8371 ports 13/14</td>
+				</tr>
+			</tbody>
+		</table>
+		<h4>Example</h4>
+		<pre>IC-603122,TeliaSonera,Transit,ASH-4,2016-02-23,10000,2000,937649,PP8371 ports 13/14</pre>
+	</div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}{{ provider }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <ol class="breadcrumb">
+            <li><a href="{% url 'circuits:provider_list' %}">Providers</a></li>
+            <li>{{ provider }}</li>
+        </ol>
+    </div>
+</div>
+<div class="pull-right">
+    {% if perms.circuits.change_provider %}
+		<a href="{% url 'circuits:provider_edit' slug=provider.slug %}" class="btn btn-warning">
+			<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+			Edit this provider
+		</a>
+    {% endif %}
+    {% if perms.circuits.delete_provider %}
+		<a href="{% url 'circuits:provider_delete' slug=provider.slug %}" class="btn btn-danger">
+			<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+			Delete this provider
+		</a>
+    {% endif %}
+</div>
+<h1>{{ provider }}</h1>
+<div class="row">
+	<div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Details</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                <tr>
+                    <td>ASN</td>
+                    <td>{{ provider.asn }}</td>
+                </tr>
+                <tr>
+                    <td>Account</td>
+                    <td>{{ provider.account }}</td>
+                </tr>
+                <tr>
+                    <td>Customer Portal</td>
+                    <td>
+                        <a href="{{ provider.portal_url }}">{{ provider.portal_url }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>NOC Contact</td>
+                    <td>{{ provider.noc_contact|linebreaksbr }}</td>
+                </tr>
+                <tr>
+                    <td>Admin Contact</td>
+                    <td>{{ provider.admin_contact|linebreaksbr }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body">
+                {% if provider.comments  %}
+                    {{ provider.comments|gfm }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+	</div>
+	<div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Circuits</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                {% for c in circuits %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'circuits:circuit' pk=c.pk %}">{{ c.cid }}</a>
+                        </td>
+                        <td>
+                            <a href="{% url 'dcim:site' slug=c.site.slug %}">{{ c.site }}</a>
+                        </td>
+                        <td>
+                            {% if c.interface %}
+                                <a href="{% url 'dcim:device' pk=c.interface.device.pk %}">{{ c.interface.device }}</a>
+                            {% endif %}
+                        </td>
+                        <td>{{ c.get_port_speed_display }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-muted">None</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

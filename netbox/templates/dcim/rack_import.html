@@ -1,0 +1,62 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+{% load form_helpers %}
+
+{% block title %}Rack Import{% endblock %}
+
+{% block content %}
+<h1>Rack Import</h1>
+<div class="row">
+	<div class="col-md-6">
+		<form action="." method="post" class="form">
+		    {% csrf_token %}
+		    {% render_form form %}
+		    <div class="form-group">
+		        <button type="submit" class="btn btn-primary">Submit</button>
+                <a href="{% url obj_list_url %}" class="btn btn-default">Cancel</a>
+		    </div>
+		</form>
+	</div>
+	<div class="col-md-6">
+		<h4>CSV Format</h4>
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Field</th>
+					<th>Description</th>
+					<th>Example</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Site</td>
+					<td>Name of the assigned site</td>
+					<td>DC-4</td>
+				</tr>
+				<tr>
+					<td>Group</td>
+					<td>Rack group name (optional)</td>
+					<td>Cage 1400</td>
+				</tr>
+				<tr>
+					<td>Name</td>
+					<td>Internal rack name</td>
+					<td>R101</td>
+				</tr>
+				<tr>
+					<td>Facility ID</td>
+					<td>Rack ID assigned by the facility (optional)</td>
+					<td>J12.100</td>
+				</tr>
+				<tr>
+					<td>Height</td>
+					<td>Height in rack units</td>
+					<td>42</td>
+				</tr>
+			</tbody>
+		</table>
+		<h4>Example</h4>
+		<pre>DC-4,Cage 1400,R101,J12.100,42</pre>
+	</div>
+</div>
+{% endblock %}

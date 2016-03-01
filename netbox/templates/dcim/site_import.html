@@ -1,0 +1,57 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+{% load form_helpers %}
+
+{% block title %}Site Import{% endblock %}
+
+{% block content %}
+<h1>Site Import</h1>
+<div class="row">
+	<div class="col-md-6">
+		<form action="." method="post" class="form">
+		    {% csrf_token %}
+		    {% render_form form %}
+		    <div class="form-group">
+		        <button type="submit" class="btn btn-primary">Submit</button>
+                <a href="{% url obj_list_url %}" class="btn btn-default">Cancel</a>
+		    </div>
+		</form>
+	</div>
+	<div class="col-md-6">
+		<h4>CSV Format</h4>
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Field</th>
+					<th>Description</th>
+					<th>Example</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Name</td>
+					<td>Site's proper name</td>
+					<td>ASH-4 South</td>
+				</tr>
+				<tr>
+					<td>Slug</td>
+					<td>URL-friendly name</td>
+					<td>ash4-south</td>
+				</tr>
+				<tr>
+					<td>Facility</td>
+					<td>Name of the hosting facility (optional)</td>
+					<td>Equinix DC6</td>
+				</tr>
+				<tr>
+					<td>ASN</td>
+					<td>Autonomous system number (optional)</td>
+					<td>65000</td>
+				</tr>
+			</tbody>
+		</table>
+		<h4>Example</h4>
+		<pre>ASH-4 South,ash4-south,Equinix DC6,65000</pre>
+	</div>
+</div>
+{% endblock %}

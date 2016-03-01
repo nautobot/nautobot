@@ -1,0 +1,66 @@
+{% extends '_base.html' %}
+
+{% block title %}{{ device }} - LLDP Neighbors{% endblock %}
+
+{% block content %}
+{% include 'dcim/inc/_device_header.html' with active_tab='inventory' %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Chassis</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                <tr>
+                    <td>Model</td>
+                    <td>{{ device.device_type }}</td>
+                </tr>
+                <tr>
+                    <td>Serial Number</td>
+                    <td>{{ device.serial }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Software</strong>
+            </div>
+            <table class="table table-hover panel-body" id="software">
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th>Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Hardware</strong>
+            </div>
+            <table class="table table-hover panel-body" id="hardware">
+                <thead>
+                    <tr>
+                        <th>Module</th>
+                        <th>Part Number</th>
+                        <th>Serial Number</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for module in modules %}
+                        <tr>
+                            <td>{{ module.name }}</td>
+                            <td>{{ module.part_id }}</td>
+                            <td>{{ module.serial }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

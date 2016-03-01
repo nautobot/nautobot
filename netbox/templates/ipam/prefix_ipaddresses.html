@@ -1,0 +1,13 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+
+{% block title %}{{ prefix }}{% endblock %}
+
+{% block content %}
+{% include 'ipam/inc/prefix_header.html' with active_tab='ip-addresses' %}
+<div class="row">
+	<div class="col-md-12">
+        {% include 'ipam/inc/ipaddress_table.html' with table=ip_table table_template='panel_table.html' heading='IP Addresses' %}
+    </div>
+</div>
+{% endblock %}

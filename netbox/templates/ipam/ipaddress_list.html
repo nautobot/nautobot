@@ -1,0 +1,69 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+{% load helpers %}
+
+{% block title %}IP Addresses{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.ipam.add_ipaddress %}
+		<a href="{% url 'ipam:ipaddress_add' %}" class="btn btn-primary">
+			<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+			Add an IP
+		</a>
+		<a href="{% url 'ipam:ipaddress_import' %}" class="btn btn-info">
+			<span class="glyphicon glyphicon-import" aria-hidden="true"></span>
+			Import IPs
+		</a>
+	{% endif %}
+    {% if export_templates %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
+                Export IP addresses <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% for et in export_templates %}
+                    <li><a href="{% url 'ipam:ipaddress_list' %}?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+<h1>IP Addresses</h1>
+<div class="row">
+	<div class="col-md-9">
+        {% if not ip_table.rows and prefix_table.rows %}
+            <div class="alert alert-warning alert-dismissable" role="alert">
+	    		<button type="button" class="close" data-dismiss="alert" aria-label="Close">
+	    			<span aria-hidden="true">&times;</span>
+	    		</button>
+	    		No IP addresses were found. However, a <a href="{% url 'ipam:prefix_list' %}?q={{ request.GET.q }}">prefix search</a> returned the following results.
+	    	</div>
+            {% render_table prefix_table 'table.html' %}
+        {% else %}
+            {% include 'ipam/inc/ipaddress_table.html' with table=ip_table %}
+        {% endif %}
+	</div>
+	<div class="col-md-3">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<strong>Search</strong>
+			</div>
+			<div class="panel-body">
+				<form action="{% url 'ipam:ipaddress_list' %}" method="get">
+					<div class="input-group">
+						<input type="text" name="q" class="form-control" placeholder="IP address" {%  if request.GET.q %}value="{{ request.GET.q }}" {% endif %}/>
+						<span class="input-group-btn">
+							<button type="submit" class="btn btn-primary">
+								<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+							</button>
+						</span>
+					</div>
+				</form>
+			</div>
+		</div>
+		{% include 'inc/filter_panel.html' %}
+	</div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}Circuits{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.circuits.add_circuit %}
+		<a href="{% url 'circuits:circuit_add' %}" class="btn btn-primary">
+			<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+			Add a circuit
+		</a>
+    {% endif %}
+    {% if export_templates %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
+                Export circuits <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% for et in export_templates %}
+                    <li><a href="{% url 'circuits:circuit_list' %}{% if request.GET %}?{{ request.GET.urlencode }}&{% else %}?{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+<h1>Circuits</h1>
+<div class="row">
+	<div class="col-md-9">
+        {% include 'circuits/inc/circuit_table.html' with table=circuit_table %}
+    </div>
+    <div class="col-md-3">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<strong>Search</strong>
+			</div>
+			<div class="panel-body">
+				<form action="{% url 'circuits:circuit_list' %}" method="get">
+					<div class="input-group">
+						<input type="text" name="q" class="form-control" placeholder="Name" {% if request.GET.q %}value="{{ request.GET.q }}" {% endif %}/>
+						<span class="input-group-btn">
+							<button type="submit" class="btn btn-primary">
+								<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+							</button>
+						</span>
+					</div>
+				</form>
+			</div>
+		</div>
+		{% include 'inc/filter_panel.html' %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>NetBox - {% block title %}Home{% endblock %}</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+	<link href="/static/css/base.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="/">NetBox</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li class="dropdown{% if '/sites/' in request.path %} active{% endif %}">
+                        {% if perms.dcim.add_site %}
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Sites <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{% url 'dcim:site_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Sites</a></li>
+                                <li><a href="{% url 'dcim:site_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Site</a></li>
+                                <li><a href="{% url 'dcim:site_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Sites</a></li>
+                            </ul>
+                        {% else %}
+                            <a href="{% url 'dcim:site_list' %}">Sites</a>
+                        {% endif %}
+                    </li>
+                    <li class="dropdown{% if '/racks/' in request.path %} active{% endif %}">
+                        {% if perms.dcim.add_rack %}
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Racks <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{% url 'dcim:rack_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Racks</a></li>
+                            <li><a href="{% url 'dcim:rack_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Rack</a></li>
+                            <li><a href="{% url 'dcim:rack_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Racks</a></li>
+                        </ul>
+                        {% else %}
+                            <a href="{% url 'dcim:rack_list' %}">Racks</a>
+                        {% endif %}
+                    </li>
+                    <li class="dropdown{% if '/devices/' in request.path %} active{% endif %}">
+                        {% if perms.dcim.add_device %}
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Devices <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{% url 'dcim:device_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Devices</a></li>
+                                <li><a href="{% url 'dcim:device_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Device</a></li>
+                                <li><a href="{% url 'dcim:device_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Devices</a></li>
+                                <li class="divider"></li>
+                                <li><a href="{% url 'dcim:console_connections_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Console Connections</a></li>
+                                {% if perms.dcim.change_consoleport %}
+                                    <li><a href="{% url 'dcim:console_connections_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Console Connections</a></li>
+                                {% endif %}
+                                <li class="divider"></li>
+                                <li><a href="{% url 'dcim:power_connections_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Power Connections</a></li>
+                                {% if perms.dcim.change_powerport %}
+                                    <li><a href="{% url 'dcim:power_connections_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Power Connections</a></li>
+                                {% endif %}
+                                <li class="divider"></li>
+                                <li><a href="{% url 'dcim:interface_connections_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Interface Connections</a></li>
+                                {% if perms.dcim.add_interfaceconnection %}
+                                    <li><a href="{% url 'dcim:interface_connections_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Interface Connections</a></li>
+                                {% endif %}
+                            </ul>
+                        {% else %}
+                            <a href="{% url 'dcim:device_list' %}">Devices</a>
+                        {% endif %}
+                    </li>
+                    <li class="dropdown{% if '/ip-addresses/' in request.path or '/prefixes/' in request.path or '/aggregates/' in request.path %} active{% endif %}">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">IP Space <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{% url 'ipam:ipaddress_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> IP Addresses</a></li>
+                            {% if perms.ipam.add_ipaddress %}
+                                <li><a href="{% url 'ipam:ipaddress_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add an IP</a></li>
+                                <li><a href="{% url 'ipam:ipaddress_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import IPs</a></li>
+                            {% endif %}
+                            {% if perms.ipam.add_ipaddress or perms.ipam.add_prefix %}
+                                <li class="divider"></li>
+                            {% endif %}
+                            <li><a href="{% url 'ipam:prefix_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Prefixes</a></li>
+                            {% if perms.ipam.add_prefix %}
+                                <li><a href="{% url 'ipam:prefix_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Prefix</a></li>
+                                <li><a href="{% url 'ipam:prefix_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Prefixes</a></li>
+                            {% endif %}
+                            {% if perms.ipam.add_prefix or perms.ipam.add_aggregate %}
+                                <li class="divider"></li>
+                            {% endif %}
+                            <li><a href="{% url 'ipam:aggregate_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Aggregates</a></li>
+                            {% if perms.ipam.add_aggregate %}
+                                <li><a href="{% url 'ipam:aggregate_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add an Aggregate</a></li>
+                                <li><a href="{% url 'ipam:aggregate_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Aggregates</a></li>
+                            {% endif %}
+                            {% if perms.ipam.add_aggregate or perms.ipam.add_vrf %}
+                                <li class="divider"></li>
+                            {% endif %}
+                            <li><a href="{% url 'ipam:vrf_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> VRFs</a></li>
+                            {% if perms.ipam.add_vrf %}
+                                <li><a href="{% url 'ipam:vrf_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a VRF</a></li>
+                                <li><a href="{% url 'ipam:vrf_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import VRFs</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    <li class="dropdown{% if '/vlans/' in request.path %} active{% endif %}">
+                        {% if perms.ipam.add_vlan %}
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">VLANs <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{% url 'ipam:vlan_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> VLANs</a></li>
+                                <li><a href="{% url 'ipam:vlan_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a VLAN</a></li>
+                                <li><a href="{% url 'ipam:vlan_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import VLANs</a></li>
+                            </ul>
+                        {% else %}
+                            <a href="{% url 'ipam:vlan_list' %}">VLANs</a>
+                        {% endif %}
+                    </li>
+                    <li class="dropdown{% if '/circuits/' in request.path %} active{% endif %}">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Circuits <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{% url 'circuits:provider_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Providers</a></li>
+                            {% if perms.circuits.add_provider %}
+                                <li><a href="{% url 'circuits:provider_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Provider</a></li>
+                                <li><a href="{% url 'circuits:provider_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Providers</a></li>
+                            {% endif %}
+                            {% if perms.circuits.add_circuit or perms.circuits.add_provider %}
+                                <li class="divider"></li>
+                            {% endif %}
+                            <li><a href="{% url 'circuits:circuit_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Circuits</a></li>
+                            {% if perms.circuits.add_circuit %}
+                                <li><a href="{% url 'circuits:circuit_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Circuit</a></li>
+                                <li><a href="{% url 'circuits:circuit_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Circuits</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    {% if perms.secrets %}
+                        <li class="dropdown{% if '/secrets/' in request.path %} active{% endif %}">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Secrets <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{% url 'secrets:secret_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Secrets</a></li>
+                                {% if perms.secrets.add_secret %}
+                                    <li><a href="{% url 'secrets:secret_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Secrets</a></li>
+                                {% endif %}
+                            </ul>
+                        </li>
+                    {% endif %}
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    {% if request.user.is_staff %}
+                        <li><a href="{% url 'admin:index' %}"><i class="glyphicon glyphicon-cog" aria-hidden="true"></i> Admin</a></li>
+                    {% endif %}
+                    {% if request.user.is_authenticated %}
+                        <li><a href="{% url 'users:profile' %}"><i class="glyphicon glyphicon-user" aria-hidden="true"></i> Profile</a></li>
+                        <li><a href="{% url 'logout' %}"><i class="glyphicon glyphicon-log-out" aria-hidden="true"></i> Log out</a></li>
+                    {% else %}
+                        <li><a href="{% url 'login' %}?next={{ request.path }}"><i class="glyphicon glyphicon-log-in" aria-hidden="true"></i> Log in</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+	<div class="container wrapper">
+        {% if settings.MAINTENANCE_MODE %}
+            <div class="alert alert-warning text-center" role="alert">
+                <h4><i class="fa fa-exclamation-triangle"></i> Maintenance Mode</h4>
+                <p>The application is currently in maintenance mode.</p>
+            </div>
+        {% endif %}
+	    {% for message in messages %}
+	    	<div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
+	    		<button type="button" class="close" data-dismiss="alert" aria-label="Close">
+	    			<span aria-hidden="true">&times;</span>
+	    		</button>
+	    		{{ message|safe }}
+	    	</div>
+	    {% endfor %}
+		{% block content %}{% endblock %}
+		<div class="push"></div>
+	</div>
+	<footer class="footer">
+		<div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted">{{ settings.HOSTNAME }}</p>
+                </div>
+                <div class="col-md-6 text-right">
+                    <p>
+                        <a href="/api/docs/">API</a> &middot;
+                        <a href="https://github.com/digitalocean/netbox">Code</a>
+                    </p>
+                </div>
+            </div>
+		</div>
+	</footer>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<script src="/static/js/forms.js"></script>
+{% block javascript %}{% endblock %}
+</body>
+</html>

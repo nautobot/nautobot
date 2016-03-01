@@ -1,0 +1,15 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Delete Circuits?{% endblock %}
+
+{% block message %}
+    <p>
+        Are you sure you want to delete these circuits?
+    </p>
+    <ul>
+        {% for circuit in selected_objects %}
+            <li><a href="{% url 'circuits:circuit' pk=circuit.pk %}">{{ circuit }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

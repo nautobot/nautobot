@@ -1,0 +1,26 @@
+{% load form_helpers %}
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Filter</strong>
+    </div>
+    <div class="panel-body">
+        <form action="." method="get" class="form">
+            {% for field in filter_form %}
+                <div class="form-group">
+                    {% if field|widget_type == 'checkboxinput' %}
+                        <label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
+                    {% else %}
+                        {{ field.label_tag }}
+                        {{ field }}
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <div class="text-right">
+                <button type="submit" class="btn btn-primary">
+                    <span class="glyphicon glyphicon-search" aria-hidden="true"></span> Apply filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

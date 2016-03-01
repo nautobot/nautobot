@@ -1,0 +1,37 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}Aggregates{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.ipam.add_aggregate %}
+		<a href="{% url 'ipam:aggregate_add' %}" class="btn btn-primary">
+			<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+			Add an aggregate
+		</a>
+    {% endif %}
+    {% if export_templates %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
+                Export aggregates <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% for et in export_templates %}
+                    <li><a href="{% url 'ipam:aggregate_list' %}?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+<h1>Aggregates</h1>
+<div class="row">
+	<div class="col-md-9">
+        {% include 'ipam/inc/aggregate_table.html' with table=aggregate_table %}
+	</div>
+	<div class="col-md-3">
+		{% include 'inc/filter_panel.html' %}
+	</div>
+</div>
+{% endblock %}

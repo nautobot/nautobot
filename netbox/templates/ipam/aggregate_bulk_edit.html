@@ -1,0 +1,15 @@
+{% extends 'utilities/bulk_edit_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Aggregate Bulk Edit{% endblock %}
+
+{% block select_objects_table %}
+    {% for aggregate in selected_objects %}
+        <tr>
+            <td><a href="{% url 'ipam:aggregate' pk=aggregate.pk %}">{{ aggregate }}</a></td>
+            <td>{{ aggregate.rir }}</td>
+            <td>{{ aggregate.date_added }}</td>
+            <td>{{ aggregate.description }}</td>
+        </tr>
+    {% endfor %}
+{% endblock %}

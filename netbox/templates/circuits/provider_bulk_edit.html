@@ -1,0 +1,15 @@
+{% extends 'utilities/bulk_edit_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Provider Bulk Edit{% endblock %}
+
+{% block select_objects_table %}
+    {% for provider in selected_objects %}
+        <tr>
+            <td><a href="{% url 'circuits:provider' slug=provider.slug %}">{{ provider }}</a></td>
+            <td>{{ aggregate.asn }}</td>
+            <td>{{ aggregate.account }}</td>
+            <td>{{ aggregate.comments }}</td>
+        </tr>
+    {% endfor %}
+{% endblock %}

@@ -1,0 +1,6 @@
+*.pyc
+configuration.py
+.idea
+*.sh
+fabfile.py
+

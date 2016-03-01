@@ -1,0 +1,69 @@
+{% extends '_base.html' %}
+{% load form_helpers %}
+
+{% block title %}{% if provider %}Editing {{ provider }}{% else %}Add a provider{% endif %}{% endblock %}
+
+{% block content %}
+{% if provider %}
+	<h1>Editing {{ provider }}</h1>
+{% else %}
+	<h1>Add a Provider</h1>
+{% endif %}
+<form action="." method="post" class="form form-horizontal">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            {% if form.non_field_errors %}
+                <div class="panel panel-danger">
+                    <div class="panel-heading"><strong>Errors</strong></div>
+                    <div class="panel-body">
+                        {{ form.non_field_errors }}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Provider</strong></div>
+                <div class="panel-body">
+                    {% render_field form.name %}
+                    {% render_field form.slug %}
+                    {% render_field form.category %}
+                    {% render_field form.asn %}
+                </div>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Comments</strong></div>
+                <div class="panel-body">
+                    {% render_field form.comments %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Support Info</strong></div>
+                <div class="panel-body">
+                    {% render_field form.account %}
+                    {% render_field form.portal_url %}
+                    {% render_field form.noc_contact %}
+                    {% render_field form.admin_contact %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 text-right">
+            {% if provider %}
+                <button type="submit" name="_update" class="btn btn-primary">Update</button>
+                <a href="{% url 'circuits:provider' slug=provider.slug %}" class="btn btn-default">Cancel</a>
+            {% else %}
+                <button type="submit" name="_create" class="btn btn-primary">Create</button>
+                <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
+                <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+
+{% block title %}{{ prefix }}{% endblock %}
+
+{% block content %}
+{% include 'ipam/inc/prefix_header.html' with active_tab='prefix' %}
+<div class="row">
+	<div class="col-md-5">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Details</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                <tr>
+                    <td>Family</td>
+                    <td>{{ prefix.get_family_display }}</td>
+                </tr>
+                <tr>
+                    <td>Aggregate</td>
+                    <td>
+                        {% if aggregate %}
+                            <a href="{% url 'ipam:aggregate' pk=aggregate.pk %}">{{ aggregate.prefix }}</a> ({{ aggregate.rir }})
+                        {% else %}
+                            <span class="text-warning">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Site</td>
+                    <td>
+                        {% if prefix.site %}
+                            <a href="{% url 'dcim:site' slug=prefix.site.slug %}">{{ prefix.site }}</a>
+                        {% else %}
+                            <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>VLAN</td>
+                    <td>
+                        {% if prefix.vlan %}
+                            <a href="{% url 'ipam:vlan' pk=prefix.vlan.pk %}">{{ prefix.vlan.name }} ({{ prefix.vlan.vid }})</a>
+                        {% else %}
+                            <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td>
+                        <span class="label label-{{ prefix.status.get_bootstrap_class_display|lower }}">{{ prefix.status }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Role</td>
+                    <td>{{ prefix.role }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>
+                        {% if prefix.description  %}
+                            <span>{{ prefix.description }}</span>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>IP Addresses</td>
+                    <td><a href="{% url 'ipam:prefix_ipaddresses' pk=prefix.pk %}">{{ ipaddress_count }}</a></td>
+                </tr>
+            </table>
+        </div>
+	</div>
+	<div class="col-md-7">
+        {% if duplicate_prefix_table.rows %}
+            {% with heading='Duplicate Prefixes' panel_class='danger' %}
+                {% render_table duplicate_prefix_table 'panel_table.html' %}
+            {% endwith %}
+        {% endif %}
+        {% with heading='Parent Prefixes' %}
+            {% render_table parent_prefix_table 'panel_table.html' %}
+        {% endwith %}
+	</div>
+</div>
+<div class="row">
+	<div class="col-md-12">
+        {% include 'ipam/inc/prefix_table.html' with table=child_prefix_table table_template='panel_table.html' heading='Child Prefixes' %}
+    </div>
+</div>
+{% endblock %}

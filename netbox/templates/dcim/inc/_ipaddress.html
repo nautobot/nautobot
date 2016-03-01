@@ -1,0 +1,18 @@
+<tr>
+    <td>{{ ip.interface }}</td>
+    <td>
+        <a href="{% url 'ipam:ipaddress' pk=ip.pk %}">{{ ip }}</a>
+    </td>
+    <td>
+        {% if device.primary_ip == ip %}
+            <span class="label label-success">Primary</span>
+        {% endif %}
+    </td>
+    <td class="text-right">
+        {% if perms.ipam.delete_ipaddress %}
+            <a href="{% url 'ipam:ipaddress_delete' pk=ip.pk %}" class="btn btn-danger btn-xs">
+                <i class="glyphicon glyphicon-trash" aria-hidden="true" title="Delete IP address"></i>
+            </a>
+        {% endif %}
+    </td>
+</tr>

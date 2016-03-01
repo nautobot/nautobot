@@ -1,0 +1,158 @@
+from rest_framework import serializers
+
+from dcim.api.serializers import SiteNestedSerializer, InterfaceNestedSerializer
+from ipam.models import VRF, Status, Role, RIR, Aggregate, Prefix, IPAddress, VLAN
+
+
+#
+# VRFs
+#
+
+class VRFSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = VRF
+        fields = ['id', 'name', 'rd', 'description']
+
+
+class VRFNestedSerializer(VRFSerializer):
+
+    class Meta(VRFSerializer.Meta):
+        fields = ['id', 'name', 'rd']
+
+
+#
+# Statuses
+#
+
+class StatusSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Status
+        fields = ['id', 'name', 'slug', 'weight', 'bootstrap_class']
+
+
+class StatusNestedSerializer(StatusSerializer):
+
+    class Meta(StatusSerializer.Meta):
+        fields = ['id', 'name', 'slug']
+
+
+#
+# Roles
+#
+
+class RoleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'slug', 'weight']
+
+
+class RoleNestedSerializer(RoleSerializer):
+
+    class Meta(RoleSerializer.Meta):
+        fields = ['id', 'name', 'slug']
+
+
+#
+# RIRs
+#
+
+class RIRSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RIR
+        fields = ['id', 'name', 'slug']
+
+
+class RIRNestedSerializer(RIRSerializer):
+
+    class Meta(RIRSerializer.Meta):
+        pass
+
+
+#
+# Aggregates
+#
+
+class AggregateSerializer(serializers.ModelSerializer):
+    rir = RIRNestedSerializer()
+
+    class Meta:
+        model = Aggregate
+        fields = ['id', 'family', 'prefix', 'rir', 'date_added', 'description']
+
+
+class AggregateNestedSerializer(AggregateSerializer):
+
+    class Meta(AggregateSerializer.Meta):
+        fields = ['id', 'family', 'prefix']
+
+
+#
+# VLANs
+#
+
+class VLANSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+    site = SiteNestedSerializer()
+    status = StatusNestedSerializer()
+    role = RoleNestedSerializer()
+
+    class Meta:
+        model = VLAN
+        fields = ['id', 'site', 'vid', 'name', 'status', 'role', 'display_name']
+
+    def get_display_name(self, obj):
+        return "{} ({})".format(obj.vid, obj.name)
+
+
+class VLANNestedSerializer(VLANSerializer):
+
+    class Meta(VLANSerializer.Meta):
+        fields = ['id', 'vid', 'name', 'display_name']
+
+
+#
+# Prefixes
+#
+
+class PrefixSerializer(serializers.ModelSerializer):
+    site = SiteNestedSerializer()
+    vrf = VRFNestedSerializer()
+    vlan = VLANNestedSerializer()
+    status = StatusNestedSerializer()
+    role = RoleNestedSerializer()
+
+    class Meta:
+        model = Prefix
+        fields = ['id', 'family', 'prefix', 'site', 'vrf', 'vlan', 'status', 'role', 'description']
+
+
+class PrefixNestedSerializer(PrefixSerializer):
+
+    class Meta(PrefixSerializer.Meta):
+        fields = ['id', 'family', 'prefix']
+
+
+#
+# IP addresses
+#
+
+class IPAddressSerializer(serializers.ModelSerializer):
+    vrf = VRFNestedSerializer()
+    interface = InterfaceNestedSerializer()
+
+    class Meta:
+        model = IPAddress
+        fields = ['id', 'family', 'address', 'vrf', 'interface', 'description', 'nat_inside', 'nat_outside']
+
+
+class IPAddressNestedSerializer(IPAddressSerializer):
+
+    class Meta(IPAddressSerializer.Meta):
+        fields = ['id', 'family', 'address']
+
+IPAddressSerializer._declared_fields['nat_inside'] = IPAddressNestedSerializer()
+IPAddressSerializer._declared_fields['nat_outside'] = IPAddressNestedSerializer()

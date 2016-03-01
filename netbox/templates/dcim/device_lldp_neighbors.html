@@ -1,0 +1,73 @@
+{% extends '_base.html' %}
+
+{% block title %}{{ device }} - LLDP Neighbors{% endblock %}
+
+{% block content %}
+{% include 'dcim/inc/_device_header.html' with active_tab='lldp-neighbors' %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>LLDP Neighbors</strong>
+    </div>
+    <table class="table table-hover panel-body">
+        <thead>
+            <tr>
+                <th>Interface</th>
+                <th>Configured Device</th>
+                <th>Configured Interface</th>
+                <th>LLDP Device</th>
+                <th>LLDP Interface</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for iface in interfaces %}
+                <tr id="{{ iface }}">
+                    <td>{{ iface }}</td>
+                    {% if iface.connection %}
+                        {% with iface.get_connected_interface as connected_iface %}
+                            <td class="configured_device" data="{{ connected_iface.device }}">
+                                <a href="{% url 'dcim:device' pk=connected_iface.device.pk %}">{{ connected_iface.device }}</a>
+                            </td>
+                            <td class="configured_interface" data="{{ connected_iface }}">
+                                <span title="{{ connected_iface.get_form_factor_display }}">{{ connected_iface }}</span>
+                            </td>
+                        {% endwith %}
+                    {% else %}
+                        <td colspan="2">None</td>
+                    {% endif %}
+                    <td class="device"></td>
+                    <td class="interface"></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $.ajax({
+        url: "{% url 'dcim-api:device_lldp-neighbors' pk=device.pk %}",
+        dataType: 'json',
+        success: function(json) {
+            $.each(json, function(i, neighbor) {
+                var row = $('#' + neighbor['local-interface'].replace(/(\/)/g, "\\$1"));
+                var configured_device = row.children('td.configured_device').attr('data');
+                var configured_interface = row.children('td.configured_interface').attr('data');
+                // Add LLDP neighbors to table
+                row.children('td.device').html(neighbor['name']);
+                row.children('td.interface').html(neighbor['remote-interface']);
+                // Apply colors to rows
+                if (!configured_device && neighbor['name']) {
+                    row.addClass('info');
+                } else if (configured_device == neighbor['name'] && configured_interface == neighbor['remote-interface']) {
+                    row.addClass('success');
+                } else {
+                    row.addClass('danger');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

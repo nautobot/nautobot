@@ -1,0 +1,15 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Delete Aggregates?{% endblock %}
+
+{% block message %}
+    <p>
+        Are you sure you want to delete these aggregates?
+    </p>
+    <ul>
+        {% for aggregate in selected_objects %}
+            <li><a href="{% url 'ipam:aggregate' pk=aggregate.pk %}">{{ aggregate }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

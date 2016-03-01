@@ -1,0 +1,44 @@
+<div class="row">
+    <div class="col-md-9">
+    {% if device.rack %}
+        <ol class="breadcrumb">
+            <li><a href="{% url 'dcim:site' slug=device.rack.site.slug %}">{{ device.rack.site }}</a></li>
+            <li><a href="{% url 'dcim:rack_list' %}?site={{ device.rack.site.slug }}">Racks</a></li>
+            <li><a href="{% url 'dcim:rack' pk=device.rack.pk %}">{{ device.rack }}</a></li>
+            <li>{{ device }}</li>
+        </ol>
+    {% endif %}
+    </div>
+    <div class="col-md-3">
+        <form action="{% url 'dcim:device_list' %}" method="get">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Device name or serial" />
+                <span class="input-group-btn">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+                    </button>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="pull-right">
+    {% if perms.dcim.change_device %}
+		<a href="{% url 'dcim:device_edit' pk=device.pk %}" class="btn btn-warning">
+			<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+			Edit this device
+		</a>
+    {% endif %}
+    {% if perms.dcim.delete_device %}
+		<a href="{% url 'dcim:device_delete' pk=device.pk %}" class="btn btn-danger">
+			<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+			Delete this device
+		</a>
+{% endif %}
+</div>
+<h1>{{ device }}</h1>
+<ul class="nav nav-tabs" style="margin-bottom: 20px">
+    <li role="presentation"{% if active_tab == 'info' %} class="active"{% endif %}><a href="{% url 'dcim:device' pk=device.pk %}">Info</a></li>
+    <li role="presentation"{% if active_tab == 'inventory' %} class="active"{% endif %}><a href="{% url 'dcim:device_inventory' pk=device.pk %}">Inventory</a></li>
+    <li role="presentation"{% if active_tab == 'lldp-neighbors' %} class="active"{% endif %}><a href="{% url 'dcim:device_lldp_neighbors' pk=device.pk %}">LLDP Neighbors</a></li>
+</ul>

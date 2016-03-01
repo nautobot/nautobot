@@ -1,0 +1,15 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Delete IP Addresses?{% endblock %}
+
+{% block message %}
+    <p>
+        Are you sure you want to delete these IP addresses?
+    </p>
+    <ul>
+        {% for ipaddress in selected_objects %}
+            <li><a href="{% url 'ipam:ipaddress' pk=ipaddress.pk %}">{{ ipaddress }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

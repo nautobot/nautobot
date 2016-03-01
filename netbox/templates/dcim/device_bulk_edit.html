@@ -1,0 +1,16 @@
+{% extends 'utilities/bulk_edit_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Device Bulk Edit{% endblock %}
+
+{% block select_objects_table %}
+    {% for device in selected_objects %}
+        <tr>
+            <td><a href="{% url 'dcim:device' pk=device.pk %}">{{ device }}</a></td>
+            <td>{{ device.device_type }}</td>
+            <td>{{ device.device_role }}</td>
+            <td>{{ device.serial }}</td>
+            <td>{{ device.ro_snmp }}</td>
+        </tr>
+    {% endfor %}
+{% endblock %}

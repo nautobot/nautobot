@@ -1,0 +1,58 @@
+{% extends '_base.html' %}
+{% load helpers %}
+{% load form_helpers %}
+
+{% block title %}VRFs{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.ipam.add_vrf %}
+		<a href="{% url 'ipam:vrf_add' %}" class="btn btn-primary">
+			<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+			Add a VRF
+		</a>
+		<a href="{% url 'ipam:vrf_import' %}" class="btn btn-info">
+			<span class="glyphicon glyphicon-import" aria-hidden="true"></span>
+			Import VRFs
+		</a>
+	{% endif %}
+    {% if export_templates %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
+                Export VRFs <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% for et in export_templates %}
+                    <li><a href="{% url 'ipam:vrf_list' %}?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+<h1>VRFs</h1>
+<div class="row">
+	<div class="col-md-9">
+        {% include 'ipam/inc/vrf_table.html' with table=vrf_table %}
+	</div>
+	<div class="col-md-3">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<strong>Search</strong>
+			</div>
+			<div class="panel-body">
+				<form action="{% url 'ipam:vrf_list' %}" method="get">
+					<div class="input-group">
+						<input type="text" name="name" class="form-control" placeholder="Name" {%  if request.GET.q %}value="{{ request.GET.q }}" {% endif %}/>
+						<span class="input-group-btn">
+							<button type="submit" class="btn btn-primary">
+								<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+							</button>
+						</span>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}

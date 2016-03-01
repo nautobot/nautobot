@@ -1,0 +1,16 @@
+{% extends 'utilities/bulk_edit_form.html' %}
+{% load form_helpers %}
+
+{% block title %}VLAN Bulk Edit{% endblock %}
+
+{% block select_objects_table %}
+    {% for vlan in selected_objects %}
+        <tr>
+            <td><a href="{% url 'ipam:vlan' pk=vlan.pk %}">{{ vlan.vid }}</a></td>
+            <td>{{ vlan.name }}</td>
+            <td>{{ vlan.site }}</td>
+            <td>{{ vlan.status }}</td>
+            <td>{{ vlan.role }}</td>
+        </tr>
+    {% endfor %}
+{% endblock %}

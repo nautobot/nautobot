@@ -1,0 +1,22 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Delete VLAN {{ vlan }}?{% endblock %}
+
+{% block message %}
+    <p>
+        Are you sure you want to delete this VLAN?
+        {% if vlan.prefix_set.count %}
+            The following prefixes will also be deleted:
+        {% else %}
+            (There are no prefixes associated with this VLAN.)
+        {% endif %}
+    </p>
+    {% if vlan.prefix_set.count %}
+        <ul>
+            {% for p in vlan.prefix_set.all %}
+            <li><a href="{% url 'ipam:prefix' pk=p.pk %}">{{ p }}</a></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

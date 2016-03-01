@@ -1,0 +1,426 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+{% load helpers %}
+
+{% block title %}{{ device }}{% endblock %}
+
+{% block content %}
+{% include 'dcim/inc/_device_header.html' with active_tab='info' %}
+<div class="row">
+	<div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Hardware</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                <tr>
+                    <td>Site</td>
+                    <td>
+                        <a href="{% url 'dcim:site' slug=device.rack.site.slug %}">{{ device.rack.site }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Rack</td>
+                    <td>
+                        <span><a href="{% url 'dcim:rack' pk=device.rack.pk %}">{{ device.rack.name }}</a>{% if device.rack.facility_id %} ({{ device.rack.facility_id }}){% endif %}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Position</td>
+                    <td>
+                        {% if device.position %}
+                            <span>U{{ device.position }} / {{ device.get_face_display }}</span>
+                        {% elif device.device_type.u_height %}
+                            <span class="label label-warning">Not racked</span>
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Device Type</td>
+                    <td>
+                        <span><a href="{% url 'dcim:device_list' %}?manufacturer={{ device.device_type.manufacturer.slug }}&model={{ device.device_type.slug }}">{{ device.device_type }}</a> ({{ device.device_type.u_height }}U)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Serial</td>
+                    <td>
+                        {% if device.serial %}
+                            <span>{{ device.serial }}</span>
+                        {% else %}
+                            <span class="text-muted">Not defined</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Management</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                <tr>
+                    <td>Role</td>
+                    <td>
+                        <a href="{% url 'dcim:device_list' %}?role={{ device.device_role.slug }}">{{ device.device_role }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Platform</td>
+                    <td>
+                        {% if device.platform %}
+                            <span>{{ device.platform }}</span>
+                        {% else %}
+                            <span class="text-warning">Not assigned</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td>
+                        {% if device.status %}
+                            <span class="label label-success">{{ device.get_status_display }}</span>
+                        {% else %}
+                            <span class="label label-danger">{{ device.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Primary IP</td>
+                    <td>
+                        {% if device.primary_ip %}
+                            <a href="{% url 'ipam:ipaddress' pk=device.primary_ip.pk %}">{{ device.primary_ip.address.ip }}</a>
+                            {% if device.primary_ip.nat_inside %}
+                                <span>(NAT for {{ device.primary_ip.nat_inside.address.ip }})</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">Not defined</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>SNMP String (RO)</td>
+                    <td>
+                        {% if device.ro_snmp %}
+                            <span>{{ device.ro_snmp }}</span>
+                        {% else %}
+                            <span class="text-muted">Not defined</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        {% if perms.secrets.view_secret %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Secrets</strong>
+                </div>
+                {% if secrets %}
+                    <table class="table table-hover panel-body">
+                        {% for secret in secrets %}
+                            {% include 'secrets/inc/secret_tr.html' %}
+                        {% endfor %}
+                    </table>
+                {% else %}
+                    <div class="panel-body text-muted">
+                        None found
+                    </div>
+                {% endif %}
+                {% if perms.secrets.add_secret %}
+                    <form id="secret_form">
+                        {% csrf_token %}
+                    </form>
+                    <div class="panel-footer text-right">
+                        <a href="{% url 'dcim:device_addsecret' parent_pk=device.pk %}" class="btn btn-xs btn-primary">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                            Add secret
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>IP Addresses</strong>
+            </div>
+            {% if ip_addresses %}
+                <table class="table table-hover panel-body">
+                    {% for ip in ip_addresses %}
+                        {% include 'dcim/inc/_ipaddress.html' %}
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="panel-body text-muted">
+                    None found
+                </div>
+            {% endif %}
+            {% if perms.ipam.add_ipaddress %}
+                <div class="panel-footer text-right">
+                    <a href="{% url 'dcim:ipaddress_assign' pk=device.pk %}" class="btn btn-xs btn-primary">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        Assign IP Address
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Critical Connections</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                {% for iface in mgmt_interfaces %}
+                    {% include 'dcim/inc/_interface.html' with icon='wrench' %}
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="alert-warning">
+                            <i class="fa fa-fw fa-warning"></i> No management interfaces defined!
+                            {% if perms.dcim.add_interface %}
+                                <a href="{% url 'dcim:interface_add' pk=device.pk %}?mgmt_only=1" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% for cp in console_ports %}
+                    {% include 'dcim/inc/_consoleport.html' %}
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="alert-warning">
+                            <i class="fa fa-fw fa-warning"></i> No console ports defined!
+                            {% if perms.dcim.add_consoleport %}
+                                <a href="{% url 'dcim:consoleport_add' pk=device.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% for pp in power_ports %}
+                    {% include 'dcim/inc/_powerport.html' %}
+                {% empty %}
+                    {% if not device.device_type.is_pdu %}
+                        <tr>
+                            <td colspan="4" class="alert-warning">
+                                <i class="fa fa-fw fa-warning"></i> No power ports defined!
+                                {% if perms.dcim.add_powerport %}
+                                    <a href="{% url 'dcim:powerport_add' pk=device.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+            {% if perms.dcim.add_interface or perms.dcim.add_consoleport or perms.dcim.add_powerport %}
+                <div class="panel-footer text-right">
+                    {% if perms.dcim.add_interface %}
+                        <a href="{% url 'dcim:interface_add' pk=device.pk %}?mgmt_only=1" class="btn btn-xs btn-primary">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                            Add interface
+                        </a>
+                    {% endif %}
+                    {% if perms.dcim.add_consoleport %}
+                        <a href="{% url 'dcim:consoleport_add' pk=device.pk %}" class="btn btn-xs btn-primary">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                            Add console
+                        </a>
+                    {% endif %}
+                    {% if perms.dcim.add_powerport and not device.device_type.is_pdu %}
+                        <a href="{% url 'dcim:powerport_add' pk=device.pk %}" class="btn btn-xs btn-primary">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                            Add power
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body">
+                {% if device.comments  %}
+                    {{ device.comments|gfm }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Related Devices</strong>
+            </div>
+            {% if related_devices %}
+                <table class="table table-hover panel-body">
+                    {% for rd in related_devices %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'dcim:device' pk=rd.pk %}">{{ rd }}</a>
+                            </td>
+                            <td>
+                                <a href="{% url 'dcim:rack' pk=rd.rack.pk %}">Rack {{ rd.rack }}</a>
+                            </td>
+                            <td>{{ rd.device_type }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="panel-body text-muted">None found</div>
+            {% endif %}
+        </div>
+	</div>
+	<div class="col-md-6">
+        {% if interfaces or device.device_type.is_network_device %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    {% if perms.dcim.add_interface %}
+                        <a href="{% url 'dcim:interface_add' pk=device.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Interfaces</a>
+                    {% endif %}
+                    <strong>Interfaces</strong>
+                </div>
+                <table class="table table-hover panel-body">
+                    {% for iface in interfaces %}
+                        {% include 'dcim/inc/_interface.html' %}
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">No interfaces defined</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
+        {% if cs_ports or device.device_type.is_console_server %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    {% if perms.dcim.add_consoleserverport %}
+                        <a href="{% url 'dcim:consoleserverport_add' pk=device.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Console Server Ports</a>
+                    {% endif %}
+                    <strong>Console Server Ports</strong>
+                </div>
+                <table class="table table-hover panel-body">
+                    {% for csp in cs_ports %}
+                        {% include 'dcim/inc/_consoleserverport.html' %}
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">No console server ports defined</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
+        {% if power_outlets or device.device_type.is_pdu %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    {% if perms.dcim.add_poweroutlet %}
+                        <a href="{% url 'dcim:poweroutlet_add' pk=device.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Power Outlets</a>
+                    {% endif %}
+                    <strong>Power Outlets</strong>
+                </div>
+                <table class="table table-hover panel-body">
+                    {% for po in power_outlets %}
+                        {% include 'dcim/inc/_poweroutlet.html' %}
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">No power outlets defined</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
+	</div>
+</div>
+
+<div class="modal fade" id="graphs_modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="graphs_modal_title">Modal title</h4>
+            </div>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+</div>
+
+{% include 'secrets/inc/private_key_modal.html' %}
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+function toggleConnection(elem, api_url) {
+    if (elem.hasClass('connected')) {
+        $.ajax({
+            url: api_url + elem.attr('data') + "/",
+            method: 'PATCH',
+            dataType: 'json',
+            beforeSend: function(xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+            },
+            data: {
+                'connection_status': 'False'
+            },
+            context: this,
+            success: function() {
+                elem.parents('tr').removeClass('success').addClass('info');
+                elem.removeClass('connected btn-warning').addClass('btn-success');
+                elem.attr('title', 'Mark connected');
+                elem.children('i').removeClass('glyphicon glyphicon-ban-circle').addClass('fa fa-plug')
+            }
+        });
+    } else {
+        $.ajax({
+            url: api_url + elem.attr('data') + "/",
+            method: 'PATCH',
+            dataType: 'json',
+            beforeSend: function(xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+            },
+            data: {
+                'connection_status': 'True'
+            },
+            context: this,
+            success: function() {
+                elem.parents('tr').removeClass('info').addClass('success');
+                elem.removeClass('btn-success').addClass('connected btn-warning');
+                elem.attr('title', 'Mark disconnected');
+                elem.children('i').removeClass('fa fa-plug').addClass('glyphicon glyphicon-ban-circle')
+            }
+        });
+    }
+    return false;
+}
+$(".consoleport-toggle").click(function() {
+    return toggleConnection($(this), "/api/dcim/console-ports/");
+});
+$(".powerport-toggle").click(function() {
+    return toggleConnection($(this), "/api/dcim/power-ports/");
+});
+$(".interface-toggle").click(function() {
+    return toggleConnection($(this), "/api/dcim/interface-connections/");
+});
+$('#graphs_modal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var iface = button.data('interface');
+    var iface_id = button.data('id');
+    var modal_title = $(this).find('.modal-title');
+    var modal_body = $(this).find('.modal-body');
+    modal_title.text('{{ device.name }} - ' + iface);
+    modal_body.empty();
+    $.ajax({
+        url: "/api/dcim/interfaces/" + iface_id + "/graphs/",
+        dataType: 'json',
+        success: function(json) {
+            $.each(json, function(i, graph) {
+                // Build in a 500ms delay per graph to avoid hammering the server
+                setTimeout(function() {
+                    modal_body.append('<h4 class="text-center">' + graph.name + '</h4>');
+                    if (graph.link) {
+                        modal_body.append('<a href="' + graph.link + '"><img src="' + graph.embed_url + '" /></a>');
+                    } else {
+                        modal_body.append('<img src="' + graph.embed_url + '" />');
+                    }
+                }, i*500);
+            })
+        }
+    });
+});
+</script>
+<script src="/static/js/secrets.js"></script>
+{% endblock %}

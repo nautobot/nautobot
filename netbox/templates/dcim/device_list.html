@@ -1,0 +1,58 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}Devices{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.dcim.add_device %}
+        <a href="{% url 'dcim:device_add' %}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            Add a device
+        </a>
+        <a href="{% url 'dcim:device_import' %}" class="btn btn-info">
+            <span class="glyphicon glyphicon-import" aria-hidden="true"></span>
+            Import devices
+        </a>
+    {% endif %}
+    {% if export_templates %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
+                Export devices <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% for et in export_templates %}
+                    <li><a href="{% url 'dcim:device_list' %}?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+<h1>Devices</h1>
+<div class="row">
+	<div class="col-md-9">
+        {% include 'dcim/inc/device_table.html' with table=device_table %}
+    </div>
+    <div class="col-md-3">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<strong>Search</strong>
+			</div>
+			<div class="panel-body">
+				<form action="{% url 'dcim:device_list' %}" method="get">
+					<div class="input-group">
+						<input type="text" name="q" class="form-control" placeholder="Name or serial" {% if request.GET.q %}value="{{ request.GET.q }}" {% endif %}/>
+						<span class="input-group-btn">
+							<button type="submit" class="btn btn-primary">
+								<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+							</button>
+						</span>
+					</div>
+				</form>
+			</div>
+		</div>
+		{% include 'inc/filter_panel.html' %}
+    </div>
+</div>
+{% endblock %}
