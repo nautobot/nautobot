@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.contenttypes.models import ContentType
+from django.template import TemplateSyntaxError
 from django.core.urlresolvers import reverse
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError
@@ -33,9 +34,12 @@ class ObjectListView(View):
         # Export
         if request.GET.get('export'):
             et = get_object_or_404(ExportTemplate, content_type=object_ct, name=request.GET.get('export'))
-            response = et.to_response(context_dict={'queryset': self.queryset},
-                                      filename='netbox_r{}'.format(self.queryset.model._meta.verbose_name_plural))
-            return response
+            try:
+                response = et.to_response(context_dict={'queryset': self.queryset},
+                                          filename='netbox_{}'.format(self.queryset.model._meta.verbose_name_plural))
+                return response
+            except TemplateSyntaxError:
+                messages.error(request, "There was an error rendering the selected export template ({}).".format(et.name))
 
         table = self.table(self.queryset)
         RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
