@@ -337,7 +337,7 @@ def device_role_choices():
 
 def device_type_choices():
     type_choices = DeviceType.objects.select_related('manufacturer').annotate(device_count=Count('instances'))
-    return [(t.slug, '{} ({})'.format(t, t.device_count)) for t in type_choices]
+    return [(t.pk, '{} ({})'.format(t, t.device_count)) for t in type_choices]
 
 
 def device_platform_choices():
@@ -350,8 +350,8 @@ class DeviceFilterForm(forms.Form, BootstrapMixin):
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
     role = forms.MultipleChoiceField(required=False, choices=device_role_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
-    type = forms.MultipleChoiceField(required=False, choices=device_type_choices,
-                                     widget=forms.SelectMultiple(attrs={'size': 8}))
+    device_type_id = forms.MultipleChoiceField(required=False, choices=device_type_choices, label='Type',
+                                               widget=forms.SelectMultiple(attrs={'size': 8}))
     platform = forms.MultipleChoiceField(required=False, choices=device_platform_choices)
 
 

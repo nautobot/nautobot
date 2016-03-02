@@ -115,7 +115,7 @@ class DeviceFilter(django_filters.FilterSet):
         to_field_name='slug',
         label='Role (slug)',
     )
-    device_type = django_filters.ModelMultipleChoiceFilter(
+    device_type_id = django_filters.ModelMultipleChoiceFilter(
         name='device_type',
         queryset=DeviceType.objects.all(),
         label='Device type (ID)',
@@ -163,7 +163,7 @@ class DeviceFilter(django_filters.FilterSet):
 
     class Meta:
         model = Device
-        fields = ['q', 'name', 'site_id', 'site', 'rack_id', 'role_id', 'role', 'device_type', 'manufacturer_id',
+        fields = ['q', 'name', 'site_id', 'site', 'rack_id', 'role_id', 'role', 'device_type_id', 'manufacturer_id',
                   'manufacturer', 'model', 'platform_id', 'platform', 'is_console_server', 'is_pdu',
                   'is_network_device']
 
