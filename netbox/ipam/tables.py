@@ -21,13 +21,13 @@ PREFIX_LINK = """
 {% else %}
     <span style="padding-left: {{ record.depth }}9px">
 {% endif %}
-    <a href="{% if record.pk %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% endif %}">{{ record.prefix }}</a>
+    <a href="{% if record.pk %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if site %}&site={{ site.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
 </span>
 """
 
 PREFIX_LINK_BRIEF = """
 <span style="padding-left: {{ record.depth }}0px">
-    <a href="{% if record.pk %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% endif %}">{{ record.prefix }}</a>
+    <a href="{% if record.pk %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if site %}&site={{ site.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
 </span>
 """
 

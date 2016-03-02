@@ -86,7 +86,7 @@
 </div>
 <div class="row">
 	<div class="col-md-12">
-        {% include 'ipam/inc/prefix_table.html' with table=child_prefix_table table_template='panel_table.html' heading='Child Prefixes' %}
+        {% include 'ipam/inc/prefix_table.html' with table=child_prefix_table table_template='panel_table.html' heading='Child Prefixes' site=prefix.site %}
     </div>
 </div>
 {% endblock %}
