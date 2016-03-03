@@ -447,6 +447,7 @@ def prefix_add(request):
     else:
         form = PrefixForm(initial={
             'site': request.GET.get('site'),
+            'vrf': request.GET.get('vrf'),
             'prefix': request.GET.get('prefix'),
         })
 

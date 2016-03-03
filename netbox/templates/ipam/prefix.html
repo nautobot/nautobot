@@ -86,7 +86,13 @@
 </div>
 <div class="row">
 	<div class="col-md-12">
-        {% include 'ipam/inc/prefix_table.html' with table=child_prefix_table table_template='panel_table.html' heading='Child Prefixes' site=prefix.site %}
+        {% if child_prefix_table.rows %}
+            {% include 'ipam/inc/prefix_table.html' with table=child_prefix_table table_template='panel_table.html' heading='Child Prefixes' parent=prefix %}
+        {% elif prefix.new_subnet %}
+            <a href="{% url 'ipam:prefix_add' %}?prefix={{ prefix.new_subnet }}{% if prefix.vrf %}&vrf={{ prefix.vrf.pk }}{% endif %}{% if prefix.site %}&site={{ prefix.site.pk }}{% endif %}" class="btn btn-success">
+                <i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add Child Prefix
+            </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
