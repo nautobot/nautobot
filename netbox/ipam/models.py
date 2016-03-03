@@ -1,4 +1,4 @@
-from netaddr import cidr_merge
+from netaddr import IPNetwork, cidr_merge
 
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
@@ -213,6 +213,17 @@ class Prefix(models.Model):
             # Infer address family from IPNetwork object
             self.family = self.prefix.version
         super(Prefix, self).save(*args, **kwargs)
+
+    @property
+    def new_subnet(self):
+        if self.family == 4:
+            if self.prefix.prefixlen <= 30:
+                return IPNetwork('{}/{}'.format(self.prefix.network, self.prefix.prefixlen + 1))
+            return None
+        if self.family == 6:
+            if self.prefix.prefixlen <= 126:
+                return IPNetwork('{}/{}'.format(self.prefix.network, self.prefix.prefixlen + 1))
+            return None
 
 
 class IPAddress(models.Model):
