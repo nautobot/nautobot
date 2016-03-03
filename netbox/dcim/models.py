@@ -276,11 +276,11 @@ class DeviceType(models.Model):
     is_full_depth = models.BooleanField(default=True, verbose_name="Is full depth",
                                         help_text="Device consumes both front and rear rack faces")
     is_console_server = models.BooleanField(default=False, verbose_name='Is a console server',
-                                            help_text="Include this type of device in lists of console servers")
+                                            help_text="This type of device has console server ports")
     is_pdu = models.BooleanField(default=False, verbose_name='Is a PDU',
-                                 help_text="Include this type of device in lists of PDUs")
+                                 help_text="This type of device has power outlets")
     is_network_device = models.BooleanField(default=True, verbose_name='Is a network device',
-                                            help_text="This is a network device (e.g. switch, router, etc.)")
+                                            help_text="This type of device has network interfaces")
 
     class Meta:
         ordering = ['manufacturer', 'model']
