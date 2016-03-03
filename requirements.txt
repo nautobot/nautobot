@@ -1,5 +1,4 @@
 Django==1.9.1
-django-cors-headers==1.1.0
 django-debug-toolbar==1.4
 django-extensions==1.6.1
 django-filter==0.12.0

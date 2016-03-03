@@ -395,39 +395,6 @@ ALTER SEQUENCE circuits_provider_id_seq OWNED BY circuits_provider.id;
 
 
 --
--- Name: corsheaders_corsmodel; Type: TABLE; Schema: public; Owner: django; Tablespace: 
---
-
-CREATE TABLE corsheaders_corsmodel (
-    id integer NOT NULL,
-    cors character varying(255) NOT NULL
-);
-
-
-ALTER TABLE public.corsheaders_corsmodel OWNER TO django;
-
---
--- Name: corsheaders_corsmodel_id_seq; Type: SEQUENCE; Schema: public; Owner: django
---
-
-CREATE SEQUENCE corsheaders_corsmodel_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.corsheaders_corsmodel_id_seq OWNER TO django;
-
---
--- Name: corsheaders_corsmodel_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: django
---
-
-ALTER SEQUENCE corsheaders_corsmodel_id_seq OWNED BY corsheaders_corsmodel.id;
-
-
---
 -- Name: dcim_consoleport; Type: TABLE; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -2035,13 +2002,6 @@ ALTER TABLE ONLY circuits_provider ALTER COLUMN id SET DEFAULT nextval('circuits
 -- Name: id; Type: DEFAULT; Schema: public; Owner: django
 --
 
-ALTER TABLE ONLY corsheaders_corsmodel ALTER COLUMN id SET DEFAULT nextval('corsheaders_corsmodel_id_seq'::regclass);
-
-
---
--- Name: id; Type: DEFAULT; Schema: public; Owner: django
---
-
 ALTER TABLE ONLY dcim_consoleport ALTER COLUMN id SET DEFAULT nextval('dcim_consoleport_id_seq'::regclass);
 
 
@@ -2506,14 +2466,6 @@ ALTER TABLE ONLY circuits_provider
 
 ALTER TABLE ONLY circuits_provider
     ADD CONSTRAINT circuits_provider_slug_key UNIQUE (slug);
-
-
---
--- Name: corsheaders_corsmodel_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
---
-
-ALTER TABLE ONLY corsheaders_corsmodel
-    ADD CONSTRAINT corsheaders_corsmodel_pkey PRIMARY KEY (id);
 
 
 --
