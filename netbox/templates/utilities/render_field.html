@@ -8,6 +8,9 @@
                     {{ field }}
                     {{ field.label }}
                 </label>
+                {% if field.help_text %}
+                    <span class="help-block">{{ field.help_text|safe }}</span>
+                {% endif %}
             </div>
         </div>
     {% elif field|widget_type == 'radioselect' %}
