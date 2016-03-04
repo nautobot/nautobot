@@ -1,6 +1,3 @@
-from django_tables2 import RequestConfig
-
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -8,11 +5,9 @@ from django.core.urlresolvers import reverse
 from django.db.models import Count, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 
-from extras.models import ExportTemplate
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
-from utilities.paginator import EnhancedPaginator
-from utilities.views import BulkImportView, BulkEditView, BulkDeleteView
+from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView
 
 from .filters import CircuitFilter
 from .forms import CircuitForm, CircuitImportForm, CircuitBulkEditForm, CircuitBulkDeleteForm, CircuitFilterForm, \
@@ -25,28 +20,12 @@ from .tables import CircuitTable, CircuitBulkEditTable, ProviderTable, ProviderB
 # Providers
 #
 
-def provider_list(request):
-
+class ProviderListView(ObjectListView):
     queryset = Provider.objects.annotate(count_circuits=Count('circuits'))
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='provider', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_providers')
-        return response
-
-    if request.user.has_perm('circuits.change_provider') or request.user.has_perm('circuits.delete_provider'):
-        provider_table = ProviderBulkEditTable(queryset)
-    else:
-        provider_table = ProviderTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(provider_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='provider')
-
-    return render(request, 'circuits/provider_list.html', {
-        'provider_table': provider_table,
-        'export_templates': export_templates,
-    })
+    table = ProviderTable
+    edit_table = ProviderBulkEditTable
+    edit_table_permissions = ['circuits.change_provider', 'circuits.delete_provider']
+    template_name = 'circuits/provider_list.html'
 
 
 def provider(request, slug):
@@ -168,30 +147,14 @@ class ProviderBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 # Circuits
 #
 
-def circuit_list(request):
-
+class CircuitListView(ObjectListView):
     queryset = Circuit.objects.select_related('provider', 'type', 'site')
-    queryset = CircuitFilter(request.GET, queryset).qs
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='circuit', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_circuits')
-        return response
-
-    if request.user.has_perm('circuits.change_circuit') or request.user.has_perm('circuits.delete_circuit'):
-        circuit_table = CircuitBulkEditTable(queryset)
-    else:
-        circuit_table = CircuitTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(circuit_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='circuit')
-
-    return render(request, 'circuits/circuit_list.html', {
-        'circuit_table': circuit_table,
-        'export_templates': export_templates,
-        'filter_form': CircuitFilterForm(request.GET, label_suffix=''),
-    })
+    filter = CircuitFilter
+    filter_form = CircuitFilterForm
+    table = CircuitTable
+    edit_table = CircuitBulkEditTable
+    edit_table_permissions = ['circuits.change_circuit', 'circuits.delete_circuit']
+    template_name = 'circuits/circuit_list.html'
 
 
 def circuit(request, pk):
