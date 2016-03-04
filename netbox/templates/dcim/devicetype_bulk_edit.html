@@ -1,0 +1,15 @@
+{% extends 'utilities/bulk_edit_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Device Type Bulk Edit{% endblock %}
+
+{% block select_objects_table %}
+    {% for devicetype in selected_objects %}
+        <tr>
+            <td><a href="{% url 'dcim:devicetype' pk=devicetype.pk %}">{{ devicetype }}</a></td>
+            <td>{{ devicetype.model }}</td>
+            <td>{{ devicetype.manufacturer }}</td>
+            <td>{{ device.u_height }}</td>
+        </tr>
+    {% endfor %}
+{% endblock %}

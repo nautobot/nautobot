@@ -24,6 +24,15 @@ urlpatterns = [
     url(r'^racks/(?P<pk>\d+)/edit/$', views.rack_edit, name='rack_edit'),
     url(r'^racks/(?P<pk>\d+)/delete/$', views.rack_delete, name='rack_delete'),
 
+    # Device types
+    url(r'^device-types/$', views.DeviceTypeListView.as_view(), name='devicetype_list'),
+    url(r'^device-types/add/$', views.device_add, name='devicetype_add'),
+    url(r'^device-types/edit/$', views.DeviceTypeBulkEditView.as_view(), name='devicetype_bulk_edit'),
+    url(r'^device-types/delete/$', views.DeviceTypeBulkDeleteView.as_view(), name='devicetype_bulk_delete'),
+    url(r'^device-types/(?P<pk>\d+)/$', views.devicetype, name='devicetype'),
+    url(r'^device-types/(?P<pk>\d+)/edit/$', views.devicetype_edit, name='devicetype_edit'),
+    url(r'^device-types/(?P<pk>\d+)/delete/$', views.devicetype_delete, name='devicetype_delete'),
+
     # Devices
     url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),
     url(r'^devices/add/$', views.device_add, name='device_add'),

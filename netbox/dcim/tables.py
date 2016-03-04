@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Site, Rack, Device, ConsolePort, PowerPort
+from .models import Site, Rack, DeviceType, Device, ConsolePort, PowerPort
 
 
 PREFIXES_PER_VLAN = """
@@ -72,6 +72,30 @@ class RackBulkEditTable(RackTable):
     class Meta(RackTable.Meta):
         model = None  # django_tables2 bugfix
         fields = ('pk', 'name', 'site', 'group', 'facility_id', 'u_height')
+
+
+#
+# Device types
+#
+
+class DeviceTypeTable(tables.Table):
+    model = tables.LinkColumn('dcim:devicetype', args=[Accessor('pk')], verbose_name='Device Type')
+
+    class Meta:
+        model = DeviceType
+        fields = ('model', 'manufacturer', 'u_height')
+        empty_text = "No device types were found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+class DeviceTypeBulkEditTable(DeviceTypeTable):
+    pk = tables.CheckBoxColumn()
+
+    class Meta(DeviceTypeTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'model', 'manufacturer', 'u_height')
 
 
 #

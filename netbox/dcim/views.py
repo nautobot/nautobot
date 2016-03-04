@@ -15,19 +15,21 @@ from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
 from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView
 
-from .filters import RackFilter, DeviceFilter, ConsoleConnectionFilter, PowerConnectionFilter, InterfaceConnectionFilter
+from .filters import RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter, PowerConnectionFilter, \
+    InterfaceConnectionFilter
 from .forms import SiteForm, SiteImportForm, RackForm, RackImportForm, RackBulkEditForm, RackBulkDeleteForm, \
-    RackFilterForm, DeviceForm, DeviceImportForm, DeviceBulkEditForm, DeviceBulkDeleteForm, DeviceFilterForm, \
+    RackFilterForm, DeviceTypeForm, DeviceTypeBulkEditForm, DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, \
+    DeviceForm, DeviceImportForm, DeviceBulkEditForm, DeviceBulkDeleteForm, DeviceFilterForm, \
     ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm, ConsoleConnectionImportForm, \
     ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, PowerPortForm, \
     PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, PowerOutletCreateForm, \
     PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, InterfaceConnectionForm, \
     InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, ConsoleConnectionFilterForm, \
     PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm
-from .models import Site, Rack, Device, ConsolePort, ConsoleServerPort, PowerPort, \
-    PowerOutlet, Interface, InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
-from .tables import SiteTable, RackTable, RackBulkEditTable, DeviceTable, DeviceBulkEditTable, DeviceImportTable, \
-    ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable
+from .models import Site, Rack, DeviceType, Device, ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, \
+    InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
+from .tables import SiteTable, RackTable, RackBulkEditTable, DeviceTypeTable, DeviceTypeBulkEditTable, DeviceTable, \
+    DeviceBulkEditTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable
 
 
 EXPANSION_PATTERN = '\[(\d+-\d+)\]'
@@ -305,6 +307,125 @@ class RackBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     form = RackBulkDeleteForm
     template_name = 'dcim/rack_bulk_delete.html'
     redirect_url = 'dcim:rack_list'
+
+
+#
+# Device types
+#
+
+class DeviceTypeListView(ObjectListView):
+    queryset = DeviceType.objects.select_related('manufacturer')
+    filter = DeviceTypeFilter
+    filter_form = DeviceTypeFilterForm
+    table = DeviceTypeTable
+    edit_table = DeviceTypeBulkEditTable
+    edit_table_permissions = ['dcim.change_devicetype', 'dcim.delete_devicetype']
+    template_name = 'dcim/devicetype_list.html'
+
+
+def devicetype(request, pk):
+
+    devicetype = get_object_or_404(DeviceType, pk=pk)
+
+    return render(request, 'dcim/devicetype.html', {
+        'devicetype': devicetype,
+    })
+
+
+@permission_required('dcim.add_devicetype')
+def devicetype_add(request):
+
+    if request.method == 'POST':
+        form = DeviceTypeForm(request.POST)
+        if form.is_valid():
+            devicetype = form.save()
+            messages.success(request, "Added new device type: {}".format(devicetype))
+            if '_addanother' in request.POST:
+                return redirect('dcim:devicetype_add')
+            else:
+                return redirect('dcim:devicetype', pk=devicetype.pk)
+
+    else:
+        form = DeviceTypeForm()
+
+    return render(request, 'dcim/devicetype_edit.html', {
+        'form': form,
+        'cancel_url': reverse('dcim:devicetype_list'),
+    })
+
+
+@permission_required('dcim.change_devicetype')
+def devicetype_edit(request, pk):
+
+    devicetype = get_object_or_404(DeviceType, pk=pk)
+
+    if request.method == 'POST':
+        form = DeviceTypeForm(request.POST, instance=devicetype)
+        if form.is_valid():
+            devicetype = form.save()
+            messages.success(request, "Modified device type {}".format(devicetype))
+            return redirect('dcim:devicetype', pk=devicetype.pk)
+
+    else:
+        form = DeviceTypeForm(instance=devicetype)
+
+    return render(request, 'dcim/devicetype_edit.html', {
+        'devicetype': devicetype,
+        'form': form,
+        'cancel_url': reverse('dcim:devicetype', kwargs={'pk': devicetype.pk}),
+    })
+
+
+@permission_required('dcim.delete_devicetype')
+def devicetype_delete(request, pk):
+
+    devicetype = get_object_or_404(DeviceType, pk=pk)
+
+    if request.method == 'POST':
+        form = ConfirmationForm(request.POST)
+        if form.is_valid():
+            try:
+                devicetype.delete()
+                messages.success(request, "Device type {} has been deleted".format(devicetype))
+                return redirect('dcim:devicetype_list')
+            except ProtectedError, e:
+                handle_protectederror(devicetype, request, e)
+                return redirect('dcim:devicetype', pk=devicetype.pk)
+
+    else:
+        form = ConfirmationForm()
+
+    return render(request, 'dcim/devicetype_delete.html', {
+        'devicetype': device,
+        'form': form,
+        'cancel_url': reverse('dcim:devicetype', kwargs={'pk': devicetype.pk}),
+    })
+
+
+class DeviceTypeBulkEditView(PermissionRequiredMixin, BulkEditView):
+    permission_required = 'dcim.change_devicetype'
+    cls = DeviceType
+    form = DeviceTypeBulkEditForm
+    template_name = 'dcim/devicetype_bulk_edit.html'
+    redirect_url = 'dcim:devicetype_list'
+
+    def update_objects(self, pk_list, form):
+
+        fields_to_update = {}
+        for field in ['manufacturer', 'u_height']:
+            if form.cleaned_data[field]:
+                fields_to_update[field] = form.cleaned_data[field]
+
+        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
+        messages.success(self.request, "Updated {} device types".format(updated_count))
+
+
+class DeviceTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'dcim.delete_devicetype'
+    cls = DeviceType
+    form = DeviceTypeBulkDeleteForm
+    template_name = 'dcim/devicetype_bulk_delete.html'
+    redirect_url = 'dcim:devicetype_list'
 
 
 #

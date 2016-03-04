@@ -160,6 +160,38 @@ class RackFilterForm(forms.Form, BootstrapMixin):
 
 
 #
+# Device types
+#
+
+class DeviceTypeForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = DeviceType
+        fields = ['manufacturer', 'model', 'slug', 'u_height', 'is_full_depth', 'is_console_server', 'is_pdu',
+                  'is_network_device']
+
+
+class DeviceTypeBulkEditForm(forms.Form, BootstrapMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput)
+    manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    u_height = forms.IntegerField(min_value=1, required=False)
+
+
+class DeviceTypeBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+def devicetype_manufacturer_choices():
+    manufacturer_choices = Manufacturer.objects.annotate(devicetype_count=Count('device_types'))
+    return [(m.slug, '{} ({})'.format(m.name, m.devicetype_count)) for m in manufacturer_choices]
+
+
+class DeviceTypeFilterForm(forms.Form, BootstrapMixin):
+    manufacturer = forms.MultipleChoiceField(required=False, choices=devicetype_manufacturer_choices,
+                                             widget=forms.SelectMultiple(attrs={'size': 8}))
+
+
+#
 # Devices
 #
 

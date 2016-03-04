@@ -1,0 +1,15 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+
+{% block title %}Delete Device Types?{% endblock %}
+
+{% block message %}
+    <p>
+        Are you sure you want to delete these device types?
+    </p>
+    <ul>
+        {% for devicetype in selected_objects %}
+            <li><a href="{% url 'dcim:devicetype' pk=devicetype.pk %}">{{ devicetype }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

@@ -65,12 +65,12 @@ class RackFilter(django_filters.FilterSet):
 
 
 class DeviceTypeFilter(django_filters.FilterSet):
-    manufacturer_id = django_filters.ModelChoiceFilter(
+    manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         name='manufacturer',
         queryset=Manufacturer.objects.all(),
         label='Manufacturer (ID)',
     )
-    manufacturer = django_filters.ModelChoiceFilter(
+    manufacturer = django_filters.ModelMultipleChoiceFilter(
         name='manufacturer',
         queryset=Manufacturer.objects.all(),
         to_field_name='slug',
