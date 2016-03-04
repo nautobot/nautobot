@@ -3,6 +3,8 @@ from django.conf.urls import url
 from secrets.views import secret_add
 
 from . import views
+from .forms import ConsolePortTemplateForm
+
 
 urlpatterns = [
 
@@ -32,6 +34,16 @@ urlpatterns = [
     url(r'^device-types/(?P<pk>\d+)/$', views.devicetype, name='devicetype'),
     url(r'^device-types/(?P<pk>\d+)/edit/$', views.devicetype_edit, name='devicetype_edit'),
     url(r'^device-types/(?P<pk>\d+)/delete/$', views.devicetype_delete, name='devicetype_delete'),
+    url(r'^device-types/(?P<pk>\d+)/console-ports/add/$', views.ConsolePortTemplateAddView.as_view(),
+        name='devicetype_add_consoleport'),
+    url(r'^device-types/(?P<pk>\d+)/console-server-ports/add/$', views.ConsolePortTemplateAddView.as_view(),
+        name='devicetype_add_consoleserverport'),
+    url(r'^device-types/(?P<pk>\d+)/power-ports/add/$', views.PowerPortTemplateAddView.as_view(),
+        name='devicetype_add_powerport'),
+    url(r'^device-types/(?P<pk>\d+)/power-outlets/add/$', views.PowerOutletTemplateAddView.as_view(),
+        name='devicetype_add_poweroutlet'),
+    url(r'^device-types/(?P<pk>\d+)/interfaces/add/$', views.InterfaceTemplateAddView.as_view(),
+        name='devicetype_add_interface'),
 
     # Devices
     url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),

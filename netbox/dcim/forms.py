@@ -8,7 +8,8 @@ from utilities.forms import BootstrapMixin, SmallTextarea, SelectWithDisabled, C
     Livesearch, CSVDataField, CommentField, BulkImportForm, FlexibleModelChoiceField, ExpandableNameField
 
 from .models import Site, Rack, RackGroup, Device, Manufacturer, DeviceType, DeviceRole, Platform, ConsolePort, \
-    ConsoleServerPort, PowerPort, PowerOutlet, Interface, InterfaceConnection, CONNECTION_STATUS_CHOICES, \
+    ConsolePortTemplate, ConsoleServerPort, ConsoleServerPortTemplate, PowerPort, PowerPortTemplate, PowerOutlet, \
+    PowerOutletTemplate, Interface, InterfaceTemplate, InterfaceConnection, CONNECTION_STATUS_CHOICES, \
     CONNECTION_STATUS_PLANNED, CONNECTION_STATUS_CONNECTED, IFACE_FF_VIRTUAL, STATUS_CHOICES
 
 
@@ -189,6 +190,50 @@ def devicetype_manufacturer_choices():
 class DeviceTypeFilterForm(forms.Form, BootstrapMixin):
     manufacturer = forms.MultipleChoiceField(required=False, choices=devicetype_manufacturer_choices,
                                              widget=forms.SelectMultiple(attrs={'size': 8}))
+
+
+#
+# Device component templates
+#
+
+class ConsolePortTemplateForm(forms.ModelForm, BootstrapMixin):
+    name_pattern = ExpandableNameField(label='Name')
+
+    class Meta:
+        model = ConsolePortTemplate
+        fields = ['name_pattern']
+
+
+class ConsoleServerPortTemplateForm(forms.ModelForm, BootstrapMixin):
+    name_pattern = ExpandableNameField(label='Name')
+
+    class Meta:
+        model = ConsoleServerPortTemplate
+        fields = ['name_pattern']
+
+
+class PowerPortTemplateForm(forms.ModelForm, BootstrapMixin):
+    name_pattern = ExpandableNameField(label='Name')
+
+    class Meta:
+        model = PowerPortTemplate
+        fields = ['name_pattern']
+
+
+class PowerOutletTemplateForm(forms.ModelForm, BootstrapMixin):
+    name_pattern = ExpandableNameField(label='Name')
+
+    class Meta:
+        model = PowerOutletTemplate
+        fields = ['name_pattern']
+
+
+class InterfaceTemplateForm(forms.ModelForm, BootstrapMixin):
+    name_pattern = ExpandableNameField(label='Name')
+
+    class Meta:
+        model = InterfaceTemplate
+        fields = ['name_pattern', 'form_factor', 'mgmt_only']
 
 
 #

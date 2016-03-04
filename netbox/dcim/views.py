@@ -3,11 +3,13 @@ import re
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db.models import Count, ProtectedError
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
+from django.views.generic import View
 
 from ipam.models import Prefix, IPAddress, VLAN
 from circuits.models import Circuit
@@ -25,8 +27,10 @@ from .forms import SiteForm, SiteImportForm, RackForm, RackImportForm, RackBulkE
     PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, PowerOutletCreateForm, \
     PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, InterfaceConnectionForm, \
     InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, ConsoleConnectionFilterForm, \
-    PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm
-from .models import Site, Rack, DeviceType, Device, ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, \
+    PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, ConsolePortTemplateForm, \
+    ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm, InterfaceTemplateForm
+from .models import Site, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, PowerPortTemplate, \
+    PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, \
     InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
 from .tables import SiteTable, RackTable, RackBulkEditTable, DeviceTypeTable, DeviceTypeBulkEditTable, DeviceTable, \
     DeviceBulkEditTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable
@@ -426,6 +430,80 @@ class DeviceTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     form = DeviceTypeBulkDeleteForm
     template_name = 'dcim/devicetype_bulk_delete.html'
     redirect_url = 'dcim:devicetype_list'
+
+
+class ComponentTemplateCreateView(View):
+    model = None
+    form = None
+
+    def get(self, request, pk, *args, **kwargs):
+
+        devicetype = get_object_or_404(DeviceType, pk=pk)
+
+        return render(request, 'dcim/component_template_add.html', {
+            'devicetype': devicetype,
+            'component_type': self.model._meta.verbose_name,
+            'form': self.form(),
+            'cancel_url': reverse('dcim:devicetype', kwargs={'pk': devicetype.pk}),
+        })
+
+    def post(self, request, pk, *args, **kwargs):
+
+        devicetype = get_object_or_404(DeviceType, pk=pk)
+
+        form = self.form(request.POST)
+        if form.is_valid():
+
+            component_templates = []
+            for name in form.cleaned_data['name_pattern']:
+                component_template = self.form(request.POST).save(commit=False)
+                component_template.device_type = devicetype
+                component_template.name = name
+                try:
+                    component_template.full_clean()
+                    component_templates.append(component_template)
+                except ValidationError:
+                    form.add_error('name_pattern', "Duplicate name found: {}".format(name))
+
+            if not form.errors:
+                self.model.objects.bulk_create(component_templates)
+                messages.success(request, "Added {} compontent(s) to {}".format(len(component_templates), devicetype))
+                if '_addanother' in request.POST:
+                    return redirect(request.path)
+                else:
+                    return redirect('dcim:devicetype', pk=devicetype.pk)
+
+        return render(request, 'dcim/component_template_add.html', {
+            'devicetype': devicetype,
+            'component_type': self.model._meta.verbose_name,
+            'form': form,
+            'cancel_url': reverse('dcim:devicetype', kwargs={'pk': devicetype.pk}),
+        })
+
+
+class ConsolePortTemplateAddView(ComponentTemplateCreateView):
+    model = ConsolePortTemplate
+    form = ConsolePortTemplateForm
+
+
+class ConsoleServerPortTemplateAddView(ComponentTemplateCreateView):
+    model = ConsoleServerPortTemplate
+    form = ConsoleServerPortTemplateForm
+
+
+class PowerPortTemplateAddView(ComponentTemplateCreateView):
+    model = PowerPortTemplate
+    form = PowerPortTemplateForm
+
+
+class PowerOutletTemplateAddView(ComponentTemplateCreateView):
+    model = PowerOutletTemplate
+    form = PowerOutletTemplateForm
+
+
+class InterfaceTemplateAddView(ComponentTemplateCreateView):
+    model = InterfaceTemplate
+    form = InterfaceTemplateForm
 
 
 #
