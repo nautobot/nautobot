@@ -1,5 +1,4 @@
-from netaddr import IPNetwork, IPSet
-from netaddr.core import AddrFormatError
+from netaddr import IPSet
 
 from django_tables2 import RequestConfig
 from django.conf import settings
@@ -13,11 +12,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
 
 from dcim.models import Device
-from extras.models import ExportTemplate
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
 from utilities.paginator import EnhancedPaginator
-from utilities.views import BulkImportView, BulkEditView, BulkDeleteView
+from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView
 
 from .filters import AggregateFilter, PrefixFilter, IPAddressFilter, VLANFilter, VRFFilter
 from .forms import AggregateForm, AggregateImportForm, AggregateBulkEditForm, AggregateBulkDeleteForm, \
@@ -51,30 +49,13 @@ def add_available_prefixes(parent, prefix_list):
 # VRFs
 #
 
-def vrf_list(request):
-
+class VRFListView(ObjectListView):
     queryset = VRF.objects.all()
-    queryset = VRFFilter(request.GET, queryset).qs
-    # annotate_depth(queryset)
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='vrf', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_vrfs')
-        return response
-
-    if request.user.has_perm('ipam.change_vrf') or request.user.has_perm('ipam.delete_vrf'):
-        vrf_table = VRFBulkEditTable(queryset)
-    else:
-        vrf_table = VRFTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(vrf_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='vrf')
-
-    return render(request, 'ipam/vrf_list.html', {
-        'vrf_table': vrf_table,
-        'export_templates': export_templates,
-    })
+    filter = VRFFilter
+    table = VRFTable
+    edit_table = VRFBulkEditTable
+    edit_table_permissions = ['ipam.change_vrf', 'ipam.delete_vrf']
+    template_name = 'ipam/vrf_list.html'
 
 
 def vrf(request, pk):
@@ -196,35 +177,16 @@ class VRFBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 # Aggregates
 #
 
-def aggregate_list(request):
-
-    queryset = Aggregate.objects.select_related('rir').extra(
-        select = {
-            'child_count': 'SELECT COUNT(*) FROM ipam_prefix WHERE ipam_prefix.prefix <<= ipam_aggregate.prefix',
-        }
-    )
-    queryset = AggregateFilter(request.GET, queryset).qs
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='aggregate', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_aggregates')
-        return response
-
-    if request.user.has_perm('ipam.change_aggregate') or request.user.has_perm('ipam.delete_aggregate'):
-        aggregate_table = AggregateBulkEditTable(queryset)
-    else:
-        aggregate_table = AggregateTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
-        .configure(aggregate_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='aggregate')
-
-    return render(request, 'ipam/aggregate_list.html', {
-        'aggregate_table': aggregate_table,
-        'export_templates': export_templates,
-        'filter_form': AggregateFilterForm(request.GET, label_suffix=''),
+class AggregateListView(ObjectListView):
+    queryset = Aggregate.objects.select_related('rir').extra(select={
+        'child_count': 'SELECT COUNT(*) FROM ipam_prefix WHERE ipam_prefix.prefix <<= ipam_aggregate.prefix',
     })
+    filter = AggregateFilter
+    filter_form = AggregateFilterForm
+    table = AggregateTable
+    edit_table = AggregateBulkEditTable
+    edit_table_permissions = ['ipam.change_aggregate', 'ipam.delete_aggregate']
+    template_name = 'ipam/aggregate_list.html'
 
 
 def aggregate(request, pk):
@@ -357,34 +319,14 @@ class AggregateBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 # Prefixes
 #
 
-def prefix_list(request):
-
+class PrefixListView(ObjectListView):
     queryset = Prefix.objects.select_related('site', 'status', 'role')
-    queryset = PrefixFilter(request.GET, queryset).qs
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='prefix', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_prefixes')
-        return response
-
-    # Show only top-level prefixes by default
-    limit = None if request.GET.get('expand') else 0
-    prefixes = queryset.annotate_depth(limit=limit)
-
-    if request.user.has_perm('ipam.change_prefix') or request.user.has_perm('ipam.delete_prefix'):
-        prefix_table = PrefixBulkEditTable(prefixes)
-    else:
-        prefix_table = PrefixTable(prefixes)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(prefix_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='prefix')
-
-    return render(request, 'ipam/prefix_list.html', {
-        'prefix_table': prefix_table,
-        'export_templates': export_templates,
-        'filter_form': PrefixFilterForm(request.GET, label_suffix=''),
-    })
+    filter = PrefixFilter
+    filter_form = PrefixFilterForm
+    table = PrefixTable
+    edit_table = PrefixBulkEditTable
+    edit_table_permissions = ['ipam.change_prefix', 'ipam.delete_prefix']
+    template_name = 'ipam/prefix_list.html'
 
 
 def prefix(request, pk):
@@ -568,41 +510,14 @@ def prefix_ipaddresses(request, pk):
 # IP addresses
 #
 
-def ipaddress_list(request):
-
+class IPAddressListView(ObjectListView):
     queryset = IPAddress.objects.select_related('vrf', 'interface__device', 'primary_for')
-    queryset = IPAddressFilter(request.GET, queryset).qs
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='ipaddress', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_ips')
-        return response
-
-    if request.user.has_perm('ipam.change_ipaddress') or request.user.has_perm('ipam.delete_ipaddress'):
-        ip_table = IPAddressBulkEditTable(queryset)
-    else:
-        ip_table = IPAddressTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(ip_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='ipaddress')
-
-    # If searching and no IPAddresses were found, include a list of parent prefixes matching the query
-    prefix_table = None
-    if request.GET.get('q') and not queryset:
-        try:
-            ip = str(IPNetwork(request.GET.get('q')))
-            prefix_table = PrefixTable(Prefix.objects.filter(prefix__net_contains_or_equals=ip))
-            RequestConfig(request).configure(prefix_table)
-        except AddrFormatError:
-            pass
-
-    return render(request, 'ipam/ipaddress_list.html', {
-        'ip_table': ip_table,
-        'prefix_table': prefix_table,
-        'export_templates': export_templates,
-        'filter_form': IPAddressFilterForm(request.GET, label_suffix=''),
-    })
+    filter = IPAddressFilter
+    filter_form = IPAddressFilterForm
+    table = IPAddressTable
+    edit_table = IPAddressBulkEditTable
+    edit_table_permissions = ['ipam.change_ipaddress', 'ipam.delete_ipaddress']
+    template_name = 'ipam/ipaddress_list.html'
 
 
 def ipaddress(request, pk):
@@ -755,30 +670,14 @@ class IPAddressBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 # VLANs
 #
 
-def vlan_list(request):
-
+class VLANListView(ObjectListView):
     queryset = VLAN.objects.select_related('site', 'status', 'role')
-    queryset = VLANFilter(request.GET, queryset).qs
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='vlan', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_vlans')
-        return response
-
-    if request.user.has_perm('ipam.change_vlan') or request.user.has_perm('ipam.delete_vlan'):
-        vlan_table = VLANBulkEditTable(queryset)
-    else:
-        vlan_table = VLANTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(vlan_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='vlan')
-
-    return render(request, 'ipam/vlan_list.html', {
-        'vlan_table': vlan_table,
-        'export_templates': export_templates,
-        'filter_form': VLANFilterForm(request.GET, label_suffix=''),
-    })
+    filter = VLANFilter
+    filter_form = VLANFilterForm
+    table = VLANTable
+    edit_table = VLANBulkEditTable
+    edit_table_permissions = ['ipam.change_vlan', 'ipam.delete_vlan']
+    template_name = 'ipam/vlan_list.html'
 
 
 def vlan(request, pk):

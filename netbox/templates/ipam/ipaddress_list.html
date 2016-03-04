@@ -33,17 +33,7 @@
 <h1>IP Addresses</h1>
 <div class="row">
 	<div class="col-md-9">
-        {% if not ip_table.rows and prefix_table.rows %}
-            <div class="alert alert-warning alert-dismissable" role="alert">
-	    		<button type="button" class="close" data-dismiss="alert" aria-label="Close">
-	    			<span aria-hidden="true">&times;</span>
-	    		</button>
-	    		No IP addresses were found. However, a <a href="{% url 'ipam:prefix_list' %}?q={{ request.GET.q }}">prefix search</a> returned the following results.
-	    	</div>
-            {% render_table prefix_table 'table.html' %}
-        {% else %}
-            {% include 'ipam/inc/ipaddress_table.html' with table=ip_table %}
-        {% endif %}
+        {% include 'ipam/inc/ipaddress_table.html' %}
 	</div>
 	<div class="col-md-3">
 		<div class="panel panel-default">
