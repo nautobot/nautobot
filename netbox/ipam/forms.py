@@ -335,8 +335,15 @@ def ipaddress_family_choices():
     return [('', 'All'), (4, 'IPv4'), (6, 'IPv6')]
 
 
+def ipaddress_vrf_choices():
+    vrf_choices = [('', 'All'), (0, 'Global')]
+    vrf_choices += [(v.pk, v.name) for v in VRF.objects.all()]
+    return vrf_choices
+
+
 class IPAddressFilterForm(forms.Form, BootstrapMixin):
     family = forms.ChoiceField(required=False, choices=ipaddress_family_choices, label='Address Family')
+    vrf = forms.ChoiceField(required=False, choices=ipaddress_vrf_choices, label='VRF')
 
 
 #
