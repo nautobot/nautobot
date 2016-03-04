@@ -1,6 +1,5 @@
 import re
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -10,14 +9,11 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
 
-from django_tables2 import RequestConfig
-from extras.models import ExportTemplate
-from utilities.error_handlers import handle_protectederror
-from utilities.forms import ConfirmationForm
-from utilities.paginator import EnhancedPaginator
-from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView
 from ipam.models import Prefix, IPAddress, VLAN
 from circuits.models import Circuit
+from utilities.error_handlers import handle_protectederror
+from utilities.forms import ConfirmationForm
+from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView
 
 from .filters import RackFilter, DeviceFilter, ConsoleConnectionFilter, PowerConnectionFilter, InterfaceConnectionFilter
 from .forms import SiteForm, SiteImportForm, RackForm, RackImportForm, RackBulkEditForm, RackBulkDeleteForm, \
@@ -64,25 +60,10 @@ def expand_pattern(string):
 # Sites
 #
 
-def site_list(request):
-
+class SiteListView(ObjectListView):
     queryset = Site.objects.all()
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='site', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_sites')
-        return response
-
-    site_table = SiteTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(site_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='site')
-
-    return render(request, 'dcim/site_list.html', {
-        'site_table': site_table,
-        'export_templates': export_templates,
-    })
+    table = SiteTable
+    template_name = 'dcim/site_list.html'
 
 
 def site(request, slug):
@@ -184,34 +165,14 @@ class SiteBulkImportView(PermissionRequiredMixin, BulkImportView):
 # Racks
 #
 
-def rack_list(request):
-
+class RackListView(ObjectListView):
     queryset = Rack.objects.select_related('site').annotate(device_count=Count('devices', distinct=True))
-    queryset = RackFilter(request.GET, queryset).qs
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='rack', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_racks')
-        return response
-
-    # Hot-wire direct to rack view if only one rack was returned
-    if queryset.count() == 1:
-        return redirect('dcim:rack', pk=queryset[0].pk)
-
-    if request.user.has_perm('dcim.change_rack') or request.user.has_perm('dcim.delete_rack'):
-        rack_table = RackBulkEditTable(queryset)
-    else:
-        rack_table = RackTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(rack_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='rack')
-
-    return render(request, 'dcim/rack_list.html', {
-        'rack_table': rack_table,
-        'export_templates': export_templates,
-        'filter_form': RackFilterForm(request.GET, label_suffix=''),
-    })
+    filter = RackFilter
+    filter_form = RackFilterForm
+    table = RackTable
+    edit_table = RackBulkEditTable
+    edit_table_permissions = ['dcim.change_rack', 'dcim.delete_rack']
+    template_name = 'dcim/rack_list.html'
 
 
 def rack(request, pk):
@@ -350,34 +311,15 @@ class RackBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 # Devices
 #
 
-def device_list(request):
-
-    queryset = Device.objects.select_related('device_type', 'device_type__manufacturer', 'device_role', 'rack', 'rack__site', 'primary_ip')
-    queryset = DeviceFilter(request.GET, queryset).qs
-
-    # Export
-    if 'export' in request.GET:
-        et = get_object_or_404(ExportTemplate, content_type__model='device', name=request.GET.get('export'))
-        response = et.to_response(context_dict={'queryset': queryset}, filename='netbox_devices')
-        return response
-
-    # Hot-wire direct to device view if only one device was returned
-    if queryset.count() == 1:
-        return redirect('dcim:device', pk=queryset[0].pk)
-
-    if request.user.has_perm('dcim.change_device') or request.user.has_perm('dcim.delete_device'):
-        device_table = DeviceBulkEditTable(queryset)
-    else:
-        device_table = DeviceTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(device_table)
-
-    export_templates = ExportTemplate.objects.filter(content_type__model='device')
-
-    return render(request, 'dcim/device_list.html', {
-        'device_table': device_table,
-        'export_templates': export_templates,
-        'filter_form': DeviceFilterForm(request.GET, label_suffix=''),
-    })
+class DeviceListView(ObjectListView):
+    queryset = Device.objects.select_related('device_type', 'device_type__manufacturer', 'device_role', 'rack',
+                                             'rack__site', 'primary_ip')
+    filter = DeviceFilter
+    filter_form = DeviceFilterForm
+    table = DeviceTable
+    edit_table = DeviceBulkEditTable
+    edit_table_permissions = ['dcim.change_device', 'dcim.delete_device']
+    template_name = 'dcim/device_list.html'
 
 
 def device(request, pk):

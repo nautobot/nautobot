@@ -2,11 +2,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.contenttypes.models import ContentType
-from django.template import TemplateSyntaxError
 from django.core.urlresolvers import reverse
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template import TemplateSyntaxError
 from django.utils.decorators import method_decorator
 from django.views.generic import View
 
@@ -22,7 +23,10 @@ class ObjectListView(View):
     filter = None
     filter_form = None
     table = None
+    edit_table = None
+    edit_table_permissions = []
     template_name = None
+    redirect_on_single_result = True
 
     def get(self, request, *args, **kwargs):
 
@@ -31,7 +35,7 @@ class ObjectListView(View):
         if self.filter:
             self.queryset = self.filter(request.GET, self.queryset).qs
 
-        # Export
+        # Check for export template rendering
         if request.GET.get('export'):
             et = get_object_or_404(ExportTemplate, content_type=object_ct, name=request.GET.get('export'))
             try:
@@ -41,7 +45,18 @@ class ObjectListView(View):
             except TemplateSyntaxError:
                 messages.error(request, "There was an error rendering the selected export template ({}).".format(et.name))
 
-        table = self.table(self.queryset)
+        # Attempt to redirect automatically if the query returns a single result
+        if self.redirect_on_single_result and self.queryset.count() == 1:
+            try:
+                return HttpResponseRedirect(self.queryset[0].get_absolute_url())
+            except AttributeError:
+                pass
+
+        # Construct the table based on the user's permissions
+        if any([request.user.has_perm(perm) for perm in self.edit_table_permissions]):
+            table = self.edit_table(self.queryset)
+        else:
+            table = self.table(self.queryset)
         RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
             .configure(table)
 

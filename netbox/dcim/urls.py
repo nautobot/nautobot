@@ -7,7 +7,7 @@ from . import views
 urlpatterns = [
 
     # Sites
-    url(r'^sites/$', views.site_list, name='site_list'),
+    url(r'^sites/$', views.SiteListView.as_view(), name='site_list'),
     url(r'^sites/add/$', views.site_add, name='site_add'),
     url(r'^sites/import/$', views.SiteBulkImportView.as_view(), name='site_import'),
     url(r'^sites/(?P<slug>[\w-]+)/$', views.site, name='site'),
@@ -15,7 +15,7 @@ urlpatterns = [
     url(r'^sites/(?P<slug>[\w-]+)/delete/$', views.site_delete, name='site_delete'),
 
     # Racks
-    url(r'^racks/$', views.rack_list, name='rack_list'),
+    url(r'^racks/$', views.RackListView.as_view(), name='rack_list'),
     url(r'^racks/add/$', views.rack_add, name='rack_add'),
     url(r'^racks/import/$', views.RackBulkImportView.as_view(), name='rack_import'),
     url(r'^racks/edit/$', views.RackBulkEditView.as_view(), name='rack_bulk_edit'),
@@ -25,7 +25,7 @@ urlpatterns = [
     url(r'^racks/(?P<pk>\d+)/delete/$', views.rack_delete, name='rack_delete'),
 
     # Devices
-    url(r'^devices/$', views.device_list, name='device_list'),
+    url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),
     url(r'^devices/add/$', views.device_add, name='device_add'),
     url(r'^devices/import/$', views.DeviceBulkImportView.as_view(), name='device_import'),
     url(r'^devices/edit/$', views.DeviceBulkEditView.as_view(), name='device_bulk_edit'),
