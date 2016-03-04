@@ -1,5 +1,4 @@
 from django.apps import apps
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -7,12 +6,11 @@ from django.core.urlresolvers import reverse
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.decorators import method_decorator
 
-from django_tables2 import RequestConfig
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
-from utilities.paginator import EnhancedPaginator
-from utilities.views import BulkEditView, BulkDeleteView
+from utilities.views import BulkEditView, BulkDeleteView, ObjectListView
 
 from .decorators import userkey_required
 from .filters import SecretFilter
@@ -25,23 +23,15 @@ from .tables import SecretTable, SecretBulkEditTable
 # Secrets
 #
 
-@login_required
-def secret_list(request):
-
+@method_decorator(login_required, name='dispatch')
+class SecretListView(ObjectListView):
     queryset = Secret.objects.select_related('role').prefetch_related('parent')
-    queryset = SecretFilter(request.GET, queryset).qs
-
-    if request.user.has_perm('secrets.change_secret') or request.user.has_perm('secrets.delete_secret'):
-        secret_table = SecretBulkEditTable(queryset)
-    else:
-        secret_table = SecretTable(queryset)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
-        .configure(secret_table)
-
-    return render(request, 'secrets/secret_list.html', {
-        'secret_table': secret_table,
-        'filter_form': SecretFilterForm(request.GET, label_suffix=''),
-    })
+    filter = SecretFilter
+    filter_form = SecretFilterForm
+    table = SecretTable
+    edit_table = SecretBulkEditTable
+    edit_table_permissions = ['secrets.change_secret', 'secrets.delete_secret']
+    template_name = 'secrets/secret_list.html'
 
 
 @login_required

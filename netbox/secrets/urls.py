@@ -3,7 +3,7 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^secrets/$', views.secret_list, name='secret_list'),
+    url(r'^secrets/$', views.SecretListView.as_view(), name='secret_list'),
     url(r'^secrets/import/$', views.secret_import, name='secret_import'),
     url(r'^secrets/edit/$', views.SecretBulkEditView.as_view(), name='secret_bulk_edit'),
     url(r'^secrets/delete/$', views.SecretBulkDeleteView.as_view(), name='secret_bulk_delete'),
