@@ -73,90 +73,13 @@
                 </tr>
             </table>
         </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                {% if perms.dcim.change_devicetype %}
-                    <a href="{% url 'dcim:devicetype_add_consoleport' pk=devicetype.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Console Ports</a>
-                {% endif %}
-                <strong>Console Ports</strong>
-            </div>
-            <table class="table table-hover panel-body">
-                {% for cp in devicetype.console_port_templates.all %}
-                    <tr>
-                        <td>{{ cp.name }}</td>
-                        <td></td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                {% if perms.dcim.change_devicetype %}
-                    <a href="{% url 'dcim:devicetype_add_powerport' pk=devicetype.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Power Ports</a>
-                {% endif %}
-                <strong>Power Ports</strong>
-            </div>
-            <table class="table table-hover panel-body">
-                {% for pp in devicetype.power_port_templates.all %}
-                    <tr>
-                        <td>{{ pp.name }}</td>
-                        <td></td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
+        {% include 'dcim/inc/devicetype_component_table.html' with table=consoleport_table title='Console Ports' add_url='dcim:devicetype_add_consoleport' delete_url='dcim:devicetype_delete_consoleport' %}
+        {% include 'dcim/inc/devicetype_component_table.html' with table=powerport_table title='Power Ports' add_url='dcim:devicetype_add_powerport' delete_url='dcim:devicetype_delete_powerport' %}
     </div>
 	<div class="col-md-6">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                {% if perms.dcim.change_devicetype %}
-                    <a href="{% url 'dcim:devicetype_add_interface' pk=devicetype.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Interfaces</a>
-                {% endif %}
-                <strong>Interfaces</strong>
-            </div>
-            <table class="table table-hover panel-body">
-                {% for iface in devicetype.interface_templates.all %}
-                    <tr>
-                        <td>{{ iface.name }}</td>
-                        <td>{{ iface.get_form_factor_display }}</td>
-                        <td>{{ iface.mgmt_only|yesno|capfirst }}</td>
-                        <td></td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                {% if perms.dcim.change_devicetype %}
-                    <a href="{% url 'dcim:devicetype_add_consoleserverport' pk=devicetype.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Console Server Ports</a>
-                {% endif %}
-                <strong>Console Server Ports</strong>
-            </div>
-            <table class="table table-hover panel-body">
-                {% for csp in devicetype.cs_port_templates.all %}
-                    <tr>
-                        <td>{{ csp.name }}</td>
-                        <td></td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                {% if perms.dcim.change_devicetype %}
-                    <a href="{% url 'dcim:devicetype_add_poweroutlet' pk=devicetype.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Power Outlet</a>
-                {% endif %}
-                <strong>Power Outlets</strong>
-            </div>
-            <table class="table table-hover panel-body">
-                {% for po in devicetype.power_outlet_templates.all %}
-                    <tr>
-                        <td>{{ po.name }}</td>
-                        <td></td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
+        {% include 'dcim/inc/devicetype_component_table.html' with table=interface_table title='Interfaces' add_url='dcim:devicetype_add_interface' delete_url='dcim:devicetype_delete_interface' %}
+        {% include 'dcim/inc/devicetype_component_table.html' with table=consoleserverport_table title='Console Server Ports' add_url='dcim:devicetype_add_consoleserverport' delete_url='dcim:devicetype_delete_consoleserverport' %}
+        {% include 'dcim/inc/devicetype_component_table.html' with table=poweroutlet_table title='Power Outlets' add_url='dcim:devicetype_add_poweroutlet' delete_url='dcim:devicetype_delete_poweroutlet' %}
     </div>
 </div>
 {% endblock %}

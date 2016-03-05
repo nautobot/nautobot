@@ -6,6 +6,7 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db.models import Count, ProtectedError
+from django.forms import ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
@@ -33,7 +34,10 @@ from .models import Site, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPo
     PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, \
     InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
 from .tables import SiteTable, RackTable, RackBulkEditTable, DeviceTypeTable, DeviceTypeBulkEditTable, DeviceTable, \
-    DeviceBulkEditTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable
+    DeviceBulkEditTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable, \
+    ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable, PowerOutletTemplateTable, \
+    InterfaceTemplateTable, ConsolePortTemplateBulkDeleteTable, ConsoleServerPortTemplateBulkDeleteTable, \
+    PowerPortTemplateBulkDeleteTable, PowerOutletTemplateBulkDeleteTable, InterfaceTemplateBulkDeleteTable
 
 
 EXPANSION_PATTERN = '\[(\d+-\d+)\]'
@@ -331,8 +335,27 @@ def devicetype(request, pk):
 
     devicetype = get_object_or_404(DeviceType, pk=pk)
 
+    # Component tables
+    if request.user.has_perm('dcim.change_devicetype'):
+        consoleport_table = ConsolePortTemplateBulkDeleteTable(ConsolePortTemplate.objects.filter(device_type=devicetype))
+        consoleserverport_table = ConsoleServerPortTemplateBulkDeleteTable(ConsoleServerPortTemplate.objects.filter(device_type=devicetype))
+        powerport_table = PowerPortTemplateBulkDeleteTable(PowerPortTemplate.objects.filter(device_type=devicetype))
+        poweroutlet_table = PowerOutletTemplateBulkDeleteTable(PowerOutletTemplate.objects.filter(device_type=devicetype))
+        interface_table = InterfaceTemplateBulkDeleteTable(InterfaceTemplate.objects.filter(device_type=devicetype))
+    else:
+        consoleport_table = ConsolePortTemplateTable(ConsolePortTemplate.objects.filter(device_type=devicetype))
+        consoleserverport_table = ConsoleServerPortTemplateTable(ConsoleServerPortTemplate.objects.filter(device_type=devicetype))
+        powerport_table = PowerPortTemplateTable(PowerPortTemplate.objects.filter(device_type=devicetype))
+        poweroutlet_table = PowerOutletTemplateTable(PowerOutletTemplate.objects.filter(device_type=devicetype))
+        interface_table = InterfaceTemplateTable(InterfaceTemplate.objects.filter(device_type=devicetype))
+
     return render(request, 'dcim/devicetype.html', {
         'devicetype': devicetype,
+        'consoleport_table': consoleport_table,
+        'consoleserverport_table': consoleserverport_table,
+        'powerport_table': powerport_table,
+        'poweroutlet_table': poweroutlet_table,
+        'interface_table': interface_table,
     })
 
 
@@ -432,6 +455,10 @@ class DeviceTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     redirect_url = 'dcim:devicetype_list'
 
 
+#
+# Device type components
+#
+
 class ComponentTemplateCreateView(View):
     model = None
     form = None
@@ -504,6 +531,45 @@ class PowerOutletTemplateAddView(ComponentTemplateCreateView):
 class InterfaceTemplateAddView(ComponentTemplateCreateView):
     model = InterfaceTemplate
     form = InterfaceTemplateForm
+
+
+def component_template_delete(request, pk, model):
+
+    devicetype = get_object_or_404(DeviceType, pk=pk)
+
+    class ComponentTemplateBulkDeleteForm(ConfirmationForm):
+        pk = ModelMultipleChoiceField(queryset=model.objects.all(), widget=MultipleHiddenInput)
+
+    if '_confirm' in request.POST:
+        form = ComponentTemplateBulkDeleteForm(request.POST)
+        if form.is_valid():
+
+            # Delete component templates
+            objects_to_delete = model.objects.filter(pk__in=[v.id for v in form.cleaned_data['pk']])
+            try:
+                deleted_count = objects_to_delete.count()
+                objects_to_delete.delete()
+            except ProtectedError, e:
+                handle_protectederror(list(objects_to_delete), request, e)
+                return redirect('dcim:devicetype', {'pk': devicetype.pk})
+
+            messages.success(request, "Deleted {} {}".format(deleted_count, model._meta.verbose_name_plural))
+            return redirect('dcim:devicetype', pk=devicetype.pk)
+
+    else:
+        form = ComponentTemplateBulkDeleteForm(initial={'pk': request.POST.getlist('pk')})
+
+    selected_objects = model.objects.filter(pk__in=form.initial.get('pk'))
+    if not selected_objects:
+        messages.warning(request, "No {} were selected for deletion.".format(model._meta.verbose_name_plural))
+        return redirect('dcim:devicetype', pk=devicetype.pk)
+
+    return render(request, 'dcim/component_template_delete.html', {
+        'devicetype': devicetype,
+        'form': form,
+        'selected_objects': selected_objects,
+        'cancel_url': reverse('dcim:devicetype', kwargs={'pk': devicetype.pk}),
+    })
 
 
 #

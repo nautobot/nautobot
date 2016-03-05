@@ -1,7 +1,8 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Site, Rack, DeviceType, Device, ConsolePort, PowerPort
+from .models import Site, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, PowerPortTemplate, \
+    PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, PowerPort
 
 
 PREFIXES_PER_VLAN = """
@@ -96,6 +97,112 @@ class DeviceTypeBulkEditTable(DeviceTypeTable):
     class Meta(DeviceTypeTable.Meta):
         model = None  # django_tables2 bugfix
         fields = ('pk', 'model', 'manufacturer', 'u_height')
+
+
+#
+# Device type components
+#
+
+class ConsolePortTemplateTable(tables.Table):
+
+    class Meta:
+        model = ConsolePortTemplate
+        fields = ('name',)
+        empty_text = "None"
+        show_header = False
+        attrs = {
+            'class': 'table table-hover panel-body',
+        }
+
+
+class ConsolePortTemplateBulkDeleteTable(ConsolePortTemplateTable):
+    pk = tables.CheckBoxColumn()
+
+    class Meta(ConsolePortTemplateTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'name')
+
+
+class ConsoleServerPortTemplateTable(tables.Table):
+
+    class Meta:
+        model = ConsoleServerPortTemplate
+        fields = ('name',)
+        empty_text = "None"
+        show_header = False
+        attrs = {
+            'class': 'table table-hover panel-body',
+        }
+
+
+class ConsoleServerPortTemplateBulkDeleteTable(ConsoleServerPortTemplateTable):
+    pk = tables.CheckBoxColumn()
+
+    class Meta(ConsoleServerPortTemplateTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'name')
+
+
+class PowerPortTemplateTable(tables.Table):
+
+    class Meta:
+        model = PowerPortTemplate
+        fields = ('name',)
+        empty_text = "None"
+        show_header = False
+        attrs = {
+            'class': 'table table-hover panel-body',
+        }
+
+
+class PowerPortTemplateBulkDeleteTable(PowerPortTemplateTable):
+    pk = tables.CheckBoxColumn()
+
+    class Meta(PowerPortTemplateTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'name')
+
+
+class PowerOutletTemplateTable(tables.Table):
+
+    class Meta:
+        model = PowerOutletTemplate
+        fields = ('name',)
+        empty_text = "None"
+        show_header = False
+        attrs = {
+            'class': 'table table-hover panel-body',
+        }
+
+
+class PowerOutletTemplateBulkDeleteTable(PowerOutletTemplateTable):
+    pk = tables.CheckBoxColumn()
+
+    class Meta(PowerOutletTemplateTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'name')
+
+
+class InterfaceTemplateTable(tables.Table):
+
+    class Meta:
+        model = InterfaceTemplate
+        fields = ('name',)
+        empty_text = "None"
+        show_header = False
+        attrs = {
+            'class': 'table table-hover panel-body',
+        }
+
+
+class InterfaceTemplateBulkDeleteTable(InterfaceTemplateTable):
+    pk = tables.CheckBoxColumn()
+
+    class Meta(InterfaceTemplateTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'name')
+
+
 
 
 #

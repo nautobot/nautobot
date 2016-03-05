@@ -3,7 +3,8 @@ from django.conf.urls import url
 from secrets.views import secret_add
 
 from . import views
-from .forms import ConsolePortTemplateForm
+from .models import ConsolePortTemplate, ConsoleServerPortTemplate, PowerPortTemplate, PowerOutletTemplate, \
+    InterfaceTemplate
 
 
 urlpatterns = [
@@ -34,16 +35,28 @@ urlpatterns = [
     url(r'^device-types/(?P<pk>\d+)/$', views.devicetype, name='devicetype'),
     url(r'^device-types/(?P<pk>\d+)/edit/$', views.devicetype_edit, name='devicetype_edit'),
     url(r'^device-types/(?P<pk>\d+)/delete/$', views.devicetype_delete, name='devicetype_delete'),
+
+    # Component templates
     url(r'^device-types/(?P<pk>\d+)/console-ports/add/$', views.ConsolePortTemplateAddView.as_view(),
         name='devicetype_add_consoleport'),
-    url(r'^device-types/(?P<pk>\d+)/console-server-ports/add/$', views.ConsolePortTemplateAddView.as_view(),
+    url(r'^device-types/(?P<pk>\d+)/console-ports/delete/$', views.component_template_delete,
+        {'model': ConsolePortTemplate}, name='devicetype_delete_consoleport'),
+    url(r'^device-types/(?P<pk>\d+)/console-server-ports/add/$', views.ConsoleServerPortTemplateAddView.as_view(),
         name='devicetype_add_consoleserverport'),
+    url(r'^device-types/(?P<pk>\d+)/console-server-ports/delete/$', views.component_template_delete,
+        {'model': ConsoleServerPortTemplate}, name='devicetype_delete_consoleserverport'),
     url(r'^device-types/(?P<pk>\d+)/power-ports/add/$', views.PowerPortTemplateAddView.as_view(),
         name='devicetype_add_powerport'),
+    url(r'^device-types/(?P<pk>\d+)/power-ports/delete/$', views.component_template_delete,
+        {'model': PowerPortTemplate}, name='devicetype_delete_powerport'),
     url(r'^device-types/(?P<pk>\d+)/power-outlets/add/$', views.PowerOutletTemplateAddView.as_view(),
         name='devicetype_add_poweroutlet'),
+    url(r'^device-types/(?P<pk>\d+)/power-outlets/delete/$', views.component_template_delete,
+        {'model': PowerOutletTemplate}, name='devicetype_delete_poweroutlet'),
     url(r'^device-types/(?P<pk>\d+)/interfaces/add/$', views.InterfaceTemplateAddView.as_view(),
         name='devicetype_add_interface'),
+    url(r'^device-types/(?P<pk>\d+)/interfaces/delete/$', views.component_template_delete,
+        {'model': InterfaceTemplate}, name='devicetype_delete_interface'),
 
     # Devices
     url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),

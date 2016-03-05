@@ -1,0 +1,29 @@
+{% load render_table from django_tables2 %}
+{% if perms.dcim.change_devicetype %}
+    <form method="post" action="{% url delete_url pk=devicetype.pk %}">
+        {% csrf_token %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <a href="{% url add_url pk=devicetype.pk %}" class="btn btn-primary btn-xs pull-right"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add {{ title }}</a>
+                <strong>{{ title }}</strong>
+            </div>
+            {% render_table table 'table.html' %}
+            {% if table.rows %}
+                <div class="panel-footer">
+                    <button type="submit" class="btn btn-xs btn-danger">
+                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Delete Selected
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </form>
+{% else %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>{{ title }}</strong>
+        </div>
+        <table class="table table-hover panel-body">
+            {% render_table table table_template|default:'table.html' %}
+        </table>
+    </div>
+{% endif %}
