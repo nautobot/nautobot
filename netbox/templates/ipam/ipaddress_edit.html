@@ -45,18 +45,6 @@
                     {% render_field form.description %}
                 </div>
             </div>
-		    <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
-                    {% if ipaddress %}
-                        <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                        <a href="{% url 'ipam:ipaddress' pk=ipaddress.pk %}" class="btn btn-default">Cancel</a>
-                    {% else %}
-                        <button type="submit" name="_create" class="btn btn-primary">Create</button>
-                        <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
-                        <a href="{% url 'ipam:ipaddress_list' %}" class="btn btn-default">Cancel</a>
-                    {% endif %}
-                </div>
-		    </div>
         </div>
         <div class="col-md-6">
             <div class="panel panel-default">
@@ -78,6 +66,18 @@
                     {% render_field form.nat_inside %}
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 text-right">
+            {% if ipaddress %}
+                <button type="submit" name="_update" class="btn btn-primary">Update</button>
+                <a href="{% url 'ipam:ipaddress' pk=ipaddress.pk %}" class="btn btn-default">Cancel</a>
+            {% else %}
+                <button type="submit" name="_create" class="btn btn-primary">Create</button>
+                <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
+                <a href="{% url 'ipam:ipaddress_list' %}" class="btn btn-default">Cancel</a>
+            {% endif %}
         </div>
     </div>
 </form>
