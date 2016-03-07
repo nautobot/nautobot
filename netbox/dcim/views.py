@@ -601,7 +601,7 @@ def device(request, pk):
     secrets = device.secrets.all()
 
     # Find all IP addresses assigned to this device
-    ip_addresses = IPAddress.objects.filter(interface__device=device).select_related('interface').order_by('interface')
+    ip_addresses = IPAddress.objects.filter(interface__device=device).select_related('interface').order_by('address')
 
     # Find any related devices for convenient linking in the UI
     related_devices = []
