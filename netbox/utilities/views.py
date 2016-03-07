@@ -52,6 +52,9 @@ class ObjectListView(View):
             except AttributeError:
                 pass
 
+        # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
+        self.queryset = self.alter_queryset(request)
+
         # Construct the table based on the user's permissions
         if any([request.user.has_perm(perm) for perm in self.edit_table_permissions]):
             table = self.edit_table(self.queryset)
@@ -67,6 +70,9 @@ class ObjectListView(View):
             'filter_form': self.filter_form(request.GET, label_suffix='') if self.filter_form else None,
             'export_templates': export_templates,
         })
+
+    def alter_queryset(self, request):
+        return self.queryset
 
 
 class BulkImportView(View):

@@ -328,6 +328,11 @@ class PrefixListView(ObjectListView):
     edit_table_permissions = ['ipam.change_prefix', 'ipam.delete_prefix']
     template_name = 'ipam/prefix_list.html'
 
+    def alter_queryset(self, request):
+        # Show only top-level prefixes by default
+        limit = None if request.GET.get('expand') else 0
+        return self.queryset.annotate_depth(limit=limit)
+
 
 def prefix(request, pk):
 
