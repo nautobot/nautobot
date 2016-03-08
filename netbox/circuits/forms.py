@@ -72,7 +72,7 @@ class CircuitForm(forms.ModelForm, BootstrapMixin):
     livesearch = forms.CharField(required=False, label='Device', widget=Livesearch(
         query_key='q', query_url='dcim-api:device_list', field_to_update='device')
     )
-    interface = forms.ModelChoiceField(queryset=Interface.objects.all(), label='Interface',
+    interface = forms.ModelChoiceField(queryset=Interface.objects.all(), required=False, label='Interface',
                                        widget=APISelect(api_url='/api/dcim/devices/{{device}}/interfaces/?type=physical',
                                                         disabled_indicator='is_connected'))
     comments = CommentField()
