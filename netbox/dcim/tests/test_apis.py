@@ -322,14 +322,6 @@ class DeviceTest(APITestCase):
 
     nested_fields = ['id', 'name']
 
-    # Holds primary IP nested fields until api tests
-    # can be made and fields imported.
-    primary_ip = [
-        'id',
-        'family',
-        'address'
-    ]
-
     def test_get_list(self, endpoint='/api/dcim/devices/'):
         response = self.client.get(endpoint)
         content = json.loads(response.content)
