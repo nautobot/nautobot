@@ -322,6 +322,14 @@ class DeviceTest(APITestCase):
 
     nested_fields = ['id', 'name']
 
+    # Holds primary IP nested fields until api tests
+    # can be made and fields imported.
+    primary_ip = [
+        'id',
+        'family',
+        'address'
+    ]
+
     def test_get_list(self, endpoint='/api/dcim/devices/'):
         response = self.client.get(endpoint)
         content = json.loads(response.content)
@@ -348,6 +356,48 @@ class DeviceTest(APITestCase):
                 sorted(device.get('rack')),
                 sorted(RackTest.nested_fields),
             )
+
+    def test_get_list_flat(self, endpoint='/api/dcim/devices/?format=json_flat'):
+
+        flat_fields = [
+            'comments',
+            'device_role_id',
+            'device_role_name',
+            'device_role_slug',
+            'device_type_id',
+            'device_type_manufacturer_id',
+            'device_type_manufacturer_name',
+            'device_type_manufacturer_slug',
+            'device_type_model',
+            'device_type_slug',
+            'display_name',
+            'face',
+            'id',
+            'name',
+            'platform_id',
+            'platform_name',
+            'platform_slug',
+            'position',
+            'primary_ip_address',
+            'primary_ip_family',
+            'primary_ip_id',
+            'rack_display_name',
+            'rack_facility_id',
+            'rack_id',
+            'rack_name',
+            'ro_snmp',
+            'serial',
+            'status',
+        ]
+
+        response = self.client.get(endpoint)
+        content = json.loads(response.content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        device = content[0]
+        self.assertEqual(
+            sorted(device.keys()),
+            sorted(flat_fields),
+        )
 
     def test_get_detail(self, endpoint='/api/dcim/devices/1/'):
         response = self.client.get(endpoint)

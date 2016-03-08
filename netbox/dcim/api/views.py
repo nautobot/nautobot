@@ -16,7 +16,7 @@ from .serializers import SiteSerializer, RackGroupSerializer, RackSerializer, Ra
     ManufacturerSerializer, DeviceTypeSerializer, DeviceRoleSerializer, PlatformSerializer, DeviceSerializer, \
     DeviceNestedSerializer, ConsolePortSerializer, ConsoleServerPortSerializer, PowerPortSerializer, \
     PowerOutletSerializer, InterfaceSerializer, InterfaceDetailSerializer, InterfaceConnectionSerializer
-from extras.api.renderers import BINDZoneRenderer
+from extras.api.renderers import BINDZoneRenderer, FlatJSONRenderer
 from utilities.api import ServiceUnavailable
 
 
@@ -198,7 +198,7 @@ class DeviceListView(generics.ListAPIView):
         .prefetch_related('primary_ip__nat_outside')
     serializer_class = DeviceSerializer
     filter_class = DeviceFilter
-    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [BINDZoneRenderer]
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [BINDZoneRenderer, FlatJSONRenderer]
 
 
 class DeviceDetailView(generics.RetrieveAPIView):
