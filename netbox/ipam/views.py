@@ -329,8 +329,8 @@ class PrefixListView(ObjectListView):
     template_name = 'ipam/prefix_list.html'
 
     def alter_queryset(self, request):
-        # Show only top-level prefixes by default
-        limit = None if request.GET.get('expand') else 0
+        # Show only top-level prefixes by default (unless searching)
+        limit = None if request.GET.get('expand') or request.GET.get('q') else 0
         return self.queryset.annotate_depth(limit=limit)
 
 
