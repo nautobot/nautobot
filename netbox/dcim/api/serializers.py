@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from ipam.models import IPAddress
-from dcim.models import Site, Rack, RackGroup, Manufacturer, DeviceType, DeviceRole, Platform, Device, ConsolePort,\
+from dcim.models import Site, Rack, RackGroup, Manufacturer, ConsolePortTemplate, ConsoleServerPortTemplate, \
+    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceType, DeviceRole, Platform, Device, ConsolePort, \
     ConsoleServerPort, PowerPort, PowerOutlet, Interface, InterfaceConnection, RACK_FACE_FRONT, RACK_FACE_REAR
 
 
@@ -107,12 +108,54 @@ class ManufacturerNestedSerializer(ManufacturerSerializer):
 # Device types
 #
 
+class ConsolePortTemplateNestedSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ConsolePortTemplate
+        fields = ['id', 'name']
+
+
+class ConsoleServerPortTemplateNestedSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ConsoleServerPortTemplate
+        fields = ['id', 'name']
+
+
+class PowerPortTemplateNestedSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PowerPortTemplate
+        fields = ['id', 'name']
+
+
+class PowerOutletTemplateNestedSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PowerOutletTemplate
+        fields = ['id', 'name']
+
+
+class InterfaceTemplateNestedSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = InterfaceTemplate
+        fields = ['id', 'name', 'form_factor', 'mgmt_only']
+
+
 class DeviceTypeSerializer(serializers.ModelSerializer):
     manufacturer = ManufacturerNestedSerializer()
+    console_port_templates = ConsolePortTemplateNestedSerializer(many=True, read_only=True)
+    cs_port_templates = ConsoleServerPortTemplateNestedSerializer(many=True, read_only=True)
+    power_port_templates = PowerPortTemplateNestedSerializer(many=True, read_only=True)
+    power_outlet_templates = PowerPortTemplateNestedSerializer(many=True, read_only=True)
+    interface_templates = InterfaceTemplateNestedSerializer(many=True, read_only=True)
 
     class Meta:
         model = DeviceType
-        fields = ['id', 'manufacturer', 'model', 'slug', 'u_height', 'is_console_server', 'is_pdu', 'is_network_device']
+        fields = ['id', 'manufacturer', 'model', 'slug', 'u_height', 'is_console_server', 'is_pdu', 'is_network_device',
+                  'console_port_templates', 'cs_port_templates', 'power_port_templates', 'power_outlet_templates',
+                  'interface_templates']
 
 
 class DeviceTypeNestedSerializer(DeviceTypeSerializer):
