@@ -138,7 +138,7 @@ class DeviceTypeListView(generics.ListAPIView):
     filter_class = DeviceTypeFilter
 
 
-class DeviceTypeDetailView(generics.ListAPIView):
+class DeviceTypeDetailView(generics.RetrieveAPIView):
     """
     Retrieve a single device type
     """
