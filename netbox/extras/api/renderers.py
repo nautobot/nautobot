@@ -1,5 +1,5 @@
+import json
 from rest_framework import renderers
-
 
 # IP address family designations
 AF = {
@@ -29,3 +29,23 @@ class BINDZoneRenderer(renderers.BaseRenderer):
                 except KeyError:
                     pass
         return '\n'.join(records)
+
+
+class FlatJSONRenderer(renderers.BaseRenderer):
+    """
+    Flattens a nested JSON reponse.
+    """
+    format = 'json_flat'
+    media_type = 'application/json'
+
+    def render(self, data, media_type=None, renderer_context=None):
+
+        def flatten(entry):
+            for key, val in entry.iteritems():
+                if isinstance(val, dict):
+                    for child_key, child_val in flatten(val):
+                        yield "{}_{}".format(key, child_key), child_val
+                else:
+                    yield key, val
+
+        return json.dumps([dict(flatten(i)) for i in data])
