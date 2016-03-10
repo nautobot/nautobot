@@ -207,7 +207,12 @@ class DeviceTypeTest(APITestCase):
         'u_height',
         'is_console_server',
         'is_pdu',
-        'is_network_device'
+        'is_network_device',
+        'console_port_templates',
+        'cs_port_templates',
+        'interface_templates',
+        'power_outlet_templates',
+        'power_port_templates',
     ]
 
     nested_fields = [
