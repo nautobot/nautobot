@@ -664,8 +664,8 @@ class PowerConnectionCSVForm(forms.Form):
                                                        name=self.cleaned_data['power_outlet'])
                 if PowerPort.objects.filter(power_outlet=power_outlet):
                     raise forms.ValidationError("Power outlet is already occupied (by {} {})"
-                                                .format(power_outlet.connected_console.device,
-                                                        power_outlet.connected_console))
+                                                .format(power_outlet.connected_port.device,
+                                                        power_outlet.connected_port))
             except PowerOutlet.DoesNotExist:
                 raise forms.ValidationError("Invalid PDU port ({} {})"
                                             .format(self.cleaned_data['pdu'], self.cleaned_data['power_outlet']))
@@ -698,8 +698,8 @@ class PowerConnectionImportForm(BulkImportForm, BootstrapMixin):
             if form.is_valid():
                 power_port = PowerPort.objects.get(device=form.cleaned_data['device'],
                                                    name=form.cleaned_data['power_port'])
-                power_port.cs_port = PowerOutlet.objects.get(device=form.cleaned_data['pdu'],
-                                                             name=form.cleaned_data['power_outlet'])
+                power_port.power_outlet = PowerOutlet.objects.get(device=form.cleaned_data['pdu'],
+                                                                  name=form.cleaned_data['power_outlet'])
                 if form.cleaned_data['status'] == 'planned':
                     power_port.connection_status = CONNECTION_STATUS_PLANNED
                 else:
