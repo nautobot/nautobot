@@ -668,6 +668,11 @@ class InterfaceConnection(models.Model):
     interface_b = models.OneToOneField('Interface', related_name='connected_as_b', on_delete=models.CASCADE)
     connection_status = models.BooleanField(choices=CONNECTION_STATUS_CHOICES, default=CONNECTION_STATUS_CONNECTED, verbose_name='Status')
 
+    def clean(self):
+
+        if self.interface_a == self.interface_b:
+            raise ValidationError("Cannot connect an interface to itself")
+
 
 class Module(models.Model):
     """
