@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from secrets.filters import SecretFilter
 from secrets.models import Secret, SecretRole, UserKey
 from .serializers import SecretRoleSerializer, SecretSerializer
 
@@ -35,7 +36,7 @@ class SecretListView(generics.ListAPIView):
     """
     queryset = Secret.objects.select_related('role')
     serializer_class = SecretSerializer
-    #filter_class = SecretFilter
+    filter_class = SecretFilter
     permission_classes = [IsAuthenticated]
 
 
@@ -72,7 +73,7 @@ class SecretDecryptView(APIView):
         # Attempt to decrypt the Secret.
         master_key = uk.get_master_key(private_key)
         if master_key is None:
-            return HttpResponseForbidden(reason="Invalid secret key.")
+            raise ValidationError("Invalid secret key.")
         secret.decrypt(master_key)
 
         return Response({
