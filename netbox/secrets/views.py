@@ -180,11 +180,11 @@ def secret_import(request):
                             secret.save()
                             new_secrets.append(secret)
 
-                    secret_table = SecretTable(new_secrets)
+                    table = SecretTable(new_secrets)
                     messages.success(request, "Imported {} new secrets".format(len(new_secrets)))
 
                     return render(request, 'import_success.html', {
-                        'secret_table': secret_table,
+                        'table': table,
                     })
 
                 except IntegrityError as e:
