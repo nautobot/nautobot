@@ -14,7 +14,7 @@ Each rack is assigned a name and (optionally) a separate facility ID. This is he
 
 Racks can be arranged into groups. As with sites, how you choose to designate rack groups will depend on the nature of your organization. For example, if each site is a campus, each group might be a building. If each site is a building, each rack group might be a floor or room.
 
-Each group is assigned to a parent sire for easy navigation. Hierarchical recursion of rack groups is not currently supported.
+Each group is assigned to a parent site for easy navigation. Hierarchical recursion of rack groups is not currently supported.
 
 # Devices
 
