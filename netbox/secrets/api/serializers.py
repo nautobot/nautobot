@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from dcim.api.serializers import DeviceNestedSerializer
 from secrets.models import Secret, SecretRole
 
 
@@ -24,13 +25,13 @@ class SecretRoleNestedSerializer(SecretRoleSerializer):
 # Secrets
 #
 
-# TODO: Serialize parent info
 class SecretSerializer(serializers.ModelSerializer):
+    device = DeviceNestedSerializer()
     role = SecretRoleNestedSerializer()
 
     class Meta:
         model = Secret
-        fields = ['id', 'role', 'name', 'hash', 'created', 'last_modified']
+        fields = ['id', 'device', 'role', 'name', 'hash', 'created', 'last_modified']
 
 
 class SecretNestedSerializer(SecretSerializer):

@@ -5,12 +5,12 @@ from Crypto.PublicKey import RSA
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils.encoding import force_bytes
+
+from dcim.models import Device
 
 
 def generate_master_key():
@@ -176,9 +176,7 @@ class Secret(models.Model):
     A secret string of up to 255 bytes in length, stored as both an AES256-encrypted ciphertext and an irreversible
     salted SHA256 hash (for plaintext validation).
     """
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    parent = GenericForeignKey('content_type', 'object_id')
+    device = models.ForeignKey(Device, related_name='secrets')
     role = models.ForeignKey('SecretRole', related_name='secrets', on_delete=models.PROTECT)
     name = models.CharField(max_length=100, blank=True)
     ciphertext = models.BinaryField(editable=False, max_length=65568)  # 16B IV + 2B pad length + {62-65550}B padded
@@ -189,7 +187,7 @@ class Secret(models.Model):
     plaintext = None
 
     class Meta:
-        ordering = ['role', 'name']
+        ordering = ['device', 'role', 'name']
         permissions = (
             ('view_secret', "Can view secrets"),
         )
@@ -199,8 +197,8 @@ class Secret(models.Model):
         super(Secret, self).__init__(*args, **kwargs)
 
     def __unicode__(self):
-        if self.role and self.parent:
-            return "{} for {}".format(self.role, self.parent)
+        if self.role and self.device:
+            return "{} for {}".format(self.role, self.device)
         return "Secret"
 
     def get_absolute_url(self):

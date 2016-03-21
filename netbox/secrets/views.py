@@ -1,4 +1,3 @@
-from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -8,6 +7,7 @@ from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 
+from dcim.models import Device
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
 from utilities.views import BulkEditView, BulkDeleteView, ObjectListView
@@ -25,7 +25,7 @@ from .tables import SecretTable, SecretBulkEditTable
 
 @method_decorator(login_required, name='dispatch')
 class SecretListView(ObjectListView):
-    queryset = Secret.objects.select_related('role').prefetch_related('parent')
+    queryset = Secret.objects.select_related('role').prefetch_related('device')
     filter = SecretFilter
     filter_form = SecretFilterForm
     table = SecretTable
@@ -46,13 +46,12 @@ def secret(request, pk):
 
 @permission_required('secrets.add_secret')
 @userkey_required()
-def secret_add(request, parent_model, parent_pk):
+def secret_add(request, pk):
 
-    # Retrieve parent object
-    parent_cls = apps.get_model(parent_model)
-    parent = get_object_or_404(parent_cls, pk=parent_pk)
+    # Retrieve device
+    device = get_object_or_404(Device, pk=pk)
 
-    secret = Secret(parent=parent)
+    secret = Secret(device=device)
     uk = UserKey.objects.get(user=request.user)
 
     if request.method == 'POST':
@@ -83,7 +82,7 @@ def secret_add(request, parent_model, parent_pk):
     return render(request, 'secrets/secret_edit.html', {
         'secret': secret,
         'form': form,
-        'cancel_url': parent.get_absolute_url(),
+        'cancel_url': device.get_absolute_url(),
     })
 
 

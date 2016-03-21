@@ -132,7 +132,7 @@
                         {% csrf_token %}
                     </form>
                     <div class="panel-footer text-right">
-                        <a href="{% url 'dcim:device_addsecret' parent_pk=device.pk %}" class="btn btn-xs btn-primary">
+                        <a href="{% url 'dcim:device_addsecret' pk=device.pk %}" class="btn btn-xs btn-primary">
                             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                             Add secret
                         </a>

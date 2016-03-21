@@ -66,6 +66,6 @@ class SecretRoleAdmin(admin.ModelAdmin):
 
 @admin.register(Secret)
 class SecretAdmin(admin.ModelAdmin):
-    list_display = ['parent', 'role', 'name', 'created', 'last_modified']
-    fields = ['parent', 'role', 'name', 'hash', 'created', 'last_modified']
-    readonly_fields = ['parent', 'hash', 'created', 'last_modified']
+    list_display = ['device', 'role', 'name', 'created', 'last_modified']
+    fields = ['device', 'role', 'name', 'hash', 'created', 'last_modified']
+    readonly_fields = ['device', 'hash', 'created', 'last_modified']

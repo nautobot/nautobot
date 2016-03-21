@@ -2,10 +2,10 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
 from django import forms
-from django.apps import apps
 from django.db.models import Count
 
-from utilities.forms import BootstrapMixin, ConfirmationForm, CSVDataField
+from dcim.models import Device
+from utilities.forms import BootstrapMixin, BulkImportForm, ConfirmationForm, CSVDataField
 from .models import Secret, SecretRole, UserKey
 
 
@@ -53,50 +53,25 @@ class SecretForm(forms.ModelForm, BootstrapMixin):
 
 
 class SecretFromCSVForm(forms.ModelForm):
-    parent_name = forms.CharField()
+    device = forms.ModelChoiceField(queryset=Device.objects.all(), required=False, to_field_name='name',
+                                    error_messages={'invalid_choice': 'Device not found.'})
     role = forms.ModelChoiceField(queryset=SecretRole.objects.all(), to_field_name='name',
                                   error_messages={'invalid_choice': 'Invalid secret role.'})
     plaintext = forms.CharField()
 
     class Meta:
         model = Secret
-        fields = ['parent_name', 'role', 'name', 'plaintext']
+        fields = ['device', 'role', 'name', 'plaintext']
+
+    def save(self, *args, **kwargs):
+        s = super(SecretFromCSVForm, self).save(*args, **kwargs)
+        s.plaintext = str(self.cleaned_data['plaintext'])
+        return s
 
 
-class SecretImportForm(forms.Form, BootstrapMixin):
+class SecretImportForm(BulkImportForm, BootstrapMixin):
     private_key = forms.CharField(widget=forms.HiddenInput())
-    parent_type = forms.ChoiceField(label='Parent Type', choices=(
-        ('dcim.Device', 'Device'),
-    ))
     csv = CSVDataField(csv_form=SecretFromCSVForm)
-
-    def clean(self):
-        parent_type = self.cleaned_data.get('parent_type')
-        records = self.cleaned_data.get('csv')
-        if not records or not parent_type:
-            return
-
-        secrets = []
-        parent_cls = apps.get_model(parent_type)
-
-        for i, record in enumerate(records, start=1):
-            secret_form = SecretFromCSVForm(data=record)
-            if secret_form.is_valid():
-                s = secret_form.save(commit=False)
-                # Set parent
-                try:
-                    s.parent = parent_cls.objects.get(name=secret_form.cleaned_data['parent_name'])
-                except parent_cls.DoesNotExist:
-                    self.add_error('csv', "Invalid parent object ({})".format(secret_form.cleaned_data['parent_name']))
-                # Set plaintext
-                s.plaintext = str(secret_form.cleaned_data['plaintext'])
-                secrets.append(s)
-            else:
-                for field, errors in secret_form.errors.items():
-                    for e in errors:
-                        self.add_error('csv', "Record {} {}: {}".format(i, field, e))
-
-        self.cleaned_data['csv'] = secrets
 
 
 class SecretBulkEditForm(forms.Form, BootstrapMixin):

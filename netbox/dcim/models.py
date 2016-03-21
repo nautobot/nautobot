@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
@@ -8,7 +7,6 @@ from django.db import models
 from django.db.models import Q, ObjectDoesNotExist
 
 from extras.rpc import RPC_CLIENTS
-from secrets.models import Secret
 from utilities.fields import NullableCharField
 
 
@@ -420,7 +418,6 @@ class Device(models.Model):
     primary_ip = models.OneToOneField('ipam.IPAddress', related_name='primary_for', on_delete=models.SET_NULL, blank=True, null=True, verbose_name='Primary IP')
     ro_snmp = models.CharField(max_length=50, blank=True, verbose_name='SNMP (RO)')
     comments = models.TextField(blank=True)
-    secrets = GenericRelation(Secret)
 
     class Meta:
         ordering = ['name']

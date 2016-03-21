@@ -70,8 +70,7 @@ urlpatterns = [
     url(r'^devices/(?P<pk>\d+)/inventory/$', views.device_inventory, name='device_inventory'),
     url(r'^devices/(?P<pk>\d+)/lldp-neighbors/$', views.device_lldp_neighbors, name='device_lldp_neighbors'),
     url(r'^devices/(?P<pk>\d+)/ip-addresses/assign/$', views.ipaddress_assign, name='ipaddress_assign'),
-    url(r'^devices/(?P<parent_pk>\d+)/add-secret/$', secret_add, {'parent_model': 'dcim.Device'},
-        name='device_addsecret'),
+    url(r'^devices/(?P<pk>\d+)/add-secret/$', secret_add, name='device_addsecret'),
 
     # Console ports
     url(r'^devices/(?P<pk>\d+)/console-ports/add/$', views.consoleport_add, name='consoleport_add'),
