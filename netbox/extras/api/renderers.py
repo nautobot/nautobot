@@ -33,7 +33,7 @@ class BINDZoneRenderer(renderers.BaseRenderer):
 
 class FlatJSONRenderer(renderers.BaseRenderer):
     """
-    Flattens a nested JSON reponse.
+    Flattens a nested JSON response.
     """
     format = 'json_flat'
     media_type = 'application/json'
@@ -49,3 +49,28 @@ class FlatJSONRenderer(renderers.BaseRenderer):
                     yield key, val
 
         return json.dumps([dict(flatten(i)) for i in data])
+
+
+class FreeRADIUSClientsRenderer(renderers.BaseRenderer):
+    """
+    Generate a FreeRADIUS clients.conf file from a list of Secrets.
+    """
+    media_type = 'text/plain'
+    format = 'freeradius'
+
+    CLIENT_TEMPLATE = """client {name} {{
+    ipaddr = {ip}
+    secret = {secret}
+}}"""
+
+    def render(self, data, media_type=None, renderer_context=None):
+        clients = []
+        for secret in data:
+            if secret['device']['primary_ip'] and secret['plaintext']:
+                client = self.CLIENT_TEMPLATE.format(
+                    name=secret['device']['name'],
+                    ip=secret['device']['primary_ip']['address'].split('/')[0],
+                    secret=secret['plaintext']
+                )
+                clients.append(client)
+        return '\n'.join(clients)

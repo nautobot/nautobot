@@ -6,8 +6,10 @@ from rest_framework import generics
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 
+from extras.api.renderers import FreeRADIUSClientsRenderer
 from secrets.filters import SecretFilter
 from secrets.models import Secret, SecretRole, UserKey
 from .serializers import SecretRoleSerializer, SecretSerializer
@@ -47,6 +49,7 @@ class SecretListView(generics.GenericAPIView):
     serializer_class = SecretSerializer
     filter_class = SecretFilter
     permission_classes = [SecretViewPermission]
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [FreeRADIUSClientsRenderer]
 
     def get(self, request, private_key=None, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -90,6 +93,7 @@ class SecretDetailView(generics.GenericAPIView):
     queryset = Secret.objects.select_related('device', 'role')
     serializer_class = SecretSerializer
     permission_classes = [SecretViewPermission]
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [FreeRADIUSClientsRenderer]
 
     def get(self, request, pk, private_key=None, *args, **kwargs):
         secret = get_object_or_404(Secret, pk=pk)
