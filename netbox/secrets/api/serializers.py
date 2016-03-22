@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from dcim.api.serializers import DeviceNestedSerializer
+from dcim.models import Device
+from ipam.api.serializers import IPAddressNestedSerializer
 from secrets.models import Secret, SecretRole
 
 
@@ -25,8 +26,16 @@ class SecretRoleNestedSerializer(SecretRoleSerializer):
 # Secrets
 #
 
+class SecretDeviceSerializer(serializers.ModelSerializer):
+    primary_ip = IPAddressNestedSerializer()
+
+    class Meta:
+        model = Device
+        fields = ['id', 'name', 'primary_ip']
+
+
 class SecretSerializer(serializers.ModelSerializer):
-    device = DeviceNestedSerializer()
+    device = SecretDeviceSerializer()
     role = SecretRoleNestedSerializer()
 
     class Meta:
