@@ -65,12 +65,15 @@ class FreeRADIUSClientsRenderer(renderers.BaseRenderer):
 
     def render(self, data, media_type=None, renderer_context=None):
         clients = []
-        for secret in data:
-            if secret['device']['primary_ip'] and secret['plaintext']:
-                client = self.CLIENT_TEMPLATE.format(
-                    name=secret['device']['name'],
-                    ip=secret['device']['primary_ip']['address'].split('/')[0],
-                    secret=secret['plaintext']
-                )
-                clients.append(client)
+        try:
+            for secret in data:
+                if secret['device']['primary_ip'] and secret['plaintext']:
+                    client = self.CLIENT_TEMPLATE.format(
+                        name=secret['device']['name'],
+                        ip=secret['device']['primary_ip']['address'].split('/')[0],
+                        secret=secret['plaintext']
+                    )
+                    clients.append(client)
+        except:
+            pass
         return '\n'.join(clients)
