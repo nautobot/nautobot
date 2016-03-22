@@ -8,7 +8,6 @@ urlpatterns = [
     # Secrets
     url(r'^secrets/$', SecretListView.as_view(), name='secret_list'),
     url(r'^secrets/(?P<pk>\d+)/$', SecretDetailView.as_view(), name='secret_detail'),
-    url(r'^secrets/(?P<pk>\d+)/decrypt/$', SecretDecryptView.as_view(), name='secret_decrypt'),
 
     # Secret roles
     url(r'^secret-roles/$', SecretRoleListView.as_view(), name='secretrole_list'),

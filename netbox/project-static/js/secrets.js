@@ -71,7 +71,7 @@ $(document).ready(function() {
     function unlock_secret(secret_id, private_key) {
         var csrf_token = $('input[name=csrfmiddlewaretoken]').val();
         $.ajax({
-            url: '/api/secrets/secrets/' + secret_id + '/decrypt/',
+            url: '/api/secrets/secrets/' + secret_id + '/',
             type: 'POST',
             data: {
                 private_key: private_key

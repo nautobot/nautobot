@@ -1,17 +1,26 @@
 from Crypto.PublicKey import RSA
 
-from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from secrets.filters import SecretFilter
 from secrets.models import Secret, SecretRole, UserKey
 from .serializers import SecretRoleSerializer, SecretSerializer
+
+
+ERR_USERKEY_MISSING = "No UserKey found for the current user."
+ERR_USERKEY_INACTIVE = "UserKey has not been activated for decryption."
+ERR_PRIVKEY_INVALID = "Invalid private key."
+
+
+class SecretViewPermission(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.has_perm('secrets.view_secret')
 
 
 class SecretRoleListView(generics.ListAPIView):
@@ -30,55 +39,90 @@ class SecretRoleDetailView(generics.RetrieveAPIView):
     serializer_class = SecretRoleSerializer
 
 
-class SecretListView(generics.ListAPIView):
+class SecretListView(generics.GenericAPIView):
     """
-    List secrets (filterable)
+    List secrets (filterable). If a private key is POSTed, attempt to decrypt each Secret.
     """
-    queryset = Secret.objects.select_related('role')
+    queryset = Secret.objects.select_related('device', 'role')
     serializer_class = SecretSerializer
     filter_class = SecretFilter
-    permission_classes = [IsAuthenticated]
+    permission_classes = [SecretViewPermission]
 
+    def get(self, request, private_key=None, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
 
-class SecretDetailView(generics.RetrieveAPIView):
-    """
-    Retrieve a single Secret
-    """
-    queryset = Secret.objects.select_related('role')
-    serializer_class = SecretSerializer
-    permission_classes = [IsAuthenticated]
+        # Attempt to decrypt each Secret if a private key was provided.
+        if private_key is not None:
+            try:
+                uk = UserKey.objects.get(user=request.user)
+            except UserKey.DoesNotExist:
+                return Response(
+                    {'error': ERR_USERKEY_MISSING},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if not uk.is_active():
+                return Response(
+                    {'error': ERR_USERKEY_INACTIVE},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            master_key = uk.get_master_key(private_key)
+            if master_key is not None:
+                for s in queryset:
+                    s.decrypt(master_key)
+            else:
+                return Response(
+                    {'error': ERR_PRIVKEY_INVALID},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
-class SecretDecryptView(APIView):
-    """
-    Retrieve the plaintext from a stored Secret. The request must include a valid private key.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-
-        secret = get_object_or_404(Secret, pk=pk)
+    def post(self, request, *args, **kwargs):
         private_key = request.POST.get('private_key')
-        if not private_key:
-            raise ValidationError("Private key is missing from request.")
+        return self.get(request, private_key=private_key)
 
-        # Retrieve the Secret's plaintext with the user's private key
-        try:
-            uk = UserKey.objects.get(user=request.user)
-        except UserKey.DoesNotExist:
-            return HttpResponseForbidden(reason="No UserKey found.")
-        if not uk.is_active():
-            return HttpResponseForbidden(reason="UserKey is inactive.")
 
-        # Attempt to decrypt the Secret.
-        master_key = uk.get_master_key(private_key)
-        if master_key is None:
-            raise ValidationError("Invalid secret key.")
-        secret.decrypt(master_key)
+class SecretDetailView(generics.GenericAPIView):
+    """
+    Retrieve a single Secret. If a private key is POSTed, attempt to decrypt the Secret.
+    """
+    queryset = Secret.objects.select_related('device', 'role')
+    serializer_class = SecretSerializer
+    permission_classes = [SecretViewPermission]
 
-        return Response({
-            'plaintext': secret.plaintext,
-        })
+    def get(self, request, pk, private_key=None, *args, **kwargs):
+        secret = get_object_or_404(Secret, pk=pk)
+
+        # Attempt to decrypt the Secret if a private key was provided.
+        if private_key is not None:
+            try:
+                uk = UserKey.objects.get(user=request.user)
+            except UserKey.DoesNotExist:
+                return Response(
+                    {'error': ERR_USERKEY_MISSING},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if not uk.is_active():
+                return Response(
+                    {'error': ERR_USERKEY_INACTIVE},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            master_key = uk.get_master_key(private_key)
+            if master_key is not None:
+                secret.decrypt(master_key)
+            else:
+                return Response(
+                    {'error': ERR_PRIVKEY_INVALID},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        serializer = self.get_serializer(secret)
+        return Response(serializer.data)
+
+    def post(self, request, pk, *args, **kwargs):
+        private_key = request.POST.get('private_key')
+        return self.get(request, pk, private_key=private_key)
 
 
 class RSAKeyGeneratorView(APIView):

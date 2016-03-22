@@ -31,7 +31,7 @@ class SecretSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Secret
-        fields = ['id', 'device', 'role', 'name', 'hash', 'created', 'last_modified']
+        fields = ['id', 'device', 'role', 'name', 'plaintext', 'hash', 'created', 'last_modified']
 
 
 class SecretNestedSerializer(SecretSerializer):
