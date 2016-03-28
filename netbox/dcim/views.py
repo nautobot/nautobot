@@ -760,7 +760,7 @@ class DeviceBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 def device_inventory(request, pk):
 
     device = get_object_or_404(Device, pk=pk)
-    modules = Module.objects.filter(device=device)
+    modules = Module.objects.filter(device=device, parent=None).prefetch_related('submodules')
 
     return render(request, 'dcim/device_inventory.html', {
         'device': device,

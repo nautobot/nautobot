@@ -95,6 +95,24 @@ class JunosNC(RPCClient):
 
     def get_inventory(self):
 
+        def glean_modules(node, depth=0):
+            modules = []
+            modules_list = node.get('chassis{}-module'.format('-sub' * depth), [])
+            # Junos like to return single children directly instead of as a single-item list
+            if hasattr(modules_list, 'items'):
+                modules_list = [modules_list]
+            for module in modules_list:
+                m = {
+                    'name': module['name'],
+                    'part_id': module.get('model-number', ''),
+                    'serial': module.get('serial-number', ''),
+                }
+                submodules = glean_modules(module, depth + 1)
+                if submodules:
+                    m['modules'] = submodules
+                modules.append(m)
+            return modules
+
         rpc_reply = self.manager.dispatch('get-chassis-inventory')
         inventory_raw = xmltodict.parse(rpc_reply.xml)['rpc-reply']['chassis-inventory']['chassis']
 
@@ -107,18 +125,7 @@ class JunosNC(RPCClient):
         }
 
         # Gather modules
-        result['modules'] = []
-        for module in inventory_raw['chassis-module']:
-            try:
-                # Skip built-in modules
-                if module['name'] and module['serial-number'] != inventory_raw['serial-number']:
-                    result['modules'].append({
-                        'name': module['name'],
-                        'part_id': module['model-number'] or '',
-                        'serial': module['serial-number'] or '',
-                    })
-            except KeyError:
-                pass
+        result['modules'] = glean_modules(inventory_raw)
 
         return result
 

@@ -24,6 +24,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
+        def create_modules(modules, parent=None):
+            for module in modules:
+                m = Module(device=device, parent=parent, name=module['name'], part_id=module['part_id'],
+                           serial=module['serial'])
+                m.save()
+                create_modules(module.get('modules', []), parent=m)
+
         # Credentials
         if options['username']:
             self.username = options['username']
@@ -106,12 +113,6 @@ class Command(BaseCommand):
                         device.serial = inventory['chassis']['serial']
                         device.save()
                     Module.objects.filter(device=device).delete()
-                    modules = []
-                    for module in inventory['modules']:
-                        modules.append(Module(device=device,
-                                              name=module['name'],
-                                              part_id=module['part_id'],
-                                              serial=module['serial']))
-                    Module.objects.bulk_create(modules)
+                    create_modules(inventory.get('modules', []))
 
         self.stdout.write("Finished!")

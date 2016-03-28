@@ -51,12 +51,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for module in modules %}
+                    {% for m in modules %}
                         <tr>
-                            <td>{{ module.name }}</td>
-                            <td>{{ module.part_id }}</td>
-                            <td>{{ module.serial }}</td>
+                            <td>{{ m.name }}</td>
+                            <td>{{ m.part_id }}</td>
+                            <td>{{ m.serial }}</td>
                         </tr>
+                        {% for m2 in m.submodules.all %}
+                        <tr>
+                            <td style="padding-left: 20px">{{ m2.name }}</td>
+                            <td>{{ m2.part_id }}</td>
+                            <td>{{ m2.serial }}</td>
+                        </tr>
+                        {% endfor %}
                     {% endfor %}
                 </tbody>
             </table>
