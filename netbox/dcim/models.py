@@ -676,13 +676,14 @@ class Module(models.Model):
     A hardware module belonging to a device. Used for inventory purposes only.
     """
     device = models.ForeignKey('Device', related_name='modules', on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', related_name='submodules', blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=50, verbose_name='Name')
     part_id = models.CharField(max_length=50, verbose_name='Part ID', blank=True)
     serial = models.CharField(max_length=50, verbose_name='Serial number', blank=True)
 
     class Meta:
-        ordering = ['device', 'name']
-        unique_together = ['device', 'name']
+        ordering = ['device', 'parent', 'name']
+        unique_together = ['device', 'parent', 'name']
 
     def __unicode__(self):
         return self.name
