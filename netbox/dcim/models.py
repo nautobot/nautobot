@@ -682,7 +682,7 @@ class Module(models.Model):
     serial = models.CharField(max_length=50, verbose_name='Serial number', blank=True)
 
     class Meta:
-        ordering = ['device', 'parent', 'name']
+        ordering = ['device__id', 'parent__id', 'name']
         unique_together = ['device', 'parent', 'name']
 
     def __unicode__(self):
