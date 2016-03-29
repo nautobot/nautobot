@@ -104,7 +104,7 @@ class JunosNC(RPCClient):
             for module in modules_list:
                 m = {
                     'name': module['name'],
-                    'part_id': module.get('model-number', ''),
+                    'part_id': module.get('model-number') or module.get('part-number', ''),
                     'serial': module.get('serial-number', ''),
                 }
                 submodules = glean_modules(module, depth + 1)
