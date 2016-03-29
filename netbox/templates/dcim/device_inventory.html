@@ -58,11 +58,25 @@
                             <td>{{ m.serial }}</td>
                         </tr>
                         {% for m2 in m.submodules.all %}
-                        <tr>
-                            <td style="padding-left: 20px">{{ m2.name }}</td>
-                            <td>{{ m2.part_id }}</td>
-                            <td>{{ m2.serial }}</td>
-                        </tr>
+                            <tr>
+                                <td style="padding-left: 20px">{{ m2.name }}</td>
+                                <td>{{ m2.part_id }}</td>
+                                <td>{{ m2.serial }}</td>
+                            </tr>
+                            {% for m3 in m2.submodules.all %}
+                                <tr>
+                                    <td style="padding-left: 40px">{{ m3.name }}</td>
+                                    <td>{{ m3.part_id }}</td>
+                                    <td>{{ m3.serial }}</td>
+                                </tr>
+                                {% for m4 in m3.submodules.all %}
+                                    <tr>
+                                        <td style="padding-left: 60px">{{ m4.name }}</td>
+                                        <td>{{ m4.part_id }}</td>
+                                        <td>{{ m4.serial }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endfor %}
                         {% endfor %}
                     {% endfor %}
                 </tbody>
