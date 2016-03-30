@@ -11,6 +11,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
 from django.views.generic import View
+from django.views.generic.edit import CreateView, UpdateView
 
 from ipam.models import Prefix, IPAddress, VLAN
 from circuits.models import Circuit
@@ -18,26 +19,28 @@ from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
 from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView
 
-from .filters import RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter, PowerConnectionFilter, \
-    InterfaceConnectionFilter
-from .forms import SiteForm, SiteImportForm, RackForm, RackImportForm, RackBulkEditForm, RackBulkDeleteForm, \
-    RackFilterForm, DeviceTypeForm, DeviceTypeBulkEditForm, DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, \
-    DeviceForm, DeviceImportForm, DeviceBulkEditForm, DeviceBulkDeleteForm, DeviceFilterForm, \
-    ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm, ConsoleConnectionImportForm, \
-    ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, PowerPortForm, \
-    PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, PowerOutletCreateForm, \
-    PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, InterfaceConnectionForm, \
-    InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, ConsoleConnectionFilterForm, \
-    PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, ConsolePortTemplateForm, \
-    ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm, InterfaceTemplateForm
-from .models import Site, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, PowerPortTemplate, \
-    PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, \
-    InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
-from .tables import SiteTable, RackTable, RackBulkEditTable, DeviceTypeTable, DeviceTypeBulkEditTable, DeviceTable, \
-    DeviceBulkEditTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable, \
-    ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable, PowerOutletTemplateTable, \
-    InterfaceTemplateTable, ConsolePortTemplateBulkDeleteTable, ConsoleServerPortTemplateBulkDeleteTable, \
-    PowerPortTemplateBulkDeleteTable, PowerOutletTemplateBulkDeleteTable, InterfaceTemplateBulkDeleteTable
+from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter, \
+    PowerConnectionFilter, InterfaceConnectionFilter
+from .forms import SiteForm, SiteImportForm, RackGroupFilterForm, RackGroupBulkDeleteForm, RackForm, RackImportForm, \
+    RackBulkEditForm, RackBulkDeleteForm, RackFilterForm, DeviceTypeForm, DeviceTypeBulkEditForm, \
+    DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, DeviceForm, DeviceImportForm, DeviceBulkEditForm, \
+    DeviceBulkDeleteForm, DeviceFilterForm, ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm, \
+    ConsoleConnectionImportForm, ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, \
+    PowerPortForm, PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, \
+    PowerOutletCreateForm, PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, \
+    InterfaceConnectionForm, InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, \
+    ConsoleConnectionFilterForm, PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, \
+    ConsolePortTemplateForm, ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm, \
+    InterfaceTemplateForm
+from .models import Site, RackGroup, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, \
+    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, ConsoleServerPort, PowerPort, \
+    PowerOutlet, Interface, InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
+from .tables import SiteTable, RackGroupTable, RackGroupBulkEditTable, RackTable, RackBulkEditTable, DeviceTypeTable, \
+    DeviceTypeBulkEditTable, DeviceTable, DeviceBulkEditTable, DeviceImportTable, ConsoleConnectionTable, \
+    PowerConnectionTable, InterfaceConnectionTable, ConsolePortTemplateTable, ConsoleServerPortTemplateTable, \
+    PowerPortTemplateTable, PowerOutletTemplateTable, InterfaceTemplateTable, ConsolePortTemplateBulkDeleteTable, \
+    ConsoleServerPortTemplateBulkDeleteTable, PowerPortTemplateBulkDeleteTable, PowerOutletTemplateBulkDeleteTable, \
+    InterfaceTemplateBulkDeleteTable
 
 
 EXPANSION_PATTERN = '\[(\d+-\d+)\]'
@@ -169,6 +172,42 @@ class SiteBulkImportView(PermissionRequiredMixin, BulkImportView):
     table = SiteTable
     template_name = 'dcim/site_import.html'
     obj_list_url = 'dcim:site_list'
+
+
+#
+# Rack groups
+#
+
+class RackGroupListView(ObjectListView):
+    queryset = RackGroup.objects.all()
+    filter = RackGroupFilter
+    filter_form = RackGroupFilterForm
+    table = RackGroupTable
+    edit_table = RackGroupBulkEditTable
+    edit_table_permissions = ['dcim.change_rackgroup', 'dcim.delete_rackgroup']
+    template_name = 'dcim/rackgroup_list.html'
+
+
+class RackGroupAddView(PermissionRequiredMixin, CreateView):
+    permission_required = 'dcim.add_rackgroup'
+    model = RackGroup
+    fields = ['site', 'name', 'slug']
+    template_name = 'dcim/rackgroup_edit.html'
+
+
+class RackGroupEditView(PermissionRequiredMixin, UpdateView):
+    permission_required = 'dcim.change_rackgroup'
+    model = RackGroup
+    fields = ['site', 'name', 'slug']
+    template_name = 'dcim/rackgroup_edit.html'
+
+
+class RackGroupBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'dcim.delete_rackgroup'
+    cls = RackGroup
+    form = RackGroupBulkDeleteForm
+    template_name = 'dcim/rackgroup_bulk_delete.html'
+    redirect_url = 'dcim:rackgroup_list'
 
 
 #

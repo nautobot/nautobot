@@ -1,0 +1,13 @@
+{% load render_table from django_tables2 %}
+{% if perms.dcim.delete_rackgroup %}
+    <form method="post" class="form form-horizontal">
+        {% csrf_token %}
+        {% render_table table table_template|default:'table.html' %}
+        <button type="submit" name="_delete" formaction="{% url 'dcim:rackgroup_bulk_delete' %}" class="btn btn-danger btn-sm">
+            <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+            Delete Selected
+        </button>
+    </form>
+{% else %}
+    {% render_table table table_template|default:'table.html' %}
+{% endif %}

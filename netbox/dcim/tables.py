@@ -1,25 +1,15 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Site, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, PowerPortTemplate, \
-    PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, PowerPort
-
-
-PREFIXES_PER_VLAN = """
-{% for p in record.prefix_set.all %}
-    <a href="{% url 'ipam:prefix' pk=p.pk %}">{{ p }}</a>
-    {% if not forloop.last %}<br />{% endif %}
-{% endfor %}
-"""
-
-STATUS_LABEL = """
-<span class="label label-{{ record.status.get_bootstrap_class_display|lower }}">
-    {{ record.status.name }}
-</span>
-"""
+from .models import Site, RackGroup, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, \
+    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, PowerPort
 
 DEVICE_LINK = """
 <a href="{% url 'dcim:device' pk=record.pk %}">{{ record.name|default:'<span class="label label-info">Unnamed device</span>' }}</a>
+"""
+
+RACKGROUP_EDIT_LINK = """
+<a href="{% url 'dcim:rackgroup_edit' pk=record.pk %}">Edit</a>
 """
 
 
@@ -44,6 +34,33 @@ class SiteTable(tables.Table):
         attrs = {
             'class': 'table table-hover',
         }
+
+
+#
+# Rack groups
+#
+
+class RackGroupTable(tables.Table):
+    name = tables.LinkColumn(verbose_name='Name')
+    site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
+    slug = tables.Column(verbose_name='Slug')
+
+    class Meta:
+        model = RackGroup
+        fields = ('name', 'site', 'slug')
+        empty_text = "No rack groups were found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+class RackGroupBulkEditTable(RackGroupTable):
+    pk = tables.CheckBoxColumn()
+    edit = tables.TemplateColumn(template_code=RACKGROUP_EDIT_LINK, verbose_name='')
+
+    class Meta(RackGroupTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'name', 'site', 'slug', 'edit')
 
 
 #

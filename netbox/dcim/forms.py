@@ -69,6 +69,24 @@ class SiteImportForm(BulkImportForm, BootstrapMixin):
 
 
 #
+# Rack groups
+#
+
+class RackGroupBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RackGroup.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+def rackgroup_site_choices():
+    site_choices = Site.objects.annotate(rack_count=Count('racks'))
+    return [(s.slug, '{} ({})'.format(s.name, s.rack_count)) for s in site_choices]
+
+
+class RackGroupFilterForm(forms.Form, BootstrapMixin):
+    site = forms.MultipleChoiceField(required=False, choices=rackgroup_site_choices,
+                                     widget=forms.SelectMultiple(attrs={'size': 8}))
+
+
+#
 # Racks
 #
 

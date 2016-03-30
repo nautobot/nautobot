@@ -17,6 +17,12 @@ urlpatterns = [
     url(r'^sites/(?P<slug>[\w-]+)/edit/$', views.site_edit, name='site_edit'),
     url(r'^sites/(?P<slug>[\w-]+)/delete/$', views.site_delete, name='site_delete'),
 
+    # Rack groups
+    url(r'^rack-groups/$', views.RackGroupListView.as_view(), name='rackgroup_list'),
+    url(r'^rack-groups/add/$', views.RackGroupAddView.as_view(), name='rackgroup_add'),
+    url(r'^rack-groups/delete/$', views.RackGroupBulkDeleteView.as_view(), name='rackgroup_bulk_delete'),
+    url(r'^rack-groups/(?P<pk>\d+)/edit/$', views.RackGroupEditView.as_view(), name='rackgroup_edit'),
+
     # Racks
     url(r'^racks/$', views.RackListView.as_view(), name='rack_list'),
     url(r'^racks/add/$', views.rack_add, name='rack_add'),
