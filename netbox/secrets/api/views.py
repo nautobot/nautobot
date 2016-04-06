@@ -43,9 +43,11 @@ class SecretRoleDetailView(generics.RetrieveAPIView):
 
 class SecretListView(generics.GenericAPIView):
     """
-    List secrets (filterable). If a private key is POSTed, attempt to decrypt each Secret.
+    List secrets (filterable). If a private key is provided in the GET body, attempt to decrypt each Secret.
+
+      e.g. curl -X GET http://netbox/api/secrets/secrets/ --data-binary "@/path/to/private_key"
     """
-    queryset = Secret.objects.select_related('device', 'role')
+    queryset = Secret.objects.select_related('device__primary_ip', 'role')
     serializer_class = SecretSerializer
     filter_class = SecretFilter
     permission_classes = [SecretViewPermission]
@@ -55,6 +57,7 @@ class SecretListView(generics.GenericAPIView):
         queryset = self.filter_queryset(self.get_queryset())
 
         # Attempt to decrypt each Secret if a private key was provided.
+        private_key = request.body or None
         if private_key is not None:
             try:
                 uk = UserKey.objects.get(user=request.user)
@@ -81,24 +84,23 @@ class SecretListView(generics.GenericAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    def post(self, request, *args, **kwargs):
-        private_key = request.POST.get('private_key')
-        return self.get(request, private_key=private_key)
-
 
 class SecretDetailView(generics.GenericAPIView):
     """
-    Retrieve a single Secret. If a private key is POSTed, attempt to decrypt the Secret.
+    Retrieve a single Secret. If a private key is provided in the GET body, attempt to decrypt the Secret.
+
+      e.g. curl -X GET http://netbox/api/secrets/secrets/123/ --data-binary "@/path/to/private_key"
     """
-    queryset = Secret.objects.select_related('device', 'role')
+    queryset = Secret.objects.select_related('device__primary_ip', 'role')
     serializer_class = SecretSerializer
     permission_classes = [SecretViewPermission]
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [FreeRADIUSClientsRenderer]
 
-    def get(self, request, pk, private_key=None, *args, **kwargs):
+    def get(self, request, pk, *args, **kwargs):
         secret = get_object_or_404(Secret, pk=pk)
 
         # Attempt to decrypt the Secret if a private key was provided.
+        private_key = request.body or None
         if private_key is not None:
             try:
                 uk = UserKey.objects.get(user=request.user)
@@ -123,10 +125,6 @@ class SecretDetailView(generics.GenericAPIView):
 
         serializer = self.get_serializer(secret)
         return Response(serializer.data)
-
-    def post(self, request, pk, *args, **kwargs):
-        private_key = request.POST.get('private_key')
-        return self.get(request, pk, private_key=private_key)
 
 
 class RSAKeyGeneratorView(APIView):
