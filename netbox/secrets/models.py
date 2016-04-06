@@ -11,6 +11,7 @@ from django.db import models
 from django.utils.encoding import force_bytes
 
 from dcim.models import Device
+from .hashers import SecretValidationHasher
 
 
 def generate_master_key():
@@ -245,7 +246,7 @@ class Secret(models.Model):
         self.ciphertext = iv + aes.encrypt(self._pad(self.plaintext))
 
         # Generate SHA256 using Django's built-in password hashing mechanism
-        self.hash = make_password(self.plaintext, hasher='pbkdf2_sha256')
+        self.hash = make_password(self.plaintext, hasher=SecretValidationHasher())
 
         self.plaintext = None
 
@@ -277,4 +278,4 @@ class Secret(models.Model):
         """
         if not self.hash:
             raise Exception("Hash has not been generated for this secret.")
-        return check_password(plaintext, self.hash)
+        return check_password(plaintext, self.hash, preferred=SecretValidationHasher())
