@@ -4,7 +4,7 @@ from Crypto.PublicKey import RSA
 
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db import models
@@ -164,6 +164,8 @@ class SecretRole(models.Model):
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
+    users = models.ManyToManyField(User, related_name='secretroles', blank=True)
+    groups = models.ManyToManyField(Group, related_name='secretroles', blank=True)
 
     class Meta:
         ordering = ['name']
@@ -189,9 +191,6 @@ class Secret(models.Model):
 
     class Meta:
         ordering = ['device', 'role', 'name']
-        permissions = (
-            ('view_secret', "Can view secrets"),
-        )
 
     def __init__(self, *args, **kwargs):
         self.plaintext = kwargs.pop('plaintext', None)
@@ -279,3 +278,9 @@ class Secret(models.Model):
         if not self.hash:
             raise Exception("Hash has not been generated for this secret.")
         return check_password(plaintext, self.hash, preferred=SecretValidationHasher())
+
+    def decryptable_by(self, user):
+        """
+        Check whether the given user has permission to decrypt this Secret.
+        """
+        return user in self.role.users.all() or user.groups.filter(pk__in=self.role.groups.all()).exists()

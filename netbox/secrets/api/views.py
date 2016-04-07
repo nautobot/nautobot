@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 
 from rest_framework import generics
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.views import APIView
@@ -18,11 +18,6 @@ from .serializers import SecretRoleSerializer, SecretSerializer
 ERR_USERKEY_MISSING = "No UserKey found for the current user."
 ERR_USERKEY_INACTIVE = "UserKey has not been activated for decryption."
 ERR_PRIVKEY_INVALID = "Invalid private key."
-
-
-class SecretViewPermission(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.has_perm('secrets.view_secret')
 
 
 class SecretRoleListView(generics.ListAPIView):
@@ -47,10 +42,10 @@ class SecretListView(generics.GenericAPIView):
 
       e.g. curl -X GET http://netbox/api/secrets/secrets/ --data-binary "@/path/to/private_key"
     """
-    queryset = Secret.objects.select_related('device__primary_ip', 'role')
+    queryset = Secret.objects.select_related('device__primary_ip', 'role')\
+        .prefetch_related('role__users', 'role__groups')
     serializer_class = SecretSerializer
     filter_class = SecretFilter
-    permission_classes = [SecretViewPermission]
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [FreeRADIUSClientsRenderer]
 
     def get(self, request, private_key=None, *args, **kwargs):
@@ -74,7 +69,8 @@ class SecretListView(generics.GenericAPIView):
             master_key = uk.get_master_key(private_key)
             if master_key is not None:
                 for s in queryset:
-                    s.decrypt(master_key)
+                    if s.decryptable_by(request.user):
+                        s.decrypt(master_key)
             else:
                 return Response(
                     {'error': ERR_PRIVKEY_INVALID},
@@ -91,9 +87,9 @@ class SecretDetailView(generics.GenericAPIView):
 
       e.g. curl -X GET http://netbox/api/secrets/secrets/123/ --data-binary "@/path/to/private_key"
     """
-    queryset = Secret.objects.select_related('device__primary_ip', 'role')
+    queryset = Secret.objects.select_related('device__primary_ip', 'role')\
+        .prefetch_related('role__users', 'role__groups')
     serializer_class = SecretSerializer
-    permission_classes = [SecretViewPermission]
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [FreeRADIUSClientsRenderer]
 
     def get(self, request, pk, *args, **kwargs):
@@ -114,14 +110,14 @@ class SecretDetailView(generics.GenericAPIView):
                     {'error': ERR_USERKEY_INACTIVE},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            master_key = uk.get_master_key(private_key)
-            if master_key is not None:
+            if secret.decryptable_by(request.user):
+                master_key = uk.get_master_key(private_key)
+                if master_key is None:
+                    return Response(
+                        {'error': ERR_PRIVKEY_INVALID},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
                 secret.decrypt(master_key)
-            else:
-                return Response(
-                    {'error': ERR_PRIVKEY_INVALID},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
 
         serializer = self.get_serializer(secret)
         return Response(serializer.data)
