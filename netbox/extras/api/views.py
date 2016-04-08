@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 
 from circuits.models import Provider
 from dcim.models import Site, Device, Interface, InterfaceConnection
-from extras.models import Graph, GRAPH_TYPE_INTERFACE, GRAPH_TYPE_PROVIDER, GRAPH_TYPE_SITE
+from extras.models import Graph, TopologyMap, GRAPH_TYPE_INTERFACE, GRAPH_TYPE_PROVIDER, GRAPH_TYPE_SITE
 from .serializers import GraphSerializer
 
 
@@ -38,24 +38,23 @@ class GraphListView(generics.ListAPIView):
         return queryset
 
 
-class TopologyMapperView(APIView):
+class TopologyMapView(APIView):
     """
     Generate a topology diagram
     """
 
-    def get(self, request):
+    def get(self, request, slug):
 
-        # Glean device sets to map. Each set is represented as a hierarchical tier in the diagram.
-        device_sets = request.GET.getlist('devices', [])
+        tmap = get_object_or_404(TopologyMap, slug=slug)
 
         # Construct the graph
         graph = pydot.Dot(graph_type='graph', ranksep='1')
-        for i, device_set in enumerate(device_sets):
+        for i, device_set in enumerate(tmap.device_sets):
 
             subgraph = pydot.Subgraph('sg{}'.format(i), rank='same')
 
             # Add a pseudonode for each device_set to enforce hierarchical layout
-            subgraph.add_node(pydot.Node('set{}'.format(i), shape='none'))
+            subgraph.add_node(pydot.Node('set{}'.format(i), shape='none', width='0', label=''))
             if i:
                 graph.add_edge(pydot.Edge('set{}'.format(i - 1), 'set{}'.format(i), style='invis'))
 
@@ -76,7 +75,7 @@ class TopologyMapperView(APIView):
 
         # Compile list of all devices
         device_superset = Q()
-        for regex in device_sets:
+        for regex in tmap.device_sets:
             device_superset = device_superset | Q(name__regex=regex)
 
         # Add all connections to the graph

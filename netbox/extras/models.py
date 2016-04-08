@@ -4,6 +4,9 @@ from django.http import HttpResponse
 from django.template import Template, Context
 
 
+from dcim.models import Site
+
+
 GRAPH_TYPE_INTERFACE = 100
 GRAPH_TYPE_PROVIDER = 200
 GRAPH_TYPE_SITE = 300
@@ -68,3 +71,23 @@ class ExportTemplate(models.Model):
             filename += '.{}'.format(self.file_extension)
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
         return response
+
+
+class TopologyMap(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(unique=True)
+    site = models.ForeignKey(Site, related_name='topology_maps', blank=True, null=True)
+    device_patterns = models.TextField()
+    description = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __unicode__(self):
+        return self.name
+
+    @property
+    def device_sets(self):
+        if not self.device_patterns:
+            return None
+        return [line.strip() for line in self.device_patterns.split('\n')]

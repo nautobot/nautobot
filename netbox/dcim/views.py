@@ -15,6 +15,7 @@ from django.views.generic.edit import CreateView, UpdateView
 
 from ipam.models import Prefix, IPAddress, VLAN
 from circuits.models import Circuit
+from extras.models import TopologyMap
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
 from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView
@@ -89,10 +90,12 @@ def site(request, slug):
         'vlan_count': VLAN.objects.filter(site=site).count(),
         'circuit_count': Circuit.objects.filter(site=site).count(),
     }
+    topology_maps = TopologyMap.objects.filter(site=site)
 
     return render(request, 'dcim/site.html', {
         'site': site,
         'stats': stats,
+        'topology_maps': topology_maps,
     })
 
 
