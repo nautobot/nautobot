@@ -1,7 +1,7 @@
 from django.conf.urls import url
 
 from extras.models import GRAPH_TYPE_INTERFACE, GRAPH_TYPE_SITE
-from extras.api.views import GraphListView
+from extras.api.views import GraphListView, TopologyMapperView
 
 from .views import *
 
@@ -62,5 +62,6 @@ urlpatterns = [
 
     # Miscellaneous
     url(r'^related-connections/$', RelatedConnectionsView.as_view(), name='related_connections'),
+    url(r'^topology-mapper/$', TopologyMapperView.as_view(), name='topology_mapper'),
 
 ]
