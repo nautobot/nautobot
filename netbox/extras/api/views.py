@@ -59,7 +59,9 @@ class TopologyMapView(APIView):
                 graph.add_edge(pydot.Edge('set{}'.format(i - 1), 'set{}'.format(i), style='invis'))
 
             # Add each device to the graph
-            devices = Device.objects.filter(name__regex=device_set)
+            devices = []
+            for query in device_set.split(','):
+                devices += Device.objects.filter(name__regex=query)
             for d in devices:
                 node = pydot.Node(d.name)
                 subgraph.add_node(node)
@@ -75,8 +77,9 @@ class TopologyMapView(APIView):
 
         # Compile list of all devices
         device_superset = Q()
-        for regex in tmap.device_sets:
-            device_superset = device_superset | Q(name__regex=regex)
+        for device_set in tmap.device_sets:
+            for query in device_set.split(','):
+                device_superset = device_superset | Q(name__regex=query)
 
         # Add all connections to the graph
         devices = Device.objects.filter(*(device_superset,))
