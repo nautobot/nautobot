@@ -8,6 +8,14 @@ AF = {
 }
 
 
+class FormlessBrowsableAPIRenderer(renderers.BrowsableAPIRenderer):
+    """
+    An instance of the browseable API with forms suppressed. Useful for POST endpoints that don't create objects.
+    """
+    def show_form_for_method(self, *args, **kwargs):
+        return False
+
+
 class BINDZoneRenderer(renderers.BaseRenderer):
     """
     Generate a BIND zone file from a list of DNS records.
