@@ -111,7 +111,7 @@
                 </tr>
             </table>
         </div>
-        {% if perms.secrets.view_secret %}
+        {% if request.user.is_authenticated %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Secrets</strong>
