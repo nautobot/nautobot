@@ -80,7 +80,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/ip-addresses/' in request.path or '/prefixes/' in request.path or '/aggregates/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if '/ipam/ip-addresses/' in request.path or '/prefixes/' in request.path or '/aggregates/' in request.path %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">IP Space <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'ipam:ipaddress_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> IP Addresses</a></li>
@@ -144,7 +144,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    {% if perms.secrets %}
+                    {% if request.user.is_authenticated %}
                         <li class="dropdown{% if '/secrets/' in request.path %} active{% endif %}">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Secrets <span class="caret"></span></a>
                             <ul class="dropdown-menu">
