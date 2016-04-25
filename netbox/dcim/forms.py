@@ -77,7 +77,7 @@ class RackGroupBulkDeleteForm(ConfirmationForm):
 
 
 def rackgroup_site_choices():
-    site_choices = Site.objects.annotate(rack_count=Count('racks'))
+    site_choices = Site.objects.annotate(rack_count=Count('rack_groups'))
     return [(s.slug, '{} ({})'.format(s.name, s.rack_count)) for s in site_choices]
 
 
