@@ -9,6 +9,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template import TemplateSyntaxError
 from django.utils.decorators import method_decorator
+from django.utils.http import is_safe_url
 from django.views.generic import View
 
 from django_tables2 import RequestConfig
@@ -122,12 +123,18 @@ class BulkEditView(View):
     cls = None
     form = None
     template_name = None
-    redirect_url = None
+    default_redirect_url = None
 
     def get(self, request, *args, **kwargs):
-        return redirect(self.redirect_url)
+        return redirect(self.default_redirect_url)
 
     def post(self, request, *args, **kwargs):
+
+        posted_redirect_url = request.POST.get('redirect_url')
+        if posted_redirect_url and is_safe_url(url=posted_redirect_url, host=request.get_host()):
+            redirect_url = posted_redirect_url
+        else:
+            redirect_url = reverse(self.default_redirect_url)
 
         if '_apply' in request.POST:
             form = self.form(request.POST)
@@ -135,7 +142,7 @@ class BulkEditView(View):
                 pk_list = [obj.pk for obj in form.cleaned_data['pk']]
                 self.update_objects(pk_list, form)
                 if not form.errors:
-                    return redirect(self.redirect_url)
+                    return redirect(redirect_url)
 
         else:
             form = self.form(initial={'pk': request.POST.getlist('pk')})
@@ -143,12 +150,12 @@ class BulkEditView(View):
         selected_objects = self.cls.objects.filter(pk__in=request.POST.getlist('pk'))
         if not selected_objects:
             messages.warning(request, "No {} were selected.".format(self.cls._meta.verbose_name_plural))
-            return redirect(self.redirect_url)
+            return redirect(redirect_url)
 
         return render(request, self.template_name, {
             'form': form,
             'selected_objects': selected_objects,
-            'cancel_url': reverse(self.redirect_url),
+            'cancel_url': redirect_url,
         })
 
     def update_objects(self, obj_list, form):
@@ -162,16 +169,23 @@ class BulkDeleteView(View):
     cls = None
     form = None
     template_name = None
-    redirect_url = None
+    default_redirect_url = None
 
     @method_decorator(staff_member_required)
     def dispatch(self, *args, **kwargs):
         return super(BulkDeleteView, self).dispatch(*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return redirect(self.redirect_url)
+        return redirect(self.default_redirect_url)
 
     def post(self, request, *args, **kwargs):
+
+        posted_redirect_url = request.POST.get('redirect_url')
+        if posted_redirect_url and is_safe_url(url=posted_redirect_url, host=request.get_host()):
+            redirect_url = posted_redirect_url
+        else:
+            redirect_url = reverse(self.default_redirect_url)
+
         if '_confirm' in request.POST:
             form = self.form(request.POST)
             if form.is_valid():
@@ -183,10 +197,10 @@ class BulkDeleteView(View):
                     objects_to_delete.delete()
                 except ProtectedError, e:
                     handle_protectederror(list(objects_to_delete), request, e)
-                    return redirect(self.redirect_url)
+                    return redirect(redirect_url)
 
                 messages.success(request, "Deleted {} {}".format(deleted_count, self.cls._meta.verbose_name_plural))
-                return redirect(self.redirect_url)
+                return redirect(redirect_url)
 
         else:
             form = self.form(initial={'pk': request.POST.getlist('pk')})
@@ -194,10 +208,10 @@ class BulkDeleteView(View):
         selected_objects = self.cls.objects.filter(pk__in=form.initial.get('pk'))
         if not selected_objects:
             messages.warning(request, "No {} were selected for deletion.".format(self.cls._meta.verbose_name_plural))
-            return redirect(self.redirect_url)
+            return redirect(redirect_url)
 
         return render(request, self.template_name, {
             'form': form,
             'selected_objects': selected_objects,
-            'cancel_url': reverse(self.redirect_url),
+            'cancel_url': redirect_url,
         })

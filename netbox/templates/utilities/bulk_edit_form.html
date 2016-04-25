@@ -5,6 +5,9 @@
 <h1>{% block title %}{% endblock %}</h1>
 <form action="." method="post" class="form form-horizontal">
     {% csrf_token %}
+    {% if request.POST.redirect_url %}
+        <input type="hidden" name="redirect_url" value="{{ request.POST.redirect_url }}" />
+    {% endif %}
     {% for hidden in form.hidden_fields %}
         {{ hidden }}
     {% endfor %}

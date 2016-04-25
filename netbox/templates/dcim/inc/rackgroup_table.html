@@ -2,6 +2,7 @@
 {% if perms.dcim.delete_rackgroup %}
     <form method="post" class="form form-horizontal">
         {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" />
         {% render_table table table_template|default:'table.html' %}
         <button type="submit" name="_delete" formaction="{% url 'dcim:rackgroup_bulk_delete' %}" class="btn btn-danger btn-sm">
             <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>

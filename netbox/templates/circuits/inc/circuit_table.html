@@ -2,6 +2,7 @@
 {% if perms.circuits.change_circuit or perms.circuits.delete_circuit %}
     <form method="post" class="form form-horizontal">
         {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" />
         {% render_table table table_template|default:'table.html' %}
         {% if perms.circuits.change_circuit %}
             <button type="submit" name="_edit" formaction="{% url 'circuits:circuit_bulk_edit' %}" class="btn btn-warning btn-sm">

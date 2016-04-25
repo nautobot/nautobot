@@ -203,7 +203,7 @@ class SecretBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = Secret
     form = SecretBulkEditForm
     template_name = 'secrets/secret_bulk_edit.html'
-    redirect_url = 'secrets:secret_list'
+    default_redirect_url = 'secrets:secret_list'
 
     def update_objects(self, pk_list, form):
 
@@ -221,4 +221,4 @@ class SecretBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Secret
     form = SecretBulkDeleteForm
     template_name = 'secrets/secret_bulk_delete.html'
-    redirect_url = 'secrets:secret_list'
+    default_redirect_url = 'secrets:secret_list'

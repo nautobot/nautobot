@@ -2,6 +2,7 @@
 {% if perms.ipam.change_vlan or perms.ipam.delete_vlan %}
     <form method="post" class="form form-horizontal">
         {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" />
         {% render_table table table_template|default:'table.html' %}
         {% if perms.ipam.change_vlan %}
             <button type="submit" name="_edit" formaction="{% url 'ipam:vlan_bulk_edit' %}" class="btn btn-warning btn-sm">

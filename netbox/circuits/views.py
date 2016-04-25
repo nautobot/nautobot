@@ -122,7 +122,7 @@ class ProviderBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = Provider
     form = ProviderBulkEditForm
     template_name = 'circuits/provider_bulk_edit.html'
-    redirect_url = 'circuits:provider_list'
+    default_redirect_url = 'circuits:provider_list'
 
     def update_objects(self, pk_list, form):
 
@@ -140,7 +140,7 @@ class ProviderBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Provider
     form = ProviderBulkDeleteForm
     template_name = 'circuits/provider_bulk_delete.html'
-    redirect_url = 'circuits:provider_list'
+    default_redirect_url = 'circuits:provider_list'
 
 
 #
@@ -251,7 +251,7 @@ class CircuitBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = Circuit
     form = CircuitBulkEditForm
     template_name = 'circuits/circuit_bulk_edit.html'
-    redirect_url = 'circuits:circuit_list'
+    default_redirect_url = 'circuits:circuit_list'
 
     def update_objects(self, pk_list, form):
 
@@ -269,4 +269,4 @@ class CircuitBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Circuit
     form = CircuitBulkDeleteForm
     template_name = 'circuits/circuit_bulk_delete.html'
-    redirect_url = 'circuits:circuit_list'
+    default_redirect_url = 'circuits:circuit_list'

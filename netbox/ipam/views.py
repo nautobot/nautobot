@@ -152,7 +152,7 @@ class VRFBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = VRF
     form = VRFBulkEditForm
     template_name = 'ipam/vrf_bulk_edit.html'
-    redirect_url = 'ipam:vrf_list'
+    default_redirect_url = 'ipam:vrf_list'
 
     def update_objects(self, pk_list, form):
 
@@ -170,7 +170,7 @@ class VRFBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = VRF
     form = VRFBulkDeleteForm
     template_name = 'ipam/vrf_bulk_delete.html'
-    redirect_url = 'ipam:vrf_list'
+    default_redirect_url = 'ipam:vrf_list'
 
 
 #
@@ -294,7 +294,7 @@ class AggregateBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = Aggregate
     form = AggregateBulkEditForm
     template_name = 'ipam/aggregate_bulk_edit.html'
-    redirect_url = 'ipam:aggregate_list'
+    default_redirect_url = 'ipam:aggregate_list'
 
     def update_objects(self, pk_list, form):
 
@@ -312,7 +312,7 @@ class AggregateBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Aggregate
     form = AggregateBulkDeleteForm
     template_name = 'ipam/aggregate_bulk_delete.html'
-    redirect_url = 'ipam:aggregate_list'
+    default_redirect_url = 'ipam:aggregate_list'
 
 
 #
@@ -465,7 +465,7 @@ class PrefixBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = Prefix
     form = PrefixBulkEditForm
     template_name = 'ipam/prefix_bulk_edit.html'
-    redirect_url = 'ipam:prefix_list'
+    default_redirect_url = 'ipam:prefix_list'
 
     def update_objects(self, pk_list, form):
 
@@ -487,7 +487,7 @@ class PrefixBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Prefix
     form = PrefixBulkDeleteForm
     template_name = 'ipam/prefix_bulk_delete.html'
-    redirect_url = 'ipam:prefix_list'
+    default_redirect_url = 'ipam:prefix_list'
 
 
 def prefix_ipaddresses(request, pk):
@@ -646,7 +646,7 @@ class IPAddressBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = IPAddress
     form = IPAddressBulkEditForm
     template_name = 'ipam/ipaddress_bulk_edit.html'
-    redirect_url = 'ipam:ipaddress_list'
+    default_redirect_url = 'ipam:ipaddress_list'
 
     def update_objects(self, pk_list, form):
 
@@ -668,7 +668,7 @@ class IPAddressBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = IPAddress
     form = IPAddressBulkDeleteForm
     template_name = 'ipam/ipaddress_bulk_delete.html'
-    redirect_url = 'ipam:ipaddress_list'
+    default_redirect_url = 'ipam:ipaddress_list'
 
 
 #
@@ -783,7 +783,7 @@ class VLANBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = VLAN
     form = VLANBulkEditForm
     template_name = 'ipam/vlan_bulk_edit.html'
-    redirect_url = 'ipam:vlan_list'
+    default_redirect_url = 'ipam:vlan_list'
 
     def update_objects(self, pk_list, form):
 
@@ -801,4 +801,4 @@ class VLANBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = VLAN
     form = VLANBulkDeleteForm
     template_name = 'ipam/vlan_bulk_delete.html'
-    redirect_url = 'ipam:vlan_list'
+    default_redirect_url = 'ipam:vlan_list'

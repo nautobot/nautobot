@@ -210,7 +210,7 @@ class RackGroupBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = RackGroup
     form = RackGroupBulkDeleteForm
     template_name = 'dcim/rackgroup_bulk_delete.html'
-    redirect_url = 'dcim:rackgroup_list'
+    default_redirect_url = 'dcim:rackgroup_list'
 
 
 #
@@ -338,7 +338,7 @@ class RackBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = Rack
     form = RackBulkEditForm
     template_name = 'dcim/rack_bulk_edit.html'
-    redirect_url = 'dcim:rack_list'
+    default_redirect_url = 'dcim:rack_list'
 
     def update_objects(self, pk_list, form):
 
@@ -356,7 +356,7 @@ class RackBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Rack
     form = RackBulkDeleteForm
     template_name = 'dcim/rack_bulk_delete.html'
-    redirect_url = 'dcim:rack_list'
+    default_redirect_url = 'dcim:rack_list'
 
 
 #
@@ -476,7 +476,7 @@ class DeviceTypeBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = DeviceType
     form = DeviceTypeBulkEditForm
     template_name = 'dcim/devicetype_bulk_edit.html'
-    redirect_url = 'dcim:devicetype_list'
+    default_redirect_url = 'dcim:devicetype_list'
 
     def update_objects(self, pk_list, form):
 
@@ -494,7 +494,7 @@ class DeviceTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = DeviceType
     form = DeviceTypeBulkDeleteForm
     template_name = 'dcim/devicetype_bulk_delete.html'
-    redirect_url = 'dcim:devicetype_list'
+    default_redirect_url = 'dcim:devicetype_list'
 
 
 #
@@ -771,7 +771,7 @@ class DeviceBulkEditView(PermissionRequiredMixin, BulkEditView):
     cls = Device
     form = DeviceBulkEditForm
     template_name = 'dcim/device_bulk_edit.html'
-    redirect_url = 'dcim:device_list'
+    default_redirect_url = 'dcim:device_list'
 
     def update_objects(self, pk_list, form):
 
@@ -796,7 +796,7 @@ class DeviceBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Device
     form = DeviceBulkDeleteForm
     template_name = 'dcim/device_bulk_delete.html'
-    redirect_url = 'dcim:device_list'
+    default_redirect_url = 'dcim:device_list'
 
 
 def device_inventory(request, pk):
@@ -1508,7 +1508,7 @@ class InterfaceBulkAddView(PermissionRequiredMixin, BulkEditView):
     cls = Device
     form = InterfaceBulkCreateForm
     template_name = 'dcim/interface_bulk_add.html'
-    redirect_url = 'dcim:device_list'
+    default_redirect_url = 'dcim:device_list'
 
     def update_objects(self, pk_list, form):
 

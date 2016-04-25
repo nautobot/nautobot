@@ -2,6 +2,7 @@
 {% if perms.dcim.add_interface or perms.dcim.change_device or perms.dcim.delete_device %}
     <form method="post" class="form form-horizontal">
         {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" />
         {% render_table table table_template|default:'table.html' %}
         {% if perms.dcim.add_interface %}
             <button type="submit" name="_addinterfaces" formaction="{% url 'dcim:interface_bulk_add' %}" class="btn btn-primary btn-sm">
