@@ -93,6 +93,8 @@
                             <a href="{% url 'ipam:ipaddress' pk=device.primary_ip.pk %}">{{ device.primary_ip.address.ip }}</a>
                             {% if device.primary_ip.nat_inside %}
                                 <span>(NAT for {{ device.primary_ip.nat_inside.address.ip }})</span>
+                            {% elif device.primary_ip.nat_outside %}
+                                <span>(NAT: {{ device.primary_ip.nat_outside.address.ip }})</span>
                             {% endif %}
                         {% else %}
                             <span class="text-muted">Not defined</span>
