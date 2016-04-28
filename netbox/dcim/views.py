@@ -232,14 +232,8 @@ def rack(request, pk):
     rack = get_object_or_404(Rack, pk=pk)
 
     nonracked_devices = Device.objects.filter(rack=rack, position__isnull=True)
-    try:
-        next_rack = Rack.objects.filter(site=rack.site, name__gt=rack.name).order_by('name')[0]
-    except IndexError:
-        next_rack = None
-    try:
-        prev_rack = Rack.objects.filter(site=rack.site, name__lt=rack.name).order_by('-name')[0]
-    except IndexError:
-        prev_rack = None
+    next_rack = Rack.objects.filter(site=rack.site, name__gt=rack.name).order_by('name').first()
+    prev_rack = Rack.objects.filter(site=rack.site, name__lt=rack.name).order_by('-name').first()
 
     return render(request, 'dcim/rack.html', {
         'rack': rack,
