@@ -1,4 +1,4 @@
-Django==1.9.1
+Django==1.9.5
 django-debug-toolbar==1.4
 django-extensions==1.6.1
 django-filter==0.12.0
