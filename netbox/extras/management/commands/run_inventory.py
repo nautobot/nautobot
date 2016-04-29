@@ -37,7 +37,8 @@ class Command(BaseCommand):
         if options['password']:
             self.password = getpass("Password: ")
 
-        device_list = Device.objects.filter()
+        # Attempt to inventory only active devices
+        device_list = Device.objects.filter(status=True)
 
         # --site: Include only devices belonging to specified site(s)
         if options['site']:
