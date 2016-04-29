@@ -98,18 +98,22 @@ class Command(BaseCommand):
                 self.stdout.write("Authentication error!")
                 continue
             except Exception as e:
-                self.stdout.write("Error for {} ({}): {}".format(device, device.primary_ip.address.ip, e))
+                self.stdout.write("Error: {}".format(e))
                 continue
 
-            self.stdout.write("")
-            self.stdout.write("\tSerial: {}".format(inventory['chassis']['serial']))
-            self.stdout.write("\tDescription: {}".format(inventory['chassis']['description']))
-            for module in inventory['modules']:
-                self.stdout.write("\tModule: {} / {} ({})".format(module['name'], module['part_id'], module['serial']))
+            if options['verbosity'] > 1:
+                self.stdout.write("")
+                self.stdout.write("\tSerial: {}".format(inventory['chassis']['serial']))
+                self.stdout.write("\tDescription: {}".format(inventory['chassis']['description']))
+                for module in inventory['modules']:
+                    self.stdout.write("\tModule: {} / {} ({})".format(module['name'], module['part_id'], module['serial']))
+            else:
+                self.stdout.write("{} ({})".format(inventory['chassis']['description'], inventory['chassis']['serial']))
 
             if not options['fake']:
                 with transaction.atomic():
-                    if inventory['chassis']['serial']:
+                    # Update device serial
+                    if device.serial != inventory['chassis']['serial']:
                         device.serial = inventory['chassis']['serial']
                         device.save()
                     Module.objects.filter(device=device).delete()
