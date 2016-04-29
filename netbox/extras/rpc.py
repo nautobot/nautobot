@@ -140,7 +140,7 @@ class IOSSSH(RPCClient):
         # Initiate a connection to the device
         self.ssh = SSH2(connect_timeout=CONNECT_TIMEOUT)
         self.ssh.connect(self.host)
-        self.ssh.login(Account(self.username, self.password))
+        self.ssh.authenticate(Account(self.username, self.password))
 
         # Disable terminal paging
         self.ssh.execute("terminal length 0")
