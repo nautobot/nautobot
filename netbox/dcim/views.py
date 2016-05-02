@@ -1341,7 +1341,7 @@ def poweroutlet_disconnect(request, pk):
     poweroutlet = get_object_or_404(PowerOutlet, pk=pk)
 
     if not hasattr(poweroutlet, 'connected_port'):
-        messages.warning(request, "Cannot disconnectpower outlet {0}: Nothing is connected to it".format(poweroutlet))
+        messages.warning(request, "Cannot disconnect power outlet {0}: Nothing is connected to it".format(poweroutlet))
         return redirect('dcim:device', pk=poweroutlet.device.pk)
 
     if request.method == 'POST':
