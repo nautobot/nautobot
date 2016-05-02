@@ -2,9 +2,9 @@ Django==1.9.5
 django-debug-toolbar==1.4
 django-extensions==1.6.1
 django-filter==0.12.0
-django-rest-swagger==0.3.4
+django-rest-swagger==0.3.6
 django-tables2==1.0.7
-djangorestframework==3.3.2
+djangorestframework==3.3.3
 ecdsa==0.13
 Exscript==2.1.479
 lxml==3.5.0
