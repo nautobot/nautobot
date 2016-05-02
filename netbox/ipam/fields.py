@@ -2,17 +2,19 @@ from netaddr import IPNetwork
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.six import with_metaclass
 
 from .formfields import IPFormField
 from .lookups import EndsWith, IEndsWith, StartsWith, IStartsWith, Regex, IRegex, NetContained, NetContainedOrEqual, \
     NetContains, NetContainsOrEquals, NetHost
 
 
-class _BaseIPField(models.Field):
+class BaseIPField(models.Field):
 
     def python_type(self):
         return IPNetwork
+
+    def from_db_value(self, value, expression, connection, context):
+        return self.to_python(value)
 
     def to_python(self, value):
         if not value:
@@ -33,10 +35,10 @@ class _BaseIPField(models.Field):
     def formfield(self, **kwargs):
         defaults = {'form_class': self.form_class()}
         defaults.update(kwargs)
-        return super(_BaseIPField, self).formfield(**defaults)
+        return super(BaseIPField, self).formfield(**defaults)
 
 
-class IPNetworkField(with_metaclass(models.SubfieldBase, _BaseIPField)):
+class IPNetworkField(BaseIPField):
     """
     IP prefix (network and mask)
     """
@@ -59,7 +61,7 @@ IPNetworkField.register_lookup(NetContainsOrEquals)
 IPNetworkField.register_lookup(NetHost)
 
 
-class IPAddressField(with_metaclass(models.SubfieldBase, _BaseIPField)):
+class IPAddressField(BaseIPField):
     """
     IP address (host address and mask)
     """
