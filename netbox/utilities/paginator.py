@@ -10,21 +10,15 @@ class EnhancedPaginator(Paginator):
 class EnhancedPage(Page):
 
     def smart_pages(self):
-        """
-        Instead of every page, return only first, last, and nearby pages (taken from
-        https://www.technovelty.org/web/skipping-pages-with-djangocorepaginator.html).
-        """
-        n = self.number
-        last_page = self.paginator.num_pages
 
-        # Determine the page numbers to display
-        pages_wanted = [1, 2, n-2, n-1, n, n+1, n+2, last_page-1, last_page]
-        pages_to_show = set(self.paginator.page_range).intersection(pages_wanted)
-        pages_to_show = sorted(pages_to_show)
+        # Show first page, last page, next/previous two pages, and current page
+        n = self.number
+        pages_wanted = [1, n - 2, n - 1, n, n + 1, n + 2, self.paginator.num_pages]
+        page_list = sorted(set(self.paginator.page_range).intersection(pages_wanted))
 
         # Insert skip markers
-        skip_pages = [x[1] for x in zip(pages_to_show[:-1], pages_to_show[1:]) if (x[1] - x[0] != 1)]
+        skip_pages = [x[1] for x in zip(page_list[:-1], page_list[1:]) if (x[1] - x[0] != 1)]
         for i in skip_pages:
-            pages_to_show.insert(pages_to_show.index(i), False)
+            page_list.insert(page_list.index(i), False)
 
-        return pages_to_show
+        return page_list
