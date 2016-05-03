@@ -1,11 +1,11 @@
 {% extends '_base.html' %}
 {% load form_helpers %}
 
-{% block title %}{% if devicetype %}Editing device type {{ devicetype }}{% else %}Add a Device Type{% endif %}{% endblock %}
+{% block title %}{% if obj %}Editing device type {{ obj }}{% else %}Add a Device Type{% endif %}{% endblock %}
 
 {% block content %}
-{% if devicetype %}
-	<h1>{{ devicetype }}</h1>
+{% if obj %}
+	<h1>{{ obj }}</h1>
 {% else %}
 	<h1>Add a Device Type</h1>
 {% endif %}
@@ -35,9 +35,9 @@
     </div>
     <div class="row">
         <div class="col-md-6 col-md-offset-3 text-center">
-            {% if devicetype %}
+            {% if obj %}
                 <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{% url 'dcim:devicetype' pk=devicetype.pk %}" class="btn btn-default">Cancel</a>
+                <a href="{% url 'dcim:devicetype' pk=obj.pk %}" class="btn btn-default">Cancel</a>
             {% else %}
                 <button type="submit" name="_create" class="btn btn-primary">Create</button>
                 <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>

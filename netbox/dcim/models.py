@@ -293,6 +293,9 @@ class DeviceType(models.Model):
     def __unicode__(self):
         return "{0} {1}".format(self.manufacturer, self.model)
 
+    def get_absolute_url(self):
+        return reverse('dcim:devicetype', args=[self.pk])
+
 
 class ConsolePortTemplate(models.Model):
     """
