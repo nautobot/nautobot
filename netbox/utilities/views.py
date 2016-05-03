@@ -15,6 +15,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from .error_handlers import handle_protectederror
+from .forms import ConfirmationForm
 from .paginator import EnhancedPaginator
 from extras.models import ExportTemplate
 
@@ -74,6 +75,127 @@ class ObjectListView(View):
 
     def alter_queryset(self, request):
         return self.queryset
+
+
+class ObjectAddView(View):
+    model = None
+    form_class = None
+    template_name = None
+    cancel_url = None
+    fields_initial = []
+
+    def get(self, request):
+
+        initial = {k: request.GET.get(k) for k in self.fields_initial}
+        form = self.form_class(initial=initial)
+
+        return render(request, self.template_name, {
+            'form': form,
+            'cancel_url': reverse(self.cancel_url),
+        })
+
+    def post(self, request):
+
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            obj = form.save()
+            messages.success(request, 'Added new {} <a href="{}">{}</a>'.format(self.model._meta.verbose_name,
+                                                                                obj.get_absolute_url(), obj))
+            if '_addanother' in request.POST:
+                return redirect(request.path)
+            else:
+                return redirect(obj.get_absolute_url())
+
+        return render(request, self.template_name, {
+            'form': form,
+            'cancel_url': reverse(self.cancel_url),
+        })
+
+
+class ObjectEditView(View):
+    model = None
+    form_class = None
+    template_name = None
+
+    def get_object(self, kwargs):
+        # Look up object by slug if one has been provided. Otherwise, use PK.
+        if 'slug' in kwargs:
+            return get_object_or_404(self.model, slug=kwargs['slug'])
+        else:
+            return get_object_or_404(self.model, pk=kwargs['pk'])
+
+    def get(self, request, *args, **kwargs):
+
+        obj = self.get_object(kwargs)
+        form = self.form_class(instance=obj)
+
+        return render(request, self.template_name, {
+            'obj': obj,
+            'form': form,
+            'cancel_url': obj.get_absolute_url(),
+        })
+
+    def post(self, request, *args, **kwargs):
+
+        obj = self.get_object(kwargs)
+        form = self.form_class(request.POST, instance=obj)
+        if form.is_valid():
+            obj = form.save()
+            messages.success(request, 'Modified {} <a href="{}">{}</a>'.format(self.model._meta.verbose_name,
+                                                                               obj.get_absolute_url(), obj))
+            if '_addanother' in request.POST:
+                return redirect(request.path)
+            else:
+                return redirect(obj.get_absolute_url())
+
+        return render(request, self.template_name, {
+            'obj': obj,
+            'form': form,
+            'cancel_url': obj.get_absolute_url(),
+        })
+
+
+class ObjectDeleteView(View):
+    model = None
+    template_name = None
+    redirect_url = None
+
+    def get_object(self, kwargs):
+        # Look up object by slug if one has been provided. Otherwise, use PK.
+        if 'slug' in kwargs:
+            return get_object_or_404(self.model, slug=kwargs['slug'])
+        else:
+            return get_object_or_404(self.model, pk=kwargs['pk'])
+
+    def get(self, request, *args, **kwargs):
+
+        obj = self.get_object(kwargs)
+        form = ConfirmationForm()
+
+        return render(request, self.template_name, {
+            'obj': obj,
+            'form': form,
+            'cancel_url': obj.get_absolute_url(),
+        })
+
+    def post(self, request, *args, **kwargs):
+
+        obj = self.get_object(kwargs)
+        form = ConfirmationForm(request.POST)
+        if form.is_valid():
+            try:
+                obj.delete()
+                messages.success(request, 'Deleted {} {}'.format(self.model._meta.verbose_name, obj))
+                return redirect(self.redirect_url)
+            except ProtectedError, e:
+                handle_protectederror(obj, request, e)
+                return redirect(obj.get_absolute_url())
+
+        return render(request, self.template_name, {
+            'obj': obj,
+            'form': form,
+            'cancel_url': obj.get_absolute_url(),
+        })
 
 
 class BulkImportView(View):
