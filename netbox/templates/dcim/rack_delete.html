@@ -1,8 +1,8 @@
 {% extends 'utilities/confirmation_form.html' %}
 {% load form_helpers %}
 
-{% block title %}Delete rack {{ rack }}?{% endblock %}
+{% block title %}Delete rack {{ obj }}?{% endblock %}
 
 {% block message %}
-    <p>Are you sure you want to delete rack {{ rack }} from {{ rack.site }}?</p>
+    <p>Are you sure you want to delete rack {{ obj }} from {{ obj.site }}?</p>
 {% endblock %}

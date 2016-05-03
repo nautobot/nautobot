@@ -198,78 +198,100 @@ def rack(request, pk):
     })
 
 
-@permission_required('dcim.add_rack')
-def rack_add(request):
-
-    if request.method == 'POST':
-        form = RackForm(request.POST)
-        if form.is_valid():
-            rack = form.save()
-            messages.success(request, "Added new rack to {}: {}".format(rack.site.name, rack))
-            if '_addanother' in request.POST:
-                base_url = reverse('dcim:rack_add')
-                params = urlencode({
-                    'site': rack.site.pk,
-                })
-                return HttpResponseRedirect('{}?{}'.format(base_url, params))
-            else:
-                return redirect('dcim:rack', pk=rack.pk)
-
-    else:
-        form = RackForm()
-
-    return render(request, 'dcim/rack_edit.html', {
-        'form': form,
-        'cancel_url': reverse('dcim:rack_list'),
-    })
+class RackAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'dcim.add_rack'
+    model = Rack
+    form_class = RackForm
+    template_name = 'dcim/rack_edit.html'
+    cancel_url = 'dcim:rack_list'
 
 
-@permission_required('dcim.change_rack')
-def rack_edit(request, pk):
+# @permission_required('dcim.add_rack')
+# def rack_add(request):
+#
+#     if request.method == 'POST':
+#         form = RackForm(request.POST)
+#         if form.is_valid():
+#             rack = form.save()
+#             messages.success(request, "Added new rack to {}: {}".format(rack.site.name, rack))
+#             if '_addanother' in request.POST:
+#                 base_url = reverse('dcim:rack_add')
+#                 params = urlencode({
+#                     'site': rack.site.pk,
+#                 })
+#                 return HttpResponseRedirect('{}?{}'.format(base_url, params))
+#             else:
+#                 return redirect('dcim:rack', pk=rack.pk)
+#
+#     else:
+#         form = RackForm()
+#
+#     return render(request, 'dcim/rack_edit.html', {
+#         'form': form,
+#         'cancel_url': reverse('dcim:rack_list'),
+#     })
 
-    rack = get_object_or_404(Rack, pk=pk)
 
-    if request.method == 'POST':
-        form = RackForm(request.POST, instance=rack)
-        if form.is_valid():
-            rack = form.save()
-            messages.success(request, "Modified rack {0}".format(rack.name))
-            return redirect('dcim:rack', pk=rack.pk)
+# @permission_required('dcim.change_rack')
+# def rack_edit(request, pk):
+#
+#     rack = get_object_or_404(Rack, pk=pk)
+#
+#     if request.method == 'POST':
+#         form = RackForm(request.POST, instance=rack)
+#         if form.is_valid():
+#             rack = form.save()
+#             messages.success(request, "Modified rack {0}".format(rack.name))
+#             return redirect('dcim:rack', pk=rack.pk)
+#
+#     else:
+#         form = RackForm(instance=rack)
+#
+#     return render(request, 'dcim/rack_edit.html', {
+#         'rack': rack,
+#         'form': form,
+#         'cancel_url': reverse('dcim:rack', kwargs={'pk': rack.pk}),
+#     })
 
-    else:
-        form = RackForm(instance=rack)
 
-    return render(request, 'dcim/rack_edit.html', {
-        'rack': rack,
-        'form': form,
-        'cancel_url': reverse('dcim:rack', kwargs={'pk': rack.pk}),
-    })
+class RackEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'dcim.change_rack'
+    model = Rack
+    form_class = RackForm
+    template_name = 'dcim/rack_edit.html'
 
 
-@permission_required('dcim.delete_rack')
-def rack_delete(request, pk):
+# @permission_required('dcim.delete_rack')
+# def rack_delete(request, pk):
+#
+#     rack = get_object_or_404(Rack, pk=pk)
+#
+#     if request.method == 'POST':
+#         form = ConfirmationForm(request.POST)
+#         if form.is_valid():
+#             try:
+#                 rack.delete()
+#                 messages.success(request, "Rack {0} has been deleted".format(rack))
+#                 return redirect('dcim:rack_list')
+#             except ProtectedError, e:
+#                 handle_protectederror(rack, request, e)
+#                 return redirect('dcim:rack', pk=rack.pk)
+#
+#     else:
+#         form = ConfirmationForm()
+#
+#     return render(request, 'dcim/rack_delete.html', {
+#         'rack': rack,
+#         'form': form,
+#         'cancel_url': reverse('dcim:rack', kwargs={'pk': rack.pk}),
+#     })
 
-    rack = get_object_or_404(Rack, pk=pk)
 
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                rack.delete()
-                messages.success(request, "Rack {0} has been deleted".format(rack))
-                return redirect('dcim:rack_list')
-            except ProtectedError, e:
-                handle_protectederror(rack, request, e)
-                return redirect('dcim:rack', pk=rack.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'dcim/rack_delete.html', {
-        'rack': rack,
-        'form': form,
-        'cancel_url': reverse('dcim:rack', kwargs={'pk': rack.pk}),
-    })
+class RackDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'dcim.delete_rack'
+    model = Rack
+    template_name = 'dcim/rack_delete.html'
+    redirect_url = 'dcim:rack_list'
 
 
 class RackBulkImportView(PermissionRequiredMixin, BulkImportView):

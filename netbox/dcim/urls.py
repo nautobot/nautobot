@@ -25,13 +25,13 @@ urlpatterns = [
 
     # Racks
     url(r'^racks/$', views.RackListView.as_view(), name='rack_list'),
-    url(r'^racks/add/$', views.rack_add, name='rack_add'),
+    url(r'^racks/add/$', views.RackAddView.as_view(), name='rack_add'),
     url(r'^racks/import/$', views.RackBulkImportView.as_view(), name='rack_import'),
     url(r'^racks/edit/$', views.RackBulkEditView.as_view(), name='rack_bulk_edit'),
     url(r'^racks/delete/$', views.RackBulkDeleteView.as_view(), name='rack_bulk_delete'),
     url(r'^racks/(?P<pk>\d+)/$', views.rack, name='rack'),
-    url(r'^racks/(?P<pk>\d+)/edit/$', views.rack_edit, name='rack_edit'),
-    url(r'^racks/(?P<pk>\d+)/delete/$', views.rack_delete, name='rack_delete'),
+    url(r'^racks/(?P<pk>\d+)/edit/$', views.RackEditView.as_view(), name='rack_edit'),
+    url(r'^racks/(?P<pk>\d+)/delete/$', views.RackDeleteView.as_view(), name='rack_delete'),
 
     # Device types
     url(r'^device-types/$', views.DeviceTypeListView.as_view(), name='devicetype_list'),
