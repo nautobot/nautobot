@@ -18,7 +18,8 @@ from circuits.models import Circuit
 from extras.models import TopologyMap
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
-from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView
+from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView, ObjectAddView,\
+    ObjectEditView, ObjectDeleteView
 
 from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter, \
     PowerConnectionFilter, InterfaceConnectionFilter
@@ -99,74 +100,26 @@ def site(request, slug):
     })
 
 
-@permission_required('dcim.add_site')
-def site_add(request):
-
-    if request.method == 'POST':
-        form = SiteForm(request.POST)
-        if form.is_valid():
-            site = form.save()
-            messages.success(request, "Added new site: {0}".format(site.name))
-            if '_addanother' in request.POST:
-                return redirect('dcim:site_add')
-            else:
-                return redirect('dcim:site', slug=site.slug)
-
-    else:
-        form = SiteForm()
-
-    return render(request, 'dcim/site_edit.html', {
-        'form': form,
-        'cancel_url': reverse('dcim:site_list'),
-    })
+class SiteAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'dcim.add_site'
+    model = Site
+    form_class = SiteForm
+    template_name = 'dcim/site_edit.html'
+    cancel_url = 'dcim:site_list'
 
 
-@permission_required('dcim.change_site')
-def site_edit(request, slug):
-
-    site = get_object_or_404(Site, slug=slug)
-
-    if request.method == 'POST':
-        form = SiteForm(request.POST, instance=site)
-        if form.is_valid():
-            site = form.save()
-            messages.success(request, "Modified site {0}".format(site.name))
-            return redirect('dcim:site', slug=site.slug)
-
-    else:
-        form = SiteForm(instance=site)
-
-    return render(request, 'dcim/site_edit.html', {
-        'site': site,
-        'form': form,
-        'cancel_url': reverse('dcim:site', kwargs={'slug': site.slug}),
-    })
+class SiteEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'dcim.change_site'
+    model = Site
+    form_class = SiteForm
+    template_name = 'dcim/site_edit.html'
 
 
-@permission_required('dcim.delete_site')
-def site_delete(request, slug):
-
-    site = get_object_or_404(Site, slug=slug)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                site.delete()
-                messages.success(request, "Site {0} has been deleted".format(site))
-                return redirect('dcim:site_list')
-            except ProtectedError, e:
-                handle_protectederror(site, request, e)
-                return redirect('dcim:site', slug=site.slug)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'dcim/site_delete.html', {
-        'site': site,
-        'form': form,
-        'cancel_url': reverse('dcim:site', kwargs={'slug': site.slug}),
-    })
+class SiteDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'dcim.delete_site'
+    model = Site
+    template_name = 'dcim/site_delete.html'
+    redirect_url = 'dcim:site_list'
 
 
 class SiteBulkImportView(PermissionRequiredMixin, BulkImportView):

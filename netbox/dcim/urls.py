@@ -11,11 +11,11 @@ urlpatterns = [
 
     # Sites
     url(r'^sites/$', views.SiteListView.as_view(), name='site_list'),
-    url(r'^sites/add/$', views.site_add, name='site_add'),
+    url(r'^sites/add/$', views.SiteAddView.as_view(), name='site_add'),
     url(r'^sites/import/$', views.SiteBulkImportView.as_view(), name='site_import'),
     url(r'^sites/(?P<slug>[\w-]+)/$', views.site, name='site'),
-    url(r'^sites/(?P<slug>[\w-]+)/edit/$', views.site_edit, name='site_edit'),
-    url(r'^sites/(?P<slug>[\w-]+)/delete/$', views.site_delete, name='site_delete'),
+    url(r'^sites/(?P<slug>[\w-]+)/edit/$', views.SiteEditView.as_view(), name='site_edit'),
+    url(r'^sites/(?P<slug>[\w-]+)/delete/$', views.SiteDeleteView.as_view(), name='site_delete'),
 
     # Rack groups
     url(r'^rack-groups/$', views.RackGroupListView.as_view(), name='rackgroup_list'),

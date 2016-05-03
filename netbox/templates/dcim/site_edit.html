@@ -1,11 +1,11 @@
 {% extends '_base.html' %}
 {% load form_helpers %}
 
-{% block title %}{% if site %}Editing site {{ site }}{% else %}Add a site{% endif %}{% endblock %}
+{% block title %}{% if obj %}Editing site {{ obj }}{% else %}Add a site{% endif %}{% endblock %}
 
 {% block content %}
-{% if site %}
-	<h1>Site {{ site }}</h1>
+{% if obj %}
+	<h1>Site {{ obj }}</h1>
 {% else %}
 	<h1>Add a Site</h1>
 {% endif %}
@@ -48,9 +48,9 @@
     </div>
     <div class="row">
         <div class="col-md-12 text-right">
-            {% if site %}
+            {% if obj %}
                 <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{% url 'dcim:site' slug=site.slug %}" class="btn btn-default">Cancel</a>
+                <a href="{% url 'dcim:site' slug=obj.slug %}" class="btn btn-default">Cancel</a>
             {% else %}
                 <button type="submit" name="_create" class="btn btn-primary">Create</button>
                 <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
