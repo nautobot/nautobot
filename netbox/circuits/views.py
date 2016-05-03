@@ -1,16 +1,13 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.core.urlresolvers import reverse
-from django.db.models import Count, ProtectedError
-from django.shortcuts import get_object_or_404, redirect, render
+from django.db.models import Count
+from django.shortcuts import get_object_or_404, render
 
-from utilities.error_handlers import handle_protectederror
-from utilities.forms import ConfirmationForm
-from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView
+from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectAddView,\
+    ObjectEditView, ObjectDeleteView
 
 from .filters import CircuitFilter
-from .forms import CircuitForm, CircuitImportForm, CircuitBulkEditForm, CircuitBulkDeleteForm, CircuitFilterForm, \
+from .forms import CircuitForm, CircuitImportForm, CircuitBulkEditForm, CircuitBulkDeleteForm, CircuitFilterForm,\
     ProviderForm, ProviderImportForm, ProviderBulkEditForm, ProviderBulkDeleteForm
 from .models import Circuit, Provider
 from .tables import CircuitTable, CircuitBulkEditTable, ProviderTable, ProviderBulkEditTable
@@ -39,74 +36,26 @@ def provider(request, slug):
     })
 
 
-@permission_required('circuits.add_provider')
-def provider_add(request):
-
-    if request.method == 'POST':
-        form = ProviderForm(request.POST)
-        if form.is_valid():
-            provider = form.save()
-            messages.success(request, "Added new provider: {0}".format(provider))
-            if '_addanother' in request.POST:
-                return redirect('circuits:provider_add')
-            else:
-                return redirect('circuits:provider', slug=provider.slug)
-
-    else:
-        form = ProviderForm()
-
-    return render(request, 'circuits/provider_edit.html', {
-        'form': form,
-        'cancel_url': reverse('circuits:provider_list'),
-    })
+class ProviderAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'circuits.add_provider'
+    model = Provider
+    form_class = ProviderForm
+    template_name = 'circuits/provider_edit.html'
+    cancel_url = 'circuits:provider_list'
 
 
-@permission_required('circuits.change_provider')
-def provider_edit(request, slug):
-
-    provider = get_object_or_404(Provider, slug=slug)
-
-    if request.method == 'POST':
-        form = ProviderForm(request.POST, instance=provider)
-        if form.is_valid():
-            provider = form.save()
-            messages.success(request, "Modified provider {0}".format(provider))
-            return redirect('circuits:provider', slug=provider.slug)
-
-    else:
-        form = ProviderForm(instance=provider)
-
-    return render(request, 'circuits/provider_edit.html', {
-        'provider': provider,
-        'form': form,
-        'cancel_url': reverse('circuits:provider', kwargs={'slug': provider.slug}),
-    })
+class ProviderEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'circuits.change_provider'
+    model = Provider
+    form_class = ProviderForm
+    template_name = 'circuits/provider_edit.html'
 
 
-@permission_required('circuits.delete_provider')
-def provider_delete(request, slug):
-
-    provider = get_object_or_404(Provider, slug=slug)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                provider.delete()
-                messages.success(request, "Provider {0} has been deleted".format(provider))
-                return redirect('circuits:provider_list')
-            except ProtectedError, e:
-                handle_protectederror(provider, request, e)
-                return redirect('circuits:provider', slug=provider.slug)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'circuits/provider_delete.html', {
-        'provider': provider,
-        'form': form,
-        'cancel_url': reverse('circuits:provider', kwargs={'slug': provider.slug})
-    })
+class ProviderDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'circuits.delete_provider'
+    model = Provider
+    template_name = 'circuits/provider_delete.html'
+    redirect_url = 'circuits:provider_list'
 
 
 class ProviderBulkImportView(PermissionRequiredMixin, BulkImportView):
@@ -166,76 +115,27 @@ def circuit(request, pk):
     })
 
 
-@permission_required('circuits.add_circuit')
-def circuit_add(request):
-
-    if request.method == 'POST':
-        form = CircuitForm(request.POST)
-        if form.is_valid():
-            circuit = form.save()
-            messages.success(request, "Added new circuit: {0}".format(circuit))
-            if '_addanother' in request.POST:
-                return redirect('circuits:circuit_add')
-            else:
-                return redirect('circuits:circuit', pk=circuit.pk)
-
-    else:
-        form = CircuitForm(initial={
-            'site': request.GET.get('site'),
-        })
-
-    return render(request, 'circuits/circuit_edit.html', {
-        'form': form,
-        'cancel_url': reverse('circuits:circuit_list'),
-    })
+class CircuitAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'circuits.add_circuit'
+    model = Circuit
+    form_class = CircuitForm
+    template_name = 'circuits/circuit_edit.html'
+    cancel_url = 'circuits:circuit_list'
+    fields_initial = ['site']
 
 
-@permission_required('circuits.change_circuit')
-def circuit_edit(request, pk):
-
-    circuit = get_object_or_404(Circuit, pk=pk)
-
-    if request.method == 'POST':
-        form = CircuitForm(request.POST, instance=circuit)
-        if form.is_valid():
-            circuit = form.save()
-            messages.success(request, "Modified circuit {0}".format(circuit))
-            return redirect('circuits:circuit', pk=circuit.pk)
-
-    else:
-        form = CircuitForm(instance=circuit)
-
-    return render(request, 'circuits/circuit_edit.html', {
-        'circuit': circuit,
-        'form': form,
-        'cancel_url': reverse('circuits:circuit', kwargs={'pk': circuit.pk}),
-    })
+class CircuitEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'circuits.change_circuit'
+    model = Circuit
+    form_class = CircuitForm
+    template_name = 'circuits/circuit_edit.html'
 
 
-@permission_required('circuits.delete_circuit')
-def circuit_delete(request, pk):
-
-    circuit = get_object_or_404(Circuit, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                circuit.delete()
-                messages.success(request, "Circuit {0} has been deleted".format(circuit))
-                return redirect('circuits:circuit_list')
-            except ProtectedError, e:
-                handle_protectederror(circuit, request, e)
-                return redirect('circuits:circuit', pk=circuit.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'circuits/circuit_delete.html', {
-        'circuit': circuit,
-        'form': form,
-        'cancel_url': reverse('circuits:circuit', kwargs={'pk': circuit.pk})
-    })
+class CircuitDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'circuits.delete_circuit'
+    model = Circuit
+    template_name = 'circuits/circuit_delete.html'
+    redirect_url = 'circuits:circuit_list'
 
 
 class CircuitBulkImportView(PermissionRequiredMixin, BulkImportView):

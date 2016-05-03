@@ -1,8 +1,8 @@
 {% extends 'utilities/confirmation_form.html' %}
 {% load form_helpers %}
 
-{% block title %}Delete {{ circuit.provider }} Circuit {{ circuit.cid }}?{% endblock %}
+{% block title %}Delete {{ obj.provider }} - {{ obj.cid }}?{% endblock %}
 
 {% block message %}
-    <p>Are you sure you want to delete rack {{ circuit }} from {{ circuit.site }}?</p>
+    <p>Are you sure you want to delete circuit {{ obj }} from {{ obj.site }}?</p>
 {% endblock %}

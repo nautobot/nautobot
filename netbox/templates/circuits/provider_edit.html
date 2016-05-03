@@ -1,11 +1,11 @@
 {% extends '_base.html' %}
 {% load form_helpers %}
 
-{% block title %}{% if provider %}Editing {{ provider }}{% else %}Add a provider{% endif %}{% endblock %}
+{% block title %}{% if obj %}Editing {{ obj }}{% else %}Add a provider{% endif %}{% endblock %}
 
 {% block content %}
-{% if provider %}
-	<h1>Editing {{ provider }}</h1>
+{% if obj %}
+	<h1>Editing {{ obj }}</h1>
 {% else %}
 	<h1>Add a Provider</h1>
 {% endif %}
@@ -55,9 +55,9 @@
     </div>
     <div class="row">
         <div class="col-md-12 text-right">
-            {% if provider %}
+            {% if obj %}
                 <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{% url 'circuits:provider' slug=provider.slug %}" class="btn btn-default">Cancel</a>
+                <a href="{% url 'circuits:provider' slug=obj.slug %}" class="btn btn-default">Cancel</a>
             {% else %}
                 <button type="submit" name="_create" class="btn btn-primary">Create</button>
                 <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
