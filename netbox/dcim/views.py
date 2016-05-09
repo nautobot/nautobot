@@ -520,89 +520,27 @@ def device(request, pk):
     })
 
 
-@permission_required('dcim.add_device')
-def device_add(request):
-
-    if request.method == 'POST':
-        form = DeviceForm(request.POST)
-        if form.is_valid():
-            device = form.save()
-            messages.success(request, "Added new device: {0} ({1})".format(device.name, device.device_type))
-            if '_addanother' in request.POST:
-                base_url = reverse('dcim:device_add')
-                params = urlencode({
-                    'site': device.rack.site.pk,
-                    'rack': device.rack.pk,
-                })
-                return HttpResponseRedirect('{}?{}'.format(base_url, params))
-            else:
-                return redirect('dcim:device', pk=device.pk)
-
-    else:
-        initial_data = {}
-        if request.GET.get('rack', None):
-            try:
-                rack = Rack.objects.get(pk=request.GET.get('rack', None))
-                initial_data['rack'] = rack.pk
-                initial_data['site'] = rack.site.pk
-                initial_data['position'] = request.GET.get('position')
-                initial_data['face'] = request.GET.get('face')
-            except Rack.DoesNotExist:
-                pass
-        form = DeviceForm(initial=initial_data)
-
-    return render(request, 'dcim/device_edit.html', {
-        'form': form,
-        'cancel_url': reverse('dcim:device_list'),
-    })
+class DeviceAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'dcim.add_device'
+    model = Device
+    form_class = DeviceForm
+    template_name = 'dcim/device_edit.html'
+    cancel_url = 'dcim:device_list'
+    fields_initial = ['site', 'rack', 'position', 'face']
 
 
-@permission_required('dcim.change_device')
-def device_edit(request, pk):
-
-    device = get_object_or_404(Device, pk=pk)
-
-    if request.method == 'POST':
-        form = DeviceForm(request.POST, instance=device)
-        if form.is_valid():
-            device = form.save()
-            messages.success(request, "Modified device {0}".format(device.name))
-            return redirect('dcim:device', pk=device.pk)
-
-    else:
-        form = DeviceForm(instance=device)
-
-    return render(request, 'dcim/device_edit.html', {
-        'device': device,
-        'form': form,
-        'cancel_url': reverse('dcim:device', kwargs={'pk': device.pk}),
-    })
+class DeviceEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'dcim.change_device'
+    model = Device
+    form_class = DeviceForm
+    template_name = 'dcim/device_edit.html'
 
 
-@permission_required('dcim.delete_device')
-def device_delete(request, pk):
-
-    device = get_object_or_404(Device, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                device.delete()
-                messages.success(request, "Device {0} has been deleted".format(device))
-                return redirect('dcim:device_list')
-            except ProtectedError, e:
-                handle_protectederror(device, request, e)
-                return redirect('dcim:device', pk=device.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'dcim/device_delete.html', {
-        'device': device,
-        'form': form,
-        'cancel_url': reverse('dcim:device', kwargs={'pk': device.pk}),
-    })
+class DeviceDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'dcim.delete_device'
+    model = Device
+    template_name = 'dcim/device_delete.html'
+    redirect_url = 'dcim:device_list'
 
 
 class DeviceBulkImportView(PermissionRequiredMixin, BulkImportView):

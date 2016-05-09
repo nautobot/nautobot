@@ -66,13 +66,13 @@ urlpatterns = [
 
     # Devices
     url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),
-    url(r'^devices/add/$', views.device_add, name='device_add'),
+    url(r'^devices/add/$', views.DeviceAddView.as_view(), name='device_add'),
     url(r'^devices/import/$', views.DeviceBulkImportView.as_view(), name='device_import'),
     url(r'^devices/edit/$', views.DeviceBulkEditView.as_view(), name='device_bulk_edit'),
     url(r'^devices/delete/$', views.DeviceBulkDeleteView.as_view(), name='device_bulk_delete'),
     url(r'^devices/(?P<pk>\d+)/$', views.device, name='device'),
-    url(r'^devices/(?P<pk>\d+)/edit/$', views.device_edit, name='device_edit'),
-    url(r'^devices/(?P<pk>\d+)/delete/$', views.device_delete, name='device_delete'),
+    url(r'^devices/(?P<pk>\d+)/edit/$', views.DeviceEditView.as_view(), name='device_edit'),
+    url(r'^devices/(?P<pk>\d+)/delete/$', views.DeviceDeleteView.as_view(), name='device_delete'),
     url(r'^devices/(?P<pk>\d+)/inventory/$', views.device_inventory, name='device_inventory'),
     url(r'^devices/(?P<pk>\d+)/lldp-neighbors/$', views.device_lldp_neighbors, name='device_lldp_neighbors'),
     url(r'^devices/(?P<pk>\d+)/ip-addresses/assign/$', views.ipaddress_assign, name='ipaddress_assign'),
