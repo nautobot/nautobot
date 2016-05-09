@@ -4,22 +4,22 @@ from . import views
 
 urlpatterns = [
     url(r'^vrfs/$', views.VRFListView.as_view(), name='vrf_list'),
-    url(r'^vrfs/add/$', views.vrf_add, name='vrf_add'),
+    url(r'^vrfs/add/$', views.VRFAddView.as_view(), name='vrf_add'),
     url(r'^vrfs/import/$', views.VRFBulkImportView.as_view(), name='vrf_import'),
     url(r'^vrfs/edit/$', views.VRFBulkEditView.as_view(), name='vrf_bulk_edit'),
     url(r'^vrfs/delete/$', views.VRFBulkDeleteView.as_view(), name='vrf_bulk_delete'),
     url(r'^vrfs/(?P<pk>\d+)/$', views.vrf, name='vrf'),
-    url(r'^vrfs/(?P<pk>\d+)/edit/$', views.vrf_edit, name='vrf_edit'),
-    url(r'^vrfs/(?P<pk>\d+)/delete/$', views.vrf_delete, name='vrf_delete'),
+    url(r'^vrfs/(?P<pk>\d+)/edit/$', views.VRFEditView.as_view(), name='vrf_edit'),
+    url(r'^vrfs/(?P<pk>\d+)/delete/$', views.VRFDeleteView.as_view(), name='vrf_delete'),
 
     url(r'^aggregates/$', views.AggregateListView.as_view(), name='aggregate_list'),
-    url(r'^aggregates/add/$', views.aggregate_add, name='aggregate_add'),
+    url(r'^aggregates/add/$', views.AggregateAddView.as_view(), name='aggregate_add'),
     url(r'^aggregates/import/$', views.AggregateBulkImportView.as_view(), name='aggregate_import'),
     url(r'^aggregates/edit/$', views.AggregateBulkEditView.as_view(), name='aggregate_bulk_edit'),
     url(r'^aggregates/delete/$', views.AggregateBulkDeleteView.as_view(), name='aggregate_bulk_delete'),
     url(r'^aggregates/(?P<pk>\d+)/$', views.aggregate, name='aggregate'),
-    url(r'^aggregates/(?P<pk>\d+)/edit/$', views.aggregate_edit, name='aggregate_edit'),
-    url(r'^aggregates/(?P<pk>\d+)/delete/$', views.aggregate_delete, name='aggregate_delete'),
+    url(r'^aggregates/(?P<pk>\d+)/edit/$', views.AggregateEditView.as_view(), name='aggregate_edit'),
+    url(r'^aggregates/(?P<pk>\d+)/delete/$', views.AggregateDeleteView.as_view(), name='aggregate_delete'),
 
     url(r'^prefixes/$', views.PrefixListView.as_view(), name='prefix_list'),
     url(r'^prefixes/add/$', views.prefix_add, name='prefix_add'),

@@ -15,17 +15,18 @@ from dcim.models import Device
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
 from utilities.paginator import EnhancedPaginator
-from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView
+from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectAddView,\
+    ObjectEditView, ObjectDeleteView
 
 from .filters import AggregateFilter, PrefixFilter, IPAddressFilter, VLANFilter, VRFFilter
-from .forms import AggregateForm, AggregateImportForm, AggregateBulkEditForm, AggregateBulkDeleteForm, \
-    AggregateFilterForm, PrefixForm, PrefixImportForm, PrefixBulkEditForm, PrefixBulkDeleteForm, PrefixFilterForm, \
-    IPAddressForm, IPAddressImportForm, IPAddressBulkEditForm, IPAddressBulkDeleteForm, IPAddressFilterForm, VLANForm, \
-    VLANImportForm, VLANBulkEditForm, VLANBulkDeleteForm, VRFForm, VRFImportForm, VRFBulkEditForm, VRFBulkDeleteForm, \
+from .forms import AggregateForm, AggregateImportForm, AggregateBulkEditForm, AggregateBulkDeleteForm,\
+    AggregateFilterForm, PrefixForm, PrefixImportForm, PrefixBulkEditForm, PrefixBulkDeleteForm, PrefixFilterForm,\
+    IPAddressForm, IPAddressImportForm, IPAddressBulkEditForm, IPAddressBulkDeleteForm, IPAddressFilterForm, VLANForm,\
+    VLANImportForm, VLANBulkEditForm, VLANBulkDeleteForm, VRFForm, VRFImportForm, VRFBulkEditForm, VRFBulkDeleteForm,\
     VLANFilterForm
 from .models import VRF, Aggregate, Prefix, VLAN
-from .tables import AggregateTable, AggregateBulkEditTable, PrefixTable, PrefixBriefTable, PrefixBulkEditTable, \
-    IPAddress, IPAddressBriefTable, IPAddressTable, IPAddressBulkEditTable, VLANTable, VLANBulkEditTable, VRFTable, \
+from .tables import AggregateTable, AggregateBulkEditTable, PrefixTable, PrefixBriefTable, PrefixBulkEditTable,\
+    IPAddress, IPAddressBriefTable, IPAddressTable, IPAddressBulkEditTable, VLANTable, VLANBulkEditTable, VRFTable,\
     VRFBulkEditTable
 
 
@@ -69,74 +70,26 @@ def vrf(request, pk):
     })
 
 
-@permission_required('ipam.add_vrf')
-def vrf_add(request):
-
-    if request.method == 'POST':
-        form = VRFForm(request.POST)
-        if form.is_valid():
-            vrf = form.save()
-            messages.success(request, "Added new VRF: {0}".format(vrf))
-            if '_addanother' in request.POST:
-                return redirect('ipam:vrf_add')
-            else:
-                return redirect('ipam:vrf', pk=vrf.pk)
-
-    else:
-        form = VRFForm()
-
-    return render(request, 'ipam/vrf_edit.html', {
-        'form': form,
-        'cancel_url': reverse('ipam:vrf_list'),
-    })
+class VRFAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'ipam.add_vrf'
+    model = VRF
+    form_class = VRFForm
+    template_name = 'ipam/vrf_edit.html'
+    cancel_url = 'ipam:vrf_list'
 
 
-@permission_required('ipam.change_vrf')
-def vrf_edit(request, pk):
-
-    vrf = get_object_or_404(VRF, pk=pk)
-
-    if request.method == 'POST':
-        form = VRFForm(request.POST, instance=vrf)
-        if form.is_valid():
-            vrf = form.save()
-            messages.success(request, "Modified VRF {0}".format(vrf))
-            return redirect('ipam:vrf', pk=vrf.pk)
-
-    else:
-        form = VRFForm(instance=vrf)
-
-    return render(request, 'ipam/vrf_edit.html', {
-        'vrf': vrf,
-        'form': form,
-        'cancel_url': reverse('ipam:vrf', kwargs={'pk': vrf.pk}),
-    })
+class VRFEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'ipam.change_vrf'
+    model = VRF
+    form_class = VRFForm
+    template_name = 'ipam/vrf_edit.html'
 
 
-@permission_required('ipam.delete_vrf')
-def vrf_delete(request, pk):
-
-    vrf = get_object_or_404(VRF, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                vrf.delete()
-                messages.success(request, "VRF {0} has been deleted".format(vrf))
-                return redirect('ipam:vrf_list')
-            except ProtectedError, e:
-                handle_protectederror(vrf, request, e)
-                return redirect('ipam:vrf', pk=vrf.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'ipam/vrf_delete.html', {
-        'vrf': vrf,
-        'form': form,
-        'cancel_url': reverse('ipam:vrf', kwargs={'pk': vrf.pk})
-    })
+class VRFDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'ipam.delete_vrf'
+    model = VRF
+    template_name = 'ipam/vrf_delete.html'
+    redirect_url = 'ipam:vrf_list'
 
 
 class VRFBulkImportView(PermissionRequiredMixin, BulkImportView):
@@ -211,74 +164,26 @@ def aggregate(request, pk):
     })
 
 
-@permission_required('ipam.add_aggregate')
-def aggregate_add(request):
-
-    if request.method == 'POST':
-        form = AggregateForm(request.POST)
-        if form.is_valid():
-            aggregate = form.save()
-            messages.success(request, "Added new aggregate: {0}".format(aggregate.prefix))
-            if '_addanother' in request.POST:
-                return redirect('ipam:aggregate_add')
-            else:
-                return redirect('ipam:aggregate', pk=aggregate.pk)
-
-    else:
-        form = AggregateForm()
-
-    return render(request, 'ipam/aggregate_edit.html', {
-        'form': form,
-        'cancel_url': reverse('ipam:aggregate_list'),
-    })
+class AggregateAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'ipam.add_aggregate'
+    model = Aggregate
+    form_class = AggregateForm
+    template_name = 'ipam/aggregate_edit.html'
+    cancel_url = 'ipam:aggregate_list'
 
 
-@permission_required('ipam.change_aggregate')
-def aggregate_edit(request, pk):
-
-    aggregate = get_object_or_404(Aggregate, pk=pk)
-
-    if request.method == 'POST':
-        form = AggregateForm(request.POST, instance=aggregate)
-        if form.is_valid():
-            aggregate = form.save()
-            messages.success(request, "Modified aggregate {0}".format(aggregate.prefix))
-            return redirect('ipam:aggregate', pk=aggregate.pk)
-
-    else:
-        form = AggregateForm(instance=aggregate)
-
-    return render(request, 'ipam/aggregate_edit.html', {
-        'aggregate': aggregate,
-        'form': form,
-        'cancel_url': reverse('ipam:aggregate', kwargs={'pk': aggregate.pk}),
-    })
+class AggregateEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'ipam.change_aggregate'
+    model = Aggregate
+    form_class = AggregateForm
+    template_name = 'ipam/aggregate_edit.html'
 
 
-@permission_required('ipam.delete_aggregate')
-def aggregate_delete(request, pk):
-
-    aggregate = get_object_or_404(Aggregate, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                aggregate.delete()
-                messages.success(request, "Aggregate {0} has been deleted".format(aggregate))
-                return redirect('ipam:aggregate_list')
-            except ProtectedError, e:
-                handle_protectederror(aggregate, request, e)
-                return redirect('ipam:aggregate', pk=aggregate.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'ipam/aggregate_delete.html', {
-        'aggregate': aggregate,
-        'form': form,
-        'cancel_url': reverse('ipam:aggregate', kwargs={'pk': aggregate.pk})
-    })
+class AggregateDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'ipam.delete_aggregate'
+    model = Aggregate
+    template_name = 'ipam/aggregate_delete.html'
+    redirect_url = 'ipam:aggregate_list'
 
 
 class AggregateBulkImportView(PermissionRequiredMixin, BulkImportView):
