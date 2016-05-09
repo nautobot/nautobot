@@ -1,86 +1,54 @@
-{% extends '_base.html' %}
+{% extends 'utilities/obj_edit.html' %}
 {% load form_helpers %}
 
-{% block title %}{% if obj %}Editing IP Address {{ obj }}{% else %}Add an IP Address{% endif %}{% endblock %}
-
-{% block content %}
-<h1>{% if obj %}Editing IP Address {{ obj }}{% else %}Add an IP Address{% endif %}</h1>
-<form action="." method="post" class="form form-horizontal">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-md-6">
-            {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
-            {% endif %}
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>IP Address</strong></div>
-                <div class="panel-body">
-                    {% render_field form.address %}
-                    {% render_field form.vrf %}
-                    {% if obj %}
-                        <div class="form-group">
-                            <label class="col-md-3 control-label">Device</label>
-                            <div class="col-md-9">
-                                <p class="form-control-static">
-                                    {% if obj.interface %}
-                                        <a href="{% url 'dcim:device' pk=obj.interface.device.pk %}">{{ obj.interface.device }}</a>
-                                    {% else %}
-                                        <span>None</span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-md-3 control-label">Interface</label>
-                            <div class="col-md-9">
-                                <p class="form-control-static">{{ obj.interface }}</p>
-                            </div>
-                        </div>
-                    {% endif %}
-                    {% render_field form.description %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>NAT IP (Inside)</strong></div>
-                <div class="panel-body">
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="active"><a href="#select" aria-controls="home" role="tab" data-toggle="tab">By Device</a></li>
-                        <li role="presentation"><a href="#search" aria-controls="search" role="tab" data-toggle="tab">By IP</a></li>
-                    </ul>
-                    <div class="tab-content">
-                        <div class="tab-pane active" id="select">
-                            {% render_field form.nat_site %}
-                            {% render_field form.nat_device %}
-                        </div>
-                        <div class="tab-pane" id="search">
-                            {% render_field form.livesearch %}
-                        </div>
-                    </div>
-                    {% render_field form.nat_inside %}
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12 text-right">
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>IP Address</strong></div>
+        <div class="panel-body">
+            {% render_field form.address %}
+            {% render_field form.vrf %}
             {% if obj %}
-                <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{% url 'ipam:ipaddress' pk=obj.pk %}" class="btn btn-default">Cancel</a>
-            {% else %}
-                <button type="submit" name="_create" class="btn btn-primary">Create</button>
-                <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
-                <a href="{% url 'ipam:ipaddress_list' %}" class="btn btn-default">Cancel</a>
+                <div class="form-group">
+                    <label class="col-md-3 control-label">Device</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">
+                            {% if obj.interface %}
+                                <a href="{% url 'dcim:device' pk=obj.interface.device.pk %}">{{ obj.interface.device }}</a>
+                            {% else %}
+                                <span>None</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-3 control-label">Interface</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.interface }}</p>
+                    </div>
+                </div>
             {% endif %}
+            {% render_field form.description %}
         </div>
     </div>
-</form>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>NAT IP (Inside)</strong></div>
+        <div class="panel-body">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"><a href="#select" aria-controls="home" role="tab" data-toggle="tab">By Device</a></li>
+                <li role="presentation"><a href="#search" aria-controls="search" role="tab" data-toggle="tab">By IP</a></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane active" id="select">
+                    {% render_field form.nat_site %}
+                    {% render_field form.nat_device %}
+                </div>
+                <div class="tab-pane" id="search">
+                    {% render_field form.livesearch %}
+                </div>
+            </div>
+            {% render_field form.nat_inside %}
+        </div>
+    </div>
 {% endblock %}
 
 {% block javascript %}

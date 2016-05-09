@@ -17,6 +17,9 @@ class VRFForm(forms.ModelForm, BootstrapMixin):
     class Meta:
         model = VRF
         fields = ['name', 'rd', 'description']
+        labels = {
+            'rd': "RD",
+        }
         help_texts = {
             'rd': "Route distinguisher in any format",
         }

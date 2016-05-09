@@ -1,86 +1,46 @@
-{% extends '_base.html' %}
+{% extends 'utilities/obj_edit.html' %}
 {% load form_helpers %}
 
-{% block title %}{% if obj %}Editing {{ obj }}{% else %}Add a circuit{% endif %}{% endblock %}
-
-{% block content %}
-{% if obj %}
-	<h1>Editing {{ obj.provider }} circuit {{ obj.cid }}</h1>
-{% else %}
-	<h1>Add a Circuit</h1>
-{% endif %}
-<form action="." method="post" class="form form-horizontal">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
-            {% endif %}
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Details</strong></div>
+        <div class="panel-body">
+            {% render_field form.provider %}
+            {% render_field form.cid %}
+            {% render_field form.type %}
+            {% render_field form.install_date %}
+            {% render_field form.port_speed %}
+            {% render_field form.commit_rate %}
+            {% render_field form.xconnect_id %}
+            {% render_field form.pp_info %}
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Details</strong></div>
-                <div class="panel-body">
-                    {% render_field form.cid %}
-                    {% render_field form.type %}
-                    {% render_field form.provider %}
-                    {% render_field form.install_date %}
-                    {% render_field form.port_speed %}
-                    {% render_field form.commit_rate %}
-                    {% render_field form.xconnect_id %}
-                    {% render_field form.pp_info %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Termination</strong></div>
+        <div class="panel-body">
+            {% render_field form.site %}
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"><a href="#select" aria-controls="home" role="tab" data-toggle="tab">Select</a></li>
+                <li role="presentation"><a href="#search" aria-controls="search" role="tab" data-toggle="tab">Search</a></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane active" id="select">
+                    {% render_field form.rack %}
+                    {% render_field form.device %}
+                </div>
+                <div class="tab-pane" id="search">
+                    {% render_field form.livesearch %}
                 </div>
             </div>
-        </div>
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Termination</strong></div>
-                <div class="panel-body">
-                    {% render_field form.site %}
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="active"><a href="#select" aria-controls="home" role="tab" data-toggle="tab">Select</a></li>
-                        <li role="presentation"><a href="#search" aria-controls="search" role="tab" data-toggle="tab">Search</a></li>
-                    </ul>
-                    <div class="tab-content">
-                        <div class="tab-pane active" id="select">
-                            {% render_field form.rack %}
-                            {% render_field form.device %}
-                        </div>
-                        <div class="tab-pane" id="search">
-                            {% render_field form.livesearch %}
-                        </div>
-                    </div>
-                    {% render_field form.interface %}
-                </div>
-            </div>
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Comments</strong></div>
-                <div class="panel-body">
-                    {% render_field form.comments %}
-                </div>
-            </div>
+            {% render_field form.interface %}
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-12 text-right">
-            {% if obj %}
-                <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{% url 'circuits:circuit' pk=obj.pk %}" class="btn btn-default">Cancel</a>
-            {% else %}
-                <button type="submit" name="_create" class="btn btn-primary">Create</button>
-                <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
-                <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
-            {% endif %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
+            {% render_field form.comments %}
         </div>
     </div>
-</form>
 {% endblock %}
 
 {% block javascript %}

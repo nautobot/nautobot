@@ -1,84 +1,44 @@
-{% extends '_base.html' %}
+{% extends 'utilities/obj_edit.html' %}
 {% load form_helpers %}
 
-{% block title %}{% if obj %}Editing device {{ obj }}{% else %}Add a device{% endif %}{% endblock %}
-
-{% block content %}
-{% if obj %}
-	<h1>{{ obj }}</h1>
-{% else %}
-	<h1>Add a Device</h1>
-{% endif %}
-<form action="." method="post" class="form form-horizontal">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
-            {% endif %}
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Device</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.device_role %}
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Device</strong></div>
-                <div class="panel-body">
-                    {% render_field form.name %}
-                    {% render_field form.device_role %}
-                </div>
-            </div>
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Hardware</strong></div>
-                <div class="panel-body">
-                    {% render_field form.manufacturer %}
-                    {% render_field form.device_type %}
-                    {% render_field form.serial %}
-                </div>
-            </div>
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Comments</strong></div>
-                <div class="panel-body">
-                    {% render_field form.comments %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Location</strong></div>
-                <div class="panel-body">
-                    {% render_field form.site %}
-                    {% render_field form.rack %}
-                    {% render_field form.face %}
-                    {% render_field form.position %}
-                </div>
-            </div>
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Management</strong></div>
-                <div class="panel-body">
-                    {% render_field form.platform %}
-                    {% render_field form.status %}
-                    {% if obj %}{% render_field form.primary_ip %}{% endif %}
-                    {% render_field form.ro_snmp %}
-                </div>
-            </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Hardware</strong></div>
+        <div class="panel-body">
+            {% render_field form.manufacturer %}
+            {% render_field form.device_type %}
+            {% render_field form.serial %}
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-12 text-right">
-            {% if obj %}
-                <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{% url 'dcim:device' pk=obj.pk %}" class="btn btn-default">Cancel</a>
-            {% else %}
-                <button type="submit" name="_create" class="btn btn-primary">Create</button>
-                <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
-                <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
-            {% endif %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Location</strong></div>
+        <div class="panel-body">
+            {% render_field form.site %}
+            {% render_field form.rack %}
+            {% render_field form.face %}
+            {% render_field form.position %}
         </div>
     </div>
-</form>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Management</strong></div>
+        <div class="panel-body">
+            {% render_field form.platform %}
+            {% render_field form.status %}
+            {% if obj %}{% render_field form.primary_ip %}{% endif %}
+            {% render_field form.ro_snmp %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
 {% endblock %}

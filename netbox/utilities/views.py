@@ -91,6 +91,7 @@ class ObjectAddView(View):
 
         return render(request, self.template_name, {
             'form': form,
+            'obj_type': self.model._meta.verbose_name,
             'cancel_url': reverse(self.cancel_url),
         })
 
@@ -108,6 +109,7 @@ class ObjectAddView(View):
 
         return render(request, self.template_name, {
             'form': form,
+            'obj_type': self.model._meta.verbose_name,
             'cancel_url': reverse(self.cancel_url),
         })
 
@@ -132,6 +134,7 @@ class ObjectEditView(View):
         return render(request, self.template_name, {
             'obj': obj,
             'form': form,
+            'obj_type': self.model._meta.verbose_name,
             'cancel_url': obj.get_absolute_url(),
         })
 
@@ -151,6 +154,7 @@ class ObjectEditView(View):
         return render(request, self.template_name, {
             'obj': obj,
             'form': form,
+            'obj_type': self.model._meta.verbose_name,
             'cancel_url': obj.get_absolute_url(),
         })
 
