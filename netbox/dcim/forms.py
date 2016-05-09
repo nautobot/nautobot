@@ -325,13 +325,10 @@ class DeviceForm(forms.ModelForm, BootstrapMixin):
             self.fields['rack'].choices = []
 
         # Rack position
-        face = self.data.get('face')
-        if face == '':
-            face = None
         try:
-            if self.is_bound and self.data.get('rack') and face is not None:
-                position_choices = Rack.objects.get(pk=self.data['rack']).get_rack_units(face=face)
-            elif self.initial.get('rack') and face is not None:
+            if self.is_bound and self.data.get('rack') and self.data.get('face') is not None:
+                position_choices = Rack.objects.get(pk=self.data['rack']).get_rack_units(face=self.data.get('face'))
+            elif self.initial.get('rack') and self.initial.get('face') is not None:
                 position_choices = Rack.objects.get(pk=self.initial['rack']).get_rack_units(face=self.initial.get('face'))
             else:
                 position_choices = []
