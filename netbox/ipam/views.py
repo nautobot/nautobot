@@ -283,78 +283,27 @@ def prefix(request, pk):
     })
 
 
-@permission_required('ipam.add_prefix')
-def prefix_add(request):
-
-    if request.method == 'POST':
-        form = PrefixForm(request.POST)
-        if form.is_valid():
-            prefix = form.save()
-            messages.success(request, "Added new prefix: {0}".format(prefix.prefix))
-            if '_addanother' in request.POST:
-                return redirect('ipam:prefix_add')
-            else:
-                return redirect('ipam:prefix', pk=prefix.pk)
-
-    else:
-        form = PrefixForm(initial={
-            'site': request.GET.get('site'),
-            'vrf': request.GET.get('vrf'),
-            'prefix': request.GET.get('prefix'),
-        })
-
-    return render(request, 'ipam/prefix_edit.html', {
-        'form': form,
-        'cancel_url': reverse('ipam:prefix_list'),
-    })
+class PrefixAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'ipam.add_prefix'
+    model = Prefix
+    form_class = PrefixForm
+    template_name = 'ipam/prefix_edit.html'
+    cancel_url = 'ipam:prefix_list'
+    fields_initial = ['site', 'vrf', 'prefix']
 
 
-@permission_required('ipam.change_prefix')
-def prefix_edit(request, pk):
-
-    prefix = get_object_or_404(Prefix, pk=pk)
-
-    if request.method == 'POST':
-        form = PrefixForm(request.POST, instance=prefix)
-        if form.is_valid():
-            prefix = form.save()
-            messages.success(request, "Modified prefix {0}".format(prefix.prefix))
-            return redirect('ipam:prefix', pk=prefix.pk)
-
-    else:
-        form = PrefixForm(instance=prefix)
-
-    return render(request, 'ipam/prefix_edit.html', {
-        'prefix': prefix,
-        'form': form,
-        'cancel_url': reverse('ipam:prefix', kwargs={'pk': prefix.pk}),
-    })
+class PrefixEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'ipam.change_prefix'
+    model = Prefix
+    form_class = PrefixForm
+    template_name = 'ipam/prefix_edit.html'
 
 
-@permission_required('ipam.delete_prefix')
-def prefix_delete(request, pk):
-
-    prefix = get_object_or_404(Prefix, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                prefix.delete()
-                messages.success(request, "Prefix {0} has been deleted".format(prefix))
-                return redirect('ipam:prefix_list')
-            except ProtectedError, e:
-                handle_protectederror(prefix, request, e)
-                return redirect('ipam:prefix', pk=prefix.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'ipam/prefix_delete.html', {
-        'prefix': prefix,
-        'form': form,
-        'cancel_url': reverse('ipam:prefix', kwargs={'pk': prefix.pk})
-    })
+class PrefixDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'ipam.delete_prefix'
+    model = Prefix
+    template_name = 'ipam/prefix_delete.html'
+    redirect_url = 'ipam:prefix_list'
 
 
 class PrefixBulkImportView(PermissionRequiredMixin, BulkImportView):
@@ -447,85 +396,27 @@ def ipaddress(request, pk):
     })
 
 
-@permission_required('ipam.add_ipaddress')
-def ipaddress_add(request):
-
-    if request.method == 'POST':
-        form = IPAddressForm(request.POST)
-        if form.is_valid():
-            ipaddress = form.save()
-            messages.success(request, "Created new IP Address: {0}".format(ipaddress))
-            if '_addanother' in request.POST:
-                return redirect('ipam:ipaddress_add')
-            else:
-                return redirect('ipam:ipaddress', pk=ipaddress.pk)
-
-    else:
-        form = IPAddressForm(initial={
-            'ipaddress': request.GET.get('ipaddress', None),
-        })
-
-    return render(request, 'ipam/ipaddress_edit.html', {
-        'form': form,
-        'cancel_url': reverse('ipam:ipaddress_list'),
-    })
+class IPAddressAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'ipam.add_ipaddress'
+    model = IPAddress
+    form_class = IPAddressForm
+    template_name = 'ipam/ipaddress_edit.html'
+    cancel_url = 'ipam:ipaddress_list'
+    fields_initial = ['ipaddress']
 
 
-@permission_required('ipam.change_ipaddress')
-def ipaddress_edit(request, pk):
-
-    ipaddress = get_object_or_404(IPAddress, pk=pk)
-
-    if request.method == 'POST':
-        form = IPAddressForm(request.POST, instance=ipaddress)
-        if form.is_valid():
-            ipaddress = form.save()
-            messages.success(request, "Modified IP address {0}".format(ipaddress))
-            return redirect('ipam:ipaddress', pk=ipaddress.pk)
-
-    else:
-        form = IPAddressForm(instance=ipaddress)
-
-    return render(request, 'ipam/ipaddress_edit.html', {
-        'ipaddress': ipaddress,
-        'form': form,
-        'cancel_url': reverse('ipam:ipaddress', kwargs={'pk': ipaddress.pk}),
-    })
+class IPAddressEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'ipam.change_ipaddress'
+    model = IPAddress
+    form_class = IPAddressForm
+    template_name = 'ipam/ipaddress_edit.html'
 
 
-@permission_required('ipam.delete_ipaddress')
-def ipaddress_delete(request, pk):
-
-    ipaddress = get_object_or_404(IPAddress, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                ipaddress.delete()
-                messages.success(request, "IP address {0} has been deleted".format(ipaddress))
-                if ipaddress.interface:
-                    return redirect('dcim:device', pk=ipaddress.interface.device.pk)
-                else:
-                    return redirect('ipam:ipaddress_list')
-            except ProtectedError, e:
-                handle_protectederror(ipaddress, request, e)
-                return redirect('ipam:ipaddress', pk=ipaddress.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    # Upon cancellation, redirect to the assigned device if one exists
-    if ipaddress.interface:
-        cancel_url = reverse('dcim:device', kwargs={'pk': ipaddress.interface.device.pk})
-    else:
-        cancel_url = reverse('ipam:ipaddress_list')
-
-    return render(request, 'ipam/ipaddress_delete.html', {
-        'ipaddress': ipaddress,
-        'form': form,
-        'cancel_url': cancel_url,
-    })
+class IPAddressDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'ipam.delete_ipaddress'
+    model = IPAddress
+    template_name = 'ipam/ipaddress_delete.html'
+    redirect_url = 'ipam:ipaddress_list'
 
 
 class IPAddressBulkImportView(PermissionRequiredMixin, BulkImportView):
@@ -601,78 +492,26 @@ def vlan(request, pk):
     })
 
 
-@permission_required('ipam.add_vlan')
-def vlan_add(request):
-
-    if request.method == 'POST':
-        form = VLANForm(request.POST)
-        if form.is_valid():
-            vlan = form.save()
-            messages.success(request, "Added new VLAN: {0}".format(vlan))
-            if '_addanother' in request.POST:
-                base_url = reverse('ipam:vlan_add')
-                params = urlencode({
-                    'site': vlan.site.pk,
-                })
-                return HttpResponseRedirect('{}?{}'.format(base_url, params))
-            else:
-                return redirect('ipam:vlan', pk=vlan.pk)
-
-    else:
-        form = VLANForm()
-
-    return render(request, 'ipam/vlan_edit.html', {
-        'form': form,
-        'cancel_url': reverse('ipam:vlan_list'),
-    })
+class VLANAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'ipam.add_vlan'
+    model = VLAN
+    form_class = VLANForm
+    template_name = 'ipam/vlan_edit.html'
+    cancel_url = 'ipam:vlan_list'
 
 
-@permission_required('ipam.change_vlan')
-def vlan_edit(request, pk):
-
-    vlan = get_object_or_404(VLAN, pk=pk)
-
-    if request.method == 'POST':
-        form = VLANForm(request.POST, instance=vlan)
-        if form.is_valid():
-            vlan = form.save()
-            messages.success(request, "Modified VLAN {0}".format(vlan))
-            return redirect('ipam:vlan', pk=vlan.pk)
-
-    else:
-        form = VLANForm(instance=vlan)
-
-    return render(request, 'ipam/vlan_edit.html', {
-        'vlan': vlan,
-        'form': form,
-        'cancel_url': reverse('ipam:vlan', kwargs={'pk': vlan.pk}),
-    })
+class VLANEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'ipam.change_vlan'
+    model = VLAN
+    form_class = VLANForm
+    template_name = 'ipam/vlan_edit.html'
 
 
-@permission_required('ipam.delete_vlan')
-def vlan_delete(request, pk):
-
-    vlan = get_object_or_404(VLAN, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                vlan.delete()
-                messages.success(request, "VLAN {0} has been deleted".format(vlan))
-                return redirect('ipam:vlan_list')
-            except ProtectedError, e:
-                handle_protectederror(vlan, request, e)
-                return redirect('ipam:vlan', pk=vlan.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'ipam/vlan_delete.html', {
-        'vlan': vlan,
-        'form': form,
-        'cancel_url': reverse('ipam:vlan', kwargs={'pk': vlan.pk})
-    })
+class VLANDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'ipam.delete_vlan'
+    model = VLAN
+    template_name = 'ipam/vlan_delete.html'
+    redirect_url = 'ipam:vlan_list'
 
 
 class VLANBulkImportView(PermissionRequiredMixin, BulkImportView):

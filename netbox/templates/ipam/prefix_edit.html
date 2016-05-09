@@ -1,11 +1,11 @@
 {% extends '_base.html' %}
 {% load form_helpers %}
 
-{% block title %}{% if prefix %}Editing prefix {{ prefix }}{% else %}Add a prefix{% endif %}{% endblock %}
+{% block title %}{% if obj %}Editing prefix {{ obj }}{% else %}Add a prefix{% endif %}{% endblock %}
 
 {% block content %}
-{% if prefix %}
-	<h1>{{ prefix }}</h1>
+{% if obj %}
+	<h1>{{ obj }}</h1>
 {% else %}
 	<h1>Add a Prefix</h1>
 {% endif %}
@@ -35,9 +35,9 @@
             </div>
 		    <div class="form-group">
                 <div class="col-md-9 col-md-offset-3">
-                    {% if prefix %}
+                    {% if obj %}
                         <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                        <a href="{% url 'ipam:prefix' pk=prefix.pk %}" class="btn btn-default">Cancel</a>
+                        <a href="{% url 'ipam:prefix' pk=obj.pk %}" class="btn btn-default">Cancel</a>
                     {% else %}
                         <button type="submit" name="_create" class="btn btn-primary">Create</button>
                         <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
