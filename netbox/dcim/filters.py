@@ -148,6 +148,10 @@ class DeviceFilter(django_filters.FilterSet):
         to_field_name='slug',
         label='Platform (slug)',
     )
+    status = django_filters.BooleanFilter(
+        name='status',
+        label='Status',
+    )
     is_console_server = django_filters.BooleanFilter(
         name='device_type__is_console_server',
         label='Is a console server',
@@ -164,7 +168,7 @@ class DeviceFilter(django_filters.FilterSet):
     class Meta:
         model = Device
         fields = ['q', 'name', 'site_id', 'site', 'rack_id', 'role_id', 'role', 'device_type_id', 'manufacturer_id',
-                  'manufacturer', 'model', 'platform_id', 'platform', 'is_console_server', 'is_pdu',
+                  'manufacturer', 'model', 'platform_id', 'platform', 'status', 'is_console_server', 'is_pdu',
                   'is_network_device']
 
     def search(self, queryset, value):

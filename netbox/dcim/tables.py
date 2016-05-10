@@ -12,6 +12,10 @@ RACKGROUP_EDIT_LINK = """
 <a href="{% url 'dcim:rackgroup_edit' pk=record.pk %}">Edit</a>
 """
 
+STATUS_ICON = """
+<span class="glyphicon glyphicon-{% if record.status %}ok-sign text-success" title="Active{% else %}minus-sign text-danger" title="Offline{% endif %}" aria-hidden="true"></span>
+"""
+
 
 #
 # Sites
@@ -220,13 +224,12 @@ class InterfaceTemplateBulkDeleteTable(InterfaceTemplateTable):
         fields = ('pk', 'name')
 
 
-
-
 #
 # Devices
 #
 
 class DeviceTable(tables.Table):
+    status = tables.TemplateColumn(template_code=STATUS_ICON, verbose_name='')
     name = tables.TemplateColumn(template_code=DEVICE_LINK, verbose_name='Name')
     site = tables.Column(accessor=Accessor('rack.site'), verbose_name='Site')
     rack = tables.LinkColumn('dcim:rack', args=[Accessor('rack.pk')], verbose_name='Rack')
@@ -236,7 +239,7 @@ class DeviceTable(tables.Table):
 
     class Meta:
         model = Device
-        fields = ('name', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
+        fields = ('name', 'status', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
         empty_text = "No devices were found."
         attrs = {
             'class': 'table table-hover',
@@ -248,7 +251,7 @@ class DeviceBulkEditTable(DeviceTable):
 
     class Meta(DeviceTable.Meta):
         model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
+        fields = ('pk', 'name', 'status', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
 
 
 class DeviceImportTable(tables.Table):

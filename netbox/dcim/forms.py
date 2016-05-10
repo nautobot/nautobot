@@ -13,10 +13,10 @@ from .models import Site, Rack, RackGroup, Device, Manufacturer, DeviceType, Dev
     CONNECTION_STATUS_PLANNED, CONNECTION_STATUS_CONNECTED, IFACE_FF_VIRTUAL, STATUS_CHOICES
 
 
-BULK_STATUS_CHOICES = [
+FORM_STATUS_CHOICES = [
     ['', '---------'],
 ]
-BULK_STATUS_CHOICES += STATUS_CHOICES
+FORM_STATUS_CHOICES += STATUS_CHOICES
 
 DEVICE_BY_PK_RE = '{\d+\}'
 
@@ -411,7 +411,7 @@ class DeviceBulkEditForm(forms.Form, BootstrapMixin):
     device_role = forms.ModelChoiceField(queryset=DeviceRole.objects.all(), required=False, label='Role')
     platform = forms.ModelChoiceField(queryset=Platform.objects.all(), required=False, label='Platform')
     platform_delete = forms.BooleanField(required=False, label='Set platform to "none"')
-    status = forms.ChoiceField(choices=BULK_STATUS_CHOICES, required=False, initial='', label='Status')
+    status = forms.ChoiceField(choices=FORM_STATUS_CHOICES, required=False, initial='', label='Status')
     serial = forms.CharField(max_length=50, required=False, label='Serial Number')
     ro_snmp = forms.CharField(max_length=50, required=False, label='SNMP (RO)')
 
@@ -448,6 +448,7 @@ class DeviceFilterForm(forms.Form, BootstrapMixin):
     device_type_id = forms.MultipleChoiceField(required=False, choices=device_type_choices, label='Type',
                                                widget=forms.SelectMultiple(attrs={'size': 8}))
     platform = forms.MultipleChoiceField(required=False, choices=device_platform_choices)
+    status = forms.NullBooleanField(required=False, widget=forms.Select(choices=FORM_STATUS_CHOICES))
 
 
 #
