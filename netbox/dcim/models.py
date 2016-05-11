@@ -140,7 +140,7 @@ class RackGroup(models.Model):
         ]
 
     def __unicode__(self):
-        return self.name
+        return '{} - {}'.format(self.site.name, self.name)
 
     def get_absolute_url(self):
         return "{}?group={}".format(reverse('dcim:rack_list'), self.slug)

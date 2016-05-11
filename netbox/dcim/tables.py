@@ -74,7 +74,7 @@ class RackGroupBulkEditTable(RackGroupTable):
 class RackTable(tables.Table):
     name = tables.LinkColumn('dcim:rack', args=[Accessor('pk')], verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
-    group = tables.Column(verbose_name='Group')
+    group = tables.Column(accessor=Accessor('group.name'), verbose_name='Group')
     facility_id = tables.Column(verbose_name='Facility ID')
     u_height = tables.Column(verbose_name='Height (U)')
     devices = tables.Column(accessor=Accessor('device_count'), orderable=False, verbose_name='Devices')
