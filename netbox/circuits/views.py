@@ -88,7 +88,6 @@ class ProviderBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'circuits.delete_provider'
     cls = Provider
     form = ProviderBulkDeleteForm
-    template_name = 'circuits/provider_bulk_delete.html'
     default_redirect_url = 'circuits:provider_list'
 
 
@@ -168,5 +167,4 @@ class CircuitBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'circuits.delete_circuit'
     cls = Circuit
     form = CircuitBulkDeleteForm
-    template_name = 'circuits/circuit_bulk_delete.html'
     default_redirect_url = 'circuits:circuit_list'

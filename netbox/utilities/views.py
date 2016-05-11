@@ -294,7 +294,7 @@ class BulkEditView(View):
 class BulkDeleteView(View):
     cls = None
     form = None
-    template_name = None
+    template_name = 'utilities/confirm_bulk_delete.html'
     default_redirect_url = None
 
     @method_decorator(staff_member_required)
@@ -338,6 +338,7 @@ class BulkDeleteView(View):
 
         return render(request, self.template_name, {
             'form': form,
+            'obj_type_plural': self.cls._meta.verbose_name_plural,
             'selected_objects': selected_objects,
             'cancel_url': redirect_url,
         })

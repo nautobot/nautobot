@@ -220,5 +220,4 @@ class SecretBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'secrets.delete_secret'
     cls = Secret
     form = SecretBulkDeleteForm
-    template_name = 'secrets/secret_bulk_delete.html'
     default_redirect_url = 'secrets:secret_list'

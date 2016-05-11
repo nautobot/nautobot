@@ -3,17 +3,10 @@ from netaddr import IPSet
 from django_tables2 import RequestConfig
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.core.urlresolvers import reverse
-from django.db.models import ProtectedError
-from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.http import urlencode
+from django.shortcuts import get_object_or_404, render
 
 from dcim.models import Device
-from utilities.error_handlers import handle_protectederror
-from utilities.forms import ConfirmationForm
 from utilities.paginator import EnhancedPaginator
 from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectAddView,\
     ObjectEditView, ObjectDeleteView
@@ -122,7 +115,6 @@ class VRFBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'ipam.delete_vrf'
     cls = VRF
     form = VRFBulkDeleteForm
-    template_name = 'ipam/vrf_bulk_delete.html'
     default_redirect_url = 'ipam:vrf_list'
 
 
@@ -216,7 +208,6 @@ class AggregateBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'ipam.delete_aggregate'
     cls = Aggregate
     form = AggregateBulkDeleteForm
-    template_name = 'ipam/aggregate_bulk_delete.html'
     default_redirect_url = 'ipam:aggregate_list'
 
 
@@ -340,7 +331,6 @@ class PrefixBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'ipam.delete_prefix'
     cls = Prefix
     form = PrefixBulkDeleteForm
-    template_name = 'ipam/prefix_bulk_delete.html'
     default_redirect_url = 'ipam:prefix_list'
 
 
@@ -463,7 +453,6 @@ class IPAddressBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'ipam.delete_ipaddress'
     cls = IPAddress
     form = IPAddressBulkDeleteForm
-    template_name = 'ipam/ipaddress_bulk_delete.html'
     default_redirect_url = 'ipam:ipaddress_list'
 
 
@@ -544,5 +533,4 @@ class VLANBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'ipam.delete_vlan'
     cls = VLAN
     form = VLANBulkDeleteForm
-    template_name = 'ipam/vlan_bulk_delete.html'
     default_redirect_url = 'ipam:vlan_list'

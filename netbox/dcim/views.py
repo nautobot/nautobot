@@ -11,7 +11,6 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
 from django.views.generic import View
-from django.views.generic.edit import CreateView, UpdateView
 
 from ipam.models import Prefix, IPAddress, VLAN
 from circuits.models import Circuit
@@ -163,7 +162,6 @@ class RackGroupBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'dcim.delete_rackgroup'
     cls = RackGroup
     form = RackGroupBulkDeleteForm
-    template_name = 'dcim/rackgroup_bulk_delete.html'
     default_redirect_url = 'dcim:rackgroup_list'
 
 
@@ -251,7 +249,6 @@ class RackBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'dcim.delete_rack'
     cls = Rack
     form = RackBulkDeleteForm
-    template_name = 'dcim/rack_bulk_delete.html'
     default_redirect_url = 'dcim:rack_list'
 
 
@@ -341,7 +338,6 @@ class DeviceTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'dcim.delete_devicetype'
     cls = DeviceType
     form = DeviceTypeBulkDeleteForm
-    template_name = 'dcim/devicetype_bulk_delete.html'
     default_redirect_url = 'dcim:devicetype_list'
 
 
@@ -581,7 +577,6 @@ class DeviceBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'dcim.delete_device'
     cls = Device
     form = DeviceBulkDeleteForm
-    template_name = 'dcim/device_bulk_delete.html'
     default_redirect_url = 'dcim:device_list'
 
 
