@@ -72,6 +72,13 @@ class SiteImportForm(BulkImportForm, BootstrapMixin):
 # Rack groups
 #
 
+class RackGroupForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = RackGroup
+        fields = ['site', 'name', 'slug']
+
+
 class RackGroupBulkDeleteForm(ConfirmationForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackGroup.objects.all(), widget=forms.MultipleHiddenInput)
 

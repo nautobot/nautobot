@@ -23,8 +23,8 @@ from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDe
 
 from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter, \
     PowerConnectionFilter, InterfaceConnectionFilter
-from .forms import SiteForm, SiteImportForm, RackGroupFilterForm, RackGroupBulkDeleteForm, RackForm, RackImportForm, \
-    RackBulkEditForm, RackBulkDeleteForm, RackFilterForm, DeviceTypeForm, DeviceTypeBulkEditForm, \
+from .forms import SiteForm, SiteImportForm, RackGroupForm, RackGroupFilterForm, RackGroupBulkDeleteForm, RackForm, \
+    RackImportForm, RackBulkEditForm, RackBulkDeleteForm, RackFilterForm, DeviceTypeForm, DeviceTypeBulkEditForm, \
     DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, DeviceForm, DeviceImportForm, DeviceBulkEditForm, \
     DeviceBulkDeleteForm, DeviceFilterForm, ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm, \
     ConsoleConnectionImportForm, ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, \
@@ -144,17 +144,18 @@ class RackGroupListView(ObjectListView):
     template_name = 'dcim/rackgroup_list.html'
 
 
-class RackGroupAddView(PermissionRequiredMixin, CreateView):
+class RackGroupAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'dcim.add_rackgroup'
     model = RackGroup
-    fields = ['site', 'name', 'slug']
+    form_class = RackGroupForm
     template_name = 'dcim/rackgroup_edit.html'
+    cancel_url = 'dcim:rackgroup_list'
 
 
-class RackGroupEditView(PermissionRequiredMixin, UpdateView):
+class RackGroupEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_rackgroup'
     model = RackGroup
-    fields = ['site', 'name', 'slug']
+    form_class = RackGroupForm
     template_name = 'dcim/rackgroup_edit.html'
 
 
