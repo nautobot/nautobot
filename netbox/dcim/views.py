@@ -134,7 +134,7 @@ class SiteBulkImportView(PermissionRequiredMixin, BulkImportView):
 #
 
 class RackGroupListView(ObjectListView):
-    queryset = RackGroup.objects.all()
+    queryset = RackGroup.objects.annotate(rack_count=Count('racks'))
     filter = RackGroupFilter
     filter_form = RackGroupFilterForm
     table = RackGroupTable

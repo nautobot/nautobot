@@ -51,11 +51,12 @@ class SiteTable(tables.Table):
 class RackGroupTable(tables.Table):
     name = tables.LinkColumn(verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
+    rack_count = tables.Column(verbose_name='Racks')
     slug = tables.Column(verbose_name='Slug')
 
     class Meta:
         model = RackGroup
-        fields = ('name', 'site', 'slug')
+        fields = ('name', 'site', 'rack_count', 'slug')
         empty_text = "No rack groups were found."
         attrs = {
             'class': 'table table-hover',
@@ -68,7 +69,7 @@ class RackGroupBulkEditTable(RackGroupTable):
 
     class Meta(RackGroupTable.Meta):
         model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'site', 'slug', 'edit')
+        fields = ('pk', 'name', 'site', 'rack_count', 'slug', 'edit')
 
 
 #
@@ -234,7 +235,7 @@ class InterfaceTemplateBulkDeleteTable(InterfaceTemplateTable):
 
 class DeviceRoleTable(tables.Table):
     name = tables.LinkColumn(verbose_name='Name')
-    device_count = tables.Column(accessor=Accessor('device_count'), verbose_name='Devices')
+    device_count = tables.Column(verbose_name='Devices')
     slug = tables.Column(verbose_name='Slug')
     color = tables.Column(verbose_name='Color')
 

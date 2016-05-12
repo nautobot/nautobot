@@ -45,12 +45,6 @@ class RackFilter(django_filters.FilterSet):
         queryset=RackGroup.objects.all(),
         label='Group (ID)',
     )
-    group = django_filters.ModelMultipleChoiceFilter(
-        name='group',
-        queryset=RackGroup.objects.all(),
-        to_field_name='slug',
-        label='Group (slug)',
-    )
 
     class Meta:
         model = Rack

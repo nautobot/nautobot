@@ -175,13 +175,13 @@ def rack_site_choices():
 
 def rack_group_choices():
     group_choices = RackGroup.objects.select_related('site').annotate(rack_count=Count('racks'))
-    return [(g.slug, '{} ({})'.format(g, g.rack_count)) for g in group_choices]
+    return [(g.pk, '{} ({})'.format(g, g.rack_count)) for g in group_choices]
 
 
 class RackFilterForm(forms.Form, BootstrapMixin):
     site = forms.MultipleChoiceField(required=False, choices=rack_site_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
-    group = forms.MultipleChoiceField(required=False, choices=rack_group_choices,
+    group_id = forms.MultipleChoiceField(required=False, choices=rack_group_choices,
                                       widget=forms.SelectMultiple(attrs={'size': 8}))
 
 

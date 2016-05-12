@@ -143,7 +143,7 @@ class RackGroup(models.Model):
         return '{} - {}'.format(self.site.name, self.name)
 
     def get_absolute_url(self):
-        return "{}?group={}".format(reverse('dcim:rack_list'), self.slug)
+        return "{}?group_id={}".format(reverse('dcim:rack_list'), self.pk)
 
 
 class Rack(models.Model):
