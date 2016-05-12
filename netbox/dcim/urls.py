@@ -64,6 +64,12 @@ urlpatterns = [
     url(r'^device-types/(?P<pk>\d+)/interfaces/delete/$', views.component_template_delete,
         {'model': InterfaceTemplate}, name='devicetype_delete_interface'),
 
+    # Device roles
+    url(r'^device-roles/$', views.DeviceRoleListView.as_view(), name='devicerole_list'),
+    url(r'^device-roles/add/$', views.DeviceRoleAddView.as_view(), name='devicerole_add'),
+    url(r'^device-roles/delete/$', views.DeviceRoleBulkDeleteView.as_view(), name='devicerole_bulk_delete'),
+    url(r'^device-roles/(?P<slug>[\w-]+)/edit/$', views.DeviceRoleEditView.as_view(), name='devicerole_edit'),
+
     # Devices
     url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),
     url(r'^devices/add/$', views.DeviceAddView.as_view(), name='device_add'),

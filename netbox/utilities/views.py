@@ -118,6 +118,7 @@ class ObjectEditView(View):
     model = None
     form_class = None
     template_name = None
+    return_url = None
 
     def get_object(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
@@ -135,7 +136,7 @@ class ObjectEditView(View):
             'obj': obj,
             'form': form,
             'obj_type': self.model._meta.verbose_name,
-            'cancel_url': obj.get_absolute_url(),
+            'cancel_url': reverse(self.return_url) if self.return_url else obj.get_absolute_url(),
         })
 
     def post(self, request, *args, **kwargs):
@@ -155,7 +156,7 @@ class ObjectEditView(View):
             'obj': obj,
             'form': form,
             'obj_type': self.model._meta.verbose_name,
-            'cancel_url': obj.get_absolute_url(),
+            'cancel_url': reverse(self.return_url) if self.return_url else obj.get_absolute_url(),
         })
 
 

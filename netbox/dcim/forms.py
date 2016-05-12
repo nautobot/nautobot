@@ -262,6 +262,21 @@ class InterfaceTemplateForm(forms.ModelForm, BootstrapMixin):
 
 
 #
+# Device roles
+#
+
+class DeviceRoleForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = DeviceRole
+        fields = ['name', 'slug', 'color']
+
+
+class DeviceRoleBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceRole.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+#
 # Devices
 #
 

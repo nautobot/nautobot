@@ -24,24 +24,24 @@ from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter
     PowerConnectionFilter, InterfaceConnectionFilter
 from .forms import SiteForm, SiteImportForm, RackGroupForm, RackGroupFilterForm, RackGroupBulkDeleteForm, RackForm, \
     RackImportForm, RackBulkEditForm, RackBulkDeleteForm, RackFilterForm, DeviceTypeForm, DeviceTypeBulkEditForm, \
-    DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, DeviceForm, DeviceImportForm, DeviceBulkEditForm, \
-    DeviceBulkDeleteForm, DeviceFilterForm, ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm, \
-    ConsoleConnectionImportForm, ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, \
-    PowerPortForm, PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, \
-    PowerOutletCreateForm, PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, \
-    InterfaceConnectionForm, InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, \
-    ConsoleConnectionFilterForm, PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, \
-    ConsolePortTemplateForm, ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm, \
-    InterfaceTemplateForm
-from .models import Site, RackGroup, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, \
+    DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, DeviceRoleForm, DeviceRoleBulkDeleteForm, DeviceForm, \
+    DeviceImportForm, DeviceBulkEditForm, DeviceBulkDeleteForm, DeviceFilterForm, ConsolePortForm, \
+    ConsolePortCreateForm, ConsolePortConnectionForm, ConsoleConnectionImportForm, ConsoleServerPortForm, \
+    ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, PowerPortForm, PowerPortCreateForm, \
+    PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, PowerOutletCreateForm, \
+    PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, InterfaceConnectionForm, \
+    InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, ConsoleConnectionFilterForm, \
+    PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, ConsolePortTemplateForm, \
+    ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm, InterfaceTemplateForm
+from .models import Site, RackGroup, Rack, DeviceType, DeviceRole, ConsolePortTemplate, ConsoleServerPortTemplate, \
     PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, ConsoleServerPort, PowerPort, \
     PowerOutlet, Interface, InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
 from .tables import SiteTable, RackGroupTable, RackGroupBulkEditTable, RackTable, RackBulkEditTable, DeviceTypeTable, \
-    DeviceTypeBulkEditTable, DeviceTable, DeviceBulkEditTable, DeviceImportTable, ConsoleConnectionTable, \
-    PowerConnectionTable, InterfaceConnectionTable, ConsolePortTemplateTable, ConsoleServerPortTemplateTable, \
-    PowerPortTemplateTable, PowerOutletTemplateTable, InterfaceTemplateTable, ConsolePortTemplateBulkDeleteTable, \
-    ConsoleServerPortTemplateBulkDeleteTable, PowerPortTemplateBulkDeleteTable, PowerOutletTemplateBulkDeleteTable, \
-    InterfaceTemplateBulkDeleteTable
+    DeviceTypeBulkEditTable, DeviceRoleTable, DeviceRoleBulkEditTable, DeviceTable, DeviceBulkEditTable, \
+    DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable, \
+    ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable, PowerOutletTemplateTable, \
+    InterfaceTemplateTable, ConsolePortTemplateBulkDeleteTable, ConsoleServerPortTemplateBulkDeleteTable, \
+    PowerPortTemplateBulkDeleteTable, PowerOutletTemplateBulkDeleteTable, InterfaceTemplateBulkDeleteTable
 
 
 EXPANSION_PATTERN = '\[(\d+-\d+)\]'
@@ -456,6 +456,41 @@ def component_template_delete(request, pk, model):
         'selected_objects': selected_objects,
         'cancel_url': reverse('dcim:devicetype', kwargs={'pk': devicetype.pk}),
     })
+
+
+#
+# Device roles
+#
+
+class DeviceRoleListView(ObjectListView):
+    queryset = DeviceRole.objects.annotate(device_count=Count('devices'))
+    table = DeviceRoleTable
+    edit_table = DeviceRoleBulkEditTable
+    edit_table_permissions = ['dcim.change_devicerole', 'dcim.delete_devicerole']
+    template_name = 'dcim/devicerole_list.html'
+
+
+class DeviceRoleAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'dcim.add_devicerole'
+    model = DeviceRole
+    form_class = DeviceRoleForm
+    template_name = 'dcim/devicerole_edit.html'
+    cancel_url = 'dcim:devicerole_list'
+
+
+class DeviceRoleEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'dcim.change_devicerole'
+    model = DeviceRole
+    form_class = DeviceRoleForm
+    return_url = 'dcim:devicerole_list'
+    template_name = 'dcim/devicerole_edit.html'
+
+
+class DeviceRoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'dcim.delete_devicerole'
+    cls = DeviceRole
+    form = DeviceRoleBulkDeleteForm
+    default_redirect_url = 'dcim:devicerole_list'
 
 
 #

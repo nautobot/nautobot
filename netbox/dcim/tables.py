@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from .models import Site, RackGroup, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, \
-    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, PowerPort
+    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceRole, Device, ConsolePort, PowerPort
 
 DEVICE_LINK = """
 <a href="{% url 'dcim:device' pk=record.pk %}">{{ record.name|default:'<span class="label label-info">Unnamed device</span>' }}</a>
@@ -10,6 +10,10 @@ DEVICE_LINK = """
 
 RACKGROUP_EDIT_LINK = """
 <a href="{% url 'dcim:rackgroup_edit' pk=record.pk %}">Edit</a>
+"""
+
+DEVICEROLE_EDIT_LINK = """
+<a href="{% url 'dcim:devicerole_edit' slug=record.slug %}">Edit</a>
 """
 
 STATUS_ICON = """
@@ -222,6 +226,34 @@ class InterfaceTemplateBulkDeleteTable(InterfaceTemplateTable):
     class Meta(InterfaceTemplateTable.Meta):
         model = None  # django_tables2 bugfix
         fields = ('pk', 'name')
+
+
+#
+# Device roles
+#
+
+class DeviceRoleTable(tables.Table):
+    name = tables.LinkColumn(verbose_name='Name')
+    device_count = tables.Column(accessor=Accessor('device_count'), verbose_name='Devices')
+    slug = tables.Column(verbose_name='Slug')
+    color = tables.Column(verbose_name='Color')
+
+    class Meta:
+        model = DeviceRole
+        fields = ('name', 'device_count', 'slug', 'color')
+        empty_text = "No device roles were found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+class DeviceRoleBulkEditTable(DeviceRoleTable):
+    pk = tables.CheckBoxColumn()
+    edit = tables.TemplateColumn(template_code=DEVICEROLE_EDIT_LINK, verbose_name='')
+
+    class Meta(DeviceRoleTable.Meta):
+        model = None  # django_tables2 bugfix
+        fields = ('pk', 'name', 'device_count', 'slug', 'color')
 
 
 #

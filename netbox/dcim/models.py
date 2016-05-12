@@ -392,6 +392,9 @@ class DeviceRole(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return "{}?role={}".format(reverse('dcim:device_list'), self.slug)
+
 
 class Platform(models.Model):
     """
