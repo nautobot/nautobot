@@ -117,7 +117,6 @@ class SiteEditView(PermissionRequiredMixin, ObjectEditView):
 class SiteDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'dcim.delete_site'
     model = Site
-    template_name = 'dcim/site_delete.html'
     redirect_url = 'dcim:site_list'
 
 
@@ -214,7 +213,6 @@ class RackEditView(PermissionRequiredMixin, ObjectEditView):
 class RackDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'dcim.delete_rack'
     model = Rack
-    template_name = 'dcim/rack_delete.html'
     redirect_url = 'dcim:rack_list'
 
 
@@ -309,7 +307,6 @@ class DeviceTypeEditView(PermissionRequiredMixin, ObjectEditView):
 class DeviceTypeDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'dcim.delete_devicetype'
     model = DeviceType
-    template_name = 'dcim/devicetype_delete.html'
     redirect_url = 'dcim:devicetype_list'
 
 
@@ -566,7 +563,6 @@ class DeviceEditView(PermissionRequiredMixin, ObjectEditView):
 class DeviceDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'dcim.delete_device'
     model = Device
-    template_name = 'dcim/device_delete.html'
     redirect_url = 'dcim:device_list'
 
 

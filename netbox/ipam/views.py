@@ -79,7 +79,6 @@ class VRFEditView(PermissionRequiredMixin, ObjectEditView):
 class VRFDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'ipam.delete_vrf'
     model = VRF
-    template_name = 'ipam/vrf_delete.html'
     redirect_url = 'ipam:vrf_list'
 
 
@@ -170,7 +169,6 @@ class AggregateEditView(PermissionRequiredMixin, ObjectEditView):
 class AggregateDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'ipam.delete_aggregate'
     model = Aggregate
-    template_name = 'ipam/aggregate_delete.html'
     redirect_url = 'ipam:aggregate_list'
 
 
@@ -287,7 +285,6 @@ class PrefixEditView(PermissionRequiredMixin, ObjectEditView):
 class PrefixDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'ipam.delete_prefix'
     model = Prefix
-    template_name = 'ipam/prefix_delete.html'
     redirect_url = 'ipam:prefix_list'
 
 
@@ -399,7 +396,6 @@ class IPAddressEditView(PermissionRequiredMixin, ObjectEditView):
 class IPAddressDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'ipam.delete_ipaddress'
     model = IPAddress
-    template_name = 'ipam/ipaddress_delete.html'
     redirect_url = 'ipam:ipaddress_list'
 
 
@@ -491,7 +487,6 @@ class VLANEditView(PermissionRequiredMixin, ObjectEditView):
 class VLANDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'ipam.delete_vlan'
     model = VLAN
-    template_name = 'ipam/vlan_delete.html'
     redirect_url = 'ipam:vlan_list'
 
 

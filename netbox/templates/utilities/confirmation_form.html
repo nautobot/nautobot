@@ -9,7 +9,7 @@
             <div class="panel panel-danger">
                 <div class="panel-heading">{% block title %}{% endblock %}</div>
                 <div class="panel-body">
-                    {% block message %}Are you sure?{% endblock %}
+                    {% block message %}<p>Are you sure?</p>{% endblock %}
                     {% for field in form.hidden_fields %}
                         {{ field }}
                     {% endfor %}

@@ -54,7 +54,6 @@ class ProviderEditView(PermissionRequiredMixin, ObjectEditView):
 class ProviderDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'circuits.delete_provider'
     model = Provider
-    template_name = 'circuits/provider_delete.html'
     redirect_url = 'circuits:provider_list'
 
 
@@ -133,7 +132,6 @@ class CircuitEditView(PermissionRequiredMixin, ObjectEditView):
 class CircuitDeleteView(PermissionRequiredMixin, ObjectDeleteView):
     permission_required = 'circuits.delete_circuit'
     model = Circuit
-    template_name = 'circuits/circuit_delete.html'
     redirect_url = 'circuits:circuit_list'
 
 

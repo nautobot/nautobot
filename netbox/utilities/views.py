@@ -162,7 +162,7 @@ class ObjectEditView(View):
 
 class ObjectDeleteView(View):
     model = None
-    template_name = None
+    template_name = 'utilities/obj_delete.html'
     redirect_url = None
 
     def get_object(self, kwargs):
@@ -180,6 +180,7 @@ class ObjectDeleteView(View):
         return render(request, self.template_name, {
             'obj': obj,
             'form': form,
+            'obj_type': self.model._meta.verbose_name,
             'cancel_url': obj.get_absolute_url(),
         })
 
@@ -199,6 +200,7 @@ class ObjectDeleteView(View):
         return render(request, self.template_name, {
             'obj': obj,
             'form': form,
+            'obj_type': self.model._meta.verbose_name,
             'cancel_url': obj.get_absolute_url(),
         })
 

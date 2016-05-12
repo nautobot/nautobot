@@ -3,14 +3,11 @@ from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.urlresolvers import reverse
 from django.db import transaction, IntegrityError
-from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 
 from dcim.models import Device
-from utilities.error_handlers import handle_protectederror
-from utilities.forms import ConfirmationForm
-from utilities.views import BulkEditView, BulkDeleteView, ObjectListView
+from utilities.views import BulkEditView, BulkDeleteView, ObjectListView, ObjectDeleteView
 
 from .decorators import userkey_required
 from .filters import SecretFilter
@@ -128,30 +125,10 @@ def secret_edit(request, pk):
     })
 
 
-@permission_required('secrets.delete_secret')
-def secret_delete(request, pk):
-
-    secret = get_object_or_404(Secret, pk=pk)
-
-    if request.method == 'POST':
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            try:
-                secret.delete()
-                messages.success(request, "Secret {0} has been deleted".format(secret))
-                return redirect('secrets:secret_list')
-            except ProtectedError, e:
-                handle_protectederror(secret, request, e)
-                return redirect('secrets:secret', pk=secret.pk)
-
-    else:
-        form = ConfirmationForm()
-
-    return render(request, 'secrets/secret_delete.html', {
-        'secret': secret,
-        'form': form,
-        'cancel_url': reverse('secrets:secret', kwargs={'pk': secret.pk})
-    })
+class SecretDeleteView(PermissionRequiredMixin, ObjectDeleteView):
+    permission_required = 'secrets.delete_secret'
+    model = Secret
+    redirect_url = 'secrets:secret_list'
 
 
 @permission_required('secrets.add_secret')
