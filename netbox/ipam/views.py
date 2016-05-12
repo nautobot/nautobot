@@ -67,7 +67,6 @@ class VRFAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'ipam.add_vrf'
     model = VRF
     form_class = VRFForm
-    template_name = 'ipam/vrf_edit.html'
     cancel_url = 'ipam:vrf_list'
 
 
@@ -75,7 +74,6 @@ class VRFEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_vrf'
     model = VRF
     form_class = VRFForm
-    template_name = 'ipam/vrf_edit.html'
 
 
 class VRFDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -160,7 +158,6 @@ class AggregateAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'ipam.add_aggregate'
     model = Aggregate
     form_class = AggregateForm
-    template_name = 'ipam/aggregate_edit.html'
     cancel_url = 'ipam:aggregate_list'
 
 
@@ -168,7 +165,6 @@ class AggregateEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_aggregate'
     model = Aggregate
     form_class = AggregateForm
-    template_name = 'ipam/aggregate_edit.html'
 
 
 class AggregateDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -278,7 +274,6 @@ class PrefixAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'ipam.add_prefix'
     model = Prefix
     form_class = PrefixForm
-    template_name = 'ipam/prefix_edit.html'
     cancel_url = 'ipam:prefix_list'
     fields_initial = ['site', 'vrf', 'prefix']
 
@@ -287,7 +282,6 @@ class PrefixEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_prefix'
     model = Prefix
     form_class = PrefixForm
-    template_name = 'ipam/prefix_edit.html'
 
 
 class PrefixDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -485,7 +479,6 @@ class VLANAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'ipam.add_vlan'
     model = VLAN
     form_class = VLANForm
-    template_name = 'ipam/vlan_edit.html'
     cancel_url = 'ipam:vlan_list'
 
 
@@ -493,7 +486,6 @@ class VLANEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_vlan'
     model = VLAN
     form_class = VLANForm
-    template_name = 'ipam/vlan_edit.html'
 
 
 class VLANDeleteView(PermissionRequiredMixin, ObjectDeleteView):

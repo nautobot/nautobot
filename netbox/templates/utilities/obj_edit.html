@@ -19,7 +19,14 @@
                         </div>
                     </div>
                 {% endif %}
-                {% block form %}{% endblock %}
+                {% block form %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><strong>Details</strong></div>
+                        <div class="panel-body">
+                            {% render_form form %}
+                        </div>
+                    </div>
+                {% endblock %}
             </div>
         </div>
         <div class="row">

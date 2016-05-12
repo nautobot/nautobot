@@ -80,7 +80,7 @@ class ObjectListView(View):
 class ObjectAddView(View):
     model = None
     form_class = None
-    template_name = None
+    template_name = 'utilities/obj_edit.html'
     cancel_url = None
     fields_initial = []
 
@@ -117,7 +117,7 @@ class ObjectAddView(View):
 class ObjectEditView(View):
     model = None
     form_class = None
-    template_name = None
+    template_name = 'utilities/obj_edit.html'
     return_url = None
 
     def get_object(self, kwargs):

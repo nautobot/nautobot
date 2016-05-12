@@ -147,7 +147,6 @@ class RackGroupAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'dcim.add_rackgroup'
     model = RackGroup
     form_class = RackGroupForm
-    template_name = 'dcim/rackgroup_edit.html'
     cancel_url = 'dcim:rackgroup_list'
 
 
@@ -155,7 +154,7 @@ class RackGroupEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_rackgroup'
     model = RackGroup
     form_class = RackGroupForm
-    template_name = 'dcim/rackgroup_edit.html'
+    return_url = 'dcim:rackgroup_list'
 
 
 class RackGroupBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -298,7 +297,6 @@ class DeviceTypeAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'dcim.add_devicetype'
     model = DeviceType
     form_class = DeviceTypeForm
-    template_name = 'dcim/devicetype_edit.html'
     cancel_url = 'dcim:devicetype_list'
 
 
@@ -306,7 +304,6 @@ class DeviceTypeEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_devicetype'
     model = DeviceType
     form_class = DeviceTypeForm
-    template_name = 'dcim/devicetype_edit.html'
 
 
 class DeviceTypeDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -474,7 +471,6 @@ class DeviceRoleAddView(PermissionRequiredMixin, ObjectAddView):
     permission_required = 'dcim.add_devicerole'
     model = DeviceRole
     form_class = DeviceRoleForm
-    template_name = 'dcim/devicerole_edit.html'
     cancel_url = 'dcim:devicerole_list'
 
 
@@ -483,7 +479,6 @@ class DeviceRoleEditView(PermissionRequiredMixin, ObjectEditView):
     model = DeviceRole
     form_class = DeviceRoleForm
     return_url = 'dcim:devicerole_list'
-    template_name = 'dcim/devicerole_edit.html'
 
 
 class DeviceRoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
