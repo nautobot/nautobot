@@ -17,6 +17,16 @@
                     <td>{{ prefix.get_family_display }}</td>
                 </tr>
                 <tr>
+                    <td>VRF</td>
+                    <td>
+                        {% if prefix.vrf %}
+                            <a href="{% url 'ipam:vrf' pk=prefix.vrf.pk %}">{{ prefix.vrf }}</a> ({{ prefix.vrf.rd }})
+                        {% else %}
+                            <span>Global</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
                     <td>Aggregate</td>
                     <td>
                         {% if aggregate %}
