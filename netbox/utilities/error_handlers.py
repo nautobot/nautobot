@@ -11,19 +11,26 @@ def handle_protectederror(obj, request, e):
     except IndexError:
         raise e
 
-    # Handle multiple triggering objects
+    # Grammar for single versus multiple triggering objects
     if type(obj) in (list, tuple):
-        messages.error(request, "Unable to delete the requested {}. The following dependent {} were found: {}".format(
+        err_message = "Unable to delete the requested {}. The following dependent {} were found: ".format(
             obj[0]._meta.verbose_name_plural,
             dep_class,
-            ', '.join([str(o) for o in dependent_objects])
-        ))
-
-    # Handle a single triggering object
+        )
     else:
-        messages.error(request, "Unable to delete {} {}. The following dependent {} were found: {}".format(
+        err_message = "Unable to delete {} {}. The following dependent {} were found: ".format(
             obj._meta.verbose_name,
             obj,
             dep_class,
-            ', '.join([str(o) for o in dependent_objects])
-        ))
+        )
+
+    # Append dependent objects to error message
+    dependent_objects = []
+    for o in e[1]:
+        if hasattr(o, 'get_absolute_url'):
+            dependent_objects.append('<a href="{}">{}</a>'.format(o.get_absolute_url(), str(o)))
+        else:
+            dependent_objects.append(str(o))
+    err_message += ', '.join(dependent_objects)
+
+    messages.error(request, err_message)
