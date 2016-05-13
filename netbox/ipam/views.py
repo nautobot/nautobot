@@ -8,8 +8,8 @@ from django.shortcuts import get_object_or_404, render
 
 from dcim.models import Device
 from utilities.paginator import EnhancedPaginator
-from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectAddView,\
-    ObjectEditView, ObjectDeleteView
+from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectEditView,\
+    ObjectDeleteView
 
 from .filters import AggregateFilter, PrefixFilter, IPAddressFilter, VLANFilter, VRFFilter
 from .forms import AggregateForm, AggregateImportForm, AggregateBulkEditForm, AggregateBulkDeleteForm,\
@@ -61,17 +61,11 @@ def vrf(request, pk):
     })
 
 
-class VRFAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'ipam.add_vrf'
-    model = VRF
-    form_class = VRFForm
-    cancel_url = 'ipam:vrf_list'
-
-
 class VRFEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_vrf'
     model = VRF
     form_class = VRFForm
+    cancel_url = 'ipam:vrf_list'
 
 
 class VRFDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -149,17 +143,11 @@ def aggregate(request, pk):
     })
 
 
-class AggregateAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'ipam.add_aggregate'
-    model = Aggregate
-    form_class = AggregateForm
-    cancel_url = 'ipam:aggregate_list'
-
-
 class AggregateEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_aggregate'
     model = Aggregate
     form_class = AggregateForm
+    cancel_url = 'ipam:aggregate_list'
 
 
 class AggregateDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -262,18 +250,12 @@ def prefix(request, pk):
     })
 
 
-class PrefixAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'ipam.add_prefix'
-    model = Prefix
-    form_class = PrefixForm
-    cancel_url = 'ipam:prefix_list'
-    fields_initial = ['site', 'vrf', 'prefix']
-
-
 class PrefixEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_prefix'
     model = Prefix
     form_class = PrefixForm
+    fields_initial = ['site', 'vrf', 'prefix']
+    cancel_url = 'ipam:prefix_list'
 
 
 class PrefixDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -369,20 +351,13 @@ def ipaddress(request, pk):
     })
 
 
-class IPAddressAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'ipam.add_ipaddress'
-    model = IPAddress
-    form_class = IPAddressForm
-    template_name = 'ipam/ipaddress_edit.html'
-    cancel_url = 'ipam:ipaddress_list'
-    fields_initial = ['ipaddress']
-
-
 class IPAddressEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_ipaddress'
     model = IPAddress
     form_class = IPAddressForm
+    fields_initial = ['ipaddress']
     template_name = 'ipam/ipaddress_edit.html'
+    cancel_url = 'ipam:ipaddress_list'
 
 
 class IPAddressDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -462,17 +437,11 @@ def vlan(request, pk):
     })
 
 
-class VLANAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'ipam.add_vlan'
-    model = VLAN
-    form_class = VLANForm
-    cancel_url = 'ipam:vlan_list'
-
-
 class VLANEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_vlan'
     model = VLAN
     form_class = VLANForm
+    cancel_url = 'ipam:vlan_list'
 
 
 class VLANDeleteView(PermissionRequiredMixin, ObjectDeleteView):

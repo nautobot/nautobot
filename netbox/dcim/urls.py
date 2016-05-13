@@ -11,7 +11,7 @@ urlpatterns = [
 
     # Sites
     url(r'^sites/$', views.SiteListView.as_view(), name='site_list'),
-    url(r'^sites/add/$', views.SiteAddView.as_view(), name='site_add'),
+    url(r'^sites/add/$', views.SiteEditView.as_view(), name='site_add'),
     url(r'^sites/import/$', views.SiteBulkImportView.as_view(), name='site_import'),
     url(r'^sites/(?P<slug>[\w-]+)/$', views.site, name='site'),
     url(r'^sites/(?P<slug>[\w-]+)/edit/$', views.SiteEditView.as_view(), name='site_edit'),
@@ -19,13 +19,13 @@ urlpatterns = [
 
     # Rack groups
     url(r'^rack-groups/$', views.RackGroupListView.as_view(), name='rackgroup_list'),
-    url(r'^rack-groups/add/$', views.RackGroupAddView.as_view(), name='rackgroup_add'),
+    url(r'^rack-groups/add/$', views.RackGroupEditView.as_view(), name='rackgroup_add'),
     url(r'^rack-groups/delete/$', views.RackGroupBulkDeleteView.as_view(), name='rackgroup_bulk_delete'),
     url(r'^rack-groups/(?P<pk>\d+)/edit/$', views.RackGroupEditView.as_view(), name='rackgroup_edit'),
 
     # Racks
     url(r'^racks/$', views.RackListView.as_view(), name='rack_list'),
-    url(r'^racks/add/$', views.RackAddView.as_view(), name='rack_add'),
+    url(r'^racks/add/$', views.RackEditView.as_view(), name='rack_add'),
     url(r'^racks/import/$', views.RackBulkImportView.as_view(), name='rack_import'),
     url(r'^racks/edit/$', views.RackBulkEditView.as_view(), name='rack_bulk_edit'),
     url(r'^racks/delete/$', views.RackBulkDeleteView.as_view(), name='rack_bulk_delete'),
@@ -35,13 +35,13 @@ urlpatterns = [
 
     # Manufacturers
     url(r'^manufacturers/$', views.ManufacturerListView.as_view(), name='manufacturer_list'),
-    url(r'^manufacturers/add/$', views.ManufacturerAddView.as_view(), name='manufacturer_add'),
+    url(r'^manufacturers/add/$', views.ManufacturerEditView.as_view(), name='manufacturer_add'),
     url(r'^manufacturers/delete/$', views.ManufacturerBulkDeleteView.as_view(), name='manufacturer_bulk_delete'),
     url(r'^manufacturers/(?P<slug>[\w-]+)/edit/$', views.ManufacturerEditView.as_view(), name='manufacturer_edit'),
 
     # Device types
     url(r'^device-types/$', views.DeviceTypeListView.as_view(), name='devicetype_list'),
-    url(r'^device-types/add/$', views.DeviceTypeAddView.as_view(), name='devicetype_add'),
+    url(r'^device-types/add/$', views.DeviceTypeEditView.as_view(), name='devicetype_add'),
     url(r'^device-types/edit/$', views.DeviceTypeBulkEditView.as_view(), name='devicetype_bulk_edit'),
     url(r'^device-types/delete/$', views.DeviceTypeBulkDeleteView.as_view(), name='devicetype_bulk_delete'),
     url(r'^device-types/(?P<pk>\d+)/$', views.devicetype, name='devicetype'),
@@ -72,13 +72,13 @@ urlpatterns = [
 
     # Device roles
     url(r'^device-roles/$', views.DeviceRoleListView.as_view(), name='devicerole_list'),
-    url(r'^device-roles/add/$', views.DeviceRoleAddView.as_view(), name='devicerole_add'),
+    url(r'^device-roles/add/$', views.DeviceRoleEditView.as_view(), name='devicerole_add'),
     url(r'^device-roles/delete/$', views.DeviceRoleBulkDeleteView.as_view(), name='devicerole_bulk_delete'),
     url(r'^device-roles/(?P<slug>[\w-]+)/edit/$', views.DeviceRoleEditView.as_view(), name='devicerole_edit'),
 
     # Devices
     url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),
-    url(r'^devices/add/$', views.DeviceAddView.as_view(), name='device_add'),
+    url(r'^devices/add/$', views.DeviceEditView.as_view(), name='device_add'),
     url(r'^devices/import/$', views.DeviceBulkImportView.as_view(), name='device_import'),
     url(r'^devices/edit/$', views.DeviceBulkEditView.as_view(), name='device_bulk_edit'),
     url(r'^devices/delete/$', views.DeviceBulkDeleteView.as_view(), name='device_bulk_delete'),

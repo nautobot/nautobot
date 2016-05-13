@@ -17,8 +17,8 @@ from circuits.models import Circuit
 from extras.models import TopologyMap
 from utilities.error_handlers import handle_protectederror
 from utilities.forms import ConfirmationForm
-from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView, ObjectAddView,\
-    ObjectEditView, ObjectDeleteView
+from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView, ObjectEditView,\
+    ObjectDeleteView
 
 from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter,\
     PowerConnectionFilter, InterfaceConnectionFilter
@@ -97,19 +97,12 @@ def site(request, slug):
     })
 
 
-class SiteAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'dcim.add_site'
-    model = Site
-    form_class = SiteForm
-    template_name = 'dcim/site_edit.html'
-    cancel_url = 'dcim:site_list'
-
-
 class SiteEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_site'
     model = Site
     form_class = SiteForm
     template_name = 'dcim/site_edit.html'
+    cancel_url = 'dcim:site_list'
 
 
 class SiteDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -139,18 +132,11 @@ class RackGroupListView(ObjectListView):
     template_name = 'dcim/rackgroup_list.html'
 
 
-class RackGroupAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'dcim.add_rackgroup'
-    model = RackGroup
-    form_class = RackGroupForm
-    cancel_url = 'dcim:rackgroup_list'
-
-
 class RackGroupEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_rackgroup'
     model = RackGroup
     form_class = RackGroupForm
-    return_url = 'dcim:rackgroup_list'
+    cancel_url = 'dcim:rackgroup_list'
 
 
 class RackGroupBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -191,19 +177,12 @@ def rack(request, pk):
     })
 
 
-class RackAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'dcim.add_rack'
-    model = Rack
-    form_class = RackForm
-    template_name = 'dcim/rack_edit.html'
-    cancel_url = 'dcim:rack_list'
-
-
 class RackEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_rack'
     model = Rack
     form_class = RackForm
     template_name = 'dcim/rack_edit.html'
+    cancel_url = 'dcim:rack_list'
 
 
 class RackDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -256,18 +235,11 @@ class ManufacturerListView(ObjectListView):
     template_name = 'dcim/manufacturer_list.html'
 
 
-class ManufacturerAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'dcim.add_manufacturer'
-    model = Manufacturer
-    form_class = ManufacturerForm
-    cancel_url = 'dcim:manufacturer_list'
-
-
 class ManufacturerEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_manufacturer'
     model = Manufacturer
     form_class = ManufacturerForm
-    return_url = 'dcim:manufacturer_list'
+    cancel_url = 'dcim:manufacturer_list'
 
 
 class ManufacturerBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -317,17 +289,11 @@ def devicetype(request, pk):
     })
 
 
-class DeviceTypeAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'dcim.add_devicetype'
-    model = DeviceType
-    form_class = DeviceTypeForm
-    cancel_url = 'dcim:devicetype_list'
-
-
 class DeviceTypeEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_devicetype'
     model = DeviceType
     form_class = DeviceTypeForm
+    cancel_url = 'dcim:devicetype_list'
 
 
 class DeviceTypeDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -489,18 +455,12 @@ class DeviceRoleListView(ObjectListView):
     template_name = 'dcim/devicerole_list.html'
 
 
-class DeviceRoleAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'dcim.add_devicerole'
-    model = DeviceRole
-    form_class = DeviceRoleForm
-    cancel_url = 'dcim:devicerole_list'
-
-
 class DeviceRoleEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_devicerole'
     model = DeviceRole
     form_class = DeviceRoleForm
-    return_url = 'dcim:devicerole_list'
+    success_url = 'dcim:devicerole_list'
+    cancel_url = 'dcim:devicerole_list'
 
 
 class DeviceRoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -568,20 +528,13 @@ def device(request, pk):
     })
 
 
-class DeviceAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'dcim.add_device'
-    model = Device
-    form_class = DeviceForm
-    template_name = 'dcim/device_edit.html'
-    cancel_url = 'dcim:device_list'
-    fields_initial = ['site', 'rack', 'position', 'face']
-
-
 class DeviceEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_device'
     model = Device
     form_class = DeviceForm
+    fields_initial = ['site', 'rack', 'position', 'face']
     template_name = 'dcim/device_edit.html'
+    cancel_url = 'dcim:device_list'
 
 
 class DeviceDeleteView(PermissionRequiredMixin, ObjectDeleteView):

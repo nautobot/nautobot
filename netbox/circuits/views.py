@@ -3,8 +3,8 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, render
 
-from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectAddView,\
-    ObjectEditView, ObjectDeleteView
+from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectEditView,\
+    ObjectDeleteView
 
 from .filters import CircuitFilter
 from .forms import CircuitTypeForm, CircuitTypeBulkDeleteForm, CircuitForm, CircuitImportForm, CircuitBulkEditForm,\
@@ -36,19 +36,12 @@ def provider(request, slug):
     })
 
 
-class ProviderAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'circuits.add_provider'
-    model = Provider
-    form_class = ProviderForm
-    template_name = 'circuits/provider_edit.html'
-    cancel_url = 'circuits:provider_list'
-
-
 class ProviderEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'circuits.change_provider'
     model = Provider
     form_class = ProviderForm
     template_name = 'circuits/provider_edit.html'
+    cancel_url = 'circuits:provider_list'
 
 
 class ProviderDeleteView(PermissionRequiredMixin, ObjectDeleteView):
@@ -101,18 +94,12 @@ class CircuitTypeListView(ObjectListView):
     template_name = 'circuits/circuittype_list.html'
 
 
-class CircuitTypeAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'circuits.add_circuittype'
-    model = CircuitType
-    form_class = CircuitTypeForm
-    cancel_url = 'circuits:circuittype_list'
-
-
 class CircuitTypeEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'circuits.change_circuittype'
     model = CircuitType
     form_class = CircuitTypeForm
-    return_url = 'circuits:circuittype_list'
+    success_url = 'circuits:circuittype_list'
+    cancel_url = 'circuits:circuittype_list'
 
 
 class CircuitTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -144,20 +131,13 @@ def circuit(request, pk):
     })
 
 
-class CircuitAddView(PermissionRequiredMixin, ObjectAddView):
-    permission_required = 'circuits.add_circuit'
-    model = Circuit
-    form_class = CircuitForm
-    template_name = 'circuits/circuit_edit.html'
-    cancel_url = 'circuits:circuit_list'
-    fields_initial = ['site']
-
-
 class CircuitEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'circuits.change_circuit'
     model = Circuit
     form_class = CircuitForm
+    fields_initial = ['site']
     template_name = 'circuits/circuit_edit.html'
+    cancel_url = 'circuits:circuit_list'
 
 
 class CircuitDeleteView(PermissionRequiredMixin, ObjectDeleteView):

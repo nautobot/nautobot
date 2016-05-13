@@ -75,48 +75,13 @@ class ObjectListView(View):
         return self.queryset
 
 
-class ObjectAddView(View):
-    model = None
-    form_class = None
-    template_name = 'utilities/obj_edit.html'
-    cancel_url = None
-    fields_initial = []
-
-    def get(self, request):
-
-        initial = {k: request.GET.get(k) for k in self.fields_initial}
-        form = self.form_class(initial=initial)
-
-        return render(request, self.template_name, {
-            'form': form,
-            'obj_type': self.model._meta.verbose_name,
-            'cancel_url': reverse(self.cancel_url),
-        })
-
-    def post(self, request):
-
-        form = self.form_class(request.POST)
-        if form.is_valid():
-            obj = form.save()
-            messages.success(request, 'Added new {} <a href="{}">{}</a>'.format(self.model._meta.verbose_name,
-                                                                                obj.get_absolute_url(), obj))
-            if '_addanother' in request.POST:
-                return redirect(request.path)
-            else:
-                return redirect(obj.get_absolute_url())
-
-        return render(request, self.template_name, {
-            'form': form,
-            'obj_type': self.model._meta.verbose_name,
-            'cancel_url': reverse(self.cancel_url),
-        })
-
-
 class ObjectEditView(View):
     model = None
     form_class = None
+    fields_initial = []
     template_name = 'utilities/obj_edit.html'
-    return_url = None
+    success_url = None
+    cancel_url = None
 
     def get_object(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
@@ -127,36 +92,46 @@ class ObjectEditView(View):
 
     def get(self, request, *args, **kwargs):
 
-        obj = self.get_object(kwargs)
-        form = self.form_class(instance=obj)
+        if kwargs:
+            obj = self.get_object(kwargs)
+            form = self.form_class(instance=obj)
+        else:
+            obj = None
+            form = self.form_class(initial={k: request.GET.get(k) for k in self.fields_initial})
 
         return render(request, self.template_name, {
             'obj': obj,
-            'form': form,
             'obj_type': self.model._meta.verbose_name,
-            'cancel_url': reverse(self.return_url) if self.return_url else obj.get_absolute_url(),
+            'form': form,
+            'cancel_url': reverse(self.cancel_url) if self.cancel_url else obj.get_absolute_url(),
         })
 
     def post(self, request, *args, **kwargs):
 
-        obj = self.get_object(kwargs)
+        # Validate object if editing an existing object
+        obj = self.get_object(kwargs) if kwargs else None
+
         form = self.form_class(request.POST, instance=obj)
         if form.is_valid():
-            obj = form.save()
-            messages.success(request, 'Modified {} <a href="{}">{}</a>'.format(self.model._meta.verbose_name,
-                                                                               obj.get_absolute_url(), obj))
+            obj = form.save(commit=False)
+            obj_created = not obj.pk
+            obj.save()
+            messages.success(request, '{} {} <a href="{}">{}</a>'.format('Created' if obj_created else 'Modified',
+                                                                         self.model._meta.verbose_name,
+                                                                         obj.get_absolute_url(),
+                                                                         obj))
             if '_addanother' in request.POST:
                 return redirect(request.path)
-            elif self.return_url:
-                return redirect(self.return_url)
+            elif self.success_url:
+                return redirect(self.success_url)
             else:
                 return redirect(obj.get_absolute_url())
 
         return render(request, self.template_name, {
             'obj': obj,
-            'form': form,
             'obj_type': self.model._meta.verbose_name,
-            'cancel_url': reverse(self.return_url) if self.return_url else obj.get_absolute_url(),
+            'form': form,
+            'cancel_url': reverse(self.cancel_url) if self.cancel_url else obj.get_absolute_url(),
         })
 
 
