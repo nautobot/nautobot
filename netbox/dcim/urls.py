@@ -33,6 +33,12 @@ urlpatterns = [
     url(r'^racks/(?P<pk>\d+)/edit/$', views.RackEditView.as_view(), name='rack_edit'),
     url(r'^racks/(?P<pk>\d+)/delete/$', views.RackDeleteView.as_view(), name='rack_delete'),
 
+    # Manufacturers
+    url(r'^manufacturers/$', views.ManufacturerListView.as_view(), name='manufacturer_list'),
+    url(r'^manufacturers/add/$', views.ManufacturerAddView.as_view(), name='manufacturer_add'),
+    url(r'^manufacturers/delete/$', views.ManufacturerBulkDeleteView.as_view(), name='manufacturer_bulk_delete'),
+    url(r'^manufacturers/(?P<slug>[\w-]+)/edit/$', views.ManufacturerEditView.as_view(), name='manufacturer_edit'),
+
     # Device types
     url(r'^device-types/$', views.DeviceTypeListView.as_view(), name='devicetype_list'),
     url(r'^device-types/add/$', views.DeviceTypeAddView.as_view(), name='devicetype_add'),

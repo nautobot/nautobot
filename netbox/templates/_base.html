@@ -44,7 +44,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/devices/' in request.path or '/device-types/' in request.path or '/device-roles/' in request.path or '-connections/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if '/devices/' in request.path or '/device-types/' in request.path or '/device-roles/' in request.path or '/manufacturers/' in request.path or '-connections/' in request.path %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Devices <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'dcim:device_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Devices</a></li>
@@ -65,6 +65,11 @@
                             <li><a href="{% url 'dcim:devicerole_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Device Roles</a></li>
                             {% if perms.dcim.add_devicerole %}
                                 <li><a href="{% url 'dcim:devicerole_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Device Role</a></li>
+                            {% endif %}
+                            <li class="divider"></li>
+                            <li><a href="{% url 'dcim:manufacturer_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Manufacturers</a></li>
+                            {% if perms.dcim.add_manufacturer %}
+                                <li><a href="{% url 'dcim:manufacturer_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Manufacturer</a></li>
                             {% endif %}
                             <li class="divider"></li>
                             <li><a href="{% url 'dcim:console_connections_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Console Connections</a></li>

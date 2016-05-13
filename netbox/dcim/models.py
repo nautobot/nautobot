@@ -265,6 +265,9 @@ class Manufacturer(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return "{}?manufacturer={}".format(reverse('dcim:devicetype_list'), self.slug)
+
 
 class DeviceType(models.Model):
     """

@@ -20,25 +20,25 @@ from utilities.forms import ConfirmationForm
 from utilities.views import ObjectListView, BulkImportView, BulkEditView, BulkDeleteView, ObjectAddView,\
     ObjectEditView, ObjectDeleteView
 
-from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter, \
+from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter, ConsoleConnectionFilter,\
     PowerConnectionFilter, InterfaceConnectionFilter
-from .forms import SiteForm, SiteImportForm, RackGroupForm, RackGroupFilterForm, RackGroupBulkDeleteForm, RackForm, \
-    RackImportForm, RackBulkEditForm, RackBulkDeleteForm, RackFilterForm, DeviceTypeForm, DeviceTypeBulkEditForm, \
-    DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, DeviceRoleForm, DeviceRoleBulkDeleteForm, DeviceForm, \
-    DeviceImportForm, DeviceBulkEditForm, DeviceBulkDeleteForm, DeviceFilterForm, ConsolePortForm, \
-    ConsolePortCreateForm, ConsolePortConnectionForm, ConsoleConnectionImportForm, ConsoleServerPortForm, \
-    ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, PowerPortForm, PowerPortCreateForm, \
-    PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, PowerOutletCreateForm, \
-    PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, InterfaceConnectionForm, \
-    InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, ConsoleConnectionFilterForm, \
-    PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, ConsolePortTemplateForm, \
+from .forms import SiteForm, SiteImportForm, RackGroupForm, RackGroupFilterForm, RackGroupBulkDeleteForm, RackForm,\
+    RackImportForm, RackBulkEditForm, RackBulkDeleteForm, RackFilterForm, ManufacturerForm, ManufacturerBulkDeleteForm,\
+    DeviceTypeForm, DeviceTypeBulkEditForm, DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, DeviceRoleForm,\
+    DeviceRoleBulkDeleteForm, DeviceForm, DeviceImportForm, DeviceBulkEditForm, DeviceBulkDeleteForm, DeviceFilterForm,\
+    ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm, ConsoleConnectionImportForm,\
+    ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, PowerPortForm,\
+    PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, PowerOutletCreateForm,\
+    PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, InterfaceConnectionForm,\
+    InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, ConsoleConnectionFilterForm,\
+    PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, ConsolePortTemplateForm,\
     ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm, InterfaceTemplateForm
-from .models import Site, RackGroup, Rack, DeviceType, DeviceRole, ConsolePortTemplate, ConsoleServerPortTemplate, \
-    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, ConsoleServerPort, PowerPort, \
-    PowerOutlet, Interface, InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
-from .tables import SiteTable, RackGroupTable, RackTable, DeviceTypeTable, DeviceRoleTable, DeviceTable, \
-    DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable, \
-    ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable, PowerOutletTemplateTable, \
+from .models import Site, RackGroup, Rack, Manufacturer, DeviceType, DeviceRole, ConsolePortTemplate,\
+    ConsoleServerPortTemplate, PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort,\
+    ConsoleServerPort, PowerPort, PowerOutlet, Interface, InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
+from .tables import SiteTable, RackGroupTable, RackTable, ManufacturerTable, DeviceTypeTable, DeviceRoleTable,\
+    DeviceTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable,\
+    ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable, PowerOutletTemplateTable,\
     InterfaceTemplateTable
 
 
@@ -243,6 +243,38 @@ class RackBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Rack
     form = RackBulkDeleteForm
     default_redirect_url = 'dcim:rack_list'
+
+
+#
+# Manufacturers
+#
+
+class ManufacturerListView(ObjectListView):
+    queryset = Manufacturer.objects.annotate(devicetype_count=Count('device_types'))
+    table = ManufacturerTable
+    edit_permissions = ['dcim.change_manufacturer', 'dcim.delete_manufacturer']
+    template_name = 'dcim/manufacturer_list.html'
+
+
+class ManufacturerAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'dcim.add_manufacturer'
+    model = Manufacturer
+    form_class = ManufacturerForm
+    cancel_url = 'dcim:manufacturer_list'
+
+
+class ManufacturerEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'dcim.change_manufacturer'
+    model = Manufacturer
+    form_class = ManufacturerForm
+    return_url = 'dcim:manufacturer_list'
+
+
+class ManufacturerBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'dcim.delete_manufacturer'
+    cls = Manufacturer
+    form = ManufacturerBulkDeleteForm
+    default_redirect_url = 'dcim:manufacturer_list'
 
 
 #

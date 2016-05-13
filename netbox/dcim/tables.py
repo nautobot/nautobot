@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Site, RackGroup, Rack, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate, \
+from .models import Site, RackGroup, Rack, Manufacturer, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate,\
     PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceRole, Device, ConsolePort, PowerPort
 
 DEVICE_LINK = """
@@ -14,6 +14,10 @@ RACKGROUP_EDIT_LINK = """
 
 DEVICEROLE_EDIT_LINK = """
 {% if perms.dcim.change_devicerole %}<a href="{% url 'dcim:devicerole_edit' slug=record.slug %}">Edit</a>{% endif %}
+"""
+
+MANUFACTURER_EDIT_LINK = """
+{% if perms.dcim.change_manufacturer %}<a href="{% url 'dcim:manufacturer_edit' slug=record.slug %}">Edit</a>{% endif %}
 """
 
 STATUS_ICON = """
@@ -82,6 +86,26 @@ class RackTable(tables.Table):
         model = Rack
         fields = ('pk', 'name', 'site', 'group', 'facility_id', 'u_height')
         empty_text = "No racks were found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+#
+# Manufacturers
+#
+
+class ManufacturerTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
+    name = tables.LinkColumn(verbose_name='Name')
+    devicetype_count = tables.Column(verbose_name='Device Types')
+    slug = tables.Column(verbose_name='Slug')
+    edit = tables.TemplateColumn(template_code=MANUFACTURER_EDIT_LINK, verbose_name='')
+
+    class Meta:
+        model = Manufacturer
+        fields = ('pk', 'name', 'devicetype_count', 'slug', 'edit')
+        empty_text = "No device types were found."
         attrs = {
             'class': 'table table-hover',
         }

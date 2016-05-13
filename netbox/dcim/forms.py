@@ -186,6 +186,21 @@ class RackFilterForm(forms.Form, BootstrapMixin):
 
 
 #
+# Manufacturers
+#
+
+class ManufacturerForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = Manufacturer
+        fields = ['name', 'slug']
+
+
+class ManufacturerBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Manufacturer.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+#
 # Device types
 #
 
