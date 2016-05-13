@@ -1,7 +1,12 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Circuit, Provider
+from .models import Circuit, CircuitType, Provider
+
+
+CIRCUITTYPE_EDIT_LINK = """
+{% if perms.circuit.change_circuittype %}<a href="{% url 'circuits:circuittype_edit' slug=record.slug %}">Edit</a>{% endif %}
+"""
 
 
 #
@@ -18,6 +23,26 @@ class ProviderTable(tables.Table):
         model = Provider
         fields = ('pk', 'name', 'asn', 'circuit_count')
         empty_text = "No providers found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+#
+# Circuit types
+#
+
+class CircuitTypeTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
+    name = tables.LinkColumn(verbose_name='Name')
+    circuit_count = tables.Column(verbose_name='Circuits')
+    slug = tables.Column(verbose_name='Slug')
+    edit = tables.TemplateColumn(template_code=CIRCUITTYPE_EDIT_LINK, verbose_name='')
+
+    class Meta:
+        model = CircuitType
+        fields = ('pk', 'name', 'circuit_count', 'slug', 'edit')
+        empty_text = "No circuit types found."
         attrs = {
             'class': 'table table-hover',
         }

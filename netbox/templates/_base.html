@@ -149,6 +149,13 @@
                                 <li><a href="{% url 'circuits:circuit_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Circuit</a></li>
                                 <li><a href="{% url 'circuits:circuit_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Circuits</a></li>
                             {% endif %}
+                            {% if perms.circuits.add_circuit or perms.circuits.add_circuittype %}
+                                <li class="divider"></li>
+                            {% endif %}
+                            <li><a href="{% url 'circuits:circuittype_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Circuit Types</a></li>
+                            {% if perms.circuits.add_circuittype %}
+                                <li><a href="{% url 'circuits:circuittype_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Circuit Type</a></li>
+                            {% endif %}
                         </ul>
                     </li>
                     {% if request.user.is_authenticated %}

@@ -58,6 +58,9 @@ class CircuitType(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return "{}?type={}".format(reverse('circuits:circuit_list'), self.slug)
+
 
 class Circuit(models.Model):
     """

@@ -147,6 +147,8 @@ class ObjectEditView(View):
                                                                                obj.get_absolute_url(), obj))
             if '_addanother' in request.POST:
                 return redirect(request.path)
+            elif self.return_url:
+                return redirect(self.return_url)
             else:
                 return redirect(obj.get_absolute_url())
 

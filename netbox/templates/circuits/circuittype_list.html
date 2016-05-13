@@ -1,0 +1,21 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}Circuit Types{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.circuits.add_circuittype %}
+        <a href="{% url 'circuits:circuittype_add' %}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            Add a circuit type
+        </a>
+    {% endif %}
+</div>
+<h1>Circuit Types</h1>
+<div class="row">
+	<div class="col-md-12">
+        {% include 'circuits/inc/circuittype_table.html' %}
+    </div>
+</div>
+{% endblock %}

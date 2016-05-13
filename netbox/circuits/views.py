@@ -7,10 +7,11 @@ from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, Object
     ObjectEditView, ObjectDeleteView
 
 from .filters import CircuitFilter
-from .forms import CircuitForm, CircuitImportForm, CircuitBulkEditForm, CircuitBulkDeleteForm, CircuitFilterForm,\
-    ProviderForm, ProviderImportForm, ProviderBulkEditForm, ProviderBulkDeleteForm
-from .models import Circuit, Provider
-from .tables import CircuitTable, ProviderTable
+from .forms import CircuitTypeForm, CircuitTypeBulkDeleteForm, CircuitForm, CircuitImportForm, CircuitBulkEditForm,\
+    CircuitBulkDeleteForm, CircuitFilterForm, ProviderForm, ProviderImportForm, ProviderBulkEditForm,\
+    ProviderBulkDeleteForm
+from .models import Circuit, CircuitType, Provider
+from .tables import CircuitTable, CircuitTypeTable, ProviderTable
 
 
 #
@@ -87,6 +88,38 @@ class ProviderBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Provider
     form = ProviderBulkDeleteForm
     default_redirect_url = 'circuits:provider_list'
+
+
+#
+# Circuit Types
+#
+
+class CircuitTypeListView(ObjectListView):
+    queryset = CircuitType.objects.annotate(circuit_count=Count('circuits'))
+    table = CircuitTypeTable
+    edit_permissions = ['circuits.change_circuittype', 'circuits.delete_circuittype']
+    template_name = 'circuits/circuittype_list.html'
+
+
+class CircuitTypeAddView(PermissionRequiredMixin, ObjectAddView):
+    permission_required = 'circuits.add_circuittype'
+    model = CircuitType
+    form_class = CircuitTypeForm
+    cancel_url = 'circuits:circuittype_list'
+
+
+class CircuitTypeEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'circuits.change_circuittype'
+    model = CircuitType
+    form_class = CircuitTypeForm
+    return_url = 'circuits:circuittype_list'
+
+
+class CircuitTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'circuits.delete_circuittype'
+    cls = CircuitType
+    form = CircuitTypeBulkDeleteForm
+    default_redirect_url = 'circuits:circuittype_list'
 
 
 #

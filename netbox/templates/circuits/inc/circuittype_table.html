@@ -1,0 +1,14 @@
+{% load render_table from django_tables2 %}
+{% if perms.circuits.delete_circuittype %}
+    <form method="post" class="form form-horizontal">
+        {% csrf_token %}
+        <input type="hidden" name="redirect_url" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" />
+        {% render_table table table_template|default:'table.html' %}
+        <button type="submit" name="_delete" formaction="{% url 'circuits:circuittype_bulk_delete' %}" class="btn btn-danger btn-sm">
+            <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+            Delete Selected
+        </button>
+    </form>
+{% else %}
+    {% render_table table table_template|default:'table.html' %}
+{% endif %}

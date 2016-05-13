@@ -58,6 +58,21 @@ class ProviderBulkDeleteForm(ConfirmationForm):
 
 
 #
+# Circuit types
+#
+
+class CircuitTypeForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = CircuitType
+        fields = ['name', 'slug']
+
+
+class CircuitTypeBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CircuitType.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+#
 # Circuits
 #
 
