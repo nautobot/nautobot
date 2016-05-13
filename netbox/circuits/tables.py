@@ -9,25 +9,18 @@ from .models import Circuit, Provider
 #
 
 class ProviderTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     name = tables.LinkColumn('circuits:provider', args=[Accessor('slug')], verbose_name='Name')
     asn = tables.Column(verbose_name='ASN')
     circuit_count = tables.Column(accessor=Accessor('count_circuits'), verbose_name='Circuits')
 
     class Meta:
         model = Provider
-        fields = ('name', 'asn', 'circuit_count')
+        fields = ('pk', 'name', 'asn', 'circuit_count')
         empty_text = "No providers found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class ProviderBulkEditTable(ProviderTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(ProviderTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'asn', 'circuit_count')
 
 
 #
@@ -35,6 +28,7 @@ class ProviderBulkEditTable(ProviderTable):
 #
 
 class CircuitTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     cid = tables.LinkColumn('circuits:circuit', args=[Accessor('pk')], verbose_name='ID')
     type = tables.Column(verbose_name='Type')
     provider = tables.LinkColumn('circuits:provider', args=[Accessor('provider.slug')], verbose_name='Provider')
@@ -44,16 +38,8 @@ class CircuitTable(tables.Table):
 
     class Meta:
         model = Circuit
-        fields = ('cid', 'type', 'provider', 'site', 'port_speed', 'commit_rate')
+        fields = ('pk', 'cid', 'type', 'provider', 'site', 'port_speed', 'commit_rate')
         empty_text = "No circuits found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class CircuitBulkEditTable(CircuitTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(CircuitTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'cid', 'type', 'provider', 'site', 'port_speed', 'commit_rate')

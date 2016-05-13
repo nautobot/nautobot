@@ -45,25 +45,18 @@ STATUS_LABEL = """
 #
 
 class VRFTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     name = tables.LinkColumn('ipam:vrf', args=[Accessor('pk')], verbose_name='Name')
     rd = tables.Column(verbose_name='RD')
     description = tables.Column(sortable=False, verbose_name='Description')
 
     class Meta:
         model = VRF
-        fields = ('name', 'rd', 'description')
+        fields = ('pk', 'name', 'rd', 'description')
         empty_text = "No VRFs found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class VRFBulkEditTable(VRFTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(VRFTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'rd', 'description')
 
 
 #
@@ -71,6 +64,7 @@ class VRFBulkEditTable(VRFTable):
 #
 
 class AggregateTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     prefix = tables.LinkColumn('ipam:aggregate', args=[Accessor('pk')], verbose_name='Aggregate')
     rir = tables.Column(verbose_name='RIR')
     child_count = tables.Column(verbose_name='Prefixes')
@@ -80,19 +74,11 @@ class AggregateTable(tables.Table):
 
     class Meta:
         model = Aggregate
-        fields = ('prefix', 'rir', 'child_count', 'utilization', 'date_added', 'description')
+        fields = ('pk', 'prefix', 'rir', 'child_count', 'utilization', 'date_added', 'description')
         empty_text = "No aggregates found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class AggregateBulkEditTable(AggregateTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(AggregateTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'prefix', 'rir', 'child_count', 'utilization', 'date_added', 'description')
 
 
 #
@@ -100,6 +86,7 @@ class AggregateBulkEditTable(AggregateTable):
 #
 
 class PrefixTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     status = tables.TemplateColumn(STATUS_LABEL, verbose_name='Status')
     prefix = tables.TemplateColumn(PREFIX_LINK, verbose_name='Prefix')
     vrf = tables.Column(orderable=False, default='Global', verbose_name='VRF')
@@ -109,7 +96,7 @@ class PrefixTable(tables.Table):
 
     class Meta:
         model = Prefix
-        fields = ('prefix', 'status', 'vrf', 'site', 'role', 'description')
+        fields = ('pk', 'prefix', 'status', 'vrf', 'site', 'role', 'description')
         empty_text = "No prefixes found."
         attrs = {
             'class': 'table table-hover',
@@ -131,19 +118,12 @@ class PrefixBriefTable(tables.Table):
         }
 
 
-class PrefixBulkEditTable(PrefixTable):
-    pk = tables.CheckBoxColumn(default='')
-
-    class Meta(PrefixTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'prefix', 'status', 'vrf', 'site', 'role', 'description')
-
-
 #
 # IPAddresses
 #
 
 class IPAddressTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     address = tables.LinkColumn('ipam:ipaddress', args=[Accessor('pk')], verbose_name='IP Address')
     vrf = tables.Column(orderable=False, default='Global', verbose_name='VRF')
     device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False, verbose_name='Device')
@@ -152,7 +132,7 @@ class IPAddressTable(tables.Table):
 
     class Meta:
         model = IPAddress
-        fields = ('address', 'vrf', 'device', 'interface', 'description')
+        fields = ('pk', 'address', 'vrf', 'device', 'interface', 'description')
         empty_text = "No IP addresses found."
         attrs = {
             'class': 'table table-hover',
@@ -174,19 +154,12 @@ class IPAddressBriefTable(tables.Table):
         }
 
 
-class IPAddressBulkEditTable(IPAddressTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(IPAddressTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'address', 'vrf', 'device', 'interface', 'description')
-
-
 #
 # VLANs
 #
 
 class VLANTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     vid = tables.LinkColumn('ipam:vlan', args=[Accessor('pk')], verbose_name='ID')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     name = tables.Column(verbose_name='Name')
@@ -195,16 +168,8 @@ class VLANTable(tables.Table):
 
     class Meta:
         model = VLAN
-        fields = ('vid', 'site', 'name', 'status', 'role')
+        fields = ('pk', 'vid', 'site', 'name', 'status', 'role')
         empty_text = "No VLANs found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class VLANBulkEditTable(VLANTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(VLANTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'vid', 'site', 'name', 'status', 'role')

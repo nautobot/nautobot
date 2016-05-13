@@ -13,7 +13,7 @@ from .decorators import userkey_required
 from .filters import SecretFilter
 from .forms import SecretForm, SecretImportForm, SecretBulkEditForm, SecretBulkDeleteForm, SecretFilterForm
 from .models import Secret, UserKey
-from .tables import SecretTable, SecretBulkEditTable
+from .tables import SecretTable
 
 
 #
@@ -26,8 +26,7 @@ class SecretListView(ObjectListView):
     filter = SecretFilter
     filter_form = SecretFilterForm
     table = SecretTable
-    edit_table = SecretBulkEditTable
-    edit_table_permissions = ['secrets.change_secret', 'secrets.delete_secret']
+    edit_permissions = ['secrets.change_secret', 'secrets.delete_secret']
     template_name = 'secrets/secret_list.html'
 
 

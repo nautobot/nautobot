@@ -36,12 +36,10 @@ from .forms import SiteForm, SiteImportForm, RackGroupForm, RackGroupFilterForm,
 from .models import Site, RackGroup, Rack, DeviceType, DeviceRole, ConsolePortTemplate, ConsoleServerPortTemplate, \
     PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort, ConsoleServerPort, PowerPort, \
     PowerOutlet, Interface, InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
-from .tables import SiteTable, RackGroupTable, RackGroupBulkEditTable, RackTable, RackBulkEditTable, DeviceTypeTable, \
-    DeviceTypeBulkEditTable, DeviceRoleTable, DeviceRoleBulkEditTable, DeviceTable, DeviceBulkEditTable, \
+from .tables import SiteTable, RackGroupTable, RackTable, DeviceTypeTable, DeviceRoleTable, DeviceTable, \
     DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable, \
     ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable, PowerOutletTemplateTable, \
-    InterfaceTemplateTable, ConsolePortTemplateBulkDeleteTable, ConsoleServerPortTemplateBulkDeleteTable, \
-    PowerPortTemplateBulkDeleteTable, PowerOutletTemplateBulkDeleteTable, InterfaceTemplateBulkDeleteTable
+    InterfaceTemplateTable
 
 
 EXPANSION_PATTERN = '\[(\d+-\d+)\]'
@@ -137,8 +135,7 @@ class RackGroupListView(ObjectListView):
     filter = RackGroupFilter
     filter_form = RackGroupFilterForm
     table = RackGroupTable
-    edit_table = RackGroupBulkEditTable
-    edit_table_permissions = ['dcim.change_rackgroup', 'dcim.delete_rackgroup']
+    edit_permissions = ['dcim.change_rackgroup', 'dcim.delete_rackgroup']
     template_name = 'dcim/rackgroup_list.html'
 
 
@@ -172,8 +169,7 @@ class RackListView(ObjectListView):
     filter = RackFilter
     filter_form = RackFilterForm
     table = RackTable
-    edit_table = RackBulkEditTable
-    edit_table_permissions = ['dcim.change_rack', 'dcim.delete_rack']
+    edit_permissions = ['dcim.change_rack', 'dcim.delete_rack']
     template_name = 'dcim/rack_list.html'
 
 
@@ -258,8 +254,7 @@ class DeviceTypeListView(ObjectListView):
     filter = DeviceTypeFilter
     filter_form = DeviceTypeFilterForm
     table = DeviceTypeTable
-    edit_table = DeviceTypeBulkEditTable
-    edit_table_permissions = ['dcim.change_devicetype', 'dcim.delete_devicetype']
+    edit_permissions = ['dcim.change_devicetype', 'dcim.delete_devicetype']
     template_name = 'dcim/devicetype_list.html'
 
 
@@ -268,18 +263,17 @@ def devicetype(request, pk):
     devicetype = get_object_or_404(DeviceType, pk=pk)
 
     # Component tables
+    consoleport_table = ConsolePortTemplateTable(ConsolePortTemplate.objects.filter(device_type=devicetype))
+    consoleserverport_table = ConsoleServerPortTemplateTable(ConsoleServerPortTemplate.objects.filter(device_type=devicetype))
+    powerport_table = PowerPortTemplateTable(PowerPortTemplate.objects.filter(device_type=devicetype))
+    poweroutlet_table = PowerOutletTemplateTable(PowerOutletTemplate.objects.filter(device_type=devicetype))
+    interface_table = InterfaceTemplateTable(InterfaceTemplate.objects.filter(device_type=devicetype))
     if request.user.has_perm('dcim.change_devicetype'):
-        consoleport_table = ConsolePortTemplateBulkDeleteTable(ConsolePortTemplate.objects.filter(device_type=devicetype))
-        consoleserverport_table = ConsoleServerPortTemplateBulkDeleteTable(ConsoleServerPortTemplate.objects.filter(device_type=devicetype))
-        powerport_table = PowerPortTemplateBulkDeleteTable(PowerPortTemplate.objects.filter(device_type=devicetype))
-        poweroutlet_table = PowerOutletTemplateBulkDeleteTable(PowerOutletTemplate.objects.filter(device_type=devicetype))
-        interface_table = InterfaceTemplateBulkDeleteTable(InterfaceTemplate.objects.filter(device_type=devicetype))
-    else:
-        consoleport_table = ConsolePortTemplateTable(ConsolePortTemplate.objects.filter(device_type=devicetype))
-        consoleserverport_table = ConsoleServerPortTemplateTable(ConsoleServerPortTemplate.objects.filter(device_type=devicetype))
-        powerport_table = PowerPortTemplateTable(PowerPortTemplate.objects.filter(device_type=devicetype))
-        poweroutlet_table = PowerOutletTemplateTable(PowerOutletTemplate.objects.filter(device_type=devicetype))
-        interface_table = InterfaceTemplateTable(InterfaceTemplate.objects.filter(device_type=devicetype))
+        consoleport_table.base_columns['pk'].visible = True
+        consoleserverport_table.base_columns['pk'].visible = True
+        powerport_table.base_columns['pk'].visible = True
+        poweroutlet_table.base_columns['pk'].visible = True
+        interface_table.base_columns['pk'].visible = True
 
     return render(request, 'dcim/devicetype.html', {
         'devicetype': devicetype,
@@ -343,7 +337,7 @@ class ComponentTemplateCreateView(View):
     model = None
     form = None
 
-    def get(self, request, pk, *args, **kwargs):
+    def get(self, request, pk):
 
         devicetype = get_object_or_404(DeviceType, pk=pk)
 
@@ -354,7 +348,7 @@ class ComponentTemplateCreateView(View):
             'cancel_url': reverse('dcim:devicetype', kwargs={'pk': devicetype.pk}),
         })
 
-    def post(self, request, pk, *args, **kwargs):
+    def post(self, request, pk):
 
         devicetype = get_object_or_404(DeviceType, pk=pk)
 
@@ -459,8 +453,7 @@ def component_template_delete(request, pk, model):
 class DeviceRoleListView(ObjectListView):
     queryset = DeviceRole.objects.annotate(device_count=Count('devices'))
     table = DeviceRoleTable
-    edit_table = DeviceRoleBulkEditTable
-    edit_table_permissions = ['dcim.change_devicerole', 'dcim.delete_devicerole']
+    edit_permissions = ['dcim.change_devicerole', 'dcim.delete_devicerole']
     template_name = 'dcim/devicerole_list.html'
 
 
@@ -495,8 +488,7 @@ class DeviceListView(ObjectListView):
     filter = DeviceFilter
     filter_form = DeviceFilterForm
     table = DeviceTable
-    edit_table = DeviceBulkEditTable
-    edit_table_permissions = ['dcim.change_device', 'dcim.delete_device']
+    edit_permissions = ['dcim.change_device', 'dcim.delete_device']
     template_name = 'dcim/device_list.html'
 
 

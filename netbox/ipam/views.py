@@ -17,10 +17,9 @@ from .forms import AggregateForm, AggregateImportForm, AggregateBulkEditForm, Ag
     IPAddressForm, IPAddressImportForm, IPAddressBulkEditForm, IPAddressBulkDeleteForm, IPAddressFilterForm, VLANForm,\
     VLANImportForm, VLANBulkEditForm, VLANBulkDeleteForm, VRFForm, VRFImportForm, VRFBulkEditForm, VRFBulkDeleteForm,\
     VLANFilterForm
-from .models import VRF, Aggregate, Prefix, VLAN
-from .tables import AggregateTable, AggregateBulkEditTable, PrefixTable, PrefixBriefTable, PrefixBulkEditTable,\
-    IPAddress, IPAddressBriefTable, IPAddressTable, IPAddressBulkEditTable, VLANTable, VLANBulkEditTable, VRFTable,\
-    VRFBulkEditTable
+from .models import VRF, Aggregate, Prefix, IPAddress, VLAN
+from .tables import AggregateTable, PrefixTable, PrefixBriefTable, IPAddressBriefTable, IPAddressTable, VLANTable,\
+    VRFTable
 
 
 def add_available_prefixes(parent, prefix_list):
@@ -47,8 +46,7 @@ class VRFListView(ObjectListView):
     queryset = VRF.objects.all()
     filter = VRFFilter
     table = VRFTable
-    edit_table = VRFBulkEditTable
-    edit_table_permissions = ['ipam.change_vrf', 'ipam.delete_vrf']
+    edit_permissions = ['ipam.change_vrf', 'ipam.delete_vrf']
     template_name = 'ipam/vrf_list.html'
 
 
@@ -126,8 +124,7 @@ class AggregateListView(ObjectListView):
     filter = AggregateFilter
     filter_form = AggregateFilterForm
     table = AggregateTable
-    edit_table = AggregateBulkEditTable
-    edit_table_permissions = ['ipam.change_aggregate', 'ipam.delete_aggregate']
+    edit_permissions = ['ipam.change_aggregate', 'ipam.delete_aggregate']
     template_name = 'ipam/aggregate_list.html'
 
 
@@ -140,10 +137,9 @@ def aggregate(request, pk):
         .select_related('site', 'status', 'role').annotate_depth(limit=0)
     child_prefixes = add_available_prefixes(aggregate.prefix, child_prefixes)
 
+    prefix_table = PrefixTable(child_prefixes)
     if request.user.has_perm('ipam.change_prefix') or request.user.has_perm('ipam.delete_prefix'):
-        prefix_table = PrefixBulkEditTable(child_prefixes)
-    else:
-        prefix_table = PrefixTable(child_prefixes)
+        prefix_table.base_columns['pk'].visible = True
     RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
         .configure(prefix_table)
 
@@ -214,8 +210,7 @@ class PrefixListView(ObjectListView):
     filter = PrefixFilter
     filter_form = PrefixFilterForm
     table = PrefixTable
-    edit_table = PrefixBulkEditTable
-    edit_table_permissions = ['ipam.change_prefix', 'ipam.delete_prefix']
+    edit_permissions = ['ipam.change_prefix', 'ipam.delete_prefix']
     template_name = 'ipam/prefix_list.html'
 
     def alter_queryset(self, request):
@@ -251,10 +246,9 @@ def prefix(request, pk):
         .select_related('site', 'status', 'role').annotate_depth(limit=0)
     if child_prefixes:
         child_prefixes = add_available_prefixes(prefix.prefix, child_prefixes)
+    child_prefix_table = PrefixTable(child_prefixes)
     if request.user.has_perm('ipam.change_prefix') or request.user.has_perm('ipam.delete_prefix'):
-        child_prefix_table = PrefixBulkEditTable(child_prefixes)
-    else:
-        child_prefix_table = PrefixTable(child_prefixes)
+        child_prefix_table.base_columns['pk'].visible = True
     RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
         .configure(child_prefix_table)
 
@@ -333,10 +327,9 @@ def prefix_ipaddresses(request, pk):
     ipaddresses = IPAddress.objects.filter(address__net_contained_or_equal=str(prefix.prefix))\
         .select_related('vrf', 'interface__device', 'primary_for')
 
+    ip_table = IPAddressTable(ipaddresses)
     if request.user.has_perm('ipam.change_ipaddress') or request.user.has_perm('ipam.delete_ipaddress'):
-        ip_table = IPAddressBulkEditTable(ipaddresses)
-    else:
-        ip_table = IPAddressTable(ipaddresses)
+        ip_table.base_columns['pk'].visible = True
     RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
         .configure(ip_table)
 
@@ -355,8 +348,7 @@ class IPAddressListView(ObjectListView):
     filter = IPAddressFilter
     filter_form = IPAddressFilterForm
     table = IPAddressTable
-    edit_table = IPAddressBulkEditTable
-    edit_table_permissions = ['ipam.change_ipaddress', 'ipam.delete_ipaddress']
+    edit_permissions = ['ipam.change_ipaddress', 'ipam.delete_ipaddress']
     template_name = 'ipam/ipaddress_list.html'
 
 
@@ -455,8 +447,7 @@ class VLANListView(ObjectListView):
     filter = VLANFilter
     filter_form = VLANFilterForm
     table = VLANTable
-    edit_table = VLANBulkEditTable
-    edit_table_permissions = ['ipam.change_vlan', 'ipam.delete_vlan']
+    edit_permissions = ['ipam.change_vlan', 'ipam.delete_vlan']
     template_name = 'ipam/vlan_list.html'
 
 

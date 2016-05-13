@@ -25,8 +25,7 @@ class ObjectListView(View):
     filter = None
     filter_form = None
     table = None
-    edit_table = None
-    edit_table_permissions = []
+    edit_permissions = []
     template_name = None
     redirect_on_single_result = True
 
@@ -58,10 +57,9 @@ class ObjectListView(View):
         self.queryset = self.alter_queryset(request)
 
         # Construct the table based on the user's permissions
-        if any([request.user.has_perm(perm) for perm in self.edit_table_permissions]):
-            table = self.edit_table(self.queryset)
-        else:
-            table = self.table(self.queryset)
+        table = self.table(self.queryset)
+        if 'pk' in table.base_columns and any([request.user.has_perm(perm) for perm in self.edit_permissions]):
+            table.base_columns['pk'].visible = True
         RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
             .configure(table)
 

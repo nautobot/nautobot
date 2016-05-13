@@ -10,7 +10,7 @@ from .filters import CircuitFilter
 from .forms import CircuitForm, CircuitImportForm, CircuitBulkEditForm, CircuitBulkDeleteForm, CircuitFilterForm,\
     ProviderForm, ProviderImportForm, ProviderBulkEditForm, ProviderBulkDeleteForm
 from .models import Circuit, Provider
-from .tables import CircuitTable, CircuitBulkEditTable, ProviderTable, ProviderBulkEditTable
+from .tables import CircuitTable, ProviderTable
 
 
 #
@@ -20,8 +20,7 @@ from .tables import CircuitTable, CircuitBulkEditTable, ProviderTable, ProviderB
 class ProviderListView(ObjectListView):
     queryset = Provider.objects.annotate(count_circuits=Count('circuits'))
     table = ProviderTable
-    edit_table = ProviderBulkEditTable
-    edit_table_permissions = ['circuits.change_provider', 'circuits.delete_provider']
+    edit_permissions = ['circuits.change_provider', 'circuits.delete_provider']
     template_name = 'circuits/provider_list.html'
 
 
@@ -99,8 +98,7 @@ class CircuitListView(ObjectListView):
     filter = CircuitFilter
     filter_form = CircuitFilterForm
     table = CircuitTable
-    edit_table = CircuitBulkEditTable
-    edit_table_permissions = ['circuits.change_circuit', 'circuits.delete_circuit']
+    edit_permissions = ['circuits.change_circuit', 'circuits.delete_circuit']
     template_name = 'circuits/circuit_list.html'
 
 

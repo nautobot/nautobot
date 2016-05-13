@@ -9,11 +9,11 @@ DEVICE_LINK = """
 """
 
 RACKGROUP_EDIT_LINK = """
-<a href="{% url 'dcim:rackgroup_edit' pk=record.pk %}">Edit</a>
+{% if perms.dcim.change_rackgroup %}<a href="{% url 'dcim:rackgroup_edit' pk=record.pk %}">Edit</a>{% endif %}
 """
 
 DEVICEROLE_EDIT_LINK = """
-<a href="{% url 'dcim:devicerole_edit' slug=record.slug %}">Edit</a>
+{% if perms.dcim.change_devicerole %}<a href="{% url 'dcim:devicerole_edit' slug=record.slug %}">Edit</a>{% endif %}
 """
 
 STATUS_ICON = """
@@ -49,27 +49,20 @@ class SiteTable(tables.Table):
 #
 
 class RackGroupTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     name = tables.LinkColumn(verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     rack_count = tables.Column(verbose_name='Racks')
     slug = tables.Column(verbose_name='Slug')
+    edit = tables.TemplateColumn(template_code=RACKGROUP_EDIT_LINK, verbose_name='')
 
     class Meta:
         model = RackGroup
-        fields = ('name', 'site', 'rack_count', 'slug')
+        fields = ('pk', 'name', 'site', 'rack_count', 'slug', 'edit')
         empty_text = "No rack groups were found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class RackGroupBulkEditTable(RackGroupTable):
-    pk = tables.CheckBoxColumn()
-    edit = tables.TemplateColumn(template_code=RACKGROUP_EDIT_LINK, verbose_name='')
-
-    class Meta(RackGroupTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'site', 'rack_count', 'slug', 'edit')
 
 
 #
@@ -77,6 +70,7 @@ class RackGroupBulkEditTable(RackGroupTable):
 #
 
 class RackTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     name = tables.LinkColumn('dcim:rack', args=[Accessor('pk')], verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     group = tables.Column(accessor=Accessor('group.name'), verbose_name='Group')
@@ -86,19 +80,11 @@ class RackTable(tables.Table):
 
     class Meta:
         model = Rack
-        fields = ('name', 'site', 'group', 'facility_id', 'u_height')
+        fields = ('pk', 'name', 'site', 'group', 'facility_id', 'u_height')
         empty_text = "No racks were found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class RackBulkEditTable(RackTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(RackTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'site', 'group', 'facility_id', 'u_height')
 
 
 #
@@ -106,23 +92,16 @@ class RackBulkEditTable(RackTable):
 #
 
 class DeviceTypeTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     model = tables.LinkColumn('dcim:devicetype', args=[Accessor('pk')], verbose_name='Device Type')
 
     class Meta:
         model = DeviceType
-        fields = ('model', 'manufacturer', 'u_height')
+        fields = ('pk', 'model', 'manufacturer', 'u_height')
         empty_text = "No device types were found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class DeviceTypeBulkEditTable(DeviceTypeTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(DeviceTypeTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'model', 'manufacturer', 'u_height')
 
 
 #
@@ -130,103 +109,68 @@ class DeviceTypeBulkEditTable(DeviceTypeTable):
 #
 
 class ConsolePortTemplateTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
 
     class Meta:
         model = ConsolePortTemplate
-        fields = ('name',)
+        fields = ('pk', 'name')
         empty_text = "None"
         show_header = False
         attrs = {
             'class': 'table table-hover panel-body',
         }
-
-
-class ConsolePortTemplateBulkDeleteTable(ConsolePortTemplateTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(ConsolePortTemplateTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name')
 
 
 class ConsoleServerPortTemplateTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
 
     class Meta:
         model = ConsoleServerPortTemplate
-        fields = ('name',)
+        fields = ('pk', 'name')
         empty_text = "None"
         show_header = False
         attrs = {
             'class': 'table table-hover panel-body',
         }
-
-
-class ConsoleServerPortTemplateBulkDeleteTable(ConsoleServerPortTemplateTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(ConsoleServerPortTemplateTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name')
 
 
 class PowerPortTemplateTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
 
     class Meta:
         model = PowerPortTemplate
-        fields = ('name',)
+        fields = ('pk', 'name')
         empty_text = "None"
         show_header = False
         attrs = {
             'class': 'table table-hover panel-body',
         }
-
-
-class PowerPortTemplateBulkDeleteTable(PowerPortTemplateTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(PowerPortTemplateTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name')
 
 
 class PowerOutletTemplateTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
 
     class Meta:
         model = PowerOutletTemplate
-        fields = ('name',)
+        fields = ('pk', 'name')
         empty_text = "None"
         show_header = False
         attrs = {
             'class': 'table table-hover panel-body',
         }
-
-
-class PowerOutletTemplateBulkDeleteTable(PowerOutletTemplateTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(PowerOutletTemplateTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name')
 
 
 class InterfaceTemplateTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
 
     class Meta:
         model = InterfaceTemplate
-        fields = ('name',)
+        fields = ('pk', 'name')
         empty_text = "None"
         show_header = False
         attrs = {
             'class': 'table table-hover panel-body',
         }
-
-
-class InterfaceTemplateBulkDeleteTable(InterfaceTemplateTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(InterfaceTemplateTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name')
 
 
 #
@@ -234,27 +178,20 @@ class InterfaceTemplateBulkDeleteTable(InterfaceTemplateTable):
 #
 
 class DeviceRoleTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     name = tables.LinkColumn(verbose_name='Name')
     device_count = tables.Column(verbose_name='Devices')
     slug = tables.Column(verbose_name='Slug')
     color = tables.Column(verbose_name='Color')
+    edit = tables.TemplateColumn(template_code=DEVICEROLE_EDIT_LINK, verbose_name='')
 
     class Meta:
         model = DeviceRole
-        fields = ('name', 'device_count', 'slug', 'color')
+        fields = ('pk', 'name', 'device_count', 'slug', 'color')
         empty_text = "No device roles were found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class DeviceRoleBulkEditTable(DeviceRoleTable):
-    pk = tables.CheckBoxColumn()
-    edit = tables.TemplateColumn(template_code=DEVICEROLE_EDIT_LINK, verbose_name='')
-
-    class Meta(DeviceRoleTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'device_count', 'slug', 'color')
 
 
 #
@@ -262,6 +199,7 @@ class DeviceRoleBulkEditTable(DeviceRoleTable):
 #
 
 class DeviceTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     status = tables.TemplateColumn(template_code=STATUS_ICON, verbose_name='')
     name = tables.TemplateColumn(template_code=DEVICE_LINK, verbose_name='Name')
     site = tables.Column(accessor=Accessor('rack.site'), verbose_name='Site')
@@ -272,19 +210,11 @@ class DeviceTable(tables.Table):
 
     class Meta:
         model = Device
-        fields = ('name', 'status', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
+        fields = ('pk', 'name', 'status', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
         empty_text = "No devices were found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class DeviceBulkEditTable(DeviceTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(DeviceTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'name', 'status', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
 
 
 class DeviceImportTable(tables.Table):

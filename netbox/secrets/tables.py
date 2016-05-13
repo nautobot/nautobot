@@ -9,6 +9,7 @@ from .models import Secret
 #
 
 class SecretTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
     device = tables.LinkColumn('secrets:secret', args=[Accessor('pk')], verbose_name='Device')
     role = tables.Column(verbose_name='Role')
     name = tables.Column(verbose_name='Name')
@@ -16,16 +17,8 @@ class SecretTable(tables.Table):
 
     class Meta:
         model = Secret
-        fields = ('device', 'role', 'name', 'last_modified')
+        fields = ('pk', 'device', 'role', 'name', 'last_modified')
         empty_text = "No secrets found."
         attrs = {
             'class': 'table table-hover',
         }
-
-
-class SecretBulkEditTable(SecretTable):
-    pk = tables.CheckBoxColumn()
-
-    class Meta(SecretTable.Meta):
-        model = None  # django_tables2 bugfix
-        fields = ('pk', 'device', 'role', 'name')
