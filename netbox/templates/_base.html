@@ -71,6 +71,11 @@
                             {% if perms.dcim.add_manufacturer %}
                                 <li><a href="{% url 'dcim:manufacturer_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Manufacturer</a></li>
                             {% endif %}
+                            <li class="divider"></li>
+                            <li><a href="{% url 'dcim:platform_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Platforms</a></li>
+                            {% if perms.dcim.add_platform %}
+                                <li><a href="{% url 'dcim:platform_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Platform</a></li>
+                            {% endif %}
                         </ul>
                     </li>
                     <li class="dropdown{% if '-connections/' in request.path %} active{% endif %}">

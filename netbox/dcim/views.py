@@ -25,21 +25,22 @@ from .filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter
 from .forms import SiteForm, SiteImportForm, RackGroupForm, RackGroupFilterForm, RackGroupBulkDeleteForm, RackForm,\
     RackImportForm, RackBulkEditForm, RackBulkDeleteForm, RackFilterForm, ManufacturerForm, ManufacturerBulkDeleteForm,\
     DeviceTypeForm, DeviceTypeBulkEditForm, DeviceTypeBulkDeleteForm, DeviceTypeFilterForm, DeviceRoleForm,\
-    DeviceRoleBulkDeleteForm, DeviceForm, DeviceImportForm, DeviceBulkEditForm, DeviceBulkDeleteForm, DeviceFilterForm,\
-    ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm, ConsoleConnectionImportForm,\
-    ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm, PowerPortForm,\
-    PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm, PowerOutletCreateForm,\
-    PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm, InterfaceConnectionForm,\
-    InterfaceConnectionDeletionForm, InterfaceConnectionImportForm, ConsoleConnectionFilterForm,\
-    PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm, ConsolePortTemplateForm,\
-    ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm, InterfaceTemplateForm
-from .models import Site, RackGroup, Rack, Manufacturer, DeviceType, DeviceRole, ConsolePortTemplate,\
-    ConsoleServerPortTemplate, PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, Device, ConsolePort,\
+    DeviceRoleBulkDeleteForm, PlatformForm, PlatformBulkDeleteForm, DeviceForm, DeviceImportForm, DeviceBulkEditForm,\
+    DeviceBulkDeleteForm, DeviceFilterForm, ConsolePortForm, ConsolePortCreateForm, ConsolePortConnectionForm,\
+    ConsoleConnectionImportForm, ConsoleServerPortForm, ConsoleServerPortCreateForm, ConsoleServerPortConnectionForm,\
+    PowerPortForm, PowerPortCreateForm, PowerPortConnectionForm, PowerConnectionImportForm, PowerOutletForm,\
+    PowerOutletCreateForm, PowerOutletConnectionForm, InterfaceForm, InterfaceCreateForm, InterfaceBulkCreateForm,\
+    InterfaceConnectionForm, InterfaceConnectionDeletionForm, InterfaceConnectionImportForm,\
+    ConsoleConnectionFilterForm, PowerConnectionFilterForm, InterfaceConnectionFilterForm, IPAddressForm,\
+    ConsolePortTemplateForm, ConsoleServerPortTemplateForm, PowerPortTemplateForm, PowerOutletTemplateForm,\
+    InterfaceTemplateForm
+from .models import Site, RackGroup, Rack, Manufacturer, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate,\
+    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceRole, Platform, Device, ConsolePort,\
     ConsoleServerPort, PowerPort, PowerOutlet, Interface, InterfaceConnection, Module, CONNECTION_STATUS_CONNECTED
 from .tables import SiteTable, RackGroupTable, RackTable, ManufacturerTable, DeviceTypeTable, DeviceRoleTable,\
-    DeviceTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable, InterfaceConnectionTable,\
-    ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable, PowerOutletTemplateTable,\
-    InterfaceTemplateTable
+    PlatformTable, DeviceTable, DeviceImportTable, ConsoleConnectionTable, PowerConnectionTable,\
+    InterfaceConnectionTable, ConsolePortTemplateTable, ConsoleServerPortTemplateTable, PowerPortTemplateTable,\
+    PowerOutletTemplateTable, InterfaceTemplateTable
 
 
 EXPANSION_PATTERN = '\[(\d+-\d+)\]'
@@ -239,6 +240,7 @@ class ManufacturerEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'dcim.change_manufacturer'
     model = Manufacturer
     form_class = ManufacturerForm
+    success_url = 'dcim:manufacturer_list'
     cancel_url = 'dcim:manufacturer_list'
 
 
@@ -468,6 +470,32 @@ class DeviceRoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = DeviceRole
     form = DeviceRoleBulkDeleteForm
     default_redirect_url = 'dcim:devicerole_list'
+
+
+#
+# Platforms
+#
+
+class PlatformListView(ObjectListView):
+    queryset = Platform.objects.annotate(device_count=Count('devices'))
+    table = PlatformTable
+    edit_permissions = ['dcim.change_platform', 'dcim.delete_platform']
+    template_name = 'dcim/platform_list.html'
+
+
+class PlatformEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'dcim.change_platform'
+    model = Platform
+    form_class = PlatformForm
+    success_url = 'dcim:platform_list'
+    cancel_url = 'dcim:platform_list'
+
+
+class PlatformBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'dcim.delete_platform'
+    cls = Platform
+    form = PlatformBulkDeleteForm
+    default_redirect_url = 'dcim:platform_list'
 
 
 #

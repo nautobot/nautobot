@@ -413,6 +413,9 @@ class Platform(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return "{}?platform={}".format(reverse('dcim:device_list'), self.slug)
+
 
 class Device(models.Model):
     """

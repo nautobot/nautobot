@@ -76,6 +76,12 @@ urlpatterns = [
     url(r'^device-roles/delete/$', views.DeviceRoleBulkDeleteView.as_view(), name='devicerole_bulk_delete'),
     url(r'^device-roles/(?P<slug>[\w-]+)/edit/$', views.DeviceRoleEditView.as_view(), name='devicerole_edit'),
 
+    # Platforms
+    url(r'^platforms/$', views.PlatformListView.as_view(), name='platform_list'),
+    url(r'^platforms/add/$', views.PlatformEditView.as_view(), name='platform_add'),
+    url(r'^platforms/delete/$', views.PlatformBulkDeleteView.as_view(), name='platform_bulk_delete'),
+    url(r'^platforms/(?P<slug>[\w-]+)/edit/$', views.PlatformEditView.as_view(), name='platform_edit'),
+
     # Devices
     url(r'^devices/$', views.DeviceListView.as_view(), name='device_list'),
     url(r'^devices/add/$', views.DeviceEditView.as_view(), name='device_add'),

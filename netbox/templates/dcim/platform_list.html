@@ -1,0 +1,21 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}Platforms{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.dcim.add_platform %}
+        <a href="{% url 'dcim:platform_add' %}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            Add a platform
+        </a>
+    {% endif %}
+</div>
+<h1>Platforms</h1>
+<div class="row">
+	<div class="col-md-12">
+        {% include 'dcim/inc/platform_table.html' %}
+    </div>
+</div>
+{% endblock %}

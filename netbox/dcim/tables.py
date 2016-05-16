@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from .models import Site, RackGroup, Rack, Manufacturer, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate,\
-    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceRole, Device, ConsolePort, PowerPort
+    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceRole, Platform, Device, ConsolePort, PowerPort
 
 DEVICE_LINK = """
 <a href="{% url 'dcim:device' pk=record.pk %}">{{ record.name|default:'<span class="label label-info">Unnamed device</span>' }}</a>
@@ -18,6 +18,10 @@ DEVICEROLE_EDIT_LINK = """
 
 MANUFACTURER_EDIT_LINK = """
 {% if perms.dcim.change_manufacturer %}<a href="{% url 'dcim:manufacturer_edit' slug=record.slug %}">Edit</a>{% endif %}
+"""
+
+PLATFORM_EDIT_LINK = """
+{% if perms.dcim.change_platform %}<a href="{% url 'dcim:platform_edit' slug=record.slug %}">Edit</a>{% endif %}
 """
 
 STATUS_ICON = """
@@ -213,6 +217,26 @@ class DeviceRoleTable(tables.Table):
         model = DeviceRole
         fields = ('pk', 'name', 'device_count', 'slug', 'color')
         empty_text = "No device roles were found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+#
+# Platforms
+#
+
+class PlatformTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
+    name = tables.LinkColumn(verbose_name='Name')
+    device_count = tables.Column(verbose_name='Devices')
+    slug = tables.Column(verbose_name='Slug')
+    edit = tables.TemplateColumn(template_code=PLATFORM_EDIT_LINK, verbose_name='')
+
+    class Meta:
+        model = Platform
+        fields = ('pk', 'name', 'device_count', 'slug', 'edit')
+        empty_text = "No platforms were found."
         attrs = {
             'class': 'table table-hover',
         }

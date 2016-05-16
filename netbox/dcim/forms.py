@@ -292,6 +292,21 @@ class DeviceRoleBulkDeleteForm(ConfirmationForm):
 
 
 #
+# Platforms
+#
+
+class PlatformForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = Platform
+        fields = ['name', 'slug']
+
+
+class PlatformBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Platform.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+#
 # Devices
 #
 
