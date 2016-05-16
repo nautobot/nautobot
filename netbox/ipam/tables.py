@@ -1,8 +1,12 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Aggregate, Prefix, IPAddress, VLAN, VRF
+from .models import VRF, RIR, Aggregate, Prefix, IPAddress, VLAN
 
+
+RIR_EDIT_LINK = """
+{% if perms.ipam.change_rir %}<a href="{% url 'ipam:rir_edit' slug=record.slug %}">Edit</a>{% endif %}
+"""
 
 UTILIZATION_GRAPH = """
 {% with record.get_utilization as percentage %}
@@ -54,6 +58,26 @@ class VRFTable(tables.Table):
         model = VRF
         fields = ('pk', 'name', 'rd', 'description')
         empty_text = "No VRFs found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+#
+# RIRs
+#
+
+class RIRTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
+    name = tables.LinkColumn(verbose_name='Name')
+    aggregate_count = tables.Column(verbose_name='Aggregates')
+    slug = tables.Column(verbose_name='Slug')
+    edit = tables.TemplateColumn(template_code=RIR_EDIT_LINK, verbose_name='')
+
+    class Meta:
+        model = RIR
+        fields = ('pk', 'name', 'aggregate_count', 'slug', 'edit')
+        empty_text = "No aggregates were found."
         attrs = {
             'class': 'table table-hover',
         }

@@ -101,7 +101,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/ipam/ip-addresses/' in request.path or '/prefixes/' in request.path or '/aggregates/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if '/ipam/ip-addresses/' in request.path or '/prefixes/' in request.path or '/aggregates/' in request.path or '/vrfs/' in request.path or '/rirs/' in request.path %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">IP Space <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'ipam:ipaddress_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> IP Addresses</a></li>
@@ -132,6 +132,11 @@
                             {% if perms.ipam.add_vrf %}
                                 <li><a href="{% url 'ipam:vrf_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a VRF</a></li>
                                 <li><a href="{% url 'ipam:vrf_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import VRFs</a></li>
+                            {% endif %}
+                            <li class="divider"></li>
+                            <li><a href="{% url 'ipam:rir_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> RIRs</a></li>
+                            {% if perms.ipam.add_rir %}
+                                <li><a href="{% url 'ipam:rir_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a RIR</a></li>
                             {% endif %}
                         </ul>
                     </li>

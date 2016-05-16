@@ -46,6 +46,21 @@ class VRFBulkDeleteForm(ConfirmationForm):
 
 
 #
+# RIRs
+#
+
+class RIRForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = RIR
+        fields = ['name', 'slug']
+
+
+class RIRBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RIR.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+#
 # Aggregates
 #
 

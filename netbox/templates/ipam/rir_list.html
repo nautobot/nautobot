@@ -1,0 +1,21 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block title %}RIRs{% endblock %}
+
+{% block content %}
+<div class="pull-right">
+    {% if perms.dcim.add_devicerole %}
+        <a href="{% url 'ipam:rir_add' %}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            Add a RIR
+        </a>
+    {% endif %}
+</div>
+<h1>RIRs</h1>
+<div class="row">
+	<div class="col-md-12">
+        {% include 'ipam/inc/rir_table.html' %}
+    </div>
+</div>
+{% endblock %}

@@ -1,9 +1,10 @@
 from netaddr import IPSet
-
 from django_tables2 import RequestConfig
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, render
 
 from dcim.models import Device
@@ -16,10 +17,10 @@ from .forms import AggregateForm, AggregateImportForm, AggregateBulkEditForm, Ag
     AggregateFilterForm, PrefixForm, PrefixImportForm, PrefixBulkEditForm, PrefixBulkDeleteForm, PrefixFilterForm,\
     IPAddressForm, IPAddressImportForm, IPAddressBulkEditForm, IPAddressBulkDeleteForm, IPAddressFilterForm, VLANForm,\
     VLANImportForm, VLANBulkEditForm, VLANBulkDeleteForm, VRFForm, VRFImportForm, VRFBulkEditForm, VRFBulkDeleteForm,\
-    VLANFilterForm
-from .models import VRF, Aggregate, Prefix, IPAddress, VLAN
-from .tables import AggregateTable, PrefixTable, PrefixBriefTable, IPAddressBriefTable, IPAddressTable, VLANTable,\
-    VRFTable
+    VLANFilterForm, RIRForm, RIRBulkDeleteForm
+from .models import VRF, RIR, Aggregate, Prefix, IPAddress, VLAN
+from .tables import VRFTable, RIRTable, AggregateTable, PrefixTable, PrefixBriefTable, IPAddressBriefTable,\
+    IPAddressTable, VLANTable
 
 
 def add_available_prefixes(parent, prefix_list):
@@ -105,6 +106,32 @@ class VRFBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = VRF
     form = VRFBulkDeleteForm
     default_redirect_url = 'ipam:vrf_list'
+
+
+#
+# RIRs
+#
+
+class RIRListView(ObjectListView):
+    queryset = RIR.objects.annotate(aggregate_count=Count('aggregates'))
+    table = RIRTable
+    edit_permissions = ['ipam.change_rir', 'ipam.delete_rir']
+    template_name = 'ipam/rir_list.html'
+
+
+class RIREditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'ipam.change_rir'
+    model = RIR
+    form_class = RIRForm
+    success_url = 'ipam:rir_list'
+    cancel_url = 'ipam:rir_list'
+
+
+class RIRBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'ipam.delete_rir'
+    cls = RIR
+    form = RIRBulkDeleteForm
+    default_redirect_url = 'ipam:rir_list'
 
 
 #
