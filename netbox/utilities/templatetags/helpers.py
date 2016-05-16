@@ -11,7 +11,7 @@ register = template.Library()
 # Filters
 #
 
-@register.filter(name='oneline')
+@register.filter()
 def oneline(value):
     """
     Replace each line break with a single space
@@ -19,7 +19,7 @@ def oneline(value):
     return value.replace('\n', ' ')
 
 
-@register.filter(name='getlist')
+@register.filter()
 def getlist(value, arg):
     """
     Return all values of a QueryDict key
@@ -27,7 +27,7 @@ def getlist(value, arg):
     return value.getlist(arg)
 
 
-@register.filter(name='gfm', is_safe=True)
+@register.filter(is_safe=True)
 def gfm(value):
     """
     Render text as GitHub-Flavored Markdown
@@ -36,11 +36,29 @@ def gfm(value):
     return mark_safe(html)
 
 
+@register.filter()
+def user_can_add(model, user):
+    perm_name = '{}:add_{}'.format(model._meta.app_label, model.__class__.__name__.lower())
+    return user.has_perm(perm_name)
+
+
+@register.filter()
+def user_can_change(model, user):
+    perm_name = '{}:change_{}'.format(model._meta.app_label, model.__class__.__name__.lower())
+    return user.has_perm(perm_name)
+
+
+@register.filter()
+def user_can_delete(model, user):
+    perm_name = '{}:delete_{}'.format(model._meta.app_label, model.__class__.__name__.lower())
+    return user.has_perm(perm_name)
+
+
 #
 # Tags
 #
 
-@register.simple_tag(name='querystring_toggle')
+@register.simple_tag()
 def querystring_toggle(request, multi=True, page_key='page', **kwargs):
     """
     Add or remove a parameter in the HTTP GET query string

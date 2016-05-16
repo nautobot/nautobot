@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.contenttypes.models import ContentType
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError
 from django.http import HttpResponseRedirect
@@ -31,7 +31,8 @@ class ObjectListView(View):
 
     def get(self, request, *args, **kwargs):
 
-        object_ct = ContentType.objects.get_for_model(self.queryset.model)
+        model = self.queryset.model
+        object_ct = ContentType.objects.get_for_model(model)
 
         if self.filter:
             self.queryset = self.filter(request.GET, self.queryset).qs
@@ -58,17 +59,16 @@ class ObjectListView(View):
 
         # Construct the table based on the user's permissions
         table = self.table(self.queryset)
+        table.model = model
         if 'pk' in table.base_columns and any([request.user.has_perm(perm) for perm in self.edit_permissions]):
             table.base_columns['pk'].visible = True
         RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
             .configure(table)
 
-        export_templates = ExportTemplate.objects.filter(content_type=object_ct)
-
         return render(request, self.template_name, {
             'table': table,
             'filter_form': self.filter_form(request.GET, label_suffix='') if self.filter_form else None,
-            'export_templates': export_templates,
+            'export_templates': ExportTemplate.objects.filter(content_type=object_ct),
         })
 
     def alter_queryset(self, request):

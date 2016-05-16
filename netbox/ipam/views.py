@@ -159,6 +159,7 @@ def aggregate(request, pk):
     child_prefixes = add_available_prefixes(aggregate.prefix, child_prefixes)
 
     prefix_table = PrefixTable(child_prefixes)
+    prefix_table.model = Prefix
     if request.user.has_perm('ipam.change_prefix') or request.user.has_perm('ipam.delete_prefix'):
         prefix_table.base_columns['pk'].visible = True
     RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
@@ -262,6 +263,7 @@ def prefix(request, pk):
     if child_prefixes:
         child_prefixes = add_available_prefixes(prefix.prefix, child_prefixes)
     child_prefix_table = PrefixTable(child_prefixes)
+    child_prefix_table.model = Prefix
     if request.user.has_perm('ipam.change_prefix') or request.user.has_perm('ipam.delete_prefix'):
         child_prefix_table.base_columns['pk'].visible = True
     RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
@@ -337,6 +339,7 @@ def prefix_ipaddresses(request, pk):
         .select_related('vrf', 'interface__device', 'primary_for')
 
     ip_table = IPAddressTable(ipaddresses)
+    ip_table.model = IPAddress
     if request.user.has_perm('ipam.change_ipaddress') or request.user.has_perm('ipam.delete_ipaddress'):
         ip_table.base_columns['pk'].visible = True
     RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\

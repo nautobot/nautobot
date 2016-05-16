@@ -7,11 +7,11 @@
 {% block content %}
 <div class="pull-right">
     {% if perms.ipam.add_prefix %}
-		<a href="{% url 'ipam:prefix_add' %}" class="btn btn-primary">
+		<a href="{{ action_urls.add }}" class="btn btn-primary">
 			<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
 			Add a prefix
 		</a>
-		<a href="{% url 'ipam:prefix_import' %}" class="btn btn-info">
+		<a href="{{ action_urls.import }}" class="btn btn-info">
 			<span class="glyphicon glyphicon-import" aria-hidden="true"></span>
 			Import prefixes
 		</a>
@@ -33,7 +33,7 @@
 <h1>Prefixes</h1>
 <div class="row">
 	<div class="col-md-9">
-        {% include 'ipam/inc/prefix_table.html' %}
+        {% include 'utilities/obj_table.html' with bulk_edit_url='ipam:prefix_bulk_edit' bulk_delete_url='ipam:prefix_bulk_delete' %}
 	</div>
 	<div class="col-md-3">
 		<div class="panel panel-default">

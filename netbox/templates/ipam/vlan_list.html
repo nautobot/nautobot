@@ -33,7 +33,7 @@
 <h1>VLANs</h1>
 <div class="row">
 	<div class="col-md-9">
-        {% include 'ipam/inc/vlan_table.html' %}
+        {% include 'utilities/obj_table.html' with bulk_edit_url='ipam:vlan_bulk_edit' bulk_delete_url='ipam:vlan_bulk_delete' %}
 	</div>
 	<div class="col-md-3">
 		<div class="panel panel-default">
