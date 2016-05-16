@@ -15,7 +15,7 @@
 <h1>Device Roles</h1>
 <div class="row">
 	<div class="col-md-12">
-        {% include 'dcim/inc/devicerole_table.html' %}
+        {% include 'utilities/obj_table.html' with bulk_delete_url='dcim:devicerole_bulk_delete' %}
     </div>
 </div>
 {% endblock %}
