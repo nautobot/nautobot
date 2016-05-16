@@ -173,6 +173,9 @@ class SecretRole(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return "{}?role={}".format(reverse('secrets:secret_list'), self.slug)
+
 
 class Secret(models.Model):
     """

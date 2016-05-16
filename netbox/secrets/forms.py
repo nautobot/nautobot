@@ -30,6 +30,21 @@ def validate_rsa_key(key, is_secret=True):
 
 
 #
+# Secret roles
+#
+
+class SecretRoleForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = SecretRole
+        fields = ['name', 'slug']
+
+
+class SecretRoleBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=SecretRole.objects.all(), widget=forms.MultipleHiddenInput)
+
+
+#
 # Secrets
 #
 

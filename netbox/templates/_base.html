@@ -180,6 +180,11 @@
                                 {% if perms.secrets.add_secret %}
                                     <li><a href="{% url 'secrets:secret_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Secrets</a></li>
                                 {% endif %}
+                                <li class="divider"></li>
+                                <li><a href="{% url 'secrets:secretrole_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Secret Roles</a></li>
+                                {% if perms.secrets.add_secretrole %}
+                                    <li><a href="{% url 'secrets:secretrole_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Secret Role</a></li>
+                                {% endif %}
                             </ul>
                         </li>
                     {% endif %}

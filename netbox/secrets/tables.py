@@ -1,7 +1,32 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Secret
+from .models import SecretRole, Secret
+
+
+SECRETROLE_EDIT_LINK = """
+{% if perms.secrets.change_secretrole %}<a href="{% url 'secrets:secretrole_edit' slug=record.slug %}">Edit</a>{% endif %}
+"""
+
+
+#
+# Secret roles
+#
+
+class SecretRoleTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
+    name = tables.LinkColumn(verbose_name='Name')
+    secret_count = tables.Column(verbose_name='Secrets')
+    slug = tables.Column(verbose_name='Slug')
+    edit = tables.TemplateColumn(template_code=SECRETROLE_EDIT_LINK, verbose_name='')
+
+    class Meta:
+        model = SecretRole
+        fields = ('pk', 'name', 'secret_count', 'slug', 'edit')
+        empty_text = "No secret roles were found."
+        attrs = {
+            'class': 'table table-hover',
+        }
 
 
 #

@@ -3,17 +3,45 @@ from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.urlresolvers import reverse
 from django.db import transaction, IntegrityError
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 
 from dcim.models import Device
-from utilities.views import BulkEditView, BulkDeleteView, ObjectListView, ObjectDeleteView
+from utilities.views import BulkEditView, BulkDeleteView, ObjectListView, ObjectEditView, ObjectDeleteView
 
 from .decorators import userkey_required
 from .filters import SecretFilter
-from .forms import SecretForm, SecretImportForm, SecretBulkEditForm, SecretBulkDeleteForm, SecretFilterForm
-from .models import Secret, UserKey
-from .tables import SecretTable
+from .forms import SecretRoleForm, SecretRoleBulkDeleteForm, SecretForm, SecretImportForm, SecretBulkEditForm,\
+    SecretBulkDeleteForm, SecretFilterForm
+from .models import SecretRole, Secret, UserKey
+from .tables import SecretRoleTable, SecretTable
+
+
+#
+# Secret roles
+#
+
+class SecretRoleListView(ObjectListView):
+    queryset = SecretRole.objects.annotate(secret_count=Count('secrets'))
+    table = SecretRoleTable
+    edit_permissions = ['secrets.change_secretrole', 'secrets.delete_secretrole']
+    template_name = 'secrets/secretrole_list.html'
+
+
+class SecretRoleEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'secrets.change_secretrole'
+    model = SecretRole
+    form_class = SecretRoleForm
+    success_url = 'secrets:secretrole_list'
+    cancel_url = 'secrets:secretrole_list'
+
+
+class SecretRoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'secrets.delete_secretrole'
+    cls = SecretRole
+    form = SecretRoleBulkDeleteForm
+    default_redirect_url = 'secrets:secretrole_list'
 
 
 #
