@@ -221,7 +221,6 @@ class Prefix(models.Model):
     vrf = models.ForeignKey('VRF', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VRF')
     vlan = models.ForeignKey('VLAN', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VLAN')
     status = models.PositiveSmallIntegerField('Status', choices=PREFIX_STATUS_CHOICES, default=1)
-    status_new = models.PositiveSmallIntegerField('Status', choices=PREFIX_STATUS_CHOICES, default=1)
     role = models.ForeignKey('Role', related_name='prefixes', on_delete=models.SET_NULL, blank=True, null=True)
     description = models.CharField(max_length=100, blank=True)
 
@@ -306,7 +305,6 @@ class VLAN(models.Model):
     ])
     name = models.CharField(max_length=30)
     status = models.PositiveSmallIntegerField('Status', choices=VLAN_STATUS_CHOICES, default=1)
-    status_new = models.PositiveSmallIntegerField('Status', choices=VLAN_STATUS_CHOICES, default=1)
     role = models.ForeignKey('Role', related_name='vlans', on_delete=models.SET_NULL, blank=True, null=True)
 
     class Meta:
