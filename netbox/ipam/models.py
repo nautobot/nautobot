@@ -14,6 +14,19 @@ AF_CHOICES = (
     (6, 'IPv6'),
 )
 
+PREFIX_STATUS_CHOICES = (
+    (0, 'Container'),
+    (1, 'Active'),
+    (2, 'Reserved'),
+    (3, 'Deprecated')
+)
+
+VLAN_STATUS_CHOICES = (
+    (1, 'Active'),
+    (2, 'Reserved'),
+    (3, 'Deprecated')
+)
+
 BOOTSTRAP_CLASS_CHOICES = (
     (0, 'Default'),
     (1, 'Primary'),
@@ -96,7 +109,6 @@ class Aggregate(models.Model):
             if covering_aggregates:
                 raise ValidationError("{} is already covered by an existing aggregate ({})"
                                       .format(self.prefix, covering_aggregates[0]))
-
 
     def save(self, *args, **kwargs):
         if self.prefix:
@@ -202,6 +214,7 @@ class Prefix(models.Model):
     vrf = models.ForeignKey('VRF', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VRF')
     vlan = models.ForeignKey('VLAN', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VLAN')
     status = models.ForeignKey('Status', related_name='prefixes', on_delete=models.PROTECT)
+    status_new = models.PositiveSmallIntegerField('Status', choices=PREFIX_STATUS_CHOICES, default=1)
     role = models.ForeignKey('Role', related_name='prefixes', on_delete=models.SET_NULL, blank=True, null=True)
     description = models.CharField(max_length=100, blank=True)
 
@@ -283,6 +296,7 @@ class VLAN(models.Model):
     ])
     name = models.CharField(max_length=30)
     status = models.ForeignKey('Status', related_name='vlans', on_delete=models.PROTECT)
+    status_new = models.PositiveSmallIntegerField('Status', choices=VLAN_STATUS_CHOICES, default=1)
     role = models.ForeignKey('Role', related_name='vlans', on_delete=models.SET_NULL, blank=True, null=True)
 
     class Meta:
