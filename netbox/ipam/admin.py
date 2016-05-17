@@ -47,7 +47,7 @@ class PrefixAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super(PrefixAdmin, self).get_queryset(request)
-        return qs.select_related('vrf', 'site', 'status', 'role', 'vlan')
+        return qs.select_related('vrf', 'site', 'role', 'vlan')
 
 
 @admin.register(IPAddress)
@@ -71,4 +71,4 @@ class VLANAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super(VLANAdmin, self).get_queryset(request)
-        return qs.select_related('site', 'status', 'role')
+        return qs.select_related('site', 'role')

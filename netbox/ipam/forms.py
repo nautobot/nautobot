@@ -5,7 +5,8 @@ from django.db.models import Count
 
 from dcim.models import Site, Device, Interface
 from utilities.forms import BootstrapMixin, ConfirmationForm, APISelect, Livesearch, CSVDataField, BulkImportForm
-from .models import VRF, RIR, Aggregate, Role, Status, Prefix, IPAddress, VLAN
+from .models import VRF, RIR, Aggregate, Role, Status, Prefix, IPAddress, VLAN, PREFIX_STATUS_CHOICES,\
+    VLAN_STATUS_CHOICES
 
 
 #
@@ -215,11 +216,6 @@ def prefix_vrf_choices():
     return vrf_choices
 
 
-def prefix_status_choices():
-    status_choices = Status.objects.annotate(prefix_count=Count('prefixes'))
-    return [(s.slug, '{} ({})'.format(s.name, s.prefix_count)) for s in status_choices]
-
-
 def prefix_site_choices():
     site_choices = Site.objects.annotate(prefix_count=Count('prefixes'))
     return [(s.slug, '{} ({})'.format(s.name, s.prefix_count)) for s in site_choices]
@@ -233,7 +229,7 @@ def prefix_role_choices():
 class PrefixFilterForm(forms.Form, BootstrapMixin):
     parent = forms.CharField(required=False, label='Search Within')
     vrf = forms.ChoiceField(required=False, choices=prefix_vrf_choices, label='VRF')
-    status = forms.MultipleChoiceField(required=False, choices=prefix_status_choices)
+    status = forms.MultipleChoiceField(required=False, choices=PREFIX_STATUS_CHOICES)
     site = forms.MultipleChoiceField(required=False, choices=prefix_site_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
     role = forms.MultipleChoiceField(required=False, choices=prefix_role_choices,
@@ -430,11 +426,6 @@ def vlan_site_choices():
     return [(s.slug, '{} ({})'.format(s.name, s.vlan_count)) for s in site_choices]
 
 
-def vlan_status_choices():
-    status_choices = Status.objects.annotate(vlan_count=Count('vlans'))
-    return [(s.slug, '{} ({})'.format(s.name, s.vlan_count)) for s in status_choices]
-
-
 def vlan_role_choices():
     role_choices = Role.objects.annotate(vlan_count=Count('vlans'))
     return [(r.slug, '{} ({})'.format(r.name, r.vlan_count)) for r in role_choices]
@@ -443,6 +434,6 @@ def vlan_role_choices():
 class VLANFilterForm(forms.Form, BootstrapMixin):
     site = forms.MultipleChoiceField(required=False, choices=vlan_site_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
-    status = forms.MultipleChoiceField(required=False, choices=vlan_status_choices)
+    status = forms.MultipleChoiceField(required=False, choices=VLAN_STATUS_CHOICES)
     role = forms.MultipleChoiceField(required=False, choices=vlan_role_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))

@@ -36,6 +36,13 @@ BOOTSTRAP_CLASS_CHOICES = (
     (5, 'Danger'),
 )
 
+STATUS_CHOICE_CLASSES = {
+    0: 'default',
+    1: 'primary',
+    2: 'info',
+    3: 'danger',
+}
+
 
 class VRF(models.Model):
     """
@@ -213,7 +220,7 @@ class Prefix(models.Model):
     site = models.ForeignKey('dcim.Site', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True)
     vrf = models.ForeignKey('VRF', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VRF')
     vlan = models.ForeignKey('VLAN', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VLAN')
-    status = models.ForeignKey('Status', related_name='prefixes', on_delete=models.PROTECT)
+    status = models.PositiveSmallIntegerField('Status', choices=PREFIX_STATUS_CHOICES, default=1)
     status_new = models.PositiveSmallIntegerField('Status', choices=PREFIX_STATUS_CHOICES, default=1)
     role = models.ForeignKey('Role', related_name='prefixes', on_delete=models.SET_NULL, blank=True, null=True)
     description = models.CharField(max_length=100, blank=True)
@@ -248,6 +255,9 @@ class Prefix(models.Model):
             if self.prefix.prefixlen <= 126:
                 return IPNetwork('{}/{}'.format(self.prefix.network, self.prefix.prefixlen + 1))
             return None
+
+    def get_status_class(self):
+        return STATUS_CHOICE_CLASSES[self.status]
 
 
 class IPAddress(models.Model):
@@ -295,7 +305,7 @@ class VLAN(models.Model):
         MaxValueValidator(4094)
     ])
     name = models.CharField(max_length=30)
-    status = models.ForeignKey('Status', related_name='vlans', on_delete=models.PROTECT)
+    status = models.PositiveSmallIntegerField('Status', choices=VLAN_STATUS_CHOICES, default=1)
     status_new = models.PositiveSmallIntegerField('Status', choices=VLAN_STATUS_CHOICES, default=1)
     role = models.ForeignKey('Role', related_name='vlans', on_delete=models.SET_NULL, blank=True, null=True)
 
@@ -309,3 +319,6 @@ class VLAN(models.Model):
 
     def get_absolute_url(self):
         return reverse('ipam:vlan', args=[self.pk])
+
+    def get_status_class(self):
+        return STATUS_CHOICE_CLASSES[self.status]

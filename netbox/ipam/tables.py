@@ -41,7 +41,7 @@ PREFIX_LINK_BRIEF = """
 
 STATUS_LABEL = """
 {% if record.pk %}
-    <span class="label label-{{ record.status.get_bootstrap_class_display|lower }}">{{ record.status.name }}</span>
+    <span class="label label-{{ record.get_status_class }}">{{ record.get_status_display }}</span>
 {% else %}
     <span class="label label-success">Available</span>
 {% endif %}

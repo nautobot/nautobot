@@ -69,17 +69,6 @@ class PrefixFilter(django_filters.FilterSet):
         name='vlan__vid',
         label='VLAN number (1-4095)',
     )
-    status_id = django_filters.ModelMultipleChoiceFilter(
-        name='status',
-        queryset=Status.objects.all(),
-        label='Status (ID)',
-    )
-    status = django_filters.ModelMultipleChoiceFilter(
-        name='status',
-        queryset=Status.objects.all(),
-        to_field_name='slug',
-        label='Status (slug)',
-    )
     role_id = django_filters.ModelMultipleChoiceFilter(
         name='role',
         queryset=Role.objects.all(),
@@ -94,8 +83,7 @@ class PrefixFilter(django_filters.FilterSet):
 
     class Meta:
         model = Prefix
-        fields = ['family', 'site_id', 'site', 'vrf_id', 'vrf', 'vlan_id', 'vlan_vid', 'status_id', 'status', 'role_id',
-                  'role']
+        fields = ['family', 'site_id', 'site', 'vrf_id', 'vrf', 'vlan_id', 'vlan_vid', 'status', 'role_id', 'role']
 
     def search(self, queryset, value):
         value = value.strip()
@@ -188,17 +176,6 @@ class VLANFilter(django_filters.FilterSet):
         name='vid',
         label='VLAN number (1-4095)',
     )
-    status_id = django_filters.ModelMultipleChoiceFilter(
-        name='status',
-        queryset=Status.objects.all(),
-        label='Status (ID)',
-    )
-    status = django_filters.ModelMultipleChoiceFilter(
-        name='status',
-        queryset=Status.objects.all(),
-        to_field_name='slug',
-        label='Status (slug)',
-    )
     role_id = django_filters.ModelMultipleChoiceFilter(
         name='role',
         queryset=Role.objects.all(),
@@ -213,4 +190,4 @@ class VLANFilter(django_filters.FilterSet):
 
     class Meta:
         model = VLAN
-        fields = ['site_id', 'site', 'vid', 'name', 'status_id', 'status', 'role_id', 'role']
+        fields = ['site_id', 'site', 'vid', 'name', 'status', 'role_id', 'role']

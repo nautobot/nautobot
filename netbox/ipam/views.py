@@ -155,7 +155,7 @@ def aggregate(request, pk):
 
     # Find all child prefixes contained by this aggregate
     child_prefixes = Prefix.objects.filter(prefix__net_contained_or_equal=str(aggregate.prefix))\
-        .select_related('site', 'status', 'role').annotate_depth(limit=0)
+        .select_related('site', 'role').annotate_depth(limit=0)
     child_prefixes = add_available_prefixes(aggregate.prefix, child_prefixes)
 
     prefix_table = PrefixTable(child_prefixes)
@@ -248,7 +248,7 @@ class RoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 #
 
 class PrefixListView(ObjectListView):
-    queryset = Prefix.objects.select_related('site', 'status', 'role')
+    queryset = Prefix.objects.select_related('site', 'role')
     filter = PrefixFilter
     filter_form = PrefixFilterForm
     table = PrefixTable
@@ -263,7 +263,7 @@ class PrefixListView(ObjectListView):
 
 def prefix(request, pk):
 
-    prefix = get_object_or_404(Prefix.objects.select_related('site', 'vlan', 'status', 'role'), pk=pk)
+    prefix = get_object_or_404(Prefix.objects.select_related('site', 'vlan', 'role'), pk=pk)
 
     try:
         aggregate = Aggregate.objects.get(prefix__net_contains_or_equals=str(prefix.prefix))
@@ -275,17 +275,17 @@ def prefix(request, pk):
 
     # Parent prefixes table
     parent_prefixes = Prefix.objects.filter(vrf=prefix.vrf, prefix__net_contains=str(prefix.prefix))\
-        .select_related('site', 'status', 'role').annotate_depth()
+        .select_related('site', 'role').annotate_depth()
     parent_prefix_table = PrefixBriefTable(parent_prefixes)
 
     # Duplicate prefixes table
     duplicate_prefixes = Prefix.objects.filter(vrf=prefix.vrf, prefix=str(prefix.prefix)).exclude(pk=prefix.pk)\
-        .select_related('site', 'status', 'role')
+        .select_related('site', 'role')
     duplicate_prefix_table = PrefixBriefTable(duplicate_prefixes)
 
     # Child prefixes table
     child_prefixes = Prefix.objects.filter(vrf=prefix.vrf, prefix__net_contained=str(prefix.prefix))\
-        .select_related('site', 'status', 'role').annotate_depth(limit=0)
+        .select_related('site', 'role').annotate_depth(limit=0)
     if child_prefixes:
         child_prefixes = add_available_prefixes(prefix.prefix, child_prefixes)
     child_prefix_table = PrefixTable(child_prefixes)
@@ -474,7 +474,7 @@ class IPAddressBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 #
 
 class VLANListView(ObjectListView):
-    queryset = VLAN.objects.select_related('site', 'status', 'role')
+    queryset = VLAN.objects.select_related('site', 'role')
     filter = VLANFilter
     filter_form = VLANFilterForm
     table = VLANTable
@@ -484,7 +484,7 @@ class VLANListView(ObjectListView):
 
 def vlan(request, pk):
 
-    vlan = get_object_or_404(VLAN.objects.select_related('site', 'status', 'role'), pk=pk)
+    vlan = get_object_or_404(VLAN.objects.select_related('site', 'role'), pk=pk)
     prefixes = Prefix.objects.filter(vlan=vlan)
 
     return render(request, 'ipam/vlan.html', {
