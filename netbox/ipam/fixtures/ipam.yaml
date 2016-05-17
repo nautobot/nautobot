@@ -1,9 +1,3 @@
-- model: ipam.status
-  pk: 1
-  fields: {name: Active, slug: active, weight: 1000, bootstrap_class: 1}
-- model: ipam.status
-  pk: 2
-  fields: {name: Inactive, slug: inactive, weight: 500, bootstrap_class: 3}
 - model: ipam.role
   pk: 1
   fields: {name: Lab Network, slug: lab-network, weight: 1000}

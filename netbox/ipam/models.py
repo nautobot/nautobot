@@ -27,15 +27,6 @@ VLAN_STATUS_CHOICES = (
     (3, 'Deprecated')
 )
 
-BOOTSTRAP_CLASS_CHOICES = (
-    (0, 'Default'),
-    (1, 'Primary'),
-    (2, 'Success'),
-    (3, 'Info'),
-    (4, 'Warning'),
-    (5, 'Danger'),
-)
-
 STATUS_CHOICE_CLASSES = {
     0: 'default',
     1: 'primary',
@@ -134,23 +125,6 @@ class Aggregate(models.Model):
         for p in networks:
             children_size += p.size
         return int(children_size / self.prefix.size * 100)
-
-
-class Status(models.Model):
-    """
-    The status of a prefix or VLAN (e.g. allocated, reserved, etc.)
-    """
-    name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(unique=True)
-    weight = models.PositiveSmallIntegerField(default=1000)
-    bootstrap_class = models.PositiveSmallIntegerField(choices=BOOTSTRAP_CLASS_CHOICES, default=0)
-
-    class Meta:
-        ordering = ['weight', 'name']
-        verbose_name_plural = 'statuses'
-
-    def __unicode__(self):
-        return self.name
 
 
 class Role(models.Model):

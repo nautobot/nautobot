@@ -5,8 +5,7 @@ from django.db.models import Count
 
 from dcim.models import Site, Device, Interface
 from utilities.forms import BootstrapMixin, ConfirmationForm, APISelect, Livesearch, CSVDataField, BulkImportForm
-from .models import VRF, RIR, Aggregate, Role, Status, Prefix, IPAddress, VLAN, PREFIX_STATUS_CHOICES,\
-    VLAN_STATUS_CHOICES
+from .models import VRF, RIR, Aggregate, Role, Prefix, IPAddress, VLAN, PREFIX_STATUS_CHOICES, VLAN_STATUS_CHOICES
 
 
 #
@@ -181,8 +180,6 @@ class PrefixFromCSVForm(forms.ModelForm):
                                  error_messages={'invalid_choice': 'VRF not found.'})
     site = forms.ModelChoiceField(queryset=Site.objects.all(), required=False, to_field_name='name',
                                   error_messages={'invalid_choice': 'Site not found.'})
-    status = forms.ModelChoiceField(queryset=Status.objects.all(), to_field_name='name',
-                                    error_messages={'invalid_choice': 'Invalid status.'})
     role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False, to_field_name='name',
                                   error_messages={'invalid_choice': 'Invalid role.'})
 
@@ -201,7 +198,6 @@ class PrefixBulkEditForm(forms.Form, BootstrapMixin):
     vrf = forms.ModelChoiceField(queryset=VRF.objects.all(), required=False, label='VRF',
                                  help_text="Select the VRF to assign, or check below to remove VRF assignment")
     vrf_global = forms.BooleanField(required=False, label='Set VRF to global')
-    status = forms.ModelChoiceField(queryset=Status.objects.all(), required=False)
     role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False)
     description = forms.CharField(max_length=50, required=False)
 
@@ -396,8 +392,6 @@ class VLANForm(forms.ModelForm, BootstrapMixin):
 class VLANFromCSVForm(forms.ModelForm):
     site = forms.ModelChoiceField(queryset=Site.objects.all(), to_field_name='name',
                                   error_messages={'invalid_choice': 'Device not found.'})
-    status = forms.ModelChoiceField(queryset=Status.objects.all(), to_field_name='name',
-                                    error_messages={'invalid_choice': 'Invalid status.'})
     role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False, to_field_name='name',
                                   error_messages={'invalid_choice': 'Invalid role.'})
 
@@ -413,7 +407,6 @@ class VLANImportForm(BulkImportForm, BootstrapMixin):
 class VLANBulkEditForm(forms.Form, BootstrapMixin):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput)
     site = forms.ModelChoiceField(queryset=Site.objects.all(), required=False)
-    status = forms.ModelChoiceField(queryset=Status.objects.all(), required=False)
     role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False)
 
 

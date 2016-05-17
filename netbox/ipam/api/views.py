@@ -1,9 +1,9 @@
 from rest_framework import generics
 
-from ipam.models import VRF, Status, Role, RIR, Aggregate, Prefix, IPAddress, VLAN
+from ipam.models import VRF, Role, RIR, Aggregate, Prefix, IPAddress, VLAN
 from ipam.filters import AggregateFilter, PrefixFilter, IPAddressFilter, VLANFilter
-from .serializers import VRFSerializer, StatusSerializer, RoleSerializer, RIRSerializer, AggregateSerializer, \
-    PrefixSerializer, IPAddressSerializer, VLANSerializer
+from .serializers import VRFSerializer, RoleSerializer, RIRSerializer, AggregateSerializer, PrefixSerializer,\
+    IPAddressSerializer, VLANSerializer
 
 
 class VRFListView(generics.ListAPIView):
@@ -20,22 +20,6 @@ class VRFDetailView(generics.RetrieveAPIView):
     """
     queryset = VRF.objects.all()
     serializer_class = VRFSerializer
-
-
-class StatusListView(generics.ListAPIView):
-    """
-    List all statuses
-    """
-    queryset = Status.objects.all()
-    serializer_class = StatusSerializer
-
-
-class StatusDetailView(generics.RetrieveAPIView):
-    """
-    Retrieve a single status
-    """
-    queryset = Status.objects.all()
-    serializer_class = StatusSerializer
 
 
 class RoleListView(generics.ListAPIView):
@@ -91,7 +75,7 @@ class PrefixListView(generics.ListAPIView):
     """
     List prefixes (filterable)
     """
-    queryset = Prefix.objects.select_related('site', 'vrf', 'vlan', 'status', 'role')
+    queryset = Prefix.objects.select_related('site', 'vrf', 'vlan', 'role')
     serializer_class = PrefixSerializer
     filter_class = PrefixFilter
 
@@ -100,7 +84,7 @@ class PrefixDetailView(generics.RetrieveAPIView):
     """
     Retrieve a single prefix
     """
-    queryset = Prefix.objects.select_related('site', 'vrf', 'vlan', 'status', 'role')
+    queryset = Prefix.objects.select_related('site', 'vrf', 'vlan', 'role')
     serializer_class = PrefixSerializer
 
 
@@ -127,7 +111,7 @@ class VLANListView(generics.ListAPIView):
     """
     List VLANs (filterable)
     """
-    queryset = VLAN.objects.select_related('site', 'status', 'role')
+    queryset = VLAN.objects.select_related('site', 'role')
     serializer_class = VLANSerializer
     filter_class = VLANFilter
 
@@ -136,5 +120,5 @@ class VLANDetailView(generics.RetrieveAPIView):
     """
     Retrieve a single VLAN
     """
-    queryset = VLAN.objects.select_related('site', 'status', 'role')
+    queryset = VLAN.objects.select_related('site', 'role')
     serializer_class = VLANSerializer

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from dcim.api.serializers import SiteNestedSerializer, InterfaceNestedSerializer
-from ipam.models import VRF, Status, Role, RIR, Aggregate, Prefix, IPAddress, VLAN
+from ipam.models import VRF, Role, RIR, Aggregate, Prefix, IPAddress, VLAN
 
 
 #
@@ -19,23 +19,6 @@ class VRFNestedSerializer(VRFSerializer):
 
     class Meta(VRFSerializer.Meta):
         fields = ['id', 'name', 'rd']
-
-
-#
-# Statuses
-#
-
-class StatusSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Status
-        fields = ['id', 'name', 'slug', 'weight', 'bootstrap_class']
-
-
-class StatusNestedSerializer(StatusSerializer):
-
-    class Meta(StatusSerializer.Meta):
-        fields = ['id', 'name', 'slug']
 
 
 #
@@ -97,7 +80,6 @@ class AggregateNestedSerializer(AggregateSerializer):
 class VLANSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     site = SiteNestedSerializer()
-    status = StatusNestedSerializer()
     role = RoleNestedSerializer()
 
     class Meta:
@@ -122,7 +104,6 @@ class PrefixSerializer(serializers.ModelSerializer):
     site = SiteNestedSerializer()
     vrf = VRFNestedSerializer()
     vlan = VLANNestedSerializer()
-    status = StatusNestedSerializer()
     role = RoleNestedSerializer()
 
     class Meta:

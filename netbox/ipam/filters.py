@@ -3,7 +3,7 @@ from netaddr import IPNetwork
 from netaddr.core import AddrFormatError
 
 from dcim.models import Site, Device, Interface
-from ipam.models import RIR, Aggregate, VRF, Prefix, IPAddress, VLAN, Status, Role
+from ipam.models import RIR, Aggregate, VRF, Prefix, IPAddress, VLAN, Role
 
 
 class VRFFilter(django_filters.FilterSet):

@@ -8,14 +8,6 @@ class VRFAdmin(admin.ModelAdmin):
     list_display = ['name', 'rd']
 
 
-@admin.register(Status)
-class StatusAdmin(admin.ModelAdmin):
-    prepopulated_fields = {
-        'slug': ['name'],
-    }
-    list_display = ['name', 'slug', 'weight', 'bootstrap_class']
-
-
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     prepopulated_fields = {

@@ -9,10 +9,6 @@ urlpatterns = [
     url(r'^vrfs/$', VRFListView.as_view(), name='vrf_list'),
     url(r'^vrfs/(?P<pk>\d+)/$', VRFDetailView.as_view(), name='vrf_detail'),
 
-    # Statuses
-    url(r'^statuses/$', StatusListView.as_view(), name='status_list'),
-    url(r'^statuses/(?P<pk>\d+)/$', StatusDetailView.as_view(), name='status_detail'),
-
     # Roles
     url(r'^roles/$', RoleListView.as_view(), name='role_list'),
     url(r'^roles/(?P<pk>\d+)/$', RoleDetailView.as_view(), name='role_detail'),
