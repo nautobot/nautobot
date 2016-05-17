@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="pull-right">
-    {% if perms.dcim.add_devicerole %}
+    {% if perms.ipam.add_rir %}
         <a href="{% url 'ipam:rir_add' %}" class="btn btn-primary">
             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             Add a RIR

@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import VRF, RIR, Aggregate, Prefix, IPAddress, VLAN
+from .models import VRF, RIR, Aggregate, Role, Prefix, IPAddress, VLAN
 
 
 RIR_EDIT_LINK = """
@@ -17,6 +17,10 @@ UTILIZATION_GRAPH = """
     </div>
 </div>
 {% endwith %}
+"""
+
+ROLE_EDIT_LINK = """
+{% if perms.ipam.change_role %}<a href="{% url 'ipam:role_edit' slug=record.slug %}">Edit</a>{% endif %}
 """
 
 PREFIX_LINK = """
@@ -100,6 +104,27 @@ class AggregateTable(tables.Table):
         model = Aggregate
         fields = ('pk', 'prefix', 'rir', 'child_count', 'utilization', 'date_added', 'description')
         empty_text = "No aggregates found."
+        attrs = {
+            'class': 'table table-hover',
+        }
+
+
+#
+# Roles
+#
+
+class RoleTable(tables.Table):
+    pk = tables.CheckBoxColumn(visible=False, default='')
+    name = tables.Column(verbose_name='Name')
+    prefix_count = tables.Column(accessor=Accessor('count_prefixes'), orderable=False, verbose_name='Prefixes')
+    vlan_count = tables.Column(accessor=Accessor('count_vlans'), orderable=False, verbose_name='VLANs')
+    slug = tables.Column(verbose_name='Slug')
+    edit = tables.TemplateColumn(template_code=ROLE_EDIT_LINK, verbose_name='')
+
+    class Meta:
+        model = Role
+        fields = ('pk', 'name', 'prefix_count', 'vlan_count', 'slug', 'edit')
+        empty_text = "No roles were found."
         attrs = {
             'class': 'table table-hover',
         }

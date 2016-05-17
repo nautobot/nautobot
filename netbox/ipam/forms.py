@@ -5,7 +5,7 @@ from django.db.models import Count
 
 from dcim.models import Site, Device, Interface
 from utilities.forms import BootstrapMixin, ConfirmationForm, APISelect, Livesearch, CSVDataField, BulkImportForm
-from .models import VRF, RIR, Aggregate, Prefix, IPAddress, VLAN, Status, Role
+from .models import VRF, RIR, Aggregate, Role, Status, Prefix, IPAddress, VLAN
 
 
 #
@@ -108,6 +108,21 @@ def aggregate_rir_choices():
 class AggregateFilterForm(forms.Form, BootstrapMixin):
     rir = forms.MultipleChoiceField(required=False, choices=aggregate_rir_choices, label='RIR',
                                     widget=forms.SelectMultiple(attrs={'size': 8}))
+
+
+#
+# Roles
+#
+
+class RoleForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = Role
+        fields = ['name', 'slug']
+
+
+class RoleBulkDeleteForm(ConfirmationForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), widget=forms.MultipleHiddenInput)
 
 
 #

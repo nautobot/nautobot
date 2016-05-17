@@ -30,6 +30,12 @@ urlpatterns = [
     url(r'^aggregates/(?P<pk>\d+)/edit/$', views.AggregateEditView.as_view(), name='aggregate_edit'),
     url(r'^aggregates/(?P<pk>\d+)/delete/$', views.AggregateDeleteView.as_view(), name='aggregate_delete'),
 
+    # Roles
+    url(r'^roles/$', views.RoleListView.as_view(), name='role_list'),
+    url(r'^roles/add/$', views.RoleEditView.as_view(), name='role_add'),
+    url(r'^roles/delete/$', views.RoleBulkDeleteView.as_view(), name='role_bulk_delete'),
+    url(r'^roles/(?P<slug>[\w-]+)/edit/$', views.RoleEditView.as_view(), name='role_edit'),
+
     # Prefixes
     url(r'^prefixes/$', views.PrefixListView.as_view(), name='prefix_list'),
     url(r'^prefixes/add/$', views.PrefixEditView.as_view(), name='prefix_add'),

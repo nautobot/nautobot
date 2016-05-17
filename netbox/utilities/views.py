@@ -116,10 +116,13 @@ class ObjectEditView(View):
             obj = form.save(commit=False)
             obj_created = not obj.pk
             obj.save()
-            messages.success(request, '{} {} <a href="{}">{}</a>'.format('Created' if obj_created else 'Modified',
-                                                                         self.model._meta.verbose_name,
-                                                                         obj.get_absolute_url(),
-                                                                         obj))
+            msg = 'Created ' if obj_created else 'Modified '
+            msg += self.model._meta.verbose_name
+            if hasattr(obj, 'get_absolute_url'):
+                msg += ' <a href="{}">{}</a>'.format(obj.get_absolute_url(), obj)
+            else:
+                msg += ' {}'.format(obj)
+            messages.success(request, msg)
             if '_addanother' in request.POST:
                 return redirect(request.path)
             elif self.success_url:

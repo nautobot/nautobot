@@ -14,12 +14,12 @@ from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, Object
 
 from .filters import AggregateFilter, PrefixFilter, IPAddressFilter, VLANFilter, VRFFilter
 from .forms import AggregateForm, AggregateImportForm, AggregateBulkEditForm, AggregateBulkDeleteForm,\
-    AggregateFilterForm, PrefixForm, PrefixImportForm, PrefixBulkEditForm, PrefixBulkDeleteForm, PrefixFilterForm,\
-    IPAddressForm, IPAddressImportForm, IPAddressBulkEditForm, IPAddressBulkDeleteForm, IPAddressFilterForm, VLANForm,\
-    VLANImportForm, VLANBulkEditForm, VLANBulkDeleteForm, VRFForm, VRFImportForm, VRFBulkEditForm, VRFBulkDeleteForm,\
-    VLANFilterForm, RIRForm, RIRBulkDeleteForm
-from .models import VRF, RIR, Aggregate, Prefix, IPAddress, VLAN
-from .tables import VRFTable, RIRTable, AggregateTable, PrefixTable, PrefixBriefTable, IPAddressBriefTable,\
+    AggregateFilterForm, RoleForm, RoleBulkDeleteForm, PrefixForm, PrefixImportForm, PrefixBulkEditForm,\
+    PrefixBulkDeleteForm, PrefixFilterForm, IPAddressForm, IPAddressImportForm, IPAddressBulkEditForm,\
+    IPAddressBulkDeleteForm, IPAddressFilterForm, VLANForm, VLANImportForm, VLANBulkEditForm, VLANBulkDeleteForm,\
+    VRFForm, VRFImportForm, VRFBulkEditForm, VRFBulkDeleteForm, VLANFilterForm, RIRForm, RIRBulkDeleteForm
+from .models import VRF, RIR, Aggregate, Role, Prefix, IPAddress, VLAN
+from .tables import VRFTable, RIRTable, AggregateTable, RoleTable, PrefixTable, PrefixBriefTable, IPAddressBriefTable,\
     IPAddressTable, VLANTable
 
 
@@ -215,6 +215,32 @@ class AggregateBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     cls = Aggregate
     form = AggregateBulkDeleteForm
     default_redirect_url = 'ipam:aggregate_list'
+
+
+#
+# Prefix/VLAN roles
+#
+
+class RoleListView(ObjectListView):
+    queryset = Role.objects.all()
+    table = RoleTable
+    edit_permissions = ['ipam.change_role', 'ipam.delete_role']
+    template_name = 'ipam/role_list.html'
+
+
+class RoleEditView(PermissionRequiredMixin, ObjectEditView):
+    permission_required = 'ipam.change_role'
+    model = Role
+    form_class = RoleForm
+    success_url = 'ipam:role_list'
+    cancel_url = 'ipam:role_list'
+
+
+class RoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
+    permission_required = 'ipam.delete_role'
+    cls = Role
+    form = RoleBulkDeleteForm
+    default_redirect_url = 'ipam:role_list'
 
 
 #

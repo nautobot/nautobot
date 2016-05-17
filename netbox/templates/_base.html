@@ -35,9 +35,7 @@
                                 <li><a href="{% url 'dcim:rack_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Rack</a></li>
                                 <li><a href="{% url 'dcim:rack_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Racks</a></li>
                             {% endif %}
-                            {% if perms.dcim.add_rack or perms.dcim.add_rackgroup %}
-                                <li class="divider"></li>
-                            {% endif %}
+                            <li class="divider"></li>
                             <li><a href="{% url 'dcim:rackgroup_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Rack Groups</a></li>
                             {% if perms.dcim.add_rackgroup %}
                                 <li><a href="{% url 'dcim:rackgroup_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Rack Group</a></li>
@@ -59,19 +57,21 @@
                             {% if perms.dcim.add_devicetype %}
                                 <li><a href="{% url 'dcim:devicetype_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Device Type</a></li>
                             {% endif %}
-                            {% if perms.ipam.add_devicetype or perms.ipam.add_devicerole %}
-                                <li class="divider"></li>
-                            {% endif %}
+                            <li class="divider"></li>
                             <li><a href="{% url 'dcim:devicerole_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Device Roles</a></li>
                             {% if perms.dcim.add_devicerole %}
                                 <li><a href="{% url 'dcim:devicerole_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Device Role</a></li>
                             {% endif %}
-                            <li class="divider"></li>
+                            {% if perms.dcim.add_devicerole or perms.dcim.add_manufacturer %}
+                                <li class="divider"></li>
+                            {% endif %}
                             <li><a href="{% url 'dcim:manufacturer_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Manufacturers</a></li>
                             {% if perms.dcim.add_manufacturer %}
                                 <li><a href="{% url 'dcim:manufacturer_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Manufacturer</a></li>
                             {% endif %}
-                            <li class="divider"></li>
+                            {% if perms.dcim.add_manufacturer or perms.dcim.add_platform %}
+                                <li class="divider"></li>
+                            {% endif %}
                             <li><a href="{% url 'dcim:platform_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Platforms</a></li>
                             {% if perms.dcim.add_platform %}
                                 <li><a href="{% url 'dcim:platform_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Platform</a></li>
@@ -101,7 +101,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/ipam/ip-addresses/' in request.path or '/prefixes/' in request.path or '/aggregates/' in request.path or '/vrfs/' in request.path or '/rirs/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if '/ipam/' in request.path and not '/ipam/vlans/' in request.path %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">IP Space <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'ipam:ipaddress_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> IP Addresses</a></li>
@@ -138,9 +138,16 @@
                             {% if perms.ipam.add_rir %}
                                 <li><a href="{% url 'ipam:rir_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a RIR</a></li>
                             {% endif %}
+                            {% if perms.ipam.add_rir or perms.ipam.add_role %}
+                                <li class="divider"></li>
+                            {% endif %}
+                            <li><a href="{% url 'ipam:role_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Prefix/VLAN Roles</a></li>
+                            {% if perms.ipam.add_role %}
+                                <li><a href="{% url 'ipam:role_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Role</a></li>
+                            {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/vlans/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if '/ipam/vlans/' in request.path %} active{% endif %}">
                         {% if perms.ipam.add_vlan %}
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">VLANs <span class="caret"></span></a>
                             <ul class="dropdown-menu">
@@ -168,9 +175,7 @@
                                 <li><a href="{% url 'circuits:circuit_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Circuit</a></li>
                                 <li><a href="{% url 'circuits:circuit_import' %}"><i class="glyphicon glyphicon-import" aria-hidden="true"></i> Import Circuits</a></li>
                             {% endif %}
-                            {% if perms.circuits.add_circuit or perms.circuits.add_circuittype %}
-                                <li class="divider"></li>
-                            {% endif %}
+                            <li class="divider"></li>
                             <li><a href="{% url 'circuits:circuittype_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Circuit Types</a></li>
                             {% if perms.circuits.add_circuittype %}
                                 <li><a href="{% url 'circuits:circuittype_add' %}"><i class="glyphicon glyphicon-plus" aria-hidden="true"></i> Add a Circuit Type</a></li>

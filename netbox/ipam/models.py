@@ -44,38 +44,6 @@ class VRF(models.Model):
         return reverse('ipam:vrf', args=[self.pk])
 
 
-class Status(models.Model):
-    """
-    The status of a prefix or VLAN (e.g. allocated, reserved, etc.)
-    """
-    name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(unique=True)
-    weight = models.PositiveSmallIntegerField(default=1000)
-    bootstrap_class = models.PositiveSmallIntegerField(choices=BOOTSTRAP_CLASS_CHOICES, default=0)
-
-    class Meta:
-        ordering = ['weight', 'name']
-        verbose_name_plural = 'statuses'
-
-    def __unicode__(self):
-        return self.name
-
-
-class Role(models.Model):
-    """
-    The role of an address resource (e.g. customer, infrastructure, mgmt, etc.)
-    """
-    name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(unique=True)
-    weight = models.PositiveSmallIntegerField(default=1000)
-    
-    class Meta:
-        ordering = ['weight', 'name']
-
-    def __unicode__(self):
-        return self.name
-
-
 class RIR(models.Model):
     """
     A regional Internet registry (e.g. ARIN) or governing standard (e.g. RFC 1918)
@@ -147,6 +115,46 @@ class Aggregate(models.Model):
         for p in networks:
             children_size += p.size
         return int(children_size / self.prefix.size * 100)
+
+
+class Status(models.Model):
+    """
+    The status of a prefix or VLAN (e.g. allocated, reserved, etc.)
+    """
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(unique=True)
+    weight = models.PositiveSmallIntegerField(default=1000)
+    bootstrap_class = models.PositiveSmallIntegerField(choices=BOOTSTRAP_CLASS_CHOICES, default=0)
+
+    class Meta:
+        ordering = ['weight', 'name']
+        verbose_name_plural = 'statuses'
+
+    def __unicode__(self):
+        return self.name
+
+
+class Role(models.Model):
+    """
+    The role of an address resource (e.g. customer, infrastructure, mgmt, etc.)
+    """
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(unique=True)
+    weight = models.PositiveSmallIntegerField(default=1000)
+
+    class Meta:
+        ordering = ['weight', 'name']
+
+    def __unicode__(self):
+        return self.name
+
+    @property
+    def count_prefixes(self):
+        return self.prefixes.count()
+
+    @property
+    def count_vlans(self):
+        return self.vlans.count()
 
 
 class PrefixQuerySet(models.QuerySet):
