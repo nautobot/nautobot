@@ -180,12 +180,21 @@ class PrefixFromCSVForm(forms.ModelForm):
                                  error_messages={'invalid_choice': 'VRF not found.'})
     site = forms.ModelChoiceField(queryset=Site.objects.all(), required=False, to_field_name='name',
                                   error_messages={'invalid_choice': 'Site not found.'})
+    status_name = forms.ChoiceField(choices=[(s[1], s[0]) for s in PREFIX_STATUS_CHOICES])
     role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False, to_field_name='name',
                                   error_messages={'invalid_choice': 'Invalid role.'})
 
     class Meta:
         model = Prefix
-        fields = ['prefix', 'vrf', 'site', 'status', 'role', 'description']
+        fields = ['prefix', 'vrf', 'site', 'status_name', 'role', 'description']
+
+    def save(self, *args, **kwargs):
+        m = super(PrefixFromCSVForm, self).save(commit=False)
+        # Assign Prefix status by name
+        m.status = dict(self.fields['status_name'].choices)[self.cleaned_data['status_name']]
+        if kwargs.get('commit'):
+            m.save()
+        return m
 
 
 class PrefixImportForm(BulkImportForm, BootstrapMixin):
@@ -392,12 +401,21 @@ class VLANForm(forms.ModelForm, BootstrapMixin):
 class VLANFromCSVForm(forms.ModelForm):
     site = forms.ModelChoiceField(queryset=Site.objects.all(), to_field_name='name',
                                   error_messages={'invalid_choice': 'Device not found.'})
+    status_name = forms.ChoiceField(choices=[(s[1], s[0]) for s in VLAN_STATUS_CHOICES])
     role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False, to_field_name='name',
                                   error_messages={'invalid_choice': 'Invalid role.'})
 
     class Meta:
         model = VLAN
-        fields = ['site', 'vid', 'name', 'status', 'role']
+        fields = ['site', 'vid', 'name', 'status_name', 'role']
+
+    def save(self, *args, **kwargs):
+        m = super(VLANFromCSVForm, self).save(commit=False)
+        # Assign VLAN status by name
+        m.status = dict(self.fields['status_name'].choices)[self.cleaned_data['status_name']]
+        if kwargs.get('commit'):
+            m.save()
+        return m
 
 
 class VLANImportForm(BulkImportForm, BootstrapMixin):
