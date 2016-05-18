@@ -1,6 +1,7 @@
 import json
 from rest_framework import renderers
 
+
 # IP address family designations
 AF = {
     4: 'A',

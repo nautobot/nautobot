@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import VRF, RIR, Aggregate, Role, Prefix, IPAddress, VLAN
+from .models import Aggregate, IPAddress, Prefix, RIR, Role, VLAN, VRF
 
 
 RIR_EDIT_LINK = """
@@ -12,7 +12,8 @@ UTILIZATION_GRAPH = """
 {% with record.get_utilization as percentage %}
 <div class="progress text-center">
     {% if percentage < 15 %}<span style="font-size: 12px;">{{ percentage }}%</span>{% endif %}
-    <div class="progress-bar progress-bar-{% if percentage >= 90 %}danger{% elif percentage >= 75 %}warning{% else %}success{% endif %}" role="progressbar" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ percentage }}%">
+    <div class="progress-bar progress-bar-{% if percentage >= 90 %}danger{% elif percentage >= 75 %}warning{% else %}success{% endif %}"
+        role="progressbar" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ percentage }}%">
         {% if percentage >= 15 %}{{ percentage }}%{% endif %}
     </div>
 </div>
@@ -175,7 +176,8 @@ class IPAddressTable(tables.Table):
     pk = tables.CheckBoxColumn(visible=False, default='')
     address = tables.LinkColumn('ipam:ipaddress', args=[Accessor('pk')], verbose_name='IP Address')
     vrf = tables.Column(orderable=False, default='Global', verbose_name='VRF')
-    device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False, verbose_name='Device')
+    device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False,
+                               verbose_name='Device')
     interface = tables.Column(orderable=False, verbose_name='Interface')
     description = tables.Column(sortable=False, verbose_name='Description')
 
@@ -190,9 +192,11 @@ class IPAddressTable(tables.Table):
 
 class IPAddressBriefTable(tables.Table):
     address = tables.LinkColumn('ipam:ipaddress', args=[Accessor('pk')], verbose_name='IP Address')
-    device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False, verbose_name='Device')
+    device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False,
+                               verbose_name='Device')
     interface = tables.Column(orderable=False, verbose_name='Interface')
-    nat_inside = tables.LinkColumn('ipam:ipaddress', args=[Accessor('nat_inside.pk')], orderable=False, verbose_name='NAT (Inside)')
+    nat_inside = tables.LinkColumn('ipam:ipaddress', args=[Accessor('nat_inside.pk')], orderable=False,
+                                   verbose_name='NAT (Inside)')
 
     class Meta:
         model = IPAddress

@@ -3,7 +3,6 @@ from django.db import models
 from django.http import HttpResponse
 from django.template import Template, Context
 
-
 from dcim.models import Site
 
 

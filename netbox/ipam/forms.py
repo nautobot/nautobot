@@ -5,7 +5,10 @@ from django.db.models import Count
 
 from dcim.models import Site, Device, Interface
 from utilities.forms import BootstrapMixin, ConfirmationForm, APISelect, Livesearch, CSVDataField, BulkImportForm
-from .models import VRF, RIR, Aggregate, Role, Prefix, IPAddress, VLAN, PREFIX_STATUS_CHOICES, VLAN_STATUS_CHOICES
+
+from .models import (
+    Aggregate, IPAddress, Prefix, PREFIX_STATUS_CHOICES, RIR, Role, VLAN, VLAN_STATUS_CHOICES, VRF,
+)
 
 
 #
@@ -286,8 +289,10 @@ class IPAddressForm(forms.ModelForm, BootstrapMixin):
             if self.instance.nat_inside.interface:
                 self.initial['nat_site'] = self.instance.nat_inside.interface.device.rack.site.pk
                 self.initial['nat_device'] = self.instance.nat_inside.interface.device.pk
-                self.fields['nat_device'].queryset = Device.objects.filter(rack__site=nat_inside.interface.device.rack.site)
-                self.fields['nat_inside'].queryset = IPAddress.objects.filter(interface__device=nat_inside.interface.device)
+                self.fields['nat_device'].queryset = Device.objects.filter(
+                    rack__site=nat_inside.interface.device.rack.site)
+                self.fields['nat_inside'].queryset = IPAddress.objects.filter(
+                    interface__device=nat_inside.interface.device)
             else:
                 self.fields['nat_inside'].queryset = IPAddress.objects.filter(pk=nat_inside.pk)
 
@@ -303,9 +308,11 @@ class IPAddressForm(forms.ModelForm, BootstrapMixin):
 
             # Initialize nat_inside choices if nat_device is set
             if self.is_bound and self.data.get('nat_device'):
-                self.fields['nat_inside'].queryset = IPAddress.objects.filter(interface__device__pk=self.data['nat_device'])
+                self.fields['nat_inside'].queryset = IPAddress.objects.filter(
+                    interface__device__pk=self.data['nat_device'])
             elif self.initial.get('nat_device'):
-                self.fields['nat_inside'].queryset = IPAddress.objects.filter(interface__device__pk=self.initial['nat_device'])
+                self.fields['nat_inside'].queryset = IPAddress.objects.filter(
+                    interface__device__pk=self.initial['nat_device'])
             else:
                 self.fields['nat_inside'].choices = []
 

@@ -6,6 +6,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from dcim.models import Interface
+
 from .fields import IPNetworkField, IPAddressField
 
 
@@ -192,8 +193,10 @@ class Prefix(models.Model):
     family = models.PositiveSmallIntegerField(choices=AF_CHOICES, editable=False)
     prefix = IPNetworkField()
     site = models.ForeignKey('dcim.Site', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True)
-    vrf = models.ForeignKey('VRF', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VRF')
-    vlan = models.ForeignKey('VLAN', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VLAN')
+    vrf = models.ForeignKey('VRF', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True,
+                            verbose_name='VRF')
+    vlan = models.ForeignKey('VLAN', related_name='prefixes', on_delete=models.PROTECT, blank=True, null=True,
+                             verbose_name='VLAN')
     status = models.PositiveSmallIntegerField('Status', choices=PREFIX_STATUS_CHOICES, default=1)
     role = models.ForeignKey('Role', related_name='prefixes', on_delete=models.SET_NULL, blank=True, null=True)
     description = models.CharField(max_length=100, blank=True)
@@ -239,9 +242,12 @@ class IPAddress(models.Model):
     """
     family = models.PositiveSmallIntegerField(choices=AF_CHOICES, editable=False)
     address = IPAddressField()
-    vrf = models.ForeignKey('VRF', related_name='ip_addresses', on_delete=models.PROTECT, blank=True, null=True, verbose_name='VRF')
-    interface = models.ForeignKey(Interface, related_name='ip_addresses', on_delete=models.CASCADE, blank=True, null=True)
-    nat_inside = models.OneToOneField('self', related_name='nat_outside', on_delete=models.SET_NULL, blank=True, null=True, verbose_name='NAT IP (inside)')
+    vrf = models.ForeignKey('VRF', related_name='ip_addresses', on_delete=models.PROTECT, blank=True, null=True,
+                            verbose_name='VRF')
+    interface = models.ForeignKey(Interface, related_name='ip_addresses', on_delete=models.CASCADE, blank=True,
+                                  null=True)
+    nat_inside = models.OneToOneField('self', related_name='nat_outside', on_delete=models.SET_NULL, blank=True,
+                                      null=True, verbose_name='NAT IP (inside)')
     description = models.CharField(max_length=100, blank=True)
 
     class Meta:

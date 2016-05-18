@@ -4,8 +4,10 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from .formfields import IPFormField
-from .lookups import EndsWith, IEndsWith, StartsWith, IStartsWith, Regex, IRegex, NetContained, NetContainedOrEqual, \
-    NetContains, NetContainsOrEquals, NetHost
+from .lookups import (
+    EndsWith, IEndsWith, IRegex, IStartsWith, NetContained, NetContainedOrEqual, NetContains, NetContainsOrEquals,
+    NetHost, Regex, StartsWith,
+)
 
 
 class BaseIPField(models.Field):

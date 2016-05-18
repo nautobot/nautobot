@@ -17,7 +17,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('-u', '--username', dest='username', help="Specify the username to use")
         parser.add_argument('-p', '--password', action='store_true', default=False, help="Prompt for password to use")
-        parser.add_argument('-s', '--site', dest='site', action='append', help="Filter devices by site (include argument once per site)")
+        parser.add_argument('-s', '--site', dest='site', action='append',
+                            help="Filter devices by site (include argument once per site)")
         parser.add_argument('-n', '--name', dest='name', help="Filter devices by name (regular expression)")
         parser.add_argument('--full', action='store_true', default=False, help="For inventory update for all devices")
         parser.add_argument('--fake', action='store_true', default=False, help="Do not actually update database")
@@ -107,7 +108,8 @@ class Command(BaseCommand):
                 self.stdout.write("\tSerial: {}".format(inventory['chassis']['serial']))
                 self.stdout.write("\tDescription: {}".format(inventory['chassis']['description']))
                 for module in inventory['modules']:
-                    self.stdout.write("\tModule: {} / {} ({})".format(module['name'], module['part_id'], module['serial']))
+                    self.stdout.write("\tModule: {} / {} ({})".format(module['name'], module['part_id'],
+                                                                      module['serial']))
             else:
                 self.stdout.write("{} ({})".format(inventory['chassis']['description'], inventory['chassis']['serial']))
 
