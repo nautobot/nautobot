@@ -427,10 +427,13 @@ class Device(models.Model):
     name = NullableCharField(max_length=50, blank=True, null=True, unique=True)
     serial = models.CharField(max_length=50, blank=True, verbose_name='Serial number')
     rack = models.ForeignKey('Rack', related_name='devices', on_delete=models.PROTECT)
-    position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MinValueValidator(1)], verbose_name='Position (U)', help_text='Number of the lowest U position occupied by the device')
+    position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MinValueValidator(1)],
+                                                verbose_name='Position (U)',
+                                                help_text='Number of the lowest U position occupied by the device')
     face = models.PositiveSmallIntegerField(blank=True, null=True, choices=RACK_FACE_CHOICES, verbose_name='Rack face')
     status = models.BooleanField(choices=STATUS_CHOICES, default=STATUS_ACTIVE, verbose_name='Status')
-    primary_ip = models.OneToOneField('ipam.IPAddress', related_name='primary_for', on_delete=models.SET_NULL, blank=True, null=True, verbose_name='Primary IP')
+    primary_ip = models.OneToOneField('ipam.IPAddress', related_name='primary_for', on_delete=models.SET_NULL,
+                                      blank=True, null=True, verbose_name='Primary IP')
     ro_snmp = models.CharField(max_length=50, blank=True, verbose_name='SNMP (RO)')
     comments = models.TextField(blank=True)
 
@@ -480,19 +483,24 @@ class Device(models.Model):
         # If this is a new Device, instantiate all of the related components per the DeviceType definition
         if is_new:
             ConsolePort.objects.bulk_create(
-                [ConsolePort(device=self, name=template.name) for template in self.device_type.console_port_templates.all()]
+                [ConsolePort(device=self, name=template.name) for template in
+                 self.device_type.console_port_templates.all()]
             )
             ConsoleServerPort.objects.bulk_create(
-                [ConsoleServerPort(device=self, name=template.name) for template in self.device_type.cs_port_templates.all()]
+                [ConsoleServerPort(device=self, name=template.name) for template in
+                 self.device_type.cs_port_templates.all()]
             )
             PowerPort.objects.bulk_create(
-                [PowerPort(device=self, name=template.name) for template in self.device_type.power_port_templates.all()]
+                [PowerPort(device=self, name=template.name) for template in
+                 self.device_type.power_port_templates.all()]
             )
             PowerOutlet.objects.bulk_create(
-                [PowerOutlet(device=self, name=template.name) for template in self.device_type.power_outlet_templates.all()]
+                [PowerOutlet(device=self, name=template.name) for template in
+                 self.device_type.power_outlet_templates.all()]
             )
             Interface.objects.bulk_create(
-                [Interface(device=self, name=template.name, form_factor=template.form_factor, mgmt_only=template.mgmt_only) for template in self.device_type.interface_templates.all()]
+                [Interface(device=self, name=template.name, form_factor=template.form_factor,
+                           mgmt_only=template.mgmt_only) for template in self.device_type.interface_templates.all()]
             )
 
     def get_rpc_client(self):
@@ -510,7 +518,8 @@ class ConsolePort(models.Model):
     """
     device = models.ForeignKey('Device', related_name='console_ports', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
-    cs_port = models.OneToOneField('ConsoleServerPort', related_name='connected_console', on_delete=models.SET_NULL, verbose_name='Console server port', blank=True, null=True)
+    cs_port = models.OneToOneField('ConsoleServerPort', related_name='connected_console', on_delete=models.SET_NULL,
+                                   verbose_name='Console server port', blank=True, null=True)
     connection_status = models.NullBooleanField(choices=CONNECTION_STATUS_CHOICES, default=CONNECTION_STATUS_CONNECTED)
 
     class Meta:
@@ -558,7 +567,8 @@ class PowerPort(models.Model):
     """
     device = models.ForeignKey('Device', related_name='power_ports', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
-    power_outlet = models.OneToOneField('PowerOutlet', related_name='connected_port', on_delete=models.SET_NULL, blank=True, null=True)
+    power_outlet = models.OneToOneField('PowerOutlet', related_name='connected_port', on_delete=models.SET_NULL,
+                                        blank=True, null=True)
     connection_status = models.NullBooleanField(choices=CONNECTION_STATUS_CHOICES, default=CONNECTION_STATUS_CONNECTED)
 
     class Meta:
@@ -573,7 +583,8 @@ class PowerOutletManager(models.Manager):
 
     def get_queryset(self):
         return super(PowerOutletManager, self).get_queryset().extra(select={
-            'name_padded': "CONCAT(SUBSTRING(dcim_poweroutlet.name FROM '^[^0-9]+'), LPAD(SUBSTRING(dcim_poweroutlet.name FROM '[0-9\/]+$'), 8, '0'))",
+            'name_padded': "CONCAT(SUBSTRING(dcim_poweroutlet.name FROM '^[^0-9]+'), "
+                           "LPAD(SUBSTRING(dcim_poweroutlet.name FROM '[0-9\/]+$'), 8, '0'))",
         }).order_by('device', 'name_padded')
 
 
@@ -678,7 +689,8 @@ class InterfaceConnection(models.Model):
     """
     interface_a = models.OneToOneField('Interface', related_name='connected_as_a', on_delete=models.CASCADE)
     interface_b = models.OneToOneField('Interface', related_name='connected_as_b', on_delete=models.CASCADE)
-    connection_status = models.BooleanField(choices=CONNECTION_STATUS_CHOICES, default=CONNECTION_STATUS_CONNECTED, verbose_name='Status')
+    connection_status = models.BooleanField(choices=CONNECTION_STATUS_CHOICES, default=CONNECTION_STATUS_CONNECTED,
+                                            verbose_name='Status')
 
     def clean(self):
 

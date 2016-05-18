@@ -1,7 +1,11 @@
 from django.contrib import admin
 from django.db.models import Count
 
-from .models import *
+from .models import (
+    ConsolePort, ConsolePortTemplate, ConsoleServerPort, ConsoleServerPortTemplate, Device, DeviceRole, DeviceType,
+    Interface, InterfaceTemplate, Manufacturer, Module, Platform, PowerOutlet, PowerOutletTemplate, PowerPort,
+    PowerPortTemplate, Rack, RackGroup, Site,
+)
 
 
 @admin.register(Site)
@@ -142,6 +146,7 @@ class InterfaceAdmin(admin.TabularInline):
 
 class ModuleAdmin(admin.TabularInline):
     model = Module
+
 
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):

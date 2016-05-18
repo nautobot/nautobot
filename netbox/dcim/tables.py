@@ -1,31 +1,48 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from .models import Site, RackGroup, Rack, Manufacturer, DeviceType, ConsolePortTemplate, ConsoleServerPortTemplate,\
-    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceRole, Platform, Device, ConsolePort, PowerPort
+from .models import (
+    ConsolePort, ConsolePortTemplate, ConsoleServerPortTemplate, Device, DeviceRole, DeviceType, InterfaceTemplate,
+    Manufacturer, Platform, PowerOutletTemplate, PowerPort, PowerPortTemplate, Rack, RackGroup, Site,
+)
+
 
 DEVICE_LINK = """
-<a href="{% url 'dcim:device' pk=record.pk %}">{{ record.name|default:'<span class="label label-info">Unnamed device</span>' }}</a>
+<a href="{% url 'dcim:device' pk=record.pk %}">
+    {{ record.name|default:'<span class="label label-info">Unnamed device</span>' }}
+</a>
 """
 
 RACKGROUP_EDIT_LINK = """
-{% if perms.dcim.change_rackgroup %}<a href="{% url 'dcim:rackgroup_edit' pk=record.pk %}">Edit</a>{% endif %}
+{% if perms.dcim.change_rackgroup %}
+    <a href="{% url 'dcim:rackgroup_edit' pk=record.pk %}">Edit</a>
+{% endif %}
 """
 
 DEVICEROLE_EDIT_LINK = """
-{% if perms.dcim.change_devicerole %}<a href="{% url 'dcim:devicerole_edit' slug=record.slug %}">Edit</a>{% endif %}
+{% if perms.dcim.change_devicerole %}
+    <a href="{% url 'dcim:devicerole_edit' slug=record.slug %}">Edit</a>
+{% endif %}
 """
 
 MANUFACTURER_EDIT_LINK = """
-{% if perms.dcim.change_manufacturer %}<a href="{% url 'dcim:manufacturer_edit' slug=record.slug %}">Edit</a>{% endif %}
+{% if perms.dcim.change_manufacturer %}
+    <a href="{% url 'dcim:manufacturer_edit' slug=record.slug %}">Edit</a>
+{% endif %}
 """
 
 PLATFORM_EDIT_LINK = """
-{% if perms.dcim.change_platform %}<a href="{% url 'dcim:platform_edit' slug=record.slug %}">Edit</a>{% endif %}
+{% if perms.dcim.change_platform %}
+    <a href="{% url 'dcim:platform_edit' slug=record.slug %}">Edit</a>
+{% endif %}
 """
 
 STATUS_ICON = """
-<span class="glyphicon glyphicon-{% if record.status %}ok-sign text-success" title="Active{% else %}minus-sign text-danger" title="Offline{% endif %}" aria-hidden="true"></span>
+{% if record.status %}
+    <span class="glyphicon glyphicon-ok-sign text-success" title="Active" aria-hidden="true"></span>
+{% else %}
+    <span class="glyphicon glyphicon-minus-sign text-danger" title="Offline" aria-hidden="true"></span>
+{% endif %}
 """
 
 
@@ -45,7 +62,8 @@ class SiteTable(tables.Table):
 
     class Meta:
         model = Site
-        fields = ('name', 'facility', 'asn', 'rack_count', 'device_count', 'prefix_count', 'vlan_count', 'circuit_count')
+        fields = ('name', 'facility', 'asn', 'rack_count', 'device_count', 'prefix_count', 'vlan_count',
+                  'circuit_count')
         empty_text = "No sites have been defined."
         attrs = {
             'class': 'table table-hover',
@@ -254,7 +272,8 @@ class DeviceTable(tables.Table):
     rack = tables.LinkColumn('dcim:rack', args=[Accessor('rack.pk')], verbose_name='Rack')
     device_role = tables.Column(verbose_name='Role')
     device_type = tables.Column(verbose_name='Type')
-    primary_ip = tables.TemplateColumn(orderable=False, verbose_name='IP Address', template_code="{{ record.primary_ip.address.ip }}")
+    primary_ip = tables.TemplateColumn(orderable=False, verbose_name='IP Address',
+                                       template_code="{{ record.primary_ip.address.ip }}")
 
     class Meta:
         model = Device
@@ -286,7 +305,8 @@ class DeviceImportTable(tables.Table):
 #
 
 class ConsoleConnectionTable(tables.Table):
-    console_server = tables.LinkColumn('dcim:device', accessor=Accessor('cs_port.device'), args=[Accessor('cs_port.device.pk')], verbose_name='Console server')
+    console_server = tables.LinkColumn('dcim:device', accessor=Accessor('cs_port.device'),
+                                       args=[Accessor('cs_port.device.pk')], verbose_name='Console server')
     cs_port = tables.Column(verbose_name='Port')
     device = tables.LinkColumn('dcim:device', args=[Accessor('device.pk')], verbose_name='Device')
     name = tables.Column(verbose_name='Console port')
@@ -300,7 +320,8 @@ class ConsoleConnectionTable(tables.Table):
 
 
 class PowerConnectionTable(tables.Table):
-    pdu = tables.LinkColumn('dcim:device', accessor=Accessor('power_outlet.device'), args=[Accessor('power_outlet.device.pk')], verbose_name='PDU')
+    pdu = tables.LinkColumn('dcim:device', accessor=Accessor('power_outlet.device'),
+                            args=[Accessor('power_outlet.device.pk')], verbose_name='PDU')
     power_outlet = tables.Column(verbose_name='Outlet')
     device = tables.LinkColumn('dcim:device', args=[Accessor('device.pk')], verbose_name='Device')
     name = tables.Column(verbose_name='Console port')
@@ -314,9 +335,11 @@ class PowerConnectionTable(tables.Table):
 
 
 class InterfaceConnectionTable(tables.Table):
-    device_a = tables.LinkColumn('dcim:device', accessor=Accessor('interface_a.device'), args=[Accessor('interface_a.device.pk')], verbose_name='Device A')
+    device_a = tables.LinkColumn('dcim:device', accessor=Accessor('interface_a.device'),
+                                 args=[Accessor('interface_a.device.pk')], verbose_name='Device A')
     interface_a = tables.Column(verbose_name='Interface A')
-    device_b = tables.LinkColumn('dcim:device', accessor=Accessor('interface_b.device'), args=[Accessor('interface_b.device.pk')], verbose_name='Device B')
+    device_b = tables.LinkColumn('dcim:device', accessor=Accessor('interface_b.device'),
+                                 args=[Accessor('interface_b.device.pk')], verbose_name='Device B')
     interface_b = tables.Column(verbose_name='Interface B')
 
     class Meta:

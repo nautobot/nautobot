@@ -1,9 +1,11 @@
 from rest_framework import serializers
 
 from ipam.models import IPAddress
-from dcim.models import Site, Rack, RackGroup, Manufacturer, ConsolePortTemplate, ConsoleServerPortTemplate, \
-    PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate, DeviceType, DeviceRole, Platform, Device, ConsolePort, \
-    ConsoleServerPort, PowerPort, PowerOutlet, Interface, InterfaceConnection, RACK_FACE_FRONT, RACK_FACE_REAR
+from dcim.models import (
+    ConsolePort, ConsolePortTemplate, ConsoleServerPort, ConsoleServerPortTemplate, Device, DeviceType, DeviceRole,
+    Interface, InterfaceConnection, InterfaceTemplate, Manufacturer, Platform, PowerOutlet, PowerOutletTemplate,
+    PowerPort, PowerPortTemplate, Rack, RackGroup, RACK_FACE_FRONT, RACK_FACE_REAR, Site,
+)
 
 
 #

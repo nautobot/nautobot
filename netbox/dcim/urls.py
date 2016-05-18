@@ -3,8 +3,9 @@ from django.conf.urls import url
 from secrets.views import secret_add
 
 from . import views
-from .models import ConsolePortTemplate, ConsoleServerPortTemplate, PowerPortTemplate, PowerOutletTemplate, \
-    InterfaceTemplate
+from .models import (
+    ConsolePortTemplate, ConsoleServerPortTemplate, PowerPortTemplate, PowerOutletTemplate, InterfaceTemplate,
+)
 
 
 urlpatterns = [

@@ -4,7 +4,7 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, render
 
 from utilities.views import (
-    BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectEditView, ObjectDeleteView,
+    BulkDeleteView, BulkEditView, BulkImportView, ObjectDeleteView, ObjectEditView, ObjectListView,
 )
 
 from . import forms

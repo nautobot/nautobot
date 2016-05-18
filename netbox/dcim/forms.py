@@ -4,18 +4,23 @@ from django import forms
 from django.db.models import Count, Q
 
 from ipam.models import IPAddress
-from utilities.forms import BootstrapMixin, SmallTextarea, SelectWithDisabled, ConfirmationForm, APISelect, \
-    Livesearch, CSVDataField, CommentField, BulkImportForm, FlexibleModelChoiceField, ExpandableNameField
+from utilities.forms import (
+    APISelect, BootstrapMixin, BulkImportForm, CommentField, ConfirmationForm, CSVDataField, ExpandableNameField,
+    FlexibleModelChoiceField, Livesearch, SelectWithDisabled, SmallTextarea,
+)
 
-from .models import Site, Rack, RackGroup, Device, Manufacturer, DeviceType, DeviceRole, Platform, ConsolePort, \
-    ConsolePortTemplate, ConsoleServerPort, ConsoleServerPortTemplate, PowerPort, PowerPortTemplate, PowerOutlet, \
-    PowerOutletTemplate, Interface, InterfaceTemplate, InterfaceConnection, CONNECTION_STATUS_CHOICES, \
-    CONNECTION_STATUS_PLANNED, CONNECTION_STATUS_CONNECTED, IFACE_FF_VIRTUAL, STATUS_CHOICES
+from .models import (
+    CONNECTION_STATUS_CHOICES, CONNECTION_STATUS_PLANNED, CONNECTION_STATUS_CONNECTED, ConsolePort, ConsolePortTemplate,
+    ConsoleServerPort, ConsoleServerPortTemplate, Device, DeviceRole, DeviceType, Interface, IFACE_FF_VIRTUAL,
+    InterfaceConnection, InterfaceTemplate, Manufacturer, Platform, PowerOutlet, PowerOutletTemplate, PowerPort,
+    PowerPortTemplate, Rack, RackGroup, Site, STATUS_CHOICES
+)
 
 
 FORM_STATUS_CHOICES = [
     ['', '---------'],
 ]
+
 FORM_STATUS_CHOICES += STATUS_CHOICES
 
 DEVICE_BY_PK_RE = '{\d+\}'
@@ -182,7 +187,7 @@ class RackFilterForm(forms.Form, BootstrapMixin):
     site = forms.MultipleChoiceField(required=False, choices=rack_site_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
     group_id = forms.MultipleChoiceField(required=False, choices=rack_group_choices,
-                                      widget=forms.SelectMultiple(attrs={'size': 8}))
+                                         widget=forms.SelectMultiple(attrs={'size': 8}))
 
 
 #

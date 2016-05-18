@@ -44,7 +44,8 @@ urlpatterns = [
     url(r'^devices/(?P<pk>\d+)/$', DeviceDetailView.as_view(), name='device_detail'),
     url(r'^devices/(?P<pk>\d+)/lldp-neighbors/$', LLDPNeighborsView.as_view(), name='device_lldp-neighbors'),
     url(r'^devices/(?P<pk>\d+)/console-ports/$', ConsolePortListView.as_view(), name='device_consoleports'),
-    url(r'^devices/(?P<pk>\d+)/console-server-ports/$', ConsoleServerPortListView.as_view(), name='device_consoleserverports'),
+    url(r'^devices/(?P<pk>\d+)/console-server-ports/$', ConsoleServerPortListView.as_view(),
+        name='device_consoleserverports'),
     url(r'^devices/(?P<pk>\d+)/power-ports/$', PowerPortListView.as_view(), name='device_powerports'),
     url(r'^devices/(?P<pk>\d+)/power-outlets/$', PowerOutletListView.as_view(), name='device_poweroutlets'),
     url(r'^devices/(?P<pk>\d+)/interfaces/$', InterfaceListView.as_view(), name='device_interfaces'),
@@ -57,7 +58,8 @@ urlpatterns = [
 
     # Interfaces
     url(r'^interfaces/(?P<pk>\d+)/$', InterfaceDetailView.as_view(), name='interface_detail'),
-    url(r'^interfaces/(?P<pk>\d+)/graphs/$', GraphListView.as_view(), {'type': GRAPH_TYPE_INTERFACE}, name='interface_graphs'),
+    url(r'^interfaces/(?P<pk>\d+)/graphs/$', GraphListView.as_view(), {'type': GRAPH_TYPE_INTERFACE},
+        name='interface_graphs'),
     url(r'^interface-connections/(?P<pk>\d+)/$', InterfaceConnectionView.as_view(), name='interfaceconnection'),
 
     # Miscellaneous

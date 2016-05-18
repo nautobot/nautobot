@@ -1,7 +1,7 @@
 import django_filters
 
 from dcim.models import Site
-from circuits.models import Provider, Circuit, CircuitType
+from .models import Provider, Circuit, CircuitType
 
 
 class CircuitFilter(django_filters.FilterSet):

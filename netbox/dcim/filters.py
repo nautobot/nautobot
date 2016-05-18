@@ -2,8 +2,10 @@ import django_filters
 
 from django.db.models import Q
 
-from .models import Site, RackGroup, Rack, Manufacturer, DeviceType, DeviceRole, Device, ConsolePort, \
-    ConsoleServerPort, Platform, PowerPort, PowerOutlet, Interface, InterfaceConnection
+from .models import (
+    ConsolePort, ConsoleServerPort, Device, DeviceRole, DeviceType, Interface, InterfaceConnection, Manufacturer,
+    Platform, PowerOutlet, PowerPort, Rack, RackGroup, Site,
+)
 
 
 class RackGroupFilter(django_filters.FilterSet):

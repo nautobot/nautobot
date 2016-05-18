@@ -8,14 +8,13 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
-from dcim.models import Site, Rack, RackGroup, Manufacturer, DeviceType, DeviceRole, Platform, Device, ConsolePort, \
-    ConsoleServerPort, PowerPort, PowerOutlet, Interface, InterfaceConnection, IFACE_FF_VIRTUAL
-from dcim.filters import RackGroupFilter, RackFilter, DeviceTypeFilter, DeviceFilter, InterfaceFilter
+from dcim.models import (
+    ConsolePort, ConsoleServerPort, Device, DeviceRole, DeviceType, IFACE_FF_VIRTUAL, Interface, InterfaceConnection,
+    Manufacturer, Platform, PowerOutlet, PowerPort, Rack, RackGroup, Site,
+)
+from dcim import filters
 from .exceptions import MissingFilterException
-from .serializers import SiteSerializer, RackGroupSerializer, RackSerializer, RackDetailSerializer, \
-    ManufacturerSerializer, DeviceTypeSerializer, DeviceRoleSerializer, PlatformSerializer, DeviceSerializer, \
-    DeviceNestedSerializer, ConsolePortSerializer, ConsoleServerPortSerializer, PowerPortSerializer, \
-    PowerOutletSerializer, InterfaceSerializer, InterfaceDetailSerializer, InterfaceConnectionSerializer
+from . import serializers
 from extras.api.renderers import BINDZoneRenderer, FlatJSONRenderer
 from utilities.api import ServiceUnavailable
 
@@ -29,7 +28,7 @@ class SiteListView(generics.ListAPIView):
     List all sites
     """
     queryset = Site.objects.all()
-    serializer_class = SiteSerializer
+    serializer_class = serializers.SiteSerializer
 
 
 class SiteDetailView(generics.RetrieveAPIView):
@@ -37,7 +36,7 @@ class SiteDetailView(generics.RetrieveAPIView):
     Retrieve a single site
     """
     queryset = Site.objects.all()
-    serializer_class = SiteSerializer
+    serializer_class = serializers.SiteSerializer
 
 
 #
@@ -49,8 +48,8 @@ class RackGroupListView(generics.ListAPIView):
     List all rack groups
     """
     queryset = RackGroup.objects.all()
-    serializer_class = RackGroupSerializer
-    filter_class = RackGroupFilter
+    serializer_class = serializers.RackGroupSerializer
+    filter_class = filters.RackGroupFilter
 
 
 class RackGroupDetailView(generics.RetrieveAPIView):
@@ -58,7 +57,7 @@ class RackGroupDetailView(generics.RetrieveAPIView):
     Retrieve a single rack group
     """
     queryset = RackGroup.objects.all()
-    serializer_class = RackGroupSerializer
+    serializer_class = serializers.RackGroupSerializer
 
 
 #
@@ -70,8 +69,8 @@ class RackListView(generics.ListAPIView):
     List racks (filterable)
     """
     queryset = Rack.objects.select_related('site')
-    serializer_class = RackSerializer
-    filter_class = RackFilter
+    serializer_class = serializers.RackSerializer
+    filter_class = filters.RackFilter
 
 
 class RackDetailView(generics.RetrieveAPIView):
@@ -79,7 +78,7 @@ class RackDetailView(generics.RetrieveAPIView):
     Retrieve a single rack
     """
     queryset = Rack.objects.select_related('site')
-    serializer_class = RackDetailSerializer
+    serializer_class = serializers.RackDetailSerializer
 
 
 #
@@ -100,7 +99,7 @@ class RackUnitListView(APIView):
         # Serialize Devices within the rack elevation
         for u in elevation:
             if u['device']:
-                u['device'] = DeviceNestedSerializer(instance=u['device']).data
+                u['device'] = serializers.DeviceNestedSerializer(instance=u['device']).data
 
         return Response(elevation)
 
@@ -114,7 +113,7 @@ class ManufacturerListView(generics.ListAPIView):
     List all hardware manufacturers
     """
     queryset = Manufacturer.objects.all()
-    serializer_class = ManufacturerSerializer
+    serializer_class = serializers.ManufacturerSerializer
 
 
 class ManufacturerDetailView(generics.RetrieveAPIView):
@@ -122,7 +121,7 @@ class ManufacturerDetailView(generics.RetrieveAPIView):
     Retrieve a single hardware manufacturers
     """
     queryset = Manufacturer.objects.all()
-    serializer_class = ManufacturerSerializer
+    serializer_class = serializers.ManufacturerSerializer
 
 
 #
@@ -134,8 +133,8 @@ class DeviceTypeListView(generics.ListAPIView):
     List device types (filterable)
     """
     queryset = DeviceType.objects.select_related('manufacturer')
-    serializer_class = DeviceTypeSerializer
-    filter_class = DeviceTypeFilter
+    serializer_class = serializers.DeviceTypeSerializer
+    filter_class = filters.DeviceTypeFilter
 
 
 class DeviceTypeDetailView(generics.RetrieveAPIView):
@@ -143,7 +142,7 @@ class DeviceTypeDetailView(generics.RetrieveAPIView):
     Retrieve a single device type
     """
     queryset = DeviceType.objects.select_related('manufacturer')
-    serializer_class = DeviceTypeSerializer
+    serializer_class = serializers.DeviceTypeSerializer
 
 
 #
@@ -155,7 +154,7 @@ class DeviceRoleListView(generics.ListAPIView):
     List all device roles
     """
     queryset = DeviceRole.objects.all()
-    serializer_class = DeviceRoleSerializer
+    serializer_class = serializers.DeviceRoleSerializer
 
 
 class DeviceRoleDetailView(generics.RetrieveAPIView):
@@ -163,7 +162,7 @@ class DeviceRoleDetailView(generics.RetrieveAPIView):
     Retrieve a single device role
     """
     queryset = DeviceRole.objects.all()
-    serializer_class = DeviceRoleSerializer
+    serializer_class = serializers.DeviceRoleSerializer
 
 
 #
@@ -175,7 +174,7 @@ class PlatformListView(generics.ListAPIView):
     List all platforms
     """
     queryset = Platform.objects.all()
-    serializer_class = PlatformSerializer
+    serializer_class = serializers.PlatformSerializer
 
 
 class PlatformDetailView(generics.RetrieveAPIView):
@@ -183,7 +182,7 @@ class PlatformDetailView(generics.RetrieveAPIView):
     Retrieve a single platform
     """
     queryset = Platform.objects.all()
-    serializer_class = PlatformSerializer
+    serializer_class = serializers.PlatformSerializer
 
 
 #
@@ -196,8 +195,8 @@ class DeviceListView(generics.ListAPIView):
     """
     queryset = Device.objects.select_related('device_type__manufacturer', 'device_role', 'platform', 'rack__site')\
         .prefetch_related('primary_ip__nat_outside')
-    serializer_class = DeviceSerializer
-    filter_class = DeviceFilter
+    serializer_class = serializers.DeviceSerializer
+    filter_class = filters.DeviceFilter
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [BINDZoneRenderer, FlatJSONRenderer]
 
 
@@ -206,7 +205,7 @@ class DeviceDetailView(generics.RetrieveAPIView):
     Retrieve a single device
     """
     queryset = Device.objects.all()
-    serializer_class = DeviceSerializer
+    serializer_class = serializers.DeviceSerializer
 
 
 #
@@ -217,7 +216,7 @@ class ConsolePortListView(generics.ListAPIView):
     """
     List console ports (by device)
     """
-    serializer_class = ConsolePortSerializer
+    serializer_class = serializers.ConsolePortSerializer
 
     def get_queryset(self):
 
@@ -227,7 +226,7 @@ class ConsolePortListView(generics.ListAPIView):
 
 class ConsolePortView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
-    serializer_class = ConsolePortSerializer
+    serializer_class = serializers.ConsolePortSerializer
     queryset = ConsolePort.objects.all()
 
 
@@ -239,7 +238,7 @@ class ConsoleServerPortListView(generics.ListAPIView):
     """
     List console server ports (by device)
     """
-    serializer_class = ConsoleServerPortSerializer
+    serializer_class = serializers.ConsoleServerPortSerializer
 
     def get_queryset(self):
 
@@ -255,7 +254,7 @@ class PowerPortListView(generics.ListAPIView):
     """
     List power ports (by device)
     """
-    serializer_class = PowerPortSerializer
+    serializer_class = serializers.PowerPortSerializer
 
     def get_queryset(self):
 
@@ -265,7 +264,7 @@ class PowerPortListView(generics.ListAPIView):
 
 class PowerPortView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
-    serializer_class = PowerPortSerializer
+    serializer_class = serializers.PowerPortSerializer
     queryset = PowerPort.objects.all()
 
 
@@ -277,7 +276,7 @@ class PowerOutletListView(generics.ListAPIView):
     """
     List power outlets (by device)
     """
-    serializer_class = PowerOutletSerializer
+    serializer_class = serializers.PowerOutletSerializer
 
     def get_queryset(self):
 
@@ -293,8 +292,8 @@ class InterfaceListView(generics.ListAPIView):
     """
     List interfaces (by device)
     """
-    serializer_class = InterfaceSerializer
-    filter_class = InterfaceFilter
+    serializer_class = serializers.InterfaceSerializer
+    filter_class = filters.InterfaceFilter
 
     def get_queryset(self):
 
@@ -318,12 +317,12 @@ class InterfaceDetailView(generics.RetrieveAPIView):
     Retrieve a single interface
     """
     queryset = Interface.objects.select_related('device')
-    serializer_class = InterfaceDetailSerializer
+    serializer_class = serializers.InterfaceDetailSerializer
 
 
 class InterfaceConnectionView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
-    serializer_class = InterfaceConnectionSerializer
+    serializer_class = serializers.InterfaceConnectionSerializer
     queryset = InterfaceConnection.objects.all()
 
 
@@ -341,7 +340,6 @@ class LLDPNeighborsView(APIView):
         device = get_object_or_404(Device, pk=pk)
         if not device.primary_ip:
             raise ServiceUnavailable(detail="No IP configured for this device.")
-        hostname = str(device.primary_ip.address.ip)
 
         RPC = device.get_rpc_client()
         if not RPC:
@@ -390,7 +388,7 @@ class RelatedConnectionsView(APIView):
 
         # Initialize response skeleton
         response = dict()
-        response['device'] = DeviceSerializer(device).data
+        response['device'] = serializers.DeviceSerializer(device).data
         response['console-ports'] = []
         response['power-ports'] = []
         response['interfaces'] = []
