@@ -5,7 +5,9 @@ from .models import Circuit, CircuitType, Provider
 
 
 CIRCUITTYPE_EDIT_LINK = """
-{% if perms.circuit.change_circuittype %}<a href="{% url 'circuits:circuittype_edit' slug=record.slug %}">Edit</a>{% endif %}
+{% if perms.circuit.change_circuittype %}
+    <a href="{% url 'circuits:circuittype_edit' slug=record.slug %}">Edit</a>
+{% endif %}
 """
 
 

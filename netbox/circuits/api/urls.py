@@ -11,7 +11,8 @@ urlpatterns = [
     # Providers
     url(r'^providers/$', ProviderListView.as_view(), name='provider_list'),
     url(r'^providers/(?P<pk>\d+)/$', ProviderDetailView.as_view(), name='provider_detail'),
-    url(r'^providers/(?P<pk>\d+)/graphs/$', GraphListView.as_view(), {'type': GRAPH_TYPE_PROVIDER}, name='provider_graphs'),
+    url(r'^providers/(?P<pk>\d+)/graphs/$', GraphListView.as_view(), {'type': GRAPH_TYPE_PROVIDER},
+        name='provider_graphs'),
 
     # Circuit types
     url(r'^circuit-types/$', CircuitTypeListView.as_view(), name='circuittype_list'),

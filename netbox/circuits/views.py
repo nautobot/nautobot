@@ -3,13 +3,12 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, render
 
-from utilities.views import BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectEditView,\
-    ObjectDeleteView
+from utilities.views import (
+    BulkImportView, BulkEditView, BulkDeleteView, ObjectListView, ObjectEditView, ObjectDeleteView,
+)
 
+from . import forms
 from .filters import CircuitFilter
-from .forms import CircuitTypeForm, CircuitTypeBulkDeleteForm, CircuitForm, CircuitImportForm, CircuitBulkEditForm,\
-    CircuitBulkDeleteForm, CircuitFilterForm, ProviderForm, ProviderImportForm, ProviderBulkEditForm,\
-    ProviderBulkDeleteForm
 from .models import Circuit, CircuitType, Provider
 from .tables import CircuitTable, CircuitTypeTable, ProviderTable
 
@@ -39,7 +38,7 @@ def provider(request, slug):
 class ProviderEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'circuits.change_provider'
     model = Provider
-    form_class = ProviderForm
+    form_class = forms.ProviderForm
     template_name = 'circuits/provider_edit.html'
     cancel_url = 'circuits:provider_list'
 
@@ -52,7 +51,7 @@ class ProviderDeleteView(PermissionRequiredMixin, ObjectDeleteView):
 
 class ProviderBulkImportView(PermissionRequiredMixin, BulkImportView):
     permission_required = 'circuits.add_provider'
-    form = ProviderImportForm
+    form = forms.ProviderImportForm
     table = ProviderTable
     template_name = 'circuits/provider_import.html'
     obj_list_url = 'circuits:provider_list'
@@ -61,7 +60,7 @@ class ProviderBulkImportView(PermissionRequiredMixin, BulkImportView):
 class ProviderBulkEditView(PermissionRequiredMixin, BulkEditView):
     permission_required = 'circuits.change_provider'
     cls = Provider
-    form = ProviderBulkEditForm
+    form = forms.ProviderBulkEditForm
     template_name = 'circuits/provider_bulk_edit.html'
     default_redirect_url = 'circuits:provider_list'
 
@@ -79,7 +78,7 @@ class ProviderBulkEditView(PermissionRequiredMixin, BulkEditView):
 class ProviderBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'circuits.delete_provider'
     cls = Provider
-    form = ProviderBulkDeleteForm
+    form = forms.ProviderBulkDeleteForm
     default_redirect_url = 'circuits:provider_list'
 
 
@@ -97,7 +96,7 @@ class CircuitTypeListView(ObjectListView):
 class CircuitTypeEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'circuits.change_circuittype'
     model = CircuitType
-    form_class = CircuitTypeForm
+    form_class = forms.CircuitTypeForm
     success_url = 'circuits:circuittype_list'
     cancel_url = 'circuits:circuittype_list'
 
@@ -105,7 +104,7 @@ class CircuitTypeEditView(PermissionRequiredMixin, ObjectEditView):
 class CircuitTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'circuits.delete_circuittype'
     cls = CircuitType
-    form = CircuitTypeBulkDeleteForm
+    form = forms.CircuitTypeBulkDeleteForm
     default_redirect_url = 'circuits:circuittype_list'
 
 
@@ -116,7 +115,7 @@ class CircuitTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 class CircuitListView(ObjectListView):
     queryset = Circuit.objects.select_related('provider', 'type', 'site')
     filter = CircuitFilter
-    filter_form = CircuitFilterForm
+    filter_form = forms.CircuitFilterForm
     table = CircuitTable
     edit_permissions = ['circuits.change_circuit', 'circuits.delete_circuit']
     template_name = 'circuits/circuit_list.html'
@@ -134,7 +133,7 @@ def circuit(request, pk):
 class CircuitEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'circuits.change_circuit'
     model = Circuit
-    form_class = CircuitForm
+    form_class = forms.CircuitForm
     fields_initial = ['site']
     template_name = 'circuits/circuit_edit.html'
     cancel_url = 'circuits:circuit_list'
@@ -148,7 +147,7 @@ class CircuitDeleteView(PermissionRequiredMixin, ObjectDeleteView):
 
 class CircuitBulkImportView(PermissionRequiredMixin, BulkImportView):
     permission_required = 'circuits.add_circuit'
-    form = CircuitImportForm
+    form = forms.CircuitImportForm
     table = CircuitTable
     template_name = 'circuits/circuit_import.html'
     obj_list_url = 'circuits:circuit_list'
@@ -157,7 +156,7 @@ class CircuitBulkImportView(PermissionRequiredMixin, BulkImportView):
 class CircuitBulkEditView(PermissionRequiredMixin, BulkEditView):
     permission_required = 'circuits.change_circuit'
     cls = Circuit
-    form = CircuitBulkEditForm
+    form = forms.CircuitBulkEditForm
     template_name = 'circuits/circuit_bulk_edit.html'
     default_redirect_url = 'circuits:circuit_list'
 
@@ -175,5 +174,5 @@ class CircuitBulkEditView(PermissionRequiredMixin, BulkEditView):
 class CircuitBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'circuits.delete_circuit'
     cls = Circuit
-    form = CircuitBulkDeleteForm
+    form = forms.CircuitBulkDeleteForm
     default_redirect_url = 'circuits:circuit_list'

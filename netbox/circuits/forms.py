@@ -2,10 +2,11 @@ from django import forms
 from django.db.models import Count
 
 from dcim.models import Site, Device, Interface, Rack, IFACE_FF_VIRTUAL
-from utilities.forms import BootstrapMixin, SmallTextarea, ConfirmationForm, APISelect, Livesearch
+from utilities.forms import (
+    APISelect, BootstrapMixin, BulkImportForm, CommentField, ConfirmationForm, CSVDataField, Livesearch, SmallTextarea,
+)
 
-from .models import PORT_SPEED_CHOICES, Circuit, Provider, CircuitType
-from utilities.forms import CommentField, CSVDataField, BulkImportForm
+from .models import PORT_SPEED_CHOICES, Circuit, CircuitType, Provider
 
 
 #
