@@ -58,7 +58,7 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label label-{{ vlan.status.get_bootstrap_class_display|lower }}">{{ vlan.status }}</span>
+                        <span class="label label-{{ vlan.get_status_class }}">{{ vlan.get_status_display }}</span>
                     </td>
                 </tr>
                 <tr>
