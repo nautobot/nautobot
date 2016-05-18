@@ -226,6 +226,13 @@ def prefix_site_choices():
     return [(s.slug, '{} ({})'.format(s.name, s.prefix_count)) for s in site_choices]
 
 
+def prefix_status_choices():
+    status_counts = {}
+    for status in Prefix.objects.values('status').annotate(count=Count('status')).order_by('status'):
+        status_counts[status['status']] = status['count']
+    return [(s[0], '{} ({})'.format(s[1], status_counts.get(s[0], 0))) for s in PREFIX_STATUS_CHOICES]
+
+
 def prefix_role_choices():
     role_choices = Role.objects.annotate(prefix_count=Count('prefixes'))
     return [(r.slug, '{} ({})'.format(r.name, r.prefix_count)) for r in role_choices]
@@ -234,7 +241,7 @@ def prefix_role_choices():
 class PrefixFilterForm(forms.Form, BootstrapMixin):
     parent = forms.CharField(required=False, label='Search Within')
     vrf = forms.ChoiceField(required=False, choices=prefix_vrf_choices, label='VRF')
-    status = forms.MultipleChoiceField(required=False, choices=PREFIX_STATUS_CHOICES)
+    status = forms.MultipleChoiceField(required=False, choices=prefix_status_choices)
     site = forms.MultipleChoiceField(required=False, choices=prefix_site_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
     role = forms.MultipleChoiceField(required=False, choices=prefix_role_choices,
@@ -437,6 +444,13 @@ def vlan_site_choices():
     return [(s.slug, '{} ({})'.format(s.name, s.vlan_count)) for s in site_choices]
 
 
+def vlan_status_choices():
+    status_counts = {}
+    for status in VLAN.objects.values('status').annotate(count=Count('status')).order_by('status'):
+        status_counts[status['status']] = status['count']
+    return [(s[0], '{} ({})'.format(s[1], status_counts.get(s[0], 0))) for s in VLAN_STATUS_CHOICES]
+
+
 def vlan_role_choices():
     role_choices = Role.objects.annotate(vlan_count=Count('vlans'))
     return [(r.slug, '{} ({})'.format(r.name, r.vlan_count)) for r in role_choices]
@@ -445,6 +459,6 @@ def vlan_role_choices():
 class VLANFilterForm(forms.Form, BootstrapMixin):
     site = forms.MultipleChoiceField(required=False, choices=vlan_site_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
-    status = forms.MultipleChoiceField(required=False, choices=VLAN_STATUS_CHOICES)
+    status = forms.MultipleChoiceField(required=False, choices=vlan_status_choices)
     role = forms.MultipleChoiceField(required=False, choices=vlan_role_choices,
                                      widget=forms.SelectMultiple(attrs={'size': 8}))
