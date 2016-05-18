@@ -1,8 +1,10 @@
+from django_tables2 import RequestConfig
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.contenttypes.models import ContentType
-from django.core.urlresolvers import reverse, NoReverseMatch
+from django.core.urlresolvers import reverse
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError
 from django.http import HttpResponseRedirect
@@ -12,12 +14,11 @@ from django.utils.decorators import method_decorator
 from django.utils.http import is_safe_url
 from django.views.generic import View
 
-from django_tables2 import RequestConfig
+from extras.models import ExportTemplate
 
 from .error_handlers import handle_protectederror
 from .forms import ConfirmationForm
 from .paginator import EnhancedPaginator
-from extras.models import ExportTemplate
 
 
 class ObjectListView(View):
@@ -45,7 +46,8 @@ class ObjectListView(View):
                                           filename='netbox_{}'.format(self.queryset.model._meta.verbose_name_plural))
                 return response
             except TemplateSyntaxError:
-                messages.error(request, "There was an error rendering the selected export template ({}).".format(et.name))
+                messages.error(request, "There was an error rendering the selected export template ({})."
+                               .format(et.name))
 
         # Attempt to redirect automatically if the query returns a single result
         if self.redirect_on_single_result and self.queryset.count() == 1:

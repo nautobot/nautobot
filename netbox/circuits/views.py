@@ -7,10 +7,8 @@ from utilities.views import (
     BulkDeleteView, BulkEditView, BulkImportView, ObjectDeleteView, ObjectEditView, ObjectListView,
 )
 
-from . import forms
-from .filters import CircuitFilter
+from . import filters, forms, tables
 from .models import Circuit, CircuitType, Provider
-from .tables import CircuitTable, CircuitTypeTable, ProviderTable
 
 
 #
@@ -19,7 +17,7 @@ from .tables import CircuitTable, CircuitTypeTable, ProviderTable
 
 class ProviderListView(ObjectListView):
     queryset = Provider.objects.annotate(count_circuits=Count('circuits'))
-    table = ProviderTable
+    table = tables.ProviderTable
     edit_permissions = ['circuits.change_provider', 'circuits.delete_provider']
     template_name = 'circuits/provider_list.html'
 
@@ -52,7 +50,7 @@ class ProviderDeleteView(PermissionRequiredMixin, ObjectDeleteView):
 class ProviderBulkImportView(PermissionRequiredMixin, BulkImportView):
     permission_required = 'circuits.add_provider'
     form = forms.ProviderImportForm
-    table = ProviderTable
+    table = tables.ProviderTable
     template_name = 'circuits/provider_import.html'
     obj_list_url = 'circuits:provider_list'
 
@@ -88,7 +86,7 @@ class ProviderBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 
 class CircuitTypeListView(ObjectListView):
     queryset = CircuitType.objects.annotate(circuit_count=Count('circuits'))
-    table = CircuitTypeTable
+    table = tables.CircuitTypeTable
     edit_permissions = ['circuits.change_circuittype', 'circuits.delete_circuittype']
     template_name = 'circuits/circuittype_list.html'
 
@@ -114,9 +112,9 @@ class CircuitTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 
 class CircuitListView(ObjectListView):
     queryset = Circuit.objects.select_related('provider', 'type', 'site')
-    filter = CircuitFilter
+    filter = filters.CircuitFilter
     filter_form = forms.CircuitFilterForm
-    table = CircuitTable
+    table = tables.CircuitTable
     edit_permissions = ['circuits.change_circuit', 'circuits.delete_circuit']
     template_name = 'circuits/circuit_list.html'
 
@@ -148,7 +146,7 @@ class CircuitDeleteView(PermissionRequiredMixin, ObjectDeleteView):
 class CircuitBulkImportView(PermissionRequiredMixin, BulkImportView):
     permission_required = 'circuits.add_circuit'
     form = forms.CircuitImportForm
-    table = CircuitTable
+    table = tables.CircuitTable
     template_name = 'circuits/circuit_import.html'
     obj_list_url = 'circuits:circuit_list'
 

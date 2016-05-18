@@ -6,6 +6,7 @@ from django.db.models import Count
 
 from dcim.models import Device
 from utilities.forms import BootstrapMixin, BulkImportForm, ConfirmationForm, CSVDataField
+
 from .models import Secret, SecretRole, UserKey
 
 
@@ -133,4 +134,3 @@ class UserKeyForm(forms.ModelForm, BootstrapMixin):
 class ActivateUserKeyForm(forms.Form):
     _selected_action = forms.ModelMultipleChoiceField(queryset=UserKey.objects.all(), label='User Keys')
     secret_key = forms.CharField(label='Your private key', widget=forms.Textarea(attrs={'class': 'vLargeTextField'}))
-

@@ -8,14 +8,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 
 from dcim.models import Device
-from utilities.views import BulkEditView, BulkDeleteView, ObjectListView, ObjectEditView, ObjectDeleteView
+from utilities.views import BulkDeleteView, BulkEditView, ObjectDeleteView, ObjectEditView, ObjectListView
 
+from . import filters, forms, tables
 from .decorators import userkey_required
-from .filters import SecretFilter
-from .forms import SecretRoleForm, SecretRoleBulkDeleteForm, SecretForm, SecretImportForm, SecretBulkEditForm,\
-    SecretBulkDeleteForm, SecretFilterForm
 from .models import SecretRole, Secret, UserKey
-from .tables import SecretRoleTable, SecretTable
 
 
 #
@@ -24,7 +21,7 @@ from .tables import SecretRoleTable, SecretTable
 
 class SecretRoleListView(ObjectListView):
     queryset = SecretRole.objects.annotate(secret_count=Count('secrets'))
-    table = SecretRoleTable
+    table = tables.SecretRoleTable
     edit_permissions = ['secrets.change_secretrole', 'secrets.delete_secretrole']
     template_name = 'secrets/secretrole_list.html'
 
@@ -32,7 +29,7 @@ class SecretRoleListView(ObjectListView):
 class SecretRoleEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'secrets.change_secretrole'
     model = SecretRole
-    form_class = SecretRoleForm
+    form_class = forms.SecretRoleForm
     success_url = 'secrets:secretrole_list'
     cancel_url = 'secrets:secretrole_list'
 
@@ -40,7 +37,7 @@ class SecretRoleEditView(PermissionRequiredMixin, ObjectEditView):
 class SecretRoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'secrets.delete_secretrole'
     cls = SecretRole
-    form = SecretRoleBulkDeleteForm
+    form = forms.SecretRoleBulkDeleteForm
     default_redirect_url = 'secrets:secretrole_list'
 
 
@@ -51,9 +48,9 @@ class SecretRoleBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 @method_decorator(login_required, name='dispatch')
 class SecretListView(ObjectListView):
     queryset = Secret.objects.select_related('role').prefetch_related('device')
-    filter = SecretFilter
-    filter_form = SecretFilterForm
-    table = SecretTable
+    filter = filters.SecretFilter
+    filter_form = forms.SecretFilterForm
+    table = tables.SecretTable
     edit_permissions = ['secrets.change_secret', 'secrets.delete_secret']
     template_name = 'secrets/secret_list.html'
 
@@ -79,7 +76,7 @@ def secret_add(request, pk):
     uk = UserKey.objects.get(user=request.user)
 
     if request.method == 'POST':
-        form = SecretForm(request.POST, instance=secret)
+        form = forms.SecretForm(request.POST, instance=secret)
         if form.is_valid():
 
             # Retrieve the master key from the current user's UserKey
@@ -101,7 +98,7 @@ def secret_add(request, pk):
                     return redirect('secrets:secret', pk=secret.pk)
 
     else:
-        form = SecretForm(instance=secret)
+        form = forms.SecretForm(instance=secret)
 
     return render(request, 'secrets/secret_edit.html', {
         'secret': secret,
@@ -118,7 +115,7 @@ def secret_edit(request, pk):
     uk = UserKey.objects.get(user=request.user)
 
     if request.method == 'POST':
-        form = SecretForm(request.POST, instance=secret)
+        form = forms.SecretForm(request.POST, instance=secret)
         if form.is_valid():
 
             # Re-encrypt the Secret if a plaintext has been specified.
@@ -143,7 +140,7 @@ def secret_edit(request, pk):
             return redirect('secrets:secret', pk=secret.pk)
 
     else:
-        form = SecretForm(instance=secret)
+        form = forms.SecretForm(instance=secret)
 
     return render(request, 'secrets/secret_edit.html', {
         'secret': secret,
@@ -165,7 +162,7 @@ def secret_import(request):
     uk = UserKey.objects.get(user=request.user)
 
     if request.method == 'POST':
-        form = SecretImportForm(request.POST)
+        form = forms.SecretImportForm(request.POST)
         if form.is_valid():
 
             new_secrets = []
@@ -183,7 +180,7 @@ def secret_import(request):
                             secret.save()
                             new_secrets.append(secret)
 
-                    table = SecretTable(new_secrets)
+                    table = tables.SecretTable(new_secrets)
                     messages.success(request, "Imported {} new secrets".format(len(new_secrets)))
 
                     return render(request, 'import_success.html', {
@@ -194,7 +191,7 @@ def secret_import(request):
                     form.add_error('csv', "Record {}: {}".format(len(new_secrets) + 1, e.__cause__))
 
     else:
-        form = SecretImportForm()
+        form = forms.SecretImportForm()
 
     return render(request, 'secrets/secret_import.html', {
         'form': form,
@@ -205,7 +202,7 @@ def secret_import(request):
 class SecretBulkEditView(PermissionRequiredMixin, BulkEditView):
     permission_required = 'secrets.change_secret'
     cls = Secret
-    form = SecretBulkEditForm
+    form = forms.SecretBulkEditForm
     template_name = 'secrets/secret_bulk_edit.html'
     default_redirect_url = 'secrets:secret_list'
 
@@ -223,5 +220,5 @@ class SecretBulkEditView(PermissionRequiredMixin, BulkEditView):
 class SecretBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
     permission_required = 'secrets.delete_secret'
     cls = Secret
-    form = SecretBulkDeleteForm
+    form = forms.SecretBulkDeleteForm
     default_redirect_url = 'secrets:secret_list'

@@ -5,7 +5,9 @@ from .models import SecretRole, Secret
 
 
 SECRETROLE_EDIT_LINK = """
-{% if perms.secrets.change_secretrole %}<a href="{% url 'secrets:secretrole_edit' slug=record.slug %}">Edit</a>{% endif %}
+{% if perms.secrets.change_secretrole %}
+    <a href="{% url 'secrets:secretrole_edit' slug=record.slug %}">Edit</a>
+{% endif %}
 """
 
 

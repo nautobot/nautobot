@@ -12,7 +12,8 @@ from rest_framework.views import APIView
 from extras.api.renderers import FormlessBrowsableAPIRenderer, FreeRADIUSClientsRenderer
 from secrets.filters import SecretFilter
 from secrets.models import Secret, SecretRole, UserKey
-from .serializers import SecretRoleSerializer, SecretSerializer
+
+from . import serializers
 
 
 ERR_USERKEY_MISSING = "No UserKey found for the current user."
@@ -25,7 +26,7 @@ class SecretRoleListView(generics.ListAPIView):
     List all secret roles
     """
     queryset = SecretRole.objects.all()
-    serializer_class = SecretRoleSerializer
+    serializer_class = serializers.SecretRoleSerializer
 
 
 class SecretRoleDetailView(generics.RetrieveAPIView):
@@ -33,7 +34,7 @@ class SecretRoleDetailView(generics.RetrieveAPIView):
     Retrieve a single secret role
     """
     queryset = SecretRole.objects.all()
-    serializer_class = SecretRoleSerializer
+    serializer_class = serializers.SecretRoleSerializer
 
 
 class SecretListView(generics.GenericAPIView):
@@ -42,7 +43,7 @@ class SecretListView(generics.GenericAPIView):
     """
     queryset = Secret.objects.select_related('device__primary_ip', 'role')\
         .prefetch_related('role__users', 'role__groups')
-    serializer_class = SecretSerializer
+    serializer_class = serializers.SecretSerializer
     filter_class = SecretFilter
     renderer_classes = [FormlessBrowsableAPIRenderer, JSONRenderer, FreeRADIUSClientsRenderer]
 
@@ -87,7 +88,7 @@ class SecretDetailView(generics.GenericAPIView):
     """
     queryset = Secret.objects.select_related('device__primary_ip', 'role')\
         .prefetch_related('role__users', 'role__groups')
-    serializer_class = SecretSerializer
+    serializer_class = serializers.SecretSerializer
     renderer_classes = [FormlessBrowsableAPIRenderer, JSONRenderer, FreeRADIUSClientsRenderer]
 
     def get(self, request, pk, private_key=None):

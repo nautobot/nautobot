@@ -11,6 +11,7 @@ from django.db import models
 from django.utils.encoding import force_bytes
 
 from dcim.models import Device
+
 from .hashers import SecretValidationHasher
 
 

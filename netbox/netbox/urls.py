@@ -7,16 +7,22 @@ from users.views import login, logout
 
 
 urlpatterns = [
+
+    # Default page
     url(r'^$', home, name='home'),
+
+    # Login/logout
+    url(r'^login/$', login, name='login'),
+    url(r'^logout/$', logout, name='logout'),
+
+    # Apps
     url(r'^circuits/', include('circuits.urls', namespace='circuits')),
     url(r'^dcim/', include('dcim.urls', namespace='dcim')),
     url(r'^ipam/', include('ipam.urls', namespace='ipam')),
     url(r'^secrets/', include('secrets.urls', namespace='secrets')),
     url(r'^profile/', include('users.urls', namespace='users')),
 
-    url(r'^login/$', login, name='login'),
-    url(r'^logout/$', logout, name='logout'),
-
+    # API
     url(r'^api/circuits/', include('circuits.api.urls', namespace='circuits-api')),
     url(r'^api/dcim/', include('dcim.api.urls', namespace='dcim-api')),
     url(r'^api/ipam/', include('ipam.api.urls', namespace='ipam-api')),
@@ -28,5 +34,7 @@ urlpatterns = [
     url(r'^404/$', page_not_found),
     url(r'^500/$', trigger_500),
 
+    # Admin
     url(r'^admin/', include(admin.site.urls)),
+
 ]

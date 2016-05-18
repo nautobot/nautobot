@@ -3,7 +3,6 @@ from django.db import models
 
 class NullableCharField(models.CharField):
     description = "Stores empty values as NULL rather than ''"
-    #__metaclass__ = models.SubfieldBase
 
     def to_python(self, value):
         if isinstance(value, models.CharField):
