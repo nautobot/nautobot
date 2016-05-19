@@ -807,7 +807,8 @@ CREATE TABLE dcim_module (
     name character varying(50) NOT NULL,
     part_id character varying(50) NOT NULL,
     serial character varying(50) NOT NULL,
-    device_id integer NOT NULL
+    device_id integer NOT NULL,
+    parent_id integer
 );
 
 
@@ -1320,6 +1321,43 @@ ALTER SEQUENCE extras_graph_id_seq OWNED BY extras_graph.id;
 
 
 --
+-- Name: extras_topologymap; Type: TABLE; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE TABLE extras_topologymap (
+    id integer NOT NULL,
+    name character varying(50) NOT NULL,
+    slug character varying(50) NOT NULL,
+    device_patterns text NOT NULL,
+    description character varying(100) NOT NULL,
+    site_id integer
+);
+
+
+ALTER TABLE public.extras_topologymap OWNER TO django;
+
+--
+-- Name: extras_topologymap_id_seq; Type: SEQUENCE; Schema: public; Owner: django
+--
+
+CREATE SEQUENCE extras_topologymap_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.extras_topologymap_id_seq OWNER TO django;
+
+--
+-- Name: extras_topologymap_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: django
+--
+
+ALTER SEQUENCE extras_topologymap_id_seq OWNED BY extras_topologymap.id;
+
+
+--
 -- Name: inet; Type: TABLE; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -1441,9 +1479,10 @@ CREATE TABLE ipam_prefix (
     description character varying(100) NOT NULL,
     site_id integer,
     vlan_id integer,
-    status_id integer NOT NULL,
+    status smallint NOT NULL,
     role_id integer,
-    CONSTRAINT ipam_prefix_family_check CHECK ((family >= 0))
+    CONSTRAINT ipam_prefix_family_check CHECK ((family >= 0)),
+    CONSTRAINT ipam_prefix_status_4735d2a1_check CHECK ((status >= 0))
 );
 
 
@@ -1541,44 +1580,6 @@ ALTER SEQUENCE ipam_role_id_seq OWNED BY ipam_role.id;
 
 
 --
--- Name: ipam_status; Type: TABLE; Schema: public; Owner: django; Tablespace: 
---
-
-CREATE TABLE ipam_status (
-    id integer NOT NULL,
-    name character varying(50) NOT NULL,
-    weight smallint NOT NULL,
-    bootstrap_class smallint NOT NULL,
-    slug character varying(50) NOT NULL,
-    CONSTRAINT ipam_status_bootstrap_class_check CHECK ((bootstrap_class >= 0)),
-    CONSTRAINT ipam_status_weight_check CHECK ((weight >= 0))
-);
-
-
-ALTER TABLE public.ipam_status OWNER TO django;
-
---
--- Name: ipam_status_id_seq; Type: SEQUENCE; Schema: public; Owner: django
---
-
-CREATE SEQUENCE ipam_status_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.ipam_status_id_seq OWNER TO django;
-
---
--- Name: ipam_status_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: django
---
-
-ALTER SEQUENCE ipam_status_id_seq OWNED BY ipam_status.id;
-
-
---
 -- Name: ipam_vlan; Type: TABLE; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -1587,8 +1588,9 @@ CREATE TABLE ipam_vlan (
     vid smallint NOT NULL,
     name character varying(30) NOT NULL,
     site_id integer NOT NULL,
-    status_id integer NOT NULL,
+    status smallint NOT NULL,
     role_id integer,
+    CONSTRAINT ipam_vlan_status_77289327_check CHECK ((status >= 0)),
     CONSTRAINT ipam_vlan_vid_check CHECK ((vid >= 0))
 );
 
@@ -1756,15 +1758,13 @@ ALTER SEQUENCE nullinet_id_seq OWNED BY nullinet.id;
 
 CREATE TABLE secrets_secret (
     id integer NOT NULL,
-    object_id integer NOT NULL,
     name character varying(100) NOT NULL,
     ciphertext bytea NOT NULL,
     hash character varying(128) NOT NULL,
     created timestamp with time zone NOT NULL,
     last_modified timestamp with time zone NOT NULL,
-    content_type_id integer NOT NULL,
     role_id integer NOT NULL,
-    CONSTRAINT secrets_secret_object_id_check CHECK ((object_id >= 0))
+    device_id integer NOT NULL
 );
 
 
@@ -1805,6 +1805,40 @@ CREATE TABLE secrets_secretrole (
 ALTER TABLE public.secrets_secretrole OWNER TO django;
 
 --
+-- Name: secrets_secretrole_groups; Type: TABLE; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE TABLE secrets_secretrole_groups (
+    id integer NOT NULL,
+    secretrole_id integer NOT NULL,
+    group_id integer NOT NULL
+);
+
+
+ALTER TABLE public.secrets_secretrole_groups OWNER TO django;
+
+--
+-- Name: secrets_secretrole_groups_id_seq; Type: SEQUENCE; Schema: public; Owner: django
+--
+
+CREATE SEQUENCE secrets_secretrole_groups_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.secrets_secretrole_groups_id_seq OWNER TO django;
+
+--
+-- Name: secrets_secretrole_groups_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: django
+--
+
+ALTER SEQUENCE secrets_secretrole_groups_id_seq OWNED BY secrets_secretrole_groups.id;
+
+
+--
 -- Name: secrets_secretrole_id_seq; Type: SEQUENCE; Schema: public; Owner: django
 --
 
@@ -1823,6 +1857,40 @@ ALTER TABLE public.secrets_secretrole_id_seq OWNER TO django;
 --
 
 ALTER SEQUENCE secrets_secretrole_id_seq OWNED BY secrets_secretrole.id;
+
+
+--
+-- Name: secrets_secretrole_users; Type: TABLE; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE TABLE secrets_secretrole_users (
+    id integer NOT NULL,
+    secretrole_id integer NOT NULL,
+    user_id integer NOT NULL
+);
+
+
+ALTER TABLE public.secrets_secretrole_users OWNER TO django;
+
+--
+-- Name: secrets_secretrole_users_id_seq; Type: SEQUENCE; Schema: public; Owner: django
+--
+
+CREATE SEQUENCE secrets_secretrole_users_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.secrets_secretrole_users_id_seq OWNER TO django;
+
+--
+-- Name: secrets_secretrole_users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: django
+--
+
+ALTER SEQUENCE secrets_secretrole_users_id_seq OWNED BY secrets_secretrole_users.id;
 
 
 --
@@ -2177,6 +2245,13 @@ ALTER TABLE ONLY extras_graph ALTER COLUMN id SET DEFAULT nextval('extras_graph_
 -- Name: id; Type: DEFAULT; Schema: public; Owner: django
 --
 
+ALTER TABLE ONLY extras_topologymap ALTER COLUMN id SET DEFAULT nextval('extras_topologymap_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: django
+--
+
 ALTER TABLE ONLY inet ALTER COLUMN id SET DEFAULT nextval('inet_id_seq'::regclass);
 
 
@@ -2213,13 +2288,6 @@ ALTER TABLE ONLY ipam_rir ALTER COLUMN id SET DEFAULT nextval('ipam_rir_id_seq':
 --
 
 ALTER TABLE ONLY ipam_role ALTER COLUMN id SET DEFAULT nextval('ipam_role_id_seq'::regclass);
-
-
---
--- Name: id; Type: DEFAULT; Schema: public; Owner: django
---
-
-ALTER TABLE ONLY ipam_status ALTER COLUMN id SET DEFAULT nextval('ipam_status_id_seq'::regclass);
 
 
 --
@@ -2269,6 +2337,20 @@ ALTER TABLE ONLY secrets_secret ALTER COLUMN id SET DEFAULT nextval('secrets_sec
 --
 
 ALTER TABLE ONLY secrets_secretrole ALTER COLUMN id SET DEFAULT nextval('secrets_secretrole_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY secrets_secretrole_groups ALTER COLUMN id SET DEFAULT nextval('secrets_secretrole_groups_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY secrets_secretrole_users ALTER COLUMN id SET DEFAULT nextval('secrets_secretrole_users_id_seq'::regclass);
 
 
 --
@@ -2701,11 +2783,11 @@ ALTER TABLE ONLY dcim_manufacturer
 
 
 --
--- Name: dcim_module_device_id_44410c90b98b7fd5_uniq; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+-- Name: dcim_module_device_id_4d8292af_uniq; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
 --
 
 ALTER TABLE ONLY dcim_module
-    ADD CONSTRAINT dcim_module_device_id_44410c90b98b7fd5_uniq UNIQUE (device_id, name);
+    ADD CONSTRAINT dcim_module_device_id_4d8292af_uniq UNIQUE (device_id, parent_id, name);
 
 
 --
@@ -2949,6 +3031,30 @@ ALTER TABLE ONLY extras_graph
 
 
 --
+-- Name: extras_topologymap_name_key; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY extras_topologymap
+    ADD CONSTRAINT extras_topologymap_name_key UNIQUE (name);
+
+
+--
+-- Name: extras_topologymap_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY extras_topologymap
+    ADD CONSTRAINT extras_topologymap_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: extras_topologymap_slug_key; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY extras_topologymap
+    ADD CONSTRAINT extras_topologymap_slug_key UNIQUE (slug);
+
+
+--
 -- Name: inet_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -3037,30 +3143,6 @@ ALTER TABLE ONLY ipam_role
 
 
 --
--- Name: ipam_status_name_70695c5e5c2b0c2b_uniq; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
---
-
-ALTER TABLE ONLY ipam_status
-    ADD CONSTRAINT ipam_status_name_70695c5e5c2b0c2b_uniq UNIQUE (name);
-
-
---
--- Name: ipam_status_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
---
-
-ALTER TABLE ONLY ipam_status
-    ADD CONSTRAINT ipam_status_pkey PRIMARY KEY (id);
-
-
---
--- Name: ipam_status_slug_a16a9e1e0e5e16d_uniq; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
---
-
-ALTER TABLE ONLY ipam_status
-    ADD CONSTRAINT ipam_status_slug_a16a9e1e0e5e16d_uniq UNIQUE (slug);
-
-
---
 -- Name: ipam_vlan_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -3117,6 +3199,22 @@ ALTER TABLE ONLY secrets_secret
 
 
 --
+-- Name: secrets_secretrole_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY secrets_secretrole_groups
+    ADD CONSTRAINT secrets_secretrole_groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: secrets_secretrole_groups_secretrole_id_1c7f7ee5_uniq; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY secrets_secretrole_groups
+    ADD CONSTRAINT secrets_secretrole_groups_secretrole_id_1c7f7ee5_uniq UNIQUE (secretrole_id, group_id);
+
+
+--
 -- Name: secrets_secretrole_name_key; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -3138,6 +3236,22 @@ ALTER TABLE ONLY secrets_secretrole
 
 ALTER TABLE ONLY secrets_secretrole
     ADD CONSTRAINT secrets_secretrole_slug_key UNIQUE (slug);
+
+
+--
+-- Name: secrets_secretrole_users_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY secrets_secretrole_users
+    ADD CONSTRAINT secrets_secretrole_users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: secrets_secretrole_users_secretrole_id_41832d38_uniq; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY secrets_secretrole_users
+    ADD CONSTRAINT secrets_secretrole_users_secretrole_id_41832d38_uniq UNIQUE (secretrole_id, user_id);
 
 
 --
@@ -3399,6 +3513,13 @@ CREATE INDEX dcim_manufacturer_name_d0e87afc92d84ee_like ON dcim_manufacturer US
 
 
 --
+-- Name: dcim_module_6be37982; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX dcim_module_6be37982 ON dcim_module USING btree (parent_id);
+
+
+--
 -- Name: dcim_module_9379346c; Type: INDEX; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -3525,6 +3646,27 @@ CREATE INDEX extras_exporttemplate_417f1b1c ON extras_exporttemplate USING btree
 
 
 --
+-- Name: extras_topologymap_9365d6e7; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX extras_topologymap_9365d6e7 ON extras_topologymap USING btree (site_id);
+
+
+--
+-- Name: extras_topologymap_name_f377ebf1_like; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX extras_topologymap_name_f377ebf1_like ON extras_topologymap USING btree (name varchar_pattern_ops);
+
+
+--
+-- Name: extras_topologymap_slug_9ba3d31e_like; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX extras_topologymap_slug_9ba3d31e_like ON extras_topologymap USING btree (slug varchar_pattern_ops);
+
+
+--
 -- Name: ipam_aggregate_rir_id_6b95f7cbf861b265_uniq; Type: INDEX; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -3581,13 +3723,6 @@ CREATE INDEX ipam_prefix_cd1dc8b7 ON ipam_prefix USING btree (vlan_id);
 
 
 --
--- Name: ipam_prefix_dc91ed4b; Type: INDEX; Schema: public; Owner: django; Tablespace: 
---
-
-CREATE INDEX ipam_prefix_dc91ed4b ON ipam_prefix USING btree (status_id);
-
-
---
 -- Name: ipam_rir_slug_416a41a245986cd_like; Type: INDEX; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -3599,13 +3734,6 @@ CREATE INDEX ipam_rir_slug_416a41a245986cd_like ON ipam_rir USING btree (slug va
 --
 
 CREATE INDEX ipam_role_2dbcba41 ON ipam_role USING btree (slug);
-
-
---
--- Name: ipam_status_2dbcba41; Type: INDEX; Schema: public; Owner: django; Tablespace: 
---
-
-CREATE INDEX ipam_status_2dbcba41 ON ipam_status USING btree (slug);
 
 
 --
@@ -3623,24 +3751,31 @@ CREATE INDEX ipam_vlan_9365d6e7 ON ipam_vlan USING btree (site_id);
 
 
 --
--- Name: ipam_vlan_dc91ed4b; Type: INDEX; Schema: public; Owner: django; Tablespace: 
---
-
-CREATE INDEX ipam_vlan_dc91ed4b ON ipam_vlan USING btree (status_id);
-
-
---
--- Name: secrets_secret_417f1b1c; Type: INDEX; Schema: public; Owner: django; Tablespace: 
---
-
-CREATE INDEX secrets_secret_417f1b1c ON secrets_secret USING btree (content_type_id);
-
-
---
 -- Name: secrets_secret_84566833; Type: INDEX; Schema: public; Owner: django; Tablespace: 
 --
 
 CREATE INDEX secrets_secret_84566833 ON secrets_secret USING btree (role_id);
+
+
+--
+-- Name: secrets_secret_9379346c; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX secrets_secret_9379346c ON secrets_secret USING btree (device_id);
+
+
+--
+-- Name: secrets_secretrole_groups_0e939a4f; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX secrets_secretrole_groups_0e939a4f ON secrets_secretrole_groups USING btree (group_id);
+
+
+--
+-- Name: secrets_secretrole_groups_be893205; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX secrets_secretrole_groups_be893205 ON secrets_secretrole_groups USING btree (secretrole_id);
 
 
 --
@@ -3655,6 +3790,20 @@ CREATE INDEX secrets_secretrole_name_7b6ee7a4_like ON secrets_secretrole USING b
 --
 
 CREATE INDEX secrets_secretrole_slug_a06c885e_like ON secrets_secretrole USING btree (slug varchar_pattern_ops);
+
+
+--
+-- Name: secrets_secretrole_users_be893205; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX secrets_secretrole_users_be893205 ON secrets_secretrole_users USING btree (secretrole_id);
+
+
+--
+-- Name: secrets_secretrole_users_e8701ad4; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX secrets_secretrole_users_e8701ad4 ON secrets_secretrole_users USING btree (user_id);
 
 
 --
@@ -3874,6 +4023,14 @@ ALTER TABLE ONLY dcim_module
 
 
 --
+-- Name: dcim_module_parent_id_bb5d0341_fk_dcim_module_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY dcim_module
+    ADD CONSTRAINT dcim_module_parent_id_bb5d0341_fk_dcim_module_id FOREIGN KEY (parent_id) REFERENCES dcim_module(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
 -- Name: dcim_po_power_outlet_id_4099940c71613091_fk_dcim_poweroutlet_id; Type: FK CONSTRAINT; Schema: public; Owner: django
 --
 
@@ -3962,6 +4119,14 @@ ALTER TABLE ONLY extras_exporttemplate
 
 
 --
+-- Name: extras_topologymap_site_id_b56b3ceb_fk_dcim_site_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY extras_topologymap
+    ADD CONSTRAINT extras_topologymap_site_id_b56b3ceb_fk_dcim_site_id FOREIGN KEY (site_id) REFERENCES dcim_site(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
 -- Name: ipam_aggregate_rir_id_6b95f7cbf861b265_fk_ipam_rir_id; Type: FK CONSTRAINT; Schema: public; Owner: django
 --
 
@@ -4010,14 +4175,6 @@ ALTER TABLE ONLY ipam_prefix
 
 
 --
--- Name: ipam_prefix_status_id_40a4d7159d040d2d_fk_ipam_status_id; Type: FK CONSTRAINT; Schema: public; Owner: django
---
-
-ALTER TABLE ONLY ipam_prefix
-    ADD CONSTRAINT ipam_prefix_status_id_40a4d7159d040d2d_fk_ipam_status_id FOREIGN KEY (status_id) REFERENCES ipam_status(id) DEFERRABLE INITIALLY DEFERRED;
-
-
---
 -- Name: ipam_prefix_vlan_id_46c10e1ba4efd5ae_fk_ipam_vlan_id; Type: FK CONSTRAINT; Schema: public; Owner: django
 --
 
@@ -4050,19 +4207,11 @@ ALTER TABLE ONLY ipam_vlan
 
 
 --
--- Name: ipam_vlan_status_id_1e0407a8c04d0694_fk_ipam_status_id; Type: FK CONSTRAINT; Schema: public; Owner: django
---
-
-ALTER TABLE ONLY ipam_vlan
-    ADD CONSTRAINT ipam_vlan_status_id_1e0407a8c04d0694_fk_ipam_status_id FOREIGN KEY (status_id) REFERENCES ipam_status(id) DEFERRABLE INITIALLY DEFERRED;
-
-
---
--- Name: secrets_secr_content_type_id_07a52c0f_fk_django_content_type_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+-- Name: secrets_secret_device_id_c7c13124_fk_dcim_device_id; Type: FK CONSTRAINT; Schema: public; Owner: django
 --
 
 ALTER TABLE ONLY secrets_secret
-    ADD CONSTRAINT secrets_secr_content_type_id_07a52c0f_fk_django_content_type_id FOREIGN KEY (content_type_id) REFERENCES django_content_type(id) DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT secrets_secret_device_id_c7c13124_fk_dcim_device_id FOREIGN KEY (device_id) REFERENCES dcim_device(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -4071,6 +4220,38 @@ ALTER TABLE ONLY secrets_secret
 
 ALTER TABLE ONLY secrets_secret
     ADD CONSTRAINT secrets_secret_role_id_39d9347f_fk_secrets_secretrole_id FOREIGN KEY (role_id) REFERENCES secrets_secretrole(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: secrets_secretr_secretrole_id_3cf0338b_fk_secrets_secretrole_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY secrets_secretrole_groups
+    ADD CONSTRAINT secrets_secretr_secretrole_id_3cf0338b_fk_secrets_secretrole_id FOREIGN KEY (secretrole_id) REFERENCES secrets_secretrole(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: secrets_secretr_secretrole_id_d2eac298_fk_secrets_secretrole_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY secrets_secretrole_users
+    ADD CONSTRAINT secrets_secretr_secretrole_id_d2eac298_fk_secrets_secretrole_id FOREIGN KEY (secretrole_id) REFERENCES secrets_secretrole(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: secrets_secretrole_groups_group_id_a687dd10_fk_auth_group_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY secrets_secretrole_groups
+    ADD CONSTRAINT secrets_secretrole_groups_group_id_a687dd10_fk_auth_group_id FOREIGN KEY (group_id) REFERENCES auth_group(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: secrets_secretrole_users_user_id_25be95ad_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY secrets_secretrole_users
+    ADD CONSTRAINT secrets_secretrole_users_user_id_25be95ad_fk_auth_user_id FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

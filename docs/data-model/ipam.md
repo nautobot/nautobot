@@ -42,12 +42,12 @@ A prefix may optionally be assigned to one VLAN; a VLAN may have multiple prefix
 
 ## Status
 
-Each prefix is assigned an operational status. A status describes very generally the state of a prefix within the network; for example, statuses might include:
+Each prefix is assigned an operational status. This may be one of the following:
 
-* Active (provisioned)
-* Reserved (for future use)
-* Deprecated (no longer in use)
-* Container (a summary of child prefixes)
+* Container - A summary of child prefixes
+* Active - Provisioned and in use
+* Reserved - Earmarked for future use
+* Deprecated - No longer in use
 
 NetBox provides several statuses by default, but you are free to change them to suit the needs of your organization.
 
