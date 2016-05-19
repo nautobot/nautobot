@@ -629,47 +629,47 @@
 - model: dcim.device
   pk: 1
   fields: {device_type: 1, device_role: 1, platform: 1, name: test1-edge1, serial: '5555555555',
-    rack: 1, position: 1, face: 0, status: true, primary_ip: 1, ro_snmp: TEST}
+    rack: 1, position: 1, face: 0, status: true, primary_ip: 1}
 - model: dcim.device
   pk: 2
   fields: {device_type: 2, device_role: 3, platform: 1, name: test1-core1, serial: '',
-    rack: 1, position: 17, face: 0, status: true, primary_ip: 5, ro_snmp: ''}
+    rack: 1, position: 17, face: 0, status: true, primary_ip: 5}
 - model: dcim.device
   pk: 3
   fields: {device_type: 3, device_role: 2, platform: 1, name: test1-spine1, serial: '',
-    rack: 1, position: 33, face: 0, status: true, primary_ip: null, ro_snmp: ''}
+    rack: 1, position: 33, face: 0, status: true, primary_ip: null}
 - model: dcim.device
   pk: 4
   fields: {device_type: 4, device_role: 4, platform: 1, name: test1-leaf1, serial: '',
-    rack: 1, position: 34, face: 0, status: true, primary_ip: null, ro_snmp: ''}
+    rack: 1, position: 34, face: 0, status: true, primary_ip: null}
 - model: dcim.device
   pk: 5
   fields: {device_type: 4, device_role: 4, platform: 1, name: test1-leaf2, serial: '9823478293748',
-    rack: 2, position: 34, face: 0, status: true, primary_ip: null, ro_snmp: ''}
+    rack: 2, position: 34, face: 0, status: true, primary_ip: null}
 - model: dcim.device
   pk: 6
   fields: {device_type: 3, device_role: 2, platform: 1, name: test1-spine2, serial: '45649818158',
-    rack: 2, position: 33, face: 0, status: true, primary_ip: null, ro_snmp: ''}
+    rack: 2, position: 33, face: 0, status: true, primary_ip: null}
 - model: dcim.device
   pk: 7
   fields: {device_type: 1, device_role: 1, platform: 1, name: test1-edge2, serial: '7567356345',
-    rack: 2, position: 1, face: 0, status: true, primary_ip: 3, ro_snmp: ''}
+    rack: 2, position: 1, face: 0, status: true, primary_ip: 3}
 - model: dcim.device
   pk: 8
   fields: {device_type: 2, device_role: 3, platform: 1, name: test1-core2, serial: '67856734534',
-    rack: 2, position: 17, face: 0, status: true, primary_ip: 19, ro_snmp: ''}
+    rack: 2, position: 17, face: 0, status: true, primary_ip: 19}
 - model: dcim.device
   pk: 9
   fields: {device_type: 5, device_role: 5, platform: 2, name: test1-oob1, serial: '98273942938',
-    rack: 1, position: 42, face: 0, status: true, primary_ip: null, ro_snmp: ''}
+    rack: 1, position: 42, face: 0, status: true, primary_ip: null}
 - model: dcim.device
   pk: 11
   fields: {device_type: 6, device_role: 6, platform: null, name: test1-pdu1, serial: '',
-    rack: 1, position: null, face: null, status: true, primary_ip: null, ro_snmp: ''}
+    rack: 1, position: null, face: null, status: true, primary_ip: null}
 - model: dcim.device
   pk: 12
   fields: {device_type: 6, device_role: 6, platform: null, name: test1-pdu2, serial: '',
-    rack: 2, position: null, face: null, status: true, primary_ip: null, ro_snmp: ''}
+    rack: 2, position: null, face: null, status: true, primary_ip: null}
 - model: dcim.consoleport
   pk: 1
   fields: {device: 1, name: Console (RE0), cs_port: 27, connection_status: true}

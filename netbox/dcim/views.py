@@ -586,7 +586,7 @@ class DeviceBulkEditView(PermissionRequiredMixin, BulkEditView):
         if form.cleaned_data['status']:
             status = form.cleaned_data['status']
             fields_to_update['status'] = True if status == 'True' else False
-        for field in ['device_type', 'device_role', 'serial', 'ro_snmp']:
+        for field in ['device_type', 'device_role', 'serial']:
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 

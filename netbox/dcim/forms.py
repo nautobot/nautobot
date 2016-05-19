@@ -337,11 +337,10 @@ class DeviceForm(forms.ModelForm, BootstrapMixin):
     class Meta:
         model = Device
         fields = ['name', 'device_role', 'device_type', 'serial', 'site', 'rack', 'position', 'face', 'status',
-                  'platform', 'primary_ip', 'ro_snmp', 'comments']
+                  'platform', 'primary_ip', 'comments']
         help_texts = {
             'device_role': "The function this device serves",
             'serial': "Chassis serial number",
-            'ro_snmp': "Read-only SNMP string",
         }
         widgets = {
             'face': forms.Select(attrs={'filter-for': 'position'}),
@@ -470,7 +469,6 @@ class DeviceBulkEditForm(forms.Form, BootstrapMixin):
     platform_delete = forms.BooleanField(required=False, label='Set platform to "none"')
     status = forms.ChoiceField(choices=FORM_STATUS_CHOICES, required=False, initial='', label='Status')
     serial = forms.CharField(max_length=50, required=False, label='Serial Number')
-    ro_snmp = forms.CharField(max_length=50, required=False, label='SNMP (RO)')
 
 
 class DeviceBulkDeleteForm(ConfirmationForm):

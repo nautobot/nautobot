@@ -434,7 +434,6 @@ class Device(models.Model):
     status = models.BooleanField(choices=STATUS_CHOICES, default=STATUS_ACTIVE, verbose_name='Status')
     primary_ip = models.OneToOneField('ipam.IPAddress', related_name='primary_for', on_delete=models.SET_NULL,
                                       blank=True, null=True, verbose_name='Primary IP')
-    ro_snmp = models.CharField(max_length=50, blank=True, verbose_name='SNMP (RO)')
     comments = models.TextField(blank=True)
 
     class Meta:

@@ -544,7 +544,6 @@ CREATE TABLE dcim_device (
     face smallint,
     device_type_id integer NOT NULL,
     rack_id integer NOT NULL,
-    ro_snmp character varying(50) NOT NULL,
     device_role_id integer NOT NULL,
     primary_ip_id integer,
     status boolean NOT NULL,

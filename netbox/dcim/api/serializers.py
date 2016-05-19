@@ -222,7 +222,7 @@ class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Device
         fields = ['id', 'name', 'display_name', 'device_type', 'device_role', 'platform', 'serial', 'rack', 'position',
-                  'face', 'status', 'primary_ip', 'ro_snmp', 'comments']
+                  'face', 'status', 'primary_ip', 'comments']
 
 
 class DeviceNestedSerializer(DeviceSerializer):

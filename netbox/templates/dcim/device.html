@@ -101,16 +101,6 @@
                         {% endif %}
                     </td>
                 </tr>
-                <tr>
-                    <td>SNMP String (RO)</td>
-                    <td>
-                        {% if device.ro_snmp %}
-                            <span>{{ device.ro_snmp }}</span>
-                        {% else %}
-                            <span class="text-muted">Not defined</span>
-                        {% endif %}
-                    </td>
-                </tr>
             </table>
         </div>
         {% if request.user.is_authenticated %}

@@ -321,7 +321,6 @@ class DeviceTest(APITestCase):
         'face',
         'status',
         'primary_ip',
-        'ro_snmp',
         'comments',
     ]
 
@@ -382,7 +381,6 @@ class DeviceTest(APITestCase):
             'rack_facility_id',
             'rack_id',
             'rack_name',
-            'ro_snmp',
             'serial',
             'status',
         ]
