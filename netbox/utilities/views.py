@@ -49,8 +49,8 @@ class ObjectListView(View):
                 messages.error(request, "There was an error rendering the selected export template ({})."
                                .format(et.name))
 
-        # Attempt to redirect automatically if the query returns a single result
-        if self.redirect_on_single_result and self.queryset.count() == 1:
+        # Attempt to redirect automatically if the search query returns a single result
+        if self.redirect_on_single_result and self.queryset.count() == 1 and request.GET:
             try:
                 return HttpResponseRedirect(self.queryset[0].get_absolute_url())
             except AttributeError:
