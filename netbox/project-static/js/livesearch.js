@@ -1,10 +1,17 @@
 $(document).ready(function() {
     var search_field = $('#id_livesearch');
+    var real_field = $('#id_' + search_field.attr('data-field'));
     var search_key = search_field.attr('data-key');
     var label = search_field.attr('data-label');
     if (!label) {
         label = 'name';
     }
+
+    // Update livesearch text when real field changes
+    search_field.val(real_field.children('option:selected').text());
+    real_field.change(function() {
+        search_field.val(real_field.children('option:selected').text());
+    });
 
     search_field.autocomplete({
         source: function(request, response) {
@@ -27,7 +34,6 @@ $(document).ready(function() {
         select: function(event, ui) {
             event.preventDefault();
             search_field.val(ui.item.label);
-            var real_field = $('#id_' + search_field.attr('data-field'));
             real_field.empty();
             real_field.append($("<option></option>").attr('value', ui.item.value).text(ui.item.label));
             real_field.change();
