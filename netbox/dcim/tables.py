@@ -102,11 +102,11 @@ class RackTable(tables.Table):
     group = tables.Column(accessor=Accessor('group.name'), verbose_name='Group')
     facility_id = tables.Column(verbose_name='Facility ID')
     u_height = tables.Column(verbose_name='Height (U)')
-    devices = tables.Column(accessor=Accessor('device_count'), orderable=False, verbose_name='Devices')
+    devices = tables.Column(accessor=Accessor('device_count'), verbose_name='Devices')
 
     class Meta:
         model = Rack
-        fields = ('pk', 'name', 'site', 'group', 'facility_id', 'u_height')
+        fields = ('pk', 'name', 'site', 'group', 'facility_id', 'u_height', 'devices')
         empty_text = "No racks were found."
         attrs = {
             'class': 'table table-hover',
