@@ -146,6 +146,7 @@ class InterfaceAdmin(admin.TabularInline):
 
 class ModuleAdmin(admin.TabularInline):
     model = Module
+    readonly_fields = ['parent']
 
 
 @admin.register(Device)
