@@ -6,7 +6,7 @@ from django.db.models import Count, Q
 from ipam.models import IPAddress
 from utilities.forms import (
     APISelect, BootstrapMixin, BulkImportForm, CommentField, ConfirmationForm, CSVDataField, ExpandableNameField,
-    FlexibleModelChoiceField, Livesearch, SelectWithDisabled, SmallTextarea,
+    FlexibleModelChoiceField, Livesearch, SelectWithDisabled, SmallTextarea, SlugField,
 )
 
 from .models import (
@@ -43,6 +43,7 @@ def get_device_by_name_or_pk(name):
 #
 
 class SiteForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
     comments = CommentField()
 
     class Meta:
@@ -54,7 +55,6 @@ class SiteForm(forms.ModelForm, BootstrapMixin):
         }
         help_texts = {
             'name': "Full name of the site",
-            'slug': "URL-friendly unique shorthand (e.g. 'nyc3' for NYC3)",
             'facility': "Data center provider and facility (e.g. Equinix NY7)",
             'asn': "BGP autonomous system number",
             'physical_address': "Physical location of the building (e.g. for GPS)",
@@ -78,6 +78,7 @@ class SiteImportForm(BulkImportForm, BootstrapMixin):
 #
 
 class RackGroupForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = RackGroup
@@ -195,6 +196,7 @@ class RackFilterForm(forms.Form, BootstrapMixin):
 #
 
 class ManufacturerForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = Manufacturer
@@ -210,6 +212,7 @@ class ManufacturerBulkDeleteForm(ConfirmationForm):
 #
 
 class DeviceTypeForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField(slug_source='model')
 
     class Meta:
         model = DeviceType
@@ -286,6 +289,7 @@ class InterfaceTemplateForm(forms.ModelForm, BootstrapMixin):
 #
 
 class DeviceRoleForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = DeviceRole
@@ -301,6 +305,7 @@ class DeviceRoleBulkDeleteForm(ConfirmationForm):
 #
 
 class PlatformForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = Platform

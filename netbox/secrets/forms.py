@@ -5,7 +5,7 @@ from django import forms
 from django.db.models import Count
 
 from dcim.models import Device
-from utilities.forms import BootstrapMixin, BulkImportForm, ConfirmationForm, CSVDataField
+from utilities.forms import BootstrapMixin, BulkImportForm, ConfirmationForm, CSVDataField, SlugField
 
 from .models import Secret, SecretRole, UserKey
 
@@ -35,6 +35,7 @@ def validate_rsa_key(key, is_secret=True):
 #
 
 class SecretRoleForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = SecretRole

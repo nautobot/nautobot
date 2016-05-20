@@ -5,6 +5,27 @@ $(document).ready(function() {
         $(this).parents('table').find('td input:checkbox').prop('checked', $(this).prop('checked'));
     });
 
+    // Slugify
+    function slugify(s, num_chars) {
+        s = s.replace(/[^-\.\+\w\s]/g, '');  // Remove unneeded chars
+        s = s.replace(/^\s+|\s+$/g, '');     // Trim leading/trailing spaces
+        s = s.replace(/[-\s]+/g, '-');       // Convert spaces to hyphens
+        s = s.toLowerCase();                 // Convert to lowercase
+        return s.substring(0, num_chars);    // Trim to first num_chars chars
+    }
+    var slug_field = $('#id_slug');
+    slug_field.change(function() {
+        $(this).attr('_changed', true);
+    });
+    if (slug_field) {
+        var slug_source = $('#id_' + slug_field.attr('slug-source'));
+        slug_source.keyup(function() {
+            if (slug_field && !slug_field.attr('_changed')) {
+                slug_field.val(slugify($(this).val(), 50));
+            }
+        })
+    }
+
     // Helper select fields
     $('select.helper-parent').change(function () {
 

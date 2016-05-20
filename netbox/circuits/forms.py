@@ -4,6 +4,7 @@ from django.db.models import Count
 from dcim.models import Site, Device, Interface, Rack, IFACE_FF_VIRTUAL
 from utilities.forms import (
     APISelect, BootstrapMixin, BulkImportForm, CommentField, ConfirmationForm, CSVDataField, Livesearch, SmallTextarea,
+    SlugField,
 )
 
 from .models import PORT_SPEED_CHOICES, Circuit, CircuitType, Provider
@@ -14,6 +15,7 @@ from .models import PORT_SPEED_CHOICES, Circuit, CircuitType, Provider
 #
 
 class ProviderForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
     comments = CommentField()
 
     class Meta:
@@ -25,7 +27,6 @@ class ProviderForm(forms.ModelForm, BootstrapMixin):
         }
         help_texts = {
             'name': "Full name of the provider",
-            'slug': "URL-friendly unique shorthand (e.g. 'decix' for DE-CIX)",
             'asn': "BGP autonomous system number (if applicable)",
             'portal_url': "URL of the provider's customer support portal",
             'noc_contact': "NOC email address and phone number",
@@ -63,6 +64,7 @@ class ProviderBulkDeleteForm(ConfirmationForm):
 #
 
 class CircuitTypeForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = CircuitType

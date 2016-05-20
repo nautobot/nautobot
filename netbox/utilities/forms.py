@@ -203,6 +203,15 @@ class FlexibleModelChoiceField(forms.ModelChoiceField):
         return value
 
 
+class SlugField(forms.SlugField):
+
+    def __init__(self, slug_source='name', *args, **kwargs):
+        label = kwargs.pop('label', "Slug")
+        help_text = kwargs.pop('help_text', "URL-friendly unique shorthand")
+        super(SlugField, self).__init__(label=label, help_text=help_text, *args, **kwargs)
+        self.widget.attrs['slug-source'] = slug_source
+
+
 #
 # Forms
 #

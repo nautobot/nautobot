@@ -4,7 +4,9 @@ from django import forms
 from django.db.models import Count
 
 from dcim.models import Site, Device, Interface
-from utilities.forms import BootstrapMixin, ConfirmationForm, APISelect, Livesearch, CSVDataField, BulkImportForm
+from utilities.forms import (
+    BootstrapMixin, ConfirmationForm, APISelect, Livesearch, CSVDataField, BulkImportForm, SlugField,
+)
 
 from .models import (
     Aggregate, IPAddress, Prefix, PREFIX_STATUS_CHOICES, RIR, Role, VLAN, VLAN_STATUS_CHOICES, VRF,
@@ -53,6 +55,7 @@ class VRFBulkDeleteForm(ConfirmationForm):
 #
 
 class RIRForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = RIR
@@ -118,6 +121,7 @@ class AggregateFilterForm(forms.Form, BootstrapMixin):
 #
 
 class RoleForm(forms.ModelForm, BootstrapMixin):
+    slug = SlugField()
 
     class Meta:
         model = Role
