@@ -523,7 +523,7 @@ def device(request, pk):
         if re.match('.+[0-9]+$', device.name):
             # Strip 1 or more trailing digits (e.g. core-switch1)
             base_name = re.match('(.*?)[0-9]+$', device.name).group(1)
-        elif re.match('.+\d[a-z]+$', device.name.lower()):
+        elif re.match('.+\d[a-z]$', device.name.lower()):
             # Strip a trailing letter if preceded by a digit (e.g. dist-switch3a -> dist-switch3)
             base_name = re.match('(.*\d+)[a-z]$', device.name.lower()).group(1)
         else:
