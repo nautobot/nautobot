@@ -7,11 +7,11 @@
 {% block content %}
 <div class="pull-right">
     {% if perms.ipam.add_prefix %}
-		<a href="{{ action_urls.add }}" class="btn btn-primary">
+		<a href="{% url 'ipam:prefix_add' %}" class="btn btn-primary">
 			<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
 			Add a prefix
 		</a>
-		<a href="{{ action_urls.import }}" class="btn btn-info">
+		<a href="{% url 'ipam:prefix_import' %}" class="btn btn-info">
 			<span class="glyphicon glyphicon-import" aria-hidden="true"></span>
 			Import prefixes
 		</a>
