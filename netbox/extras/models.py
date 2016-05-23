@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.http import HttpResponse
@@ -20,6 +21,21 @@ EXPORTTEMPLATE_MODELS = [
     'aggregate', 'prefix', 'ipaddress', 'vlan',
     'provider', 'circuit'
 ]
+
+ACTION_CREATE = 1
+ACTION_IMPORT = 2
+ACTION_EDIT = 3
+ACTION_BULK_EDIT = 4
+ACTION_DELETE = 5
+ACTION_BULK_DELETE = 6
+ACTION_CHOICES = (
+    (ACTION_CREATE, 'created'),
+    (ACTION_IMPORT, 'imported'),
+    (ACTION_EDIT, 'modified'),
+    (ACTION_BULK_EDIT, 'bulk edited'),
+    (ACTION_DELETE, 'deleted'),
+    (ACTION_BULK_DELETE, 'bulk deleted')
+)
 
 
 class Graph(models.Model):
@@ -93,3 +109,60 @@ class TopologyMap(models.Model):
         if not self.device_patterns:
             return None
         return [line.strip() for line in self.device_patterns.split('\n')]
+
+
+class UserActionManager(models.Manager):
+
+    # Actions affecting a single object
+    def log_action(self, user, obj, action, message):
+        self.model.objects.create(
+            content_type = ContentType.objects.get_for_model(obj),
+            object_id = obj.pk,
+            user = user,
+            action = action,
+            message = message,
+        )
+
+    def log_create(self, user, obj, message=''):
+        self.log_action(user, obj, ACTION_CREATE, message)
+
+    def log_edit(self, user, obj, message=''):
+        self.log_action(user, obj, ACTION_EDIT, message)
+
+    def log_delete(self, user, obj, message=''):
+        self.log_action(user, obj, ACTION_DELETE, message)
+
+    # Actions affecting multiple objects
+    def log_bulk_action(self, user, content_type, action, message):
+        self.model.objects.create(
+            content_type=content_type,
+            user=user,
+            action=action,
+            message=message,
+        )
+
+    def log_import(self, user, content_type, message=''):
+        self.log_bulk_action(user, content_type, ACTION_IMPORT, message)
+
+    def log_bulk_edit(self, user, content_type, message=''):
+        self.log_bulk_action(user, content_type, ACTION_BULK_EDIT, message)
+
+    def log_bulk_delete(self, user, content_type, message=''):
+        self.log_bulk_action(user, content_type, ACTION_BULK_DELETE, message)
+
+
+class UserAction(models.Model):
+    """
+    A record of an action (add, edit, or delete) performed on an object by a User.
+    """
+    time = models.DateTimeField(auto_now_add=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField(blank=True, null=True)
+    action = models.PositiveSmallIntegerField(choices=ACTION_CHOICES)
+    message = models.TextField(blank=True)
+
+    objects = UserActionManager()
+
+    class Meta:
+        ordering = ['-time']

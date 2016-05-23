@@ -1,7 +1,6 @@
 from netaddr import IPSet
 from django_tables2 import RequestConfig
 
-from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, render
@@ -90,8 +89,7 @@ class VRFBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} VRFs".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class VRFBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -198,8 +196,7 @@ class AggregateBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} aggregates".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class AggregateBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -336,8 +333,7 @@ class PrefixBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} prefixes".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class PrefixBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -449,8 +445,7 @@ class IPAddressBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} IP addresses".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class IPAddressBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -519,8 +514,7 @@ class VLANBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} VLANs".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class VLANBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):

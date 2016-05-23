@@ -213,8 +213,7 @@ class SecretBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} secrets".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class SecretBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):

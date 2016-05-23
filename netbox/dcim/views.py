@@ -200,8 +200,7 @@ class RackBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} racks".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class RackBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -305,8 +304,7 @@ class DeviceTypeBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} device types".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class DeviceTypeBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
@@ -590,8 +588,7 @@ class DeviceBulkEditView(PermissionRequiredMixin, BulkEditView):
             if form.cleaned_data[field]:
                 fields_to_update[field] = form.cleaned_data[field]
 
-        updated_count = self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
-        messages.success(self.request, "Updated {} devices".format(updated_count))
+        return self.cls.objects.filter(pk__in=pk_list).update(**fields_to_update)
 
 
 class DeviceBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):

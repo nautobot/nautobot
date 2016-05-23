@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Graph, ExportTemplate, TopologyMap
+from .models import Graph, ExportTemplate, TopologyMap, UserAction
 
 
 @admin.register(Graph)
@@ -19,3 +19,8 @@ class TopologyMapAdmin(admin.ModelAdmin):
     prepopulated_fields = {
         'slug': ['name'],
     }
+
+
+@admin.register(UserAction)
+class UserActionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'action', 'content_type', 'object_id', 'message']

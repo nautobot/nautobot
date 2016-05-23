@@ -13,7 +13,7 @@ from django.utils.decorators import method_decorator
 from django.utils.http import is_safe_url
 from django.views.generic import View
 
-from extras.models import ExportTemplate
+from extras.models import ExportTemplate, UserAction
 
 from .error_handlers import handle_protectederror
 from .forms import ConfirmationForm
@@ -116,6 +116,7 @@ class ObjectEditView(View):
             obj = form.save(commit=False)
             obj_created = not obj.pk
             obj.save()
+
             msg = 'Created ' if obj_created else 'Modified '
             msg += self.model._meta.verbose_name
             if hasattr(obj, 'get_absolute_url'):
@@ -123,6 +124,11 @@ class ObjectEditView(View):
             else:
                 msg += ' {}'.format(obj)
             messages.success(request, msg)
+            if obj_created:
+                UserAction.objects.log_create(request.user, obj, msg)
+            else:
+                UserAction.objects.log_edit(request.user, obj, msg)
+
             if '_addanother' in request.POST:
                 return redirect(request.path)
             elif self.success_url:
@@ -169,7 +175,9 @@ class ObjectDeleteView(View):
         if form.is_valid():
             try:
                 obj.delete()
-                messages.success(request, 'Deleted {} {}'.format(self.model._meta.verbose_name, obj))
+                msg = 'Deleted {} {}'.format(self.model._meta.verbose_name, obj)
+                messages.success(request, msg)
+                UserAction.objects.log_delete(request.user, obj, msg)
                 return redirect(self.redirect_url)
             except ProtectedError, e:
                 handle_protectederror(obj, request, e)
@@ -208,7 +216,9 @@ class BulkImportView(View):
                         new_objs.append(obj)
 
                 obj_table = self.table(new_objs)
-                messages.success(request, "Imported {} objects".format(len(new_objs)))
+                msg = 'Imported {} objects'.format(len(new_objs))
+                messages.success(request, msg)
+                UserAction.objects.log_import(request.user, ContentType.objects.get_for_model(new_objs[0]), msg)
 
                 return render(request, "import_success.html", {
                     'table': obj_table,
@@ -247,9 +257,12 @@ class BulkEditView(View):
             form = self.form(request.POST)
             if form.is_valid():
                 pk_list = [obj.pk for obj in form.cleaned_data['pk']]
-                self.update_objects(pk_list, form)
-                if not form.errors:
-                    return redirect(redirect_url)
+                updated_count = self.update_objects(pk_list, form)
+                msg = 'Updated {} {}'.format(updated_count, self.cls._meta.verbose_name_plural)
+                messages.success(self.request, msg)
+                UserAction.objects.log_bulk_edit(request.user, ContentType.objects.get_for_model(self.cls), msg)
+
+                return redirect(redirect_url)
 
         else:
             form = self.form(initial={'pk': request.POST.getlist('pk')})
@@ -306,7 +319,9 @@ class BulkDeleteView(View):
                     handle_protectederror(list(objects_to_delete), request, e)
                     return redirect(redirect_url)
 
-                messages.success(request, "Deleted {} {}".format(deleted_count, self.cls._meta.verbose_name_plural))
+                msg = 'Deleted {} {}'.format(deleted_count, self.cls._meta.verbose_name_plural)
+                messages.success(request, msg)
+                UserAction.objects.log_bulk_delete(request.user, ContentType.objects.get_for_model(self.cls), msg)
                 return redirect(redirect_url)
 
         else:
