@@ -1,7 +1,12 @@
+from django.conf import settings
 from django.core.paginator import Paginator, Page
 
 
 class EnhancedPaginator(Paginator):
+
+    def __init__(self, object_list, per_page, **kwargs):
+        per_page = getattr(settings, 'PAGINATE_COUNT', 50)
+        super(EnhancedPaginator, self).__init__(object_list, per_page, **kwargs)
 
     def _get_page(self, *args, **kwargs):
         return EnhancedPage(*args, **kwargs)

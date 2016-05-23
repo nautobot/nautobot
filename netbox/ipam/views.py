@@ -1,7 +1,6 @@
 from netaddr import IPSet
 from django_tables2 import RequestConfig
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Count
@@ -156,8 +155,7 @@ def aggregate(request, pk):
     prefix_table.model = Prefix
     if request.user.has_perm('ipam.change_prefix') or request.user.has_perm('ipam.delete_prefix'):
         prefix_table.base_columns['pk'].visible = True
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
-        .configure(prefix_table)
+    RequestConfig(request, paginate={'klass': EnhancedPaginator}).configure(prefix_table)
 
     return render(request, 'ipam/aggregate.html', {
         'aggregate': aggregate,
@@ -286,8 +284,7 @@ def prefix(request, pk):
     child_prefix_table.model = Prefix
     if request.user.has_perm('ipam.change_prefix') or request.user.has_perm('ipam.delete_prefix'):
         child_prefix_table.base_columns['pk'].visible = True
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
-        .configure(child_prefix_table)
+    RequestConfig(request, paginate={'klass': EnhancedPaginator}).configure(child_prefix_table)
 
     return render(request, 'ipam/prefix.html', {
         'prefix': prefix,
@@ -362,8 +359,7 @@ def prefix_ipaddresses(request, pk):
     ip_table.model = IPAddress
     if request.user.has_perm('ipam.change_ipaddress') or request.user.has_perm('ipam.delete_ipaddress'):
         ip_table.base_columns['pk'].visible = True
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
-        .configure(ip_table)
+    RequestConfig(request, paginate={'klass': EnhancedPaginator}).configure(ip_table)
 
     return render(request, 'ipam/prefix_ipaddresses.html', {
         'prefix': prefix,
@@ -389,10 +385,11 @@ def ipaddress(request, pk):
     ipaddress = get_object_or_404(IPAddress.objects.select_related('interface__device'), pk=pk)
 
     parent_prefixes = Prefix.objects.filter(vrf=ipaddress.vrf, prefix__net_contains=str(ipaddress.address.ip))
-    related_ips = IPAddress.objects.select_related('interface__device').exclude(pk=ipaddress.pk).filter(vrf=ipaddress.vrf, address__net_contained_or_equal=str(ipaddress.address))
+    related_ips = IPAddress.objects.select_related('interface__device').exclude(pk=ipaddress.pk)\
+        .filter(vrf=ipaddress.vrf, address__net_contained_or_equal=str(ipaddress.address))
 
     related_ips_table = tables.IPAddressBriefTable(related_ips)
-    RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator}).configure(related_ips_table)
+    RequestConfig(request, paginate={'klass': EnhancedPaginator}).configure(related_ips_table)
 
     return render(request, 'ipam/ipaddress.html', {
         'ipaddress': ipaddress,

@@ -1,6 +1,5 @@
 from django_tables2 import RequestConfig
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.contenttypes.models import ContentType
@@ -64,8 +63,7 @@ class ObjectListView(View):
         table.model = model
         if 'pk' in table.base_columns and any([request.user.has_perm(perm) for perm in self.edit_permissions]):
             table.base_columns['pk'].visible = True
-        RequestConfig(request, paginate={'per_page': settings.PAGINATE_COUNT, 'klass': EnhancedPaginator})\
-            .configure(table)
+        RequestConfig(request, paginate={'klass': EnhancedPaginator}).configure(table)
 
         return render(request, self.template_name, {
             'table': table,
