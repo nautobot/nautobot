@@ -79,6 +79,20 @@
                 </div>
             </div>
         </div>
+        {% if perms.secrets %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Secrets</strong>
+                </div>
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <span class="badge pull-right">{{ stats.secret_count }}</span>
+                        <h4 class="list-group-item-heading"><a href="{% url 'secrets:secret_list' %}">Secrets</a></h4>
+                        <p class="list-group-item-text text-muted">Sensitive data (such as passwords) which has been stored securely</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
     <div class="col-md-4">
         <div class="panel panel-default">
@@ -108,8 +122,6 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Circuits</strong>
@@ -127,20 +139,22 @@
                 </div>
             </div>
         </div>
-        {% if perms.secrets %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <strong>Secrets</strong>
-                </div>
-                <div class="list-group">
-                    <div class="list-group-item">
-                        <span class="badge pull-right">{{ stats.secret_count }}</span>
-                        <h4 class="list-group-item-heading"><a href="{% url 'secrets:secret_list' %}">Secrets</a></h4>
-                        <p class="list-group-item-text text-muted">Sensitive data (such as passwords) which has been stored securely</p>
-                    </div>
-                </div>
+    </div>
+    <div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Recent Activity</strong>
             </div>
-        {% endif %}
+            <table class="table table-hover panel-body">
+                {% for a in recent_activity %}
+                    <tr>
+                        <td>{{ a.time|date:"Y-m-d H:i" }}</td>
+                        <td>{{ a.user }}</td>
+                        <td>{{ a.message|safe }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
