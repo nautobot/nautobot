@@ -30,13 +30,21 @@ SECRET_KEY = ''
 #                       #
 #########################
 
+# Specify one or more name and email email address tuples representing NetBox administrators. These people will be
+# notified of application errors (assuming correct email settings are provided).
+ADMINS = [
+    # ['John Doe', 'jdoe@example.com'],
+]
+
 # Email settings
 EMAIL = {
     'SERVER': 'localhost',
+    'PORT': 25,
     'USERNAME': '',
     'PASSWORD': '',
+    'TIMEOUT': 10,  # seconds
+    'FROM_EMAIL': '',
 }
-SERVER_EMAIL = 'netbox@digitalocean.com'
 
 # Setting this to True will permit only authenticated users to access any part of NetBox. By default, anonymous users
 # are permitted to access most data in NetBox (excluding secrets) but not make any changes.

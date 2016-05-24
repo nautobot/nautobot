@@ -6,6 +6,18 @@ NetBox's local configuration is held in `netbox/netbox/configuration.py`. An exa
 
 ---
 
+#### ALLOWED_HOSTS
+
+This is a list of valid host names by which NetBox may be reached. This list is used to defend against cross-site scripting (XSS) attacks. You must specify at least one host name.
+
+Example:
+
+```
+ALLOWED_HOSTS = ['netbox.example.com', 'netbox.internal.local']
+```
+
+---
+
 #### DATABASE
 
 NetBox requires access to a PostgreSQL database service to store data. This service can run locally or on a remote system. The following parameters must be defined within the `DATABASE` dictionary:
@@ -26,6 +38,7 @@ Please note that this key is **not** used for hashing user passwords or for the 
 
 `SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols. The following Python code can be used to generate a key:
 
+
 ```
 import os
 import random
@@ -35,27 +48,41 @@ random.seed = (os.urandom(2048))
 print ''.join(random.choice(charset) for c in range(50))
 ```
 
----
-
-#### ALLOWED_HOSTS
-
-This is a list of valid host names by which NetBox may be reached. This list is used to defend against cross-site scripting (XSS) attacks. You must specify at least one host name.
-
-Example:
-
-```
-ALLOWED_HOSTS = ['netbox.example.com', 'netbox.internal.local']
-```
-
 ## Optional Settings
 
 ---
 
-#### TIME_ZONE
+#### ADMINS
 
-Default: UTC
+NetBox will email details about critical errors to the administrators listed here. This should be a list of (name, email) tuples. For example:
 
-The time zone NetBox will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. [List of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
+```
+ADMINS = [
+    ['Hank Hill', 'hhill@example.com'],
+    ['Dale Gribble', 'dgribble@example.com'],
+]
+```
+
+---
+
+#### DEBUG
+
+Default: False
+
+This setting enables debugging. This should be done only during development or troubleshooting. Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users. 
+
+---
+
+#### EMAIL
+
+In order to send email, NetBox needs an email server configured. The following items can be defined within the `EMAIL` setting:
+
+* SERVER - Host name or IP address of the email server (use `localhost` if running locally)
+* PORT - TCP port to use for the connection (default: 25)
+* USERNAME - Username with which to authenticate
+* PASSSWORD - Password with which to authenticate
+* TIMEOUT - Amount of time to wait for a connection (seconds)
+* FROM_EMAIL - Sender address for emails sent by NetBox
 
 ---
 
@@ -67,11 +94,11 @@ Setting this to True will permit only authenticated users to access any part of 
 
 ---
 
-#### PAGINATE_COUNT
+#### MAINTENANCE_MODE
 
-Default: 50
+Default: False
 
-Determine how many objects to display per page within each list of objects.
+Setting this to True will display a "maintenance mode" banner at the top of every page.
 
 ---
 
@@ -83,16 +110,16 @@ If provided, NetBox will use these credentials to authenticate against devices w
 
 ---
 
-#### MAINTENANCE_MODE
+#### PAGINATE_COUNT
 
-Default: False
+Default: 50
 
-Setting this to True will display a "maintenance mode" banner at the top of every page.
+Determine how many objects to display per page within each list of objects.
 
 ---
 
-#### DEBUG
+#### TIME_ZONE
 
-Default: False
+Default: UTC
 
-This setting enables debugging. This should be done only during development or troubleshooting. Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users. 
+The time zone NetBox will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. [List of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).

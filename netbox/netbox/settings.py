@@ -12,7 +12,7 @@ except ImportError:
 
 
 # Import local configuration
-for setting in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'STATIC_ROOT']:
+for setting in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY']:
     try:
         globals()[setting] = getattr(configuration, setting)
     except AttributeError:
@@ -20,9 +20,10 @@ for setting in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'STATIC_ROOT']:
                                    "documentation.".format(setting))
 
 # Default configurations
-ADMINS = getattr(configuration, 'ADMINS', False)
-CSRF_TRUSTED_ORIGINS = getattr(configuration, 'CSRF_TRUSTED_ORIGINS', False)
+ADMINS = getattr(configuration, 'ADMINS', [])
+CSRF_TRUSTED_ORIGINS = getattr(configuration, 'CSRF_TRUSTED_ORIGINS', [])
 DEBUG = getattr(configuration, 'DEBUG', False)
+EMAIL = getattr(configuration, 'EMAIL', {})
 LOGIN_REQUIRED = getattr(configuration, 'LOGIN_REQUIRED', False)
 MAINTENANCE_MODE = getattr(configuration, 'MAINTENANCE_MODE', False)
 PAGINATE_COUNT = getattr(configuration, 'PAGINATE_COUNT', 50)
@@ -38,6 +39,15 @@ configuration.DATABASE.update({'ENGINE': 'django.db.backends.postgresql'})
 DATABASES = {
     'default': configuration.DATABASE,
 }
+
+# Email
+EMAIL_HOST = EMAIL.get('SERVER')
+EMAIL_PORT = EMAIL.get('PORT', 25)
+EMAIL_HOST_USER = EMAIL.get('USER')
+EMAIL_HOST_PASSWORD = EMAIL.get('PASSWORD')
+EMAIL_TIMEOUT = EMAIL.get('TIMEOUT', 10)
+SERVER_EMAIL = EMAIL.get('FROM_EMAIL')
+EMAIL_SUBJECT_PREFIX = '[NetBox] '
 
 # Installed applications
 INSTALLED_APPS = (
@@ -97,6 +107,7 @@ TEMPLATES = [
 # WSGI
 WSGI_APPLICATION = 'netbox.wsgi.application'
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
@@ -106,6 +117,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
+STATIC_ROOT = BASE_DIR + '/static/'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "project-static"),
