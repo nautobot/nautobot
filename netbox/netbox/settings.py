@@ -2,9 +2,40 @@ import os
 import socket
 
 from django.contrib.messages import constants as messages
+from django.core.exceptions import ImproperlyConfigured
+
+try:
+    import configuration
+except ImportError:
+    raise ImproperlyConfigured("Configuration file is not present. Please define netbox/netbox/configuration.py per "
+                               "the documentation.")
+
+
+# Import local configuration
+for setting in ['DATABASE', 'SECRET_KEY', 'ALLOWED_HOSTS']:
+    try:
+        globals()[setting] = getattr(configuration, setting)
+    except AttributeError:
+        raise ImproperlyConfigured("Mandatory setting {} is missing from configuration.py. Please define it per the "
+                                   "documentation.".format(setting))
+
+# Default configurations
+TIME_ZONE = getattr(configuration, 'TIME_ZONE', 'UTC')
+MAINTENANCE_MODE = getattr(configuration, 'MAINTENANCE_MODE', False)
+DEBUG = getattr(configuration, 'DEBUG', False)
+LOGIN_REQUIRED = getattr(configuration, 'LOGIN_REQUIRED', False)
+PAGINATE_COUNT = getattr(configuration, 'PAGINATE_COUNT', 50)
+NETBOX_USERNAME = getattr(configuration, 'NETBOX_USERNAME', '')
+NETBOX_PASSWORD = getattr(configuration, 'NETBOX_PASSWORD', '')
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Database
+configuration.DATABASE.update({'ENGINE': 'django.db.backends.postgresql'})
+DATABASES = {
+    'default': configuration.DATABASE,
+}
 
 # Installed applications
 INSTALLED_APPS = (
@@ -68,7 +99,6 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
@@ -109,9 +139,3 @@ try:
     HOSTNAME = socket.gethostname()
 except:
     HOSTNAME = 'localhost'
-
-# Import local configuration
-try:
-    from configuration import *
-except ImportError:
-    pass
