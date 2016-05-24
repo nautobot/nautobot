@@ -21,7 +21,6 @@ for setting in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY']:
 
 # Default configurations
 ADMINS = getattr(configuration, 'ADMINS', [])
-CSRF_TRUSTED_ORIGINS = getattr(configuration, 'CSRF_TRUSTED_ORIGINS', [])
 DEBUG = getattr(configuration, 'DEBUG', False)
 EMAIL = getattr(configuration, 'EMAIL', {})
 LOGIN_REQUIRED = getattr(configuration, 'LOGIN_REQUIRED', False)
@@ -30,6 +29,7 @@ PAGINATE_COUNT = getattr(configuration, 'PAGINATE_COUNT', 50)
 NETBOX_USERNAME = getattr(configuration, 'NETBOX_USERNAME', '')
 NETBOX_PASSWORD = getattr(configuration, 'NETBOX_PASSWORD', '')
 TIME_ZONE = getattr(configuration, 'TIME_ZONE', 'UTC')
+CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -148,6 +148,12 @@ SECRETS_MIN_PUBKEY_SIZE = 2048
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
 }
+
+# Swagger settings (API docs)
+SWAGGER_SETTINGS = {
+    'base_path': '{}/api/docs'.format(ALLOWED_HOSTS[0]),
+}
+
 
 try:
     HOSTNAME = socket.gethostname()
