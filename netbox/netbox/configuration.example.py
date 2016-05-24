@@ -4,8 +4,10 @@
 #                       #
 #########################
 
-# Set this to your server's FQDN. This is required when DEBUG = False.
-# E.g. ALLOWED_HOSTS = ['netbox.yourdomain.com']
+# This is a list of valid fully-qualified domain names (FQDNs) for the NetBox server. NetBox will not permit write
+# access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
+#
+# Example: ALLOWED_HOSTS = ['netbox.example.com', 'netbox.internal.local']
 ALLOWED_HOSTS = []
 
 # PostgreSQL database configuration.
@@ -30,8 +32,8 @@ SECRET_KEY = ''
 #                       #
 #########################
 
-# Specify one or more name and email email address tuples representing NetBox administrators. These people will be
-# notified of application errors (assuming correct email settings are provided).
+# Specify one or more name and email address tuples representing NetBox administrators. These people will be notified of
+# application errors (assuming correct email settings are provided).
 ADMINS = [
     # ['John Doe', 'jdoe@example.com'],
 ]

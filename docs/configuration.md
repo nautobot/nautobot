@@ -8,7 +8,7 @@ NetBox's local configuration is held in `netbox/netbox/configuration.py`. An exa
 
 #### ALLOWED_HOSTS
 
-This is a list of valid host names by which NetBox may be reached. This list is used to defend against cross-site scripting (XSS) attacks. You must specify at least one host name.
+This is a list of valid fully-qualified domain names (FQDNs) for the NetBox server. NetBox will not permit write access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
 
 Example:
 
