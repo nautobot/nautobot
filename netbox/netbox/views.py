@@ -36,7 +36,7 @@ def home(request):
 
     return render(request, 'home.html', {
         'stats': stats,
-        'recent_activity': UserAction.objects.all()[:20]
+        'recent_activity': UserAction.objects.all()[:15]
     })
 
 

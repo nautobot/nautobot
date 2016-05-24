@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.http import HttpResponse
 from django.template import Template, Context
+from django.utils.safestring import mark_safe
 
 from dcim.models import Site
 
@@ -156,7 +157,7 @@ class UserAction(models.Model):
     A record of an action (add, edit, or delete) performed on an object by a User.
     """
     time = models.DateTimeField(auto_now_add=True, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='actions', on_delete=models.CASCADE)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField(blank=True, null=True)
     action = models.PositiveSmallIntegerField(choices=ACTION_CHOICES)
@@ -166,3 +167,18 @@ class UserAction(models.Model):
 
     class Meta:
         ordering = ['-time']
+
+    def __unicode__(self):
+        if self.message:
+            return ' '.join([self.user, self.message])
+        return ' '.join([self.user, self.get_action_display(), self.content_type])
+
+    def icon(self):
+        if self.action in [ACTION_CREATE, ACTION_IMPORT]:
+            return mark_safe('<i class="glyphicon glyphicon-plus text-success"></i>')
+        elif self.action in [ACTION_EDIT, ACTION_BULK_EDIT]:
+            return mark_safe('<i class="glyphicon glyphicon-pencil text-warning"></i>')
+        elif self.action in [ACTION_DELETE, ACTION_BULK_DELETE]:
+            return mark_safe('<i class="glyphicon glyphicon-remove text-danger"></i>')
+        else:
+            return ''

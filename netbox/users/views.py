@@ -116,3 +116,11 @@ def userkey_edit(request):
         'userkey': userkey,
         'form': form,
     })
+
+
+@login_required()
+def recent_activity(request):
+
+    return render(request, 'users/recent_activity.html', {
+        'recent_activity': request.user.actions.all()[:50]
+    })
