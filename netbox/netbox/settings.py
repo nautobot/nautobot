@@ -12,7 +12,7 @@ except ImportError:
 
 
 # Import local configuration
-for setting in ['DATABASE', 'SECRET_KEY', 'ALLOWED_HOSTS']:
+for setting in ['ALLOWED_HOSTS', 'DATABASE', 'SECRET_KEY', 'STATIC_ROOT']:
     try:
         globals()[setting] = getattr(configuration, setting)
     except AttributeError:
@@ -20,13 +20,15 @@ for setting in ['DATABASE', 'SECRET_KEY', 'ALLOWED_HOSTS']:
                                    "documentation.".format(setting))
 
 # Default configurations
-TIME_ZONE = getattr(configuration, 'TIME_ZONE', 'UTC')
-MAINTENANCE_MODE = getattr(configuration, 'MAINTENANCE_MODE', False)
+ADMINS = getattr(configuration, 'ADMINS', False)
+CSRF_TRUSTED_ORIGINS = getattr(configuration, 'CSRF_TRUSTED_ORIGINS', False)
 DEBUG = getattr(configuration, 'DEBUG', False)
 LOGIN_REQUIRED = getattr(configuration, 'LOGIN_REQUIRED', False)
+MAINTENANCE_MODE = getattr(configuration, 'MAINTENANCE_MODE', False)
 PAGINATE_COUNT = getattr(configuration, 'PAGINATE_COUNT', 50)
 NETBOX_USERNAME = getattr(configuration, 'NETBOX_USERNAME', '')
 NETBOX_PASSWORD = getattr(configuration, 'NETBOX_PASSWORD', '')
+TIME_ZONE = getattr(configuration, 'TIME_ZONE', 'UTC')
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
