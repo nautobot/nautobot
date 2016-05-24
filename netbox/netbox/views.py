@@ -1,4 +1,9 @@
+from markdown import markdown
+
+from django.conf import settings
+from django.http import Http404
 from django.shortcuts import render
+from django.utils.safestring import mark_safe
 
 from circuits.models import Provider, Circuit
 from dcim.models import Site, Rack, Device, ConsolePort, PowerPort, InterfaceConnection
@@ -37,6 +42,25 @@ def home(request):
     return render(request, 'home.html', {
         'stats': stats,
         'recent_activity': UserAction.objects.all()[:15]
+    })
+
+
+def docs(request, path):
+    """
+    Display a page of Markdown-formatted documentation.
+    """
+    filename = '{}/docs/{}.md'.format(settings.BASE_DIR.rsplit('/', 1)[0], path)
+    try:
+        with open(filename, 'r') as docfile:
+            markup = docfile.read()
+    except:
+        raise Http404
+
+    content = mark_safe(markdown(markup, extensions=['mdx_gfm']))
+
+    return render(request, 'docs.html', {
+        'content': content,
+        'path': path,
     })
 
 
