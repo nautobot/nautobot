@@ -139,6 +139,21 @@ class AggregateListView(ObjectListView):
     edit_permissions = ['ipam.change_aggregate', 'ipam.delete_aggregate']
     template_name = 'ipam/aggregate_list.html'
 
+    def extra_context(self):
+        ipv4_total = 0
+        ipv6_total = 0
+
+        for a in self.queryset:
+            if a.prefix.version == 4:
+                ipv4_total += a.prefix.size
+            elif a.prefix.version == 6:
+                ipv6_total += a.prefix.size / 2**64
+
+        return {
+            'ipv4_total': ipv4_total,
+            'ipv6_total': ipv6_total,
+        }
+
 
 def aggregate(request, pk):
 

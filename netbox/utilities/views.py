@@ -65,14 +65,20 @@ class ObjectListView(View):
             table.base_columns['pk'].visible = True
         RequestConfig(request, paginate={'klass': EnhancedPaginator}).configure(table)
 
-        return render(request, self.template_name, {
+        context = {
             'table': table,
             'filter_form': self.filter_form(request.GET, label_suffix='') if self.filter_form else None,
             'export_templates': ExportTemplate.objects.filter(content_type=object_ct),
-        })
+        }
+        context.update(self.extra_context())
+
+        return render(request, self.template_name, context)
 
     def alter_queryset(self, request):
         return self.queryset
+
+    def extra_context(self):
+        return {}
 
 
 class ObjectEditView(View):

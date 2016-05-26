@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load humanize %}
 {% load helpers %}
 
 {% block title %}Aggregates{% endblock %}
@@ -29,6 +30,8 @@
 <div class="row">
 	<div class="col-md-9">
         {% include 'utilities/obj_table.html' with bulk_edit_url='ipam:aggregate_bulk_edit' bulk_delete_url='ipam:aggregate_bulk_delete' %}
+        <p class="text-right">IPv4 total: <strong>{{ ipv4_total|intcomma }} /32s</strong></p>
+        <p class="text-right">IPv6 total: <strong>{{ ipv6_total|intcomma }} /64s</strong></p>
 	</div>
 	<div class="col-md-3">
 		{% include 'inc/filter_panel.html' %}
