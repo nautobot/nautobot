@@ -222,9 +222,10 @@ class BulkImportView(View):
                         new_objs.append(obj)
 
                 obj_table = self.table(new_objs)
-                msg = 'Imported {} objects'.format(len(new_objs))
-                messages.success(request, msg)
-                UserAction.objects.log_import(request.user, ContentType.objects.get_for_model(new_objs[0]), msg)
+                if new_objs:
+                    msg = 'Imported {} {}'.format(len(new_objs), new_objs[0]._meta.verbose_name_plural)
+                    messages.success(request, msg)
+                    UserAction.objects.log_import(request.user, ContentType.objects.get_for_model(new_objs[0]), msg)
 
                 return render(request, "import_success.html", {
                     'table': obj_table,
