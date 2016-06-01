@@ -40,7 +40,7 @@
                 <tr>
                     <td>Device Type</td>
                     <td>
-                        <span><a href="{% url 'dcim:device_list' %}?manufacturer={{ device.device_type.manufacturer.slug }}&model={{ device.device_type.slug }}">{{ device.device_type }}</a> ({{ device.device_type.u_height }}U)</span>
+                        <span><a href="{% url 'dcim:devicetype' pk=device.device_type.pk %}">{{ device.device_type }}</a> ({{ device.device_type.u_height }}U)</span>
                     </td>
                 </tr>
                 <tr>
