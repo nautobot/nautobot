@@ -9,7 +9,7 @@
             <td><a href="{% url 'dcim:devicetype' pk=devicetype.pk %}">{{ devicetype }}</a></td>
             <td>{{ devicetype.model }}</td>
             <td>{{ devicetype.manufacturer }}</td>
-            <td>{{ device.u_height }}</td>
+            <td>{{ devicetype.u_height }}U</td>
         </tr>
     {% endfor %}
 {% endblock %}

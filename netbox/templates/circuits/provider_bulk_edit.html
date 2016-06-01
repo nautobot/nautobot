@@ -7,9 +7,8 @@
     {% for provider in selected_objects %}
         <tr>
             <td><a href="{% url 'circuits:provider' slug=provider.slug %}">{{ provider }}</a></td>
-            <td>{{ aggregate.asn }}</td>
-            <td>{{ aggregate.account }}</td>
-            <td>{{ aggregate.comments }}</td>
+            <td>{{ provider.account }}</td>
+            <td>{{ provider.asn }}</td>
         </tr>
     {% endfor %}
 {% endblock %}
