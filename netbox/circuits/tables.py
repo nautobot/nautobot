@@ -1,6 +1,8 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from utilities.tables import ToggleColumn
+
 from .models import Circuit, CircuitType, Provider
 
 
@@ -16,7 +18,7 @@ CIRCUITTYPE_EDIT_LINK = """
 #
 
 class ProviderTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn('circuits:provider', args=[Accessor('slug')], verbose_name='Name')
     asn = tables.Column(verbose_name='ASN')
     circuit_count = tables.Column(accessor=Accessor('count_circuits'), verbose_name='Circuits')
@@ -35,7 +37,7 @@ class ProviderTable(tables.Table):
 #
 
 class CircuitTypeTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     circuit_count = tables.Column(verbose_name='Circuits')
     slug = tables.Column(verbose_name='Slug')
@@ -55,7 +57,7 @@ class CircuitTypeTable(tables.Table):
 #
 
 class CircuitTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     cid = tables.LinkColumn('circuits:circuit', args=[Accessor('pk')], verbose_name='ID')
     type = tables.Column(verbose_name='Type')
     provider = tables.LinkColumn('circuits:provider', args=[Accessor('provider.slug')], verbose_name='Provider')

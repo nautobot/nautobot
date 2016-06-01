@@ -1,6 +1,8 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from utilities.tables import ToggleColumn
+
 from .models import (
     ConsolePort, ConsolePortTemplate, ConsoleServerPortTemplate, Device, DeviceRole, DeviceType, InterfaceTemplate,
     Manufacturer, Platform, PowerOutletTemplate, PowerPort, PowerPortTemplate, Rack, RackGroup, Site,
@@ -75,7 +77,7 @@ class SiteTable(tables.Table):
 #
 
 class RackGroupTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     rack_count = tables.Column(verbose_name='Racks')
@@ -96,7 +98,7 @@ class RackGroupTable(tables.Table):
 #
 
 class RackTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn('dcim:rack', args=[Accessor('pk')], verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     group = tables.Column(accessor=Accessor('group.name'), verbose_name='Group')
@@ -118,7 +120,7 @@ class RackTable(tables.Table):
 #
 
 class ManufacturerTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     devicetype_count = tables.Column(verbose_name='Device Types')
     slug = tables.Column(verbose_name='Slug')
@@ -138,7 +140,7 @@ class ManufacturerTable(tables.Table):
 #
 
 class DeviceTypeTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     model = tables.LinkColumn('dcim:devicetype', args=[Accessor('pk')], verbose_name='Device Type')
 
     class Meta:
@@ -155,7 +157,7 @@ class DeviceTypeTable(tables.Table):
 #
 
 class ConsolePortTemplateTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
 
     class Meta:
         model = ConsolePortTemplate
@@ -168,7 +170,7 @@ class ConsolePortTemplateTable(tables.Table):
 
 
 class ConsoleServerPortTemplateTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
 
     class Meta:
         model = ConsoleServerPortTemplate
@@ -181,7 +183,7 @@ class ConsoleServerPortTemplateTable(tables.Table):
 
 
 class PowerPortTemplateTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
 
     class Meta:
         model = PowerPortTemplate
@@ -194,7 +196,7 @@ class PowerPortTemplateTable(tables.Table):
 
 
 class PowerOutletTemplateTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
 
     class Meta:
         model = PowerOutletTemplate
@@ -207,7 +209,7 @@ class PowerOutletTemplateTable(tables.Table):
 
 
 class InterfaceTemplateTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
 
     class Meta:
         model = InterfaceTemplate
@@ -224,7 +226,7 @@ class InterfaceTemplateTable(tables.Table):
 #
 
 class DeviceRoleTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     device_count = tables.Column(verbose_name='Devices')
     slug = tables.Column(verbose_name='Slug')
@@ -245,7 +247,7 @@ class DeviceRoleTable(tables.Table):
 #
 
 class PlatformTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     device_count = tables.Column(verbose_name='Devices')
     slug = tables.Column(verbose_name='Slug')
@@ -265,7 +267,7 @@ class PlatformTable(tables.Table):
 #
 
 class DeviceTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     status = tables.TemplateColumn(template_code=STATUS_ICON, verbose_name='')
     name = tables.TemplateColumn(template_code=DEVICE_LINK, verbose_name='Name')
     site = tables.Column(accessor=Accessor('rack.site'), verbose_name='Site')

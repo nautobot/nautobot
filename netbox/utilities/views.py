@@ -260,10 +260,14 @@ class BulkEditView(View):
         else:
             redirect_url = reverse(self.default_redirect_url)
 
+        if request.POST.get('_all'):
+            pk_list = request.POST.get('pk_all').split(',')
+        else:
+            pk_list = request.POST.getlist('pk')
+
         if '_apply' in request.POST:
             form = self.form(request.POST)
             if form.is_valid():
-                pk_list = [obj.pk for obj in form.cleaned_data['pk']]
                 updated_count = self.update_objects(pk_list, form)
                 msg = 'Updated {} {}'.format(updated_count, self.cls._meta.verbose_name_plural)
                 messages.success(self.request, msg)
@@ -272,9 +276,9 @@ class BulkEditView(View):
                 return redirect(redirect_url)
 
         else:
-            form = self.form(initial={'pk': request.POST.getlist('pk')})
+            form = self.form(initial={'pk': pk_list})
 
-        selected_objects = self.cls.objects.filter(pk__in=request.POST.getlist('pk'))
+        selected_objects = self.cls.objects.filter(pk__in=pk_list)
         if not selected_objects:
             messages.warning(request, "No {} were selected.".format(self.cls._meta.verbose_name_plural))
             return redirect(redirect_url)
@@ -313,17 +317,21 @@ class BulkDeleteView(View):
         else:
             redirect_url = reverse(self.default_redirect_url)
 
+        if request.POST.get('_all'):
+            pk_list = request.POST.get('pk_all').split(',')
+        else:
+            pk_list = request.POST.getlist('pk')
+
         if '_confirm' in request.POST:
             form = self.form(request.POST)
             if form.is_valid():
 
                 # Delete objects
-                objects_to_delete = self.cls.objects.filter(pk__in=[v.id for v in form.cleaned_data['pk']])
+                queryset = self.cls.objects.filter(pk__in=pk_list)
                 try:
-                    deleted_count = objects_to_delete.count()
-                    objects_to_delete.delete()
+                    deleted_count = queryset.delete()[0]
                 except ProtectedError, e:
-                    handle_protectederror(list(objects_to_delete), request, e)
+                    handle_protectederror(list(queryset), request, e)
                     return redirect(redirect_url)
 
                 msg = 'Deleted {} {}'.format(deleted_count, self.cls._meta.verbose_name_plural)
@@ -332,9 +340,9 @@ class BulkDeleteView(View):
                 return redirect(redirect_url)
 
         else:
-            form = self.form(initial={'pk': request.POST.getlist('pk')})
+            form = self.form(initial={'pk': pk_list})
 
-        selected_objects = self.cls.objects.filter(pk__in=form.initial.get('pk'))
+        selected_objects = self.cls.objects.filter(pk__in=pk_list)
         if not selected_objects:
             messages.warning(request, "No {} were selected for deletion.".format(self.cls._meta.verbose_name_plural))
             return redirect(redirect_url)

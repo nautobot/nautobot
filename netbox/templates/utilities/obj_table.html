@@ -4,6 +4,7 @@
     <form method="post" class="form form-horizontal">
         {% csrf_token %}
         <input type="hidden" name="redirect_url" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" />
+        <input type="hidden" name="pk_all" value="{% for row in table.rows %}{{ row.record.pk }}{% if not forloop.last %},{% endif %}{% endfor %}" />
         {% render_table table table_template|default:'table.html' %}
         {% if bulk_edit_url and table.model|user_can_change:request.user %}
             <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}" class="btn btn-warning btn-sm">

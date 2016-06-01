@@ -1,6 +1,8 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from utilities.tables import ToggleColumn
+
 from .models import Aggregate, IPAddress, Prefix, RIR, Role, VLAN, VRF
 
 
@@ -54,7 +56,7 @@ STATUS_LABEL = """
 #
 
 class VRFTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn('ipam:vrf', args=[Accessor('pk')], verbose_name='Name')
     rd = tables.Column(verbose_name='RD')
     description = tables.Column(sortable=False, verbose_name='Description')
@@ -73,7 +75,7 @@ class VRFTable(tables.Table):
 #
 
 class RIRTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     aggregate_count = tables.Column(verbose_name='Aggregates')
     slug = tables.Column(verbose_name='Slug')
@@ -93,7 +95,7 @@ class RIRTable(tables.Table):
 #
 
 class AggregateTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     prefix = tables.LinkColumn('ipam:aggregate', args=[Accessor('pk')], verbose_name='Aggregate')
     rir = tables.Column(verbose_name='RIR')
     child_count = tables.Column(verbose_name='Prefixes')
@@ -115,7 +117,7 @@ class AggregateTable(tables.Table):
 #
 
 class RoleTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.Column(verbose_name='Name')
     prefix_count = tables.Column(accessor=Accessor('count_prefixes'), orderable=False, verbose_name='Prefixes')
     vlan_count = tables.Column(accessor=Accessor('count_vlans'), orderable=False, verbose_name='VLANs')
@@ -136,7 +138,7 @@ class RoleTable(tables.Table):
 #
 
 class PrefixTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     status = tables.TemplateColumn(STATUS_LABEL, verbose_name='Status')
     prefix = tables.TemplateColumn(PREFIX_LINK, verbose_name='Prefix')
     vrf = tables.Column(orderable=False, default='Global', verbose_name='VRF')
@@ -173,7 +175,7 @@ class PrefixBriefTable(tables.Table):
 #
 
 class IPAddressTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     address = tables.LinkColumn('ipam:ipaddress', args=[Accessor('pk')], verbose_name='IP Address')
     vrf = tables.Column(orderable=False, default='Global', verbose_name='VRF')
     device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False,
@@ -212,7 +214,7 @@ class IPAddressBriefTable(tables.Table):
 #
 
 class VLANTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     vid = tables.LinkColumn('ipam:vlan', args=[Accessor('pk')], verbose_name='ID')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     name = tables.Column(verbose_name='Name')

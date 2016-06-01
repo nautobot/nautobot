@@ -1,6 +1,8 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from utilities.tables import ToggleColumn
+
 from .models import SecretRole, Secret
 
 
@@ -16,7 +18,7 @@ SECRETROLE_EDIT_LINK = """
 #
 
 class SecretRoleTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     secret_count = tables.Column(verbose_name='Secrets')
     slug = tables.Column(verbose_name='Slug')
@@ -36,7 +38,7 @@ class SecretRoleTable(tables.Table):
 #
 
 class SecretTable(tables.Table):
-    pk = tables.CheckBoxColumn(visible=False, default='')
+    pk = ToggleColumn()
     device = tables.LinkColumn('secrets:secret', args=[Accessor('pk')], verbose_name='Device')
     role = tables.Column(verbose_name='Role')
     name = tables.Column(verbose_name='Name')
