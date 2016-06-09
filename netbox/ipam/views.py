@@ -413,7 +413,7 @@ class IPAddressEditView(PermissionRequiredMixin, ObjectEditView):
     permission_required = 'ipam.change_ipaddress'
     model = IPAddress
     form_class = forms.IPAddressForm
-    fields_initial = ['ipaddress']
+    fields_initial = ['address', 'vrf']
     template_name = 'ipam/ipaddress_edit.html'
     cancel_url = 'ipam:ipaddress_list'
 
