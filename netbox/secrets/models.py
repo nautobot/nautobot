@@ -195,6 +195,7 @@ class Secret(models.Model):
 
     class Meta:
         ordering = ['device', 'role', 'name']
+        unique_together = ['device', 'role', 'name']
 
     def __init__(self, *args, **kwargs):
         self.plaintext = kwargs.pop('plaintext', None)
