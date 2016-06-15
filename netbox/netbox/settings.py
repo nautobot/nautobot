@@ -59,7 +59,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'debug_toolbar',
-    'django_extensions',
     'django_tables2',
     'rest_framework',
     'rest_framework_swagger',
