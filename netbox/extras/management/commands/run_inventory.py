@@ -28,7 +28,7 @@ class Command(BaseCommand):
         def create_modules(modules, parent=None):
             for module in modules:
                 m = Module(device=device, parent=parent, name=module['name'], part_id=module['part_id'],
-                           serial=module['serial'])
+                           serial=module['serial'], discovered=True)
                 m.save()
                 create_modules(module.get('modules', []), parent=m)
 
@@ -119,7 +119,7 @@ class Command(BaseCommand):
                     if device.serial != inventory['chassis']['serial']:
                         device.serial = inventory['chassis']['serial']
                         device.save()
-                    Module.objects.filter(device=device).delete()
+                    Module.objects.filter(device=device, discovered=True).delete()
                     create_modules(inventory.get('modules', []))
 
         self.stdout.write("Finished!")

@@ -12,7 +12,7 @@ from utilities.forms import (
 from .models import (
     CONNECTION_STATUS_CHOICES, CONNECTION_STATUS_PLANNED, CONNECTION_STATUS_CONNECTED, ConsolePort, ConsolePortTemplate,
     ConsoleServerPort, ConsoleServerPortTemplate, Device, DeviceRole, DeviceType, Interface, IFACE_FF_VIRTUAL,
-    InterfaceConnection, InterfaceTemplate, Manufacturer, Platform, PowerOutlet, PowerOutletTemplate, PowerPort,
+    InterfaceConnection, InterfaceTemplate, Manufacturer, Module, Platform, PowerOutlet, PowerOutletTemplate, PowerPort,
     PowerPortTemplate, Rack, RackGroup, Site, STATUS_CHOICES
 )
 
@@ -1107,3 +1107,14 @@ class IPAddressForm(forms.ModelForm, BootstrapMixin):
         # If this device does not have any IP addresses assigned, default to setting the first IP as its primary
         if not IPAddress.objects.filter(interface__device=device).count():
             self.fields['set_as_primary'].initial = True
+
+
+#
+# Interfaces
+#
+
+class ModuleForm(forms.ModelForm, BootstrapMixin):
+
+    class Meta:
+        model = Module
+        fields = ['name', 'part_id', 'serial']

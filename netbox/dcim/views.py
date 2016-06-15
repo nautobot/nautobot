@@ -1497,3 +1497,51 @@ def ipaddress_assign(request, pk):
         'form': form,
         'cancel_url': reverse('dcim:device', kwargs={'pk': device.pk}),
     })
+
+
+#
+# Modules
+#
+
+@permission_required('dcim.change_module')
+def module_edit(request, pk):
+
+    module = get_object_or_404(Module, pk=pk)
+
+    if request.method == 'POST':
+        form = forms.ModuleForm(request.POST, instance=module)
+        if form.is_valid():
+            module = form.save()
+            messages.success(request, "Modified {} module {}".format(module.device.name, module.name))
+            return redirect('dcim:device_inventory', pk=module.device.pk)
+
+    else:
+        form = forms.ModuleForm(instance=module)
+
+    return render(request, 'dcim/module_edit.html', {
+        'module': module,
+        'form': form,
+        'cancel_url': reverse('dcim:device_inventory', kwargs={'pk': module.device.pk}),
+    })
+
+
+@permission_required('dcim.delete_module')
+def module_delete(request, pk):
+
+    module = get_object_or_404(Module, pk=pk)
+
+    if request.method == 'POST':
+        form = ConfirmationForm(request.POST)
+        if form.is_valid():
+            module.delete()
+            messages.success(request, "Module {} has been deleted from {}".format(module, module.device))
+            return redirect('dcim:device_inventory', pk=module.device.pk)
+
+    else:
+        form = ConfirmationForm()
+
+    return render(request, 'dcim/module_delete.html', {
+        'module': module,
+        'form': form,
+        'cancel_url': reverse('dcim:device_inventory', kwargs={'pk': module.device.pk}),
+    })

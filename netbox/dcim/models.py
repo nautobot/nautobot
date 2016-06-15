@@ -692,7 +692,6 @@ class InterfaceConnection(models.Model):
                                             verbose_name='Status')
 
     def clean(self):
-
         if self.interface_a == self.interface_b:
             raise ValidationError("Cannot connect an interface to itself")
 
@@ -706,6 +705,7 @@ class Module(models.Model):
     name = models.CharField(max_length=50, verbose_name='Name')
     part_id = models.CharField(max_length=50, verbose_name='Part ID', blank=True)
     serial = models.CharField(max_length=50, verbose_name='Serial number', blank=True)
+    discovered = models.BooleanField(default=False, verbose_name='Discovered')
 
     class Meta:
         ordering = ['device__id', 'parent__id', 'name']

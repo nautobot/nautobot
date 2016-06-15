@@ -141,4 +141,8 @@ urlpatterns = [
     url(r'^interfaces/(?P<pk>\d+)/edit/$', views.interface_edit, name='interface_edit'),
     url(r'^interfaces/(?P<pk>\d+)/delete/$', views.interface_delete, name='interface_delete'),
 
+    # Modules
+    url(r'^modules/(?P<pk>\d+)/edit/$', views.module_edit, name='module_edit'),
+    url(r'^modules/(?P<pk>\d+)/delete/$', views.module_delete, name='module_delete'),
+
 ]
