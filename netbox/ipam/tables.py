@@ -59,7 +59,7 @@ class VRFTable(tables.Table):
     pk = ToggleColumn()
     name = tables.LinkColumn('ipam:vrf', args=[Accessor('pk')], verbose_name='Name')
     rd = tables.Column(verbose_name='RD')
-    description = tables.Column(sortable=False, verbose_name='Description')
+    description = tables.Column(orderable=False, verbose_name='Description')
 
     class Meta:
         model = VRF
@@ -101,7 +101,7 @@ class AggregateTable(tables.Table):
     child_count = tables.Column(verbose_name='Prefixes')
     utilization = tables.TemplateColumn(UTILIZATION_GRAPH, orderable=False, verbose_name='Utilization')
     date_added = tables.DateColumn(format="Y-m-d", verbose_name='Added')
-    description = tables.Column(sortable=False, verbose_name='Description')
+    description = tables.Column(orderable=False, verbose_name='Description')
 
     class Meta:
         model = Aggregate
@@ -144,7 +144,7 @@ class PrefixTable(tables.Table):
     vrf = tables.Column(orderable=False, default='Global', verbose_name='VRF')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     role = tables.Column(verbose_name='Role')
-    description = tables.Column(sortable=False, verbose_name='Description')
+    description = tables.Column(orderable=False, verbose_name='Description')
 
     class Meta:
         model = Prefix
@@ -181,7 +181,7 @@ class IPAddressTable(tables.Table):
     device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False,
                                verbose_name='Device')
     interface = tables.Column(orderable=False, verbose_name='Interface')
-    description = tables.Column(sortable=False, verbose_name='Description')
+    description = tables.Column(orderable=False, verbose_name='Description')
 
     class Meta:
         model = IPAddress
