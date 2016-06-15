@@ -329,7 +329,7 @@ class BulkDeleteView(View):
                 # Delete objects
                 queryset = self.cls.objects.filter(pk__in=pk_list)
                 try:
-                    deleted_count = queryset.delete()[0]
+                    deleted_count = queryset.delete()[1][self.cls._meta.label]
                 except ProtectedError, e:
                     handle_protectederror(list(queryset), request, e)
                     return redirect(redirect_url)
