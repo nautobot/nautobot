@@ -1,7 +1,7 @@
 {% extends '_base.html' %}
 {% load form_helpers %}
 
-{% block title %}Editing {{ module.device }} {{ module }}{% endblock %}
+{% block title %}{% if module %}Editing {{ module.device }} {{ module }}{% else %}Add a Module to {{ device }}{% endif %}{% endblock %}
 
 {% block content %}
 <form action="." method="post" class="form form-horizontal">
@@ -18,13 +18,13 @@
             {% endif %}
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <strong>Editing {{ module.device }} {{ module }}</strong>
+                    <strong>{% if module %}Editing {{ module.device }} {{ module }}{% else %}Add a Module to {{ device }}{% endif %}</strong>
                 </div>
                 <div class="panel-body">
                     <div class="form-group">
                         <label class="col-md-3 control-label required">Device</label>
                         <div class="col-md-9">
-                            <p class="form-control-static">{{ module.device }}</p>
+                            <p class="form-control-static">{% if module %}{{ module.device }}{% else %}{{ device }}{% endif %}</p>
                         </div>
                     </div>
                     {% render_form form %}

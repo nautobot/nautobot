@@ -45,8 +45,8 @@
             <table class="table table-hover table-condensed panel-body" id="hardware">
                 <thead>
                     <tr>
-                        <th></th>
                         <th>Module</th>
+                        <th></th>
                         <th>Part Number</th>
                         <th>Serial Number</th>
                         <th></th>
@@ -55,8 +55,8 @@
                 <tbody>
                     {% for m in modules %}
                         <tr>
-                            <td>{% if not m.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                             <td>{{ m.name }}</td>
+                            <td>{% if not m.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                             <td>{{ m.part_id }}</td>
                             <td>{{ m.serial }}</td>
                             <td class="text-right">
@@ -70,8 +70,8 @@
                         </tr>
                         {% for m2 in m.submodules.all %}
                             <tr>
-                                <td>{% if not m.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                                 <td style="padding-left: 20px">{{ m2.name }}</td>
+                                <td>{% if not m2.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                                 <td>{{ m2.part_id }}</td>
                                 <td>{{ m2.serial }}</td>
                                 <td class="text-right">
@@ -85,8 +85,8 @@
                             </tr>
                             {% for m3 in m2.submodules.all %}
                                 <tr>
-                                    <td>{% if not m.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                                     <td style="padding-left: 40px">{{ m3.name }}</td>
+                                    <td>{% if not m3.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                                     <td>{{ m3.part_id }}</td>
                                     <td>{{ m3.serial }}</td>
                                     <td class="text-right">
@@ -100,8 +100,8 @@
                                 </tr>
                                 {% for m4 in m3.submodules.all %}
                                     <tr>
-                                        <td>{% if not m.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                                         <td style="padding-left: 60px">{{ m4.name }}</td>
+                                        <td>{% if not m4.discovered %}<i class="fa fa-asterisk" title="Manually created"></i>{% endif %}</td>
                                         <td>{{ m4.part_id }}</td>
                                         <td>{{ m4.serial }}</td>
                                         <td class="text-right">
@@ -120,6 +120,12 @@
                 </tbody>
             </table>
         </div>
+        {% if perms.dcim.add_module %}
+            <a href="{% url 'dcim:module_add' pk=device.pk %}" class="btn btn-success">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                Add a Module
+            </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

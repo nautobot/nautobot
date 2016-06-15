@@ -1503,6 +1503,31 @@ def ipaddress_assign(request, pk):
 # Modules
 #
 
+@permission_required('dcim.add_module')
+def module_add(request, pk):
+
+    device = get_object_or_404(Device, pk=pk)
+
+    if request.method == 'POST':
+        form = forms.ModuleForm(request.POST)
+        if form.is_valid():
+            module = form.save(commit=False)
+            module.device = device
+            module.save()
+            messages.success(request, "Added module {} to {}".format(module.name, module.device.name))
+            return redirect('dcim:device_inventory', pk=module.device.pk)
+
+    else:
+        form = forms.ModuleForm()
+
+    return render(request, 'dcim/module_edit.html', {
+        'device': device,
+        'form': form,
+        'cancel_url': reverse('dcim:device_inventory', kwargs={'pk': device.pk}),
+    })
+
+
+
 @permission_required('dcim.change_module')
 def module_edit(request, pk):
 
