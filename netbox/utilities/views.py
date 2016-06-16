@@ -261,7 +261,7 @@ class BulkEditView(View):
             redirect_url = reverse(self.default_redirect_url)
 
         if request.POST.get('_all'):
-            pk_list = request.POST.get('pk_all').split(',')
+            pk_list = [x for x in request.POST.get('pk_all').split(',') if x]
         else:
             pk_list = request.POST.getlist('pk')
 
@@ -318,7 +318,7 @@ class BulkDeleteView(View):
             redirect_url = reverse(self.default_redirect_url)
 
         if request.POST.get('_all'):
-            pk_list = request.POST.get('pk_all').split(',')
+            pk_list = [x for x in request.POST.get('pk_all').split(',') if x]
         else:
             pk_list = request.POST.getlist('pk')
 
