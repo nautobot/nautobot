@@ -240,7 +240,7 @@ class Prefix(models.Model):
         return ','.join([
             str(self.prefix),
             self.vrf.rd if self.vrf else '',
-            self.site.name,
+            self.site.name if self.site else '',
             self.get_status_display(),
             self.role.name if self.role else '',
             self.description,
