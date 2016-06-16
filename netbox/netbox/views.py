@@ -56,7 +56,7 @@ def docs(request, path):
     except:
         raise Http404
 
-    content = mark_safe(markdown(markup, extensions=['mdx_gfm']))
+    content = mark_safe(markdown(markup, extensions=['mdx_gfm', 'toc']))
 
     return render(request, 'docs.html', {
         'content': content,

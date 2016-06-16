@@ -1,8 +1,10 @@
-# Configuration
+<h1>Configuration</h1>
 
 NetBox's local configuration is held in `netbox/netbox/configuration.py`. An example configuration is provided at `netbox/netbox/configuration.example.py`. You may copy or rename the example configuration and make changes as appropriate. NetBox will not run without a configuration file.
 
-## Mandatory Settings
+[TOC]
+
+# Mandatory Settings
 
 ---
 
@@ -48,7 +50,7 @@ random.seed = (os.urandom(2048))
 print ''.join(random.choice(charset) for c in range(50))
 ```
 
-## Optional Settings
+# Optional Settings
 
 ---
 

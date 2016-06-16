@@ -13,7 +13,10 @@
                 <div class="list-group">
                     <a href="{% url 'docs_root' %}" class="list-group-item{% if path == 'index' %} active{% endif %}">Home</a>
                     <a href="{% url 'docs' path='configuration' %}" class="list-group-item{% if path == 'configuration' %} active{% endif %}">Configuration</a>
-                    <a href="{% url 'docs' path='data-model' %}" class="list-group-item{% if path == 'data-model' %} active{% endif %}">Data Model</a>
+                    <a href="{% url 'docs' path='dcim' %}" class="list-group-item{% if path == 'dcim' %} active{% endif %}">DCIM</a>
+                    <a href="{% url 'docs' path='ipam' %}" class="list-group-item{% if path == 'ipam' %} active{% endif %}">IPAM</a>
+                    <a href="{% url 'docs' path='circuits' %}" class="list-group-item{% if path == 'circuits' %} active{% endif %}">Circuits</a>
+                    <a href="{% url 'docs' path='secrets' %}" class="list-group-item{% if path == 'secrets' %} active{% endif %}">Secrets</a>
                 </div>
             </div>
         </div>
