@@ -5,19 +5,13 @@
 
 {% block content %}
 <div class="pull-right">
-    {% if export_templates %}
-        <div class="btn-group">
-            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
-                Export connections <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                {% for et in export_templates %}
-                    <li><a href="{% url 'dcim:console_connections_list' %}?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
-                {% endfor %}
-            </ul>
-        </div>
+    {% if perms.dcim.change_consoleport %}
+        <a href="{% url 'dcim:console_connections_import' %}" class="btn btn-info">
+            <span class="glyphicon glyphicon-import" aria-hidden="true"></span>
+            Import connections
+        </a>
     {% endif %}
+    {% include 'inc/export_button.html' with obj_type='connections' %}
 </div>
 <h1>Console Connections</h1>
 <div class="row">

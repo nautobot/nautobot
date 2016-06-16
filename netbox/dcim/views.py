@@ -488,8 +488,7 @@ class PlatformBulkDeleteView(PermissionRequiredMixin, BulkDeleteView):
 #
 
 class DeviceListView(ObjectListView):
-    queryset = Device.objects.select_related('device_type', 'device_type__manufacturer', 'device_role', 'rack',
-                                             'rack__site', 'primary_ip')
+    queryset = Device.objects.select_related('device_type__manufacturer', 'device_role', 'rack__site', 'primary_ip')
     filter = filters.DeviceFilter
     filter_form = forms.DeviceFilterForm
     table = tables.DeviceTable

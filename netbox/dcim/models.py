@@ -103,6 +103,14 @@ class Site(models.Model):
     def get_absolute_url(self):
         return reverse('dcim:site', args=[self.slug])
 
+    def to_csv(self):
+        return ','.join([
+            self.name,
+            self.slug,
+            self.facility,
+            str(self.asn),
+        ])
+
     @property
     def count_prefixes(self):
         return self.prefixes.count()
@@ -171,6 +179,15 @@ class Rack(models.Model):
 
     def get_absolute_url(self):
         return reverse('dcim:rack', args=[self.pk])
+
+    def to_csv(self):
+        return ','.join([
+            self.site.name,
+            self.group.name if self.group else '',
+            self.name,
+            self.facility_id or '',
+            str(self.u_height),
+        ])
 
     @property
     def units(self):
@@ -446,15 +463,6 @@ class Device(models.Model):
     def get_absolute_url(self):
         return reverse('dcim:device', args=[self.pk])
 
-    @property
-    def display_name(self):
-        if self.name:
-            return self.name
-        elif self.position:
-            return "{} ({} U{})".format(self.device_type, self.rack, self.position)
-        else:
-            return "{} ({})".format(self.device_type, self.rack)
-
     def clean(self):
 
         # Validate position/face combination
@@ -502,6 +510,38 @@ class Device(models.Model):
                            mgmt_only=template.mgmt_only) for template in self.device_type.interface_templates.all()]
             )
 
+    def to_csv(self):
+        return ','.join([
+            self.name or '',
+            self.device_role.name,
+            self.device_type.manufacturer.name,
+            self.device_type.model,
+            self.platform.name if self.platform else '',
+            self.serial,
+            self.rack.site.name,
+            self.rack.name,
+            str(self.position) if self.position else '',
+            self.get_face_display() or '',
+        ])
+
+    @property
+    def display_name(self):
+        if self.name:
+            return self.name
+        elif self.position:
+            return "{} ({} U{})".format(self.device_type, self.rack, self.position)
+        else:
+            return "{} ({})".format(self.device_type, self.rack)
+
+    @property
+    def identifier(self):
+        """
+        Return the device name if set; otherwise return the Device's primary key as {pk}
+        """
+        if self.name is not None:
+            return self.name
+        return '{{{}}}'.format(self.pk)
+
     def get_rpc_client(self):
         """
         Return the appropriate RPC (e.g. NETCONF, ssh, etc.) client for this device's platform, if one is defined.
@@ -527,6 +567,16 @@ class ConsolePort(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    # Used for connections export
+    def to_csv(self):
+        return ','.join([
+            self.cs_port.device.identifier if self.cs_port else '',
+            self.cs_port.name if self.cs_port else '',
+            self.device.identifier,
+            self.name,
+            self.get_connection_status_display(),
+        ])
 
 
 class ConsoleServerPortManager(models.Manager):
@@ -576,6 +626,16 @@ class PowerPort(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    # Used for connections export
+    def to_csv(self):
+        return ','.join([
+            self.power_outlet.device.identifier if self.power_outlet else '',
+            self.power_outlet.name if self.power_outlet else '',
+            self.device.identifier,
+            self.name,
+            self.get_connection_status_display(),
+        ])
 
 
 class PowerOutletManager(models.Manager):
@@ -694,6 +754,16 @@ class InterfaceConnection(models.Model):
     def clean(self):
         if self.interface_a == self.interface_b:
             raise ValidationError("Cannot connect an interface to itself")
+
+    # Used for connections export
+    def to_csv(self):
+        return ','.join([
+            self.interface_a.device.identifier,
+            self.interface_a.name,
+            self.interface_b.device.identifier,
+            self.interface_b.name,
+            self.get_connection_status_display(),
+        ])
 
 
 class Module(models.Model):

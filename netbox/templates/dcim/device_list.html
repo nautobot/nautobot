@@ -15,19 +15,7 @@
             Import devices
         </a>
     {% endif %}
-    {% if export_templates %}
-        <div class="btn-group">
-            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="glyphicon glyphicon-export" aria-hidden="true"></span>
-                Export devices <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                {% for et in export_templates %}
-                    <li><a href="{% url 'dcim:device_list' %}?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export={{ et.name }}">{{ et.name }}</a></li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% endif %}
+    {% include 'inc/export_button.html' with obj_type='devices' %}
 </div>
 <h1>Devices</h1>
 <div class="row">
