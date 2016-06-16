@@ -117,11 +117,11 @@ class UserActionManager(models.Manager):
     # Actions affecting a single object
     def log_action(self, user, obj, action, message):
         self.model.objects.create(
-            content_type = ContentType.objects.get_for_model(obj),
-            object_id = obj.pk,
-            user = user,
-            action = action,
-            message = message,
+            content_type=ContentType.objects.get_for_model(obj),
+            object_id=obj.pk,
+            user=user,
+            action=action,
+            message=message,
         )
 
     def log_create(self, user, obj, message=''):

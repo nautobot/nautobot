@@ -69,7 +69,7 @@ class RIR(models.Model):
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
-    
+
     class Meta:
         ordering = ['name']
         verbose_name = 'RIR'

@@ -1526,7 +1526,6 @@ def module_add(request, pk):
     })
 
 
-
 @permission_required('dcim.change_module')
 def module_edit(request, pk):
 
