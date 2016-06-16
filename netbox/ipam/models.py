@@ -296,7 +296,7 @@ class IPAddress(models.Model):
         return ','.join([
             str(self.address),
             self.vrf.rd if self.vrf else '',
-            self.device.name if self.device else '',
+            self.device.identifier if self.device else '',
             self.interface.name if self.interface else '',
             'True' if getattr(self, 'primary_for', False) else '',
             self.description,
