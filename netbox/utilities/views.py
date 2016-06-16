@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template import TemplateSyntaxError
 from django.utils.decorators import method_decorator
@@ -47,6 +47,16 @@ class ObjectListView(View):
             except TemplateSyntaxError:
                 messages.error(request, "There was an error rendering the selected export template ({})."
                                .format(et.name))
+        # Fall back to built-in CSV export
+        elif 'export' in request.GET and hasattr(model, 'to_csv'):
+            output = '\n'.join([obj.to_csv() for obj in self.queryset])
+            response = HttpResponse(
+                output,
+                content_type='text/csv'
+            )
+            response['Content-Disposition'] = 'attachment; filename="netbox_{}.csv"'\
+                .format(self.queryset.model._meta.verbose_name_plural)
+            return response
 
         # Attempt to redirect automatically if the search query returns a single result
         if self.redirect_on_single_result and self.queryset.count() == 1 and request.GET:

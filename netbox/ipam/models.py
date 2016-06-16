@@ -55,6 +55,13 @@ class VRF(models.Model):
     def get_absolute_url(self):
         return reverse('ipam:vrf', args=[self.pk])
 
+    def to_csv(self):
+        return ','.join([
+            self.name,
+            self.rd,
+            self.description,
+        ])
+
 
 class RIR(models.Model):
     """
@@ -114,6 +121,14 @@ class Aggregate(models.Model):
             # Infer address family from IPNetwork object
             self.family = self.prefix.version
         super(Aggregate, self).save(*args, **kwargs)
+
+    def to_csv(self):
+        return ','.join([
+            str(self.prefix),
+            self.rir.name,
+            self.date_added.isoformat() if self.date_added else '',
+            self.description,
+        ])
 
     def get_utilization(self):
         """
@@ -221,6 +236,16 @@ class Prefix(models.Model):
             self.family = self.prefix.version
         super(Prefix, self).save(*args, **kwargs)
 
+    def to_csv(self):
+        return ','.join([
+            str(self.prefix),
+            self.vrf.rd if self.vrf else '',
+            self.site.name,
+            self.get_status_display(),
+            self.role.name if self.role else '',
+            self.description,
+        ])
+
     @property
     def new_subnet(self):
         if self.family == 4:
@@ -267,6 +292,16 @@ class IPAddress(models.Model):
             self.family = self.address.version
         super(IPAddress, self).save(*args, **kwargs)
 
+    def to_csv(self):
+        return ','.join([
+            str(self.address),
+            self.vrf.rd if self.vrf else '',
+            self.device.name if self.device else '',
+            self.interface.name if self.interface else '',
+            'True' if getattr(self, 'primary_for', False) else '',
+            self.description,
+        ])
+
     @property
     def device(self):
         if self.interface:
@@ -297,6 +332,15 @@ class VLAN(models.Model):
 
     def get_absolute_url(self):
         return reverse('ipam:vlan', args=[self.pk])
+
+    def to_csv(self):
+        return ','.join([
+            self.site.name,
+            str(self.vid),
+            self.name,
+            self.get_status_display(),
+            self.role.name if self.role else '',
+        ])
 
     def get_status_class(self):
         return STATUS_CHOICE_CLASSES[self.status]
