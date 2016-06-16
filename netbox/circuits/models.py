@@ -44,6 +44,15 @@ class Provider(models.Model):
     def get_absolute_url(self):
         return reverse('circuits:provider', args=[self.slug])
 
+    def to_csv(self):
+        return ','.join([
+            self.name,
+            self.slug,
+            str(self.asn) if self.asn else '',
+            self.account,
+            self.portal_url,
+        ])
+
 
 class CircuitType(models.Model):
     """
@@ -87,3 +96,16 @@ class Circuit(models.Model):
 
     def get_absolute_url(self):
         return reverse('circuits:circuit', args=[self.pk])
+
+    def to_csv(self):
+        return ','.join([
+            self.cid,
+            self.provider.name,
+            self.type.name,
+            self.site.name,
+            self.install_date.isoformat() if self.install_date else '',
+            str(self.port_speed),
+            str(self.commit_rate) if self.commit_rate else '',
+            self.xconnect_id,
+            self.pp_info,
+        ])
