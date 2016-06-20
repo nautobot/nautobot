@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from utilities.tables import ToggleColumn
+from utilities.tables import BaseTable, ToggleColumn
 
 from .models import (
     ConsolePort, ConsolePortTemplate, ConsoleServerPortTemplate, Device, DeviceRole, DeviceType, InterfaceTemplate,
@@ -52,7 +52,7 @@ STATUS_ICON = """
 # Sites
 #
 
-class SiteTable(tables.Table):
+class SiteTable(BaseTable):
     name = tables.LinkColumn('dcim:site', args=[Accessor('slug')], verbose_name='Name')
     facility = tables.Column(verbose_name='Facility')
     asn = tables.Column(verbose_name='ASN')
@@ -62,21 +62,17 @@ class SiteTable(tables.Table):
     vlan_count = tables.Column(accessor=Accessor('count_vlans'), orderable=False, verbose_name='VLANs')
     circuit_count = tables.Column(accessor=Accessor('count_circuits'), orderable=False, verbose_name='Circuits')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Site
         fields = ('name', 'facility', 'asn', 'rack_count', 'device_count', 'prefix_count', 'vlan_count',
                   'circuit_count')
-        empty_text = "No sites have been defined."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Rack groups
 #
 
-class RackGroupTable(tables.Table):
+class RackGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
@@ -84,20 +80,16 @@ class RackGroupTable(tables.Table):
     slug = tables.Column(verbose_name='Slug')
     edit = tables.TemplateColumn(template_code=RACKGROUP_EDIT_LINK, verbose_name='')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = RackGroup
         fields = ('pk', 'name', 'site', 'rack_count', 'slug', 'edit')
-        empty_text = "No rack groups were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Racks
 #
 
-class RackTable(tables.Table):
+class RackTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn('dcim:rack', args=[Accessor('pk')], verbose_name='Name')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
@@ -106,50 +98,38 @@ class RackTable(tables.Table):
     u_height = tables.Column(verbose_name='Height (U)')
     devices = tables.Column(accessor=Accessor('device_count'), verbose_name='Devices')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Rack
         fields = ('pk', 'name', 'site', 'group', 'facility_id', 'u_height', 'devices')
-        empty_text = "No racks were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Manufacturers
 #
 
-class ManufacturerTable(tables.Table):
+class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     devicetype_count = tables.Column(verbose_name='Device Types')
     slug = tables.Column(verbose_name='Slug')
     edit = tables.TemplateColumn(template_code=MANUFACTURER_EDIT_LINK, verbose_name='')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Manufacturer
         fields = ('pk', 'name', 'devicetype_count', 'slug', 'edit')
-        empty_text = "No device types were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Device types
 #
 
-class DeviceTypeTable(tables.Table):
+class DeviceTypeTable(BaseTable):
     pk = ToggleColumn()
     model = tables.LinkColumn('dcim:devicetype', args=[Accessor('pk')], verbose_name='Device Type')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = DeviceType
         fields = ('pk', 'model', 'manufacturer', 'u_height')
-        empty_text = "No device types were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
@@ -225,7 +205,7 @@ class InterfaceTemplateTable(tables.Table):
 # Device roles
 #
 
-class DeviceRoleTable(tables.Table):
+class DeviceRoleTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     device_count = tables.Column(verbose_name='Devices')
@@ -233,40 +213,32 @@ class DeviceRoleTable(tables.Table):
     color = tables.Column(verbose_name='Color')
     edit = tables.TemplateColumn(template_code=DEVICEROLE_EDIT_LINK, verbose_name='')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = DeviceRole
         fields = ('pk', 'name', 'device_count', 'slug', 'color')
-        empty_text = "No device roles were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Platforms
 #
 
-class PlatformTable(tables.Table):
+class PlatformTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     device_count = tables.Column(verbose_name='Devices')
     slug = tables.Column(verbose_name='Slug')
     edit = tables.TemplateColumn(template_code=PLATFORM_EDIT_LINK, verbose_name='')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Platform
         fields = ('pk', 'name', 'device_count', 'slug', 'edit')
-        empty_text = "No platforms were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Devices
 #
 
-class DeviceTable(tables.Table):
+class DeviceTable(BaseTable):
     pk = ToggleColumn()
     status = tables.TemplateColumn(template_code=STATUS_ICON, verbose_name='')
     name = tables.TemplateColumn(template_code=DEVICE_LINK, verbose_name='Name')
@@ -277,16 +249,12 @@ class DeviceTable(tables.Table):
     primary_ip = tables.TemplateColumn(orderable=False, verbose_name='IP Address',
                                        template_code="{{ record.primary_ip.address.ip }}")
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Device
         fields = ('pk', 'name', 'status', 'site', 'rack', 'device_role', 'device_type', 'primary_ip')
-        empty_text = "No devices were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
-class DeviceImportTable(tables.Table):
+class DeviceImportTable(BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK, verbose_name='Name')
     site = tables.Column(accessor=Accessor('rack.site'), verbose_name='Site')
     rack = tables.LinkColumn('dcim:rack', args=[Accessor('rack.pk')], verbose_name='Rack')
@@ -294,49 +262,41 @@ class DeviceImportTable(tables.Table):
     device_role = tables.Column(verbose_name='Role')
     device_type = tables.Column(verbose_name='Type')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Device
         fields = ('name', 'site', 'rack', 'position', 'device_role', 'device_type')
-        attrs = {
-            'class': 'table table-hover',
-        }
+        empty_text = False
 
 
 #
 # Device connections
 #
 
-class ConsoleConnectionTable(tables.Table):
+class ConsoleConnectionTable(BaseTable):
     console_server = tables.LinkColumn('dcim:device', accessor=Accessor('cs_port.device'),
                                        args=[Accessor('cs_port.device.pk')], verbose_name='Console server')
     cs_port = tables.Column(verbose_name='Port')
     device = tables.LinkColumn('dcim:device', args=[Accessor('device.pk')], verbose_name='Device')
     name = tables.Column(verbose_name='Console port')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = ConsolePort
         fields = ('console_server', 'cs_port', 'device', 'name')
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
-class PowerConnectionTable(tables.Table):
+class PowerConnectionTable(BaseTable):
     pdu = tables.LinkColumn('dcim:device', accessor=Accessor('power_outlet.device'),
                             args=[Accessor('power_outlet.device.pk')], verbose_name='PDU')
     power_outlet = tables.Column(verbose_name='Outlet')
     device = tables.LinkColumn('dcim:device', args=[Accessor('device.pk')], verbose_name='Device')
     name = tables.Column(verbose_name='Console port')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = PowerPort
         fields = ('pdu', 'power_outlet', 'device', 'name')
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
-class InterfaceConnectionTable(tables.Table):
+class InterfaceConnectionTable(BaseTable):
     device_a = tables.LinkColumn('dcim:device', accessor=Accessor('interface_a.device'),
                                  args=[Accessor('interface_a.device.pk')], verbose_name='Device A')
     interface_a = tables.Column(verbose_name='Interface A')
@@ -344,9 +304,6 @@ class InterfaceConnectionTable(tables.Table):
                                  args=[Accessor('interface_b.device.pk')], verbose_name='Device B')
     interface_b = tables.Column(verbose_name='Interface B')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = PowerPort
         fields = ('device_a', 'interface_a', 'device_b', 'interface_b')
-        attrs = {
-            'class': 'table table-hover',
-        }

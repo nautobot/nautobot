@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from utilities.tables import ToggleColumn
+from utilities.tables import BaseTable, ToggleColumn
 
 from .models import Circuit, CircuitType, Provider
 
@@ -17,46 +17,38 @@ CIRCUITTYPE_EDIT_LINK = """
 # Providers
 #
 
-class ProviderTable(tables.Table):
+class ProviderTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn('circuits:provider', args=[Accessor('slug')], verbose_name='Name')
     asn = tables.Column(verbose_name='ASN')
     circuit_count = tables.Column(accessor=Accessor('count_circuits'), verbose_name='Circuits')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Provider
         fields = ('pk', 'name', 'asn', 'circuit_count')
-        empty_text = "No providers found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Circuit types
 #
 
-class CircuitTypeTable(tables.Table):
+class CircuitTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     circuit_count = tables.Column(verbose_name='Circuits')
     slug = tables.Column(verbose_name='Slug')
     edit = tables.TemplateColumn(template_code=CIRCUITTYPE_EDIT_LINK, verbose_name='')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = CircuitType
         fields = ('pk', 'name', 'circuit_count', 'slug', 'edit')
-        empty_text = "No circuit types found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Circuits
 #
 
-class CircuitTable(tables.Table):
+class CircuitTable(BaseTable):
     pk = ToggleColumn()
     cid = tables.LinkColumn('circuits:circuit', args=[Accessor('pk')], verbose_name='ID')
     type = tables.Column(verbose_name='Type')
@@ -65,10 +57,6 @@ class CircuitTable(tables.Table):
     port_speed_human = tables.Column(verbose_name='Port Speed')
     commit_rate_human = tables.Column(verbose_name='Commit Rate')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Circuit
         fields = ('pk', 'cid', 'type', 'provider', 'site', 'port_speed_human', 'commit_rate_human')
-        empty_text = "No circuits found."
-        attrs = {
-            'class': 'table table-hover',
-        }

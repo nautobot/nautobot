@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from utilities.tables import ToggleColumn
+from utilities.tables import BaseTable, ToggleColumn
 
 from .models import Aggregate, IPAddress, Prefix, RIR, Role, VLAN, VRF
 
@@ -55,46 +55,38 @@ STATUS_LABEL = """
 # VRFs
 #
 
-class VRFTable(tables.Table):
+class VRFTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn('ipam:vrf', args=[Accessor('pk')], verbose_name='Name')
     rd = tables.Column(verbose_name='RD')
     description = tables.Column(orderable=False, verbose_name='Description')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = VRF
         fields = ('pk', 'name', 'rd', 'description')
-        empty_text = "No VRFs found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # RIRs
 #
 
-class RIRTable(tables.Table):
+class RIRTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(verbose_name='Name')
     aggregate_count = tables.Column(verbose_name='Aggregates')
     slug = tables.Column(verbose_name='Slug')
     edit = tables.TemplateColumn(template_code=RIR_EDIT_LINK, verbose_name='')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = RIR
         fields = ('pk', 'name', 'aggregate_count', 'slug', 'edit')
-        empty_text = "No aggregates were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Aggregates
 #
 
-class AggregateTable(tables.Table):
+class AggregateTable(BaseTable):
     pk = ToggleColumn()
     prefix = tables.LinkColumn('ipam:aggregate', args=[Accessor('pk')], verbose_name='Aggregate')
     rir = tables.Column(verbose_name='RIR')
@@ -103,20 +95,16 @@ class AggregateTable(tables.Table):
     date_added = tables.DateColumn(format="Y-m-d", verbose_name='Added')
     description = tables.Column(orderable=False, verbose_name='Description')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Aggregate
         fields = ('pk', 'prefix', 'rir', 'child_count', 'utilization', 'date_added', 'description')
-        empty_text = "No aggregates found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Roles
 #
 
-class RoleTable(tables.Table):
+class RoleTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(verbose_name='Name')
     prefix_count = tables.Column(accessor=Accessor('count_prefixes'), orderable=False, verbose_name='Prefixes')
@@ -124,20 +112,16 @@ class RoleTable(tables.Table):
     slug = tables.Column(verbose_name='Slug')
     edit = tables.TemplateColumn(template_code=ROLE_EDIT_LINK, verbose_name='')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Role
         fields = ('pk', 'name', 'prefix_count', 'vlan_count', 'slug', 'edit')
-        empty_text = "No roles were found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # Prefixes
 #
 
-class PrefixTable(tables.Table):
+class PrefixTable(BaseTable):
     pk = ToggleColumn()
     status = tables.TemplateColumn(STATUS_LABEL, verbose_name='Status')
     prefix = tables.TemplateColumn(PREFIX_LINK, verbose_name='Prefix')
@@ -146,35 +130,27 @@ class PrefixTable(tables.Table):
     role = tables.Column(verbose_name='Role')
     description = tables.Column(orderable=False, verbose_name='Description')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Prefix
         fields = ('pk', 'prefix', 'status', 'vrf', 'site', 'role', 'description')
-        empty_text = "No prefixes found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
-class PrefixBriefTable(tables.Table):
+class PrefixBriefTable(BaseTable):
     prefix = tables.TemplateColumn(PREFIX_LINK_BRIEF, verbose_name='Prefix')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
     status = tables.TemplateColumn(STATUS_LABEL, verbose_name='Status')
     role = tables.Column(verbose_name='Role')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = Prefix
         fields = ('prefix', 'status', 'site', 'role')
-        empty_text = "No prefixes found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # IPAddresses
 #
 
-class IPAddressTable(tables.Table):
+class IPAddressTable(BaseTable):
     pk = ToggleColumn()
     address = tables.LinkColumn('ipam:ipaddress', args=[Accessor('pk')], verbose_name='IP Address')
     vrf = tables.Column(orderable=False, default='Global', verbose_name='VRF')
@@ -183,16 +159,12 @@ class IPAddressTable(tables.Table):
     interface = tables.Column(orderable=False, verbose_name='Interface')
     description = tables.Column(orderable=False, verbose_name='Description')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = IPAddress
         fields = ('pk', 'address', 'vrf', 'device', 'interface', 'description')
-        empty_text = "No IP addresses found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
-class IPAddressBriefTable(tables.Table):
+class IPAddressBriefTable(BaseTable):
     address = tables.LinkColumn('ipam:ipaddress', args=[Accessor('pk')], verbose_name='IP Address')
     device = tables.LinkColumn('dcim:device', args=[Accessor('interface.device.pk')], orderable=False,
                                verbose_name='Device')
@@ -200,20 +172,16 @@ class IPAddressBriefTable(tables.Table):
     nat_inside = tables.LinkColumn('ipam:ipaddress', args=[Accessor('nat_inside.pk')], orderable=False,
                                    verbose_name='NAT (Inside)')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = IPAddress
         fields = ('address', 'device', 'interface', 'nat_inside')
-        empty_text = "No IP addresses found."
-        attrs = {
-            'class': 'table table-hover',
-        }
 
 
 #
 # VLANs
 #
 
-class VLANTable(tables.Table):
+class VLANTable(BaseTable):
     pk = ToggleColumn()
     vid = tables.LinkColumn('ipam:vlan', args=[Accessor('pk')], verbose_name='ID')
     site = tables.LinkColumn('dcim:site', args=[Accessor('site.slug')], verbose_name='Site')
@@ -221,10 +189,6 @@ class VLANTable(tables.Table):
     status = tables.TemplateColumn(STATUS_LABEL, verbose_name='Status')
     role = tables.Column(verbose_name='Role')
 
-    class Meta:
+    class Meta(BaseTable.Meta):
         model = VLAN
         fields = ('pk', 'vid', 'site', 'name', 'status', 'role')
-        empty_text = "No VLANs found."
-        attrs = {
-            'class': 'table table-hover',
-        }
