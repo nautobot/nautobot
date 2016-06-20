@@ -105,7 +105,7 @@ class CircuitForm(forms.ModelForm, BootstrapMixin):
             'cid': "Unique circuit ID",
             'install_date': "Format: YYYY-MM-DD",
             'port_speed': "Physical circuit speed",
-            'commit_rate': "Commited rate (in Mbps)",
+            'commit_rate': "Commited rate",
             'xconnect_id': "ID of the local cross-connect",
             'pp_info': "Patch panel ID and port number(s)"
         }

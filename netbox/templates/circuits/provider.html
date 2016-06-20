@@ -90,7 +90,7 @@
                                 <a href="{% url 'dcim:device' pk=c.interface.device.pk %}">{{ c.interface.device }}</a>
                             {% endif %}
                         </td>
-                        <td>{{ c.port_speed }} Kbps</td>
+                        <td>{{ c.port_speed_human }}</td>
                     </tr>
                 {% empty %}
                     <tr>

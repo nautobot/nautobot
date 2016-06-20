@@ -91,3 +91,28 @@ class Circuit(models.Model):
             self.xconnect_id,
             self.pp_info,
         ])
+
+    def _humanize_speed(self, speed):
+        """
+        Humanize speeds given in Kbps (e.g. 10000000 becomes '10 Gbps')
+        """
+        if speed >= 1000000000 and speed % 1000000000 == 0:
+            return '{} Tbps'.format(speed / 1000000000)
+        elif speed >= 1000000 and speed % 1000000 == 0:
+            return '{} Gbps'.format(speed / 1000000)
+        elif speed >= 1000 and speed % 1000 == 0:
+            return '{} Mbps'.format(speed / 1000)
+        elif speed >= 1000:
+            return '{} Mbps'.format(float(speed) / 1000)
+        else:
+            return '{} Kbps'.format(speed)
+
+    @property
+    def port_speed_human(self):
+        return self._humanize_speed(self.port_speed)
+
+    @property
+    def commit_rate_human(self):
+        if not self.commit_rate:
+            return ''
+        return self._humanize_speed(self.commit_rate)
