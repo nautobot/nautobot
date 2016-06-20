@@ -7,7 +7,7 @@ from utilities.forms import (
     SlugField,
 )
 
-from .models import PORT_SPEED_CHOICES, Circuit, CircuitType, Provider
+from .models import Circuit, CircuitType, Provider
 
 
 #
@@ -176,9 +176,8 @@ class CircuitBulkEditForm(forms.Form, BootstrapMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Circuit.objects.all(), widget=forms.MultipleHiddenInput)
     type = forms.ModelChoiceField(queryset=CircuitType.objects.all(), required=False)
     provider = forms.ModelChoiceField(queryset=Provider.objects.all(), required=False)
-    port_speed = forms.ChoiceField(choices=[(None, '---------')] + PORT_SPEED_CHOICES, required=False,
-                                   label='Port speed')
-    commit_rate = forms.IntegerField(required=False, label='Commit rate (Mbps)')
+    port_speed = forms.IntegerField(required=False, label='Port speed (Kbps)')
+    commit_rate = forms.IntegerField(required=False, label='Commit rate (Kbps)')
     comments = CommentField()
 
 

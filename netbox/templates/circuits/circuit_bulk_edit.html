@@ -9,7 +9,7 @@
             <td><a href="{% url 'circuits:circuit' pk=circuit.pk %}">{{ circuit }}</a></td>
             <td>{{ circuit.type }}</td>
             <td>{{ circuit.provider }}</td>
-            <td>{{ circuit.port_speed }}</td>
+            <td>{{ circuit.port_speed }} Kbps</td>
             <td>{{ circuit.commit_rate }}</td>
         </tr>
     {% endfor %}

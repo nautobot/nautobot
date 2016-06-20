@@ -4,24 +4,6 @@ from django.db import models
 from dcim.models import Site, Interface
 
 
-PORT_SPEED_100M = 100
-PORT_SPEED_1G = 1000
-PORT_SPEED_10G = 10000
-PORT_SPEED_25G = 25000
-PORT_SPEED_40G = 40000
-PORT_SPEED_50G = 50000
-PORT_SPEED_100G = 100000
-PORT_SPEED_CHOICES = [
-    [PORT_SPEED_100M, '100 Mbps'],
-    [PORT_SPEED_1G, '1 Gbps'],
-    [PORT_SPEED_10G, '10 Gbps'],
-    [PORT_SPEED_25G, '25 Gbps'],
-    [PORT_SPEED_40G, '40 Gbps'],
-    [PORT_SPEED_50G, '50 Gbps'],
-    [PORT_SPEED_100G, '100 Gbps'],
-]
-
-
 class Provider(models.Model):
     """
     A transit provider, IX, or direct peer
@@ -81,8 +63,8 @@ class Circuit(models.Model):
     site = models.ForeignKey(Site, related_name='circuits', on_delete=models.PROTECT)
     interface = models.OneToOneField(Interface, related_name='circuit', blank=True, null=True)
     install_date = models.DateField(blank=True, null=True, verbose_name='Date installed')
-    port_speed = models.PositiveSmallIntegerField(choices=PORT_SPEED_CHOICES, verbose_name='Port speed')
-    commit_rate = models.PositiveIntegerField(blank=True, null=True, verbose_name='Commit rate (Mbps)')
+    port_speed = models.PositiveIntegerField(verbose_name='Port speed (Kbps)')
+    commit_rate = models.PositiveIntegerField(blank=True, null=True, verbose_name='Commit rate (Kbps)')
     xconnect_id = models.CharField(max_length=50, blank=True, verbose_name='Cross-connect ID')
     pp_info = models.CharField(max_length=100, blank=True, verbose_name='Patch panel/port(s)')
     comments = models.TextField(blank=True)

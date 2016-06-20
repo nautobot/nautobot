@@ -79,11 +79,11 @@
                 </tr>
                 <tr>
                     <td>Port Speed</td>
-                    <td>{{ circuit.get_port_speed_display }}</td>
+                    <td>{{ circuit.port_speed }} Kbps</td>
                 </tr>
                 <tr>
                     <td>Commit Rate</td>
-                    <td>{{ circuit.commit_rate }}</td>
+                    <td>{% if circuit.commit_rate %}{{ circuit.commit_rate }} Kbps{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
                 </tr>
                 <tr>
                     <td>Cross-Connect</td>
