@@ -1,4 +1,5 @@
 {% load static from staticfiles %}
+{% load helpers %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,7 +17,7 @@
             </div>
             <div id="navbar" class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    <li class="dropdown{% if '/sites/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if request.path|startswith:'/dcim/sites/' %} active{% endif %}">
                         {% if perms.dcim.add_site %}
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Sites <span class="caret"></span></a>
                             <ul class="dropdown-menu">
@@ -28,7 +29,7 @@
                             <a href="{% url 'dcim:site_list' %}">Sites</a>
                         {% endif %}
                     </li>
-                    <li class="dropdown{% if '/racks/' in request.path or '/rack-groups/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if request.path|startswith:'/dcim/rack' %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Racks <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'dcim:rack_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Racks</a></li>
@@ -43,7 +44,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/dcim/devices/' in request.path or '/device-types/' in request.path or '/device-roles/' in request.path or '/manufacturers/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if request.path|startswith:'/dcim/device' or request.path|startswith:'/dcim/manufacturers/' or request.path|startswith:'/dcim/platforms/' %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Devices <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'dcim:device_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Devices</a></li>
@@ -79,7 +80,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '-connections/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if request.path|startswith:'/dcim/console-connections/' or request.path|startswith:'/dcim/power-connections/' or request.path|startswith:'/dcim/interface-connections/' %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Connections <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'dcim:console_connections_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Console Connections</a></li>
@@ -102,7 +103,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/ipam/' in request.path and not '/ipam/vlans/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if request.path|startswith:'/ipam/' and not request.path|startswith:'/ipam/vlans/' %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">IP Space <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'ipam:ipaddress_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> IP Addresses</a></li>
@@ -148,7 +149,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="dropdown{% if '/ipam/vlans/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if request.path|startswith:'/ipam/vlans/' %} active{% endif %}">
                         {% if perms.ipam.add_vlan %}
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">VLANs <span class="caret"></span></a>
                             <ul class="dropdown-menu">
@@ -160,7 +161,7 @@
                             <a href="{% url 'ipam:vlan_list' %}">VLANs</a>
                         {% endif %}
                     </li>
-                    <li class="dropdown{% if '/circuits/' in request.path %} active{% endif %}">
+                    <li class="dropdown{% if request.path|startswith:'/circuits/' %} active{% endif %}">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Circuits <span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li><a href="{% url 'circuits:provider_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Providers</a></li>
@@ -184,7 +185,7 @@
                         </ul>
                     </li>
                     {% if request.user.is_authenticated %}
-                        <li class="dropdown{% if '/secrets/' in request.path %} active{% endif %}">
+                        <li class="dropdown{% if request.path|startswith:'/secrets/' %} active{% endif %}">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Secrets <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a href="{% url 'secrets:secret_list' %}"><i class="glyphicon glyphicon-search" aria-hidden="true"></i> Secrets</a></li>
