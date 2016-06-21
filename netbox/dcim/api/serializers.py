@@ -50,16 +50,12 @@ class RackGroupNestedSerializer(SiteSerializer):
 
 
 class RackSerializer(serializers.ModelSerializer):
-    display_name = serializers.SerializerMethodField()
     site = SiteNestedSerializer()
     group = RackGroupNestedSerializer()
 
     class Meta:
         model = Rack
         fields = ['id', 'name', 'facility_id', 'display_name', 'site', 'group', 'u_height', 'comments']
-
-    def get_display_name(self, obj):
-        return str(obj)
 
 
 class RackNestedSerializer(RackSerializer):

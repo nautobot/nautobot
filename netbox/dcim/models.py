@@ -177,8 +177,6 @@ class Rack(models.Model):
         ]
 
     def __unicode__(self):
-        if self.facility_id:
-            return "{} ({})".format(self.name, self.facility_id)
         return self.name
 
     def get_absolute_url(self):
@@ -196,6 +194,12 @@ class Rack(models.Model):
     @property
     def units(self):
         return reversed(range(1, self.u_height + 1))
+
+    @property
+    def display_name(self):
+        if self.facility_id:
+            return "{} ({})".format(self.name, self.facility_id)
+        return self.name
 
     def get_rack_units(self, face=RACK_FACE_FRONT, remove_redundant=False):
         """
