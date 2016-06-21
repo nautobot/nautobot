@@ -1,11 +1,12 @@
+{% load static from staticfiles %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<title>NetBox - {% block title %}Home{% endblock %}</title>
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
-	<link href="/static/css/base.css" rel="stylesheet">
+	<link rel="stylesheet" href="{% static 'bootstrap-3.3.6-dist/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'font-awesome-4.6.3/css/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'jquery-ui-1.11.4/jquery-ui.css' %}">
+	<link rel="stylesheet" href="{% static 'css/base.css' %}">
 </head>
 <body>
     <nav class="navbar navbar-default navbar-fixed-top">
@@ -246,9 +247,10 @@
             </div>
 		</div>
 	</footer>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-<script src="/static/js/forms.js"></script>
+<script src="{% static 'js/jquery-2.1.4.min.js' %}"></script>
+<script src="{% static 'jquery-ui-1.11.4/jquery-ui.min.js' %}"></script>
+<script src="{% static 'bootstrap-3.3.6-dist/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/forms.js' %}"></script>
 {% block javascript %}{% endblock %}
 </body>
 </html>

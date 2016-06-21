@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load static from staticfiles %}
 {% load render_table from django_tables2 %}
 {% load helpers %}
 
@@ -414,5 +415,5 @@ $('#graphs_modal').on('show.bs.modal', function (event) {
     });
 });
 </script>
-<script src="/static/js/secrets.js"></script>
+<script src="{% static 'js/secrets.js' %}"></script>
 {% endblock %}

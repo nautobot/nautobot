@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load static from staticfiles %}
 {% load form_helpers %}
 
 {% block title %}User Key{% endblock %}
@@ -68,5 +69,5 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="/static/js/secrets.js"></script>
+<script src="{% static 'js/secrets.js' %}"></script>
 {% endblock %}

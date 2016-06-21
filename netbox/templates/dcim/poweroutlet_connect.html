@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load static from staticfiles %}
 {% load form_helpers %}
 
 {% block title %}Connect {{ poweroutlet.device }} {{ poweroutlet }}{% endblock %}
@@ -48,6 +49,5 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
-<script src="/static/js/livesearch.js"></script>
+<script src="{% static 'js/livesearch.js' %}"></script>
 {% endblock %}
