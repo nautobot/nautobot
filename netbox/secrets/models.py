@@ -165,6 +165,9 @@ class SecretRole(models.Model):
     """
     A SecretRole represents an arbitrary functional classification of Secrets. For example, a user might define roles
     such as "Login Credentials" or "SNMP Communities."
+
+    By default, only superusers will have access to decrypt Secrets. To allow other users to decrypt Secrets, grant them
+    access to the appropriate SecretRoles either individually or by group.
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
