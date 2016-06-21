@@ -720,7 +720,8 @@ class Interface(models.Model):
     device = models.ForeignKey('Device', related_name='interfaces', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
     form_factor = models.PositiveSmallIntegerField(choices=IFACE_FF_CHOICES, default=IFACE_FF_SFP_PLUS)
-    mgmt_only = models.BooleanField(default=False, verbose_name='OOB Management')
+    mgmt_only = models.BooleanField(default=False, verbose_name='OOB Management',
+                                    help_text="This interface is used only for out-of-band management")
     description = models.CharField(max_length=100, blank=True)
 
     objects = InterfaceManager()
