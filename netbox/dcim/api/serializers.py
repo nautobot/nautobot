@@ -110,6 +110,21 @@ class ManufacturerNestedSerializer(ManufacturerSerializer):
 # Device types
 #
 
+class DeviceTypeSerializer(serializers.ModelSerializer):
+    manufacturer = ManufacturerNestedSerializer()
+
+    class Meta:
+        model = DeviceType
+        fields = ['id', 'manufacturer', 'model', 'slug', 'u_height', 'is_full_depth', 'is_console_server', 'is_pdu',
+                  'is_network_device']
+
+
+class DeviceTypeNestedSerializer(DeviceTypeSerializer):
+
+    class Meta(DeviceTypeSerializer.Meta):
+        fields = ['id', 'manufacturer', 'model', 'slug']
+
+
 class ConsolePortTemplateNestedSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -145,25 +160,17 @@ class InterfaceTemplateNestedSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'form_factor', 'mgmt_only']
 
 
-class DeviceTypeSerializer(serializers.ModelSerializer):
-    manufacturer = ManufacturerNestedSerializer()
+class DeviceTypeDetailSerializer(DeviceTypeSerializer):
     console_port_templates = ConsolePortTemplateNestedSerializer(many=True, read_only=True)
     cs_port_templates = ConsoleServerPortTemplateNestedSerializer(many=True, read_only=True)
     power_port_templates = PowerPortTemplateNestedSerializer(many=True, read_only=True)
     power_outlet_templates = PowerPortTemplateNestedSerializer(many=True, read_only=True)
     interface_templates = InterfaceTemplateNestedSerializer(many=True, read_only=True)
 
-    class Meta:
-        model = DeviceType
-        fields = ['id', 'manufacturer', 'model', 'slug', 'u_height', 'is_console_server', 'is_pdu', 'is_network_device',
-                  'console_port_templates', 'cs_port_templates', 'power_port_templates', 'power_outlet_templates',
-                  'interface_templates']
-
-
-class DeviceTypeNestedSerializer(DeviceTypeSerializer):
-
     class Meta(DeviceTypeSerializer.Meta):
-        fields = ['id', 'manufacturer', 'model', 'slug']
+        fields = ['id', 'manufacturer', 'model', 'slug', 'u_height', 'is_full_depth', 'is_console_server', 'is_pdu',
+                  'is_network_device', 'console_port_templates', 'cs_port_templates', 'power_port_templates',
+                  'power_outlet_templates', 'interface_templates']
 
 
 #

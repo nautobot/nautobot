@@ -142,7 +142,7 @@ class DeviceTypeDetailView(generics.RetrieveAPIView):
     Retrieve a single device type
     """
     queryset = DeviceType.objects.select_related('manufacturer')
-    serializer_class = serializers.DeviceTypeSerializer
+    serializer_class = serializers.DeviceTypeDetailSerializer
 
 
 #
