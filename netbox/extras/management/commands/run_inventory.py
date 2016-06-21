@@ -1,6 +1,6 @@
-from Exscript.protocols.Exception import LoginFailure
 from getpass import getpass
 from ncclient.transport.errors import AuthenticationError
+from paramiko import AuthenticationException
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -96,7 +96,7 @@ class Command(BaseCommand):
                     inventory = rpc_client.get_inventory()
             except KeyboardInterrupt:
                 raise
-            except (AuthenticationError, LoginFailure):
+            except (AuthenticationError, AuthenticationException):
                 self.stdout.write("Authentication error!")
                 continue
             except Exception as e:
