@@ -232,7 +232,7 @@ class DeviceNestedSerializer(DeviceSerializer):
 
     class Meta(DeviceSerializer.Meta):
         model = Device
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'display_name']
 
 
 #
