@@ -52,7 +52,9 @@ class UserKeyQuerySet(models.QuerySet):
 
 class UserKey(models.Model):
     """
-    A user's personal public RSA key.
+    A UserKey stores a user's personal RSA (public) encryption key, which is used to generate their unique encrypted
+    copy of the master encryption key. The encrypted instance of the master key can be decrypted only with the user's
+    matching (private) decryption key.
     """
     user = models.OneToOneField(User, related_name='user_key', verbose_name='User')
     public_key = models.TextField(verbose_name='RSA public key')
@@ -161,7 +163,8 @@ class UserKey(models.Model):
 
 class SecretRole(models.Model):
     """
-    A functional classification of secret type. For example: login credentials, SNMP communities, etc.
+    A SecretRole represents an arbitrary functional classification of Secrets. For example, a user might define roles
+    such as "Login Credentials" or "SNMP Communities."
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -180,8 +183,13 @@ class SecretRole(models.Model):
 
 class Secret(models.Model):
     """
-    A secret string of up to 255 bytes in length, stored as both an AES256-encrypted ciphertext and an irreversible
-    salted SHA256 hash (for plaintext validation).
+    A Secret stores an AES256-encrypted copy of sensitive data, such as passwords or secret keys. An irreversible
+    SHA-256 hash is stored along with the ciphertext for validation upon decryption. Each Secret is assigned to a
+    Device; Devices may have multiple Secrets associated with them. A name can optionally be defined along with the
+    ciphertext; this string is stored as plain text in the database.
+
+    A Secret can be up to 65,536 bytes (64KB) in length. Each secret string will be padded with random data to a minimum
+    of 64 bytes during encryption in order to protect short strings from ciphertext analysis.
     """
     device = models.ForeignKey(Device, related_name='secrets')
     role = models.ForeignKey('SecretRole', related_name='secrets', on_delete=models.PROTECT)

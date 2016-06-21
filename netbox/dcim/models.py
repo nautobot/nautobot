@@ -84,7 +84,8 @@ RPC_CLIENT_CHOICES = [
 
 class Site(models.Model):
     """
-    A physical site
+    A Site represents a geographic location within a network; typically a building or campus. The optional facility
+    field can be used to include an external designation, such as a data center name (e.g. Equinix SV6).
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -134,7 +135,9 @@ class Site(models.Model):
 
 class RackGroup(models.Model):
     """
-    An arbitrary grouping of Racks; e.g. a building or room.
+    Racks can be grouped as subsets within a Site. The scope of a group will depend on how Sites are defined. For
+    example, if a Site spans a corporate campus, a RackGroup might be defined to represent each building within that
+    campus. If a Site instead represents a single building, a RackGroup might represent a single room or floor.
     """
     name = models.CharField(max_length=50)
     slug = models.SlugField()
@@ -156,7 +159,8 @@ class RackGroup(models.Model):
 
 class Rack(models.Model):
     """
-    An equipment rack within a site (e.g. a 48U rack)
+    Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
+    Each Rack is assigned to a Site and (optionally) a RackGroup.
     """
     name = models.CharField(max_length=50)
     facility_id = NullableCharField(max_length=30, blank=True, null=True, verbose_name='Facility ID')
@@ -271,7 +275,7 @@ class Rack(models.Model):
 
 class Manufacturer(models.Model):
     """
-    A hardware manufacturer
+    A Manufacturer represents a company which produces hardware devices; for example, Juniper or Dell.
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -288,7 +292,18 @@ class Manufacturer(models.Model):
 
 class DeviceType(models.Model):
     """
-    A unique hardware type; manufacturer and model number (e.g. Juniper EX4300-48T)
+    A DeviceType represents a particular make (Manufacturer) and model of device. It specifies rack height and depth, as
+    well as high-level functional role(s).
+
+    Each DeviceType can have an arbitrary number of component templates assigned to it, which define console, power, and
+    interface objects. For example, a Juniper EX4300-48T DeviceType would have:
+
+      * 1 ConsolePortTemplate
+      * 2 PowerPortTemplates
+      * 48 InterfaceTemplates
+
+    When a new Device of this type is created, the appropriate console, power, and interface objects (as defined by the
+    DeviceType) are automatically created as well.
     """
     manufacturer = models.ForeignKey('Manufacturer', related_name='device_types', on_delete=models.PROTECT)
     model = models.CharField(max_length=50)
@@ -319,7 +334,7 @@ class DeviceType(models.Model):
 
 class ConsolePortTemplate(models.Model):
     """
-    A template for a ConsolePort to be created for a new device
+    A template for a ConsolePort to be created for a new Device.
     """
     device_type = models.ForeignKey('DeviceType', related_name='console_port_templates', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -334,7 +349,7 @@ class ConsolePortTemplate(models.Model):
 
 class ConsoleServerPortTemplate(models.Model):
     """
-    A template for a ConsoleServerPort to be created for a new device
+    A template for a ConsoleServerPort to be created for a new Device.
     """
     device_type = models.ForeignKey('DeviceType', related_name='cs_port_templates', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -349,7 +364,7 @@ class ConsoleServerPortTemplate(models.Model):
 
 class PowerPortTemplate(models.Model):
     """
-    A template for a PowerPort to be created for a new device
+    A template for a PowerPort to be created for a new Device.
     """
     device_type = models.ForeignKey('DeviceType', related_name='power_port_templates', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -364,7 +379,7 @@ class PowerPortTemplate(models.Model):
 
 class PowerOutletTemplate(models.Model):
     """
-    A template for a PowerOutlet to be created for a new device
+    A template for a PowerOutlet to be created for a new Device.
     """
     device_type = models.ForeignKey('DeviceType', related_name='power_outlet_templates', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -379,7 +394,7 @@ class PowerOutletTemplate(models.Model):
 
 class InterfaceTemplate(models.Model):
     """
-    A template for a physical data interface on a new device
+    A template for a physical data interface on a new Device.
     """
     device_type = models.ForeignKey('DeviceType', related_name='interface_templates', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -400,7 +415,8 @@ class InterfaceTemplate(models.Model):
 
 class DeviceRole(models.Model):
     """
-    The functional role of a device (e.g. router, switch, console server, etc.)
+    Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
+    color to be used when displaying rack elevations.
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -418,7 +434,9 @@ class DeviceRole(models.Model):
 
 class Platform(models.Model):
     """
-    A class of software running on a hardware device (e.g. Juniper Junos or Cisco IOS)
+    Platform refers to the software or firmware running on a Device; for example, "Cisco IOS-XR" or "Juniper Junos".
+    NetBox uses Platforms to determine how to interact with devices when pulling inventory data or other information by
+    specifying an remote procedure call (RPC) client.
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -436,7 +454,15 @@ class Platform(models.Model):
 
 class Device(models.Model):
     """
-    A physical piece of equipment mounted within a rack
+    A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
+    DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
+
+    Each Device must be assigned to a Rack, although associating it with a particular rack face or unit is optional (for
+    example, vertically mounted PDUs do not consume rack units).
+
+    When a new Device is created, console/power/interface components are created along with it as dictated by the
+    component templates assigned to its DeviceType. Components can also be added, modified, or deleted after the
+    creation of a Device.
     """
     device_type = models.ForeignKey('DeviceType', related_name='instances', on_delete=models.PROTECT)
     device_role = models.ForeignKey('DeviceRole', related_name='devices', on_delete=models.PROTECT)
@@ -553,7 +579,7 @@ class Device(models.Model):
 
 class ConsolePort(models.Model):
     """
-    A physical console port on a device
+    A physical console port within a Device. ConsolePorts connect to ConsoleServerPorts.
     """
     device = models.ForeignKey('Device', related_name='console_ports', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -596,7 +622,7 @@ class ConsoleServerPortManager(models.Manager):
 
 class ConsoleServerPort(models.Model):
     """
-    A physical port on a console server
+    A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
     """
     device = models.ForeignKey('Device', related_name='cs_ports', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -612,7 +638,7 @@ class ConsoleServerPort(models.Model):
 
 class PowerPort(models.Model):
     """
-    A physical power supply (intake) port on a device
+    A physical power supply (intake) port within a Device. PowerPorts connect to PowerOutlets.
     """
     device = models.ForeignKey('Device', related_name='power_ports', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -649,7 +675,7 @@ class PowerOutletManager(models.Manager):
 
 class PowerOutlet(models.Model):
     """
-    A physical power outlet (output) port on a device
+    A physical power outlet (output) within a Device which provides power to a PowerPort.
     """
     device = models.ForeignKey('Device', related_name='power_outlets', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -688,7 +714,8 @@ class InterfaceManager(models.Manager):
 
 class Interface(models.Model):
     """
-    A physical data interface on a device
+    A physical data interface within a Device. An Interface can connect to exactly one other Interface via the creation
+    of an InterfaceConnection.
     """
     device = models.ForeignKey('Device', related_name='interfaces', on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -744,7 +771,8 @@ class Interface(models.Model):
 
 class InterfaceConnection(models.Model):
     """
-    A symmetrical, one-to-one connection between two device interfaces
+    An InterfaceConnection represents a symmetrical, one-to-one connection between two Interfaces. There is no
+    significant difference between the interface_a and interface_b fields.
     """
     interface_a = models.OneToOneField('Interface', related_name='connected_as_a', on_delete=models.CASCADE)
     interface_b = models.OneToOneField('Interface', related_name='connected_as_b', on_delete=models.CASCADE)
@@ -768,7 +796,8 @@ class InterfaceConnection(models.Model):
 
 class Module(models.Model):
     """
-    A hardware module belonging to a device. Used for inventory purposes only.
+    A Module represents a piece of hardware within a Device, such as a line card or power supply. Modules are used only
+    for inventory purposes.
     """
     device = models.ForeignKey('Device', related_name='modules', on_delete=models.CASCADE)
     parent = models.ForeignKey('self', related_name='submodules', blank=True, null=True, on_delete=models.CASCADE)

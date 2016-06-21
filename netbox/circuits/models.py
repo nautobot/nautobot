@@ -6,15 +6,16 @@ from dcim.models import Site, Interface
 
 class Provider(models.Model):
     """
-    A transit provider, IX, or direct peer
+    Each Circuit belongs to a Provider. This is usually a telecommunications company or similar organization. This model
+    stores information pertinent to the user's relationship with the Provider.
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
     asn = models.PositiveIntegerField(blank=True, null=True, verbose_name='ASN')
     account = models.CharField(max_length=30, blank=True, verbose_name='Account number')
     portal_url = models.URLField(blank=True, verbose_name='Portal')
-    noc_contact = models.TextField(blank=True, verbose_name='NOC Contact')
-    admin_contact = models.TextField(blank=True, verbose_name='Admin Contact')
+    noc_contact = models.TextField(blank=True, verbose_name='NOC contact')
+    admin_contact = models.TextField(blank=True, verbose_name='Admin contact')
     comments = models.TextField(blank=True)
 
     class Meta:
@@ -38,7 +39,8 @@ class Provider(models.Model):
 
 class CircuitType(models.Model):
     """
-    A type of circuit
+    Circuits can be orgnanized by their functional role. For example, a user might wish to define CircuitTypes named
+    "Long Haul," "Metro," or "Out-of-Band".
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -55,7 +57,9 @@ class CircuitType(models.Model):
 
 class Circuit(models.Model):
     """
-    A data circuit from a site to a provider (includes IX connections)
+    A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
+    circuits. Each circuit is also assigned a CircuitType and a Site. A Circuit may be terminated to a specific device
+    interface, but this is not required. Circuit port speed and commit rate are measured in Kbps.
     """
     cid = models.CharField(max_length=50, verbose_name='Circuit ID')
     provider = models.ForeignKey('Provider', related_name='circuits', on_delete=models.PROTECT)

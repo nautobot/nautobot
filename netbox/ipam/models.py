@@ -38,7 +38,9 @@ STATUS_CHOICE_CLASSES = {
 
 class VRF(models.Model):
     """
-    A discrete layer three forwarding domain (e.g. a routing table)
+    A virtual routing and forwarding (VRF) table represents a discrete layer three forwarding domain (e.g. a routing
+    table). Prefixes and IPAddresses can optionally be assigned to VRFs. (Prefixes and IPAddresses not assigned to a VRF
+    are said to exist in the "global" table.)
     """
     name = models.CharField(max_length=50)
     rd = models.CharField(max_length=21, unique=True, verbose_name='Route distinguisher')
@@ -65,7 +67,8 @@ class VRF(models.Model):
 
 class RIR(models.Model):
     """
-    A regional Internet registry (e.g. ARIN) or governing standard (e.g. RFC 1918)
+    A Regional Internet Registry (RIR) is responsible for the allocation of a large portion of the global IP address
+    space. This can be an organization like ARIN or RIPE, or a governing standard such as RFC 1918.
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -84,7 +87,8 @@ class RIR(models.Model):
 
 class Aggregate(models.Model):
     """
-    A top-level IPv4 or IPv6 prefix
+    An aggregate exists at the root level of the IP address space hierarchy in NetBox. Aggregates are used to organize
+    the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
     """
     family = models.PositiveSmallIntegerField(choices=AF_CHOICES)
     prefix = IPNetworkField()
@@ -145,7 +149,8 @@ class Aggregate(models.Model):
 
 class Role(models.Model):
     """
-    The role of an address resource (e.g. customer, infrastructure, mgmt, etc.)
+    A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
+    "Management."
     """
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(unique=True)
@@ -203,7 +208,9 @@ class PrefixQuerySet(models.QuerySet):
 
 class Prefix(models.Model):
     """
-    An IPv4 or IPv6 prefix, including mask length
+    A Prefix represents an IPv4 or IPv6 network, including mask length. Prefixes can optionally be assigned to Sites and
+    VRFs. A Prefix must be assigned a status and may optionally be assigned a used-define Role. A Prefix can also be
+    assigned to a VLAN where appropriate.
     """
     family = models.PositiveSmallIntegerField(choices=AF_CHOICES, editable=False)
     prefix = IPNetworkField()
@@ -263,7 +270,14 @@ class Prefix(models.Model):
 
 class IPAddress(models.Model):
     """
-    An IPv4 or IPv6 address
+    An IPAddress represents an individual IPV4 or IPv6 address and its mask. The mask length should match what is
+    configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
+    Prefixes, IPAddresses can optionally be assigned to a VRF. An IPAddress can optionally be assigned to an Interface.
+    Interfaces can have zero or more IPAddresses assigned to them.
+
+    An IPAddress can also optionally point to a NAT inside IP, designating itself as a NAT outside IP. This is useful,
+    for example, when mapping public addresses to private addresses. When an Interface has been assigned an IPAddress
+    which has a NAT outside IP, that Interface's Device can use either the inside or outside IP as its primary IP.
     """
     family = models.PositiveSmallIntegerField(choices=AF_CHOICES, editable=False)
     address = IPAddressField()
@@ -311,7 +325,9 @@ class IPAddress(models.Model):
 
 class VLAN(models.Model):
     """
-    A VLAN within a site
+    A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094). Each VLAN must be assigned
+    to a Site, however VLAN IDs need not be unique within a Site. Like Prefixes, each VLAN is assigned an operational
+    status and optionally a user-defined Role. A VLAN can have zero or more Prefixes assigned to it.
     """
     site = models.ForeignKey('dcim.Site', related_name='vlans', on_delete=models.PROTECT)
     vid = models.PositiveSmallIntegerField(verbose_name='ID', validators=[
