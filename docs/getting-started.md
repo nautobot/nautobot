@@ -135,13 +135,7 @@ DATABASE = {
 
 Generate a random secret key of at least 50 alphanumeric characters. This key must be unique to this installation and must not be shared outside the local system.
 
-Example:
-
-```
-SECRET_KEY = '^6-ub1!t@ty5tomzkp6-ag0_y$kckdk2lmbx2$ya2r+ikk5&#d'
-```
-
-DO NOT COPY AND PASTE THE KEY FROM THE EXAMPLE.
+You may use the script located at `netbox/generate_secret_key.py` to generate a suitable key.
 
 ## Run Migrations
 

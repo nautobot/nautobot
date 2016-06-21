@@ -15,7 +15,7 @@ This is a list of valid fully-qualified domain names (FQDNs) for the NetBox serv
 Example:
 
 ```
-ALLOWED_HOSTS = ['netbox.example.com', 'netbox.internal.local']
+ALLOWED_HOSTS = ['netbox.example.com', '192.0.2.123']
 ```
 
 ---
@@ -30,6 +30,18 @@ NetBox requires access to a PostgreSQL database service to store data. This serv
 * HOST - Name or IP address of the database server (use `localhost` if running locally)
 * PORT - TCP port of the PostgreSQL service; leave blank for default port (5432)
 
+Example:
+
+```
+DATABASE = {
+    'NAME': 'netbox',               # Database name
+    'USER': 'netbox',               # PostgreSQL username
+    'PASSWORD': 'J5brHrAXFLQSif0K', # PostgreSQL password
+    'HOST': 'localhost',            # Database server
+    'PORT': '',                     # Database port (leave blank for default)
+}
+```
+
 ---
 
 #### SECRET_KEY
@@ -38,17 +50,7 @@ This is a secret cryptographic key is used to improve the security of cookies an
 
 Please note that this key is **not** used for hashing user passwords or for the encrypted storage of secret data in NetBox.
 
-`SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols. The following Python code can be used to generate a key:
-
-
-```
-import os
-import random
-
-charset = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-random.seed = (os.urandom(2048))
-print ''.join(random.choice(charset) for c in range(50))
-```
+`SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols. The script located at `netbox/generate_secret_key.py` may be used to generate a suitable key.
 
 # Optional Settings
 
