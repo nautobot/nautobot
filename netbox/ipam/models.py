@@ -344,7 +344,7 @@ class VLAN(models.Model):
         verbose_name_plural = 'VLANs'
 
     def __unicode__(self):
-        return "{0} ({1})".format(self.vid, self.name)
+        return "VLAN {}".format(self.vid)
 
     def get_absolute_url(self):
         return reverse('ipam:vlan', args=[self.pk])
@@ -357,6 +357,10 @@ class VLAN(models.Model):
             self.get_status_display(),
             self.role.name if self.role else '',
         ])
+
+    @property
+    def display_name(self):
+        return "{} ({})".format(self.vid, self.name)
 
     def get_status_class(self):
         return STATUS_CHOICE_CLASSES[self.status]

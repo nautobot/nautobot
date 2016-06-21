@@ -78,16 +78,12 @@ class AggregateNestedSerializer(AggregateSerializer):
 #
 
 class VLANSerializer(serializers.ModelSerializer):
-    display_name = serializers.SerializerMethodField()
     site = SiteNestedSerializer()
     role = RoleNestedSerializer()
 
     class Meta:
         model = VLAN
         fields = ['id', 'site', 'vid', 'name', 'status', 'role', 'display_name']
-
-    def get_display_name(self, obj):
-        return "{} ({})".format(obj.vid, obj.name)
 
 
 class VLANNestedSerializer(VLANSerializer):

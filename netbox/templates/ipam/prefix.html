@@ -50,7 +50,7 @@
                     <td>VLAN</td>
                     <td>
                         {% if prefix.vlan %}
-                            <a href="{% url 'ipam:vlan' pk=prefix.vlan.pk %}">{{ prefix.vlan.name }} ({{ prefix.vlan.vid }})</a>
+                            <a href="{% url 'ipam:vlan' pk=prefix.vlan.pk %}">{{ prefix.vlan.display_name }}</a>
                         {% else %}
                             <span class="text-muted">Not assigned</span>
                         {% endif %}
