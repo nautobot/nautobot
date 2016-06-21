@@ -37,6 +37,14 @@ def gfm(value):
 
 
 @register.filter()
+def startswith(value, arg):
+    """
+    Test whether a string starts with the given argument
+    """
+    return str(value).startswith(arg)
+
+
+@register.filter()
 def user_can_add(model, user):
     perm_name = '{}:add_{}'.format(model._meta.app_label, model.__class__.__name__.lower())
     return user.has_perm(perm_name)
