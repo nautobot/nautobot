@@ -41,7 +41,7 @@ class ObjectListView(View):
         if request.GET.get('export'):
             et = get_object_or_404(ExportTemplate, content_type=object_ct, name=request.GET.get('export'))
             try:
-                response = et.to_response(context_dict={'queryset': self.queryset},
+                response = et.to_response(context_dict={'queryset': self.queryset.all()},
                                           filename='netbox_{}'.format(self.queryset.model._meta.verbose_name_plural))
                 return response
             except TemplateSyntaxError:
@@ -49,7 +49,7 @@ class ObjectListView(View):
                                .format(et.name))
         # Fall back to built-in CSV export
         elif 'export' in request.GET and hasattr(model, 'to_csv'):
-            output = '\n'.join([obj.to_csv() for obj in self.queryset])
+            output = '\n'.join([obj.to_csv() for obj in self.queryset.all()])
             response = HttpResponse(
                 output,
                 content_type='text/csv'
@@ -85,7 +85,8 @@ class ObjectListView(View):
         return render(request, self.template_name, context)
 
     def alter_queryset(self, request):
-        return self.queryset
+        # .all() is necessary to avoid caching queries
+        return self.queryset.all()
 
     def extra_context(self):
         return {}
