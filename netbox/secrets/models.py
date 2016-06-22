@@ -61,7 +61,7 @@ class UserKey(models.Model):
     public_key = models.TextField(verbose_name='RSA public key')
     master_key_cipher = models.BinaryField(max_length=512, blank=True, null=True, editable=False)
     created = models.DateTimeField(auto_now_add=True, verbose_name='Time created')
-    last_modified = models.DateTimeField(auto_now=True, verbose_name='Last modified')
+    last_updated = models.DateTimeField(auto_now=True, verbose_name='Last modified')
 
     objects = UserKeyQuerySet.as_manager()
 
@@ -201,7 +201,7 @@ class Secret(models.Model):
     ciphertext = models.BinaryField(editable=False, max_length=65568)  # 16B IV + 2B pad length + {62-65550}B padded
     hash = models.CharField(max_length=128, editable=False)
     created = models.DateTimeField(auto_now_add=True, editable=False, verbose_name='Created')
-    last_modified = models.DateTimeField(auto_now=True, verbose_name='Last modified')
+    last_updated = models.DateTimeField(auto_now=True, verbose_name='Last modified')
 
     plaintext = None
 

@@ -9,8 +9,8 @@ from .models import UserKey, SecretRole, Secret
 class UserKeyAdmin(admin.ModelAdmin):
     actions = ['activate_selected']
     list_display = ['user', 'is_filled', 'is_active', 'created']
-    fields = ['user', 'public_key', 'is_active', 'last_modified']
-    readonly_fields = ['is_active', 'last_modified']
+    fields = ['user', 'public_key', 'is_active', 'last_updated']
+    readonly_fields = ['is_active', 'last_updated']
 
     def get_readonly_fields(self, request, obj=None):
         # Don't allow a user to modify an existing public key directly.
@@ -66,6 +66,6 @@ class SecretRoleAdmin(admin.ModelAdmin):
 
 @admin.register(Secret)
 class SecretAdmin(admin.ModelAdmin):
-    list_display = ['device', 'role', 'name', 'created', 'last_modified']
-    fields = ['device', 'role', 'name', 'hash', 'created', 'last_modified']
-    readonly_fields = ['device', 'hash', 'created', 'last_modified']
+    list_display = ['device', 'role', 'name', 'created', 'last_updated']
+    fields = ['device', 'role', 'name', 'hash', 'created', 'last_updated']
+    readonly_fields = ['device', 'hash', 'created', 'last_updated']

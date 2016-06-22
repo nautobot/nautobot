@@ -38,8 +38,8 @@ class SecretTable(BaseTable):
     device = tables.LinkColumn('secrets:secret', args=[Accessor('pk')], verbose_name='Device')
     role = tables.Column(verbose_name='Role')
     name = tables.Column(verbose_name='Name')
-    last_modified = tables.DateTimeColumn(verbose_name='Last modified')
+    last_updated = tables.DateTimeColumn(verbose_name='Last updated')
 
     class Meta(BaseTable.Meta):
         model = Secret
-        fields = ('pk', 'device', 'role', 'name', 'last_modified')
+        fields = ('pk', 'device', 'role', 'name', 'last_updated')
