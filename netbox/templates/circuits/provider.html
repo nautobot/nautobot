@@ -31,7 +31,7 @@
 	<div class="col-md-6">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Details</strong>
+                <strong>Provider</strong>
             </div>
             <table class="table table-hover panel-body">
                 <tr>
@@ -55,6 +55,14 @@
                 <tr>
                     <td>Admin Contact</td>
                     <td>{{ provider.admin_contact|linebreaksbr }}</td>
+                </tr>
+                <tr>
+                    <td>Created</td>
+                    <td>{{ provider.created }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated</td>
+                    <td>{{ provider.last_updated }}</td>
                 </tr>
             </table>
         </div>

@@ -11,7 +11,7 @@
 	<div class="col-md-6">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Hardware</strong>
+                <strong>Device</strong>
             </div>
             <table class="table table-hover panel-body">
                 <tr>
@@ -53,6 +53,14 @@
                             <span class="text-muted">Not defined</span>
                         {% endif %}
                     </td>
+                </tr>
+                <tr>
+                    <td>Created</td>
+                    <td>{{ device.created }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated</td>
+                    <td>{{ device.last_updated }}</td>
                 </tr>
             </table>
         </div>

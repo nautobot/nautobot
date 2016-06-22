@@ -21,7 +21,7 @@
                 {% endif %}
                 {% block form %}
                     <div class="panel panel-default">
-                        <div class="panel-heading"><strong>Details</strong></div>
+                        <div class="panel-heading"><strong>{{ obj_type|capfirst }}</strong></div>
                         <div class="panel-body">
                             {% render_form form %}
                         </div>

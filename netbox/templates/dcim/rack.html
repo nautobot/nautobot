@@ -57,7 +57,7 @@
 	<div class="col-md-6">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Details</strong>
+                <strong>Rack</strong>
             </div>
             <table class="table table-hover panel-body">
                 <tr>
@@ -95,6 +95,14 @@
                     <td>
                         <a href="{% url 'dcim:device_list' %}?rack_id={{ rack.id }}">{{ rack.devices.count }}</a>
                     </td>
+                </tr>
+                <tr>
+                    <td>Created</td>
+                    <td>{{ rack.created }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated</td>
+                    <td>{{ rack.last_updated }}</td>
                 </tr>
             </table>
         </div>

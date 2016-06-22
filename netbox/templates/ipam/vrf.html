@@ -23,7 +23,7 @@
 	<div class="col-md-6">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Details</strong>
+                <strong>VRF</strong>
             </div>
             <table class="table table-hover panel-body">
                 <tr>
@@ -39,6 +39,14 @@
                             <span class="text-muted">None</span>
                         {% endif %}
                     </td>
+                </tr>
+                <tr>
+                    <td>Created</td>
+                    <td>{{ vrf.created }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated</td>
+                    <td>{{ vrf.last_updated }}</td>
                 </tr>
 		    </table>
         </div>

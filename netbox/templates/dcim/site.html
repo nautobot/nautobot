@@ -28,7 +28,7 @@
 	<div class="col-md-6">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Details</strong>
+                <strong>Site</strong>
             </div>
             <table class="table table-hover panel-body">
                 <tr>
@@ -61,6 +61,14 @@
                             <span class="text-muted">See physical address</span>
                         {% endif %}
                     </td>
+                </tr>
+                <tr>
+                    <td>Created</td>
+                    <td>{{ site.created }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated</td>
+                    <td>{{ site.last_updated }}</td>
                 </tr>
             </table>
         </div>
