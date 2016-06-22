@@ -178,7 +178,7 @@ class Rack(CreatedUpdatedModel):
         ]
 
     def __unicode__(self):
-        return self.name
+        return self.display_name
 
     def get_absolute_url(self):
         return reverse('dcim:rack', args=[self.pk])
@@ -560,9 +560,9 @@ class Device(CreatedUpdatedModel):
         if self.name:
             return self.name
         elif self.position:
-            return "{} ({} U{})".format(self.device_type, self.rack, self.position)
+            return "{} ({} U{})".format(self.device_type, self.rack.name, self.position)
         else:
-            return "{} ({})".format(self.device_type, self.rack)
+            return "{} ({})".format(self.device_type, self.rack.name)
 
     @property
     def identifier(self):

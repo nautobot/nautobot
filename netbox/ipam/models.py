@@ -345,7 +345,7 @@ class VLAN(CreatedUpdatedModel):
         verbose_name_plural = 'VLANs'
 
     def __unicode__(self):
-        return "VLAN {}".format(self.vid)
+        return self.display_name
 
     def get_absolute_url(self):
         return reverse('ipam:vlan', args=[self.pk])

@@ -140,7 +140,8 @@ class PrefixForm(forms.ModelForm, BootstrapMixin):
     site = forms.ModelChoiceField(queryset=Site.objects.all(), required=False, label='Site',
                                   widget=forms.Select(attrs={'filter-for': 'vlan'}))
     vlan = forms.ModelChoiceField(queryset=VLAN.objects.all(), required=False, label='VLAN',
-                                  widget=APISelect(api_url='/api/ipam/vlans/?site_id={{site}}'))
+                                  widget=APISelect(api_url='/api/ipam/vlans/?site_id={{site}}',
+                                                   display_field='display_name'))
 
     class Meta:
         model = Prefix
