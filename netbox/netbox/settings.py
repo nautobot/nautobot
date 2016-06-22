@@ -29,8 +29,13 @@ PAGINATE_COUNT = getattr(configuration, 'PAGINATE_COUNT', 50)
 NETBOX_USERNAME = getattr(configuration, 'NETBOX_USERNAME', '')
 NETBOX_PASSWORD = getattr(configuration, 'NETBOX_PASSWORD', '')
 TIME_ZONE = getattr(configuration, 'TIME_ZONE', 'UTC')
+DATE_FORMAT = getattr(configuration, 'DATE_FORMAT', 'N j, Y')
+SHORT_DATE_FORMAT = getattr(configuration, 'SHORT_DATE_FORMAT', 'Y-m-d')
+TIME_FORMAT = getattr(configuration, 'TIME_FORMAT', 'g:i a')
+SHORT_TIME_FORMAT = getattr(configuration, 'SHORT_TIME_FORMAT', 'H:i:s')
+DATETIME_FORMAT = getattr(configuration, 'DATETIME_FORMAT', 'N j, Y g:i a')
+SHORT_DATETIME_FORMAT = getattr(configuration, 'SHORT_DATETIME_FORMAT', 'Y-m-d H:i')
 CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
-
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -132,14 +137,6 @@ MESSAGE_TAGS = {
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_URL = '/logout/'
-
-# Default time formats
-DATE_FORMAT = 'N j, Y'
-SHORT_DATE_FORMAT = 'Y-m-d'
-TIME_FORMAT = 'g:i:s a'
-SHORT_TIME_FORMAT = 'H:i:s'
-DATETIME_FORMAT = 'N j, Y \a\t g:i a'
-SHORT_DATETIME_FORMAT = 'Y-m-d H:i'
 
 # Secrets
 SECRETS_MIN_PUBKEY_SIZE = 2048

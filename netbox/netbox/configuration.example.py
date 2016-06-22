@@ -64,3 +64,12 @@ PAGINATE_COUNT = 50
 
 # Time zone (default: UTC)
 TIME_ZONE = 'UTC'
+
+# Date/time formatting. See the following link for supported formats:
+# https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
+DATE_FORMAT = 'N j, Y'
+SHORT_DATE_FORMAT = 'Y-m-d'
+TIME_FORMAT = 'g:i a'
+SHORT_TIME_FORMAT = 'H:i:s'
+DATETIME_FORMAT = 'N j, Y g:i a'
+SHORT_DATETIME_FORMAT = 'Y-m-d H:i'

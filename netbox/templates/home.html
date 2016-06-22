@@ -149,7 +149,7 @@
                 {% for a in recent_activity %}
                     <div class="list-group-item">
                         {{ a.icon }} {{ a.message|safe }}<br />
-                        <small class="text-muted">{{ a.user }} - {{ a.time|date:"Y-m-d H:i" }}</small>
+                        <small class="text-muted">{{ a.user }} - {{ a.time|date:'SHORT_DATETIME_FORMAT' }}</small>
                     </div>
                 {% endfor %}
             </div>

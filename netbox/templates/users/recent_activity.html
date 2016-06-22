@@ -24,7 +24,7 @@
             <tbody>
                 {% for action in recent_activity %}
                     <tr>
-                        <td>{{ action.time|date:"Y-m-d H:i" }}</td>
+                        <td>{{ action.time|date:'SHORT_DATETIME_FORMAT' }}</td>
                         <td>{{ action.icon }} {{ action.message|safe }}</td>
                     </tr>
                 {% endfor %}
