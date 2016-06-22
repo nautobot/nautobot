@@ -8,6 +8,7 @@ from django.db.models import Q, ObjectDoesNotExist
 
 from extras.rpc import RPC_CLIENTS
 from utilities.fields import NullableCharField
+from utilities.models import CreatedUpdatedModel
 
 
 RACK_FACE_FRONT = 0
@@ -82,7 +83,7 @@ RPC_CLIENT_CHOICES = [
 ]
 
 
-class Site(models.Model):
+class Site(CreatedUpdatedModel):
     """
     A Site represents a geographic location within a network; typically a building or campus. The optional facility
     field can be used to include an external designation, such as a data center name (e.g. Equinix SV6).
@@ -157,7 +158,7 @@ class RackGroup(models.Model):
         return "{}?group_id={}".format(reverse('dcim:rack_list'), self.pk)
 
 
-class Rack(models.Model):
+class Rack(CreatedUpdatedModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Site and (optionally) a RackGroup.
@@ -456,7 +457,7 @@ class Platform(models.Model):
         return "{}?platform={}".format(reverse('dcim:device_list'), self.slug)
 
 
-class Device(models.Model):
+class Device(CreatedUpdatedModel):
     """
     A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.

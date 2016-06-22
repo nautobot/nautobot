@@ -2,9 +2,10 @@ from django.core.urlresolvers import reverse
 from django.db import models
 
 from dcim.models import Site, Interface
+from utilities.models import CreatedUpdatedModel
 
 
-class Provider(models.Model):
+class Provider(CreatedUpdatedModel):
     """
     Each Circuit belongs to a Provider. This is usually a telecommunications company or similar organization. This model
     stores information pertinent to the user's relationship with the Provider.
@@ -55,7 +56,7 @@ class CircuitType(models.Model):
         return "{}?type={}".format(reverse('circuits:circuit_list'), self.slug)
 
 
-class Circuit(models.Model):
+class Circuit(CreatedUpdatedModel):
     """
     A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
     circuits. Each circuit is also assigned a CircuitType and a Site. A Circuit may be terminated to a specific device
