@@ -196,7 +196,7 @@ ul.rack li.occupied a:hover {
 ul.rack li.occupied span {
     display: block;
 }
-ul.rack_near_face li {
+ul.rack_near_face li.empty {
     border-bottom: 1px solid #e0e0e0;
 }
 ul.rack_near_face li.occupied {
@@ -220,6 +220,7 @@ ul.rack_far_face li.blocked {
         #ffc7c7 7px,
         #ffc7c7 14px
     );
+    border-bottom: 1px solid #e0e0e0;
     color: #303030;
 }
 ul.rack_near_face li.empty a {
@@ -249,7 +250,7 @@ ul.rack_near_face li.empty:hover a {
 .orange:hover { background-color: #d35400; }
 .red { background-color: #e74c3c; border-bottom: 1px solid #c0392b; }
 .red:hover { background-color: #c0392b; }
-.light_gray { background-color: #ecf0f1; border-bottom: 1px solid #bdc3c7; }
+.light_gray { background-color: #dce2e3; border-bottom: 1px solid #bdc3c7; }
 .light_gray:hover { background-color: #bdc3c7; }
 .medium_gray { background-color: #95a5a6; border-bottom: 1px solid #7f8c8d; }
 .medium_gray:hover { background-color: #7f8c8d; }
