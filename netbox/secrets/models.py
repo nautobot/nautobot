@@ -51,7 +51,7 @@ class UserKeyQuerySet(models.QuerySet):
         raise Exception("Bulk deletion has been disabled.")
 
 
-class UserKey(models.Model):
+class UserKey(CreatedUpdatedModel):
     """
     A UserKey stores a user's personal RSA (public) encryption key, which is used to generate their unique encrypted
     copy of the master encryption key. The encrypted instance of the master key can be decrypted only with the user's
@@ -60,8 +60,6 @@ class UserKey(models.Model):
     user = models.OneToOneField(User, related_name='user_key', verbose_name='User')
     public_key = models.TextField(verbose_name='RSA public key')
     master_key_cipher = models.BinaryField(max_length=512, blank=True, null=True, editable=False)
-    created = models.DateTimeField(auto_now_add=True, verbose_name='Time created')
-    last_updated = models.DateTimeField(auto_now=True, verbose_name='Last modified')
 
     objects = UserKeyQuerySet.as_manager()
 
@@ -185,7 +183,7 @@ class SecretRole(models.Model):
         return "{}?role={}".format(reverse('secrets:secret_list'), self.slug)
 
 
-class Secret(models.Model):
+class Secret(CreatedUpdatedModel):
     """
     A Secret stores an AES256-encrypted copy of sensitive data, such as passwords or secret keys. An irreversible
     SHA-256 hash is stored along with the ciphertext for validation upon decryption. Each Secret is assigned to a
@@ -200,8 +198,6 @@ class Secret(models.Model):
     name = models.CharField(max_length=100, blank=True)
     ciphertext = models.BinaryField(editable=False, max_length=65568)  # 16B IV + 2B pad length + {62-65550}B padded
     hash = models.CharField(max_length=128, editable=False)
-    created = models.DateTimeField(auto_now_add=True, editable=False, verbose_name='Created')
-    last_updated = models.DateTimeField(auto_now=True, verbose_name='Last modified')
 
     plaintext = None
 
