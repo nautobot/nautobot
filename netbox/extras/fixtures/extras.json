@@ -31,17 +31,5 @@
         "source": "http://localhost/interface_graph.png",
         "link": ""
     }
-},
-{
-    "model": "extras.useraction",
-    "pk": 1,
-    "fields": {
-        "time": "2016-06-23T04:30:37.586Z",
-        "user": 1,
-        "content_type": 10,
-        "object_id": 1,
-        "action": 1,
-        "message": "Created site <a href=\"/dcim/sites/test/\">TEST</a>"
-    }
 }
 ]
