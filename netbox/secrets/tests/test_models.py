@@ -100,7 +100,7 @@ class SecretTestCase(TestCase):
         # Ensure proper hashing algorithm is used
         hasher, iterations, salt, sha256 = s.hash.split('$')
         self.assertEqual(hasher, 'pbkdf2_sha256', "Hashing algorithm has been modified to: {}".format(hasher))
-        self.assertGreaterEqual(iterations, 24000, "Insufficient iteration count ({}) for hash".format(iterations))
+        self.assertGreaterEqual(int(iterations), 24000, "Insufficient iteration count ({}) for hash".format(iterations))
         self.assertGreaterEqual(len(salt), 12, "Hash salt is too short ({} chars)".format(len(salt)))
 
         # Test hash validation

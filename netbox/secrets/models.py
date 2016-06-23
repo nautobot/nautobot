@@ -233,15 +233,23 @@ class Secret(CreatedUpdatedModel):
             pad_length = 16 - ((len(s) + 2) % 16)
         else:
             pad_length = 0
-        return chr(len(s) >> 8) + chr(len(s) % 256) + s + os.urandom(pad_length)
+        return (
+            chr(len(s) >> 8).encode() +
+            chr(len(s) % 256).encode() +
+            s.encode() +
+            os.urandom(pad_length)
+        )
 
     def _unpad(self, s):
         """
         Consume the first two bytes of s as a plaintext length indicator and return only that many bytes as the
         plaintext.
         """
-        plaintext_length = (ord(s[0]) << 8) + ord(s[1])
-        return s[2:plaintext_length + 2]
+        if isinstance(s[0], int):
+            plaintext_length = (s[0] << 8) + s[1]
+        elif isinstance(s[0], str):
+            plaintext_length = (ord(s[0]) << 8) + ord(s[1])
+        return s[2:plaintext_length + 2].decode()
 
     def encrypt(self, secret_key):
         """
