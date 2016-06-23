@@ -205,14 +205,10 @@ class DeviceTypeTest(APITestCase):
         'model',
         'slug',
         'u_height',
+        'is_full_depth',
         'is_console_server',
         'is_pdu',
         'is_network_device',
-        'console_port_templates',
-        'cs_port_templates',
-        'interface_templates',
-        'power_outlet_templates',
-        'power_port_templates',
     ]
 
     nested_fields = [
@@ -324,7 +320,7 @@ class DeviceTest(APITestCase):
         'comments',
     ]
 
-    nested_fields = ['id', 'name']
+    nested_fields = ['id', 'name', 'display_name']
 
     def test_get_list(self, endpoint='/api/dcim/devices/'):
         response = self.client.get(endpoint)
