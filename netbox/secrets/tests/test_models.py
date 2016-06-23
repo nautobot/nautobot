@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from secrets.models import UserKey, Secret, generate_master_key, encrypt_master_key, decrypt_master_key
+from secrets.hashers import SecretValidationHasher
 
 
 class UserKeyTestCase(TestCase):
@@ -100,7 +101,7 @@ class SecretTestCase(TestCase):
         # Ensure proper hashing algorithm is used
         hasher, iterations, salt, sha256 = s.hash.split('$')
         self.assertEqual(hasher, 'pbkdf2_sha256', "Hashing algorithm has been modified to: {}".format(hasher))
-        self.assertGreaterEqual(int(iterations), 24000, "Insufficient iteration count ({}) for hash".format(iterations))
+        self.assertGreaterEqual(int(iterations), SecretValidationHasher.iterations, "Insufficient iteration count ({}) for hash".format(iterations))
         self.assertGreaterEqual(len(salt), 12, "Hash salt is too short ({} chars)".format(len(salt)))
 
         # Test hash validation
