@@ -282,7 +282,7 @@ CREATE TABLE circuits_circuit (
     id integer NOT NULL,
     cid character varying(50) NOT NULL,
     install_date date,
-    port_speed smallint NOT NULL,
+    port_speed integer NOT NULL,
     commit_rate integer,
     comments text NOT NULL,
     interface_id integer,
@@ -291,6 +291,8 @@ CREATE TABLE circuits_circuit (
     xconnect_id character varying(50) NOT NULL,
     type_id integer NOT NULL,
     pp_info character varying(100) NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT circuits_circuit_commit_rate_check CHECK ((commit_rate >= 0)),
     CONSTRAINT circuits_circuit_port_speed_check CHECK ((port_speed >= 0))
 );
@@ -367,6 +369,8 @@ CREATE TABLE circuits_provider (
     noc_contact text NOT NULL,
     admin_contact text NOT NULL,
     comments text NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT circuits_provider_asn_check CHECK ((asn >= 0))
 );
 
@@ -549,6 +553,8 @@ CREATE TABLE dcim_device (
     status boolean NOT NULL,
     platform_id integer,
     comments text NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT dcim_device_face_check CHECK ((face >= 0)),
     CONSTRAINT dcim_device_position_check CHECK (("position" >= 0))
 );
@@ -807,7 +813,8 @@ CREATE TABLE dcim_module (
     part_id character varying(50) NOT NULL,
     serial character varying(50) NOT NULL,
     device_id integer NOT NULL,
-    parent_id integer
+    parent_id integer,
+    discovered boolean NOT NULL
 );
 
 
@@ -1019,6 +1026,8 @@ CREATE TABLE dcim_rack (
     site_id integer NOT NULL,
     comments text NOT NULL,
     group_id integer,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT dcim_rack_u_height_check CHECK ((u_height >= 0))
 );
 
@@ -1094,6 +1103,8 @@ CREATE TABLE dcim_site (
     physical_address character varying(200) NOT NULL,
     shipping_address character varying(200) NOT NULL,
     comments text NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT dcim_site_asn_check CHECK ((asn >= 0))
 );
 
@@ -1357,6 +1368,46 @@ ALTER SEQUENCE extras_topologymap_id_seq OWNED BY extras_topologymap.id;
 
 
 --
+-- Name: extras_useraction; Type: TABLE; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE TABLE extras_useraction (
+    id integer NOT NULL,
+    "time" timestamp with time zone NOT NULL,
+    object_id integer,
+    action smallint NOT NULL,
+    message text NOT NULL,
+    content_type_id integer NOT NULL,
+    user_id integer NOT NULL,
+    CONSTRAINT extras_useraction_action_check CHECK ((action >= 0)),
+    CONSTRAINT extras_useraction_object_id_check CHECK ((object_id >= 0))
+);
+
+
+ALTER TABLE public.extras_useraction OWNER TO django;
+
+--
+-- Name: extras_useraction_id_seq; Type: SEQUENCE; Schema: public; Owner: django
+--
+
+CREATE SEQUENCE extras_useraction_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.extras_useraction_id_seq OWNER TO django;
+
+--
+-- Name: extras_useraction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: django
+--
+
+ALTER SEQUENCE extras_useraction_id_seq OWNED BY extras_useraction.id;
+
+
+--
 -- Name: inet; Type: TABLE; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -1400,6 +1451,8 @@ CREATE TABLE ipam_aggregate (
     rir_id integer NOT NULL,
     date_added date,
     description character varying(100) NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT ipam_aggregate_family_check CHECK ((family >= 0))
 );
 
@@ -1439,6 +1492,8 @@ CREATE TABLE ipam_ipaddress (
     interface_id integer,
     nat_inside_id integer,
     description character varying(100) NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT ipam_ipaddress_family_check CHECK ((family >= 0))
 );
 
@@ -1480,6 +1535,8 @@ CREATE TABLE ipam_prefix (
     vlan_id integer,
     status smallint NOT NULL,
     role_id integer,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT ipam_prefix_family_check CHECK ((family >= 0)),
     CONSTRAINT ipam_prefix_status_4735d2a1_check CHECK ((status >= 0))
 );
@@ -1589,6 +1646,8 @@ CREATE TABLE ipam_vlan (
     site_id integer NOT NULL,
     status smallint NOT NULL,
     role_id integer,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     CONSTRAINT ipam_vlan_status_77289327_check CHECK ((status >= 0)),
     CONSTRAINT ipam_vlan_vid_check CHECK ((vid >= 0))
 );
@@ -1625,7 +1684,9 @@ CREATE TABLE ipam_vrf (
     id integer NOT NULL,
     name character varying(50) NOT NULL,
     description character varying(100) NOT NULL,
-    rd character varying(21) NOT NULL
+    rd character varying(21) NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL
 );
 
 
@@ -1760,8 +1821,8 @@ CREATE TABLE secrets_secret (
     name character varying(100) NOT NULL,
     ciphertext bytea NOT NULL,
     hash character varying(128) NOT NULL,
-    created timestamp with time zone NOT NULL,
-    last_modified timestamp with time zone NOT NULL,
+    created date NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
     role_id integer NOT NULL,
     device_id integer NOT NULL
 );
@@ -1900,9 +1961,9 @@ CREATE TABLE secrets_userkey (
     id integer NOT NULL,
     public_key text NOT NULL,
     user_id integer NOT NULL,
-    created timestamp with time zone NOT NULL,
+    created date NOT NULL,
     master_key_cipher bytea,
-    last_modified timestamp with time zone NOT NULL
+    last_updated timestamp with time zone NOT NULL
 );
 
 
@@ -2245,6 +2306,13 @@ ALTER TABLE ONLY extras_graph ALTER COLUMN id SET DEFAULT nextval('extras_graph_
 --
 
 ALTER TABLE ONLY extras_topologymap ALTER COLUMN id SET DEFAULT nextval('extras_topologymap_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY extras_useraction ALTER COLUMN id SET DEFAULT nextval('extras_useraction_id_seq'::regclass);
 
 
 --
@@ -3054,6 +3122,14 @@ ALTER TABLE ONLY extras_topologymap
 
 
 --
+-- Name: extras_useraction_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY extras_useraction
+    ADD CONSTRAINT extras_useraction_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: inet_pkey; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -3187,6 +3263,14 @@ ALTER TABLE ONLY nullcidr
 
 ALTER TABLE ONLY nullinet
     ADD CONSTRAINT nullinet_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: secrets_secret_device_id_f8acc218_uniq; Type: CONSTRAINT; Schema: public; Owner: django; Tablespace: 
+--
+
+ALTER TABLE ONLY secrets_secret
+    ADD CONSTRAINT secrets_secret_device_id_f8acc218_uniq UNIQUE (device_id, role_id, name);
 
 
 --
@@ -3666,6 +3750,20 @@ CREATE INDEX extras_topologymap_slug_9ba3d31e_like ON extras_topologymap USING b
 
 
 --
+-- Name: extras_useraction_417f1b1c; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX extras_useraction_417f1b1c ON extras_useraction USING btree (content_type_id);
+
+
+--
+-- Name: extras_useraction_e8701ad4; Type: INDEX; Schema: public; Owner: django; Tablespace: 
+--
+
+CREATE INDEX extras_useraction_e8701ad4 ON extras_useraction USING btree (user_id);
+
+
+--
 -- Name: ipam_aggregate_rir_id_6b95f7cbf861b265_uniq; Type: INDEX; Schema: public; Owner: django; Tablespace: 
 --
 
@@ -4123,6 +4221,22 @@ ALTER TABLE ONLY extras_exporttemplate
 
 ALTER TABLE ONLY extras_topologymap
     ADD CONSTRAINT extras_topologymap_site_id_b56b3ceb_fk_dcim_site_id FOREIGN KEY (site_id) REFERENCES dcim_site(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: extras_usera_content_type_id_99f782d7_fk_django_content_type_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY extras_useraction
+    ADD CONSTRAINT extras_usera_content_type_id_99f782d7_fk_django_content_type_id FOREIGN KEY (content_type_id) REFERENCES django_content_type(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: extras_useraction_user_id_8aacec56_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: django
+--
+
+ALTER TABLE ONLY extras_useraction
+    ADD CONSTRAINT extras_useraction_user_id_8aacec56_fk_auth_user_id FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
