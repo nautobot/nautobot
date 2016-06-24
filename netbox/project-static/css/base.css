@@ -258,15 +258,21 @@ ul.rack_near_face li.empty:hover a {
 .dark_gray:hover { background-color: #2c3e50; }
 
 /* Misc */
-.panel table>thead>tr>th {
-    border-bottom: 0;
+.panel table {
+    margin-bottom: 0;
 }
-ul.nav-tabs, ul.nav-pills {
-    margin-bottom: 20px;
+.panel .table th {
+    border-bottom-width: 1px;
+}
+.panel table tr.even:first-child td {
+    border-top: 0;
 }
 .panel .list-group {
     max-height: 400px;
     overflow: auto;
+}
+ul.nav-tabs, ul.nav-pills {
+    margin-bottom: 20px;
 }
 /* Fix progress bar margin inside table cells */
 td .progress {

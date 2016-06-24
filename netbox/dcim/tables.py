@@ -145,7 +145,7 @@ class ConsolePortTemplateTable(tables.Table):
         empty_text = "None"
         show_header = False
         attrs = {
-            'class': 'table table-hover panel-body',
+            'class': 'table table-hover',
         }
 
 
@@ -158,7 +158,7 @@ class ConsoleServerPortTemplateTable(tables.Table):
         empty_text = "None"
         show_header = False
         attrs = {
-            'class': 'table table-hover panel-body',
+            'class': 'table table-hover',
         }
 
 
@@ -171,7 +171,7 @@ class PowerPortTemplateTable(tables.Table):
         empty_text = "None"
         show_header = False
         attrs = {
-            'class': 'table table-hover panel-body',
+            'class': 'table table-hover',
         }
 
 
@@ -184,7 +184,7 @@ class PowerOutletTemplateTable(tables.Table):
         empty_text = "None"
         show_header = False
         attrs = {
-            'class': 'table table-hover panel-body',
+            'class': 'table table-hover',
         }
 
 
