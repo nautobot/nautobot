@@ -57,10 +57,13 @@ You can verify that authentication works using the following command:
 * libxml2-dev
 * libxslt1-dev
 * libffi-dev
+* graphviz*
 
 ```
-# apt-get install python2.7 python-dev git python-pip libxml2-dev libxslt1-dev libffi-dev
+# apt-get install python2.7 python-dev git python-pip libxml2-dev libxslt1-dev libffi-dev graphviz
 ```
+
+*graphviz is needed to render topology maps. If you have no need for this feature, graphviz is not required. 
 
 ## Clone the Git Repository
 
