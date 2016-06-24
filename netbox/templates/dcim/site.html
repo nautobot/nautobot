@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load static from staticfiles %}
 {% load render_table from django_tables2 %}
 {% load helpers %}
 
@@ -6,7 +7,7 @@
 
 {% block content %}
 <div class="pull-right">
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#graphs_modal" data-site="{{ site.name }}" data-id="{{ site.id }}" title="Show graphs">
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#graphs_modal" data-obj="{{ site.name }}" data-url="{% url 'dcim-api:site_graphs' pk=site.pk %}" title="Show graphs">
         <i class="glyphicon glyphicon-signal" aria-hidden="true"></i>
         Graphs
     </button>
@@ -159,32 +160,5 @@
 {% endblock %}
 
 {% block javascript %}
-<script type="text/javascript">
-$('#graphs_modal').on('show.bs.modal', function (event) {
-    var button = $(event.relatedTarget);
-    var site = button.data('site');
-    var site_id = button.data('id');
-    var modal_title = $(this).find('.modal-title');
-    var modal_body = $(this).find('.modal-body');
-    modal_title.text(site);
-    modal_body.empty();
-    $.ajax({
-        url: "/api/dcim/sites/" + site_id + "/graphs/",
-        dataType: 'json',
-        success: function(json) {
-            $.each(json, function(i, graph) {
-                // Build in a 500ms delay per graph to avoid hammering the server
-                setTimeout(function() {
-                    modal_body.append('<h4 class="text-center">' + graph.name + '</h4>');
-                    if (graph.link) {
-                        modal_body.append('<a href="' + graph.link + '"><img src="' + graph.embed_url + '" /></a>');
-                    } else {
-                        modal_body.append('<img src="' + graph.embed_url + '" />');
-                    }
-                }, i*500);
-            })
-        }
-    });
-});
-</script>
+<script src="{% static 'js/graphs.js' %}"></script>
 {% endblock %}
