@@ -56,3 +56,21 @@ NetBox does not generate graphs itself. This feature allows you to embed context
 * **Name:** The title to display above the graph.
 * **Source URL:** The source of the image to be embedded. The associated object will be available as a template variable named `obj`.
 * **Link URL (optional):** A URL to which the graph will be linked. The associated object will be available as a template variable named `obj`.
+
+# Topology Maps
+
+NetBox can generate simple topology maps from the physical network connections recorded in its database. First, you'll need to create a topology map definition under the admin UI at Extras > Topology Maps.
+
+Each topology map is associated with a site. A site can have multiple topology maps, which might each illustrate a different aspect of its infrastructure (for example, production versus backend connectivity).
+
+To define the scope of a topology map, decide which devices you want to include. The map will only include interface connections with both points terminated on an included device. Specify the devices to include in the **device patterns** field by entering a list of [regular expressions](https://en.wikipedia.org/wiki/Regular_expression) matching device names. For example, if you wanted to include "mgmt-switch1" through "mgmt-switch99", you might use the regex `mgmt-switch\d+`.
+
+Each line of the **device patterns** field represents a hierarchical layer within the topology map. For example, you might map a traditional network with core, distribution, and access tiers like this:
+
+```
+core-switch-[abcd]
+dist-switch\d
+access-switch\d+,oob-switch\d+
+```
+
+Note that you can combine multiple regexes onto one line using commas. (Commas can only be used for separating regexes; they will not be processed as part of a regex.) The order in which regexes are listed on a line is significant: devices matching the first regex will be rendered first, and subsequent groups will be rendered to the right of those.

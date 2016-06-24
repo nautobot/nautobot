@@ -19,8 +19,11 @@ class BaseTable(tables.Table):
 
 
 class ToggleColumn(tables.CheckBoxColumn):
-    default = ''
-    visible = False
+
+    def __init__(self, *args, **kwargs):
+        default = kwargs.pop('default', '')
+        visible = kwargs.pop('visible', False)
+        super(ToggleColumn, self).__init__(*args, default=default, visible=visible, **kwargs)
 
     @property
     def header(self):
