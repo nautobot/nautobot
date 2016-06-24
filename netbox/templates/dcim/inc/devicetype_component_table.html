@@ -22,8 +22,6 @@
         <div class="panel-heading">
             <strong>{{ title }}</strong>
         </div>
-        <table class="table table-hover panel-body">
-            {% render_table table table_template|default:'table.html' %}
-        </table>
+        {% render_table table 'table.html' %}
     </div>
 {% endif %}

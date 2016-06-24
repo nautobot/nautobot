@@ -56,6 +56,12 @@ class Graph(models.Model):
         template = Template(self.source)
         return template.render(Context({'obj': obj}))
 
+    def embed_link(self, obj):
+        if self.link is None:
+            return ''
+        template = Template(self.link)
+        return template.render(Context({'obj': obj}))
+
 
 class ExportTemplate(models.Model):
     content_type = models.ForeignKey(ContentType, limit_choices_to={'model__in': EXPORTTEMPLATE_MODELS})

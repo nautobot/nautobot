@@ -19,8 +19,3 @@ class TopologyMapAdmin(admin.ModelAdmin):
     prepopulated_fields = {
         'slug': ['name'],
     }
-
-
-@admin.register(UserAction)
-class UserActionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'action', 'content_type', 'object_id', 'message']

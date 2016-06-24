@@ -84,14 +84,19 @@ class TopologyMapView(APIView):
 
         # Add all connections to the graph
         devices = Device.objects.filter(*(device_superset,))
-        connections = InterfaceConnection.objects.filter(interface_a__device__in=devices, interface_b__device__in=devices)
+        connections = InterfaceConnection.objects.filter(interface_a__device__in=devices,
+                                                         interface_b__device__in=devices)
         for c in connections:
             edge = pydot.Edge(c.interface_a.device.name, c.interface_b.device.name)
             graph.add_edge(edge)
 
         # Write the image to disk and return
         topo_file = tempfile.NamedTemporaryFile()
-        graph.write(topo_file.name, format='png')
+        try:
+            graph.write(topo_file.name, format='png')
+        except:
+            return HttpResponse("There was an error generating the requested graph. Ensure that the GraphViz "
+                                "executables have been installed correctly.")
         response = HttpResponse(FileWrapper(topo_file), content_type='image/png')
         topo_file.close()
 
