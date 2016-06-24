@@ -158,7 +158,8 @@ class ExpandableNameField(forms.CharField):
     def __init__(self, *args, **kwargs):
         super(ExpandableNameField, self).__init__(*args, **kwargs)
         if not self.help_text:
-            self.help_text = 'Numeric ranges are supported for bulk creation.'
+            self.help_text = 'Numeric ranges are supported for bulk creation.<br />'\
+                             'Example: <code>ge-0/0/[0-47]</code>'
 
     def to_python(self, value):
         if re.search(EXPANSION_PATTERN, value):
