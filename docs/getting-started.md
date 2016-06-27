@@ -259,10 +259,10 @@ Restart the nginx service to use the new configuration.
 
 ## gunicorn Configuration
 
-Save the following configuration file in the root netbox installation path (in this example, `/opt/netbox/`.) as `gunicorn_config.py`. Be sure to update the `pythonpath` variable if needed.
+Save the following configuration file in the root netbox installation path (in this example, `/opt/netbox/`.) as `gunicorn_config.py`. Be sure to verify the location of the gunicorn executable (e.g. `which gunicorn`) and to update the `pythonpath` variable if needed.
 
 ```
-command = '/usr/local/bin/gunicorn'
+command = '/usr/bin/gunicorn'
 pythonpath = '/opt/netbox/netbox'
 bind = '127.0.0.1:8001'
 workers = 3
