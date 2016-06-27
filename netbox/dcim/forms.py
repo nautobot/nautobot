@@ -138,24 +138,23 @@ class RackForm(forms.ModelForm, BootstrapMixin):
 class RackFromCSVForm(forms.ModelForm):
     site = forms.ModelChoiceField(queryset=Site.objects.all(), to_field_name='name',
                                   error_messages={'invalid_choice': 'Site not found.'})
-    group = forms.ModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name='name',
-                                   error_messages={'invalid_choice': 'Group not found.'})
+    group_name = forms.CharField(required=False)
 
     class Meta:
         model = Rack
-        fields = ['site', 'group', 'name', 'facility_id', 'u_height']
+        fields = ['site', 'group_name', 'name', 'facility_id', 'u_height']
 
     def clean(self):
 
         site = self.cleaned_data.get('site')
-        group = self.cleaned_data.get('group')
+        group = self.cleaned_data.get('group_name')
 
-        # Validate device type
+        # Validate rack group
         if site and group:
             try:
                 self.instance.group = RackGroup.objects.get(site=site, name=group)
             except RackGroup.DoesNotExist:
-                self.add_error('group', "Invalid rack group ({})".format(group))
+                self.add_error('group_name', "Invalid rack group ({})".format(group))
 
 
 class RackImportForm(BulkImportForm, BootstrapMixin):
