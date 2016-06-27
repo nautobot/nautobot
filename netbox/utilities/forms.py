@@ -19,11 +19,11 @@ def expand_pattern(string):
     lead, pattern, remnant = re.split(EXPANSION_PATTERN, string, maxsplit=1)
     x, y = pattern.split('-')
     for i in range(int(x), int(y) + 1):
-        if remnant:
+        if re.search(EXPANSION_PATTERN, remnant):
             for string in expand_pattern(remnant):
                 yield "{}{}{}".format(lead, i, string)
         else:
-            yield "{}{}".format(lead, i)
+            yield "{}{}{}".format(lead, i, remnant)
 
 
 #
