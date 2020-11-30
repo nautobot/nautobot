@@ -2,7 +2,7 @@ import logging
 from collections import defaultdict
 
 from django.conf import settings
-from django.contrib.auth.backends import ModelBackend, RemoteUserBackend as _RemoteUserBackend
+from django.contrib.auth.backends import BaseBackend, ModelBackend, RemoteUserBackend as _RemoteUserBackend
 from django.contrib.auth.models import Group
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
@@ -133,7 +133,30 @@ class RemoteUserBackend(_RemoteUserBackend):
         return False
 
 
+class DummyBackend(BaseBackend):
+    """Passthrough backend that does not authenticate or check permissions."""
+
+    def has_perm(self, *args, **kwargs):
+        """
+        This is only for the fallback dummy backend so that it will passthrough.
+        If `has_perm()` returns `True` it indicates that the backend has
+        authorized the user for a permission, which is what we don't want if
+        we're just passing through. This will allow permission checks to fall
+        through to the next backend as well until `True` or a `PermissionDenied`
+        isn't raised.
+        """
+        return False
+
+
 class LDAPBackend:
+    """
+    Wrapper for stock `django-auth-ldap` LDAP authentication.
+
+    This backend that validates usability based on whether the plugin is
+    installed and configured, otherwise it will return a dummy backend to allow
+    authentication to proceed using other configured backends.
+    """
+    is_usable = False
 
     def __new__(cls, *args, **kwargs):
         try:
@@ -141,27 +164,39 @@ class LDAPBackend:
             import ldap
         except ModuleNotFoundError as e:
             if getattr(e, 'name') == 'django_auth_ldap':
-                raise ImproperlyConfigured(
+                logging.error(
                     "LDAP authentication has been configured, but django-auth-ldap is not installed."
                 )
-            raise e
 
+        # Try to import `ldap_config.py`
+        # FIXME(jathan): Have this read from `django.conf.settings` instead vs.
+        # another config file that has to be dropped inside of the NetBox code
+        # deployment.
         try:
             from netbox import ldap_config
-        except ModuleNotFoundError as e:
+        except (ModuleNotFoundError, ImportError) as e:
             if getattr(e, 'name') == 'ldap_config':
-                raise ImproperlyConfigured(
+                logging.error(
                     "LDAP configuration file not found: Check that ldap_config.py has been created alongside "
                     "configuration.py."
                 )
-            raise e
+            ldap_config = None
 
+        # Once we've asserted that imports/settings work, set this backend as
+        # usable.
         try:
             getattr(ldap_config, 'AUTH_LDAP_SERVER_URI')
         except AttributeError:
-            raise ImproperlyConfigured(
+            logging.error(
                 "Required parameter AUTH_LDAP_SERVER_URI is missing from ldap_config.py."
             )
+        else:
+            cls.is_usable = True
+
+        # If the LDAP dependencies aren't set/working, just return a dummy
+        # backend and soft fail.
+        if not cls.is_usable:
+            return DummyBackend()
 
         # Create a new instance of django-auth-ldap's LDAPBackend
         obj = LDAPBackend_()

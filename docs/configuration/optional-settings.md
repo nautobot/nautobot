@@ -433,6 +433,11 @@ If true, NetBox will automatically create local accounts for users authenticated
 
 ## REMOTE_AUTH_BACKEND
 
+!!! warning
+    This setting is deprecated and will be removed in a future release. Changing this setting will not do anything. The supported external authentication backends are now built-in but disabled by default.
+
+    To utilize the remote user backend, please see [`REMOTE_AUTH_ENABLED`](#remote_auth_enabled). For LDAP, please see [LDAP configuration](../installation/6-ldap.md).
+
 Default: `'netbox.authentication.RemoteUserBackend'`
 
 This is the Python path to the custom [Django authentication backend](https://docs.djangoproject.com/en/stable/topics/auth/customizing/) to use for external user authentication. NetBox provides two built-in backends (listed below), though custom authentication backends may also be provided by other packages or plugins.
@@ -567,7 +572,6 @@ You may define custom formatting for date and times. For detailed instructions o
 DATE_FORMAT = 'N j, Y'               # June 26, 2016
 SHORT_DATE_FORMAT = 'Y-m-d'          # 2016-06-26
 TIME_FORMAT = 'g:i a'                # 1:23 p.m.
-SHORT_TIME_FORMAT = 'H:i:s'          # 13:23:00
 DATETIME_FORMAT = 'N j, Y g:i a'     # June 26, 2016 1:23 p.m.
 SHORT_DATETIME_FORMAT = 'Y-m-d H:i'  # 2016-06-26 13:23
 ```
