@@ -24,6 +24,13 @@ __all__ = (
 )
 
 
+# This is the authentication backend that will be explicitly used for the test
+# suite. This is required when providing multiple authentication backends in the
+# core settings, otherwise Django just uses the first one in the list, which is
+# not what we want.
+TEST_AUTHENTICATION_BACKEND = "netbox.authentication.RemoteUserBackend"
+
+
 class TestCase(_TestCase):
     user_permissions = ()
 
