@@ -96,6 +96,17 @@ CORS_ORIGIN_WHITELIST = [
 
 ---
 
+## CUSTOM_JOBS_ROOT
+
+Default: `$INSTALL_ROOT/netbox/custom-jobs/`
+
+The file path to a directory where custom jobs can be located. By default, this is the `netbox/custom-jobs/` directory within the base NetBox installation path.
+
+!!! note
+    This directory **must** contain an `__init__.py` file.
+
+---
+
 ## DEBUG
 
 Default: False
@@ -251,8 +262,7 @@ LOGGING = {
 * `netbox.<app>.<model>` - Generic form for model-specific log messages
 * `netbox.auth.*` - Authentication events
 * `netbox.api.views.*` - Views which handle business logic for the REST API
-* `netbox.reports.*` - Report execution (`module.name`)
-* `netbox.scripts.*` - Custom script execution (`module.name`)
+* `netbox.custom_jobs.*` - Custom job execution (`* = module_name.JobName`)
 * `netbox.views.*` - Views which handle business logic for the web UI
 
 ---
@@ -487,7 +497,10 @@ This parameter defines the URL of the repository that will be checked periodical
 
 Default: `$INSTALL_ROOT/netbox/reports/`
 
-The file path to the location where custom reports will be kept. By default, this is the `netbox/reports/` directory within the base NetBox installation path.
+The file path to a location where custom jobs can be located. By default, this is the `netbox/reports/` directory within the base NetBox installation path.
+
+!!! warning
+    This setting is deprecated and will be removed in a future release. Use `CUSTOM_JOBS_ROOT` instead.
 
 ---
 
@@ -503,7 +516,10 @@ The maximum execution time of a background task (such as running a custom script
 
 Default: `$INSTALL_ROOT/netbox/scripts/`
 
-The file path to the location where custom scripts will be kept. By default, this is the `netbox/scripts/` directory within the base NetBox installation path.
+The file path to a directory where custom jobs can be located. By default, this is the `netbox/scripts/` directory within the base NetBox installation path.
+
+!!! warning
+    This setting is deprecated and will be removed in a future release. Use `CUSTOM_JOBS_ROOT` instead.
 
 ---
 

@@ -20,11 +20,8 @@ router.register('image-attachments', views.ImageAttachmentViewSet)
 # Config contexts
 router.register('config-contexts', views.ConfigContextViewSet)
 
-# Reports
-router.register('reports', views.ReportViewSet, basename='report')
-
-# Scripts
-router.register('scripts', views.ScriptViewSet, basename='script')
+# Custom jobs
+router.register('custom-jobs', views.CustomJobViewSet, basename='customjob')
 
 # Change logging
 router.register('object-changes', views.ObjectChangeViewSet)

@@ -1,0 +1,15 @@
+{% extends 'generic/object_list.html' %}
+
+{% block title %}Custom Job Results{% endblock %}
+
+{% block content %}
+    <div class="row noprint">
+        <div class="col-md-12">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:customjob_list' %}">Custom Jobs</a></li>
+                <li>Results</li>
+            </ol>
+        </div>
+    </div>
+    {{ block.super }}
+{% endblock %}

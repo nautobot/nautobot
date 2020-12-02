@@ -20,6 +20,7 @@ __all__ = (
     'CustomFieldModelFilterSet',
     'ExportTemplateFilterSet',
     'ImageAttachmentFilterSet',
+    'JobResultFilterSet',
     'LocalConfigContextFilterSet',
     'ObjectChangeFilterSet',
     'TagFilterSet',

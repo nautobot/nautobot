@@ -8,11 +8,11 @@ from tenancy.models import Tenant, TenantGroup
 from utilities.forms import (
     add_blank_choice, APISelectMultiple, BootstrapMixin, BulkEditForm, BulkEditNullBooleanSelect, ColorSelect,
     ContentTypeSelect, CSVModelForm, DateTimePicker, DynamicModelMultipleChoiceField, JSONField, SlugField,
-    StaticSelect2, BOOLEAN_WITH_BLANK_CHOICES,
+    StaticSelect2, StaticSelect2Multiple, BOOLEAN_WITH_BLANK_CHOICES,
 )
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
-from .models import ConfigContext, CustomField, ImageAttachment, ObjectChange, Tag
+from .models import ConfigContext, CustomField, CustomJob, ImageAttachment, JobResult, ObjectChange, Tag
 
 
 #
@@ -374,10 +374,10 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 #
-# Scripts
+# Custom Jobs
 #
 
-class ScriptForm(BootstrapMixin, forms.Form):
+class CustomJobForm(BootstrapMixin, forms.Form):
     _commit = forms.BooleanField(
         required=False,
         initial=True,
@@ -398,3 +398,35 @@ class ScriptForm(BootstrapMixin, forms.Form):
         A boolean indicating whether the form requires user input (ignore the _commit field).
         """
         return bool(len(self.fields) > 1)
+
+
+def custom_jobs_choices():
+    from .custom_jobs import get_custom_jobs
+    custom_jobs = get_custom_jobs()
+    return [(f"{module}.{job}", f"{module}.{job}") for module, module_jobs in custom_jobs.items() for job in module_jobs["jobs"]]
+
+
+class JobResultFilterForm(BootstrapMixin, forms.Form):
+    model = JobResult
+    q = forms.CharField(required=False, label='Search')
+    name = forms.MultipleChoiceField(
+        required=False,
+        label='Custom Job',
+        choices=custom_jobs_choices,
+        widget=StaticSelect2Multiple,
+    )
+    # custom_job = ...get_custom_jobs()...
+    user = DynamicModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        display_field='username',
+        label='User',
+        widget=APISelectMultiple(
+            api_url='/api/users/users/',
+        )
+    )
+    status = forms.ChoiceField(
+        choices=add_blank_choice(JobResultStatusChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )

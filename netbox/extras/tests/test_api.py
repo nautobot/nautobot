@@ -2,6 +2,7 @@ import datetime
 from unittest import skipIf
 
 from django.contrib.contenttypes.models import ContentType
+from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware
@@ -10,11 +11,11 @@ from rest_framework import status
 from rq import Worker
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Rack, RackGroup, RackRole, Site
-from extras.api.views import ReportViewSet, ScriptViewSet
+from extras.api.views import CustomJobViewSet
 from extras.models import ConfigContext, CustomField, ExportTemplate, ImageAttachment, Tag
-from extras.reports import Report
-from extras.scripts import BooleanVar, IntegerVar, Script, StringVar
+from extras.custom_jobs import CustomJob, BooleanVar, IntegerVar, StringVar
 from utilities.testing import APITestCase, APIViewTestCases
+from utilities.testing.utils import disable_warnings
 
 
 rq_worker_running = Worker.count(get_connection('default'))
@@ -282,93 +283,120 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(rendered_context['bar'], 456)
 
 
-class ReportTest(APITestCase):
+class CustomJobTest(APITestCase):
 
-    class TestReport(Report):
-
-        def test_foo(self):
-            self.log_success(None, "Report completed")
-
-    def get_test_report(self, *args):
-        return self.TestReport()
-
-    def setUp(self):
-        super().setUp()
-
-        # Monkey-patch the API viewset's _get_script method to return our test script above
-        ReportViewSet._retrieve_report = self.get_test_report
-
-    def test_get_report(self):
-        url = reverse('extras-api:report-detail', kwargs={'pk': None})
-        response = self.client.get(url, **self.header)
-
-        self.assertEqual(response.data['name'], self.TestReport.__name__)
-
-    @skipIf(not rq_worker_running, "RQ worker not running")
-    def test_run_report(self):
-        self.add_permissions('extras.run_script')
-
-        url = reverse('extras-api:report-run', kwargs={'pk': None})
-        response = self.client.post(url, {}, format='json', **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-        self.assertEqual(response.data['result']['status']['value'], 'pending')
-
-
-class ScriptTest(APITestCase):
-
-    class TestScript(Script):
+    class TestCustomJob(CustomJob):
 
         class Meta:
-            name = "Test script"
+            name = "Test custom job"
 
         var1 = StringVar()
         var2 = IntegerVar()
         var3 = BooleanVar()
 
         def run(self, data, commit=True):
+            self.log_info(message=data['var1'])
+            self.log_success(message=data['var2'])
+            self.log_failure(message=data['var3'])
 
-            self.log_info(data['var1'])
-            self.log_success(data['var2'])
-            self.log_failure(data['var3'])
+            return 'Job complete'
 
-            return 'Script complete'
+        def test_foo(self):
+            self.log_success(obj=None, message="Test completed")
 
-    def get_test_script(self, *args):
-        return self.TestScript
+    def get_test_custom_job_class(self, pk):
+        if pk == 'test_api.TestCustomJob':
+            return self.TestCustomJob
+        raise Http404
 
     def setUp(self):
-
         super().setUp()
 
-        # Monkey-patch the API viewset's _get_script method to return our test script above
-        ScriptViewSet._get_script = self.get_test_script
+        # Monkey-patch the API viewset's _get_custom_job_class method to return our test class above
+        CustomJobViewSet._get_custom_job_class = self.get_test_custom_job_class
 
-    def test_get_script(self):
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    def test_list_custom_jobs_anonymous(self):
+        url = reverse('extras-api:customjob-list')
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        url = reverse('extras-api:script-detail', kwargs={'pk': None})
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_custom_jobs_without_permission(self):
+        url = reverse('extras-api:customjob-list')
+        with disable_warnings('django.request'):
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_custom_jobs_with_permission(self):
+        self.add_permissions('extras.view_customjob')
+        url = reverse('extras-api:customjob-list')
         response = self.client.get(url, **self.header)
 
-        self.assertEqual(response.data['name'], self.TestScript.Meta.name)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        # No custom jobs and we haven't monkey-patched the get_custom_jobs() function to fake any
+        self.assertEqual(response.data, [])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    def test_get_custom_job_anonymous(self):
+        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.TestCustomJob'})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_custom_job_without_permission(self):
+        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.TestCustomJob'})
+        with disable_warnings('django.request'):
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_custom_job_with_permission(self):
+        self.add_permissions('extras.view_customjob')
+        # Try GET to permitted object
+        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.TestCustomJob'})
+        response = self.client.get(url, **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], self.TestCustomJob.name)
         self.assertEqual(response.data['vars']['var1'], 'StringVar')
         self.assertEqual(response.data['vars']['var2'], 'IntegerVar')
         self.assertEqual(response.data['vars']['var3'], 'BooleanVar')
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
-    def test_run_script(self):
+        # Try GET to non-existent object
+        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.NoSuchJob'})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-        script_data = {
+        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'x'})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+    @skipIf(not rq_worker_running, "RQ worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_custom_job_without_permission(self):
+        url = reverse('extras-api:customjob-run', kwargs={'full_name': 'test_api.TestCustomJob'})
+        with disable_warnings('django.request'):
+            response = self.client.post(url, {}, format='json', **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @skipIf(not rq_worker_running, "RQ worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_custom_job_with_permission(self):
+        self.add_permissions('extras.run_customjob')
+        job_data = {
             'var1': 'FooBar',
             'var2': 123,
             'var3': False,
         }
 
         data = {
-            'data': script_data,
+            'data': job_data,
             'commit': True,
         }
 
-        url = reverse('extras-api:script-detail', kwargs={'pk': None})
+        url = reverse('extras-api:customjob-run', kwargs={'full_name': 'test_api.TestCustomJob'})
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 

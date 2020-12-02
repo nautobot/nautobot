@@ -35,14 +35,9 @@ urlpatterns = [
     path('changelog/', views.ObjectChangeListView.as_view(), name='objectchange_list'),
     path('changelog/<int:pk>/', views.ObjectChangeView.as_view(), name='objectchange'),
 
-    # Reports
-    path('reports/', views.ReportListView.as_view(), name='report_list'),
-    path('reports/<str:module>.<str:name>/', views.ReportView.as_view(), name='report'),
-    path('reports/results/<int:job_result_pk>/', views.ReportResultView.as_view(), name='report_result'),
-
-    # Scripts
-    path('scripts/', views.ScriptListView.as_view(), name='script_list'),
-    path('scripts/<str:module>.<str:name>/', views.ScriptView.as_view(), name='script'),
-    path('scripts/results/<int:job_result_pk>/', views.ScriptResultView.as_view(), name='script_result'),
-
+    # Custom jobs
+    path('custom-jobs/', views.CustomJobListView.as_view(), name='customjob_list'),
+    path('custom-jobs/<str:module>.<str:name>/', views.CustomJobView.as_view(), name='customjob'),
+    path('custom-jobs/results/', views.CustomJobResultListView.as_view(), name='customjob_result_list'),
+    path('custom-jobs/results/<int:job_result_pk>/', views.CustomJobResultView.as_view(), name='customjob_result'),
 ]

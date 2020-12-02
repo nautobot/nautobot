@@ -1,8 +1,12 @@
 import django_tables2 as tables
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+from django.utils.html import format_html
 
 from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ToggleColumn
-from .models import ConfigContext, ObjectChange, Tag, TaggedItem
+from .custom_jobs import get_custom_job
+from .models import ConfigContext, JobResult, ObjectChange, Tag, TaggedItem
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -73,6 +77,38 @@ class ConfigContextTable(BaseTable):
             'cluster_groups', 'clusters', 'tenant_groups', 'tenants',
         )
         default_columns = ('pk', 'name', 'weight', 'is_active', 'description')
+
+
+def customjob_link(value, record):
+    if record.obj_type == ContentType.objects.get(app_label='extras', model='customjob') and '.' in record.name:
+        module, name = record.name.split('.', 1)
+        if get_custom_job(module, name) is not None:
+            return reverse('extras:customjob', kwargs={'module': module, 'name': name})
+    return None
+
+
+class JobResultTable(BaseTable):
+    name = tables.Column(linkify=customjob_link)
+    created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    status = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/job_label.html' with result=record %}",
+    )
+    data = tables.TemplateColumn(
+        '''
+        <label class="label label-success">{{ value.total.success }}</label>
+        <label class="label label-info">{{ value.total.info }}</label>
+        <label class="label label-warning">{{ value.total.warning }}</label>
+        <label class="label label-danger">{{ value.total.failure }}</label>
+        ''',
+        verbose_name='Results',
+        orderable=False,
+        attrs={"td": {"class": "text-nowrap report-stats"}}
+    )
+
+    class Meta(BaseTable.Meta):
+        model = JobResult
+        fields = ('created', 'name', 'duration', 'completed', 'user', 'status', 'data')
+        default_columns = ('created', 'name', 'user', 'status', 'data')
 
 
 class ObjectChangeTable(BaseTable):

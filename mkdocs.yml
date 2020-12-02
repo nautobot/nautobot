@@ -46,12 +46,11 @@ nav:
         - Change Logging: 'additional-features/change-logging.md'
         - Context Data: 'models/extras/configcontext.md'
         - Custom Fields: 'additional-features/custom-fields.md'
+        - Custom Jobs: 'additional-features/custom-jobs.md'
         - Custom Links: 'additional-features/custom-links.md'
-        - Custom Scripts: 'additional-features/custom-scripts.md'
         - Export Templates: 'additional-features/export-templates.md'
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
-        - Reports: 'additional-features/reports.md'
         - Tags: 'models/extras/tag.md'
         - Webhooks: 'additional-features/webhooks.md'
     - Plugins:

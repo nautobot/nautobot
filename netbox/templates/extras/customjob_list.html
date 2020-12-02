@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load helpers %}
+
+{% block javascript %}
+    <script>
+        $("button.button-toggle").click(function() {
+            $(this).children("i").toggleClass("mdi-chevron-right mdi-chevron-down");
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+    <h1>{% block title %}Custom Jobs{% endblock %}</h1>
+    <div class="row">
+        <div class="col">
+            {% if custom_jobs %}
+                <table class="table table-hover table-headings reports">
+                    {% for module, module_jobs in custom_jobs %}
+                        <tr>
+                            <th colspan="2"><h3><a name="module.{{ module }}"></a>{{ module|bettertitle }}</h3></th>
+                            <th style="vertical-align: bottom">Description</th>
+                            <th class="text-right" style="vertical-align: bottom">Last Run</th>
+                            <th style="width: 40px; vertical-align: bottom"></th>
+                            <th style="width: 100px; vertical-align: bottom">Last Status</th>
+                            <th style="width: 200px; vertical-align: bottom">Last Results</th>
+                        </tr>
+                        {% for custom_job in module_jobs %}
+                            <tr>
+                                <td style="width: 40px">
+                                    <!-- Every custom_job.result.data has keys 'output', 'total', those don't count.
+                                         Only show the "more" button if there's more than one result function. -->
+                                    {% if custom_job.result and custom_job.result.data and custom_job.result.data|length > 3 %}
+                                        <button class="btn btn-xs btn-info button-toggle" type="button"
+                                                data-toggle="collapse"
+                                                data-target=".{{ custom_job.module}}_{{ custom_job.class_name }}"
+                                                aria-controls="{{ custom_job.module }}_{{ custom_job.class_name }}"
+                                                title="Show / hide detailed results">
+                                            <i class="mdi mdi-chevron-right"></i>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'extras:customjob' module=custom_job.module name=custom_job.class_name %}"
+                                            id="{{ custom_job.module }}.{{ custom_job.class_name }}"
+                                            name="custom_job.{{ class_name }}">
+                                        <strong>{{ custom_job }}</strong>
+                                    </a>
+                                </td>
+                                <td>{{ custom_job.description | placeholder }}</td>
+                                <td class="text-right text-nowrap">
+                                    {% if custom_job.result %}
+                                        <a href="{% url 'extras:customjob_result' job_result_pk=custom_job.result.pk %}">
+                                            {{ custom_job.result.created }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if custom_job.result %}
+                                        <a class="btn btn-xs btn-info"
+                                                href="{% url 'extras:customjob_result_list' %}?name={{ custom_job.module }}.{{ custom_job.class_name }}"
+                                                title="See job history">
+                                            <i class="mdi mdi-dots-horizontal"></i>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% include 'extras/inc/job_label.html' with result=custom_job.result %}
+                                </td>
+                                <td class="text-nowrap report-stats">
+                                    <label class="label label-success">{{ custom_job.result.data.total.success }}</label>
+                                    <label class="label label-info">{{ custom_job.result.data.total.info }}</label>
+                                    <label class="label label-warning">{{ custom_job.result.data.total.warning }}</label>
+                                    <label class="label label-danger">{{ custom_job.result.data.total.failure }}</label>
+                                </td>
+                            </tr>
+                            {% for method, stats in custom_job.result.data.items %}
+                                {% if method != "total" and method != "output" %}
+                                    <tr class="{{ custom_job.module }}_{{ custom_job.class_name }} collapse">
+                                        <td></td>
+                                        <td colspan="5" class="method">
+                                            <a href="{% url 'extras:customjob_result' job_result_pk=custom_job.result.pk %}#{{method}}">
+                                                {{ method }}
+                                            </a>
+                                        </td>
+                                        <td class="text-nowrap report-stats">
+                                            <label class="label label-success">{{ stats.success }}</label>
+                                            <label class="label label-info">{{ stats.info }}</label>
+                                            <label class="label label-warning">{{ stats.warning }}</label>
+                                            <label class="label label-danger">{{ stats.failure }}</label>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="alert alert-info">
+                    <p><strong>No custom jobs found.</strong></p>
+                    <p>Custom jobs should be saved to <code>{{ settings.CUSTOM_JOBS_ROOT }}</code>. (This path can be changed by setting <code>CUSTOM_JOBS_ROOT</code> in NetBox's configuration.)</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

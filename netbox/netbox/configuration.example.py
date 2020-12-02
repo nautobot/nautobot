@@ -100,6 +100,10 @@ CORS_ORIGIN_REGEX_WHITELIST = [
     # r'^(https?://)?(\w+\.)?example\.com$',
 ]
 
+# The file path where custom jobs will be stored. A trailing slash is not needed. Note that the default value of
+# this setting is derived from the installed location.
+# CUSTOM_JOBS_ROOT = '/opt/netbox/netbox/custom_jobs'
+
 # Set to True to enable server debugging. WARNING: Debugging introduces a substantial performance penalty and may reveal
 # sensitive information about your installation. Only enable debugging while performing testing. Never enable debugging
 # on a production system.

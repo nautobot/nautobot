@@ -245,41 +245,20 @@ class JobResultSerializer(serializers.ModelSerializer):
 
 
 #
-# Reports
+# Custom jobs (fka Scripts, Reports)
 #
 
-class ReportSerializer(serializers.Serializer):
+class CustomJobSerializer(serializers.Serializer):
     url = serializers.HyperlinkedIdentityField(
-        view_name='extras-api:report-detail',
+        view_name='extras-api:customjob-detail',
         lookup_field='full_name',
-        lookup_url_kwarg='pk'
+        lookup_url_kwarg='full_name',
     )
     id = serializers.CharField(read_only=True, source="full_name")
     module = serializers.CharField(max_length=255)
-    name = serializers.CharField(max_length=255)
-    description = serializers.CharField(max_length=255, required=False)
+    name = serializers.CharField(max_length=255, read_only=True)
+    description = serializers.CharField(max_length=255, required=False, read_only=True)
     test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
-    result = NestedJobResultSerializer()
-
-
-class ReportDetailSerializer(ReportSerializer):
-    result = JobResultSerializer()
-
-
-#
-# Scripts
-#
-
-class ScriptSerializer(serializers.Serializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name='extras-api:script-detail',
-        lookup_field='full_name',
-        lookup_url_kwarg='pk'
-    )
-    id = serializers.CharField(read_only=True, source="full_name")
-    module = serializers.CharField(max_length=255)
-    name = serializers.CharField(read_only=True)
-    description = serializers.CharField(read_only=True)
     vars = serializers.SerializerMethodField(read_only=True)
     result = NestedJobResultSerializer()
 
@@ -289,29 +268,13 @@ class ScriptSerializer(serializers.Serializer):
         }
 
 
-class ScriptDetailSerializer(ScriptSerializer):
+class CustomJobDetailSerializer(CustomJobSerializer):
     result = JobResultSerializer()
 
 
-class ScriptInputSerializer(serializers.Serializer):
-    data = serializers.JSONField()
-    commit = serializers.BooleanField()
-
-
-class ScriptLogMessageSerializer(serializers.Serializer):
-    status = serializers.SerializerMethodField(read_only=True)
-    message = serializers.SerializerMethodField(read_only=True)
-
-    def get_status(self, instance):
-        return instance[0]
-
-    def get_message(self, instance):
-        return instance[1]
-
-
-class ScriptOutputSerializer(serializers.Serializer):
-    log = ScriptLogMessageSerializer(many=True, read_only=True)
-    output = serializers.CharField(read_only=True)
+class CustomJobInputSerializer(serializers.Serializer):
+    data = serializers.JSONField(required=False, default="")
+    commit = serializers.BooleanField(required=False, default=None)
 
 
 #

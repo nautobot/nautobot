@@ -497,26 +497,13 @@ class ConfigContextModel(models.Model):
 
 
 #
-# Custom scripts
+# Custom jobs
 #
 
 @extras_features('job_results')
-class Script(models.Model):
+class CustomJob(models.Model):
     """
-    Dummy model used to generate permissions for custom scripts. Does not exist in the database.
-    """
-    class Meta:
-        managed = False
-
-
-#
-# Reports
-#
-
-@extras_features('job_results')
-class Report(models.Model):
-    """
-    Dummy model used to generate permissions for reports. Does not exist in the database.
+    Dummy model used to generate permissions for custom jobs. Does not exist in the database.
     """
     class Meta:
         managed = False
@@ -571,6 +558,8 @@ class JobResult(models.Model):
     class Meta:
         ordering = ['obj_type', 'name', '-created']
 
+    objects = RestrictedQuerySet.as_manager()
+
     def __str__(self):
         return str(self.job_id)
 
@@ -583,6 +572,9 @@ class JobResult(models.Model):
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
+
+    def get_absolute_url(self):
+        return reverse('extras:customjob_result', kwargs={'job_result_pk': self.pk})
 
     def set_status(self, status):
         """

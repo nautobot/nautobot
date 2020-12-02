@@ -17,8 +17,7 @@ from utilities.views import ContentTypePermissionRequiredMixin
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
 from .models import ConfigContext, ImageAttachment, ObjectChange, JobResult, Tag, TaggedItem
-from .reports import get_report, get_reports, run_report
-from .scripts import get_scripts, run_script
+from .custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
 
 
 #
@@ -281,233 +280,144 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 
 
 #
-# Reports
+# Custom jobs
 #
 
-class ReportListView(ContentTypePermissionRequiredMixin, View):
+class CustomJobListView(ContentTypePermissionRequiredMixin, View):
     """
-    Retrieve all of the available reports from disk and the recorded JobResult (if any) for each.
+    Retrieve all of the available custom jobs from disk and the recorded JobResult (if any) for each.
     """
     def get_required_permission(self):
-        return 'extras.view_report'
+        return 'extras.view_customjob'
 
     def get(self, request):
-
-        reports = get_reports()
-        report_content_type = ContentType.objects.get(app_label='extras', model='report')
+        custom_jobs = get_custom_jobs()
+        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        # Get the newest results for each job name
         results = {
             r.name: r
             for r in JobResult.objects.filter(
-                obj_type=report_content_type,
+                obj_type=custom_job_content_type,
                 status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-            ).defer('data')
+            ).order_by('completed').defer('data')
         }
 
         ret = []
-        for module, report_list in reports:
-            module_reports = []
-            for report in report_list:
-                report.result = results.get(report.full_name, None)
-                module_reports.append(report)
-            ret.append((module, module_reports))
+        for module, entry in custom_jobs.items():
+            module_custom_jobs = []
+            for custom_job_class in entry['jobs'].values():
+                custom_job = custom_job_class()
+                custom_job.result = results.get(custom_job.full_name, None)
+                module_custom_jobs.append(custom_job)
+            ret.append((entry["name"], module_custom_jobs))
 
-        return render(request, 'extras/report_list.html', {
-            'reports': ret,
+        return render(request, 'extras/customjob_list.html', {
+            'custom_jobs': ret,
         })
 
 
-class ReportView(ContentTypePermissionRequiredMixin, View):
+class CustomJobView(ContentTypePermissionRequiredMixin, View):
     """
-    Display a single Report and its associated JobResult (if any).
+    View the parameters of a Custom Job and enqueue it if desired.
     """
+
     def get_required_permission(self):
-        return 'extras.view_report'
+        return 'extras.view_customjob'
 
     def get(self, request, module, name):
-
-        report = get_report(module, name)
-        if report is None:
+        custom_job_class = get_custom_job(module, name)
+        if custom_job_class is None:
             raise Http404
+        custom_job = custom_job_class()
 
-        report_content_type = ContentType.objects.get(app_label='extras', model='report')
-        report.result = JobResult.objects.filter(
-            obj_type=report_content_type,
-            name=report.full_name,
-            status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-        ).first()
+        form = custom_job.as_form(initial=request.GET)
 
-        return render(request, 'extras/report.html', {
-            'report': report,
-            'run_form': ConfirmationForm(),
-        })
-
-    def post(self, request, module, name):
-
-        # Permissions check
-        if not request.user.has_perm('extras.run_report'):
-            return HttpResponseForbidden()
-
-        report = get_report(module, name)
-        if report is None:
-            raise Http404
-
-        # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection('default')):
-            messages.error(request, "Unable to run report: RQ worker process not running.")
-            return render(request, 'extras/report.html', {
-                'report': report,
-            })
-
-        # Run the Report. A new JobResult is created.
-        report_content_type = ContentType.objects.get(app_label='extras', model='report')
-        job_result = JobResult.enqueue_job(
-            run_report,
-            report.full_name,
-            report_content_type,
-            request.user
-        )
-
-        return redirect('extras:report_result', job_result_pk=job_result.pk)
-
-
-class ReportResultView(ContentTypePermissionRequiredMixin, View):
-    """
-    Display a JobResult pertaining to the execution of a Report.
-    """
-    def get_required_permission(self):
-        return 'extras.view_report'
-
-    def get(self, request, job_result_pk):
-        report_content_type = ContentType.objects.get(app_label='extras', model='report')
-        jobresult = get_object_or_404(JobResult.objects.all(), pk=job_result_pk, obj_type=report_content_type)
-
-        # Retrieve the Report and attach the JobResult to it
-        module, report_name = jobresult.name.split('.')
-        report = get_report(module, report_name)
-        report.result = jobresult
-
-        return render(request, 'extras/report_result.html', {
-            'report': report,
-            'result': jobresult,
-        })
-
-
-#
-# Scripts
-#
-
-class GetScriptMixin:
-    def _get_script(self, name, module=None):
-        if module is None:
-            module, name = name.split('.', 1)
-        scripts = get_scripts()
-        try:
-            return scripts[module][name]()
-        except KeyError:
-            raise Http404
-
-
-class ScriptListView(ContentTypePermissionRequiredMixin, View):
-
-    def get_required_permission(self):
-        return 'extras.view_script'
-
-    def get(self, request):
-
-        scripts = get_scripts(use_names=True)
-        script_content_type = ContentType.objects.get(app_label='extras', model='script')
-        results = {
-            r.name: r
-            for r in JobResult.objects.filter(
-                obj_type=script_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-            ).defer('data')
-        }
-
-        for _scripts in scripts.values():
-            for script in _scripts.values():
-                script.result = results.get(script.full_name)
-
-        return render(request, 'extras/script_list.html', {
-            'scripts': scripts,
-        })
-
-
-class ScriptView(ContentTypePermissionRequiredMixin, GetScriptMixin, View):
-
-    def get_required_permission(self):
-        return 'extras.view_script'
-
-    def get(self, request, module, name):
-        script = self._get_script(name, module)
-        form = script.as_form(initial=request.GET)
-
-        # Look for a pending JobResult (use the latest one by creation timestamp)
-        script_content_type = ContentType.objects.get(app_label='extras', model='script')
-        script.result = JobResult.objects.filter(
-            obj_type=script_content_type,
-            name=script.full_name,
-        ).exclude(
-            status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-        ).first()
-
-        return render(request, 'extras/script.html', {
+        return render(request, 'extras/customjob.html', {
             'module': module,
-            'script': script,
+            'custom_job': custom_job,
             'form': form,
+            # 'run_form': ConfirmationForm(),
         })
 
     def post(self, request, module, name):
-
-        # Permissions check
-        if not request.user.has_perm('extras.run_script'):
+        if not request.user.has_perm('extras.run_customjob'):
             return HttpResponseForbidden()
 
-        script = self._get_script(name, module)
-        form = script.as_form(request.POST, request.FILES)
+        custom_job_class = get_custom_job(module, name)
+        if custom_job_class is None:
+            raise Http404
+        custom_job = custom_job_class()
+        form = custom_job.as_form(request.POST, request.FILES)
 
         # Allow execution only if RQ worker process is running
         if not Worker.count(get_connection('default')):
-            messages.error(request, "Unable to run script: RQ worker process not running.")
+            messages.error(request, "Unable to run custom job: RQ worker process not running.")
 
         elif form.is_valid():
+            # Run the job. A new JobResult is created.
             commit = form.cleaned_data.pop('_commit')
 
-            script_content_type = ContentType.objects.get(app_label='extras', model='script')
+            custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
             job_result = JobResult.enqueue_job(
-                run_script,
-                script.full_name,
-                script_content_type,
+                run_custom_job,
+                custom_job.full_name,
+                custom_job_content_type,
                 request.user,
                 data=form.cleaned_data,
                 request=copy_safe_request(request),
-                commit=commit
+                commit=commit,
             )
 
-            return redirect('extras:script_result', job_result_pk=job_result.pk)
+            return redirect('extras:customjob_result', job_result_pk=job_result.pk)
 
-        return render(request, 'extras/script.html', {
+        return render(request, 'extras/customjob.html', {
             'module': module,
-            'script': script,
+            'custom_job': custom_job,
             'form': form,
         })
 
 
-class ScriptResultView(ContentTypePermissionRequiredMixin, GetScriptMixin, View):
+class CustomJobResultListView(generic.ObjectListView):
+    """
+    List JobResults pertaining to the execution of Custom Jobs.
+    """
+    additional_permissions = ["extras.view_customjob"]
 
+    queryset = None
+    filterset = filters.JobResultFilterSet
+    filterset_form = forms.JobResultFilterForm
+    table = tables.JobResultTable
+    action_buttons = ()
+    template_name = 'extras/customjob_result_list.html'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        self.queryset = JobResult.objects.filter(obj_type=custom_job_content_type).order_by('-created')
+
+
+class CustomJobResultView(ContentTypePermissionRequiredMixin, View):
+    """
+    Display a JobResult pertaining to the execution of a Custom Job.
+    """
     def get_required_permission(self):
-        return 'extras.view_script'
+        return 'extras.view_customjob'
 
     def get(self, request, job_result_pk):
-        result = get_object_or_404(JobResult.objects.all(), pk=job_result_pk)
-        script_content_type = ContentType.objects.get(app_label='extras', model='script')
-        if result.obj_type != script_content_type:
-            raise Http404
+        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        job_result = get_object_or_404(JobResult.objects.all(), pk=job_result_pk, obj_type=custom_job_content_type)
 
-        script = self._get_script(result.name)
+        module, job_name = job_result.name.split('.', 1)
+        custom_job_class = get_custom_job(module, job_name)
+        if custom_job_class is not None:
+            custom_job = custom_job_class()
+        else:
+            custom_job = None
 
-        return render(request, 'extras/script_result.html', {
-            'script': script,
-            'result': result,
-            'class_name': script.__class__.__name__
+        return render(request, 'extras/customjob_result.html', {
+            'module': module,
+            'class_name': job_name,
+            'custom_job': custom_job,
+            'result': job_result,
         })

@@ -3,7 +3,7 @@ import sys
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import F
+from django.db.models import F, Max, Q
 from django.http import HttpResponseServerError
 from django.shortcuts import render
 from django.template import loader
@@ -45,12 +45,20 @@ class HomeView(View):
             pk__lt=F('_path__destination_id')
         )
 
-        # Report Results
-        report_content_type = ContentType.objects.get(app_label='extras', model='report')
-        report_results = JobResult.objects.filter(
-            obj_type=report_content_type,
+        # Custom Job Results - latest result for the 10 most recently-ran unique jobs
+        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        # Only get CustomJob results that have reached a terminal state
+        custom_job_results = JobResult.objects.filter(
+            obj_type=custom_job_content_type,
             status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-        ).defer('data')[:10]
+        ).defer('data')
+        # Create a filter for only the latest result for each unique job name, limited to 10 such jobs' results
+        latest_results = custom_job_results.values('name').annotate(max_completed=Max('completed')).order_by('-max_completed')
+        q_statement = Q()
+        for pair in latest_results[:10]:
+            q_statement |= (Q(name__exact=pair['name']) & Q(completed=pair['max_completed']))
+        # Apply the filter, and sort by newest to oldest completion
+        custom_job_results = custom_job_results.filter(q_statement).order_by('-completed')
 
         stats = {
 
@@ -106,7 +114,7 @@ class HomeView(View):
         return render(request, self.template_name, {
             'search_form': SearchForm(),
             'stats': stats,
-            'report_results': report_results,
+            'custom_job_results': custom_job_results,
             'changelog': changelog[:15],
             'new_release': new_release,
         })

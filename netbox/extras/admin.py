@@ -210,7 +210,7 @@ class ExportTemplateAdmin(admin.ModelAdmin):
 
 
 #
-# Reports
+# Job results (custom jobs, scripts, reports)
 #
 
 @admin.register(JobResult)
