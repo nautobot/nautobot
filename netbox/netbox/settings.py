@@ -71,7 +71,6 @@ EXEMPT_EXCLUDE_MODELS = (
 
 EXEMPT_VIEW_PERMISSIONS = []
 HTTP_PROXIES = None
-LOGIN_REQUIRED = False
 LOGIN_TIMEOUT = None  # FIXME(jathan): Custom alias for SESSION_COOKIE_AGE
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000  # FIXME(jathan): This duplicates DRF built-in for settings.REST_FRAMEWORK['PAGE_SIZE']
@@ -294,7 +293,6 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'netbox.middleware.ExceptionHandlingMiddleware',
     'netbox.middleware.RemoteUserMiddleware',
-    'netbox.middleware.LoginRequiredMiddleware',
     'netbox.middleware.APIVersionMiddleware',
     'netbox.middleware.ObjectChangeMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',

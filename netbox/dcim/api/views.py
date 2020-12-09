@@ -26,7 +26,6 @@ from dcim.models import (
 from extras.api.views import ConfigContextQuerySetMixin, CustomFieldModelViewSet
 from ipam.models import Prefix, VLAN
 from netbox.api.views import ModelViewSet
-from netbox.api.authentication import IsAuthenticatedOrLoginNotRequired
 from netbox.api.exceptions import ServiceUnavailable
 from netbox.api.metadata import ContentTypeMetadata
 from utilities.api import get_serializer_for_model
@@ -652,7 +651,6 @@ class ConnectedDeviceViewSet(ViewSet):
     * `peer_device`: The name of the peer device
     * `peer_interface`: The name of the peer interface
     """
-    permission_classes = [IsAuthenticatedOrLoginNotRequired]
     _device_param = Parameter(
         name='peer_device',
         in_='query',

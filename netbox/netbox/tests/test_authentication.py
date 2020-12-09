@@ -23,9 +23,6 @@ class ExternalAuthenticationTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
-    @override_settings(
-        LOGIN_REQUIRED=True
-    )
     def test_remote_auth_disabled(self):
         """
         Test enabling remote authentication with the default configuration.
@@ -43,7 +40,6 @@ class ExternalAuthenticationTestCase(TestCase):
 
     @override_settings(
         REMOTE_AUTH_ENABLED=True,
-        LOGIN_REQUIRED=True
     )
     def test_remote_auth_enabled(self):
         """
@@ -63,7 +59,6 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         REMOTE_AUTH_ENABLED=True,
         REMOTE_AUTH_HEADER='HTTP_FOO',
-        LOGIN_REQUIRED=True
     )
     def test_remote_auth_custom_header(self):
         """
@@ -83,7 +78,6 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         REMOTE_AUTH_ENABLED=True,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
-        LOGIN_REQUIRED=True
     )
     def test_remote_auth_auto_create(self):
         """
@@ -108,7 +102,6 @@ class ExternalAuthenticationTestCase(TestCase):
         REMOTE_AUTH_ENABLED=True,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
         REMOTE_AUTH_DEFAULT_GROUPS=['Group 1', 'Group 2'],
-        LOGIN_REQUIRED=True
     )
     def test_remote_auth_default_groups(self):
         """
@@ -145,7 +138,6 @@ class ExternalAuthenticationTestCase(TestCase):
         REMOTE_AUTH_ENABLED=True,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
         REMOTE_AUTH_DEFAULT_PERMISSIONS={'dcim.add_site': None, 'dcim.change_site': None},
-        LOGIN_REQUIRED=True
     )
     def test_remote_auth_default_permissions(self):
         """

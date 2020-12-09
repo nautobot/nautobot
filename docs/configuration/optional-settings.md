@@ -267,14 +267,6 @@ LOGGING = {
 
 ---
 
-## LOGIN_REQUIRED
-
-Default: False
-
-Setting this to True will permit only authenticated users to access any part of NetBox. By default, anonymous users are permitted to access most data in NetBox (excluding secrets) but not make any changes.
-
----
-
 ## LOGIN_TIMEOUT
 
 Default: 1209600 seconds (14 days)

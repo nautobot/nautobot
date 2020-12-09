@@ -44,13 +44,6 @@ class TokenPermissions(DjangoObjectPermissions):
         'DELETE': ['%(app_label)s.delete_%(model_name)s'],
     }
 
-    def __init__(self):
-
-        # LOGIN_REQUIRED determines whether read-only access is provided to anonymous users.
-        self.authenticated_users_only = settings.LOGIN_REQUIRED
-
-        super().__init__()
-
     def _verify_write_permission(self, request):
 
         # If token authentication is in use, verify that the token allows write operations (for unsafe methods).
@@ -72,13 +65,3 @@ class TokenPermissions(DjangoObjectPermissions):
             return False
 
         return super().has_object_permission(request, view, obj)
-
-
-class IsAuthenticatedOrLoginNotRequired(BasePermission):
-    """
-    Returns True if the user is authenticated or LOGIN_REQUIRED is False.
-    """
-    def has_permission(self, request, view):
-        if not settings.LOGIN_REQUIRED:
-            return True
-        return request.user.is_authenticated

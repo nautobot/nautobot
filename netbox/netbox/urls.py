@@ -61,7 +61,7 @@ _patterns = [
     path('api/redoc/', schema_view.with_ui('redoc'), name='api_redocs'),
     re_path(r'^api/swagger(?P<format>.json|.yaml)$', schema_view.without_ui(), name='schema_swagger'),
 
-    # Serving static media in Django to pipe it through LoginRequiredMiddleware
+    # Serving static media in Django
     path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
 
     # Admin

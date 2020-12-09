@@ -17,7 +17,6 @@ from extras.models import (
 )
 from extras.models import CustomField
 from extras.custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
-from netbox.api.authentication import IsAuthenticatedOrLoginNotRequired
 from netbox.api.metadata import ContentTypeMetadata
 from netbox.api.views import ModelViewSet
 from utilities.exceptions import RQWorkerNotRunningException
@@ -135,7 +134,6 @@ class ConfigContextViewSet(ModelViewSet):
 #
 
 class CustomJobViewSet(ViewSet):
-    permission_classes = [IsAuthenticatedOrLoginNotRequired]
     lookup_field = "full_name"
     lookup_value_regex = '[^/]+'  # Allow dots in the "pk", i.e. "module_name.CustomJobName"
 
