@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from extras.registry import registry
 from extras.tests.dummy_plugin import config as dummy_config
+from utilities.testing import APITestCase
 
 
 @skipIf('extras.tests.dummy_plugin' not in settings.PLUGINS, "dummy_plugin not in settings.PLUGINS")
@@ -39,18 +40,6 @@ class PluginTest(TestCase):
         # Test URL resolution
         url = reverse('plugins:dummy_plugin:dummy_models')
         self.assertEqual(url, '/plugins/dummy-plugin/models/')
-
-        # Test GET request
-        client = Client()
-        response = client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
-    def test_api_views(self):
-
-        # Test URL resolution
-        url = reverse('plugins-api:dummy_plugin-api:dummymodel-list')
-        self.assertEqual(url, '/api/plugins/dummy-plugin/dummy-models/')
 
         # Test GET request
         client = Client()
@@ -132,3 +121,16 @@ class PluginTest(TestCase):
         user_config = {'bar': 456}
         DummyConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config['bar'], 456)
+
+
+class PluginAPITestCase(APITestCase):
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    def test_api_views(self):
+
+        # Test URL resolution
+        url = reverse('plugins-api:dummy_plugin-api:dummymodel-list')
+        self.assertEqual(url, '/api/plugins/dummy-plugin/dummy-models/')
+
+        # Test GET request
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, 200)

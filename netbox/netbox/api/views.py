@@ -17,6 +17,7 @@ from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rq.worker import Worker
 
 from netbox.api import BulkOperationSerializer
+from netbox.api.authentication import IsAuthenticated
 from netbox.api.exceptions import SerializerNotFound
 from utilities.api import get_serializer_for_model
 
@@ -276,6 +277,7 @@ class StatusView(APIView):
     """
     A lightweight read-only endpoint for conveying NetBox's current operational status.
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # Gather the version numbers from all installed Django apps
