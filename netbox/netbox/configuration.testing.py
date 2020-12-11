@@ -3,12 +3,14 @@
 #  only. It is not intended for production use.                   #
 ###################################################################
 
+import os
+
 ALLOWED_HOSTS = ['*']
 
 DATABASE = {
-    'NAME': 'netbox',
-    'USER': 'netbox',
-    'PASSWORD': 'netbox',
+    'NAME': os.getenv('NETBOX_DATABASE', 'netbox'),
+    'USER': os.getenv('NETBOX_USER', 'netbox'),
+    'PASSWORD': os.getenv('NETBOX_PASSWORD', 'netbox'),
     'HOST': 'localhost',
     'PORT': '',
     'CONN_MAX_AGE': 300,

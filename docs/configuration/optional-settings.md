@@ -263,6 +263,7 @@ LOGGING = {
 * `netbox.auth.*` - Authentication events
 * `netbox.api.views.*` - Views which handle business logic for the REST API
 * `netbox.custom_jobs.*` - Custom job execution (`* = module_name.JobName`)
+* `netbox.plugins.*` - Plugin loading and activity
 * `netbox.views.*` - Views which handle business logic for the web UI
 
 ---

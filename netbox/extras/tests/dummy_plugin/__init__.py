@@ -12,6 +12,12 @@ class DummyPluginConfig(PluginConfig):
     middleware = [
         'extras.tests.dummy_plugin.middleware.DummyMiddleware'
     ]
+    installed_apps = [
+        'extras.tests.dummy_plugin_dependency'
+    ]
+    default_settings = {
+        'dummy_default_key': 'dummy_default_value',
+    }
 
 
 config = DummyPluginConfig

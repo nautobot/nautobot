@@ -5,6 +5,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from extras.plugins.utils import load_plugin
+from extras.plugins.exceptions import PluginNotFound, PluginImproperlyConfigured
 from extras.registry import registry
 from extras.tests.dummy_plugin import config as dummy_config
 from utilities.testing import APITestCase
@@ -69,24 +71,40 @@ class PluginTest(TestCase):
         """
         self.assertIn('extras.tests.dummy_plugin.middleware.DummyMiddleware', settings.MIDDLEWARE)
 
+        # Establish dummy config to have invalid middleware (tuple)
+        class DummyConfigWithMiddleware(dummy_config):
+            middleware = ()
+
+        # Validation should fail when a middleware is not a list
+        with self.assertRaises(PluginImproperlyConfigured):
+            DummyConfigWithMiddleware.validate({}, settings.VERSION)
+
     def test_caching_config(self):
         """
-        Check that plugin caching configuration is registered.
+        Check that plugin caching configuration is registered and valid.
         """
         self.assertIn('extras.tests.dummy_plugin.*', settings.CACHEOPS)
+
+        # Establish dummy config to have invalid cache_config (list)
+        class DummyConfigWithBadCacheConfig(dummy_config):
+            caching_config = []
+
+        # Validation should fail when a caching_config is not a dict
+        with self.assertRaises(PluginImproperlyConfigured):
+            DummyConfigWithBadCacheConfig.validate({}, settings.VERSION)
 
     def test_min_version(self):
         """
         Check enforcement of minimum NetBox version.
         """
-        with self.assertRaises(ImproperlyConfigured):
+        with self.assertRaises(PluginImproperlyConfigured):
             dummy_config.validate({}, '0.9')
 
     def test_max_version(self):
         """
         Check enforcement of maximum NetBox version.
         """
-        with self.assertRaises(ImproperlyConfigured):
+        with self.assertRaises(PluginImproperlyConfigured):
             dummy_config.validate({}, '10.0')
 
     def test_required_settings(self):
@@ -100,7 +118,13 @@ class PluginTest(TestCase):
         DummyConfigWithRequiredSettings.validate({'foo': True}, settings.VERSION)
 
         # Validation should fail when a required setting is missing
-        with self.assertRaises(ImproperlyConfigured):
+        with self.assertRaises(PluginImproperlyConfigured):
+            DummyConfigWithRequiredSettings.validate({}, settings.VERSION)
+
+        # Overload dummy config to have invalid required_settings (dict) and
+        # assert that it should fail validation.
+        DummyConfigWithRequiredSettings.required_settings = {'foo': 'bar'}
+        with self.assertRaises(PluginImproperlyConfigured):
             DummyConfigWithRequiredSettings.validate({}, settings.VERSION)
 
     def test_default_settings(self):
@@ -122,6 +146,27 @@ class PluginTest(TestCase):
         DummyConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config['bar'], 456)
 
+        # Overload dummy config to have invalid default_settings (list) and
+        # assert that it should fail validation.
+        DummyConfigWithDefaultSettings.required_settings = ['foo']
+        with self.assertRaises(PluginImproperlyConfigured):
+            DummyConfigWithDefaultSettings.validate({}, settings.VERSION)
+
+    def test_installed_apps(self):
+        """
+        Validate that plugin installed apps and dependencies are are registerd.
+        """
+        self.assertIn("extras.tests.dummy_plugin.DummyPluginConfig", settings.INSTALLED_APPS)
+        self.assertIn("extras.tests.dummy_plugin_dependency", settings.INSTALLED_APPS)
+
+        # Establish dummy config to have invalid installed_apps (tuple)
+        class DummyConfigWithInstalledApps(dummy_config):
+            installed_apps = ('foo', 'bar')
+
+        # Validation should fail when a installed_apps is not a list
+        with self.assertRaises(PluginImproperlyConfigured):
+            DummyConfigWithInstalledApps.validate({}, settings.VERSION)
+
 
 class PluginAPITestCase(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
@@ -134,3 +179,35 @@ class PluginAPITestCase(APITestCase):
         # Test GET request
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
+
+
+class LoadPluginTest(TestCase):
+    """
+    Validate that plugin helpers work as intended.
+
+    Only `load_plugin` is tested, because that is called once for each plugin by
+    `load_plugins`.
+    """
+    def test_load_plugin(self):
+        """Test `load_plugin`."""
+
+        plugin_name = 'bad.plugin'  # Start with a bogus plugin name
+        installed_apps = settings.INSTALLED_APPS
+        plugins_config = settings.PLUGINS_CONFIG
+        version = settings.VERSION
+        middleware = settings.MIDDLEWARE
+        cacheops = settings.CACHEOPS
+
+        # FIXME(jathan): We're expecting a PluginNotFound to be raised, but
+        # unittest doesn't appear to let that happen and we only see the
+        # original ModuleNotFoundError, so this will have to do for now.
+        with self.assertRaises(ModuleNotFoundError):
+            load_plugin(
+                plugin_name, installed_apps, plugins_config, version, middleware, cacheops
+            )
+
+        # Move to the dummy plugin. No errors should be raised (which is good).
+        plugin_name = 'extras.tests.dummy_plugin'
+        load_plugin(
+            plugin_name, installed_apps, plugins_config, version, middleware, cacheops
+        )

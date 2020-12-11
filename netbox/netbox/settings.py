@@ -11,6 +11,8 @@ from django.contrib.messages import constants as messages
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.validators import URLValidator
 
+from extras.plugins.utils import load_plugins
+
 
 #
 # Environment setup
@@ -644,46 +646,5 @@ RQ_QUEUES = {
 # Plugins
 #
 
-# FIXME(jathan): Move this to utility function. This much logic shouldn't be
-# nested inside of settings.
-for plugin_name in PLUGINS:
-
-    # Import plugin module
-    try:
-        plugin = importlib.import_module(plugin_name)
-    except ModuleNotFoundError as e:
-        if getattr(e, 'name') == plugin_name:
-            raise ImproperlyConfigured(
-                "Unable to import plugin {}: Module not found. Check that the plugin module has been installed within the "
-                "correct Python environment.".format(plugin_name)
-            )
-        raise e
-
-    # Determine plugin config and add to INSTALLED_APPS.
-    try:
-        plugin_config = plugin.config
-        INSTALLED_APPS.append("{}.{}".format(plugin_config.__module__, plugin_config.__name__))
-    except AttributeError:
-        raise ImproperlyConfigured(
-            "Plugin {} does not provide a 'config' variable. This should be defined in the plugin's __init__.py file "
-            "and point to the PluginConfig subclass.".format(plugin_name)
-        )
-
-    # Validate user-provided configuration settings and assign defaults
-    if plugin_name not in PLUGINS_CONFIG:
-        PLUGINS_CONFIG[plugin_name] = {}
-    plugin_config.validate(PLUGINS_CONFIG[plugin_name], VERSION)
-
-    # Add middleware
-    plugin_middleware = plugin_config.middleware
-    if plugin_middleware and type(plugin_middleware) in (list, tuple):
-        MIDDLEWARE.extend(plugin_middleware)
-
-    # Apply cacheops config
-    if type(plugin_config.caching_config) is not dict:
-        raise ImproperlyConfigured(
-            "Plugin {} caching_config must be a dictionary.".format(plugin_name)
-        )
-    CACHEOPS.update({
-        "{}.{}".format(plugin_name, key): value for key, value in plugin_config.caching_config.items()
-    })
+# Process the plugins and manipulate the specified config settings that are passed in.
+load_plugins(PLUGINS, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE, CACHEOPS)

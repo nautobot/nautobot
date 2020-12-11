@@ -3,13 +3,12 @@ import inspect
 from packaging import version
 
 from django.apps import AppConfig
-from django.core.exceptions import ImproperlyConfigured
 from django.template.loader import get_template
 
 from extras.registry import registry
-from utilities.choices import ButtonColorChoices
-
+from extras.plugins.exceptions import PluginImproperlyConfigured
 from extras.plugins.utils import import_object
+from utilities.choices import ButtonColorChoices
 
 
 # Initialize plugin registry stores
@@ -47,6 +46,10 @@ class PluginConfig(AppConfig):
     # Middleware classes provided by the plugin
     middleware = []
 
+    # Extra installed apps provided or required by the plugin. These will be registered
+    # along with the plugin.
+    installed_apps = []
+
     # Cacheops configuration. Cache all operations by default.
     caching_config = {
         '*': {'ops': 'all'},
@@ -71,28 +74,49 @@ class PluginConfig(AppConfig):
 
     @classmethod
     def validate(cls, user_config, netbox_version):
+        """Validate the user_config for baseline correctness."""
+
+        plugin_name = cls.__module__
 
         # Enforce version constraints
         current_version = version.parse(netbox_version)
         if cls.min_version is not None:
             min_version = version.parse(cls.min_version)
             if current_version < min_version:
-                raise ImproperlyConfigured(
-                    f"Plugin {cls.__module__} requires NetBox minimum version {cls.min_version}."
+                raise PluginImproperlyConfigured(
+                    f"Plugin {plugin_name} requires NetBox minimum version {cls.min_version}"
                 )
         if cls.max_version is not None:
             max_version = version.parse(cls.max_version)
             if current_version > max_version:
-                raise ImproperlyConfigured(
-                    f"Plugin {cls.__module__} requires NetBox maximum version {cls.max_version}."
+                raise PluginImproperlyConfigured(
+                    f"Plugin {plugin_name} requires NetBox maximum version {cls.max_version}"
                 )
 
-        # Verify required configuration settings
+        # Mapping of {setting_name: setting_type} used to validate user configs
+        # TODO(jathan): This is fine for now, but as we expand the functionality
+        # of plugins, we'll need to consider something like pydantic or attrs.
+        setting_validations = {
+            'caching_config': dict,
+            'default_settings': dict,
+            'installed_apps': list,
+            'middleware': list,
+            'required_settings': list,
+        }
+
+        # Validate user settings
+        for setting_name, setting_type in setting_validations.items():
+            if not isinstance(getattr(cls, setting_name), setting_type):
+                raise PluginImproperlyConfigured(
+                    f"Plugin {plugin_name} {setting_name} must be a {setting_type}"
+                )
+
+        # Validate the required_settings
         for setting in cls.required_settings:
             if setting not in user_config:
-                raise ImproperlyConfigured(
-                    f"Plugin {cls.__module__} requires '{setting}' to be present in the PLUGINS_CONFIG section of "
-                    f"configuration.py."
+                raise PluginImproperlyConfigured(
+                    f"Plugin {plugin_name} requires '{setting}' to be present in "
+                    f"the PLUGINS_CONFIG['{plugin_name}'] section of configuration.py."
                 )
 
         # Apply default configuration values

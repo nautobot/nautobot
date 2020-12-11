@@ -1,5 +1,16 @@
+"""
+Plugin utilities.
+"""
+
 import importlib.util
+import logging
 import sys
+
+from .exceptions import PluginError, PluginNotFound, PluginImproperlyConfigured
+
+
+# Logging object
+logger = logging.getLogger('netbox.plugins')
 
 
 def import_object(module_and_object):
@@ -31,3 +42,58 @@ def import_object(module_and_object):
         spec.loader.exec_module(module)
 
     return getattr(module, object_name, None)
+
+
+def load_plugins(PLUGINS, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE, CACHEOPS):
+    """Process plugins and log errors if they can't be loaded."""
+    for plugin_name in PLUGINS:
+        # Attempt to load the plugin but let any errors bubble up.
+        load_plugin(plugin_name, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE, CACHEOPS)
+
+
+def load_plugin(plugin_name, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE, CACHEOPS):
+    """Process a single plugin or raise errors that get bubbled up."""
+
+    logger.debug(f"Loading {plugin_name}!")
+
+    # Import plugin module
+    try:
+        plugin = importlib.import_module(plugin_name)
+    except ModuleNotFoundError as err:
+        if getattr(err, 'name') == plugin_name:
+            raise PluginNotFound(
+                f"Unable to import plugin {plugin_name}: Module not found. Check that the plugin module has been "
+                f"installed within the correct Python environment."
+            ) from err
+        raise err
+
+    # Validate plugin config
+    try:
+        plugin_config = plugin.config
+    except AttributeError as err:
+        raise PluginImproperlyConfigured(
+            f"Plugin {plugin_name} does not provide a 'config' variable. This should be defined in the plugin's "
+            f"__init__.py file and point to the PluginConfig subclass."
+        ) from err
+
+    # Validate user-provided configuration settings and assign defaults. Plugin
+    # validation that fails will stop before modifying any settings.
+    if plugin_name not in PLUGINS_CONFIG:
+        PLUGINS_CONFIG[plugin_name] = {}
+    plugin_config.validate(PLUGINS_CONFIG[plugin_name], VERSION)
+
+    # Plugin config is valid, so now we can and add to INSTALLED_APPS.
+    INSTALLED_APPS.append(f"{plugin_config.__module__}.{plugin_config.__name__}")
+
+    # Include any extra installed apps provided by the plugin
+    # TODO(jathan): We won't be able to support advanced app-ordering concerns
+    # and if the time comes that we do, this will have to be rethought.
+    INSTALLED_APPS.extend(plugin_config.installed_apps)
+
+    # Include any extra middleware provided by the plugin
+    MIDDLEWARE.extend(plugin_config.middleware)
+
+    # Update caching configg
+    CACHEOPS.update({
+        f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()
+    })
