@@ -54,6 +54,10 @@ djangorestframework
 # https://github.com/axnsan12/drf-yasg
 drf-yasg[validation]
 
+# Integrate GraphQL into your Django project.
+# https://github.com/graphql-python/graphene-django/
+graphene-django
+
 # WSGI HTTP server
 # https://gunicorn.org/
 gunicorn

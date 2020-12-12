@@ -24,7 +24,7 @@ from utilities.utils import deepmerge, render_jinja2
 #
 # Webhooks
 #
-
+@extras_features('graphql')
 class Webhook(models.Model):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
@@ -157,7 +157,7 @@ class Webhook(models.Model):
 #
 # Custom links
 #
-
+@extras_features('graphql')
 class CustomLink(models.Model):
     """
     A custom link to an external representation of a NetBox object. The link text and URL fields accept Jinja2 template
@@ -209,7 +209,7 @@ class CustomLink(models.Model):
 #
 # Export templates
 #
-
+@extras_features('graphql')
 class ExportTemplate(models.Model):
     content_type = models.ForeignKey(
         to=ContentType,
@@ -360,7 +360,7 @@ class ImageAttachment(models.Model):
 #
 # Config contexts
 #
-
+@extras_features('graphql')
 class ConfigContext(ChangeLoggedModel):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
@@ -512,7 +512,7 @@ class CustomJob(models.Model):
 #
 # Job results
 #
-
+@extras_features('graphql')
 class JobResult(models.Model):
     """
     This model stores the results from running a user-defined report.

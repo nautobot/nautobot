@@ -75,6 +75,23 @@ class PluginTest(TestCase):
 
         self.assertIn(SiteCustomValidator, registry['plugin_custom_validators']['dcim.site'])
 
+    def test_graphql_types(self):
+        """
+        Check that plugin GraphQL Types are registered.
+        """
+        from extras.tests.dummy_plugin.graphql.types import AnotherDummyType
+
+        self.assertIn(AnotherDummyType, registry['plugin_graphql_types'])
+
+    def test_extras_features_graphql(self):
+        """
+        Check that plugin GraphQL Types are registered.
+        """
+        registered_models = registry.get("model_features", {}).get("graphql", {})
+
+        self.assertIn("dummy_plugin", registered_models.keys())
+        self.assertIn("dummymodel", registered_models["dummy_plugin"])
+
     def test_middleware(self):
         """
         Check that plugin middleware is registered.

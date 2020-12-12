@@ -14,6 +14,7 @@ from utilities.choices import ButtonColorChoices
 
 # Initialize plugin registry stores
 registry['plugin_template_extensions'] = collections.defaultdict(list)
+registry['plugin_graphql_types'] = []
 registry['plugin_menu_items'] = {}
 registry['plugin_custom_validators'] = collections.defaultdict(list)
 
@@ -60,6 +61,7 @@ class PluginConfig(AppConfig):
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
     template_extensions = 'template_content.template_extensions'
+    graphql_types = 'graphql.types.graphql_types'
     menu_items = 'navigation.menu_items'
     custom_validators = 'custom_validators.custom_validators'
 
@@ -69,6 +71,10 @@ class PluginConfig(AppConfig):
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+
+        graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
+        if graphql_types is not None:
+            register_graphql_types(graphql_types)
 
         # Register navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
@@ -211,6 +217,24 @@ def register_template_extensions(class_list):
             raise TypeError(f"PluginTemplateExtension class {template_extension} does not define a valid model!")
 
         registry['plugin_template_extensions'][template_extension.model].append(template_extension)
+
+
+def register_graphql_types(class_list):
+    """
+    Register a list of DjangoObjectType classes
+    """
+    # Validation
+    from graphene_django import DjangoObjectType
+
+    for item in class_list:
+        if not inspect.isclass(item):
+            raise TypeError(f"DjangoObjectType class {item} was passes as an instance!")
+        if not issubclass(item, DjangoObjectType):
+            raise TypeError(f"{item} is not a subclass of graphene_django.DjangoObjectType")
+        if item._meta.model is None:
+            raise TypeError(f"DjangoObjectType class {item} does not define a valid model!")
+
+        registry['plugin_graphql_types'].append(item)
 
 
 #

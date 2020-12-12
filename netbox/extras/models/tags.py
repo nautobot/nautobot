@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.text import slugify
 from taggit.models import TagBase, GenericTaggedItemBase
 
+from extras.utils import extras_features
 from extras.models import ChangeLoggedModel
 from extras.utils import extras_features
 from utilities.choices import ColorChoices

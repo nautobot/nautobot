@@ -36,7 +36,7 @@ __all__ = (
 # Device Types
 #
 
-@extras_features('custom_validators', 'export_templates', 'webhooks')
+@extras_features('custom_validators', 'export_templates', 'graphql', 'webhooks')
 class Manufacturer(ChangeLoggedModel):
     """
     A Manufacturer represents a company which produces hardware devices; for example, Juniper or Dell.
@@ -75,7 +75,7 @@ class Manufacturer(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'webhooks')
+@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
 class DeviceType(ChangeLoggedModel, CustomFieldModel):
     """
     A DeviceType represents a particular make (Manufacturer) and model of device. It specifies rack height and depth, as
@@ -338,7 +338,7 @@ class DeviceType(ChangeLoggedModel, CustomFieldModel):
 # Devices
 #
 
-@extras_features('custom_validators')
+@extras_features('custom_validators', 'graphql')
 class DeviceRole(ChangeLoggedModel):
     """
     Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
@@ -386,7 +386,7 @@ class DeviceRole(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_validators')
+@extras_features('custom_validators', 'graphql')
 class Platform(ChangeLoggedModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
@@ -450,7 +450,7 @@ class Platform(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'webhooks')
+@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
 class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
     """
     A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
@@ -883,7 +883,7 @@ class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
 # Virtual chassis
 #
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'webhooks')
+@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
 class VirtualChassis(ChangeLoggedModel, CustomFieldModel):
     """
     A collection of Devices which operate with a shared control plane (e.g. a switch stack).

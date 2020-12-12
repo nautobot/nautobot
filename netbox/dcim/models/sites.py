@@ -25,7 +25,7 @@ __all__ = (
 # Regions
 #
 
-@extras_features('custom_validators', 'export_templates', 'webhooks')
+@extras_features('custom_validators', 'export_templates', 'graphql', 'webhooks')
 class Region(MPTTModel, ChangeLoggedModel):
     """
     Sites can be grouped within geographic Regions.
@@ -92,7 +92,7 @@ class Region(MPTTModel, ChangeLoggedModel):
 # Sites
 #
 
-@extras_features('custom_fields', 'custom_links', 'export_templates', 'custom_validators', 'webhooks')
+@extras_features('custom_fields', 'custom_links', 'export_templates', 'custom_validators', 'graphql', 'webhooks')
 class Site(ChangeLoggedModel, CustomFieldModel):
     """
     A Site represents a geographic location within a network; typically a building or campus. The optional facility

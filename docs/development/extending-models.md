@@ -65,7 +65,11 @@ If the new field will be included in the object list view, add a column to the m
 
 Edit the object's view template to display the new field. There may also be a custom add/edit form template that needs to be updated.
 
-## 10. Create/extend test cases
+## 10. Validate the new field in GraphQL
+
+If the model is already part of the GraphQL schema, the new field will be included automatically. Validate that the new field is rendering properly in GraphQL. If the field is not compatible with GraphQL or shouldn't be included in GraphQL it's possible to exclude a specific field in the GraphQL Type Object associated with this specific model. You can refer to the [graphene-django documentation](https://docs.graphene-python.org/projects/django/en/latest/queries/#specifying-which-fields-to-include) for additional information.
+
+## 11. Create/extend test cases
 
 Create or extend the relevant test cases to verify that the new field and any accompanying validation logic perform as expected. This is especially important for relational fields. NetBox incorporates various test suites, including:
 
@@ -77,6 +81,6 @@ Create or extend the relevant test cases to verify that the new field and any ac
 
 Be diligent to ensure all of the relevant test suites are adapted or extended as necessary to test any new functionality.
 
-## 11. Update the model's documentation
+## 12. Update the model's documentation
 
 Each model has a dedicated page in the documentation, at `models/<app>/<model>.md`. Update this file to include any relevant information about the new field.

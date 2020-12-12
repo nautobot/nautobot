@@ -7,6 +7,7 @@ EXTRAS_FEATURES = [
     'custom_links',
     'export_templates',
     'custom_validators',
+    'graphql',
     'job_results',
     'webhooks'
 ]

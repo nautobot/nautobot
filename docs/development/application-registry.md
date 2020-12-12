@@ -55,3 +55,13 @@ Plugin content that gets embedded into core NetBox templates. The store comprise
     ],
 }
 ```
+
+### `plugin_graphql_types`
+
+List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL object that are defined in a plugin will be automatically registered into this registry. An example:
+
+```python
+[
+    <DjangoObjectType>, <DjangoObjectType>
+]   
+```

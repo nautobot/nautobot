@@ -275,6 +275,7 @@ INSTALLED_APPS = [
     'virtualization',
     'django_rq',  # Must come after extras to allow overriding management commands
     'drf_yasg',
+    'graphene_django'
 ]
 
 # Middleware
@@ -364,6 +365,14 @@ CORS_ORIGIN_ALLOW_ALL = False  # FIXME(jathan): Renamed to CORS_ALLOW_ALL_ORIGIN
 CORS_ORIGIN_REGEX_WHITELIST = []  # FIXME(jathan): Renamed to CORS_ALLOWED_ORIGIN_REGEXES in django-cors-headers==3.5.0
 CORS_ORIGIN_WHITELIST = []  # FIXME(jathan): Renamed to CORS_ALLOWED_ORIGINS in django-cors-headers==3.5.0
 
+#
+# GraphQL
+#
+GRAPHENE = {
+    'SCHEMA': 'netbox.graphql.schema_init.schema',
+    'DJANGO_CHOICE_FIELD_ENUM_V3_NAMING': True,  # any field with a name of type will break in Graphene otherwise.
+}
+GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 
 #################################################################
 # CONFIGURATION.PY - Configuration import from configuration.py #

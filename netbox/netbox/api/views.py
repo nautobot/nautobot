@@ -6,6 +6,7 @@ from django import __version__ as DJANGO_VERSION
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
 from django_rq.queues import get_connection
@@ -14,12 +15,24 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
+from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import PermissionDenied, ParseError
+from drf_yasg.openapi import Schema, TYPE_OBJECT, TYPE_ARRAY
+from drf_yasg.utils import swagger_auto_schema
 from rq.worker import Worker
+
+from graphql import get_default_backend
+from graphql.execution import ExecutionResult
+from graphql.type.schema import GraphQLSchema
+from graphql.execution.middleware import MiddlewareManager
+from graphene_django.settings import graphene_settings
+from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from netbox.api import BulkOperationSerializer
 from netbox.api.authentication import IsAuthenticated
 from netbox.api.exceptions import SerializerNotFound
 from utilities.api import get_serializer_for_model
+from . import serializers
 
 HTTP_ACTIONS = {
     'GET': 'view',
@@ -307,3 +320,218 @@ class StatusView(APIView):
             'python-version': platform.python_version(),
             'rq-workers-running': Worker.count(get_connection('default')),
         })
+
+
+#
+# GraphQL
+#
+
+class GraphQLDRFAPIView(APIView):
+    """
+    API View for GraphQL to integrate properly with DRF authentication mecanism.
+    The code is a stripped down version of graphene-django default View
+    https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
+    """
+
+    permission_classes = [AllowAny]
+    graphql_schema = None
+    executor = None
+    backend = None
+    middleware = None
+    root_value = None
+
+    def __init__(
+        self,
+        schema=None,
+        executor=None,
+        middleware=None,
+        root_value=None,
+        backend=None
+    ):
+        if not schema:
+            schema = graphene_settings.SCHEMA
+
+        if backend is None:
+            backend = get_default_backend()
+
+        if middleware is None:
+            middleware = graphene_settings.MIDDLEWARE
+
+        self.graphql_schema = self.graphql_schema or schema
+
+        if middleware is not None:
+            if isinstance(middleware, MiddlewareManager):
+                self.middleware = middleware
+            else:
+                self.middleware = list(instantiate_middleware(middleware))
+
+        self.executor = executor
+        self.root_value = root_value
+        self.backend = backend
+
+        assert isinstance(
+            self.graphql_schema, GraphQLSchema
+        ), "A Schema is required to be provided to GraphQLAPIView."
+
+    def get_root_value(self, request):
+        return self.root_value
+
+    def get_middleware(self, request):
+        return self.middleware
+
+    def get_context(self, request):
+        return request
+
+    def get_backend(self, request):
+        return self.backend
+
+    @swagger_auto_schema(
+        request_body=serializers.GraphQLAPISerializer,
+        operation_description='Query the database using a GraphQL query',
+        responses={
+            200: Schema(
+                type=TYPE_OBJECT,
+                properties={
+                    "data": Schema(
+                        type=TYPE_OBJECT
+                    )
+                }
+            ),
+            400: Schema(
+                type=TYPE_OBJECT,
+                properties={
+                    "errors": Schema(
+                        type=TYPE_ARRAY,
+                        items={
+                            "type": TYPE_OBJECT
+                        }
+                    )
+                }
+            )
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        try:
+            data = self.parse_body(request)
+            result, status_code = self.get_response(request, data)
+
+            return Response(
+                result, status=status_code,
+            )
+
+        except HttpError as e:
+            return Response(
+                {"errors": [GraphQLView.format_error(e)]}, status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def get_response(self, request, data):
+        """Extract the information from the request, execute the GraphQL query and form the response.
+
+        Args:
+            request (HttpRequest): Request Object from Django
+            data (dict): Parsed content of the body of the request.
+
+        Returns:
+            response (dict), status_code (int): Payload of the response to send and the status code.
+        """
+        query, variables, operation_name, id = GraphQLView.get_graphql_params(request, data)
+
+        execution_result = self.execute_graphql_request(
+            request, data, query, variables, operation_name
+        )
+
+        status_code = 200
+        if execution_result:
+            response = {}
+
+            if execution_result.errors:
+                response["errors"] = [
+                    GraphQLView.format_error(e) for e in execution_result.errors
+                ]
+
+            if execution_result.invalid:
+                status_code = 400
+            else:
+                response["data"] = execution_result.data
+
+            result = response
+        else:
+            result = None
+
+        return result, status_code
+
+    def parse_body(self, request):
+        """Analyze the request and based on the content type,
+        extract the query from the body as a string or as a JSON payload.
+
+        Args:
+            request (HttpRequest): Request object from Django
+
+        Returns:
+            dict: GraphQL query
+        """
+        content_type = GraphQLView.get_content_type(request)
+
+        if content_type == "application/graphql":
+            return {"query": request.body.decode()}
+
+        elif content_type == "application/json":
+            try:
+                return request.data
+            except ParseError:
+                raise HttpError(HttpResponseBadRequest("Request body contained Invalid JSON."))
+
+        return {}
+
+    def execute_graphql_request(
+        self, request, data, query, variables, operation_name
+    ):
+        """Execute a GraphQL request and return the result
+
+        Args:
+            request (HttpRequest): Request object from Django
+            data (dict): Parsed content of the body of the request.
+            query (dict): GraphQL query
+            variables (dict): Optional variables for the GraphQL query
+            operation_name (str): GraphQL operation name: query, mutations etc..
+
+        Returns:
+            ExecutionResult: Execution result object from GraphQL with response or error message.
+        """
+        if not query:
+            raise HttpError(
+                HttpResponseBadRequest("Must provide query string.")
+            )
+
+        try:
+            backend = self.get_backend(request)
+            document = backend.document_from_string(self.graphql_schema, query)
+        except Exception as e:
+            return ExecutionResult(errors=[e], invalid=True)
+
+        operation_type = document.get_operation_type(operation_name)
+        if operation_type and operation_type != "query":
+            raise HttpError(
+                HttpResponseBadRequest(f"'{operation_type}' is not a supported operation, Only query are supported.")
+            )
+
+        try:
+            extra_options = {}
+            if self.executor:
+                # We only include it optionally since
+                # executor is not a valid argument in all backends
+                extra_options["executor"] = self.executor
+
+            options = {
+                "root_value": self.get_root_value(request),
+                "variable_values": variables,
+                "operation_name": operation_name,
+                "context_value": self.get_context(request),
+                "middleware": self.get_middleware(request),
+            }
+            options.update(extra_options)
+
+            operation_type = document.get_operation_type(operation_name)
+            return document.execute(**options)
+        except Exception as e:
+            return ExecutionResult(errors=[e], invalid=True)

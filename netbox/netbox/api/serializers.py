@@ -87,3 +87,12 @@ class WritableNestedSerializer(serializers.ModelSerializer):
 
 class BulkOperationSerializer(serializers.Serializer):
     id = serializers.IntegerField()
+
+
+#
+# GraphQL, used by the openapi doc, not by the view
+#
+
+class GraphQLAPISerializer(serializers.Serializer):
+    query = serializers.CharField(required=True, help_text="GraphQL query")
+    variables = serializers.JSONField(required=False, help_text="Variables in JSON Format")
