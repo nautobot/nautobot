@@ -14,6 +14,13 @@ from users.models import ObjectPermission, Token
 from utilities.testing import TestCase
 
 
+# Authentication backends required for remote authentication to work
+TEST_AUTHENTICATION_BACKENDS = [
+    'netbox.authentication.RemoteUserBackend',
+    'netbox.authentication.ObjectPermissionBackend',
+]
+
+
 class ExternalAuthenticationTestCase(TestCase):
 
     @classmethod
@@ -23,6 +30,9 @@ class ExternalAuthenticationTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
+    @override_settings(
+        REMOTE_AUTH_ENABLED=False
+    )
     def test_remote_auth_disabled(self):
         """
         Test enabling remote authentication with the default configuration.
@@ -39,7 +49,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertNotIn('_auth_user_id', self.client.session)
 
     @override_settings(
-        REMOTE_AUTH_ENABLED=True,
+        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS
     )
     def test_remote_auth_enabled(self):
         """
@@ -57,7 +67,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(int(self.client.session.get('_auth_user_id')), self.user.pk, msg='Authentication failed')
 
     @override_settings(
-        REMOTE_AUTH_ENABLED=True,
+        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_HEADER='HTTP_FOO',
     )
     def test_remote_auth_custom_header(self):
@@ -76,7 +86,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(int(self.client.session.get('_auth_user_id')), self.user.pk, msg='Authentication failed')
 
     @override_settings(
-        REMOTE_AUTH_ENABLED=True,
+        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
     )
     def test_remote_auth_auto_create(self):
@@ -99,7 +109,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(int(self.client.session.get('_auth_user_id')), new_user.pk, msg='Authentication failed')
 
     @override_settings(
-        REMOTE_AUTH_ENABLED=True,
+        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
         REMOTE_AUTH_DEFAULT_GROUPS=['Group 1', 'Group 2'],
     )
@@ -135,7 +145,7 @@ class ExternalAuthenticationTestCase(TestCase):
         )
 
     @override_settings(
-        REMOTE_AUTH_ENABLED=True,
+        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
         REMOTE_AUTH_DEFAULT_PERMISSIONS={'dcim.add_site': None, 'dcim.change_site': None},
     )

@@ -22,7 +22,7 @@ nav:
         - 3. NetBox: 'installation/3-netbox.md'
         - 4. Gunicorn: 'installation/4-gunicorn.md'
         - 5. HTTP Server: 'installation/5-http-server.md'
-        - 6. LDAP (Optional): 'installation/6-ldap.md'
+        - 6. External Authentication (Optional): 'installation/6-external-authentication.md'
         - Upgrading NetBox: 'installation/upgrading.md'
         - Migrating to systemd: 'installation/migrating-to-systemd.md'
     - Configuration:

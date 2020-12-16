@@ -1,4 +1,4 @@
-# LDAP Configuration
+# LDAP Authentication
 
 This guide explains how to implement LDAP authentication using an external server. User authentication will fall back to built-in Django users in the event of a failure.
 
@@ -35,15 +35,22 @@ sudo echo django-auth-ldap >> /opt/netbox/local_requirements.txt
 
 ## Configuration
 
-First, enable the LDAP authentication backend in `configuration.py`. (Be sure to overwrite this definition if it is already set to `RemoteUserBackend`.)
+Enable the LDAP authentication backend by adding the following to your `configuration.py`:
+
+!!! note
+    It is critical that you include the `ObjectPermissionsBackend` provided by
+    NetBox after the `LDAPBackend` so that object-level permissions features can work properly.
 
 ```python
-REMOTE_AUTH_BACKEND = 'netbox.authentication.LDAPBackend'
+AUTHENTICATION_BACKENDS = [
+    'django_auth_ldap.backend.LDAPBackend',
+    'netbox.authentication.ObjectPermissionBackend',
+]
 ```
 
-Next, create a file in the same directory as `configuration.py` (typically `/opt/netbox/netbox/netbox/`) named `ldap_config.py`. Define all of the parameters required below in `ldap_config.py`. Complete documentation of all `django-auth-ldap` configuration options is included in the project's [official documentation](https://django-auth-ldap.readthedocs.io/).
-
 ### General Server Configuration
+
+Define all of the parameters required below in your `configuration.py`. Complete documentation of all `django-auth-ldap` configuration options is included in the project's [official documentation](http://django-auth-ldap.readthedocs.io/).
 
 !!! info
     When using Windows Server 2012 you may need to specify a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure, or `3268` for non-secure.

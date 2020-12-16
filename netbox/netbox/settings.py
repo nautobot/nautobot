@@ -108,14 +108,10 @@ RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
 # Remote auth
 REMOTE_AUTH_AUTO_CREATE_USER = False
-# FIXME(jathan): Deprecate this as it is obviated by the "always-on" LDAP
-# backend
-REMOTE_AUTH_BACKEND = 'netbox.authentication.RemoteUserBackend'
 REMOTE_AUTH_DEFAULT_GROUPS = []
 REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
-REMOTE_AUTH_ENABLED = False
+REMOTE_AUTH_ENABLED = True  # FIXME(jathan): Deprecated in Grimlock
 REMOTE_AUTH_HEADER = 'HTTP_REMOTE_USER'
-
 
 # Releases
 RELEASE_CHECK_URL = None
@@ -323,15 +319,7 @@ TEMPLATES = [
 
 # Set up authentication backends
 AUTHENTICATION_BACKENDS = [
-    # This first so that if LDAP is enabled it will be used first if properly
-    # configured
-    'netbox.authentication.LDAPBackend',
-
-    # REMOTE_AUTH_BACKEND,  # FIXME(jathan): We have a race condition w/ this
-    # FIXME(jathan): Hard-code this for now
-    'netbox.authentication.RemoteUserBackend',
-
-    # Finally, always check object permissions
+    # Always check object permissions
     'netbox.authentication.ObjectPermissionBackend',
 ]
 
@@ -429,6 +417,18 @@ if EMAIL:
 ##############
 # VALIDATION #
 ##############
+
+#
+# Authentication
+#
+# FIXME(jathan): This is just here as an interim validation check, to be
+# replaced in a future update when all other validations hard-coded here in
+# settings are moved to use the Django system check framework.
+if 'netbox.authentication.ObjectPermissionBackend' not in AUTHENTICATION_BACKENDS:
+    raise ImproperlyConfigured(
+        "netbox.authentication.ObjectPermissionBackend must be defined in "
+        "'AUTHENTICATION_BACKENDS'"
+    )
 
 #
 # Releases

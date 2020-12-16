@@ -24,13 +24,6 @@ __all__ = (
 )
 
 
-# This is the authentication backend that will be explicitly used for the test
-# suite. This is required when providing multiple authentication backends in the
-# core settings, otherwise Django just uses the first one in the list, which is
-# not what we want.
-TEST_AUTHENTICATION_BACKEND = "netbox.authentication.RemoteUserBackend"
-
-
 class TestCase(_TestCase):
     user_permissions = ()
 
@@ -43,8 +36,8 @@ class TestCase(_TestCase):
         # Initialize the test client
         self.client = Client()
 
-        # Force login explicitly with the TEST_AUTHENTICATION_BACKEND
-        self.client.force_login(self.user, backend=TEST_AUTHENTICATION_BACKEND)
+        # Force login explicitly with the first-available backend
+        self.client.force_login(self.user)
 
     def prepare_instance(self, instance):
         """

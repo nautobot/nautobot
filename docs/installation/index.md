@@ -9,7 +9,7 @@ The following sections detail how to set up a new instance of NetBox:
 3. [NetBox components](3-netbox.md)
 4. [Gunicorn](4-gunicorn.md)
 5. [HTTP server](5-http-server.md)
-6. [LDAP authentication](6-ldap.md) (optional)
+6. [External authentication](6-external-authentication.md) (optional)
 
 The video below demonstrates the installation of NetBox v2.10.3 on Ubuntu 20.04 for your reference.
 
