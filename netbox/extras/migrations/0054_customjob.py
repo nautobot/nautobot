@@ -22,8 +22,7 @@ def migrate_jobresults(apps, schema_editor):
     for job_result in JobResult.objects.filter(obj_type=report_content_type):
         job_result.obj_type = custom_job_content_type
         if job_result.data:
-            job_result.data["output"] = ""
-            job_result.data["total"] = {
+            totals = {
                 'success': 0,
                 'info': 0,
                 'warning': 0,
@@ -31,7 +30,9 @@ def migrate_jobresults(apps, schema_editor):
             }
             for test_results in job_result.data.values():
                 for key in ('success', 'info', 'warning', 'failure'):
-                    job_result.data['total'][key] += test_results[key]
+                    totals[key] += test_results[key]
+            job_result.data["output"] = ""
+            job_result.data["total"] = totals
         job_result.save()
 
     # For Script result objects, transform the result data to the new format
