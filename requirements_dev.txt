@@ -1,0 +1,2 @@
+pycodestyle==2.6.0
+coverage==5.3.1

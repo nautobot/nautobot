@@ -1,0 +1,52 @@
+---
+version: '3'
+services:
+  netbox:
+    build:
+      context: ../
+      dockerfile: development/Dockerfile
+    image: "grimlock/grimlock-py${PYTHON_VER}"
+    command: >
+      sh -c "python /opt/grimlock/netbox/manage.py migrate &&
+             python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - dev.env
+    volumes:
+      - ./configuration.py:/opt/grimlock/netbox/netbox/configuration.py
+      - ../:/opt/grimlock
+    tty: true
+  worker:
+    build:
+      context: ../
+      dockerfile: development/Dockerfile
+    image: "grimlock/grimlock-py${PYTHON_VER}"
+    command: sh -c "python /opt/grimlock/netbox/manage.py rqworker"
+    depends_on:
+      - netbox
+    env_file:
+      - ./dev.env
+    volumes:
+      - ./configuration.py:/opt/grimlock/netbox/netbox/configuration.py
+      - ../:/opt/grimlock
+    tty: true
+  postgres:
+    image: postgres:10
+    env_file:
+      - dev.env
+    volumes:
+      - pgdata_grimlock:/var/lib/postgresql/data
+  redis:
+    image: redis:5-alpine
+    command:
+      - sh
+      - -c  # this is to evaluate the $REDIS_PASSWORD from the env
+      - redis-server --appendonly yes --requirepass $$REDIS_PASSWORD  ## $$ because of docker-compose
+    env_file:
+      - dev.env
+volumes:
+  pgdata_grimlock:
