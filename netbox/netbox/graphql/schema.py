@@ -1,4 +1,5 @@
 """Schema module for GraphQL."""
+from collections import OrderedDict
 import logging
 
 from django.conf import settings
@@ -11,30 +12,33 @@ from dcim.graphql.types import SiteType, DeviceType, InterfaceType, RackType, Ca
 from ipam.graphql.types import IPAddressType
 from circuits.graphql.types import CircuitTerminationType
 from extras.registry import registry
-from extras.models import CustomField
-from extras.choices import CustomFieldTypeChoices
+from extras.models import CustomField, Relationship
+from extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from extras.graphql.types import TagType
 from netbox.graphql.utils import str_to_var_name
 from netbox.graphql.generators import (
     generate_schema_type,
     generate_custom_field_resolver,
+    generate_relationship_resolver,
     generate_restricted_queryset,
     generate_attrs_for_schema_type,
 )
 
 logger = logging.getLogger('netbox.graphql.schema')
 
-STATIC_TYPES = {
-    "dcim.site": SiteType,
-    "dcim.device": DeviceType,
-    "dcim.interface": InterfaceType,
-    "dcim.rack": RackType,
-    "dcim.cable": CableType,
-    "dcim.consoleserverport": ConsoleServerPortType,
-    "ipam.ipaddress": IPAddressType,
-    "circuits.circuittermination": CircuitTerminationType,
-    "extras.tag": TagType
-}
+registry["graphql_types"] = OrderedDict()
+registry["graphql_types"]["dcim.site"] = SiteType
+registry["graphql_types"]["dcim.device"] = DeviceType
+registry["graphql_types"]["dcim.interface"] = InterfaceType
+registry["graphql_types"]["dcim.rack"] = RackType
+registry["graphql_types"]["dcim.cable"] = CableType
+registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
+registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
+registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
+registry["graphql_types"]["extras.tag"] = TagType
+
+
+STATIC_TYPES = registry["graphql_types"].keys()
 
 CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_INTEGER: graphene.Int(),
@@ -54,6 +58,7 @@ def extend_schema_type(schema_type):
      - Custom Field, all custom field will be defined as a first level attribute.
      - Tags, Tags will automatically be resolvable.
      - Config Context, add a config_context attribute and resolver.
+     - Relationships, all relationships will be defined as a first level attribute.
 
     To insert a new field dynamically,
      - The field must be declared in schema_type._meta.fields as a graphene.Field.mounted
@@ -87,6 +92,11 @@ def extend_schema_type(schema_type):
     # Config Context
     #
     schema_type = extend_schema_type_config_context(schema_type, model)
+
+    #
+    # Relationships
+    #
+    schema_type = extend_schema_type_relationships(schema_type, model)
 
     return schema_type
 
@@ -179,12 +189,72 @@ def extend_schema_type_config_context(schema_type, model):
     return schema_type
 
 
+def extend_schema_type_relationships(schema_type, model):
+    """Extend the schema type with attributes and resolvers corresponding
+    to the relationships associated with this model."""
+
+    ct = ContentType.objects.get_for_model(model)
+    relationships_by_side = {
+        "source": Relationship.objects.filter(source_type=ct),
+        "destination": Relationship.objects.filter(destination_type=ct)
+    }
+
+    prefix = ""
+    if settings.GRAPHQL_RELATIONSHIP_PREFIX and isinstance(settings.GRAPHQL_RELATIONSHIP_PREFIX, str):
+        prefix = f"{settings.GRAPHQL_RELATIONSHIP_PREFIX}_"
+
+    for side, relationships in relationships_by_side.items():
+        for relationship in relationships:
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+
+            # Generate the name of the attribute and the name of the resolver based on the slug of the relationship
+            # and based on the prefix
+            rel_name = f"{prefix}{str_to_var_name(relationship.slug)}"
+            resolver_name = f"resolve_{rel_name}"
+
+            if hasattr(schema_type, rel_name):
+                logger.warning(
+                    f"Unable to add the custom relationship {relationship.slug} to {schema_type._meta.name} "
+                    f"because there is already an attribute with the same name ({rel_name})"
+                )
+                continue
+
+            # Identify which object needs to be on the other side of this relationship
+            # and check the registry to see if it is available,
+            # the schema_type object are organized by identifier in the registry `dcim.device`
+            peer_type = getattr(relationship, f"{peer_side}_type")
+            peer_model = peer_type.model_class()
+            type_identifier = f"{peer_model._meta.app_label}.{peer_model._meta.model_name}"
+            rel_schema_type = registry["graphql_types"].get(type_identifier)
+
+            if not rel_schema_type:
+                logger.warning(f"Unable to identify the GraphQL Object Type for {type_identifier} in the registry.")
+                continue
+
+            if relationship.has_many(peer_side):
+                schema_type._meta.fields[rel_name] = graphene.Field.mounted(graphene.List(rel_schema_type))
+            else:
+                schema_type._meta.fields[rel_name] = graphene.Field(rel_schema_type)
+
+            # Generate and assign the resolver
+            setattr(
+                schema_type,
+                resolver_name,
+                generate_relationship_resolver(
+                    rel_name, resolver_name, relationship, side, peer_model
+                )
+            )
+
+    return schema_type
+
+
 def generate_query_mixin():
     """Generates and returns a class definition representing a GraphQL schema."""
 
     class_attrs = {}
 
     def already_present(model):
+        """Check if a model and its resolvers are staged to added to the Mixin."""
 
         single_item_name = str_to_var_name(model._meta.verbose_name)
         list_name = str_to_var_name(model._meta.verbose_name_plural)
@@ -203,13 +273,6 @@ def generate_query_mixin():
             )
             return True
 
-    # Generate Resolver for all SchemaType statically defined
-    for schema_type in STATIC_TYPES.values():
-
-        # Extend schema_type with dynamic attributes
-        schema_type = extend_schema_type(schema_type)
-        class_attrs.update(generate_attrs_for_schema_type(schema_type))
-
     # Generate SchemaType Dynamically for all Models registered in the model_features registry
     #  - Ensure an attribute/schematype with the same name doesn't already exist
     registered_models = registry.get("model_features", {}).get("graphql", {})
@@ -227,27 +290,30 @@ def generate_query_mixin():
                 )
                 continue
 
-            if f"{app_name}.{model_name}" in STATIC_TYPES.keys():
+            type_identifier = f"{app_name}.{model_name}"
+
+            if type_identifier in registry["graphql_types"].keys():
                 # Skip models that have been added statically
                 continue
 
-            if already_present(model):
-                continue
-
             schema_type = generate_schema_type(app_name=app_name, model=model)
+            registry["graphql_types"][type_identifier] = schema_type
 
-            # Extend schema_type with dynamic attributes
-            schema_type = extend_schema_type(schema_type)
-
-            class_attrs.update(generate_attrs_for_schema_type(schema_type))
-
-    # Generate Resolvers for all SchemaType present in the plugin registry
+    # Add all objects in the plugin registry to the main registry
+    # After checking for conflict
     for schema_type in registry["plugin_graphql_types"]:
+        model = schema_type._meta.model
+        type_identifier = f"{model._meta.app_label}.{model._meta.model_name}"
+
+        if type_identifier not in registry["graphql_types"].keys():
+            registry["graphql_types"][type_identifier] = schema_type
+
+    # Extend schema_type with dynamic attributes for all object defined in the registry
+    for schema_type in registry["graphql_types"].values():
 
         if already_present(schema_type._meta.model):
             continue
 
-        # Extend schema_type with dynamic attributes
         schema_type = extend_schema_type(schema_type)
         class_attrs.update(generate_attrs_for_schema_type(schema_type))
 

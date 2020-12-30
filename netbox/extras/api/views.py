@@ -13,10 +13,9 @@ from rq import Worker
 from extras import filters
 from extras.choices import JobResultStatusChoices
 from extras.models import (
-    ConfigContext, ExportTemplate, GitRepository, ImageAttachment, ObjectChange,
-    JobResult, Status, Tag, TaggedItem,
+    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, ObjectChange,
+    Relationship, RelationshipAssociation, Status, Tag, TaggedItem
 )
-from extras.models import CustomField
 from extras.custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
 from netbox.api.authentication import IsAuthenticated
 from netbox.api.metadata import ContentTypeMetadata, StatusFieldMetadata
@@ -299,3 +298,19 @@ class StatusViewSetMixin(ModelViewSet):
     Mixin to set `metadata_class` to implement `status` field in model viewset metadata.
     """
     metadata_class = StatusFieldMetadata
+
+
+#
+#  Relationships
+#
+
+class RelationshipViewSet(ModelViewSet):
+    queryset = Relationship.objects.all()
+    serializer_class = serializers.RelationshipSerializer
+    filterset_class = filters.RelationshipFilterSet
+
+
+class RelationshipAssociationViewSet(ModelViewSet):
+    queryset = RelationshipAssociation.objects.all()
+    serializer_class = serializers.RelationshipAssociationSerializer
+    filterset_class = filters.RelationshipAssociationFilterSet

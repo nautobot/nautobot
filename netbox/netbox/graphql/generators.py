@@ -5,6 +5,9 @@ from importlib import import_module
 import graphene
 from graphene_django import DjangoObjectType
 
+from utilities.utils import get_filterset_for_model
+from extras.choices import RelationshipSideChoices
+from extras.models import RelationshipAssociation
 from netbox.graphql.utils import str_to_var_name
 
 logger = logging.getLogger('netbox.graphql.generators')
@@ -31,6 +34,34 @@ def generate_custom_field_resolver(name, resolver_name):
 
     resolve_custom_field.__name__ = resolver_name
     return resolve_custom_field
+
+
+def generate_relationship_resolver(name, resolver_name, relationship, side, peer_model):
+    """Generate function to resolve each custom relationship within each DjangoObjectType.
+
+    Args:
+        name (str): name of the custom field to resolve
+        resolver_name (str): name of the resolver as declare in DjangoObjectType
+        relationship (Relationship): Relationship object to generate a resolver for
+        site (site): side of the relationship to use for the resolver
+        peer_model (Model): Django Model of the peer of this relationship
+    """
+    def resolve_relationship(self, info, **kwargs):
+        """Return a queryset or an object depending on the type of the relationship."""
+        peer_side = RelationshipSideChoices.OPPOSITE[side]
+        query_params = {"relationship": relationship}
+        query_params[f"{side}_id"] = self.pk
+        queryset_ids = RelationshipAssociation.objects.filter(
+            **query_params
+        ).values_list(f"{peer_side}_id", flat=True)
+
+        if relationship.has_many(peer_side):
+            return peer_model.objects.filter(id__in=queryset_ids)
+
+        return peer_model.objects.filter(id__in=queryset_ids).first()
+
+    resolve_relationship.__name__ = resolver_name
+    return resolve_relationship
 
 
 def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
@@ -62,18 +93,8 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
     meta_attrs = {"model": model, "fields": "__all__"}
 
     # We'll attempt to find a FilterSet corresponding to the model
-    # based on the name of the app and the name of the model
-    # Not all models have a FilterSet defined so we'll silently continue if we can't find one
-    try:
-        filterset_name = f"{model.__name__}FilterSet"
-        filterset = getattr(import_module(f"{app_name}.filters"), filterset_name)
-        meta_attrs["filterset_class"] = filterset
-    except ModuleNotFoundError:
-        # The name of the module is not correct
-        pass
-    except AttributeError:
-        # Unable to find a filterset for this model
-        pass
+    # Not all models have a FilterSet defined so the function return none if it can't find a filterset
+    meta_attrs["filterset_class"] = get_filterset_for_model(model)
 
     main_attrs["Meta"] = type("Meta", (object,), meta_attrs)
 

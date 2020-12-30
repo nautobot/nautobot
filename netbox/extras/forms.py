@@ -27,8 +27,8 @@ from virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
-    ConfigContext, CustomField, CustomJob, GitRepository, ImageAttachment,
-    JobResult, ObjectChange, Status, Tag
+    ConfigContext, CustomField, CustomJob, Relationship, RelationshipAssociation,
+    GitRepository, ImageAttachment, JobResult, ObjectChange, Status, Tag
 )
 from .utils import FeatureQuery
 
@@ -662,5 +662,186 @@ class StatusModelCSVFormMixin(CSVModelForm):
         queryset=Status.objects.all(),
         to_field_name='name',
         help_text='Operational status'
+    )
 
+
+#
+# Relationship
+#
+
+class RelationshipForm(BootstrapMixin, forms.ModelForm):
+
+    slug = SlugField()
+
+    class Meta:
+        model = Relationship
+        fields = [
+            'name', 'slug', 'description', 'type', 'source_type', 'source_label', 'source_hidden', 'source_filter',
+            'destination_type', 'destination_label', 'destination_hidden', 'destination_filter',
+        ]
+
+    def save(self, commit=True):
+
+        # TODO add support for owner when a CR is created in the UI
+        obj = super().save(commit)
+
+        return obj
+
+
+class RelationshipFilterForm(BootstrapMixin, forms.Form):
+    model = Relationship
+
+    type = forms.MultipleChoiceField(
+        choices=RelationshipTypeChoices,
+        required=False,
+        widget=StaticSelect2Multiple()
+    )
+
+    source_type = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        display_field='display_name',
+        label='Source Type',
+        widget=APISelectMultiple(
+            api_url='/api/extras/content-types/',
+        )
+    )
+
+    destination_type = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        display_field='display_name',
+        label='Destination Type',
+        widget=APISelectMultiple(
+            api_url='/api/extras/content-types/',
+        )
+    )
+
+
+class RelationshipModelForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        self.relationships = []
+
+        super().__init__(*args, **kwargs)
+
+        self._append_relationships()
+
+    def _append_relationships(self):
+        """
+        Append form fields for all Relationships assigned to this model.
+        One form field per side will be added to the list.
+        """
+        for side, relationships in self.instance.get_relationships().items():
+            for cr, queryset in relationships.items():
+                field_name = f"cr_{cr.slug}__{side}"
+                peer_side = RelationshipSideChoices.OPPOSITE[side]
+                self.fields[field_name] = cr.to_form_field(side=side)
+
+                # if the object already exists, populate the field with existing values
+                if self.instance.pk:
+                    if cr.has_many(peer_side):
+                        initial = [getattr(cra, peer_side) for cra in queryset.all()]
+                        self.fields[field_name].initial = initial
+                    else:
+                        cra = queryset.first()
+                        if cra:
+                            self.fields[field_name].initial = getattr(cra, peer_side)
+
+                # Annotate the field in the list of Relationship form fields
+                self.relationships.append(field_name)
+
+    def _save_relationships(self):
+        """Save all Relationships on form save."""
+
+        for field_name in self.relationships:
+
+            # Extract the sidefrom the field_name
+            # Based on the side, find the list of existing RelationshipAssociation
+            side = field_name.split("__")[-1]
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+            filters = {
+                "relationship": self.fields[field_name].model,
+                f"{side}_type": self.obj_type,
+                f"{side}_id": self.instance.pk
+            }
+            existing_cras = RelationshipAssociation.objects.filter(**filters)
+
+            # Extract the list of ids of the target peers
+            target_peer_ids = []
+            if hasattr(self.cleaned_data[field_name], '__iter__'):
+                target_peer_ids = [item.pk for item in self.cleaned_data[field_name]]
+            elif self.cleaned_data[field_name]:
+                target_peer_ids = [self.cleaned_data[field_name].pk]
+            else:
+                continue
+
+            # Delete all existing CRA that are not in cleaned_data/target_peer_ids list
+            # Remove from target_peer_ids all peers that already exist
+            for cra in existing_cras:
+                found_peer = False
+                for peer_id in target_peer_ids:
+                    if peer_id == getattr(cra, f"{peer_side}_id"):
+                        found_peer = peer_id
+                if not found_peer:
+                    cra.delete()
+                else:
+                    target_peer_ids.remove(found_peer)
+
+            for cra_peer_id in target_peer_ids:
+                relationship = self.fields[field_name].model
+                cra = RelationshipAssociation(
+                    relationship=relationship,
+                )
+                setattr(cra, f"{side}_id", self.instance.pk)
+                setattr(cra, f"{side}_type", self.obj_type)
+                setattr(cra, f"{peer_side}_id", cra_peer_id)
+                setattr(cra, f"{peer_side}_type", getattr(relationship, f"{peer_side}_type"))
+
+                # FIXME Run Clean
+                cra.save()
+
+    def save(self, commit=True):
+
+        obj = super().save(commit)
+        if commit:
+            self._save_relationships()
+
+        return obj
+
+
+class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
+    model = RelationshipAssociation
+
+    # q = forms.CharField(
+    #     required=False,
+    #     label='Search'
+    # )
+
+    relationship = DynamicModelMultipleChoiceField(
+        queryset=Relationship.objects.all(),
+        to_field_name='slug',
+        required=False,
+    )
+
+    source_type = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        display_field='display_name',
+        label='Source Type',
+        widget=APISelectMultiple(
+            api_url='/api/extras/content-types/',
+        )
+    )
+
+    destination_type = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        display_field='display_name',
+        label='Destination Type',
+        widget=APISelectMultiple(
+            api_url='/api/extras/content-types/',
+        )
     )

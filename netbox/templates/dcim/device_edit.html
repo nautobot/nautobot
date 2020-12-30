@@ -86,6 +86,14 @@
             </div>
         </div>
     {% endif %}
+    {% if form.relationships %}
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Relationships</strong></div>
+            <div class="panel-body">
+                {% render_relationships form %}
+            </div>
+        </div>
+    {% endif %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Local Config Context Data</strong></div>
         <div class="panel-body">

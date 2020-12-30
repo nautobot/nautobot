@@ -11,7 +11,7 @@ from django.urls import reverse
 from taggit.managers import TaggableManager
 
 from dcim.models import Device, Interface
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, ObjectChange, TaggedItem
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 from utilities.utils import array_to_string, serialize_object
@@ -394,9 +394,10 @@ class Role(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Prefix(ChangeLoggedModel, CustomFieldModel):
+class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length. Prefixes can optionally be assigned to Sites and
     VRFs. A Prefix must be assigned a status and may optionally be assigned a used-define Role. A Prefix can also be
@@ -950,9 +951,10 @@ class VLANGroup(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class VLAN(ChangeLoggedModel, CustomFieldModel):
+class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094). Each VLAN must be assigned
     to a Site, however VLAN IDs need not be unique within a Site. A VLAN may optionally be assigned to a VLANGroup,

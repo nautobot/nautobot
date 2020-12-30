@@ -16,7 +16,10 @@ from utilities.utils import copy_safe_request, count_related, shallow_compare_di
 from utilities.views import ContentTypePermissionRequiredMixin
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
-from .models import ConfigContext, GitRepository, ImageAttachment, ObjectChange, JobResult, Status, Tag, TaggedItem
+from .models import (
+    ConfigContext, GitRepository, ImageAttachment, ObjectChange, JobResult,
+    Relationship, RelationshipAssociation, Status, Tag, TaggedItem
+)
 from .custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
 from .datasources import get_datasource_contents, enqueue_pull_git_repository_and_refresh_data
 
@@ -638,3 +641,36 @@ class StatusBulkImportView(generic.BulkImportView):
 class StatusView(generic.ObjectView):
     """Detail view for a single `Status` object."""
     queryset = Status.objects.all()
+
+
+#
+# Relationship
+#
+
+class RelationshipListView(generic.ObjectListView):
+    queryset = Relationship.objects.all()
+    filterset = filters.RelationshipFilterSet
+    filterset_form = forms.RelationshipFilterForm
+    table = tables.RelationshipTable
+    action_buttons = ("add")
+
+
+class RelationshipEditView(generic.ObjectEditView):
+    queryset = Relationship.objects.all()
+    model_form = forms.RelationshipForm
+
+
+class RelationshipDeleteView(generic.ObjectDeleteView):
+    queryset = Relationship.objects.all()
+
+
+class RelationshipAssociationListView(generic.ObjectListView):
+    queryset = RelationshipAssociation.objects.all()
+    filterset = filters.RelationshipAssociationFilterSet
+    filterset_form = forms.RelationshipAssociationFilterForm
+    table = tables.RelationshipAssociationTable
+    action_buttons = ()
+
+
+class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
+    queryset = RelationshipAssociation.objects.all()

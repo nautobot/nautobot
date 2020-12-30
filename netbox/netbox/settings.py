@@ -386,6 +386,7 @@ GRAPHENE = {
     'DJANGO_CHOICE_FIELD_ENUM_V3_NAMING': True,  # any field with a name of type will break in Graphene otherwise.
 }
 GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
+GRAPHQL_RELATIONSHIP_PREFIX = "rel"
 
 #################################################################
 # CONFIGURATION.PY - Configuration import from configuration.py #

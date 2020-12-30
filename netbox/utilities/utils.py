@@ -1,10 +1,12 @@
 import datetime
 import json
+import inspect
+from importlib import import_module
 from collections import OrderedDict
 from itertools import count, groupby
 
 from django.core.serializers import serialize
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Count, OuterRef, Subquery, Model
 from django.db.models.functions import Coalesce
 from jinja2 import Environment
 
@@ -326,3 +328,32 @@ def copy_safe_request(request):
         'path': request.path,
         'id': getattr(request, 'id', None),  # UUID assigned by middleware
     })
+
+
+def get_filterset_for_model(model):
+    """Return the FilterSet class associated with a given model.
+
+    The FilterSet class is expected to be in the filters module within the application
+    associated with the model and its name is expected to be {ModelName}FilterSet
+
+    Not all models have a FilterSet defined so this function can return None as well
+
+    Returns:
+        either the filterset class or none
+    """
+    if not inspect.isclass(model):
+        raise TypeError(f"model class {model} was passes as an instance!")
+    if not issubclass(model, Model):
+        raise TypeError(f"{model} is not a subclass of Django Model class")
+
+    try:
+        filterset_name = f"{model.__name__}FilterSet"
+        return getattr(import_module(f"{model._meta.app_label}.filters"), filterset_name)
+    except ModuleNotFoundError:
+        # The name of the module is not correct
+        pass
+    except AttributeError:
+        # Unable to find a filterset for this model
+        pass
+
+    return None

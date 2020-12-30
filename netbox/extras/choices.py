@@ -38,6 +38,39 @@ class CustomFieldFilterLogicChoices(ChoiceSet):
 
 
 #
+# Relationships
+#
+
+class RelationshipTypeChoices(ChoiceSet):
+
+    TYPE_ONE_TO_ONE = 'one-to-one'
+    TYPE_ONE_TO_MANY = 'one-to-many'
+    TYPE_MANY_TO_MANY = 'many-to-many'
+
+    CHOICES = (
+        (TYPE_ONE_TO_ONE, 'One to One'),
+        (TYPE_ONE_TO_MANY, 'One to Many'),
+        (TYPE_MANY_TO_MANY, 'Many to Many'),
+    )
+
+
+class RelationshipSideChoices(ChoiceSet):
+
+    SIDE_SOURCE = 'source'
+    SIDE_DESTINATION = 'destination'
+
+    CHOICES = (
+        (SIDE_SOURCE, 'Source'),
+        (SIDE_DESTINATION, 'Destination'),
+    )
+
+    OPPOSITE = {
+        SIDE_SOURCE: SIDE_DESTINATION,
+        SIDE_DESTINATION: SIDE_SOURCE
+    }
+
+
+#
 # CustomLinks
 #
 

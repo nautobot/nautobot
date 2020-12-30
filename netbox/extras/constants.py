@@ -11,6 +11,7 @@ EXTRAS_FEATURES = [
     'export_templates',
     'graphql',
     'job_results',
+    'relationships',
     'statuses',
     'webhooks'
 ]

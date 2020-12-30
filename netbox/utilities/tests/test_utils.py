@@ -1,7 +1,9 @@
 from django.http import QueryDict
 from django.test import TestCase
 
-from utilities.utils import deepmerge, dict_to_filter_params, normalize_querydict
+from utilities.utils import get_filterset_for_model, deepmerge, dict_to_filter_params, normalize_querydict
+from dcim.models import Device, Site
+from dcim.filters import DeviceFilterSet, SiteFilterSet
 
 
 class DictToFilterParamsTest(TestCase):
@@ -128,3 +130,10 @@ class DeepMergeTest(TestCase):
             deepmerge(dict1, dict2),
             merged
         )
+
+
+class GetFiltersetModelTest(TestCase):
+
+    def test_get_filterset_for_model(self):
+        self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
+        self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)

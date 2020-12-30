@@ -19,6 +19,7 @@ from extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelForm,
     LocalConfigContextFilterForm,
+    RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
@@ -220,7 +221,7 @@ class RegionFilterForm(BootstrapMixin, CustomFieldFilterForm):
 # Sites
 #
 
-class SiteForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class SiteForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False
@@ -466,7 +467,7 @@ class RackRoleCSVForm(CustomFieldModelCSVForm):
 # Racks
 #
 
-class RackForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class RackForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False,
@@ -1758,7 +1759,7 @@ class PlatformCSVForm(CustomFieldModelCSVForm):
 # Devices
 #
 
-class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False,

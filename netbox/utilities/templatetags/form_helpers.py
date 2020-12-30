@@ -25,6 +25,16 @@ def render_custom_fields(form):
     }
 
 
+@register.inclusion_tag('utilities/render_relationships.html')
+def render_relationships(form):
+    """
+    Render all relationships in a form
+    """
+    return {
+        'form': form,
+    }
+
+
 @register.inclusion_tag('utilities/render_form.html')
 def render_form(form):
     """

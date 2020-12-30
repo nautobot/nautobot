@@ -15,13 +15,21 @@ from users.models import ObjectPermission, Token
 from dcim.models import Device, Site, Region, Rack, Manufacturer, DeviceType, DeviceRole
 from dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from dcim.filters import DeviceFilterSet, SiteFilterSet
-from extras.models import CustomField, ConfigContext
+from ipam.models import VLAN
+from extras.models import (
+    CustomField,
+    ConfigContext,
+    Relationship,
+    RelationshipAssociation,
+    ChangeLoggedModel
+)
 from netbox.graphql.utils import str_to_var_name
 from netbox.graphql.schema import (
     extend_schema_type,
     extend_schema_type_custom_field,
     extend_schema_type_tags,
-    extend_schema_type_config_context
+    extend_schema_type_config_context,
+    extend_schema_type_relationships,
 )
 from netbox.graphql.generators import generate_list_search_parameters, generate_schema_type
 from extras.choices import CustomFieldTypeChoices
@@ -47,9 +55,9 @@ class GraphQLGenerateSchemaTypeTestCase(TestCase):
 
     def test_model_wo_filterset(self):
 
-        schema = generate_schema_type(app_name="wrong_app", model=Device)
+        schema = generate_schema_type(app_name="wrong_app", model=ChangeLoggedModel)
         self.assertEqual(schema.__bases__[0], DjangoObjectType)
-        self.assertEqual(schema._meta.model, Device)
+        self.assertEqual(schema._meta.model, ChangeLoggedModel)
         self.assertIsNone(schema._meta.filterset_class)
 
 
@@ -130,6 +138,92 @@ class GraphQLExtendSchemaType(TestCase):
         self.assertNotIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
+
+
+class GraphQLExtendSchemaRelationship(TestCase):
+
+    def setUp(self):
+
+        site_ct = ContentType.objects.get_for_model(Site)
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        vlan_ct = ContentType.objects.get_for_model(VLAN)
+
+        self.m2m_1 = Relationship(
+            name="Vlan to Rack",
+            slug="vlan-rack",
+            source_type=rack_ct,
+            source_label="My Vlans",
+            destination_type=vlan_ct,
+            destination_label="My Racks",
+            type="many-to-many"
+        )
+        self.m2m_1.save()
+
+        self.m2m_2 = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=rack_ct,
+            destination_type=vlan_ct,
+            type="many-to-many"
+        )
+        self.m2m_2.save()
+
+        self.o2m_1 = Relationship(
+            name="generic site to vlan",
+            slug="site-vlan",
+            source_type=site_ct,
+            destination_type=vlan_ct,
+            type="one-to-many"
+        )
+        self.o2m_1.save()
+
+        self.o2o_1 = Relationship(
+            name="Primary Rack per Site",
+            slug="primary-rack-site",
+            source_type=rack_ct,
+            source_hidden=True,
+            destination_type=site_ct,
+            destination_label="Primary Rack",
+            type="one-to-one"
+        )
+        self.o2o_1.save()
+
+        self.sites = [
+            Site(name='Site A', slug='site-a'),
+            Site(name='Site B', slug='site-b'),
+            Site(name='Site C', slug='site-c'),
+        ]
+        Site.objects.bulk_create(self.sites)
+
+        self.racks = [
+            Rack(name='Rack A', site=self.sites[0]),
+            Rack(name='Rack B', site=self.sites[1]),
+            Rack(name='Rack C', site=self.sites[2]),
+        ]
+        Rack.objects.bulk_create(self.racks)
+
+        self.vlans = [
+            VLAN(name='VLAN A', vid=100, site=self.sites[0]),
+            VLAN(name='VLAN B', vid=100, site=self.sites[1]),
+            VLAN(name='VLAN C', vid=100, site=self.sites[2]),
+        ]
+        VLAN.objects.bulk_create(self.vlans)
+
+        self.schema = generate_schema_type(app_name="dcim", model=Site)
+
+    @override_settings(GRAPHQL_CUSTOM_RELATIONSHIP_PREFIX="pr")
+    def test_extend_relationship_w_prefix(self):
+
+        schema = extend_schema_type_relationships(self.schema, Site)
+
+        datas = [
+            {"field_slug": "primary-rack-site"},
+            {"field_slug": "site-vlan"},
+        ]
+
+        for data in datas:
+            field_name = f"rel_{str_to_var_name(data['field_slug'])}"
+            self.assertIn(field_name, schema._meta.fields.keys())
 
 
 class GraphQLSearchParameters(TestCase):

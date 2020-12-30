@@ -772,6 +772,14 @@
                     {% endif %}
 
                     {% if perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_relationship %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_relationship %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:relationship_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:relationship_list' %}">Relationships</a>
+                        </li>
                         <li{% if not perms.extras.view_customjob %} class="disabled"{% endif %}>
                             <a href="{% url 'extras:customjob_list' %}">Custom Jobs</a>
                         </li>

@@ -8,7 +8,7 @@ from timezone_field import TimeZoneField
 from dcim.choices import *
 from dcim.constants import *
 from dcim.fields import ASNField
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, ObjectChange, TaggedItem
 from extras.utils import extras_features
 from utilities.fields import NaturalOrderingField
 from utilities.querysets import RestrictedQuerySet
@@ -29,9 +29,11 @@ __all__ = (
     'custom_fields',
     'custom_validators',
     'export_templates',
+    'graphql',
+    'relationships',
     'webhooks'
 )
-class Region(MPTTModel, ChangeLoggedModel, CustomFieldModel):
+class Region(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Sites can be grouped within geographic Regions.
     """
@@ -103,9 +105,10 @@ class Region(MPTTModel, ChangeLoggedModel, CustomFieldModel):
     'export_templates',
     'custom_validators',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Site(ChangeLoggedModel, CustomFieldModel):
+class Site(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A Site represents a geographic location within a network; typically a building or campus. The optional facility
     field can be used to include an external designation, such as a data center name (e.g. Equinix SV6).

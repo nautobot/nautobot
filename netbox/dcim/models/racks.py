@@ -16,7 +16,7 @@ from taggit.managers import TaggableManager
 from dcim.choices import *
 from dcim.constants import *
 from dcim.elevations import RackElevationSVG
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, ObjectChange, TaggedItem
 from extras.utils import extras_features
 from utilities.choices import ColorChoices
 from utilities.fields import ColorField, NaturalOrderingField
@@ -43,9 +43,10 @@ __all__ = (
     'custom_fields',
     'custom_validators',
     'export_templates',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class RackGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel):
+class RackGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Racks can be grouped as subsets within a Site. The scope of a group will depend on how Sites are defined. For
     example, if a Site spans a corporate campus, a RackGroup might be defined to represent each building within that
@@ -124,9 +125,10 @@ class RackGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel):
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class RackRole(ChangeLoggedModel, CustomFieldModel):
+class RackRole(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Racks can be organized by functional role, similar to Devices.
     """
@@ -174,9 +176,10 @@ class RackRole(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Rack(ChangeLoggedModel, CustomFieldModel):
+class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Site and (optionally) a RackGroup.
@@ -572,9 +575,10 @@ class Rack(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class RackReservation(ChangeLoggedModel, CustomFieldModel):
+class RackReservation(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     One or more reserved units within a Rack.
     """

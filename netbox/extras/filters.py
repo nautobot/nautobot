@@ -15,8 +15,8 @@ from utilities.filters import (
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .models import (
-    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment,
-    JobResult, ObjectChange, Status, Tag,
+    ConfigContext, CustomField, Relationship, RelationshipAssociation, ExportTemplate,
+    GitRepository, ImageAttachment, JobResult, ObjectChange, Status, Tag,
 )
 
 
@@ -420,3 +420,28 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
     Mixin to add a `status` filter field to a FilterSet.
     """
     status = StatusFilter()
+
+
+#
+# Relationship
+#
+
+class RelationshipFilterSet(django_filters.FilterSet):
+
+    class Meta:
+        model = Relationship
+        fields = ['name', 'type', 'source_type', 'destination_type']
+
+
+class RelationshipAssociationFilterSet(django_filters.FilterSet):
+
+    relationship = django_filters.ModelMultipleChoiceFilter(
+        field_name='relationship__slug',
+        queryset=Relationship.objects.all(),
+        to_field_name='slug',
+        label='Relationship (slug)',
+    )
+
+    class Meta:
+        model = RelationshipAssociation
+        fields = ['source_type', 'source_id', 'destination_type', 'destination_id']

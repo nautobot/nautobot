@@ -1,11 +1,15 @@
 import django_tables2 as tables
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, ToggleColumn
 from .custom_jobs import get_custom_job_classpaths
-from .models import ConfigContext, GitRepository, JobResult, ObjectChange, Status, Tag, TaggedItem
+from .models import (
+    ConfigContext, GitRepository, JobResult, ObjectChange, Relationship, RelationshipAssociation,
+    Status, Tag, TaggedItem
+)
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -246,3 +250,33 @@ class StatusTable(BaseTable):
 class StatusTableMixin(BaseTable):
     """Mixing to add a `status` field to a table."""
     status = ColoredLabelColumn()
+
+
+#
+# Relationship
+#
+
+class RelationshipTable(BaseTable):
+    pk = ToggleColumn()
+    actions = ButtonsColumn(Relationship, buttons=('edit', 'delete'))
+
+    class Meta(BaseTable.Meta):
+        model = Relationship
+        fields = ('name', 'description', 'type', 'source_type', 'destination_type', 'actions')
+
+
+class RelationshipAssociationTable(BaseTable):
+    pk = ToggleColumn()
+    actions = ButtonsColumn(Relationship, buttons=('delete',))
+
+    source = tables.Column(
+        linkify=True
+    )
+
+    destination = tables.Column(
+        linkify=True
+    )
+
+    class Meta(BaseTable.Meta):
+        model = RelationshipAssociation
+        fields = ('relationship', 'source', 'destination', 'actions')

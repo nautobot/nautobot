@@ -69,4 +69,12 @@ urlpatterns = [
     path('statuses/<int:pk>/edit/', views.StatusEditView.as_view(), name='status_edit'),
     path('statuses/<int:pk>/delete/', views.StatusDeleteView.as_view(), name='status_delete'),
     path('statuses/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='status_changelog', kwargs={'model': Status}),
+
+    # Custom relationships
+    path('relationships/', views.RelationshipListView.as_view(), name='relationship_list'),
+    path('relationships/add/', views.RelationshipEditView.as_view(), name='relationship_add'),
+    path('relationships/<int:pk>/edit/', views.RelationshipEditView.as_view(), name='relationship_edit'),
+    path('relationships/<int:pk>/delete/', views.RelationshipDeleteView.as_view(), name='relationship_delete'),
+    path('relationships/associations/', views.RelationshipAssociationListView.as_view(), name='relationshipassociation_list'),
+    path('relationships/associations/<int:pk>/delete/', views.RelationshipAssociationDeleteView.as_view(), name='relationshipassociation_delete'),
 ]

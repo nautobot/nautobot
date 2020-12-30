@@ -14,7 +14,7 @@ from taggit.managers import TaggableManager
 from dcim.choices import *
 from dcim.constants import *
 from extras.models import (
-    ChangeLoggedModel, ConfigContextModel, CustomFieldModel, StatusModel, TaggedItem,
+    ChangeLoggedModel, ConfigContextModel, CustomFieldModel, RelationshipModel, StatusModel, TaggedItem,
 )
 from extras.querysets import ConfigContextModelQuerySet
 from extras.utils import extras_features
@@ -479,10 +479,11 @@ class Platform(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'statuses',
     'webhooks'
 )
-class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, StatusModel):
+class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.

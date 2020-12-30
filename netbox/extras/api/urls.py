@@ -38,5 +38,9 @@ router.register('content-types', views.ContentTypeViewSet)
 # Statuses
 router.register('statuses', views.StatusViewSet)
 
+# Relationships
+router.register('relationships', views.RelationshipViewSet)
+router.register('relationship-associations', views.RelationshipAssociationViewSet)
+
 app_name = 'extras-api'
 urlpatterns = router.urls
