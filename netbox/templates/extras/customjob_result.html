@@ -33,6 +33,15 @@
         {% if custom_job %}{{ custom_job }}{% else %}{{ class_name }}{% endif %}
         <span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span>
     </h1>
+
+    <div class="pull-right noprint">
+        {% if perms.extras.delete_jobresult %}
+            <a href="{% url 'extras:jobresult_delete' pk=result.pk %}" class="btn btn-danger">
+                <span class="fa fa-trash" aria-hidden="true"></span> Delete
+            </a>
+        {% endif %}
+    </div>
+
     <p>{{ custom_job.description }}</p>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">

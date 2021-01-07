@@ -248,7 +248,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 # Job Results
 #
 
-class JobResultViewSet(ReadOnlyModelViewSet):
+class JobResultViewSet(ModelViewSet):
     """
     Retrieve a list of job results
     """

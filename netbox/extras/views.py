@@ -397,6 +397,15 @@ class CustomJobResultListView(generic.ObjectListView):
         self.queryset = JobResult.objects.filter(obj_type=custom_job_content_type).order_by('-created')
 
 
+class JobResultDeleteView(generic.ObjectDeleteView):
+    queryset = JobResult.objects.all()
+
+
+class JobResultBulkDeleteView(generic.BulkDeleteView):
+    queryset = JobResult.objects.all()
+    table = tables.JobResultTable
+
+
 class CustomJobResultView(ContentTypePermissionRequiredMixin, View):
     """
     Display a JobResult pertaining to the execution of a Custom Job.

@@ -40,4 +40,8 @@ urlpatterns = [
     path('custom-jobs/<str:module>.<str:name>/', views.CustomJobView.as_view(), name='customjob'),
     path('custom-jobs/results/', views.CustomJobResultListView.as_view(), name='customjob_result_list'),
     path('custom-jobs/results/<int:job_result_pk>/', views.CustomJobResultView.as_view(), name='customjob_result'),
+
+    # Generic job results
+    path('job-results/delete/', views.JobResultBulkDeleteView.as_view(), name='jobresult_bulk_delete'),
+    path('job-results/<int:pk>/delete/', views.JobResultDeleteView.as_view(), name='jobresult_delete'),
 ]

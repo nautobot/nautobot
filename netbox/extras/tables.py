@@ -88,6 +88,7 @@ def customjob_link(value, record):
 
 
 class JobResultTable(BaseTable):
+    pk = ToggleColumn()
     name = tables.Column(linkify=customjob_link)
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
