@@ -9,7 +9,9 @@ from tenancy.models import Tenant, TenantGroup
 from utilities.filters import BaseFilterSet, ContentTypeFilter
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
-from .models import ConfigContext, CustomField, ExportTemplate, ImageAttachment, JobResult, ObjectChange, Tag
+from .models import (
+    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, ObjectChange, Tag,
+)
 
 
 __all__ = (
@@ -81,10 +83,18 @@ class CustomFieldFilterSet(django_filters.FilterSet):
 
 
 class ExportTemplateFilterSet(BaseFilterSet):
+    owner_content_type = ContentTypeFilter()
 
     class Meta:
         model = ExportTemplate
-        fields = ['id', 'content_type', 'name']
+        fields = ['id', 'content_type', 'owner_content_type', 'owner_object_id', 'name']
+
+
+class GitRepositoryFilterSet(BaseFilterSet):
+
+    class Meta:
+        model = GitRepository
+        fields = ['id', 'name', 'slug', 'remote_url', 'branch']
 
 
 class ImageAttachmentFilterSet(BaseFilterSet):
@@ -119,6 +129,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         method='search',
         label='Search',
     )
+    owner_content_type = ContentTypeFilter()
     region_id = django_filters.ModelMultipleChoiceFilter(
         field_name='regions',
         queryset=Region.objects.all(),
@@ -210,7 +221,7 @@ class ConfigContextFilterSet(BaseFilterSet):
 
     class Meta:
         model = ConfigContext
-        fields = ['id', 'name', 'is_active']
+        fields = ['id', 'name', 'is_active', 'owner_content_type', 'owner_object_id']
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -317,6 +328,7 @@ class JobResultFilterSet(BaseFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
+            Q(name__icontains=value) |
             Q(user__username__icontains=value)
         )
 

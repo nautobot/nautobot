@@ -214,11 +214,21 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 
 ---
 
+## GIT_ROOT
+
+Default: `$INSTALL_ROOT/netbox/git`
+
+The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
+
+---
+
 ## GRAPHQL_CUSTOM_FIELD_PREFIX
 
 Default: `cf`
 
 By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+
+---
 
 ## HTTP_PROXIES
 

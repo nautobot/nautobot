@@ -1,7 +1,11 @@
-from django.test import TestCase
+import os
+import tempfile
+
+from django.conf import settings
+from django.test import TestCase, TransactionTestCase
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Site, Region
-from extras.models import ConfigContext, Tag
+from extras.models import ConfigContext, GitRepository, Tag
 from extras.plugins.validators import custom_validator_clean
 from tenancy.models import Tenant, TenantGroup
 from virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
@@ -365,3 +369,60 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+
+
+class GitRepositoryTest(TransactionTestCase):
+    """
+    Tests for the GitRepository model class.
+
+    Note: This is a TransactionTestCase, rather than a TestCase, because the GitRepository save() method uses
+    transaction.on_commit(), which doesn't get triggered in a normal TestCase.
+    """
+
+    SAMPLE_TOKEN = "dc6542736e7b02c159d14bc08f972f9ec1e2c45fa"
+
+    def setUp(self):
+        self.repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+        )
+        self.repo.save(trigger_resync=False)
+
+    def test_token_rendered(self):
+        self.assertEqual(self.repo.token_rendered, "—")
+        self.repo._token = self.SAMPLE_TOKEN
+        self.assertEqual(self.repo.token_rendered, GitRepository.TOKEN_PLACEHOLDER)
+        self.repo._token = ""
+        self.assertEqual(self.repo.token_rendered, "—")
+
+    def test_filesystem_path(self):
+        self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
+
+    def test_save_preserve_token(self):
+        self.repo._token = self.SAMPLE_TOKEN
+        self.repo.save(trigger_resync=False)
+        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
+        # As if the user had submitted an "Edit" form, which displays the token placeholder instead of the actual token
+        self.repo._token = GitRepository.TOKEN_PLACEHOLDER
+        self.repo.save(trigger_resync=False)
+        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
+        # As if the user had deleted a pre-existing token from the UI
+        self.repo._token = ""
+        self.repo.save(trigger_resync=False)
+        self.assertEqual(self.repo._token, "")
+
+    def test_save_relocate_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            with self.settings(GIT_ROOT=tmpdirname):
+                initial_path = self.repo.filesystem_path
+                self.assertIn(self.repo.slug, initial_path)
+                os.makedirs(initial_path)
+
+                self.repo.slug = "a-new-location"
+                self.repo.save(trigger_resync=False)
+
+                self.assertFalse(os.path.exists(initial_path))
+                new_path = self.repo.filesystem_path
+                self.assertIn(self.repo.slug, new_path)
+                self.assertTrue(os.path.isdir(new_path))

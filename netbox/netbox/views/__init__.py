@@ -19,7 +19,7 @@ from dcim.models import (
     Cable, ConsolePort, Device, DeviceType, Interface, PowerPanel, PowerFeed, PowerPort, Rack, Site,
 )
 from extras.choices import JobResultStatusChoices
-from extras.models import ObjectChange, JobResult
+from extras.models import GitRepository, ObjectChange, JobResult
 from ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from netbox.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from netbox.forms import SearchForm
@@ -95,6 +95,8 @@ class HomeView(View):
             'cluster_count': Cluster.objects.restrict(request.user, 'view').count(),
             'virtualmachine_count': VirtualMachine.objects.restrict(request.user, 'view').count(),
 
+            # Extras
+            'gitrepository_count': GitRepository.objects.restrict(request.user, 'view').count(),
         }
 
         changelog = ObjectChange.objects.restrict(request.user, 'view').prefetch_related('user', 'changed_object_type')

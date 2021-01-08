@@ -1,16 +1,19 @@
+import os
 import random
+import shutil
 from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import m2m_changed, pre_delete
+from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 from prometheus_client import Counter
 
 from .choices import ObjectChangeActionChoices
-from .models import CustomField, ObjectChange
+from .models import CustomField, GitRepository, ObjectChange
 from .webhooks import enqueue_webhooks
 
 
@@ -118,3 +121,21 @@ def cache_invalidated_collector(sender, obj_dict, **kwargs):
 
 cache_read.connect(cache_read_collector)
 cache_invalidated.connect(cache_invalidated_collector)
+
+
+#
+# Datasources
+#
+
+@receiver(pre_delete, sender=GitRepository)
+def git_repository_pre_delete(instance, **kwargs):
+    """
+    When a GitRepository is deleted, remove it from the local filesystem.
+
+    TODO: In a distributed NetBox deployment, each Django instance and/or RQ worker instance may have its own clone
+    of this repository; we need some way to ensure that all such clones are deleted.
+    For now we just delete the one that we have locally and rely on other methods (notably get_custom_jobs())
+    to clean up other clones as they're encountered.
+    """
+    if os.path.isdir(instance.filesystem_path):
+        shutil.rmtree(instance.filesystem_path)

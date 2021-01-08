@@ -1,5 +1,6 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
 from .customfields import CustomField, CustomFieldModel
+from .datasources import GitRepository
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -21,6 +22,7 @@ __all__ = (
     'CustomJob',
     'CustomLink',
     'ExportTemplate',
+    'GitRepository',
     'ImageAttachment',
     'JobResult',
     'ObjectChange',

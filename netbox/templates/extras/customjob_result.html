@@ -19,11 +19,11 @@
                 <li><a href="{% url 'extras:customjob_list' %}">Custom Jobs</a></li>
                 <li><a href="{% url 'extras:customjob_result_list' %}">Results</a></li>
                 {% if custom_job %}
-                    <li><a href="{% url 'extras:customjob_result_list' %}?name={{ module }}.{{ class_name }}">
-                        {{ module}}.{{ class_name }}
+                    <li><a href="{% url 'extras:customjob_result_list' %}?name={{ custom_job.class_path|urlencode }}">
+                        {{ custom_job.class_path }}
                     </a></li>
                 {% else %}
-                    <li>{{ module}}.{{ class_name }}</li>
+                    <li>{{ result.name }}</li>
                 {% endif %}
                 <li>{{ result.created }}</li>
             </ol>

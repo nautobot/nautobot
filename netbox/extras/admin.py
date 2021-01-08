@@ -193,7 +193,15 @@ class ExportTemplateForm(forms.ModelForm):
 class ExportTemplateAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Export Template', {
-            'fields': ('content_type', 'name', 'description', 'mime_type', 'file_extension')
+            'fields': (
+                'content_type',
+                'name',
+                'owner_content_type',
+                'owner_object_id',
+                'description',
+                'mime_type',
+                'file_extension'
+            )
         }),
         ('Content', {
             'fields': ('template_code',),
@@ -201,10 +209,10 @@ class ExportTemplateAdmin(admin.ModelAdmin):
         })
     )
     list_display = [
-        'name', 'content_type', 'description', 'mime_type', 'file_extension',
+        'name', 'content_type', 'owner', 'description', 'mime_type', 'file_extension',
     ]
     list_filter = [
-        'content_type',
+        'content_type', 'owner_content_type',
     ]
     form = ExportTemplateForm
 

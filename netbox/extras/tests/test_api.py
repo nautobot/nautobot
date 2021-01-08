@@ -1,10 +1,12 @@
 import datetime
+import os.path
 from unittest import skipIf
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
+from django.utils.functional import classproperty
 from django.utils.timezone import make_aware
 from django_rq.queues import get_connection
 from rest_framework import status
@@ -12,13 +14,16 @@ from rq import Worker
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Rack, RackGroup, RackRole, Site
 from extras.api.views import CustomJobViewSet
-from extras.models import ConfigContext, CustomField, ExportTemplate, ImageAttachment, Tag
+from extras.models import ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, Tag
 from extras.custom_jobs import CustomJob, BooleanVar, IntegerVar, StringVar
 from utilities.testing import APITestCase, APIViewTestCases
 from utilities.testing.utils import disable_warnings
 
 
 rq_worker_running = Worker.count(get_connection('default'))
+
+
+THIS_DIRECTORY = os.path.dirname(__file__)
 
 
 class AppTest(APITestCase):
@@ -156,6 +161,41 @@ class TagTest(APIViewTestCases.APIViewTestCase):
             Tag(name='Tag 3', slug='tag-3'),
         )
         Tag.objects.bulk_create(tags)
+
+
+class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
+    model = GitRepository
+    brief_fields = ['id', 'name', 'url']
+    create_data = [
+        {
+            'name': 'New Git Repository 1',
+            'slug': 'new-git-repository-1',
+            'remote_url': 'https://example.com/newrepo1.git',
+        },
+        {
+            'name': 'New Git Repository 2',
+            'slug': 'new-git-repository-2',
+            'remote_url': 'https://example.com/newrepo2.git',
+        },
+        {
+            'name': 'New Git Repository 3',
+            'slug': 'new-git-repository-3',
+            'remote_url': 'https://example.com/newrepo3.git',
+        },
+    ]
+    bulk_update_data = {
+        'branch': 'develop',
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        repos = (
+            GitRepository(name='Repo 1', slug='repo-1', remote_url='https://example.com/repo1.git'),
+            GitRepository(name='Repo 2', slug='repo-2', remote_url='https://example.com/repo2.git'),
+            GitRepository(name='Repo 3', slug='repo-3', remote_url='https://example.com/repo3.git'),
+        )
+        for repo in repos:
+            repo.save(trigger_resync=False)
 
 
 # TODO: Standardize to APIViewTestCase (needs create & update tests)
@@ -304,8 +344,8 @@ class CustomJobTest(APITestCase):
         def test_foo(self):
             self.log_success(obj=None, message="Test completed")
 
-    def get_test_custom_job_class(self, pk):
-        if pk == 'test_api.TestCustomJob':
+    def get_test_custom_job_class(self, class_path):
+        if class_path == 'local/test_api/TestCustomJob':
             return self.TestCustomJob
         raise Http404
 
@@ -315,20 +355,20 @@ class CustomJobTest(APITestCase):
         # Monkey-patch the API viewset's _get_custom_job_class method to return our test class above
         CustomJobViewSet._get_custom_job_class = self.get_test_custom_job_class
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_list_custom_jobs_anonymous(self):
         url = reverse('extras-api:customjob-list')
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_list_custom_jobs_without_permission(self):
         url = reverse('extras-api:customjob-list')
         with disable_warnings('django.request'):
             response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_list_custom_jobs_with_permission(self):
         self.add_permissions('extras.view_customjob')
         url = reverse('extras-api:customjob-list')
@@ -338,24 +378,24 @@ class CustomJobTest(APITestCase):
         # No custom jobs and we haven't monkey-patched the get_custom_jobs() function to fake any
         self.assertEqual(response.data, [])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_get_custom_job_anonymous(self):
-        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.TestCustomJob'})
+        url = reverse('extras-api:customjob-detail', kwargs={'class_path': 'local/test_api/TestCustomJob'})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_get_custom_job_without_permission(self):
-        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.TestCustomJob'})
+        url = reverse('extras-api:customjob-detail', kwargs={'class_path': 'local/test_api/TestCustomJob'})
         with disable_warnings('django.request'):
             response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_get_custom_job_with_permission(self):
         self.add_permissions('extras.view_customjob')
         # Try GET to permitted object
-        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.TestCustomJob'})
+        url = reverse('extras-api:customjob-detail', kwargs={'class_path': 'local/test_api/TestCustomJob'})
         response = self.client.get(url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -365,24 +405,20 @@ class CustomJobTest(APITestCase):
         self.assertEqual(response.data['vars']['var3'], 'BooleanVar')
 
         # Try GET to non-existent object
-        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'test_api.NoSuchJob'})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-
-        url = reverse('extras-api:customjob-detail', kwargs={'full_name': 'x'})
+        url = reverse('extras-api:customjob-detail', kwargs={'class_path': 'local/test_api/NoSuchJob'})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
     @skipIf(not rq_worker_running, "RQ worker not running")
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_run_custom_job_without_permission(self):
-        url = reverse('extras-api:customjob-run', kwargs={'full_name': 'test_api.TestCustomJob'})
+        url = reverse('extras-api:customjob-run', kwargs={'class_path': 'local/test_api/TestCustomJob'})
         with disable_warnings('django.request'):
             response = self.client.post(url, {}, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @skipIf(not rq_worker_running, "RQ worker not running")
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_run_custom_job_with_permission(self):
         self.add_permissions('extras.run_customjob')
         job_data = {
@@ -396,7 +432,7 @@ class CustomJobTest(APITestCase):
             'commit': True,
         }
 
-        url = reverse('extras-api:customjob-run', kwargs={'full_name': 'test_api.TestCustomJob'})
+        url = reverse('extras-api:customjob-run', kwargs={'class_path': 'local/test_api/TestCustomJob'})
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 

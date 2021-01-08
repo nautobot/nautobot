@@ -58,6 +58,14 @@
                             {{ object.name }}
                         </td>
                     </tr>
+                    {% if object.owner %}
+                        <tr>
+                            <td>Owner</td>
+                            <td>
+                                <a href="{{ object.owner.get_absolute_url }}">{{ object.owner }}</a>
+                            </td>
+                        </tr>
+                    {% endif %}
                     <tr>
                         <td>Weight</td>
                         <td>

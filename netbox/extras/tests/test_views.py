@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from dcim.models import Site
 from extras.choices import ObjectChangeActionChoices
-from extras.models import ConfigContext, CustomLink, ObjectChange, Tag
+from extras.models import ConfigContext, CustomLink, GitRepository, ObjectChange, Tag
 from utilities.testing import ViewTestCases, TestCase
 
 
@@ -147,3 +147,35 @@ class CustomLinkTest(TestCase):
         response = self.client.get(site.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn(f'FOO {site.name} BAR', str(response.content))
+
+
+class GitRepositoryTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = GitRepository
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Create three GitRepository records
+        repos = (
+            GitRepository(name='Repo 1', slug='repo-1', remote_url='https://example.com/repo1.git'),
+            GitRepository(name='Repo 2', slug='repo-2', remote_url='https://example.com/repo2.git'),
+            GitRepository(name='Repo 3', slug='repo-3', remote_url='https://example.com/repo3.git'),
+        )
+        for repo in repos:
+            repo.save(trigger_resync=False)
+
+        cls.form_data = {
+            'name': 'A new Git repository',
+            'slug': 'a-new-git-repository',
+            'remote_url': 'http://example.com/a_new_git_repository.git',
+            'branch': 'develop',
+            '_token': '1234567890abcdef1234567890abcdef',
+            'provided_contents': ['extras.ConfigContext', 'extras.CustomJob', 'extras.ExportTemplate'],
+        }

@@ -6,7 +6,7 @@ from django.apps import AppConfig
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 
-from extras.registry import registry
+from extras.registry import registry, register_datasource_contents
 from extras.plugins.exceptions import PluginImproperlyConfigured
 from extras.plugins.utils import import_object
 from utilities.choices import ButtonColorChoices
@@ -17,6 +17,7 @@ registry['plugin_template_extensions'] = collections.defaultdict(list)
 registry['plugin_graphql_types'] = []
 registry['plugin_menu_items'] = {}
 registry['plugin_custom_validators'] = collections.defaultdict(list)
+# 'datasource_content' is a non-plugin-exclusive registry and is initialized in extras.registry
 
 
 #
@@ -60,18 +61,25 @@ class PluginConfig(AppConfig):
 
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
-    template_extensions = 'template_content.template_extensions'
+    custom_validators = 'custom_validators.custom_validators'
+    datasource_contents = 'datasources.datasource_contents'
     graphql_types = 'graphql.types.graphql_types'
     menu_items = 'navigation.menu_items'
-    custom_validators = 'custom_validators.custom_validators'
+    template_extensions = 'template_content.template_extensions'
 
     def ready(self):
 
-        # Register template content
-        template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
-        if template_extensions is not None:
-            register_template_extensions(template_extensions)
+        # Register model validators (if defined)
+        validators = import_object(f"{self.__module__}.{self.custom_validators}")
+        if validators is not None:
+            register_custom_validators(validators)
 
+        # Register datasource contents (if defined)
+        datasource_contents = import_object(f"{self.__module__}.{self.datasource_contents}")
+        if datasource_contents is not None:
+            register_datasource_contents(datasource_contents)
+
+        # Register GraphQL types (if defined)
         graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
         if graphql_types is not None:
             register_graphql_types(graphql_types)
@@ -81,10 +89,10 @@ class PluginConfig(AppConfig):
         if menu_items is not None:
             register_menu_items(self.verbose_name, menu_items)
 
-        # Register model validators (if defined)
-        validators = import_object(f"{self.__module__}.{self.custom_validators}")
-        if validators is not None:
-            register_custom_validators(validators)
+        # Register template content (if defined)
+        template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
+        if template_extensions is not None:
+            register_template_extensions(template_extensions)
 
     @classmethod
     def validate(cls, user_config, netbox_version):

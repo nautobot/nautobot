@@ -17,9 +17,9 @@ class Command(BaseCommand):
         parser.add_argument('--commit', action='store_true', help='Commit changes to DB (defaults to dry-run if unset)')
 
     def handle(self, *args, **options):
-        if '.' not in options['job']:
-            raise CommandError('Job must be specified in the form "module.JobName"')
-        custom_job_class = get_custom_job(*options['job'].split('.', 1))
+        if '/' not in options['job']:
+            raise CommandError('Job must be specified in the form "grouping_name/module_name/JobClassName"')
+        custom_job_class = get_custom_job(options['job'])
         if not custom_job_class:
             raise CommandError('Job "%s" not found' % options['job'])
 
@@ -27,12 +27,12 @@ class Command(BaseCommand):
 
         # Run the job and create a new JobResult
         self.stdout.write(
-            "[{:%H:%M:%S}] Running {}...".format(timezone.now(), custom_job_class.full_name)
+            "[{:%H:%M:%S}] Running {}...".format(timezone.now(), custom_job_class.class_path)
         )
 
         job_result = JobResult.enqueue_job(
             run_custom_job,
-            custom_job_class.full_name,
+            custom_job_class.class_path,
             custom_job_content_type,
             None,
             data={},  # TODO: parsing CLI args into a data dictionary is not currently implemented
@@ -47,6 +47,8 @@ class Command(BaseCommand):
 
         # Report on success/failure
         for test_name, attrs in job_result.data.items():
+            if test_name == "total" or test_name == "output":
+                continue
             self.stdout.write(
                 "\t{}: {} success, {} info, {} warning, {} failure".format(
                     test_name, attrs['success'], attrs['info'], attrs['warning'], attrs['failure']
@@ -68,6 +70,9 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(f'\t\t{status}: {log_entry[-1]}')
 
+        if job_result.data["output"]:
+            self.stdout.write(job_result.data["output"])
+
         if job_result.status == JobResultStatusChoices.STATUS_FAILED:
             status = self.style.ERROR('FAILED')
         elif job_result.status == JobResultStatusChoices.STATUS_ERRORED:
@@ -75,12 +80,12 @@ class Command(BaseCommand):
         else:
             status = self.style.SUCCESS('SUCCESS')
         self.stdout.write(
-            "[{:%H:%M:%S}] {}: {}".format(timezone.now(), custom_job_class.full_name, status)
+            "[{:%H:%M:%S}] {}: {}".format(timezone.now(), custom_job_class.class_path, status)
         )
 
         # Wrap things up
         self.stdout.write(
-            "[{:%H:%M:%S}] {}: Duration {}".format(timezone.now(), custom_job_class.full_name, job_result.duration)
+            "[{:%H:%M:%S}] {}: Duration {}".format(timezone.now(), custom_job_class.class_path, job_result.duration)
         )
         self.stdout.write(
             "[{:%H:%M:%S}] Finished".format(timezone.now())

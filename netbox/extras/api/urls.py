@@ -14,6 +14,9 @@ router.register('export-templates', views.ExportTemplateViewSet)
 # Tags
 router.register('tags', views.TagViewSet)
 
+# Git repositories
+router.register('git-repositories', views.GitRepositoryViewSet)
+
 # Image attachments
 router.register('image-attachments', views.ImageAttachmentViewSet)
 

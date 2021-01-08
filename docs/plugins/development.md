@@ -19,32 +19,40 @@ However, keep in mind that each piece of functionality is entirely optional. For
 
 ## Plugin Structure
 
-Although the specific structure of a plugin is largely left to the discretion of its authors, a typical NetBox plugin looks something like this:
+Although the specific structure of a plugin is largely left to the discretion of its authors, a NetBox plugin that makes use of all available plugin features described in this document would look something like this:
 
 ```no-highlight
 plugin_name/
   - plugin_name/
+    - __init__.py           # required
+    - admin.py              # Django Admin Interface
+    - api/
+      - serializers.py      # REST API Model serializers
+      - urls.py             # REST API URL patterns
+      - views.py            # REST API view sets
+    - custom_validators.py  # Custom Validators
+    - datasources.py        # Loading Data from a Git Repository
+    - graphql/
+      - types.py            # GraphQL Type Objects
+    - middleware.py         # Request/response middleware
+    - migrations/
+      - 0001_initial.py     # Database Models
+    - models.py             # Database Models
+    - navigation.py         # Navigation Menu Items
+    - template_content.py   # Extending Core Templates
     - templates/
       - plugin_name/
-        - *.html
-    -graphql/
-      - types.py
-    - __init__.py
-    - middleware.py
-    - models.py
-    - navigation.py
-    - signals.py
-    - template_content.py
-    - urls.py
-    - views.py
-  - README
-  - setup.py
+        - *.html            # UI content templates
+    - urls.py               # UI URL Patterns
+    - views.py              # UI Views
+  - README.md
+  - setup.py                # required
 ```
 
 The top level is the project root. Immediately within the root should exist several items:
 
 * `setup.py` - This is a standard installation script used to install the plugin package within the Python environment.
-* `README` - A brief introduction to your plugin, how to install and configure it, where to find help, and any other pertinent information. It is recommended to write README files using a markup language such as Markdown.
+* `README.md` - A brief introduction to your plugin, how to install and configure it, where to find help, and any other pertinent information. It is recommended to write README files using a markup language such as Markdown.
 * The plugin source directory, with the same name as your plugin.
 
 The plugin source directory contains all of the actual Python code and other resources used by your plugin. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of NetBox's `PluginConfig` class.
@@ -491,3 +499,63 @@ caching_config = {
 ```
 
 See the [django-cacheops](https://github.com/Suor/django-cacheops) documentation for more detail on configuring caching.
+
+## Loading Data from a Git Repository
+
+It's possible for a plugin to register additional types of data that can be provided by a [Git repository](../models/extras/gitrepository.md) and be automatically notified when such a repository is refreshed with new data. By default, NetBox looks for an iterable named `datasource_contents` within a `datasources.py` file. (This can be overridden by setting `datasource_contents` to a custom value on the plugin's PluginConfig.) An example is below.
+
+```python
+import yaml
+import os
+
+from extras.choices import LogLevelChoices
+from extras.registry import DatasourceContent
+
+from .models import Animal
+
+def refresh_git_animals(repository_record, job_result):
+    """Callback for GitRepository updates - refresh Animals managed by it."""
+    if 'netbox_animal_sounds.Animal' not in repository_record.provided_contents:
+        # This repository is defined not to provide Animal records.
+        # In a more complete worked example, we might want to iterate over any
+        # Animals that might have been previously created by this GitRepository
+        # and ensure their deletion, but for now this is a no-op.
+        return
+
+    # We have decided that a Git repository can provide YAML files in a
+    # /animals/ directory at the repository root.
+    animal_path = os.path.join(repository_record.filesystem_path, 'animals')
+    for filename in os.listdir(animal_path):
+        with open(os.path.join(animal_path, filename) as fd:
+            animal_data = yaml.safe_load(fd)
+
+        # Create or update an Animal record based on the provided data
+        animal_record, created = Animal.objects.update_or_create(
+            name=animal_data['name'],
+            defaults={'sound': animal_data['sound']}
+        )
+
+        # Record the outcome in the JobResult record
+        job_result.log(
+            "Successfully created/updated animal",
+            obj=animal_record,
+            level_choice=LogLevelChoices.LOG_SUCCESS
+        )
+
+
+# Register that Animal records can be loaded from a Git repository,
+# and register the callback function used to do so
+datasource_contents = [
+    (
+        'extras.GitRepository',         # datasource class we are registering for
+        DatasourceContent(
+            name='animals',                       # human-readable name to display in the UI
+            token='netbox_animal_sounds.Animal',  # internal slug to identify the data type
+            icon='mdi-paw',                       # Material Design Icons icon to use in UI
+            callback=refresh_git_animals,         # callback function on GitRepository refresh
+        )
+    )
+]
+```
+
+With this code, once your plugin is installed, the Git repository creation/editing UI will now include "Animals" as an option for the type(s) of data that a given repository may provide. If this option is selected for a given Git repository, your `refresh_git_animals` function will be automatically called when the repository is synced.

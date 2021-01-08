@@ -8,6 +8,7 @@ __all__ = [
     'NestedConfigContextSerializer',
     'NestedCustomFieldSerializer',
     'NestedExportTemplateSerializer',
+    'NestedGitRepositorySerializer',
     'NestedImageAttachmentSerializer',
     'NestedJobResultSerializer',
     'NestedTagSerializer',
@@ -35,6 +36,14 @@ class NestedExportTemplateSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.ExportTemplate
+        fields = ['id', 'url', 'name']
+
+
+class NestedGitRepositorySerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:gitrepository-detail')
+
+    class Meta:
+        model = models.GitRepository
         fields = ['id', 'url', 'name']
 
 

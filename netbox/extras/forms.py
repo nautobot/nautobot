@@ -12,7 +12,10 @@ from utilities.forms import (
 )
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
-from .models import ConfigContext, CustomField, CustomJob, ImageAttachment, JobResult, ObjectChange, Tag
+from .datasources import get_datasource_content_choices
+from .models import (
+    ConfigContext, CustomField, CustomJob, GitRepository, ImageAttachment, JobResult, ObjectChange, Tag
+)
 
 
 #
@@ -316,6 +319,87 @@ class LocalConfigContextFilterForm(forms.Form):
 
 
 #
+# Git repositories and other data sources
+#
+
+def get_git_datasource_content_choices():
+    return get_datasource_content_choices("extras.GitRepository")
+
+
+class PasswordInputWithPlaceholder(forms.PasswordInput):
+    """PasswordInput that is populated with a placeholder value if any existing value is present."""
+
+    def __init__(self, attrs=None, placeholder="", render_value=False):
+        if placeholder:
+            render_value = True
+        self._placeholder = placeholder
+        super().__init__(attrs=attrs, render_value=render_value)
+
+    def get_context(self, name, value, attrs):
+        if value:
+            value = self._placeholder
+        return super().get_context(name, value, attrs)
+
+
+class GitRepositoryForm(BootstrapMixin, forms.ModelForm):
+
+    slug = SlugField(help_text="Filesystem-friendly unique shorthand")
+
+    remote_url = forms.URLField(
+        required=True,
+        label="Remote URL",
+    )
+
+    _token = forms.CharField(
+        required=False,
+        label="Token",
+        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+    )
+
+    provided_contents = forms.MultipleChoiceField(choices=get_git_datasource_content_choices, required=False)
+
+    class Meta:
+        model = GitRepository
+        fields = [
+            'name',
+            'slug',
+            'remote_url',
+            'branch',
+            '_token',
+            'provided_contents',
+        ]
+
+
+class GitRepositoryCSVForm(CSVModelForm):
+
+    class Meta:
+        model = GitRepository
+        fields = GitRepository.csv_headers
+
+
+class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=GitRepository.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    remote_url = forms.CharField(
+        label="Remote URL",
+        required=False,
+    )
+    branch = forms.CharField(
+        required=False,
+    )
+    _token = forms.CharField(
+        required=False,
+        label="Token",
+        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+    )
+
+    class Meta:
+        model = GitRepository
+
+
+#
 # Image attachments
 #
 
@@ -403,7 +487,12 @@ class CustomJobForm(BootstrapMixin, forms.Form):
 def custom_jobs_choices():
     from .custom_jobs import get_custom_jobs
     custom_jobs = get_custom_jobs()
-    return [(f"{module}.{job}", f"{module}.{job}") for module, module_jobs in custom_jobs.items() for job in module_jobs["jobs"]]
+    listing = []
+    for grouping, modules in custom_jobs.items():
+        for module, module_jobs in modules.items():
+            for job_class in module_jobs["jobs"].values():
+                listing.append((job_class.class_path, job_class.class_path))
+    return listing
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):

@@ -6,7 +6,7 @@ from django.utils.html import format_html
 
 from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ToggleColumn
 from .custom_jobs import get_custom_job
-from .models import ConfigContext, JobResult, ObjectChange, Tag, TaggedItem
+from .models import ConfigContext, GitRepository, JobResult, ObjectChange, Tag, TaggedItem
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -23,6 +23,20 @@ CONFIGCONTEXT_ACTIONS = """
 {% if perms.extras.delete_configcontext %}
     <a href="{% url 'extras:configcontext_delete' pk=record.pk %}" class="btn btn-xs btn-danger"><i class="mdi mdi-trash-can-outline" aria-hidden="true"></i></a>
 {% endif %}
+"""
+
+GITREPOSITORY_PROVIDES = """
+<span class="text-nowrap">
+{% for entry in datasource_contents %}
+<span style="display: inline-block" title="{{ entry.name|title }}"
+class="label label-{% if entry.token in record.provided_contents %}success{% else %}default{% endif %}">
+<i class="mdi {{ entry.icon }}"></i></span>
+{% endfor %}
+</span>
+"""
+
+GITREPOSITORY_BUTTONS = """
+<button data-url="{% url 'extras:gitrepository_sync' slug=record.slug %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -66,6 +80,7 @@ class TaggedItemTable(BaseTable):
 class ConfigContextTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    owner = tables.LinkColumn()
     is_active = BooleanColumn(
         verbose_name='Active'
     )
@@ -73,17 +88,76 @@ class ConfigContextTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = ConfigContext
         fields = (
-            'pk', 'name', 'weight', 'is_active', 'description', 'regions', 'sites', 'roles', 'platforms',
+            'pk', 'name', 'owner', 'weight', 'is_active', 'description', 'regions', 'sites', 'roles', 'platforms',
             'cluster_groups', 'clusters', 'tenant_groups', 'tenants',
         )
         default_columns = ('pk', 'name', 'weight', 'is_active', 'description')
 
 
+class GitRepositoryTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    remote_url = tables.Column(verbose_name='Remote URL')
+    token_rendered = tables.Column(verbose_name='Token')
+    last_sync_time = tables.DateTimeColumn(empty_values=(), format=settings.SHORT_DATETIME_FORMAT)
+
+    class JobResultColumn(tables.TemplateColumn):
+        def render(self, record, table, value, bound_column, **kwargs):
+            if record.name in table.context.get('job_results', {}):
+                table.context.update({'result': table.context['job_results'][record.name]})
+            else:
+                table.context.update({'result': None})
+            return super().render(record, table, value, bound_column, **kwargs)
+
+    last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html")
+    provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
+    actions = ButtonsColumn(GitRepository, pk_field='slug', prepend_template=GITREPOSITORY_BUTTONS)
+
+    class Meta(BaseTable.Meta):
+        model = GitRepository
+        fields = (
+            'pk',
+            'name',
+            'slug',
+            'remote_url',
+            'branch',
+            'token_rendered',
+            'provides',
+            'last_sync_time',
+            'last_sync_status',
+            'actions',
+        )
+        default_columns = ('pk', 'name', 'remote_url', 'branch', 'provides', 'last_sync_status', 'actions')
+
+    def render_last_sync_time(self, record):
+        if record.name in self.context['job_results']:
+            return self.context['job_results'][record.name].completed
+        return self.default
+
+
+class GitRepositoryBulkTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    remote_url = tables.Column(verbose_name='Remote URL')
+    token_rendered = tables.Column(verbose_name='Token')
+    provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
+
+    class Meta(BaseTable.Meta):
+        model = GitRepository
+        fields = (
+            'pk',
+            'name',
+            'remote_url',
+            'branch',
+            'token_rendered',
+            'provides',
+        )
+
+
 def customjob_link(value, record):
-    if record.obj_type == ContentType.objects.get(app_label='extras', model='customjob') and '.' in record.name:
-        module, name = record.name.split('.', 1)
-        if get_custom_job(module, name) is not None:
-            return reverse('extras:customjob', kwargs={'module': module, 'name': name})
+    if record.obj_type == ContentType.objects.get(app_label='extras', model='customjob'):
+        if get_custom_job(record.name) is not None:
+            return reverse('extras:customjob', kwargs={'class_path': record.name})
     return None
 
 

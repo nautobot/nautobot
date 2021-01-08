@@ -73,6 +73,7 @@ EXEMPT_EXCLUDE_MODELS = (
 )
 
 EXEMPT_VIEW_PERMISSIONS = []
+GIT_ROOT = os.path.join(BASE_DIR, 'git').rstrip('/')
 HTTP_PROXIES = None
 LOGIN_TIMEOUT = None  # FIXME(jathan): Custom alias for SESSION_COOKIE_AGE
 MAINTENANCE_MODE = False
@@ -133,6 +134,16 @@ SECRETS_MIN_PUBKEY_SIZE = 2048
 # Storage
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
+
+
+#
+# Django cryptography
+#
+
+# CRYPTOGRAPHY_BACKEND = cryptography.hazmat.backends.default_backend()
+# CRYPTOGRAPHY_DIGEST = cryptography.hazmat.primitives.hashes.SHA256
+CRYPTOGRAPHY_KEY = None  # Defaults to SECRET_KEY if unset
+CRYPTOGRAPHY_SALT = 'netbox-cryptography'
 
 
 #

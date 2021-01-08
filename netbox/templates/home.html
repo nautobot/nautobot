@@ -357,6 +357,23 @@
     {% if perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
+                <strong>Data Sources</strong>
+            </div>
+            <div class="list-group">
+                <div class="list-group-item">
+                    {% if perms.extras.view_gitrepository %}
+                        <span class="badge pull-right">{{ stats.gitrepository_count }}</span>
+                        <h4 class="list-group-item-heading"><a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a></h4>
+                    {% else %}
+                        <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
+                        <h4 class="list-group-item-heading">Git Repositories</h4>
+                    {% endif %}
+                    <p class="list-group-item-text text-muted">Collections of context data and custom jobs</p>
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 <strong>Custom Jobs</strong>
             </div>
             {% if custom_job_results and perms.extras.view_customjob %}

@@ -725,6 +725,16 @@
 
                 {% if perms.extras.view_configcontext or perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
                         <li class="divider"></li>
+                        <li class="dropdown-header">Data Sources</li>
+                        <li{% if not perms.extras.view_gitrepository %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_gitrepository %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:gitrepository_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a>
+                        </li>
+                        <li class="divider"></li>
                         <li class="dropdown-header">Miscellaneous</li>
 
                     {% if perms.extras.view_ or not settings.HIDE_RESTRICTED_UI %}

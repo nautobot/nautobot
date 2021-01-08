@@ -16,10 +16,12 @@ Custom jobs are a way for users to execute custom logic on demand from within th
 
 ## Writing Custom Jobs
 
-Custom jobs must be saved as files in the [`CUSTOM_JOBS_ROOT`](../../configuration/optional-settings/#custom_jobs_root) path (which defaults to `netbox/custom_jobs/`). Each file created within this path is considered a separate module. Each module holds one or more custom jobs (Python classes), each of which serves a specific purpose. The logic of each custom job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+Custom jobs may be manually installed as files in the [`CUSTOM_JOBS_ROOT`](../../configuration/optional-settings/#custom_jobs_root) path (which defaults to `netbox/custom_jobs/`). Each file created within this path is considered a separate module. Each module holds one or more custom jobs (Python classes), each of which serves a specific purpose. The logic of each custom job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 !!! warning
     The custom jobs path includes a file named `__init__.py`, which registers the path as a Python module. Do not delete this file.
+
+As an alternative to manually managing custom job files, you can store custom job files in an external [Git repository](../models/extras/gitrepository.md). The actual content of the files will be the same either way.
 
 For example, we can create a module named `devices.py` to hold all of our custom jobs which pertain to devices in NetBox. Within that module, we might define several custom jobs. Each custom job is defined as a Python class inheriting from `extras.custom_jobs.CustomJob`, which provides the base functionality needed to accept user input and log activity.
 
@@ -400,7 +402,7 @@ class NewBranch(CustomJob):
             status=SiteStatusChoices.STATUS_PLANNED
         )
         site.save()
-        self.log_success(f"Created new site: {site}")
+        self.log_success(obj=site, message="Created new site")
 
         # Create access switches
         switch_role = DeviceRole.objects.get(name='Access Switch')
@@ -413,7 +415,7 @@ class NewBranch(CustomJob):
                 device_role=switch_role
             )
             switch.save()
-            self.log_success(f"Created new switch: {switch}")
+            self.log_success(obj=switch, message="Created new switch")
 
         # Generate a CSV table of new devices
         output = [
@@ -450,16 +452,16 @@ class DeviceConnectionsReport(CustomJob):
         for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=active):
             if console_port.connected_endpoint is None:
                 self.log_failure(
-                    console_port.device,
-                    "No console connection defined for {}".format(console_port.name)
+                    obj=console_port.device,
+                    message="No console connection defined for {}".format(console_port.name)
                 )
             elif not console_port.connection_status:
                 self.log_warning(
-                    console_port.device,
-                    "Console connection for {} marked as planned".format(console_port.name)
+                    obj=console_port.device,
+                    message="Console connection for {} marked as planned".format(console_port.name)
                 )
             else:
-                self.log_success(console_port.device)
+                self.log_success(obj=console_port.device)
 
     def test_power_connections(self):
 
@@ -471,16 +473,16 @@ class DeviceConnectionsReport(CustomJob):
                     connected_ports += 1
                     if not power_port.connection_status:
                         self.log_warning(
-                            device,
-                            "Power connection for {} marked as planned".format(power_port.name)
+                            obj=device,
+                            message="Power connection for {} marked as planned".format(power_port.name)
                         )
             if connected_ports < 2:
                 self.log_failure(
-                    device,
-                    "{} connected power supplies found (2 needed)".format(connected_ports)
+                    obj=device,
+                    message="{} connected power supplies found (2 needed)".format(connected_ports)
                 )
             else:
-                self.log_success(device)
+                self.log_success(obj=device)
 ```
 
 

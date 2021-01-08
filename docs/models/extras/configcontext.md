@@ -12,6 +12,8 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Tenant
 * Tag
 
+Configuration contexts may be managed within NetBox via the UI and/or API; they may also be managed externally to NetBox in a [Git repository](gitrepository.md) if desired.
+
 ## Hierarchical Rendering
 
 Context data is arranged hierarchically, so that data with a higher weight can be entered to override lower-weight data. Multiple instances of data are automatically merged by NetBox to present a single dictionary for each object.

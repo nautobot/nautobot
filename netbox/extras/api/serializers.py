@@ -9,8 +9,9 @@ from dcim.api.nested_serializers import (
 )
 from dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from extras.choices import *
+from extras.datasources import get_datasource_content_choices
 from extras.models import (
-    ConfigContext, CustomField, ExportTemplate, ImageAttachment, ObjectChange, JobResult, Tag,
+    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, ObjectChange, JobResult, Tag,
 )
 from extras.utils import FeatureQuery
 from netbox.api import ChoiceField, ContentTypeField, SerializedPKRelatedField, ValidatedModelSerializer
@@ -21,6 +22,8 @@ from users.api.nested_serializers import NestedUserSerializer
 from utilities.api import get_serializer_for_model
 from virtualization.api.nested_serializers import NestedClusterGroupSerializer, NestedClusterSerializer
 from virtualization.models import Cluster, ClusterGroup
+
+from .fields import MultipleChoiceJSONField
 from .nested_serializers import *
 
 
@@ -54,10 +57,37 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery('export_templates').get_query()),
     )
+    owner_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery('export_template_owners').get_query()),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+    owner = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ExportTemplate
-        fields = ['id', 'url', 'content_type', 'name', 'description', 'template_code', 'mime_type', 'file_extension']
+        fields = [
+            'id',
+            'url',
+            'content_type',
+            'owner_content_type',
+            'owner_object_id',
+            'owner',
+            'name',
+            'description',
+            'template_code',
+            'mime_type',
+            'file_extension',
+        ]
+
+    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    def get_owner(self, obj):
+        if obj.owner is None:
+            return None
+        serializer = get_serializer_for_model(obj.owner, prefix='Nested')
+        context = {'request': self.context['request']}
+        return serializer(obj.owner, context=context).data
 
 
 #
@@ -103,6 +133,45 @@ class TaggedObjectSerializer(serializers.Serializer):
             instance.tags.clear()
 
         return instance
+
+
+#
+# Git repositories
+#
+
+class GitRepositorySerializer(ValidatedModelSerializer):
+    """Git repositories defined as a data source."""
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:gitrepository-detail')
+    token = serializers.CharField(source='_token', write_only=True, required=False)
+
+    provided_contents = MultipleChoiceJSONField(
+        choices=get_datasource_content_choices('extras.GitRepository'),
+        allow_blank=True,
+        required=False,
+    )
+
+    class Meta:
+        model = GitRepository
+        fields = [
+            'id',
+            'url',
+            'name',
+            'slug',
+            'remote_url',
+            'branch',
+            'token',
+            'current_head',
+            'provided_contents',
+            'created',
+            'last_updated',
+        ]
+
+    def validate(self, data):
+        """
+        Add the originating Request as a parameter to be passed when creating/updating a GitRepository.
+        """
+        data['request'] = self.context['request']
+        return super().validate(data)
 
 
 #
@@ -160,6 +229,13 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 class ConfigContextSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='extras-api:configcontext-detail')
+    owner_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery('config_context_owners').get_query()),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+    owner = serializers.SerializerMethodField(read_only=True)
     regions = SerializedPKRelatedField(
         queryset=Region.objects.all(),
         serializer=NestedRegionSerializer,
@@ -218,9 +294,36 @@ class ConfigContextSerializer(ValidatedModelSerializer):
     class Meta:
         model = ConfigContext
         fields = [
-            'id', 'url', 'name', 'weight', 'description', 'is_active', 'regions', 'sites', 'roles', 'platforms',
-            'cluster_groups', 'clusters', 'tenant_groups', 'tenants', 'tags', 'data', 'created', 'last_updated',
+            'id',
+            'url',
+            'name',
+            'owner_content_type',
+            'owner_object_id',
+            'owner',
+            'weight',
+            'description',
+            'is_active',
+            'regions',
+            'sites',
+            'roles',
+            'platforms',
+            'cluster_groups',
+            'clusters',
+            'tenant_groups',
+            'tenants',
+            'tags',
+            'data',
+            'created',
+            'last_updated',
         ]
+
+    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    def get_owner(self, obj):
+        if obj.owner is None:
+            return None
+        serializer = get_serializer_for_model(obj.owner, prefix='Nested')
+        context = {'request': self.context['request']}
+        return serializer(obj.owner, context=context).data
 
 
 #
@@ -251,11 +354,10 @@ class JobResultSerializer(serializers.ModelSerializer):
 class CustomJobSerializer(serializers.Serializer):
     url = serializers.HyperlinkedIdentityField(
         view_name='extras-api:customjob-detail',
-        lookup_field='full_name',
-        lookup_url_kwarg='full_name',
+        lookup_field='class_path',
+        lookup_url_kwarg='class_path',
     )
-    id = serializers.CharField(read_only=True, source="full_name")
-    module = serializers.CharField(max_length=255)
+    id = serializers.CharField(read_only=True, source="class_path")
     name = serializers.CharField(max_length=255, read_only=True)
     description = serializers.CharField(max_length=255, required=False, read_only=True)
     test_methods = serializers.ListField(child=serializers.CharField(max_length=255))

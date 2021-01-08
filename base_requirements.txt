@@ -10,6 +10,10 @@ django-cacheops
 # https://github.com/OttoYiu/django-cors-headers
 django-cors-headers
 
+# Support for per-field encryption
+# https://github.com/georgemarshall/django-cryptography
+django-cryptography
+
 # Runtime UI tool for debugging Django
 # https://github.com/jazzband/django-debug-toolbar
 django-debug-toolbar
@@ -53,6 +57,10 @@ djangorestframework
 # Swagger/OpenAPI schema generation for REST APIs
 # https://github.com/axnsan12/drf-yasg
 drf-yasg[validation]
+
+# Git/Python integration
+# https://github.com/gitpython-developers/GitPython
+git-python
 
 # Integrate GraphQL into your Django project.
 # https://github.com/graphql-python/graphene-django/

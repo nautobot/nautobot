@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from collections import OrderedDict
 
@@ -211,6 +212,26 @@ class CustomLink(models.Model):
 #
 @extras_features('graphql')
 class ExportTemplate(models.Model):
+    # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        related_name='export_template_owners',
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery('export_template_owners'),
+        default=None,
+        null=True,
+        blank=True
+    )
+    owner_object_id = models.PositiveIntegerField(
+        default=None,
+        null=True,
+        blank=True
+    )
+    owner = GenericForeignKey(
+        ct_field='owner_content_type',
+        fk_field='owner_object_id',
+    )
+
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
@@ -243,10 +264,12 @@ class ExportTemplate(models.Model):
     class Meta:
         ordering = ['content_type', 'name']
         unique_together = [
-            ['content_type', 'name']
+            ['content_type', 'name', 'owner_content_type', 'owner_object_id']
         ]
 
     def __str__(self):
+        if self.owner:
+            return f"[{self.owner}] {self.content_type}: {self.name}"
         return '{}: {}'.format(self.content_type, self.name)
 
     def render(self, queryset):
@@ -279,6 +302,10 @@ class ExportTemplate(models.Model):
         response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
 
         return response
+
+    # def get_absolute_url(self):
+    # FIXME: need to address as part of #19
+    #    return reverse('extras:exporttemplate', kwargs={'pk': self.pk})
 
 
 #
@@ -369,8 +396,27 @@ class ConfigContext(ChangeLoggedModel):
     """
     name = models.CharField(
         max_length=100,
-        unique=True
     )
+
+    # A ConfigContext *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery('config_context_owners'),
+        default=None,
+        null=True,
+        blank=True
+    )
+    owner_object_id = models.PositiveIntegerField(
+        default=None,
+        null=True,
+        blank=True
+    )
+    owner = GenericForeignKey(
+        ct_field='owner_content_type',
+        fk_field='owner_object_id',
+    )
+
     weight = models.PositiveSmallIntegerField(
         default=1000
     )
@@ -432,8 +478,13 @@ class ConfigContext(ChangeLoggedModel):
 
     class Meta:
         ordering = ['weight', 'name']
+        unique_together = [
+            ['name', 'owner_content_type', 'owner_object_id']
+        ]
 
     def __str__(self):
+        if self.owner:
+            return f"[{self.owner}] {self.name}"
         return self.name
 
     def get_absolute_url(self):
@@ -607,3 +658,64 @@ class JobResult(models.Model):
         func.delay(*args, job_id=str(job_result.job_id), job_result=job_result, **kwargs)
 
         return job_result
+
+    def log(self, message, obj=None, level_choice=LogLevelChoices.LOG_DEFAULT, keys=("log",), logger=None):
+        """
+        General-purpose API for storing log messages in a JobResult's 'data' field.
+
+        message (str): Message to log
+        obj (object): Object associated with this message, if any
+        level_choice (LogLevelChoices): Message severity level
+        keys (list): Sequence of key(s) to store the log message under
+        logger (logging.logger): Optional logger to also output the message to
+        """
+        if not self.data:
+            self.data = {}
+        data = self.data
+        for key in keys[:-1]:
+            if key not in data:
+                data[key] = {}
+            data = data[key]
+        if keys[-1] not in data:
+            data[keys[-1]] = []
+        log = data[keys[-1]]
+
+        log.append([
+            timezone.now().isoformat(),
+            level_choice,
+            str(obj) if obj else None,
+            obj.get_absolute_url() if hasattr(obj, 'get_absolute_url') else None,
+            str(message),
+        ])
+
+        if logger:
+            if level_choice == LogLevelChoices.LOG_FAILURE:
+                log_level = logging.ERROR
+            elif level_choice == LogLevelChoices.LOG_WARNING:
+                log_level = logging.WARNING
+            else:
+                log_level = logging.INFO
+            logger.log(log_level, str(message))
+
+    def check_for_failed_logs(self):
+        """
+        Did any log record report a "failed" status?
+
+        Useful when setting the terminal state of a JobResult where there may have been intermediate non-fatal failures.
+        """
+        def check_for_logs_in_data(data):
+            """
+            Recursively check the given data dict for "log" entries.
+            """
+            for key in data:
+                if key == "log" and isinstance(data[key], list):
+                    for log_entry in data[key]:
+                        if log_entry[1] == LogLevelChoices.LOG_FAILURE:
+                            return True
+                elif isinstance(data[key], dict):
+                    # Recurse
+                    if check_for_logs_in_data(data[key]):
+                        return True
+            return False
+
+        return check_for_logs_in_data(self.data)

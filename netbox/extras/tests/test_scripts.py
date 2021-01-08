@@ -1,5 +1,7 @@
+import os.path
+
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from netaddr import IPAddress, IPNetwork
 
 from dcim.models import DeviceRole
@@ -12,6 +14,10 @@ CHOICES = (
 )
 
 
+THIS_DIRECTORY = os.path.dirname(__file__)
+
+
+@override_settings(SCRIPTS_ROOT=THIS_DIRECTORY)
 class ScriptVariablesTest(TestCase):
 
     def test_stringvar(self):

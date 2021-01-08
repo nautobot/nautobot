@@ -9,8 +9,9 @@ from dcim.models import Site
 from extras.plugins.exceptions import PluginNotFound, PluginImproperlyConfigured
 from extras.plugins.utils import load_plugin
 from extras.plugins.validators import wrap_model_clean_methods
-from extras.registry import registry
+from extras.registry import registry, DatasourceContent
 from extras.tests.dummy_plugin import config as dummy_config
+from extras.tests.dummy_plugin.datasources import refresh_git_text_files
 from utilities.testing import APITestCase
 
 
@@ -91,6 +92,22 @@ class PluginTest(TestCase):
 
         self.assertIn("dummy_plugin", registered_models.keys())
         self.assertIn("dummymodel", registered_models["dummy_plugin"])
+
+    def test_git_datasource_contents(self):
+        """
+        Check that plugin DatasourceContents are registered.
+        """
+        registered_datasources = registry.get("datasource_contents", {}).get("extras.GitRepository", [])
+
+        self.assertIn(
+            DatasourceContent(
+                name='text files',
+                token='dummy_plugin.TextFile',
+                icon='mdi-note-text',
+                callback=refresh_git_text_files,
+            ),
+            registered_datasources
+        )
 
     def test_middleware(self):
         """

@@ -10,7 +10,8 @@
         <div class="col-md-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:customjob_list' %}">Custom Jobs</a></li>
-                <li><a href="{% url 'extras:customjob_list' %}#module.{{ module }}">{{ module|bettertitle }}</a></li>
+                <li><a href="{% url 'extras:customjob_list' %}#grouping.{{grouping}}">{{ grouping|bettertitle }}</a></li>
+                <li><a href="{% url 'extras:customjob_list' %}#grouping.{{grouping}}.module.{{ module }}">{{ module }}</a></li>
                 <li>{{ custom_job }}</li>
             </ol>
         </div>

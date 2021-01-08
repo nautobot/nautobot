@@ -740,6 +740,11 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request):
         return redirect(self.get_return_url(request))
 
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        # Allow views to add extra info to an object before it is processed.
+        # For example, a parent object can be defined given some parameter from the request URL.
+        return obj
+
     def post(self, request, **kwargs):
         logger = logging.getLogger('netbox.views.BulkEditView')
         model = self.queryset.model
@@ -770,6 +775,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                         updated_objects = []
                         for obj in self.queryset.filter(pk__in=form.cleaned_data['pk']):
+
+                            obj = self.alter_obj(obj, request, [], kwargs)
 
                             # Update standard fields. If a field is listed in _nullify, delete its value.
                             for name in standard_fields:
@@ -856,12 +863,17 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             messages.warning(request, "No {} were selected.".format(model._meta.verbose_name_plural))
             return redirect(self.get_return_url(request))
 
-        return render(request, self.template_name, {
+        context = {
             'form': form,
             'table': table,
             'obj_type_plural': model._meta.verbose_name_plural,
             'return_url': self.get_return_url(request),
-        })
+        }
+        context.update(self.extra_context())
+        return render(request, self.template_name, context)
+
+    def extra_context(self):
+        return {}
 
 
 class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
@@ -1013,12 +1025,17 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             messages.warning(request, "No {} were selected for deletion.".format(model._meta.verbose_name_plural))
             return redirect(self.get_return_url(request))
 
-        return render(request, self.template_name, {
+        context = {
             'form': form,
             'obj_type_plural': model._meta.verbose_name_plural,
             'table': table,
             'return_url': self.get_return_url(request),
-        })
+        }
+        context.update(self.extra_context())
+        return render(request, self.template_name, context)
+
+    def extra_context(self):
+        return {}
 
     def get_form(self):
         """

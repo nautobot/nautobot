@@ -13,7 +13,7 @@ from rq import Worker
 from extras import filters
 from extras.choices import JobResultStatusChoices
 from extras.models import (
-    ConfigContext, ExportTemplate, ImageAttachment, ObjectChange, JobResult, Tag, TaggedItem,
+    ConfigContext, ExportTemplate, GitRepository, ImageAttachment, ObjectChange, JobResult, Tag, TaggedItem,
 )
 from extras.models import CustomField
 from extras.custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
@@ -108,6 +108,19 @@ class TagViewSet(ModelViewSet):
 
 
 #
+# Git repositories
+#
+
+class GitRepositoryViewSet(ModelViewSet):
+    """
+    Manage the use of Git repositories as external data sources.
+    """
+    queryset = GitRepository.objects.all()
+    serializer_class = serializers.GitRepositorySerializer
+    filterset_class = filters.GitRepositoryFilterSet
+
+
+#
 # Image attachments
 #
 
@@ -136,19 +149,15 @@ class ConfigContextViewSet(ModelViewSet):
 
 class CustomJobViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
-    lookup_field = "full_name"
-    lookup_value_regex = '[^/]+'  # Allow dots in the "pk", i.e. "module_name.CustomJobName"
+    lookup_field = "class_path"
+    lookup_value_regex = '[^/]+/[^/]+/[^/]+'  # e.g. "git.repo_name/module_name/CustomJobName"
 
-    def _get_custom_job_class(self, full_name):
-        if '.' not in full_name:
-            raise Http404
-        module_name, job_name = full_name.split('.', 1)
-
-        custom_job = get_custom_job(module_name, job_name)
-        if custom_job is None:
+    def _get_custom_job_class(self, class_path):
+        custom_job_class = get_custom_job(class_path)
+        if custom_job_class is None:
             raise Http404
 
-        return custom_job
+        return custom_job_class
 
     def list(self, request):
         if not request.user.has_perm('extras.view_customjob'):
@@ -164,25 +173,26 @@ class CustomJobViewSet(ViewSet):
 
         custom_jobs = get_custom_jobs()
         jobs_list = []
-        for module_name, entry in custom_jobs.items():
-            for custom_job_class in entry['jobs'].values():
-                custom_job = custom_job_class()
-                custom_job.result = results.get(custom_job.full_name, None)
-                jobs_list.append(custom_job)
+        for grouping, modules in custom_jobs.items():
+            for module_name, entry in modules.items():
+                for custom_job_class in entry['jobs'].values():
+                    custom_job = custom_job_class()
+                    custom_job.result = results.get(custom_job.class_path, None)
+                    jobs_list.append(custom_job)
 
         serializer = serializers.CustomJobSerializer(jobs_list, many=True, context={'request': request})
 
         return Response(serializer.data)
 
-    def retrieve(self, request, full_name):
+    def retrieve(self, request, class_path):
         if not request.user.has_perm('extras.view_customjob'):
             raise PermissionDenied("This user does not have permission to view custom jobs.")
-        custom_job_class = self._get_custom_job_class(full_name)
+        custom_job_class = self._get_custom_job_class(class_path)
         custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
         custom_job = custom_job_class()
         custom_job.result = JobResult.objects.filter(
             obj_type=custom_job_content_type,
-            name=custom_job.full_name,
+            name=custom_job.class_path,
             status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
         ).first()
 
@@ -192,7 +202,7 @@ class CustomJobViewSet(ViewSet):
 
     @swagger_auto_schema(method='post', request_body=serializers.CustomJobInputSerializer)
     @action(detail=True, methods=['post'])
-    def run(self, request, full_name):
+    def run(self, request, class_path):
         if not request.user.has_perm('extras.run_customjob'):
             raise PermissionDenied("This user does not have permission to run custom jobs.")
 
@@ -200,7 +210,7 @@ class CustomJobViewSet(ViewSet):
         if not Worker.count(get_connection('default')):
             raise RQWorkerNotRunningException()
 
-        custom_job_class = self._get_custom_job_class(full_name)
+        custom_job_class = self._get_custom_job_class(class_path)
         custom_job = custom_job_class()
         input_serializer = serializers.CustomJobInputSerializer(data=request.data)
 
@@ -216,7 +226,7 @@ class CustomJobViewSet(ViewSet):
 
         job_result = JobResult.enqueue_job(
             run_custom_job,
-            custom_job.full_name,
+            custom_job.class_path,
             custom_job_content_type,
             request.user,
             data=data,
