@@ -1,4 +1,4 @@
-![NetBox](netbox_logo.svg "NetBox logo")
+![Nautobot](nautobot_logo.svg "Nautobot logo")
 
 # What is NetBox?
 

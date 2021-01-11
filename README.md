@@ -1,4 +1,4 @@
-![NetBox](docs/netbox_logo.svg "NetBox logo")
+![Nautobot](docs/nautobot_logo.svg "Nautobot logo")
 
 NetBox is an IP address management (IPAM) and data center infrastructure
 management (DCIM) tool. Initially conceived by the network engineering team at

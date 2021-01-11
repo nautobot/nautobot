@@ -25,7 +25,14 @@
     <link rel="stylesheet"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
-    <link rel="icon" type="image/png" href="{% static 'img/netbox.ico' %}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
+    <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
+    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+    <meta name="msapplication-TileColor" content="#2d89ef">
+    <meta name="theme-color" content="#ffffff">
     <meta charset="UTF-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
 </head>
