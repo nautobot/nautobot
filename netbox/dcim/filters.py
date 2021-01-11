@@ -2,7 +2,9 @@ import django_filters
 from django.contrib.auth.models import User
 from django.db.models import Count
 
-from extras.filters import CustomFieldModelFilterSet, LocalConfigContextFilterSet, CreatedUpdatedFilterSet
+from extras.filters import (
+    CustomFieldModelFilterSet, LocalConfigContextFilterSet, CreatedUpdatedFilterSet, StatusModelFilterSetMixin
+)
 from tenancy.filters import TenancyFilterSet
 from tenancy.models import Tenant
 from utilities.choices import ColorChoices
@@ -515,6 +517,7 @@ class DeviceFilterSet(
     BaseFilterSet,
     TenancyFilterSet,
     LocalConfigContextFilterSet,
+    StatusModelFilterSetMixin,
     CustomFieldModelFilterSet,
     CreatedUpdatedFilterSet
 ):
@@ -601,10 +604,6 @@ class DeviceFilterSet(
         queryset=DeviceType.objects.all(),
         to_field_name='slug',
         label='Device model (slug)',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=DeviceStatusChoices,
-        null_value=None
     )
     is_full_depth = django_filters.BooleanFilter(
         field_name='device_type__is_full_depth',

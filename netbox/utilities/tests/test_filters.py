@@ -11,7 +11,7 @@ from dcim.filters import DeviceFilterSet, SiteFilterSet
 from dcim.models import (
     Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
 )
-from extras.models import TaggedItem
+from extras.models import Status, TaggedItem
 from utilities.filters import (
     BaseFilterSet, MACAddressFilter, MultiValueCharFilter, MultiValueDateFilter, MultiValueDateTimeFilter,
     MultiValueNumberFilter, MultiValueTimeFilter, TagFilter, TreeNodeMultipleChoiceFilter,
@@ -360,6 +360,9 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         DeviceRole.objects.bulk_create(device_roles)
 
+        device_statuses = Status.objects.get_for_model(Device)
+        device_status_map = {ds.name: ds for ds in device_statuses.all()}
+
         platforms = (
             Platform(name='Platform 1', slug='platform-1'),
             Platform(name='Platform 2', slug='platform-2'),
@@ -390,9 +393,9 @@ class DynamicFilterLookupExpressionTest(TestCase):
         Rack.objects.bulk_create(racks)
 
         devices = (
-            Device(name='Device 1', device_type=device_types[0], device_role=device_roles[0], platform=platforms[0], serial='ABC', asset_tag='1001', site=sites[0], rack=racks[0], position=1, face=DeviceFaceChoices.FACE_FRONT, status=DeviceStatusChoices.STATUS_ACTIVE, local_context_data={"foo": 123}),
-            Device(name='Device 2', device_type=device_types[1], device_role=device_roles[1], platform=platforms[1], serial='DEF', asset_tag='1002', site=sites[1], rack=racks[1], position=2, face=DeviceFaceChoices.FACE_FRONT, status=DeviceStatusChoices.STATUS_STAGED),
-            Device(name='Device 3', device_type=device_types[2], device_role=device_roles[2], platform=platforms[2], serial='GHI', asset_tag='1003', site=sites[2], rack=racks[2], position=3, face=DeviceFaceChoices.FACE_REAR, status=DeviceStatusChoices.STATUS_FAILED),
+            Device(name='Device 1', device_type=device_types[0], device_role=device_roles[0], platform=platforms[0], serial='ABC', asset_tag='1001', site=sites[0], rack=racks[0], position=1, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['active'], local_context_data={"foo": 123}),
+            Device(name='Device 2', device_type=device_types[1], device_role=device_roles[1], platform=platforms[1], serial='DEF', asset_tag='1002', site=sites[1], rack=racks[1], position=2, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['staged']),
+            Device(name='Device 3', device_type=device_types[2], device_role=device_roles[2], platform=platforms[2], serial='GHI', asset_tag='1003', site=sites[2], rack=racks[2], position=3, face=DeviceFaceChoices.FACE_REAR, status=device_status_map['failed']),
         )
         Device.objects.bulk_create(devices)
 

@@ -6,6 +6,7 @@ from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
 from netbox.api import ContentTypeField
+from extras.api.fields import StatusSerializerField
 
 
 class BulkOperationMetadata(SimpleMetadata):
@@ -52,4 +53,24 @@ class ContentTypeMetadata(BulkOperationMetadata):
                 for choice_value, choice_name in field.choices.items()
             ]
             field_info['choices'].sort(key=lambda item: item['display_name'])
+        return field_info
+
+
+class StatusFieldMetadata(BulkOperationMetadata):
+    """Emit `Status` serializer fields as a choice enum."""
+
+    def get_field_info(self, field):
+        field_info = super().get_field_info(field)
+        if (not field_info.get('read_only') and
+                isinstance(field, StatusSerializerField) and
+                hasattr(field, 'choices') and
+                getattr(field, 'show_choices', False)):
+            field_info['choices'] = [
+                {
+                    'value': choice_value,
+                    'display_name': str(choice_name)
+                }
+                for choice_value, choice_name in field.choices.items()
+            ]
+
         return field_info

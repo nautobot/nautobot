@@ -1,5 +1,6 @@
 import collections
 
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
@@ -55,6 +56,20 @@ class FeatureQuery:
             query |= Q(app_label=app_label, model__in=models)
 
         return query
+
+    def get_choices(self):
+        """
+        Given an extras feature, return a list of 2-tuple of `(model_label, pk)`
+        suitable for use as `choices` on a choice field:
+
+            >>> FeatureQuery('statuses').get_choices()
+            [('dcim.device', 13), ('dcim.rack', 34)]
+        """
+        return [
+            (f'{ct.app_label}.{ct.model}', ct.pk) for ct in ContentType.objects.filter(
+                self.get_query()
+            )
+        ]
 
 
 def extras_features(*features):

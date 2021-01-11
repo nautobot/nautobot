@@ -2,10 +2,12 @@ import os
 import tempfile
 
 from django.conf import settings
+from django.db.models import ProtectedError
+from django.db.utils import IntegrityError
 from django.test import TestCase, TransactionTestCase
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Site, Region
-from extras.models import ConfigContext, GitRepository, Tag
+from extras.models import ConfigContext, GitRepository, Status, Tag
 from extras.plugins.validators import custom_validator_clean
 from tenancy.models import Tenant, TenantGroup
 from virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
@@ -426,3 +428,65 @@ class GitRepositoryTest(TransactionTestCase):
                 new_path = self.repo.filesystem_path
                 self.assertIn(self.repo.slug, new_path)
                 self.assertTrue(os.path.isdir(new_path))
+
+
+class StatusTest(TestCase):
+    """
+    Tests for the `Status` model class.
+    """
+
+    def setUp(self):
+        self.status = Status.objects.create(name='delete_me')
+
+        manufacturer = Manufacturer.objects.create(name='Manufacturer 1')
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1')
+        devicerole = DeviceRole.objects.create(name='Device Role 1')
+        site = Site.objects.create(name='Site-1')
+
+        self.device = Device.objects.create(
+            name='Device 1',
+            device_type=devicetype,
+            device_role=devicerole,
+            site=site,
+            status=self.status,
+        )
+
+    def test_uniqueness(self):
+        # A `delete_me` Status already exists.
+        with self.assertRaises(IntegrityError):
+            Status.objects.create(name="delete_me")
+
+    def test_delete_protection(self):
+        # Protected delete will fail
+        with self.assertRaises(ProtectedError):
+            self.status.delete()
+
+        # Delete the device
+        self.device.delete()
+
+        # Now that it's not in use, delete will succeed.
+        self.status.delete()
+        self.assertEqual(self.status.pk, None)
+
+    def test_name(self):
+        # Test a bunch of wackado names.
+        tests = [
+            '---;;a;l^^^2ZSsljk¡',
+            '-42',
+            '392405834ioafdjskl;ajr30894fjakl;fs___π',
+        ]
+        for test in tests:
+            self.status.name = test
+            self.status.clean()
+            self.status.save()
+
+    def test_clean_name(self):
+        # Assert that cleaning makes the name lowercase.
+        self.status.name = 'CAPSLOCK'
+        self.status.clean()
+        self.status.save()
+        self.status.refresh_from_db()
+        self.assertEqual(self.status.name, 'capslock')
+
+        # And str(status) capitalizes
+        self.assertEqual(str(self.status), 'Capslock')

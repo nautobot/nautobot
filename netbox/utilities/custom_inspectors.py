@@ -1,11 +1,12 @@
 from django.contrib.postgres.fields import JSONField
 from drf_yasg import openapi
-from drf_yasg.inspectors import FieldInspector, NotHandled, PaginatorInspector, SwaggerAutoSchema
+from drf_yasg.inspectors import FieldInspector, NotHandled, PaginatorInspector, RelatedFieldInspector, SwaggerAutoSchema
 from drf_yasg.utils import get_serializer_ref_name
 from rest_framework.fields import ChoiceField
 from rest_framework.relations import ManyRelatedField
 
 from extras.api.customfields import CustomFieldsDataField
+from extras.api.fields import StatusSerializerField
 from netbox.api import ChoiceField, SerializedPKRelatedField, WritableNestedSerializer
 
 
@@ -150,3 +151,24 @@ class NullablePaginatorInspector(PaginatorInspector):
                 previous['x-nullable'] = True
 
         return result
+
+
+class StatusFieldInspector(RelatedFieldInspector):
+    """
+    Inspector for status fields, since they are writable slug-related fields
+    that have choices.
+    """
+
+    def field_to_swagger_object(self, field, swagger_object_type, use_references, **kwargs):
+        dataobj = super().field_to_swagger_object(
+            field, swagger_object_type, use_references, **kwargs
+        )
+        if (
+            isinstance(field, StatusSerializerField) and
+            hasattr(field, 'choices') and
+            getattr(field, 'show_choices', False) and
+            'enum' not in dataobj
+        ):
+            dataobj['enum'] = [k for k, v in field.choices.items()]
+
+        return dataobj

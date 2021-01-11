@@ -5,6 +5,7 @@ from io import StringIO
 
 import django_filters
 from django import forms
+from django.apps import apps
 from django.forms.fields import JSONField as _JSONField, InvalidJSONInput
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db.models import Count
@@ -23,6 +24,7 @@ __all__ = (
     'CSVContentTypeField',
     'CSVDataField',
     'CSVModelChoiceField',
+    'CSVMultipleContentTypeField',
     'DynamicModelChoiceField',
     'DynamicModelMultipleChoiceField',
     'ExpandableIPAddressField',
@@ -159,6 +161,49 @@ class CSVContentTypeField(CSVModelChoiceField):
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
             raise forms.ValidationError(f'Invalid object type')
+
+
+class CSVMultipleContentTypeField(forms.ModelMultipleChoiceField):
+    """
+    Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
+    """
+    STATIC_CHOICES = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Generate choices from queryset each time form is initialized.
+        self.choices = self._generate_choices_from_queryset
+
+    def _generate_choices_from_queryset(self):
+        """Overload choices to return "<app>.<model>" for CSV import help text."""
+        return [
+            (f'{m.app_label}.{m.model}', m.app_labeled_name) for m in
+            self.queryset.all()
+        ]
+
+    def prepare_value(self, value):
+        """Parse a comma-separated string of model names into a list of PKs."""
+        if isinstance(value, str):
+            value = value.split(',')
+
+        # For each model name, retrieve the model object and extract its
+        # content-type PK.
+        pk_list = []
+        if isinstance(value, (list, tuple)):
+            for v in value:
+                try:
+                    model = apps.get_model(v)
+                except (ValueError, LookupError):
+                    raise forms.ValidationError(
+                        self.error_messages['invalid_choice'],
+                        code='invalid_choice',
+                        params={'value': v},
+                    )
+                ct = self.queryset.model.objects.get_for_model(model)
+                pk_list.append(ct.pk)
+
+        return super().prepare_value(pk_list)
 
 
 class ExpandableNameField(forms.CharField):

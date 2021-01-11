@@ -332,7 +332,12 @@ class APIViewTestCases:
                 for field in self.bulk_update_data:
                     self.assertIn(field, obj, f"Bulk update field '{field}' missing from object {i} in response")
             for instance in self._get_queryset().filter(pk__in=id_list):
-                self.assertInstanceEqual(instance, self.bulk_update_data, api=True)
+                self.assertInstanceEqual(
+                    instance,
+                    self.bulk_update_data,
+                    exclude=self.validation_excluded_fields,
+                    api=True
+                )
 
     class DeleteObjectViewTestCase(APITestCase):
 

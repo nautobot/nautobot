@@ -6,10 +6,11 @@ EXTRAS_FEATURES = [
     'config_context_owners',
     'custom_fields',
     'custom_links',
+    'custom_validators',
     'export_template_owners',
     'export_templates',
-    'custom_validators',
     'graphql',
     'job_results',
+    'statuses',
     'webhooks'
 ]

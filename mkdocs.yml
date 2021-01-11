@@ -53,6 +53,7 @@ nav:
         - Git Repositories: 'models/extras/gitrepository.md'
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
+        - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
         - Webhooks: 'additional-features/webhooks.md'
     - Plugins:

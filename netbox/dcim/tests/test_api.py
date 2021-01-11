@@ -10,6 +10,7 @@ from dcim.models import (
     InventoryItem, Platform, PowerFeed, PowerPort, PowerPortTemplate, PowerOutlet, PowerOutletTemplate, PowerPanel,
     Rack, RackGroup, RackReservation, RackRole, RearPort, RearPortTemplate, Region, Site, VirtualChassis,
 )
+from extras.models import Status
 from ipam.models import VLAN
 from utilities.testing import APITestCase, APIViewTestCases
 from virtualization.models import Cluster, ClusterType
@@ -872,6 +873,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         DeviceRole.objects.bulk_create(device_roles)
 
+        device_statuses = Status.objects.get_for_model(Device)
+
         cluster_type = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
 
         clusters = (
@@ -884,6 +887,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             Device(
                 device_type=device_types[0],
                 device_role=device_roles[0],
+                status=device_statuses[0],
                 name='Device 1',
                 site=sites[0],
                 rack=racks[0],
@@ -893,6 +897,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             Device(
                 device_type=device_types[0],
                 device_role=device_roles[0],
+                status=device_statuses[0],
                 name='Device 2',
                 site=sites[0],
                 rack=racks[0],
@@ -902,6 +907,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             Device(
                 device_type=device_types[0],
                 device_role=device_roles[0],
+                status=device_statuses[0],
                 name='Device 3',
                 site=sites[0],
                 rack=racks[0],
@@ -911,10 +917,19 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         Device.objects.bulk_create(devices)
 
+        # FIXME(jathan): The writable serializer for `Device.status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
+
         cls.create_data = [
             {
                 'device_type': device_types[1].pk,
                 'device_role': device_roles[1].pk,
+                'status': device_statuses[1].name,
                 'name': 'Test Device 4',
                 'site': sites[1].pk,
                 'rack': racks[1].pk,
@@ -923,6 +938,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 'device_type': device_types[1].pk,
                 'device_role': device_roles[1].pk,
+                'status': device_statuses[1].name,
                 'name': 'Test Device 5',
                 'site': sites[1].pk,
                 'rack': racks[1].pk,
@@ -931,6 +947,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 'device_type': device_types[1].pk,
                 'device_role': device_roles[1].pk,
+                'status': device_statuses[1].name,
                 'name': 'Test Device 6',
                 'site': sites[1].pk,
                 'rack': racks[1].pk,

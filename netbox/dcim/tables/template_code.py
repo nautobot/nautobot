@@ -30,7 +30,8 @@ DEVICE_LINK = """
 
 DEVICEBAY_STATUS = """
 {% if record.installed_device_id %}
-    <span class="label label-{{ record.installed_device.get_status_class }}">
+    {% load helpers %}
+    <span class="label" style="color: {{ record.installed_device.status.color|fgcolor }}; background-color: #{{ record.installed_device.status.color }}">
         {{ record.installed_device.get_status_display }}
     </span>
 {% else %}

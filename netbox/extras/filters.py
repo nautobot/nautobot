@@ -5,12 +5,18 @@ from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
 from dcim.models import DeviceRole, Platform, Region, Site
+from extras.utils import FeatureQuery
 from tenancy.models import Tenant, TenantGroup
-from utilities.filters import BaseFilterSet, ContentTypeFilter
+from utilities.filters import (
+    BaseFilterSet,
+    ContentTypeFilter,
+    ContentTypeMultipleChoiceFilter
+)
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .models import (
-    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, ObjectChange, Tag,
+    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment,
+    JobResult, ObjectChange, Status, Tag,
 )
 
 
@@ -26,6 +32,9 @@ __all__ = (
     'LocalConfigContextFilterSet',
     'ObjectChangeFilterSet',
     'TagFilterSet',
+    'StatusFilter',
+    'StatusFilterSet',
+    'StatusModelFilterSetMixin',
 )
 
 EXACT_FILTER_TYPES = (
@@ -351,3 +360,63 @@ class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomField
     class Meta:
         model = GitRepository
         fields = ['id', 'name', 'slug', 'remote_url', 'branch']
+
+
+#
+# Statuses
+#
+
+class StatusFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter field used for filtering Status fields.
+
+    Explicitly sets `to_field_name='value'` and dynamically sets queryset to
+    retrieve choices for the corresponding model & field name bound to the
+    filterset.
+    """
+    def __init__(self, *args, **kwargs):
+        kwargs['to_field_name'] = 'name'
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        self.queryset = Status.objects.all()
+        return super().get_queryset(request)
+
+    def get_filter_predicate(self, value):
+        """Always use the field's name and the `to_field_name` attribute as predicate."""
+        # e.g. `status__name`
+        to_field_name = self.field.to_field_name
+        name = f'{self.field_name}__{to_field_name}'
+        return {name: getattr(value, to_field_name)}
+
+
+class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet):
+    """API filter for filtering custom status object fields."""
+    q = django_filters.CharFilter(
+        method='search',
+        label='Search',
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery('statuses').get_choices,
+    )
+
+    class Meta:
+        model = Status
+        fields = [
+            'id', 'content_types', 'color', 'name', 'created', 'last_updated'
+        ]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(content_types__model__icontains=value) |
+            Q(name__icontains=value)
+        )
+
+
+class StatusModelFilterSetMixin(django_filters.FilterSet):
+    """
+    Mixin to add a `status` filter field to a FilterSet.
+    """
+    status = StatusFilter()

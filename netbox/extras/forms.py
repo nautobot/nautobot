@@ -6,16 +6,31 @@ from django.utils.safestring import mark_safe
 from dcim.models import DeviceRole, Platform, Region, Site
 from tenancy.models import Tenant, TenantGroup
 from utilities.forms import (
-    add_blank_choice, APISelectMultiple, BootstrapMixin, BulkEditForm, BulkEditNullBooleanSelect, ColorSelect,
-    ContentTypeSelect, CSVModelForm, DateTimePicker, DynamicModelMultipleChoiceField, JSONField, SlugField,
-    StaticSelect2, StaticSelect2Multiple, BOOLEAN_WITH_BLANK_CHOICES,
+    add_blank_choice,
+    APISelectMultiple,
+    BootstrapMixin,
+    BulkEditForm,
+    BulkEditNullBooleanSelect,
+    ColorSelect,
+    CSVModelChoiceField,
+    CSVModelForm,
+    CSVMultipleContentTypeField,
+    DateTimePicker,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    JSONField,
+    SlugField,
+    StaticSelect2,
+    BOOLEAN_WITH_BLANK_CHOICES,
 )
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
-    ConfigContext, CustomField, CustomJob, GitRepository, ImageAttachment, JobResult, ObjectChange, Tag
+    ConfigContext, CustomField, CustomJob, GitRepository, ImageAttachment,
+    JobResult, ObjectChange, Status, Tag
 )
+from .utils import FeatureQuery
 
 
 #
@@ -525,4 +540,127 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         choices=add_blank_choice(JobResultStatusChoices),
         required=False,
         widget=StaticSelect2(),
+    )
+
+
+#
+# Statuses
+#
+
+class StatusForm(BootstrapMixin, forms.ModelForm):
+    """Generic create/update form for `Status` objects."""
+
+    class Meta:
+        model = Status
+        widgets = {
+            'color': ColorSelect()
+        }
+        fields = ['content_types', 'color', 'name']
+
+
+class StatusCSVForm(CSVModelForm):
+    """Generic CSV bulk import form for `Status` objects."""
+
+    content_types = CSVMultipleContentTypeField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('statuses').get_query()
+        ),
+        help_text='The object type to which this status applies.'
+    )
+
+    class Meta:
+        model = Status
+        fields = Status.csv_headers
+        help_texts = {
+            'color': mark_safe('RGB color in hexadecimal (e.g. <code>00ff00</code>)'),
+        }
+
+
+class StatusFilterForm(BootstrapMixin, forms.Form):
+    """Filtering/search form for `Status` objects."""
+
+    model = Status
+    q = forms.CharField(
+        required=False,
+        label='Search'
+    )
+    # "CSV" field is being used here because it is using the slug-form input for
+    # content-types, which improves UX.
+    content_types = CSVMultipleContentTypeField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('statuses').get_query()
+        ),
+        required=False,
+        label='Content type(s)',
+    )
+    color = forms.CharField(
+        max_length=6,
+        required=False,
+        widget=ColorSelect()
+    )
+
+
+class StatusBulkEditForm(BootstrapMixin, BulkEditForm):
+    """Bulk edit/delete form for `Status` objects."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=Status.objects.all(),
+        widget=forms.MultipleHiddenInput
+    )
+    color = forms.CharField(
+        max_length=6,
+        required=False,
+        widget=ColorSelect()
+    )
+    content_types = forms.ModelMultipleChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('statuses').get_query()
+        ),
+        label='Content type(s)',
+        required=False,
+    )
+
+    class Meta:
+        nullable_fields = []
+
+
+class StatusBulkEditFormMixin(forms.Form):
+    """Mixin to add non-required `status` choice field to forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['status'] = DynamicModelChoiceField(
+            required=False,
+            queryset=Status.objects.all(),
+            query_params={'content_types': self.model._meta.label_lower},
+            display_field='label',
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class StatusFilterFormMixin(forms.Form):
+    """
+    Mixin to add non-required `status` multiple-choice field to filter forms.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['status'] = DynamicModelMultipleChoiceField(
+            required=False,
+            queryset=Status.objects.all(),
+            query_params={'content_types': self.model._meta.label_lower},
+            display_field='label',
+            to_field_name='name',
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class StatusModelCSVFormMixin(CSVModelForm):
+    """Mixin to add a required `status` choice field to CSV import forms."""
+
+    status = CSVModelChoiceField(
+        queryset=Status.objects.all(),
+        to_field_name='name',
+        help_text='Operational status'
+
     )

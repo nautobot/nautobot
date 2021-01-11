@@ -13,12 +13,13 @@ from rq import Worker
 from extras import filters
 from extras.choices import JobResultStatusChoices
 from extras.models import (
-    ConfigContext, ExportTemplate, GitRepository, ImageAttachment, ObjectChange, JobResult, Tag, TaggedItem,
+    ConfigContext, ExportTemplate, GitRepository, ImageAttachment, ObjectChange,
+    JobResult, Status, Tag, TaggedItem,
 )
 from extras.models import CustomField
 from extras.custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
 from netbox.api.authentication import IsAuthenticated
-from netbox.api.metadata import ContentTypeMetadata
+from netbox.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from netbox.api.views import ModelViewSet
 from utilities.exceptions import RQWorkerNotRunningException
 from utilities.utils import copy_safe_request, count_related
@@ -278,3 +279,23 @@ class ContentTypeViewSet(ReadOnlyModelViewSet):
     queryset = ContentType.objects.order_by('app_label', 'model')
     serializer_class = serializers.ContentTypeSerializer
     filterset_class = filters.ContentTypeFilterSet
+
+
+#
+# Statuses
+#
+
+class StatusViewSet(ModelViewSet):
+    """
+    View and manage custom status choices for objects with a `status` field.
+    """
+    queryset = Status.objects.all()
+    serializer_class = serializers.StatusSerializer
+    filterset_class = filters.StatusFilterSet
+
+
+class StatusViewSetMixin(ModelViewSet):
+    """
+    Mixin to set `metadata_class` to implement `status` field in model viewset metadata.
+    """
+    metadata_class = StatusFieldMetadata

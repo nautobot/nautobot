@@ -15,7 +15,8 @@ from dcim.models import (
 )
 from dcim.utils import decompile_path_node
 from extras.api.customfields import CustomFieldModelSerializer
-from extras.api.serializers import TaggedObjectSerializer
+from extras.api.serializers import TaggedObjectSerializer, StatusModelSerializerMixin
+from extras.api.fields import StatusSerializerField
 from ipam.api.nested_serializers import NestedIPAddressSerializer, NestedVLANSerializer
 from ipam.models import VLAN
 from netbox.api import (
@@ -424,7 +425,7 @@ class PlatformSerializer(CustomFieldModelSerializer):
         ]
 
 
-class DeviceSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:device-detail')
     device_type = NestedDeviceTypeSerializer()
     device_role = NestedDeviceRoleSerializer()
@@ -433,7 +434,6 @@ class DeviceSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     site = NestedSiteSerializer()
     rack = NestedRackSerializer(required=False, allow_null=True)
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
-    status = ChoiceField(choices=DeviceStatusChoices, required=False)
     primary_ip = NestedIPAddressSerializer(read_only=True)
     primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
     primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)

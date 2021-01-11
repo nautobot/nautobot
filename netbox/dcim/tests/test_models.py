@@ -4,6 +4,7 @@ from django.test import TestCase
 from circuits.models import *
 from dcim.choices import *
 from dcim.models import *
+from extras.models import Status
 from tenancy.models import Tenant
 
 
@@ -231,6 +232,7 @@ class DeviceTestCase(TestCase):
         self.device_role = DeviceRole.objects.create(
             name='Test Device Role 1', slug='test-device-role-1', color='ff0000'
         )
+        self.device_status = Status.objects.get_for_model(Device).get(name='active')
 
         # Create DeviceType components
         ConsolePortTemplate(
@@ -355,6 +357,7 @@ class DeviceTestCase(TestCase):
             site=self.site,
             device_type=self.device_type,
             device_role=self.device_role,
+            status=self.device_status,
             name=''
         )
         device1.save()
@@ -363,6 +366,7 @@ class DeviceTestCase(TestCase):
             site=device1.site,
             device_type=device1.device_type,
             device_role=device1.device_role,
+            status=self.device_status,
             name=''
         )
         device2.full_clean()
@@ -376,6 +380,7 @@ class DeviceTestCase(TestCase):
             site=self.site,
             device_type=self.device_type,
             device_role=self.device_role,
+            status=self.device_status,
             name='Test Device 1'
         )
         device1.save()
@@ -384,6 +389,7 @@ class DeviceTestCase(TestCase):
             site=device1.site,
             device_type=device1.device_type,
             device_role=device1.device_role,
+            status=self.device_status,
             name=device1.name
         )
 

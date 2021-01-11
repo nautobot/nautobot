@@ -11,6 +11,7 @@ from netaddr import EUI
 from dcim.choices import *
 from dcim.constants import *
 from dcim.models import *
+from extras.models import Status
 from ipam.models import VLAN
 from utilities.testing import ViewTestCases
 
@@ -958,10 +959,13 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         Platform.objects.bulk_create(platforms)
 
+        statuses = Status.objects.get_for_model(Device)
+        status_active = statuses.get(name='active')
+
         Device.objects.bulk_create([
-            Device(name='Device 1', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0]),
-            Device(name='Device 2', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0]),
-            Device(name='Device 3', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0]),
+            Device(name='Device 1', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active),
+            Device(name='Device 2', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active),
+            Device(name='Device 3', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active),
         ])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
@@ -978,7 +982,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'rack': racks[1].pk,
             'position': 1,
             'face': DeviceFaceChoices.FACE_FRONT,
-            'status': DeviceStatusChoices.STATUS_PLANNED,
+            'status': statuses.get(name='planned').pk,
             'primary_ip4': None,
             'primary_ip6': None,
             'cluster': None,
@@ -1003,7 +1007,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'tenant': None,
             'platform': platforms[1].pk,
             'serial': '123456',
-            'status': DeviceStatusChoices.STATUS_DECOMMISSIONING,
+            'status': statuses.get(name='decommissioning').pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])

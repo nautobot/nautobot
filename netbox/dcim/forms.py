@@ -12,8 +12,16 @@ from timezone_field import TimeZoneFormField
 
 from circuits.models import Circuit, CircuitTermination, Provider
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldBulkCreateForm, CustomFieldBulkEditForm, CustomFieldModelCSVForm,
-    CustomFieldFilterForm, CustomFieldModelForm, LocalConfigContextFilterForm,
+    AddRemoveTagsForm,
+    CustomFieldBulkCreateForm,
+    CustomFieldBulkEditForm,
+    CustomFieldModelCSVForm,
+    CustomFieldFilterForm,
+    CustomFieldModelForm,
+    LocalConfigContextFilterForm,
+    StatusBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusFilterFormMixin,
 )
 from extras.models import Tag
 from ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
@@ -1849,7 +1857,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
         fields = [
             'name', 'device_role', 'device_type', 'serial', 'asset_tag', 'site', 'rack', 'position', 'face',
             'status', 'platform', 'primary_ip4', 'primary_ip6', 'cluster_group', 'cluster', 'tenant_group', 'tenant',
-            'comments', 'tags', 'local_context_data'
+            'comments', 'tags', 'local_context_data',
         ]
         help_texts = {
             'device_role': "The function this device serves",
@@ -1859,7 +1867,6 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
         }
         widgets = {
             'face': StaticSelect2(),
-            'status': StaticSelect2(),
             'primary_ip4': StaticSelect2(),
             'primary_ip6': StaticSelect2(),
         }
@@ -1926,7 +1933,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
             self.fields['position'].widget.choices = [(position, f'U{position}')]
 
 
-class BaseDeviceCSVForm(CustomFieldModelCSVForm):
+class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     device_role = CSVModelChoiceField(
         queryset=DeviceRole.objects.all(),
         to_field_name='name',
@@ -1953,10 +1960,6 @@ class BaseDeviceCSVForm(CustomFieldModelCSVForm):
         required=False,
         to_field_name='name',
         help_text='Assigned platform'
-    )
-    status = CSVChoiceField(
-        choices=DeviceStatusChoices,
-        help_text='Operational status'
     )
     cluster = CSVModelChoiceField(
         queryset=Cluster.objects.all(),
@@ -2068,7 +2071,7 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
             self.instance.rack = parent.rack
 
 
-class DeviceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class DeviceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=Device.objects.all(),
         widget=forms.MultipleHiddenInput()
@@ -2097,11 +2100,6 @@ class DeviceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditF
         queryset=Platform.objects.all(),
         required=False
     )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(DeviceStatusChoices),
-        required=False,
-        widget=StaticSelect2()
-    )
     serial = forms.CharField(
         max_length=50,
         required=False,
@@ -2114,7 +2112,7 @@ class DeviceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditF
         ]
 
 
-class DeviceFilterForm(BootstrapMixin, LocalConfigContextFilterForm, TenancyFilterForm, CustomFieldFilterForm):
+class DeviceFilterForm(BootstrapMixin, LocalConfigContextFilterForm, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = Device
     field_order = [
         'q', 'region', 'site', 'rack_group_id', 'rack_id', 'status', 'role', 'tenant_group', 'tenant',
@@ -2180,11 +2178,6 @@ class DeviceFilterForm(BootstrapMixin, LocalConfigContextFilterForm, TenancyFilt
         to_field_name='slug',
         required=False,
         null_option='None'
-    )
-    status = forms.MultipleChoiceField(
-        choices=DeviceStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     mac_address = forms.CharField(
         required=False,

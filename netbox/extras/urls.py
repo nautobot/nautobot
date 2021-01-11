@@ -1,7 +1,7 @@
 from django.urls import path
 
 from extras import views
-from extras.models import ConfigContext, GitRepository, Tag
+from extras.models import ConfigContext, GitRepository, Status, Tag
 
 
 app_name = 'extras'
@@ -58,4 +58,15 @@ urlpatterns = [
     path('job-results/<int:pk>/', views.JobResultView.as_view(), name='jobresult'),
     path('job-results/delete/', views.JobResultBulkDeleteView.as_view(), name='jobresult_bulk_delete'),
     path('job-results/<int:pk>/delete/', views.JobResultDeleteView.as_view(), name='jobresult_delete'),
+
+    # Custom statuses
+    path('statuses/', views.StatusListView.as_view(), name='status_list'),
+    path('statuses/add/', views.StatusEditView.as_view(), name='status_add'),
+    path('statuses/edit/', views.StatusBulkEditView.as_view(), name='status_bulk_edit'),
+    path('statuses/delete/', views.StatusBulkDeleteView.as_view(), name='status_bulk_delete'),
+    path('statuses/import/', views.StatusBulkImportView.as_view(), name='status_import'),
+    path('statuses/<int:pk>/', views.StatusView.as_view(), name='status'),
+    path('statuses/<int:pk>/edit/', views.StatusEditView.as_view(), name='status_edit'),
+    path('statuses/<int:pk>/delete/', views.StatusDeleteView.as_view(), name='status_delete'),
+    path('statuses/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='status_changelog', kwargs={'model': Status}),
 ]

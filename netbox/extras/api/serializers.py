@@ -11,8 +11,10 @@ from dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from extras.choices import *
 from extras.datasources import get_datasource_content_choices
 from extras.models import (
-    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, ObjectChange, JobResult, Tag,
+    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment,
+    ObjectChange, JobResult, Status, Tag,
 )
+from extras.api.fields import StatusSerializerField
 from extras.utils import FeatureQuery
 from netbox.api import ChoiceField, ContentTypeField, SerializedPKRelatedField, ValidatedModelSerializer
 from netbox.api.exceptions import SerializerNotFound
@@ -445,3 +447,33 @@ class ContentTypeSerializer(serializers.ModelSerializer):
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_display_name(self, obj):
         return obj.app_labeled_name
+
+
+#
+# Custom statuses
+#
+
+class StatusSerializer(ValidatedModelSerializer):
+    """Serializer for `Status` objects."""
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:status-detail')
+    label = serializers.SerializerMethodField()
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery('statuses').get_query()),
+        many=True,
+    )
+
+    class Meta:
+        model = Status
+        fields = [
+            'id', 'url', 'content_types', 'name', 'label', 'color'
+        ]
+
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    def get_label(self, obj):
+        """Stringify the instance as the label."""
+        return str(obj)
+
+
+class StatusModelSerializerMixin(serializers.Serializer):
+    """Mixin to add non-required `status` choice field to model serializers."""
+    status = StatusSerializerField(required=False, queryset=Status.objects.all())

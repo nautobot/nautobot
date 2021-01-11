@@ -13,7 +13,9 @@ from taggit.managers import TaggableManager
 
 from dcim.choices import *
 from dcim.constants import *
-from extras.models import ChangeLoggedModel, ConfigContextModel, CustomFieldModel, TaggedItem
+from extras.models import (
+    ChangeLoggedModel, ConfigContextModel, CustomFieldModel, StatusModel, TaggedItem,
+)
 from extras.querysets import ConfigContextModelQuerySet
 from extras.utils import extras_features
 from utilities.choices import ColorChoices
@@ -477,9 +479,10 @@ class Platform(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'statuses',
     'webhooks'
 )
-class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
+class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, StatusModel):
     """
     A Device represents a piece of physical hardware mounted within a Rack. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
@@ -563,11 +566,6 @@ class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
         blank=True,
         choices=DeviceFaceChoices,
         verbose_name='Rack face'
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=DeviceStatusChoices,
-        default=DeviceStatusChoices.STATUS_ACTIVE
     )
     primary_ip4 = models.OneToOneField(
         to='ipam.IPAddress',
@@ -902,9 +900,6 @@ class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
         Return the set of child Devices installed in DeviceBays within this Device.
         """
         return Device.objects.filter(parent_bay__device=self.pk)
-
-    def get_status_class(self):
-        return DeviceStatusChoices.CSS_CLASSES.get(self.status)
 
 
 #

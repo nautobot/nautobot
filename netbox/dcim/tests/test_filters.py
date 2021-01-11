@@ -10,6 +10,7 @@ from dcim.models import (
     PowerOutletTemplate, Rack, RackGroup, RackReservation, RackRole, RearPort, RearPortTemplate, Region, Site,
     VirtualChassis,
 )
+from extras.models import Status
 from ipam.models import IPAddress
 from tenancy.models import Tenant, TenantGroup
 from virtualization.models import Cluster, ClusterType
@@ -1146,6 +1147,9 @@ class DeviceTestCase(TestCase):
         )
         DeviceRole.objects.bulk_create(device_roles)
 
+        device_statuses = Status.objects.get_for_model(Device)
+        device_status_map = {ds.name: ds for ds in device_statuses.all()}
+
         platforms = (
             Platform(name='Platform 1', slug='platform-1'),
             Platform(name='Platform 2', slug='platform-2'),
@@ -1207,9 +1211,9 @@ class DeviceTestCase(TestCase):
         Tenant.objects.bulk_create(tenants)
 
         devices = (
-            Device(name='Device 1', device_type=device_types[0], device_role=device_roles[0], platform=platforms[0], tenant=tenants[0], serial='ABC', asset_tag='1001', site=sites[0], rack=racks[0], position=1, face=DeviceFaceChoices.FACE_FRONT, status=DeviceStatusChoices.STATUS_ACTIVE, cluster=clusters[0], local_context_data={"foo": 123}),
-            Device(name='Device 2', device_type=device_types[1], device_role=device_roles[1], platform=platforms[1], tenant=tenants[1], serial='DEF', asset_tag='1002', site=sites[1], rack=racks[1], position=2, face=DeviceFaceChoices.FACE_FRONT, status=DeviceStatusChoices.STATUS_STAGED, cluster=clusters[1]),
-            Device(name='Device 3', device_type=device_types[2], device_role=device_roles[2], platform=platforms[2], tenant=tenants[2], serial='GHI', asset_tag='1003', site=sites[2], rack=racks[2], position=3, face=DeviceFaceChoices.FACE_REAR, status=DeviceStatusChoices.STATUS_FAILED, cluster=clusters[2]),
+            Device(name='Device 1', device_type=device_types[0], device_role=device_roles[0], platform=platforms[0], tenant=tenants[0], serial='ABC', asset_tag='1001', site=sites[0], rack=racks[0], position=1, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['active'], cluster=clusters[0], local_context_data={"foo": 123}),
+            Device(name='Device 2', device_type=device_types[1], device_role=device_roles[1], platform=platforms[1], tenant=tenants[1], serial='DEF', asset_tag='1002', site=sites[1], rack=racks[1], position=2, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['staged'], cluster=clusters[1]),
+            Device(name='Device 3', device_type=device_types[2], device_role=device_roles[2], platform=platforms[2], tenant=tenants[2], serial='GHI', asset_tag='1003', site=sites[2], rack=racks[2], position=3, face=DeviceFaceChoices.FACE_REAR, status=device_status_map['failed'], cluster=clusters[2]),
         )
         Device.objects.bulk_create(devices)
 
@@ -1351,7 +1355,8 @@ class DeviceTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {'status': [DeviceStatusChoices.STATUS_ACTIVE, DeviceStatusChoices.STATUS_STAGED]}
+        statuses = Status.objects.get_for_model(Device)
+        params = {'status': [statuses.get(name='active').name, statuses.get(name='staged').name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_is_full_depth(self):

@@ -153,6 +153,20 @@
                         </li>
                 {% endif %}
 
+                {% if perms.extras.view_status or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Statuses</li>
+                        <li{% if not perms.extras.view_status %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_status %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:status_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'extras:status_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:status_list' %}">Statuses</a>
+                        </li>
+                {% endif %}
+
                     </ul>
                 </li>
             {% endif %}

@@ -6,9 +6,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 
-from dcim.models import Site
+from dcim.models import Device, Site
 from extras.choices import ObjectChangeActionChoices
-from extras.models import ConfigContext, CustomLink, GitRepository, ObjectChange, Tag
+from extras.models import ConfigContext, CustomLink, GitRepository, ObjectChange, Status, Tag
 from utilities.testing import ViewTestCases, TestCase
 
 
@@ -178,4 +178,46 @@ class GitRepositoryTestCase(
             'branch': 'develop',
             '_token': '1234567890abcdef1234567890abcdef',
             'provided_contents': ['extras.ConfigContext', 'extras.CustomJob', 'extras.ExportTemplate'],
+        }
+
+
+class StatusTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = Status
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Status objects to test.
+        statuses = (
+            Status(name='status1'),
+            Status(name='status2'),
+            Status(name='status3'),
+        )
+        for status in statuses:
+            status.save()
+
+        content_type = ContentType.objects.get_for_model(Device)
+
+        cls.form_data = {
+            'name': 'new_status',
+            'color': 'ffcc00',
+            'content_types': [content_type.pk],
+        }
+
+        cls.csv_data = (
+            'content_types,color,name'
+            '"dcim.device",ffffff,test_status1'
+            '"dcim.device",ffffff,test_status2'
+            '"dcim.device",ffffff,test_status3'
+        )
+
+        cls.bulk_edit_data = {
+            'color': '000000',
         }

@@ -2,11 +2,10 @@ import django_tables2 as tables
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
-from django.utils.html import mark_safe
 
-from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ToggleColumn
+from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, ToggleColumn
 from .custom_jobs import get_custom_job_classpaths
-from .models import ConfigContext, GitRepository, JobResult, ObjectChange, Tag, TaggedItem
+from .models import ConfigContext, GitRepository, JobResult, ObjectChange, Status, Tag, TaggedItem
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -227,3 +226,23 @@ class ObjectChangeTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = ObjectChange
         fields = ('time', 'user_name', 'action', 'changed_object_type', 'object_repr', 'request_id')
+
+
+#
+# Custom statuses
+#
+
+class StatusTable(BaseTable):
+    """Table for list view of `Status` objects."""
+    pk = ToggleColumn()
+    color = ColorColumn()
+    actions = ButtonsColumn(Status)
+
+    class Meta(BaseTable.Meta):
+        model = Status
+        fields = ['pk', 'name', 'content_types', 'color']
+
+
+class StatusTableMixin(BaseTable):
+    """Mixing to add a `status` field to a table."""
+    status = ColoredLabelColumn()

@@ -1,4 +1,5 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
+from .statuses import Status, StatusField, StatusModel
 from .customfields import CustomField, CustomFieldModel
 from .datasources import GitRepository
 from .models import (
@@ -17,6 +18,9 @@ __all__ = (
     'ChangeLoggedModel',
     'ConfigContext',
     'ConfigContextModel',
+    'Status',
+    'StatusField',
+    'StatusModel',
     'CustomField',
     'CustomFieldModel',
     'CustomJob',

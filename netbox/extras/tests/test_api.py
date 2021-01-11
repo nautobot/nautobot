@@ -15,7 +15,7 @@ from rq import Worker
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Rack, RackGroup, RackRole, Site
 from extras.api.views import CustomJobViewSet
-from extras.models import ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, Tag
+from extras.models import ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, Status, Tag
 from extras.custom_jobs import CustomJob, BooleanVar, IntegerVar, StringVar
 from utilities.testing import APITestCase, APIViewTestCases
 from utilities.testing.utils import disable_warnings
@@ -552,3 +552,43 @@ class ContentTypeTest(APITestCase):
 
         url = reverse('extras-api:contenttype-detail', kwargs={'pk': contenttype.pk})
         self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
+
+
+class StatusTest(APIViewTestCases.APIViewTestCase):
+    model = Status
+    brief_fields = ['color', 'content_types', 'id', 'label', 'name', 'url']
+    bulk_update_data = {
+        'color': '000000',
+    }
+
+    # We can only create statuses for `dcim.device` at this time.
+    create_data = [
+        {
+            'name': 'Pizza',
+            'color': '0000ff',
+            'content_types': ['dcim.device'],
+        },
+        {
+            'name': 'Oysters',
+            'color': '00ff00',
+            'content_types': ['dcim.device'],
+        },
+        {
+            'name': 'Bad combinations',
+            'color': 'ff0000',
+            'content_types': ['dcim.device'],
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        """
+        Since many `Status` objects are created as part of data migrations, we're
+        testing against those. If this seems magical, it's beacuse they are
+        imported from `ChoiceSet` enum objects.
+
+        This method is defined just so it's clear that there is no need to
+        create test data for this test case.
+
+        See `extras.management.create_custom_statuses` for context.
+        """

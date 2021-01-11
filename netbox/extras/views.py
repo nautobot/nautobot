@@ -1,29 +1,22 @@
-import logging
-
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
 from django.db.models import Q
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_rq.queues import get_connection
 from django_tables2 import RequestConfig
 from rq import Worker
 
 from netbox.views import generic
-from utilities.forms import ConfirmationForm
 from utilities.paginator import EnhancedPaginator, get_paginate_count
 from utilities.utils import copy_safe_request, count_related, shallow_compare_dict
 from utilities.views import ContentTypePermissionRequiredMixin
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
-from .models import ConfigContext, GitRepository, ImageAttachment, ObjectChange, JobResult, Tag, TaggedItem
+from .models import ConfigContext, GitRepository, ImageAttachment, ObjectChange, JobResult, Status, Tag, TaggedItem
 from .custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
 from .datasources import get_datasource_contents, enqueue_pull_git_repository_and_refresh_data
 
@@ -480,7 +473,6 @@ class CustomJobView(ContentTypePermissionRequiredMixin, View):
             'module': module,
             'custom_job': custom_job,
             'form': form,
-            # 'run_form': ConfirmationForm(),
         })
 
     def post(self, request, class_path):
@@ -598,3 +590,51 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
             'custom_job': custom_job,
             'result': job_result,
         })
+
+
+#
+# Custom statuses
+#
+
+class StatusListView(generic.ObjectListView):
+    """List `Status` objects."""
+    queryset = Status.objects.all()
+    filterset = filters.StatusFilterSet
+    filterset_form = forms.StatusFilterForm
+    table = tables.StatusTable
+
+
+class StatusEditView(generic.ObjectEditView):
+    """Edit a single `Status` object."""
+    queryset = Status.objects.all()
+    model_form = forms.StatusForm
+
+
+class StatusBulkEditView(generic.BulkEditView):
+    """Edit multiple `Status` objects."""
+    queryset = Status.objects.all()
+    table = tables.StatusTable
+    form = forms.StatusBulkEditForm
+
+
+class StatusBulkDeleteView(generic.BulkDeleteView):
+    """Delete multiple `Status` objects."""
+    queryset = Status.objects.all()
+    table = tables.StatusTable
+
+
+class StatusDeleteView(generic.ObjectDeleteView):
+    """Delete a single `Status` object."""
+    queryset = Status.objects.all()
+
+
+class StatusBulkImportView(generic.BulkImportView):
+    """Bulk CSV import of multiple `Status` objects."""
+    queryset = Status.objects.all()
+    model_form = forms.StatusCSVForm
+    table = tables.StatusTable
+
+
+class StatusView(generic.ObjectView):
+    """Detail view for a single `Status` object."""
+    queryset = Status.objects.all()

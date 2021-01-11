@@ -4,8 +4,8 @@ from graphene_django.converter import convert_django_field
 
 from taggit.managers import TaggableManager
 
-from extras.models import Tag
-from extras.filters import TagFilterSet
+from extras.models import Status, Tag
+from extras.filters import StatusFilterSet, TagFilterSet
 
 
 class TagType(DjangoObjectType):
@@ -19,3 +19,10 @@ class TagType(DjangoObjectType):
 def convert_field_to_list_tags(field, registry=None):
     """Convert TaggableManager to List of Tags."""
     return graphene.List(TagType)
+
+
+class StatusType(DjangoObjectType):
+    """Graphql Type object for `Status` model."""
+    class Meta:
+        model = Status
+        filterset_class = StatusFilterSet

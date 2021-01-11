@@ -62,14 +62,17 @@ class TestCase(_TestCase):
             try:
                 field = instance._meta.get_field(key)
             except FieldDoesNotExist:
-                # Attribute is not a model field
-                continue
+                # Attribute is not a model field, but may be a computed field,
+                # so allow `field` checks to pass through.
+                field = None
 
             # Handle ManyToManyFields
             if value and type(field) in (ManyToManyField, TaggableManager):
 
-                if field.related_model is ContentType:
+                # Only convert ContentType to <app_label>.<model> for API serializers/views
+                if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f'{ct.app_label}.{ct.model}' for ct in value])
+                # Otherwise always convert object instances to pk
                 else:
                     model_dict[key] = sorted([obj.pk for obj in value])
 

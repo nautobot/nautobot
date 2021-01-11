@@ -4,10 +4,10 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from dcim.models import DeviceRole, Platform, Rack, Region, Site
+from dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from extras.choices import ObjectChangeActionChoices
 from extras.filters import *
-from extras.models import ConfigContext, ExportTemplate, ImageAttachment, ObjectChange, Tag
+from extras.models import ConfigContext, ExportTemplate, ImageAttachment, ObjectChange, Status, Tag
 from ipam.models import IPAddress
 from tenancy.models import Tenant, TenantGroup
 from virtualization.models import Cluster, ClusterGroup, ClusterType
@@ -398,3 +398,46 @@ class ObjectChangeTestCase(TestCase):
     def test_changed_object_type_id(self):
         params = {'changed_object_type_id': ContentType.objects.get(app_label='dcim', model='site').pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class StatusTestCase(TestCase):
+    queryset = Status.objects.all()
+    filterset = StatusFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        """
+        Since many `Status` objects are created as part of data migrations, we're
+        testing against those. If this seems magical, it's beacuse they are
+        imported from `ChoiceSet` enum objects.
+
+        This method is defined just so it's clear that there is no need to
+        create test data for this test case.
+
+        See `extras.management.create_custom_statuses` for context.
+        """
+
+    def test_id(self):
+        params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {'name': ['active', 'offline']}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_content_types(self):
+        ct = ContentType.objects.get_for_model(Device)
+        status_count = self.queryset.filter(content_types=ct).count()
+        params = {'content_types': ['dcim.device']}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            status_count
+        )
+
+    def test_color(self):
+        params = {'color': ['777777', '00ff00']}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        params = {'q': 'active'}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)

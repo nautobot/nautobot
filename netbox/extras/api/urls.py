@@ -35,5 +35,8 @@ router.register('job-results', views.JobResultViewSet)
 # ContentTypes
 router.register('content-types', views.ContentTypeViewSet)
 
+# Statuses
+router.register('statuses', views.StatusViewSet)
+
 app_name = 'extras-api'
 urlpatterns = router.urls

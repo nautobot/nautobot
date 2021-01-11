@@ -1,12 +1,13 @@
-import django_filters
-from django_filters.constants import EMPTY_VALUES
 from copy import deepcopy
-from dcim.forms import MACAddressField
+
 from django import forms
 from django.conf import settings
 from django.db import models
+import django_filters
+from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 
+from dcim.forms import MACAddressField
 from extras.models import Tag
 from utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP, FILTER_NEGATION_LOOKUP_MAP, FILTER_TREENODE_NEGATION_LOOKUP_MAP,
@@ -134,6 +135,36 @@ class ContentTypeFilter(django_filters.CharFilter):
                 f'{self.field_name}__model': model
             }
         )
+
+
+class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
+    """
+    Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+
+    Defaults to joining multiple options with "AND". Pass `conjoined=False` to
+    override this behavior to join with "OR" instead.
+
+    Example use on a `FilterSet`:
+
+        content_types = ContentTypeMultipleChoiceFilter(
+            choices=FeatureQuery('statuses').get_choices,
+        )
+    """
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('conjoined', True)
+        super().__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        """Filter on value, which should be list of content-type names.
+
+        e.g. `['dcim.device', 'dcim.rack']`
+        """
+        # Recursively call `ContentTypeFilter.filter()` for each item in the
+        # list of incoming filter values.
+        for v in value:
+            qs = ContentTypeFilter.filter(self, qs, v)
+
+        return qs
 
 
 #
