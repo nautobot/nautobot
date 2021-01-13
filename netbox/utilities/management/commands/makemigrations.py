@@ -19,10 +19,13 @@ class Command(_Command):
         """
         if not settings.DEVELOPER:
             raise CommandError(
-                "This command is available for development purposes only. It will\n"
-                "NOT resolve any issues with missing or unapplied migrations. For assistance,\n"
-                "please post to the NetBox mailing list:\n"
-                "    https://groups.google.com/g/netbox-discuss"
+                "This command is only available when running as a developer.\n"
+                "This should only be used when developing new functionality with Nautobot,\n"
+                "and should not be used on production instances.\n"
+                "If you are trying to develop new features, then set the DEVELOPER variable\n"
+                "in the configuration.py file to True.\n"
+                "If you are having issues with missing or unapplied migrations,\n"
+                "please raise an issue on GitHub."  # TODO: Add full URL of project
             )
 
         super().handle(*args, **kwargs)

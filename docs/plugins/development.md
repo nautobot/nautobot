@@ -29,6 +29,7 @@ plugin_name/
         - *.html
     - __init__.py
     - middleware.py
+    - models.py
     - navigation.py
     - signals.py
     - template_content.py
@@ -148,6 +149,9 @@ Once you have defined the model(s) for your plugin, you'll need to create the da
 
 !!! note
     A plugin must be installed before it can be used with Django management commands. If you skipped this step above, run `python setup.py develop` from the plugin's root directory.
+
+!!! note
+    The `DEVELOPER` setting in `netbox/configuration.py` must be set to `True` in order to run Django makemigrations command.
 
 ```no-highlight
 $ ./manage.py makemigrations netbox_animal_sounds 
