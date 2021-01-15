@@ -1,5 +1,6 @@
 """NetBox configuration file."""
 import os
+import sys
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(" ")
 
@@ -33,3 +34,7 @@ REDIS = {
 }
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
+
+# Django Debug Toolbar
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
