@@ -1,8 +1,10 @@
-{% extends 'rest_framework/base.html' %}
+{% extends "drf-yasg/swagger-ui.html" %}
 {% load static %}
 
-{% block bootstrap_theme %}
-    <link rel="stylesheet" type="text/css" href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"/>
+{% block extra_styles %}
+    <link rel="stylesheet"
+          href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
     <link rel="stylesheet"
           href="{% static 'materialdesignicons-5.4.55/css/materialdesignicons.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-5.4.55/css/materialdesignicons.min.css'">
@@ -23,8 +25,28 @@
     <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
     <meta name="msapplication-TileColor" content="#2d89ef">
     <meta name="theme-color" content="#ffffff">
+    <style>
+        /* Address a conflict between the Bootstrap style and the Swagger style for the "version" bubble */
+        h2.title pre {
+            background-color: transparent;
+            border: none;
+        }
+        /* Address a conflict between base.css and swagger-ui.css */
+        div.loading-container div.loading {
+            display: inline;
+        }
+    </style>
 {% endblock %}
 
-{% block navbar %}
+{% block extra_body %}
     {% include 'inc/nav_menu.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'jquery/jquery-3.5.1.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.5.1.min.js'"></script>
+<script src="{% static 'jquery-ui-1.12.1/jquery-ui.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.min.js'"></script>
+<script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
 {% endblock %}

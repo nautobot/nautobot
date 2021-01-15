@@ -1,8 +1,10 @@
-{% extends 'rest_framework/base.html' %}
+{% extends "drf-yasg/redoc.html" %}
 {% load static %}
 
-{% block bootstrap_theme %}
-    <link rel="stylesheet" type="text/css" href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"/>
+{% block extra_styles %}
+    <link rel="stylesheet"
+          href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
     <link rel="stylesheet"
           href="{% static 'materialdesignicons-5.4.55/css/materialdesignicons.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-5.4.55/css/materialdesignicons.min.css'">
@@ -25,6 +27,15 @@
     <meta name="theme-color" content="#ffffff">
 {% endblock %}
 
-{% block navbar %}
+{% block extra_body %}
     {% include 'inc/nav_menu.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'jquery/jquery-3.5.1.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.5.1.min.js'"></script>
+<script src="{% static 'jquery-ui-1.12.1/jquery-ui.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.min.js'"></script>
+<script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
 {% endblock %}
