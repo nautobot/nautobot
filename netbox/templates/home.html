@@ -398,10 +398,12 @@
                                     <span class="label label-danger">Deleted</span>
                                 {% endif %}
                                 {{ change.changed_object_type.name|bettertitle }}
-                                {% if change.changed_object.get_absolute_url %}
+                                {% if change and change.changed_object and change.changed_object.get_absolute_url %}
                                     <a href="{{ change.changed_object.get_absolute_url }}">{{ change.changed_object }}</a>
-                                {% else %}
+                                {% elif change and change.changed_object %}
                                     {{ change.changed_object|default:change.object_repr }}
+                                {% elif change %}
+                                    {{ change.object_repr }}
                                 {% endif %}
                                 <br />
                                 <small>

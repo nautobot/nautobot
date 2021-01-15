@@ -10,9 +10,9 @@
                 <li><a href="{% url 'extras:objectchange_list' %}">Change Log</a></li>
                 {% if object.related_object.get_absolute_url %}
                     <li><a href="{{ object.related_object.get_absolute_url }}changelog/">{{ object.related_object }}</a></li>
-                {% elif object.changed_object.get_absolute_url %}
+                {% elif object.changed_object and object.changed_object.get_absolute_url %}
                     <li><a href="{{ object.changed_object.get_absolute_url }}changelog/">{{ object.changed_object }}</a></li>
-                {% elif object.changed_object %}
+                {% elif object.changed_object is not None %}
                     <li>{{ object.changed_object }}</li>
                 {% endif %}
                 <li>{{ object }}</li>
@@ -68,7 +68,7 @@
                     <tr>
                         <td>Object</td>
                         <td>
-                            {% if object.changed_object.get_absolute_url %}
+                            {% if object.changed_object and object.changed_object.get_absolute_url %}
                                 <a href="{{ object.changed_object.get_absolute_url }}">{{ object.changed_object }}</a>
                             {% else %}
                                 {{ object.object_repr }}
