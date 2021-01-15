@@ -18,11 +18,15 @@
 {% include 'search_form.html' %}
 <div class="row">
     <div class="col-sm-6 col-md-4">
+
+    {% if perms.dcim.view_site or perms.tenancy.view_tenant or not settings.RESTRICT_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Organization</strong>
             </div>
             <div class="list-group">
+
+            {% if perms.tenancy.view_tenant or not settings.RESTRICT_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_site %}
                         <span class="badge pull-right">{{ stats.site_count }}</span>
@@ -33,6 +37,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Geographic locations</p>
                 </div>
+            {% endif %}
+
+            {% if perms.tenancy.view_tenant or not settings.RESTRICT_UI %}
                 <div class="list-group-item">
                     {% if perms.tenancy.view_tenant %}
                         <span class="badge pull-right">{{ stats.tenant_count }}</span>
@@ -43,13 +50,19 @@
                     {% endif %}
                         <p class="list-group-item-text text-muted">Customers or departments</p>
                     </div>
+            {% endif %}
             </div>
         </div>
+    {% endif %}
+
+    {% if perms.dcim.view_rack or perms.dcim.view_devicetype or perms.dcim.view_device or perms.dcim.view_cable or perms.dcim.view_interface or perms.dcim.view_consoleport or perms.dcim.view_powerport or not settings.RESTRICT_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>DCIM</strong>
             </div>
             <div class="list-group">
+
+            {% if perms.dcim.view_rack or not settings.RESTRICT_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_rack %}
                         <span class="badge pull-right">{{ stats.rack_count }}</span>
@@ -60,6 +73,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Equipment racks, optionally organized by group</p>
                 </div>
+            {% endif %}
+
+            {% if perms.dcim.view_devicetype or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_devicetype %}
                         <span class="badge pull-right">{{ stats.devicetype_count }}</span>
@@ -70,6 +86,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Physical hardware models by manufacturer</p>
                 </div>
+            {% endif %}
+
+            {% if perms.dcim.view_device or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_device %}
                         <span class="badge pull-right">{{ stats.device_count }}</span>
@@ -80,8 +99,12 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Rack-mounted network equipment, servers, and other devices</p>
                 </div>
+            {% endif %}
+
+            {% if perms.dcim.view_cable or perms.dcim.view_interface or perms.dcim.view_consoleport or perms.dcim.view_powerport or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     <h4 class="list-group-item-heading">Connections</h4>
+                {% if perms.dcim.view_cable or not settings.HIDE_RESTRICTED_UI %}
                     {% if perms.dcim.view_cable %}
                         <span class="badge pull-right">{{ stats.cable_count }}</span>
                         <p style="padding-left: 20px;"><a href="{% url 'dcim:cable_list' %}">Cables</a></p>
@@ -89,6 +112,8 @@
                         <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
                         <p style="padding-left: 20px;">Cables</p>
                     {% endif %}
+                {% endif %}
+                {% if perms.dcim.view_interface or not settings.HIDE_RESTRICTED_UI %}
                     {% if perms.dcim.view_interface %}
                         <span class="badge pull-right">{{ stats.interface_connections_count }}</span>
                         <p style="padding-left: 20px;"><a href="{% url 'dcim:interface_connections_list' %}">Interfaces</a></p>
@@ -96,6 +121,8 @@
                         <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
                         <p style="padding-left: 20px;">Interfaces</p>
                     {% endif %}
+                {% endif %}
+                {% if perms.dcim.view_consoleport or perms.dcim.view_consoleserverport or not settings.HIDE_RESTRICTED_UI %}
                     {% if perms.dcim.view_consoleport and perms.dcim.view_consoleserverport %}
                         <span class="badge pull-right">{{ stats.console_connections_count }}</span>
                         <p style="padding-left: 20px;"><a href="{% url 'dcim:console_connections_list' %}">Console</a></p>
@@ -103,6 +130,8 @@
                         <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
                         <p style="padding-left: 20px;">Console</p>
                     {% endif %}
+                {% endif %}
+                {% if perms.dcim.view_powerport or perms.dcim.view_poweroutlet or not settings.HIDE_RESTRICTED_UI %}
                     {% if perms.dcim.view_powerport and perms.dcim.view_poweroutlet %}
                         <span class="badge pull-right">{{ stats.power_connections_count }}</span>
                         <p class="list-group-item-text" style="padding-left: 20px;"><a href="{% url 'dcim:power_connections_list' %}">Power</a></p>
@@ -110,14 +139,21 @@
                         <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
                         <p style="padding-left: 20px;">Power</p>
                     {% endif %}
+                {% endif %}
                 </div>
+            {% endif %}
+
             </div>
         </div>
+    {% endif %}
+
+    {% if perms.dcim.view_powerfeed or perms.dcim.view_powerpanel or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Power</strong>
             </div>
             <div class="list-group">
+            {% if perms.dcim.view_powerfeed or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_powerfeed %}
                         <span class="badge pull-right">{{ stats.powerfeed_count }}</span>
@@ -128,6 +164,8 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Electrical circuits delivering power from panels</p>
                 </div>
+            {% endif %}
+            {% if perms.dcim.view_powerpanel or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_powerpanel %}
                         <span class="badge pull-right">{{ stats.powerpanel_count }}</span>
@@ -138,15 +176,20 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Electrical panels receiving utility power</p>
                 </div>
+            {% endif %}
             </div>
         </div>
+    {% endif %}
+
     </div>
     <div class="col-sm-6 col-md-4">
+    {% if perms.ipam.view_vrf or perms.ipam.view_aggregate or perms.ipam.view_prefix or perms.ipam.view_ipaddress or perms.ipam.view_vlan or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>IPAM</strong>
             </div>
             <div class="list-group">
+            {% if perms.ipam.view_vrf or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.ipam.view_vrf %}
                         <span class="badge pull-right">{{ stats.vrf_count }}</span>
@@ -157,6 +200,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Virtual routing and forwarding tables</p>
                 </div>
+            {% endif %}
+
+            {% if perms.ipam.view_aggregate or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.ipam.view_aggregate %}
                         <span class="badge pull-right">{{ stats.aggregate_count }}</span>
@@ -167,6 +213,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Top-level IP allocations</p>
                 </div>
+            {% endif %}
+
+            {% if perms.ipam.view_prefix or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.ipam.view_prefix %}
                         <span class="badge pull-right">{{ stats.prefix_count }}</span>
@@ -177,6 +226,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">IPv4 and IPv6 network assignments</p>
                 </div>
+            {% endif %}
+
+            {% if perms.ipam.view_ipaddress or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.ipam.view_ipaddress %}
                         <span class="badge pull-right">{{ stats.ipaddress_count }}</span>
@@ -187,6 +239,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Individual IPv4 and IPv6 addresses</p>
                 </div>
+            {% endif %}
+
+            {% if perms.ipam.view_vlan or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.ipam.view_vlan %}
                         <span class="badge pull-right">{{ stats.vlan_count }}</span>
@@ -197,13 +252,20 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Layer two domains, identified by VLAN ID</p>
                 </div>
+            {% endif %}
+
             </div>
         </div>
+    {% endif %}
+
+    {% if perms.circuits.view_provider or perms.circuits.view_circuit or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Circuits</strong>
             </div>
             <div class="list-group">
+
+            {% if perms.circuits.view_provider or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.circuits.view_provider %}
                         <span class="badge pull-right">{{ stats.provider_count }}</span>
@@ -214,6 +276,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Organizations which provide circuit connectivity</p>
                 </div>
+            {% endif %}
+
+            {% if perms.circuits.view_circuit or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.circuits.view_circuit %}
                         <span class="badge pull-right">{{ stats.circuit_count }}</span>
@@ -224,13 +289,19 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Communication links for Internet transit, peering, and other services</p>
                 </div>
+            {% endif %}
             </div>
         </div>
+    {% endif %}
+
+    {% if perms.virtualization.view_cluster or perms.virtualization.view_virtualmachine or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Virtualization</strong>
             </div>
             <div class="list-group">
+
+            {% if perms.virtualization.view_cluster or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.virtualization.view_cluster %}
                         <span class="badge pull-right">{{ stats.cluster_count }}</span>
@@ -241,6 +312,9 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Clusters of physical hosts in which VMs reside</p>
                 </div>
+            {% endif %}
+
+            {% if perms.virtualization.view_virtualmachine or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.virtualization.view_virtualmachine %}
                         <span class="badge pull-right">{{ stats.virtualmachine_count }}</span>
@@ -251,10 +325,16 @@
                     {% endif %}
                     <p class="list-group-item-text text-muted">Virtual compute instances running inside clusters</p>
                 </div>
+            {% endif %}
+
             </div>
         </div>
+    {% endif %}
+
     </div>
     <div class="col-sm-6 col-md-4">
+
+    {% if perms.secrets.view_secret or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Secrets</strong>
@@ -272,6 +352,9 @@
                 </div>
             </div>
         </div>
+    {% endif %}
+
+    {% if perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Custom Jobs</strong>
@@ -295,6 +378,9 @@
                 </div>
             {% endif %}
         </div>
+    {% endif %}
+
+    {% if perms.extras.view_objectchange or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Change Log</strong>
@@ -341,6 +427,8 @@
                 </div>
             {% endif %}
         </div>
+    {% endif %}
+
     </div>
 </div>
 {% endblock %}

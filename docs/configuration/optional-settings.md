@@ -40,6 +40,14 @@ This defines custom content to be displayed on the login page above the login fo
 
 ---
 
+## HIDE_RESTRICTED_UI
+
+Default: False
+
+When set to True, users with limited permissions will only be able to see items in the UI they have access too.
+
+---
+
 ## BASE_PATH
 
 Default: None

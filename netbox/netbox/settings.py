@@ -57,6 +57,7 @@ CUSTOM_JOBS_ROOT = os.path.join(BASE_DIR, 'custom_jobs').rstrip('/')
 CHANGELOG_RETENTION = 90
 DEVELOPER = False
 DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), 'docs')
+HIDE_RESTRICTED_UI = False
 
 # This is a dict wrapper for the various default Django `EMAIL_*` settings
 EMAIL = {}
