@@ -9,8 +9,8 @@ ALLOWED_HOSTS = ['*']
 
 DATABASE = {
     'NAME': os.getenv('NETBOX_DATABASE', 'netbox'),
-    'USER': os.getenv('NETBOX_USER', 'netbox'),
-    'PASSWORD': os.getenv('NETBOX_PASSWORD', 'netbox'),
+    'USER': os.getenv('NETBOX_USER', ''),
+    'PASSWORD': os.getenv('NETBOX_PASSWORD', ''),
     'HOST': 'localhost',
     'PORT': '',
     'CONN_MAX_AGE': 300,

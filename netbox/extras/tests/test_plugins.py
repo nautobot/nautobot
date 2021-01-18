@@ -1,12 +1,14 @@
 from unittest import skipIf
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from extras.plugins.utils import load_plugin
+from dcim.models import Site
 from extras.plugins.exceptions import PluginNotFound, PluginImproperlyConfigured
+from extras.plugins.utils import load_plugin
+from extras.plugins.validators import wrap_model_clean_methods
 from extras.registry import registry
 from extras.tests.dummy_plugin import config as dummy_config
 from utilities.testing import APITestCase
@@ -64,6 +66,14 @@ class PluginTest(TestCase):
         from extras.tests.dummy_plugin.template_content import SiteContent
 
         self.assertIn(SiteContent, registry['plugin_template_extensions']['dcim.site'])
+
+    def test_custom_validators_registration(self):
+        """
+        Check that plugin custom validators are registed correctly
+        """
+        from extras.tests.dummy_plugin.custom_validators import SiteCustomValidator
+
+        self.assertIn(SiteCustomValidator, registry['plugin_custom_validators']['dcim.site'])
 
     def test_middleware(self):
         """
@@ -167,7 +177,23 @@ class PluginTest(TestCase):
         with self.assertRaises(PluginImproperlyConfigured):
             DummyConfigWithInstalledApps.validate({}, settings.VERSION)
 
+    def test_installed_apps(self):
+        """
+        Validate that plugin installed apps and dependencies are are registerd.
+        """
+        self.assertIn("extras.tests.dummy_plugin.DummyPluginConfig", settings.INSTALLED_APPS)
+        self.assertIn("extras.tests.dummy_plugin_dependency", settings.INSTALLED_APPS)
 
+        # Establish dummy config to have invalid installed_apps (tuple)
+        class DummyConfigWithInstalledApps(dummy_config):
+            installed_apps = ('foo', 'bar')
+
+        # Validation should fail when a installed_apps is not a list
+        with self.assertRaises(PluginImproperlyConfigured):
+            DummyConfigWithInstalledApps.validate({}, settings.VERSION)
+
+
+@skipIf('extras.tests.dummy_plugin' not in settings.PLUGINS, "dummy_plugin not in settings.PLUGINS")
 class PluginAPITestCase(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_api_views(self):
@@ -179,6 +205,27 @@ class PluginAPITestCase(APITestCase):
         # Test GET request
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
+
+
+@skipIf('extras.tests.dummy_plugin' not in settings.PLUGINS, "dummy_plugin not in settings.PLUGINS")
+class PluginCustomValidationTest(TestCase):
+
+    def setUp(self):
+        # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
+        # This always occurs during the first run of migrations, however, During testing we
+        # must manually call the method again to actually perform the action, now that the
+        # ContentType table has been created.
+        wrap_model_clean_methods()
+
+    def test_custom_validator_raises_exception(self):
+
+        site = Site(
+            name="this site has a matching name",
+            slug="site1"
+        )
+
+        with self.assertRaises(ValidationError):
+            site.clean()
 
 
 class LoadPluginTest(TestCase):

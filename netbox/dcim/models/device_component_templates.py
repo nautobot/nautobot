@@ -5,6 +5,7 @@ from django.db import models
 from dcim.choices import *
 from dcim.constants import *
 from extras.models import ObjectChange
+from extras.utils import extras_features
 from utilities.fields import NaturalOrderingField
 from utilities.querysets import RestrictedQuerySet
 from utilities.ordering import naturalize_interface
@@ -82,6 +83,7 @@ class ComponentTemplateModel(models.Model):
         )
 
 
+@extras_features('custom_validators')
 class ConsolePortTemplate(ComponentTemplateModel):
     """
     A template for a ConsolePort to be created for a new Device.
@@ -105,6 +107,7 @@ class ConsolePortTemplate(ComponentTemplateModel):
         )
 
 
+@extras_features('custom_validators')
 class ConsoleServerPortTemplate(ComponentTemplateModel):
     """
     A template for a ConsoleServerPort to be created for a new Device.
@@ -128,6 +131,7 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         )
 
 
+@extras_features('custom_validators')
 class PowerPortTemplate(ComponentTemplateModel):
     """
     A template for a PowerPort to be created for a new Device.
@@ -174,6 +178,7 @@ class PowerPortTemplate(ComponentTemplateModel):
                 })
 
 
+@extras_features('custom_validators')
 class PowerOutletTemplate(ComponentTemplateModel):
     """
     A template for a PowerOutlet to be created for a new Device.
@@ -225,6 +230,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
         )
 
 
+@extras_features('custom_validators')
 class InterfaceTemplate(ComponentTemplateModel):
     """
     A template for a physical data interface on a new Device.
@@ -259,6 +265,7 @@ class InterfaceTemplate(ComponentTemplateModel):
         )
 
 
+@extras_features('custom_validators')
 class FrontPortTemplate(ComponentTemplateModel):
     """
     Template for a pass-through port on the front of a new Device.
@@ -319,6 +326,7 @@ class FrontPortTemplate(ComponentTemplateModel):
         )
 
 
+@extras_features('custom_validators')
 class RearPortTemplate(ComponentTemplateModel):
     """
     Template for a pass-through port on the rear of a new Device.
@@ -349,6 +357,7 @@ class RearPortTemplate(ComponentTemplateModel):
         )
 
 
+@extras_features('custom_validators')
 class DeviceBayTemplate(ComponentTemplateModel):
     """
     A template for a DeviceBay to be created for a new parent Device.

@@ -30,6 +30,7 @@ __all__ = (
 # Cluster types
 #
 
+@extras_features('custom_validators')
 class ClusterType(ChangeLoggedModel):
     """
     A type of Cluster.
@@ -72,6 +73,7 @@ class ClusterType(ChangeLoggedModel):
 # Cluster groups
 #
 
+@extras_features('custom_validators')
 class ClusterGroup(ChangeLoggedModel):
     """
     An organizational group of Clusters.
@@ -114,7 +116,7 @@ class ClusterGroup(ChangeLoggedModel):
 # Clusters
 #
 
-@extras_features('custom_fields', 'custom_links', 'export_templates', 'webhooks')
+@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'webhooks')
 class Cluster(ChangeLoggedModel, CustomFieldModel):
     """
     A cluster of VirtualMachines. Each Cluster may optionally be associated with one or more Devices.
@@ -198,7 +200,7 @@ class Cluster(ChangeLoggedModel, CustomFieldModel):
 # Virtual machines
 #
 
-@extras_features('custom_fields', 'custom_links', 'export_templates', 'webhooks')
+@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'webhooks')
 class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
     """
     A virtual machine which runs inside a Cluster.
@@ -370,7 +372,7 @@ class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
 # Interfaces
 #
 
-@extras_features('export_templates', 'webhooks')
+@extras_features('custom_validators', 'export_templates', 'webhooks')
 class VMInterface(BaseInterface):
     virtual_machine = models.ForeignKey(
         to='virtualization.VirtualMachine',

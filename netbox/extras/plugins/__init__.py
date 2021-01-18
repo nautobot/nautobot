@@ -3,6 +3,7 @@ import inspect
 from packaging import version
 
 from django.apps import AppConfig
+from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 
 from extras.registry import registry
@@ -14,6 +15,7 @@ from utilities.choices import ButtonColorChoices
 # Initialize plugin registry stores
 registry['plugin_template_extensions'] = collections.defaultdict(list)
 registry['plugin_menu_items'] = {}
+registry['plugin_custom_validators'] = collections.defaultdict(list)
 
 
 #
@@ -59,6 +61,7 @@ class PluginConfig(AppConfig):
     # integrated components.
     template_extensions = 'template_content.template_extensions'
     menu_items = 'navigation.menu_items'
+    custom_validators = 'custom_validators.custom_validators'
 
     def ready(self):
 
@@ -71,6 +74,11 @@ class PluginConfig(AppConfig):
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
         if menu_items is not None:
             register_menu_items(self.verbose_name, menu_items)
+
+        # Register model validators (if defined)
+        validators = import_object(f"{self.__module__}.{self.custom_validators}")
+        if validators is not None:
+            register_custom_validators(validators)
 
     @classmethod
     def validate(cls, user_config, netbox_version):
@@ -268,3 +276,57 @@ def register_menu_items(section_name, class_list):
                 raise TypeError(f"{button} must be an instance of extras.plugins.PluginMenuButton")
 
     registry['plugin_menu_items'][section_name] = class_list
+
+
+#
+# Model Validators
+#
+
+class PluginCustomValidator:
+    """
+    This class is used to register plugin custom model validators which act on specified models. It contains the clean
+    method which is overridden by plugin authors to execute custom validation logic. Plugin authors must raise
+    ValidationError within this method to trigger validation error messages which are propgated to the user.
+    A convenience method `validation_error(<message>)` may be used for this purpose.
+
+    The `model` attribute on the class defines the model to which this validator is registered. It
+    should be set as a string in the form '<app_label>.<model_name>'.
+    """
+    model = None
+
+    def __init__(self, obj):
+        self.context = {
+            "object": obj
+        }
+
+    def validation_error(self, message):
+        """
+        Convenience method for raising `django.core.exceptions.ValidationError` which is required in order to
+        trigger validation error messages which are propgated to the user.
+        """
+        raise ValidationError(message)
+
+    def clean(self):
+        """
+        Implement custom model validation in the standard Django clean method pattern. The model instance is accessed
+        with the `object` key within `self.context`, e.g. `self.context['object']`. ValidationError must be raised to
+        prevent saving model instance changes, and propogate messages to the user. For convenience,
+        `self.validation_error(<message>)` may be called to raise a ValidationError.
+        """
+        raise NotImplementedError
+
+
+def register_custom_validators(class_list):
+    """
+    Register a list of PluginCustomValidator classes
+    """
+    # Validation
+    for custom_validator in class_list:
+        if not inspect.isclass(custom_validator):
+            raise TypeError(f"PluginCustomValidator class {custom_validator} was passed as an instance!")
+        if not issubclass(custom_validator, PluginCustomValidator):
+            raise TypeError(f"{custom_validator} is not a subclass of extras.plugins.PluginCustomValidator!")
+        if custom_validator.model is None:
+            raise TypeError(f"PluginCustomValidator class {custom_validator} does not define a valid model!")
+
+        registry['plugin_custom_validators'][custom_validator.model].append(custom_validator)

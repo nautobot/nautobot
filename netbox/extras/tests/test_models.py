@@ -2,6 +2,7 @@ from django.test import TestCase
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Site, Region
 from extras.models import ConfigContext, Tag
+from extras.plugins.validators import custom_validator_clean
 from tenancy.models import Tenant, TenantGroup
 from virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 

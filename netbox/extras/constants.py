@@ -6,6 +6,7 @@ EXTRAS_FEATURES = [
     'custom_fields',
     'custom_links',
     'export_templates',
+    'custom_validators',
     'job_results',
     'webhooks'
 ]

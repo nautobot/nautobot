@@ -390,6 +390,32 @@ class SiteAnimalCount(PluginTemplateExtension):
 template_extensions = [SiteAnimalCount]
 ```
 
+## Implementing Custom Validators
+
+Plugins can register custom validator classes which implement model validation logic to be executed during a model's `clean()` method. Like template extensions, custom validators are registered to a single model and offer a method which plugin authors override to implement their validation logic. This is accomplished by subclassing `PluginCustomValidator` and implementing the `clean()` method.
+
+Plugin authors must raise `django.core.exceptions.ValidationError` within the `clean()` method to trigger validation error messages which are propgated to the user and prevent saving of the model instance. A convenience method `validation_error()` may be used to simplify this process. Raising a `ValidationError` is no different than vanilla Django, and the convenience method will simply pass the provided message through to the exception.
+
+When a PluginCustomValidator is instantiated, the model instance is assigned to context dictionary using the `object` key, much like PluginTemplateExtensions. E.g. `self.context['object']`.
+
+Declared subclasses should be gathered into a list or tuple for integration with NetBox. By default, NetBox looks for an iterable named `custom_validators` within a `custom_validators.py` file. (This can be overridden by setting `custom_validators` to a custom value on the plugin's PluginConfig.) An example is below.
+
+```python
+from extras.plugins import PluginCustomValidator
+
+class SiteValidator(PluginCustomValidator):
+    model = 'dcim.site'
+
+    def clean(self):
+        if self.context['object'].region is None:
+            # Enforce that all sites must be assigned to a region
+            self.validation_error({
+                "region": "All sites must be assigned to a region"
+            })
+
+custom_validators = [SiteValidator]
+```
+
 ## Caching Configuration
 
 By default, all query operations within a plugin are cached. To change this, define a caching configuration under the PluginConfig class' `caching_config` attribute. All configuration keys will be applied within the context of the plugin; there is no need to include the plugin name. An example configuration is below:
