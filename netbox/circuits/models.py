@@ -20,7 +20,14 @@ __all__ = (
 )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class Provider(ChangeLoggedModel, CustomFieldModel):
     """
     Each Circuit belongs to a Provider. This is usually a telecommunications company or similar organization. This model
@@ -93,7 +100,10 @@ class Provider(ChangeLoggedModel, CustomFieldModel):
         )
 
 
-@extras_features('custom_validators', 'graphql')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class CircuitType(ChangeLoggedModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
@@ -133,7 +143,14 @@ class CircuitType(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class Circuit(ChangeLoggedModel, CustomFieldModel):
     """
     A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
@@ -234,7 +251,10 @@ class Circuit(ChangeLoggedModel, CustomFieldModel):
         return self._get_termination('Z')
 
 
-@extras_features('custom_validators', 'graphql')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class CircuitTermination(PathEndpoint, CableTermination):
     circuit = models.ForeignKey(
         to='circuits.Circuit',

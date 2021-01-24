@@ -39,7 +39,10 @@ __all__ = (
 # Racks
 #
 
-@extras_features('custom_validators', 'export_templates', 'graphql')
+@extras_features(
+    'custom_validators',
+    'export_templates',
+    'graphql')
 class RackGroup(MPTTModel, ChangeLoggedModel):
     """
     Racks can be grouped as subsets within a Site. The scope of a group will depend on how Sites are defined. For
@@ -116,7 +119,10 @@ class RackGroup(MPTTModel, ChangeLoggedModel):
             raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
 
 
-@extras_features('custom_validators', 'graphql')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class RackRole(ChangeLoggedModel):
     """
     Racks can be organized by functional role, similar to Devices.
@@ -159,7 +165,14 @@ class RackRole(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class Rack(ChangeLoggedModel, CustomFieldModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
@@ -550,7 +563,14 @@ class Rack(ChangeLoggedModel, CustomFieldModel):
         return int(allocated_draw_total / available_power_total * 100)
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class RackReservation(ChangeLoggedModel, CustomFieldModel):
     """
     One or more reserved units within a Rack.

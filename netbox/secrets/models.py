@@ -273,7 +273,12 @@ class SecretRole(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'export_templates', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'export_templates',
+    'webhooks'
+)
 class Secret(ChangeLoggedModel, CustomFieldModel):
     """
     A Secret stores an AES256-encrypted copy of sensitive data, such as passwords or secret keys. An irreversible

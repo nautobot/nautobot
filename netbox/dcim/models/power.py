@@ -22,7 +22,14 @@ __all__ = (
 # Power
 #
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class PowerPanel(ChangeLoggedModel, CustomFieldModel):
     """
     A distribution point for electrical power; e.g. a data center RPP.
@@ -73,7 +80,14 @@ class PowerPanel(ChangeLoggedModel, CustomFieldModel):
             ))
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class PowerFeed(ChangeLoggedModel, PathEndpoint, CableTermination, CustomFieldModel):
     """
     An electrical circuit delivered from a PowerPanel.

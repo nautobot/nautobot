@@ -16,7 +16,10 @@ __all__ = (
 )
 
 
-@extras_features('custom_validators', 'graphql')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class TenantGroup(MPTTModel, ChangeLoggedModel):
     """
     An arbitrary collection of Tenants.
@@ -76,7 +79,14 @@ class TenantGroup(MPTTModel, ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class Tenant(ChangeLoggedModel, CustomFieldModel):
     """
     A Tenant represents an organization served by the NetBox owner. This is typically a customer or an internal

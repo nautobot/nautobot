@@ -38,7 +38,14 @@ __all__ = (
 )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class VRF(ChangeLoggedModel, CustomFieldModel):
     """
     A virtual routing and forwarding (VRF) table represents a discrete layer three forwarding domain (e.g. a routing
@@ -118,7 +125,14 @@ class VRF(ChangeLoggedModel, CustomFieldModel):
         return self.name
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class RouteTarget(ChangeLoggedModel, CustomFieldModel):
     """
     A BGP extended community used to control the redistribution of routes among VRFs, as defined in RFC 4364.
@@ -162,7 +176,10 @@ class RouteTarget(ChangeLoggedModel, CustomFieldModel):
         )
 
 
-@extras_features('custom_validators', 'graphql')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class RIR(ChangeLoggedModel):
     """
     A Regional Internet Registry (RIR) is responsible for the allocation of a large portion of the global IP address
@@ -210,7 +227,14 @@ class RIR(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class Aggregate(ChangeLoggedModel, CustomFieldModel):
     """
     An aggregate exists at the root level of the IP address space hierarchy in NetBox. Aggregates are used to organize
@@ -318,7 +342,10 @@ class Aggregate(ChangeLoggedModel, CustomFieldModel):
         return int(float(child_prefixes.size) / self.prefix.size * 100)
 
 
-@extras_features('custom_validators', 'graphql')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class Role(ChangeLoggedModel):
     """
     A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
@@ -359,7 +386,14 @@ class Role(ChangeLoggedModel):
         )
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class Prefix(ChangeLoggedModel, CustomFieldModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length. Prefixes can optionally be assigned to Sites and
@@ -617,7 +651,14 @@ class Prefix(ChangeLoggedModel, CustomFieldModel):
             return int(float(child_count) / prefix_size * 100)
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class IPAddress(ChangeLoggedModel, CustomFieldModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
@@ -836,7 +877,10 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel):
         return IPAddressRoleChoices.CSS_CLASSES.get(self.role)
 
 
-@extras_features('custom_validators', 'graphql')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class VLANGroup(ChangeLoggedModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
@@ -897,7 +941,14 @@ class VLANGroup(ChangeLoggedModel):
         return None
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class VLAN(ChangeLoggedModel, CustomFieldModel):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094). Each VLAN must be assigned
@@ -1018,7 +1069,14 @@ class VLAN(ChangeLoggedModel, CustomFieldModel):
         ).distinct()
 
 
-@extras_features('custom_fields', 'custom_links', 'custom_validators', 'export_templates', 'graphql', 'webhooks')
+@extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
+    'export_templates',
+    'graphql',
+    'webhooks'
+)
 class Service(ChangeLoggedModel, CustomFieldModel):
     """
     A Service represents a layer-four service (e.g. HTTP or SSH) running on a Device or VirtualMachine. A Service may
