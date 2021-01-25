@@ -28,11 +28,25 @@ class mac_unix_expanded_uppercase(mac_unix_expanded):
     word_fmt = '%.2X'
 
 
-class MACAddressField(models.Field):
+class MACAddressField(models.CharField):
     description = "PostgreSQL MAC Address field"
+
+    def __init__(self, *args, **kwargs):
+        kwargs['max_length'] = 18
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        del kwargs["max_length"]
+        return name, path, args, kwargs
 
     def python_type(self):
         return EUI
+
+    @property
+    def validators(self):
+        # rely on db to validate len
+        return []
 
     def from_db_value(self, value, expression, connection):
         return self.to_python(value)
@@ -40,13 +54,12 @@ class MACAddressField(models.Field):
     def to_python(self, value):
         if value is None:
             return value
+        if isinstance(value, str):
+            value = value.strip()
         try:
             return EUI(value, version=48, dialect=mac_unix_expanded_uppercase)
         except AddrFormatError as e:
             raise ValidationError("Invalid MAC address format: {}".format(value))
-
-    def db_type(self, connection):
-        return 'macaddr'
 
     def get_prep_value(self, value):
         if not value:
