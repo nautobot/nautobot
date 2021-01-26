@@ -591,7 +591,7 @@
                 </li>
             {% endif %}
 
-            {% if perms.circuits.view_circuit or perms.circuits.view_circuittype or perms.circuits.view_provider or perms.circuits.view_ or not settings.HIDE_RESTRICTED_UI %}
+            {% if perms.circuits.view_circuit or perms.circuits.view_circuittype or perms.circuits.view_provider or not settings.HIDE_RESTRICTED_UI %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Circuits <span class="caret"></span></a>
                     <ul class="dropdown-menu">
@@ -710,20 +710,26 @@
                 </li>
             {% endif %}
 
-            {% if perms.extras.view_objectchange or perms.extras.view_configcontext or perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
+            {% if perms.extras.view_objectchange or perms.extras.view_gitrepository or perms.extras.view_configcontext or perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Other <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                {% if perms.extras.view_objectchange or not settings.HIDE_RESTRICTED_UI %}
+                {% if perms.extras.view_objectchange or perms.extras.view_jobresult or not settings.HIDE_RESTRICTED_UI %}
                         <li class="dropdown-header">Logging</li>
                     {% if perms.extras.view_objectchange or not settings.HIDE_RESTRICTED_UI %}
                         <li{% if not perms.extras.view_objectchange %} class="disabled"{% endif %}>
                             <a href="{% url 'extras:objectchange_list' %}">Change Log</a>
                         </li>
                     {% endif %}
+
+                    {% if perms.extras.view_jobresult or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_jobresult %} class="disabled"{% endif %}>
+                            <a href="{% url 'extras:jobresult_list' %}">Job Results</a>
+                        </li>
+                    {% endif %}
                 {% endif %}
 
-                {% if perms.extras.view_configcontext or perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
+                {% if perms.extras.view_gitrepository or not settings.HIDE_RESTRICTED_UI %}
                         <li class="divider"></li>
                         <li class="dropdown-header">Data Sources</li>
                         <li{% if not perms.extras.view_gitrepository %} class="disabled"{% endif %}>
@@ -734,10 +740,13 @@
                             {% endif %}
                             <a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a>
                         </li>
+                {% endif %}
+
+                {% if perms.extras.view_configcontext or perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
                         <li class="divider"></li>
                         <li class="dropdown-header">Miscellaneous</li>
 
-                    {% if perms.extras.view_ or not settings.HIDE_RESTRICTED_UI %}
+                    {% if perms.extras.view_configcontext or not settings.HIDE_RESTRICTED_UI %}
                         <li{% if not perms.extras.view_configcontext %} class="disabled"{% endif %}>
                             {% if perms.extras.add_configcontext %}
                                 <div class="buttons pull-right">
@@ -747,6 +756,7 @@
                             <a href="{% url 'extras:configcontext_list' %}">Config Contexts</a>
                         </li>
                     {% endif %}
+
                     {% if perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
                         <li{% if not perms.extras.view_customjob %} class="disabled"{% endif %}>
                             <a href="{% url 'extras:customjob_list' %}">Custom Jobs</a>

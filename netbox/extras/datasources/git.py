@@ -20,6 +20,7 @@ from utilities.utils import copy_safe_request
 from virtualization.models import ClusterGroup, Cluster
 from tenancy.models import TenantGroup, Tenant
 from .registry import refresh_datasource_content
+from .utils import files_from_contenttype_directories
 
 logger = logging.getLogger(f"netbox.datasources.git")
 
@@ -77,7 +78,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
 
     finally:
         if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-            if job_result.check_for_failed_logs():
+            if job_result.data["total"][LogLevelChoices.LOG_FAILURE] > 0:
                 job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
             else:
                 job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
@@ -114,9 +115,10 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     try:
         repo_helper = GitRepo(to_path, from_url)
         head = repo_helper.checkout(from_branch, head)
-        repository_record.current_head = head
-        # Make sure we don't recursively trigger a new resync of the repository!
-        repository_record.save(trigger_resync=False)
+        if repository_record.current_head != head:
+            repository_record.current_head = head
+            # Make sure we don't recursively trigger a new resync of the repository!
+            repository_record.save(trigger_resync=False)
 
     except Exception as exc:
         if job_result:
@@ -153,33 +155,75 @@ def update_git_config_contexts(repository_record, job_result):
         return
 
     managed_config_contexts = set()
-    for filename in os.listdir(config_context_path):
-        job_result.log(f"Loading config context from `{filename}`", logger=logger)
-        context_record = None
+
+    # First, handle the "flat file" case - data files in the root config_context_path,
+    # whose metadata is expressed purely within the contents of the file:
+    for file_name in os.listdir(config_context_path):
+        if not os.path.isfile(os.path.join(config_context_path, file_name)):
+            continue
+        job_result.log(f"Loading config context from `{file_name}`", grouping="config contexts", logger=logger)
         try:
-            with open(os.path.join(config_context_path, filename)) as fd:
+            with open(os.path.join(config_context_path, file_name), 'r') as fd:
                 # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
                 try:
                     context_data = yaml.safe_load(fd)
                 except Exception as exc:
-                    raise RuntimeError(f"Error in loading config context data from `{filename}`: {exc}")
+                    raise RuntimeError(f"Error in loading config context data from `{file_name}`: {exc}")
 
             # A file can contain one config context dict or a list thereof
             if isinstance(context_data, dict):
-                import_config_context(context_data, repository_record, job_result, logger)
-                managed_config_contexts.add(context_data.get('name'))
+                context_name = import_config_context(context_data, repository_record, job_result, logger)
+                managed_config_contexts.add(context_name)
             elif isinstance(context_data, list):
                 for context_data_entry in context_data:
-                    import_config_context(context_data_entry, repository_record, job_result, logger)
-                    managed_config_contexts.add(context_data_entry.get('name'))
+                    context_name = import_config_context(context_data_entry, repository_record, job_result, logger)
+                    managed_config_contexts.add(context_name)
             else:
                 raise RuntimeError(
-                    f"Error in loading config context data from `{filename}`: data must be a dict or list of dicts"
+                    f"Error in loading config context data from `{file_name}`: data must be a dict or list of dicts"
                 )
 
         except Exception as exc:
-            job_result.log(str(exc), obj=context_record, level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
+            job_result.log(
+                str(exc), level_choice=LogLevelChoices.LOG_FAILURE, grouping="config contexts", logger=logger,
+            )
             job_result.save()
+
+    # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.[json|yaml]
+    for filter_type in (
+        'regions', 'sites', 'roles', 'platforms', 'cluster_groups', 'clusters', 'tenant_groups', 'tenants', 'tags',
+    ):
+        dir_path = os.path.join(config_context_path, filter_type)
+        if not os.path.isdir(dir_path):
+            continue
+
+        for file_name in os.listdir(dir_path):
+            slug = os.path.splitext(file_name)[0]
+            job_result.log(
+                f'Loading config context, filter `{filter_type} = [slug: "{slug}"]`, from `{filter_type}/{file_name}`',
+                grouping="config contexts",
+                logger=logger,
+            )
+            try:
+                with open(os.path.join(dir_path, file_name), 'r') as fd:
+                    # Data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
+                    try:
+                        context_data = yaml.safe_load(fd)
+                    except Exception as exc:
+                        raise RuntimeError("Error in loading config context data from `{file_name}`: {exc}")
+
+                # Unlike the above case, these files always contain just a single config context record
+
+                # Add the implied filter to the context metadata
+                context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"slug": slug})
+
+                context_name = import_config_context(context_data, repository_record, job_result, logger)
+                managed_config_contexts.add(context_name)
+            except Exception as exc:
+                job_result.log(
+                    str(exc), level_choice=LogLevelChoices.LOG_FAILURE, grouping="config contexts", logger=logger,
+                )
+                job_result.save()
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_contexts(repository_record, job_result, preserve=managed_config_contexts)
@@ -188,6 +232,9 @@ def update_git_config_contexts(repository_record, job_result):
 def import_config_context(context_data, repository_record, job_result, logger):
     """
     Parse a given dictionary of data to create/update a ConfigContext record.
+
+    The dictionary is expected to have a key "_metadata" which defines properties on the ConfigContext record itself
+    (name, weight, description, etc.), while all other keys in the dictionary will go into the record's "data" field.
 
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
     the reason is that the serializer only allows us to identify related objects (Region, Site, DeviceRole, etc.)
@@ -199,8 +246,10 @@ def import_config_context(context_data, repository_record, job_result, logger):
     # TODO: check context_data against a schema of some sort?
 
     # Set defaults for optional fields
-    context_data.setdefault('description', '')
-    context_data.setdefault('is_active', True)
+    context_metadata = context_data.setdefault('_metadata', {})
+    context_metadata.setdefault('weight', 1000)
+    context_metadata.setdefault('description', '')
+    context_metadata.setdefault('is_active', True)
 
     # Translate relationship queries/filters to lists of related objects
     relations = {}
@@ -216,18 +265,18 @@ def import_config_context(context_data, repository_record, job_result, logger):
         ('tags', Tag),
     ]:
         relations[key] = []
-        for object_data in context_data.get(key, ()):
+        for object_data in context_metadata.get(key, ()):
             try:
                 object_instance = model_class.objects.get(**object_data)
             except model_class.DoesNotExist as exc:
                 raise RuntimeError(
                     f"No matching {model_class.__name__} found for {object_data}; unable to create/update "
-                    f"context {context_data.get('name')}"
+                    f"context {context_metadata.get('name')}"
                 ) from exc
             except model_class.MultipleObjectsReturned as exc:
                 raise RuntimeError(
                     f"Multiple {model_class.__name__} found for {object_data}; unable to create/update "
-                    f"context {context_data.get('name')}"
+                    f"context {context_metadata.get('name')}"
                 ) from exc
             relations[key].append(object_instance)
 
@@ -242,24 +291,32 @@ def import_config_context(context_data, repository_record, job_result, logger):
         save_needed = False
         try:
             context_record = ConfigContext.objects.get(
-                name=context_data.get('name'),
+                name=context_metadata.get('name'),
                 owner_content_type=git_repository_content_type,
                 owner_object_id=repository_record.pk,
             )
         except ConfigContext.DoesNotExist:
             context_record = ConfigContext(
-                name=context_data.get('name'),
+                name=context_metadata.get('name'),
                 owner_content_type=git_repository_content_type,
                 owner_object_id=repository_record.pk,
             )
             created = True
 
-        for field in ('weight', 'description', 'is_active', 'data'):
-            new_value = context_data[field]
+        for field in ('weight', 'description', 'is_active'):
+            new_value = context_metadata[field]
             if getattr(context_record, field) != new_value:
                 setattr(context_record, field, new_value)
                 modified = True
                 save_needed = True
+
+        data = context_data.copy()
+        del data["_metadata"]
+
+        if context_record.data != data:
+            context_record.data = data
+            modified = True
+            save_needed = True
 
         if created:
             # Save it so that it gets a PK, required before we can set the relations
@@ -282,6 +339,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
             "Successfully created config context",
             obj=context_record,
             level_choice=LogLevelChoices.LOG_SUCCESS,
+            grouping="config contexts",
             logger=logger
         )
     elif modified:
@@ -289,6 +347,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
             "Successfully refreshed config context",
             obj=context_record,
             level_choice=LogLevelChoices.LOG_SUCCESS,
+            grouping="config contexts",
             logger=logger
         )
     else:
@@ -296,8 +355,11 @@ def import_config_context(context_data, repository_record, job_result, logger):
             "No change to config context",
             obj=context_record,
             level_choice=LogLevelChoices.LOG_INFO,
+            grouping="config contexts",
             logger=logger
         )
+
+    return context_record.name if context_record else None
 
 
 def delete_git_config_contexts(repository_record, job_result, preserve=()):
@@ -309,7 +371,10 @@ def delete_git_config_contexts(repository_record, job_result, preserve=()):
         if context_record.name not in preserve:
             context_record.delete()
             job_result.log(
-                f"Deleted config context {context_record}", level_choice=LogLevelChoices.LOG_WARNING, logger=logger
+                f"Deleted config context {context_record}",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                grouping="config contexts",
+                logger=logger,
             )
 
 #
@@ -346,99 +411,96 @@ def update_git_export_templates(repository_record, job_result):
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
 
     managed_export_templates = {}
-    for app_label in os.listdir(export_template_path):
-        app_label_path = os.path.join(export_template_path, app_label)
-        if not os.path.isdir(app_label_path):
-            continue
-        for modelname in os.listdir(app_label_path):
-            model_path = os.path.join(app_label_path, modelname)
-            if not os.path.isdir(model_path):
-                continue
+    for model_content_type, file_path in files_from_contenttype_directories(
+        export_template_path, job_result, "export templates"
+    ):
+        file_name = os.path.basename(file_path)
+        app_label = model_content_type.app_label
+        modelname = model_content_type.model
+        job_result.log(
+            f"Loading `{app_label}.{modelname}` export template from `{file_name}`",
+            grouping="export templates",
+            logger=logger,
+        )
+        managed_export_templates.setdefault(f"{app_label}.{modelname}", set()).add(file_name)
+        template_record = None
+        try:
+            with open(file_path, 'r') as fd:
+                template_content = fd.read()
 
+            # FIXME: Normally ObjectChange records are automatically generated every time we save an object,
+            # regardless of whether any fields were actually modified.
+            # Because a single GitRepository may manage dozens of records, this would result in a lot
+            # of noise every time a repository gets resynced.
+            # To reduce noise until the base issue is fixed, we need to explicitly detect object changes:
+            created = False
+            modified = False
             try:
-                model_content_type = ContentType.objects.get(app_label=app_label, model=modelname)
-            except ContentType.DoesNotExist:
+                template_record = ExportTemplate.objects.get(
+                    content_type=model_content_type,
+                    name=file_name,
+                    owner_content_type=git_repository_content_type,
+                    owner_object_id=repository_record.pk,
+                )
+            except ExportTemplate.DoesNotExist:
+                template_record = ExportTemplate(
+                    content_type=model_content_type,
+                    name=file_name,
+                    owner_content_type=git_repository_content_type,
+                    owner_object_id=repository_record.pk,
+                )
+                created = True
+                modified = True
+
+            if template_record.template_code != template_content:
+                template_record.template_code = template_content
+                modified = True
+
+            if template_record.mime_type != 'text/plain':
+                template_record.mime_type = 'text/plain'
+                modified = True
+
+            if template_record.file_extension != os.path.splitext(file_name)[-1]:
+                template_record.file_extension = os.path.splitext(file_name)[-1]
+                modified = True
+
+            if modified:
+                template_record.save()
+
+            if created:
                 job_result.log(
-                    f"Skipping `{app_label}.{modelname}` as it isn't a known content type",
-                    level_choice=LogLevelChoices.LOG_FAILURE,
+                    "Successfully created export template",
+                    obj=template_record,
+                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    grouping="export templates",
+                    logger=logger
+                )
+            elif modified:
+                job_result.log(
+                    "Successfully refreshed export template",
+                    obj=template_record,
+                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    grouping="export templates",
+                    logger=logger
+                )
+            else:
+                job_result.log(
+                    "No change to export template",
+                    obj=template_record,
+                    level_choice=LogLevelChoices.LOG_INFO,
+                    grouping="export templates",
                     logger=logger,
                 )
-                continue
 
-            for filename in os.listdir(model_path):
-                job_result.log(f"Loading `{app_label}.{modelname}` export template from `{filename}`", logger=logger)
-                managed_export_templates.setdefault(f"{app_label}.{modelname}", set()).add(filename)
-                template_record = None
-                try:
-                    with open(os.path.join(model_path, filename), 'r') as fd:
-                        template_content = fd.read()
-
-                    # FIXME: Normally ObjectChange records are automatically generated every time we save an object,
-                    # regardless of whether any fields were actually modified.
-                    # Because a single GitRepository may manage dozens of records, this would result in a lot
-                    # of noise every time a repository gets resynced.
-                    # To reduce noise until the base issue is fixed, we need to explicitly detect object changes:
-                    created = False
-                    modified = False
-                    try:
-                        template_record = ExportTemplate.objects.get(
-                            content_type=model_content_type,
-                            name=filename,
-                            owner_content_type=git_repository_content_type,
-                            owner_object_id=repository_record.pk,
-                        )
-                    except ExportTemplate.DoesNotExist:
-                        template_record = ExportTemplate(
-                            content_type=model_content_type,
-                            name=filename,
-                            owner_content_type=git_repository_content_type,
-                            owner_object_id=repository_record.pk,
-                        )
-                        created = True
-                        modified = True
-
-                    if template_record.template_code != template_content:
-                        template_record.template_code = template_content
-                        modified = True
-
-                    if template_record.mime_type != 'text/plain':
-                        template_record.mime_type = 'text/plain'
-                        modified = True
-
-                    if template_record.file_extension != os.path.splitext(filename)[-1]:
-                        template_record.file_extension = os.path.splitext(filename)[-1]
-                        modified = True
-
-                    if modified:
-                        template_record.save()
-
-                    if created:
-                        job_result.log(
-                            "Successfully created export template",
-                            obj=template_record,
-                            level_choice=LogLevelChoices.LOG_SUCCESS,
-                            logger=logger
-                        )
-                    elif modified:
-                        job_result.log(
-                            "Successfully refreshed export template",
-                            obj=template_record,
-                            level_choice=LogLevelChoices.LOG_SUCCESS,
-                            logger=logger
-                        )
-                    else:
-                        job_result.log(
-                            "No change to export template",
-                            obj=template_record,
-                            level_choice=LogLevelChoices.LOG_INFO,
-                            logger=logger,
-                        )
-
-                except Exception as exc:
-                    job_result.log(
-                        str(exc), obj=template_record, level_choice=LogLevelChoices.LOG_FAILURE, logger=logger,
-                    )
-                    job_result.save()
+        except Exception as exc:
+            job_result.log(
+                str(exc),
+                obj=template_record,
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="export templates",
+                logger=logger,
+            )
+            job_result.save()
 
     # Delete any prior templates that are owned by this repository but were not discovered above
     delete_git_export_templates(repository_record, job_result, preserve=managed_export_templates)
@@ -457,7 +519,10 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
         if template_record.name not in preserve.get(key, ()):
             template_record.delete()
             job_result.log(
-                f"Deleted export template {template_record}", level_choice=LogLevelChoices.LOG_WARNING, logger=logger
+                f"Deleted export template {template_record}",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                grouping="export templates",
+                logger=logger,
             )
 
 

@@ -18,6 +18,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.functional import classproperty
 
+from cacheops import cached
 from django_rq import job
 
 from .choices import JobResultStatusChoices, LogLevelChoices
@@ -272,55 +273,49 @@ class BaseCustomJob:
 
     # Logging
 
-    def _log(self, obj, message, level_choice=LogLevelChoices.LOG_DEFAULT, log_level=logging.INFO, status=None):
+    def _log(self, obj, message, level_choice=LogLevelChoices.LOG_DEFAULT):
         """
         Log a message. Do not call this method directly; use one of the log_* wrappers below.
         """
-        if level_choice not in LogLevelChoices.as_dict():
-            raise Exception(f"Unknown logging level: {level}")
-
-        if status:
-            self.job_result.data['total'][status] += 1
-            self.job_result.data[self.active_test][status] += 1
         self.job_result.log(
-            message, obj=obj, level_choice=level_choice, keys=(self.active_test, "log"), logger=self.logger
+            message, obj=obj, level_choice=level_choice, grouping=self.active_test, logger=self.logger,
         )
 
     def log(self, message):
         """
         Log a generic message which is not associated with a particular object.
         """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT, log_level=logging.INFO)
+        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
 
     def log_debug(self, message):
         """
         Log a debug message which is not associated with a particular object.
         """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT, log_level=logging.DEBUG)
+        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
 
     def log_success(self, obj=None, message=None):
         """
         Record a successful test against an object. Logging a message is optional.
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS, log_level=logging.INFO, status='success')
+        self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
 
     def log_info(self, obj=None, message=None):
         """
         Log an informational message.
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO, log_level=logging.INFO, status='info')
+        self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
 
     def log_warning(self, obj=None, message=None):
         """
         Log a warning.
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING, log_level=logging.WARNING, status='warning')
+        self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
 
     def log_failure(self, obj=None, message=None):
         """
         Log a failure. Calling this method will automatically mark the overall job as failed.
         """
-        self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE, log_level=logging.ERROR, status='failure')
+        self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
         self.failed = True
 
     # Convenience functions
@@ -698,9 +693,29 @@ def _get_custom_job_source_paths():
     return paths
 
 
+@cached(timeout=60)
+def get_custom_job_classpaths():
+    """
+    Get a list of all known CustomJob class_path strings.
+
+    This is used as a cacheable, light-weight alternative to calling get_custom_jobs() or get_custom_job()
+    when all that's needed is to verify whether a given custom job exists.
+    """
+    custom_jobs_dict = get_custom_jobs()
+    result = set()
+    for grouping_name, modules_dict in custom_jobs_dict.items():
+        for module_name in modules_dict:
+            for class_name in modules_dict[module_name]["jobs"]:
+                result.add(f"{grouping_name}/{module_name}/{class_name}")
+    return result
+
+
 def get_custom_job(class_path):
     """
     Retrieve a specific custom job class by its class_path.
+
+    Note that this is built atop get_custom_jobs() and so is not a particularly light-weight API;
+    if all you need to do is to verify whether a given class_path exists, use get_custom_job_classpaths() instead.
 
     Returns None if not found.
     """

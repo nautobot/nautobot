@@ -257,6 +257,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label='Search'
     )
+    # FIXME(glenn) filtering by owner_content_type
     region = DynamicModelMultipleChoiceField(
         queryset=Region.objects.all(),
         to_field_name='slug',
@@ -348,6 +349,7 @@ class GitRepositoryForm(BootstrapMixin, forms.ModelForm):
     remote_url = forms.URLField(
         required=True,
         label="Remote URL",
+        help_text='Only http:// and https:// URLs are presently supported',
     )
 
     _token = forms.CharField(
@@ -356,7 +358,11 @@ class GitRepositoryForm(BootstrapMixin, forms.ModelForm):
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
     )
 
-    provided_contents = forms.MultipleChoiceField(choices=get_git_datasource_content_choices, required=False)
+    provided_contents = forms.MultipleChoiceField(
+        required=False,
+        label="Provides",
+        choices=get_git_datasource_content_choices,
+    )
 
     class Meta:
         model = GitRepository
@@ -484,27 +490,11 @@ class CustomJobForm(BootstrapMixin, forms.Form):
         return bool(len(self.fields) > 1)
 
 
-def custom_jobs_choices():
-    from .custom_jobs import get_custom_jobs
-    custom_jobs = get_custom_jobs()
-    listing = []
-    for grouping, modules in custom_jobs.items():
-        for module, module_jobs in modules.items():
-            for job_class in module_jobs["jobs"].values():
-                listing.append((job_class.class_path, job_class.class_path))
-    return listing
-
-
 class JobResultFilterForm(BootstrapMixin, forms.Form):
     model = JobResult
     q = forms.CharField(required=False, label='Search')
-    name = forms.MultipleChoiceField(
-        required=False,
-        label='Custom Job',
-        choices=custom_jobs_choices,
-        widget=StaticSelect2Multiple,
-    )
-    # custom_job = ...get_custom_jobs()...
+    # FIXME(glenn) Filtering by obj_type?
+    name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(
         queryset=User.objects.all(),
         required=False,

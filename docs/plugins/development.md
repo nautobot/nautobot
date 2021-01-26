@@ -384,8 +384,8 @@ menu_items = (
         link='plugins:netbox_animal_sounds:random_animal',
         link_text='Random sound',
         buttons=(
-            PluginMenuButton('home', 'Button A', 'fa fa-info', ButtonColorChoices.BLUE),
-            PluginMenuButton('home', 'Button B', 'fa fa-warning', ButtonColorChoices.GREEN),
+            PluginMenuButton('home', 'Button A', 'mdi mdi-help-circle', ButtonColorChoices.BLUE),
+            PluginMenuButton('home', 'Button B', 'mdi mdi-alert', ButtonColorChoices.GREEN),
         )
     ),
 )
@@ -402,7 +402,7 @@ A `PluginMenuButton` has the following attributes:
 
 * `link` - The name of the URL path to which this button links
 * `title` - The tooltip text (displayed when the mouse hovers over the button)
-* `icon_class` - Button icon CSS class (NetBox currently supports [Font Awesome 4.7](https://fontawesome.com/v4.7.0/icons/))
+* `icon_class` - Button icon CSS classes (NetBox currently supports [Material Design Icons](https://materialdesignicons.com))
 * `color` - One of the choices provided by `ButtonColorChoices` (optional)
 * `permissions` - A list of permissions required to display this button (optional)
 
@@ -539,7 +539,8 @@ def refresh_git_animals(repository_record, job_result):
         job_result.log(
             "Successfully created/updated animal",
             obj=animal_record,
-            level_choice=LogLevelChoices.LOG_SUCCESS
+            level_choice=LogLevelChoices.LOG_SUCCESS,
+            grouping="animals",
         )
 
 

@@ -78,11 +78,13 @@ class GitTest(TestCase):
                     with open(os.path.join(path, "config_contexts", "context.yaml"), 'w') as fd:
                         yaml.dump(
                             {
-                                "name": "Region NYC servers",
-                                "weight": 1500,
-                                "description": "NTP servers for region NYC",
-                                "is_active": True,
-                                "data": {"ntp-servers": ["172.16.10.22", "172.16.10.33"]}
+                                "_metadata": {
+                                    "name": "Region NYC servers",
+                                    "weight": 1500,
+                                    "description": "NTP servers for region NYC",
+                                    "is_active": True,
+                                },
+                                "ntp-servers": ["172.16.10.22", "172.16.10.33"]
                             },
                             fd)
                     with open(os.path.join(path, "export_templates", "dcim", "device", "template.j2"), 'w') as fd:

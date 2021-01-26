@@ -602,12 +602,50 @@ class JobResult(models.Model):
         null=True,
         blank=True
     )
+    """
+    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
+
+    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10,
+    and is mostly populated by the JobResult.log() function.
+
+    data = {
+        "main": {
+            "log": [
+                [timestamp, log_level, object_name, object_url, message],
+                [timestamp, log_level, object_name, object_url, message],
+                [timestamp, log_level, object_name, object_url, message],
+                ...
+            ],
+            "success": <count of log messages with log_level "success">,
+            "info": <count of log messages with log_level "info">,
+            "warning": <count of log messages with log_level "warning">,
+            "failure": <count of log messages with log_level "failure">,
+        },
+        "grouping1": {
+            "log": [...],
+            "success": <count>,
+            "info": <count>,
+            "warning": <count>,
+            "failure": <count>,
+        },
+        "grouping2": {...},
+        ...
+        "total": {
+            "success": <total across main and all other groupings>,
+            "info": <total across main and all other groupings>,
+            "warning": <total across main and all other groupings>,
+            "failure": <total across main and all other groupings>,
+        },
+        "output": <optional string, such as captured stdout/stderr>,
+    }
+    """
+
     job_id = models.UUIDField(
         unique=True
     )
 
     class Meta:
-        ordering = ['obj_type', 'name', '-created']
+        ordering = ['-created']
 
     objects = RestrictedQuerySet.as_manager()
 
@@ -625,7 +663,7 @@ class JobResult(models.Model):
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
     def get_absolute_url(self):
-        return reverse('extras:customjob_result', kwargs={'job_result_pk': self.pk})
+        return reverse('extras:jobresult', kwargs={'pk': self.pk})
 
     def set_status(self, status):
         """
@@ -659,27 +697,40 @@ class JobResult(models.Model):
 
         return job_result
 
-    def log(self, message, obj=None, level_choice=LogLevelChoices.LOG_DEFAULT, keys=("log",), logger=None):
+    @staticmethod
+    def _data_grouping_struct():
+        return OrderedDict([
+            ('success', 0),
+            ('info', 0),
+            ('warning', 0),
+            ('failure', 0),
+            ('log', []),
+        ])
+
+    def log(self, message, obj=None, level_choice=LogLevelChoices.LOG_DEFAULT, grouping="main", logger=None):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
 
         message (str): Message to log
         obj (object): Object associated with this message, if any
         level_choice (LogLevelChoices): Message severity level
-        keys (list): Sequence of key(s) to store the log message under
+        grouping (str): Grouping to store the log message under
         logger (logging.logger): Optional logger to also output the message to
         """
+        if level_choice not in LogLevelChoices.as_dict():
+            raise Exception(f"Unknown logging level: {level}")
+
         if not self.data:
             self.data = {}
-        data = self.data
-        for key in keys[:-1]:
-            if key not in data:
-                data[key] = {}
-            data = data[key]
-        if keys[-1] not in data:
-            data[keys[-1]] = []
-        log = data[keys[-1]]
 
+        data = self.data
+        data.setdefault(grouping, self._data_grouping_struct())
+        # Just in case it got initialized by something else:
+        if "log" not in data[grouping]:
+            data[grouping]["log"] = []
+        log = data[grouping]["log"]
+
+        # Record the log message
         log.append([
             timezone.now().isoformat(),
             level_choice,
@@ -687,6 +738,17 @@ class JobResult(models.Model):
             obj.get_absolute_url() if hasattr(obj, 'get_absolute_url') else None,
             str(message),
         ])
+
+        # Default log messages have no status and do not get counted
+        if level_choice != LogLevelChoices.LOG_DEFAULT:
+            # Update per-grouping and total results counters
+            data[grouping].setdefault(level_choice, 0)
+            data[grouping][level_choice] += 1
+            if "total" not in data:
+                data["total"] = self._data_grouping_struct()
+                del data["total"]["log"]
+            data["total"].setdefault(level_choice, 0)
+            data["total"][level_choice] += 1
 
         if logger:
             if level_choice == LogLevelChoices.LOG_FAILURE:
@@ -696,26 +758,3 @@ class JobResult(models.Model):
             else:
                 log_level = logging.INFO
             logger.log(log_level, str(message))
-
-    def check_for_failed_logs(self):
-        """
-        Did any log record report a "failed" status?
-
-        Useful when setting the terminal state of a JobResult where there may have been intermediate non-fatal failures.
-        """
-        def check_for_logs_in_data(data):
-            """
-            Recursively check the given data dict for "log" entries.
-            """
-            for key in data:
-                if key == "log" and isinstance(data[key], list):
-                    for log_entry in data[key]:
-                        if log_entry[1] == LogLevelChoices.LOG_FAILURE:
-                            return True
-                elif isinstance(data[key], dict):
-                    # Recurse
-                    if check_for_logs_in_data(data[key]):
-                        return True
-            return False
-
-        return check_for_logs_in_data(self.data)

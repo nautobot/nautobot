@@ -50,11 +50,12 @@ urlpatterns = [
 
     # Custom jobs
     path('custom-jobs/', views.CustomJobListView.as_view(), name='customjob_list'),
-    path('custom-jobs/results/', views.CustomJobResultListView.as_view(), name='customjob_result_list'),
-    path('custom-jobs/results/<int:job_result_pk>/', views.CustomJobResultView.as_view(), name='customjob_result'),
+    path('custom-jobs/results/<int:pk>/', views.CustomJobResultView.as_view(), name='customjob_jobresult'),
     path('custom-jobs/<path:class_path>/', views.CustomJobView.as_view(), name='customjob'),
 
     # Generic job results
+    path('job-results/', views.JobResultListView.as_view(), name='jobresult_list'),
+    path('job-results/<int:pk>/', views.JobResultView.as_view(), name='jobresult'),
     path('job-results/delete/', views.JobResultBulkDeleteView.as_view(), name='jobresult_bulk_delete'),
     path('job-results/<int:pk>/delete/', views.JobResultDeleteView.as_view(), name='jobresult_delete'),
 ]

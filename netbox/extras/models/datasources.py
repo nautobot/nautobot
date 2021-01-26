@@ -33,6 +33,7 @@ class GitRepository(ChangeLoggedModel):
     remote_url = models.URLField(
         max_length=255,
         # For the moment we don't support ssh:// and git:// URLs
+        help_text='Only HTTP and HTTPS URLs are presently supported',
         validators=[URLValidator(schemes=['http', 'https'])],
     )
     branch = models.CharField(
@@ -75,7 +76,8 @@ class GitRepository(ChangeLoggedModel):
 
     class Meta:
         ordering = ['name']
-        verbose_name_plural = 'git repositories'
+        verbose_name = 'Git repository'
+        verbose_name_plural = 'Git repositories'
 
     def __init__(self, *args, **kwargs):
         # If instantiated from the REST API, the originating Request will be passed as a kwarg:

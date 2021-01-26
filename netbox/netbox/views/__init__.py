@@ -45,20 +45,11 @@ class HomeView(View):
             pk__lt=F('_path__destination_id')
         )
 
-        # Custom Job Results - latest result for the 10 most recently-ran unique jobs
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
-        # Only get CustomJob results that have reached a terminal state
-        custom_job_results = JobResult.objects.filter(
-            obj_type=custom_job_content_type,
+        # Job history
+        # Only get JobResults that have reached a terminal state
+        job_results = JobResult.objects.filter(
             status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-        ).defer('data')
-        # Create a filter for only the latest result for each unique job name, limited to 10 such jobs' results
-        latest_results = custom_job_results.values('name').annotate(max_completed=Max('completed')).order_by('-max_completed')
-        q_statement = Q()
-        for pair in latest_results[:10]:
-            q_statement |= (Q(name__exact=pair['name']) & Q(completed=pair['max_completed']))
-        # Apply the filter, and sort by newest to oldest completion
-        custom_job_results = custom_job_results.filter(q_statement).order_by('-completed')
+        ).defer('data').order_by("-completed")
 
         stats = {
 
@@ -116,7 +107,7 @@ class HomeView(View):
         return render(request, self.template_name, {
             'search_form': SearchForm(),
             'stats': stats,
-            'custom_job_results': custom_job_results,
+            'job_results': job_results[:10],
             'changelog': changelog[:15],
             'new_release': new_release,
         })

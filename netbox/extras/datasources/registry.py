@@ -1,5 +1,5 @@
 """Registry-related APIs for datasources."""
-from extras.choices import LogLevelChoices
+from extras.choices import JobResultStatusChoices, LogLevelChoices
 from extras.context_managers import change_logging
 from extras.registry import registry
 

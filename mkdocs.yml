@@ -66,6 +66,8 @@ nav:
         - Filtering: 'rest-api/filtering.md'
         - Authentication: 'rest-api/authentication.md'
         - Working with Secrets: 'rest-api/working-with-secrets.md'
+    - GraphQL API:
+        - Overview: 'additional-features/graphql.md'
     - Development:
         - Introduction: 'development/index.md'
         - Getting Started: 'development/getting-started.md'

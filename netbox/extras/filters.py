@@ -311,6 +311,7 @@ class JobResultFilterSet(BaseFilterSet):
         method='search',
         label='Search',
     )
+    obj_type = ContentTypeFilter()
     created = django_filters.DateTimeFilter()
     completed = django_filters.DateTimeFilter()
     status = django_filters.MultipleChoiceFilter(

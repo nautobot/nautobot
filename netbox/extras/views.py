@@ -426,7 +426,7 @@ class CustomJobListView(ContentTypePermissionRequiredMixin, View):
         return 'extras.view_customjob'
 
     def get(self, request):
-        custom_jobs = get_custom_jobs()
+        custom_jobs_dict = get_custom_jobs()
         custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
         # Get the newest results for each job name
         results = {
@@ -437,19 +437,24 @@ class CustomJobListView(ContentTypePermissionRequiredMixin, View):
             ).order_by('completed').defer('data')
         }
 
-        ret = {}
-        for grouping, modules in custom_jobs.items():
-            ret[grouping] = {}
+        # get_custom_jobs() gives us a nested dict {grouping: {module: {"name": name, "jobs": [job, job, job]}}}
+        # But for presentation to the user we want to flatten this to {module_name: [job, job, job]}
+
+        modules_dict = {}
+        for grouping, modules in custom_jobs_dict.items():
             for module, entry in modules.items():
-                module_custom_jobs = []
+                module_custom_jobs = modules_dict.get(entry["name"], [])
                 for custom_job_class in entry['jobs'].values():
                     custom_job = custom_job_class()
                     custom_job.result = results.get(custom_job.class_path, None)
                     module_custom_jobs.append(custom_job)
-                ret[grouping][entry["name"]] = module_custom_jobs
+                if module_custom_jobs:
+                    # TODO: should we sort module_custom_jobs by job name? Currently they're in source code order
+                    modules_dict[entry["name"]] = module_custom_jobs
 
         return render(request, 'extras/customjob_list.html', {
-            'custom_jobs': ret,
+            # Order the jobs listing by case-insensitive sorting of the module human-readable name
+            'custom_jobs': sorted(modules_dict.items(), key=lambda kvpair: kvpair[0].lower()),
         })
 
 
@@ -508,7 +513,7 @@ class CustomJobView(ContentTypePermissionRequiredMixin, View):
                 commit=commit,
             )
 
-            return redirect('extras:customjob_result', job_result_pk=job_result.pk)
+            return redirect('extras:customjob_jobresult', pk=job_result.pk)
 
         return render(request, 'extras/customjob.html', {
             'grouping': grouping,
@@ -518,24 +523,41 @@ class CustomJobView(ContentTypePermissionRequiredMixin, View):
         })
 
 
-class CustomJobResultListView(generic.ObjectListView):
+class CustomJobResultView(ContentTypePermissionRequiredMixin, View):
     """
-    List JobResults pertaining to the execution of Custom Jobs.
+    Display a JobResult and its CustomJob data.
     """
-    additional_permissions = ["extras.view_customjob"]
 
-    queryset = None
+    def get_required_permission(self):
+        return 'extras.view_jobresult'
+
+    def get(self, request, pk):
+        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        job_result = get_object_or_404(JobResult.objects.all(), pk=pk, obj_type=custom_job_content_type)
+
+        custom_job_class = get_custom_job(job_result.name)
+        if custom_job_class is not None:
+            custom_job = custom_job_class()
+
+        return render(request, 'extras/customjob_result.html', {
+            'custom_job': custom_job,
+            'result': job_result,
+        })
+
+
+#
+# JobResult
+#
+
+class JobResultListView(generic.ObjectListView):
+    """
+    List JobResults
+    """
+    queryset = JobResult.objects.all()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
     action_buttons = ()
-    template_name = 'extras/customjob_result_list.html'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
-        self.queryset = JobResult.objects.filter(obj_type=custom_job_content_type).order_by('-created')
 
 
 class JobResultDeleteView(generic.ObjectDeleteView):
@@ -547,24 +569,33 @@ class JobResultBulkDeleteView(generic.BulkDeleteView):
     table = tables.JobResultTable
 
 
-class CustomJobResultView(ContentTypePermissionRequiredMixin, View):
+class JobResultView(ContentTypePermissionRequiredMixin, View):
     """
-    Display a JobResult pertaining to the execution of a Custom Job.
+    Display a JobResult and its data.
     """
+
     def get_required_permission(self):
-        return 'extras.view_customjob'
+        return 'extras.view_jobresult'
 
-    def get(self, request, job_result_pk):
+    def get(self, request, pk):
+        job_result = get_object_or_404(JobResult.objects.all(), pk=pk)
+
+        associated_record = None
+        custom_job = None
         custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
-        job_result = get_object_or_404(JobResult.objects.all(), pk=job_result_pk, obj_type=custom_job_content_type)
-
-        custom_job_class = get_custom_job(job_result.name)
-        if custom_job_class is not None:
-            custom_job = custom_job_class()
+        if job_result.obj_type == custom_job_content_type:
+            custom_job_class = get_custom_job(job_result.name)
+            if custom_job_class is not None:
+                custom_job = custom_job_class()
         else:
-            custom_job = None
+            model_class = job_result.obj_type.model_class()
+            try:
+                associated_record = model_class.objects.get(name=job_result.name)
+            except model_class.DoesNotExist:
+                pass
 
-        return render(request, 'extras/customjob_result.html', {
+        return render(request, 'extras/jobresult.html', {
+            'associated_record': associated_record,
             'custom_job': custom_job,
             'result': job_result,
         })

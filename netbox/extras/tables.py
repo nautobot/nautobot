@@ -2,10 +2,10 @@ import django_tables2 as tables
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import mark_safe
 
 from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ToggleColumn
-from .custom_jobs import get_custom_job
+from .custom_jobs import get_custom_job_classpaths
 from .models import ConfigContext, GitRepository, JobResult, ObjectChange, Tag, TaggedItem
 
 TAGGED_ITEM = """
@@ -99,7 +99,13 @@ class GitRepositoryTable(BaseTable):
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name='Remote URL')
     token_rendered = tables.Column(verbose_name='Token')
-    last_sync_time = tables.DateTimeColumn(empty_values=(), format=settings.SHORT_DATETIME_FORMAT)
+    last_sync_time = tables.DateTimeColumn(
+        empty_values=(),
+        format=settings.SHORT_DATETIME_FORMAT,
+        verbose_name="Sync Time"
+    )
+
+    last_sync_user = tables.Column(empty_values=(), verbose_name="Sync By")
 
     class JobResultColumn(tables.TemplateColumn):
         def render(self, record, table, value, bound_column, **kwargs):
@@ -109,7 +115,7 @@ class GitRepositoryTable(BaseTable):
                 table.context.update({'result': None})
             return super().render(record, table, value, bound_column, **kwargs)
 
-    last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html")
+    last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html", verbose_name="Sync Status")
     provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
     actions = ButtonsColumn(GitRepository, pk_field='slug', prepend_template=GITREPOSITORY_BUTTONS)
 
@@ -124,6 +130,7 @@ class GitRepositoryTable(BaseTable):
             'token_rendered',
             'provides',
             'last_sync_time',
+            'last_sync_user',
             'last_sync_status',
             'actions',
         )
@@ -132,6 +139,12 @@ class GitRepositoryTable(BaseTable):
     def render_last_sync_time(self, record):
         if record.name in self.context['job_results']:
             return self.context['job_results'][record.name].completed
+        return self.default
+
+    def render_last_sync_user(self, record):
+        if record.name in self.context['job_results']:
+            user = self.context['job_results'][record.name].user
+            return user
         return self.default
 
 
@@ -154,16 +167,23 @@ class GitRepositoryBulkTable(BaseTable):
         )
 
 
-def customjob_link(value, record):
+def job_creator_link(value, record):
     if record.obj_type == ContentType.objects.get(app_label='extras', model='customjob'):
-        if get_custom_job(record.name) is not None:
+        if record.name in get_custom_job_classpaths():
             return reverse('extras:customjob', kwargs={'class_path': record.name})
+    else:
+        model_class = record.obj_type.model_class()
+        try:
+            return model_class.objects.get(name=record.name).get_absolute_url()
+        except model_class.DoesNotExist:
+            pass
     return None
 
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=customjob_link)
+    obj_type = tables.Column(verbose_name="Object Type", accessor='obj_type.name')
+    name = tables.Column(linkify=job_creator_link)
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
@@ -182,8 +202,8 @@ class JobResultTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = JobResult
-        fields = ('created', 'name', 'duration', 'completed', 'user', 'status', 'data')
-        default_columns = ('created', 'name', 'user', 'status', 'data')
+        fields = ('pk', 'created', 'obj_type', 'name', 'duration', 'completed', 'user', 'status', 'data')
+        default_columns = ('pk', 'created', 'name', 'user', 'status', 'data')
 
 
 class ObjectChangeTable(BaseTable):
