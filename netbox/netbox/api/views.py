@@ -276,6 +276,7 @@ class APIRootView(APIView):
             ('circuits', reverse('circuits-api:api-root', request=request, format=format)),
             ('dcim', reverse('dcim-api:api-root', request=request, format=format)),
             ('extras', reverse('extras-api:api-root', request=request, format=format)),
+            ('graphql', reverse('graphql-api', request=request, format=format)),
             ('ipam', reverse('ipam-api:api-root', request=request, format=format)),
             ('plugins', reverse('plugins-api:api-root', request=request, format=format)),
             ('secrets', reverse('secrets-api:api-root', request=request, format=format)),

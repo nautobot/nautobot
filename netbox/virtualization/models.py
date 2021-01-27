@@ -30,7 +30,10 @@ __all__ = (
 # Cluster types
 #
 
-@extras_features('custom_validators')
+@extras_features(
+    'custom_validators',
+    'graphql',
+)
 class ClusterType(ChangeLoggedModel):
     """
     A type of Cluster.
@@ -73,7 +76,10 @@ class ClusterType(ChangeLoggedModel):
 # Cluster groups
 #
 
-@extras_features('custom_validators')
+@extras_features(
+    'custom_validators',
+    'graphql'
+)
 class ClusterGroup(ChangeLoggedModel):
     """
     An organizational group of Clusters.
@@ -121,6 +127,7 @@ class ClusterGroup(ChangeLoggedModel):
     'custom_links',
     'custom_validators',
     'export_templates',
+    'graphql',
     'webhooks'
 )
 class Cluster(ChangeLoggedModel, CustomFieldModel):
@@ -211,6 +218,7 @@ class Cluster(ChangeLoggedModel, CustomFieldModel):
     'custom_links',
     'custom_validators',
     'export_templates',
+    'graphql',
     'webhooks'
 )
 class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
@@ -387,6 +395,7 @@ class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
 @extras_features(
     'custom_validators',
     'export_templates',
+    'graphql',
     'webhooks'
 )
 class VMInterface(BaseInterface):

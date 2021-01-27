@@ -53,7 +53,7 @@ class SiteType(DjangoObjectType):
     class Meta:
         model = Site
         filterset_class = SiteFilterSet
-        exclude = ["images"]
+        exclude = ["images", "_name"]
 
 
 class DeviceType(DjangoObjectType):

@@ -1,5 +1,5 @@
 import types
-
+import json
 from django.test import TestCase
 from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
@@ -10,12 +10,19 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from graphene_django import DjangoObjectType
 
+from utilities.testing import APITestCase
 from users.models import ObjectPermission, Token
-from dcim.models import Device, Site, Region, Rack
+from dcim.models import Device, Site, Region, Rack, Manufacturer, DeviceType, DeviceRole
+from dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from dcim.filters import DeviceFilterSet, SiteFilterSet
-from extras.models import CustomField
+from extras.models import CustomField, ConfigContext
 from netbox.graphql.utils import str_to_var_name
-from netbox.graphql.schema import extend_schema_type
+from netbox.graphql.schema import (
+    extend_schema_type,
+    extend_schema_type_custom_field,
+    extend_schema_type_tags,
+    extend_schema_type_config_context
+)
 from netbox.graphql.generators import generate_list_search_parameters, generate_schema_type
 from extras.choices import CustomFieldTypeChoices
 
@@ -46,7 +53,7 @@ class GraphQLGenerateSchemaTypeTestCase(TestCase):
         self.assertIsNone(schema._meta.filterset_class)
 
 
-class GraphQLExTendSchemaType(TestCase):
+class GraphQLExtendSchemaType(TestCase):
 
     def setUp(self):
 
@@ -72,53 +79,57 @@ class GraphQLExTendSchemaType(TestCase):
         self.schema = generate_schema_type(app_name="dcim", model=Site)
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX="pr")
-    def test_extend_custom_field_enabled_w_prefix(self):
+    def test_extend_custom_field_w_prefix(self):
 
-        schema = extend_schema_type(self.schema, ext_custom_fields=True)
+        schema = extend_schema_type_custom_field(self.schema, Site)
 
         for data in self.datas:
             field_name = f"pr_{str_to_var_name(data['field_name'])}"
             self.assertIn(field_name, schema._meta.fields.keys())
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX="")
-    def test_extend_custom_field_enabled_wo_prefix(self):
+    def test_extend_custom_field_wo_prefix(self):
 
-        schema = extend_schema_type(self.schema, ext_custom_fields=True)
-
-        for data in self.datas:
-            field_name = str_to_var_name(data['field_name'])
-            self.assertIn(field_name, schema._meta.fields.keys())
-
-    @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX=None)
-    def test_extend_custom_field_enabled_prefix_none(self):
-
-        schema = extend_schema_type(self.schema, ext_custom_fields=True)
+        schema = extend_schema_type_custom_field(self.schema, Site)
 
         for data in self.datas:
             field_name = str_to_var_name(data['field_name'])
             self.assertIn(field_name, schema._meta.fields.keys())
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX=None)
-    def test_extend_custom_field_disabled(self):
+    def test_extend_custom_field_prefix_none(self):
 
-        schema = extend_schema_type(self.schema, ext_custom_fields=False)
+        schema = extend_schema_type_custom_field(self.schema, Site)
 
         for data in self.datas:
             field_name = str_to_var_name(data['field_name'])
-            self.assertNotIn(field_name, schema._meta.fields.keys())
+            self.assertIn(field_name, schema._meta.fields.keys())
 
     def test_extend_tags_enabled(self):
 
-        schema = extend_schema_type(self.schema, ext_tags=True)
+        schema = extend_schema_type_tags(self.schema, Site)
 
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
-    def test_extend_tags_disabled(self):
+    def test_extend_custom_context(self):
 
-        schema = extend_schema_type(self.schema, ext_tags=False)
+        schema = extend_schema_type_config_context(DeviceTypeGraphQL, Device)
+        self.assertIn("config_context", schema._meta.fields.keys())
 
-        self.assertFalse(hasattr(schema, "resolve_tags"))
+    def test_extend_schema_device(self):
+
+        schema = extend_schema_type(DeviceTypeGraphQL)
+        self.assertIn("config_context", schema._meta.fields.keys())
+        self.assertTrue(hasattr(schema, "resolve_tags"))
+        self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
+
+    def test_extend_schema_site(self):
+
+        schema = extend_schema_type(self.schema)
+        self.assertNotIn("config_context", schema._meta.fields.keys())
+        self.assertTrue(hasattr(schema, "resolve_tags"))
+        self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
 
 class GraphQLSearchParameters(TestCase):
@@ -371,3 +382,66 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertIsInstance(response.data["data"]["sites"], list)
         site_names = [item["name"] for item in response.data["data"]["sites"]]
         self.assertEqual(site_names, ["Site 1", "Site 2"])
+
+
+class GraphQLQuery(APITestCase):
+
+    def setUp(self):
+        """Initialize the Database with some datas."""
+        super().setUp()
+
+        self.api_url = reverse("graphql-api")
+
+        # Populate Data
+        manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
+        self.devicetype = DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1')
+        self.devicerole = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
+        self.region = Region.objects.create(name="Region")
+        self.site = Site.objects.create(name='Site-1', slug='site-1', region=self.region)
+
+        self.device = Device.objects.create(
+            name='Device 1',
+            device_type=self.devicetype,
+            device_role=self.devicerole,
+            site=self.site
+        )
+
+        context1 = ConfigContext(
+            name="context 1",
+            weight=101,
+            data={
+                "a": 123,
+                "b": 456,
+                "c": 777
+            }
+        )
+        context1.save()
+        context1.regions.add(self.region)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    def test_query_config_context(self):
+
+        get_device_config_context = """
+        query {
+            devices {
+                name
+                config_context
+            }
+        }
+        """
+
+        expected_data = {
+            "a": 123,
+            "b": 456,
+            "c": 777
+        }
+
+        response = self.client.post(self.api_url, data=get_device_config_context, content_type="application/graphql")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data["data"]["devices"], list)
+        device_names = [item["name"] for item in response.data["data"]["devices"]]
+        self.assertEqual(device_names, ["Device 1"])
+
+        config_context = [item["config_context"] for item in response.data["data"]["devices"]]
+        self.assertIsInstance(config_context[0], dict)
+        self.assertDictEqual(config_context[0], expected_data)

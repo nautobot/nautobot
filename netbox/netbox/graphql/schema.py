@@ -2,12 +2,10 @@
 import logging
 
 from django.conf import settings
-from django.db.models.fields import BinaryField
 from django.contrib.contenttypes.models import ContentType
 
 import graphene
-from graphene_django.converter import convert_django_field
-from graphene_django.types import ObjectType
+from graphene.types import generic
 
 from dcim.graphql.types import SiteType, DeviceType, InterfaceType, RackType, CableType, ConsoleServerPortType
 from ipam.graphql.types import IPAddressType
@@ -48,13 +46,14 @@ CUSTOM_FIELD_MAPPING = {
 }
 
 
-def extend_schema_type(schema_type, ext_queryset=True, ext_tags=True, ext_custom_fields=True):
+def extend_schema_type(schema_type):
     """Extend an existing schema type to add fields dynamically.
 
     The following type of dynamic fields/functions are currently supported:
      - Queryset, ensure a restricted queryset is always returned.
-     - Custom Field, all custom field will be defined as a first level attribute
+     - Custom Field, all custom field will be defined as a first level attribute.
      - Tags, Tags will automatically be resolvable.
+     - Config Context, add a config_context attribute and resolver.
 
     To insert a new field dynamically,
      - The field must be declared in schema_type._meta.fields as a graphene.Field.mounted
@@ -62,7 +61,6 @@ def extend_schema_type(schema_type, ext_queryset=True, ext_tags=True, ext_custom
     """
 
     model = schema_type._meta.model
-    fields_name = [field.name for field in model._meta.get_fields()]
 
     #
     # ID, Force Id as an Integer, currently it's recognized as a String
@@ -71,51 +69,112 @@ def extend_schema_type(schema_type, ext_queryset=True, ext_tags=True, ext_custom
         schema_type._meta.fields["id"] = graphene.Field.mounted(graphene.Int())
 
     #
-    # Queryset,
+    # Queryset
     #
-    if ext_queryset:
-        setattr(schema_type, "get_queryset", generate_restricted_queryset())
+    setattr(schema_type, "get_queryset", generate_restricted_queryset())
 
     #
-    # Custom Fields, Each custom field will be defined as a first level attribute
+    # Custom Fields
     #
-    if ext_custom_fields:
-        cfs = CustomField.objects.get_for_model(model)
-
-        prefix = ""
-        if settings.GRAPHQL_CUSTOM_FIELD_PREFIX and isinstance(settings.GRAPHQL_CUSTOM_FIELD_PREFIX, str):
-            prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
-
-        for field in cfs:
-            field_name = f"{prefix}{str_to_var_name(field.name)}"
-            resolver_name = f"resolve_{field_name}"
-
-            if hasattr(schema_type, field_name):
-                logger.debug(
-                    f"Unable to add the custom field {field.name} to {schema_type._meta.name} "
-                    f"because there is already an attribute with the same name ({field_name})"
-                )
-                continue
-
-            setattr(schema_type, resolver_name, generate_custom_field_resolver(field.name, resolver_name))
-
-            if field.type in CUSTOM_FIELD_MAPPING:
-                schema_type._meta.fields[field_name] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
-            else:
-                schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
-
-        if cfs:
-            del(schema_type._meta.fields["custom_field_data"])
+    schema_type = extend_schema_type_custom_field(schema_type, model)
 
     #
     # Tags
     #
-    if ext_tags and "tags" in fields_name:
-        # For Tags we only need to define the resolver because the field itself is already defined.
-        def resolve_tags(self, args):
-            return self.tags.all()
+    schema_type = extend_schema_type_tags(schema_type, model)
 
-        setattr(schema_type, "resolve_tags", resolve_tags)
+    #
+    # Config Context
+    #
+    schema_type = extend_schema_type_config_context(schema_type, model)
+
+    return schema_type
+
+
+def extend_schema_type_custom_field(schema_type, model):
+    """Extend schema_type object to had attribute and resolver around custom_fields.
+    Each custom field will be defined as a first level attribute.
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+
+    cfs = CustomField.objects.get_for_model(model)
+    prefix = ""
+    if settings.GRAPHQL_CUSTOM_FIELD_PREFIX and isinstance(settings.GRAPHQL_CUSTOM_FIELD_PREFIX, str):
+        prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
+
+    for field in cfs:
+        field_name = f"{prefix}{str_to_var_name(field.name)}"
+        resolver_name = f"resolve_{field_name}"
+
+        if hasattr(schema_type, field_name):
+            logger.warning(
+                f"Unable to add the custom field {field.name} to {schema_type._meta.name} "
+                f"because there is already an attribute with the same name ({field_name})"
+            )
+            continue
+
+        setattr(schema_type, resolver_name, generate_custom_field_resolver(field.name, resolver_name))
+
+        if field.type in CUSTOM_FIELD_MAPPING:
+            schema_type._meta.fields[field_name] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
+        else:
+            schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
+
+    if cfs:
+        del(schema_type._meta.fields["custom_field_data"])
+
+    return schema_type
+
+
+def extend_schema_type_tags(schema_type, model):
+    """Extend schema_type object to had a resolver for tags.
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+
+    fields_name = [field.name for field in model._meta.get_fields()]
+    if "tags" not in fields_name:
+        return schema_type
+
+    def resolve_tags(self, args):
+        return self.tags.all()
+
+    setattr(schema_type, "resolve_tags", resolve_tags)
+
+    return schema_type
+
+
+def extend_schema_type_config_context(schema_type, model):
+    """Extend schema_type object to had attribute and resolver around config_context.
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+
+    fields_name = [field.name for field in model._meta.get_fields()]
+    if "local_context_data" not in fields_name:
+        return schema_type
+
+    def resolve_config_context(self, args):
+        return self.get_config_context()
+
+    schema_type._meta.fields["config_context"] = graphene.Field.mounted(generic.GenericScalar())
+    setattr(schema_type, "resolve_config_context", resolve_config_context)
 
     return schema_type
 
@@ -194,9 +253,3 @@ def generate_query_mixin():
 
     QueryMixin = type("QueryMixin", (object,), class_attrs)
     return QueryMixin
-
-
-@convert_django_field.register(BinaryField)
-def convert_field_to_string(field, registry=None):
-    """Convert BinaryField to String."""
-    return graphene.String()
