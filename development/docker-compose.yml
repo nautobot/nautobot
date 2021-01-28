@@ -1,14 +1,12 @@
 ---
-version: '3'
+version: "3"
 services:
   netbox:
     build:
       context: ../
       dockerfile: development/Dockerfile
     image: "grimlock/grimlock-py${PYTHON_VER}"
-    command: >
-      sh -c "python /opt/grimlock/netbox/manage.py migrate &&
-             python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
+    command: "python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
     ports:
       - "8000:8000"
     depends_on:
@@ -25,7 +23,7 @@ services:
       context: ../
       dockerfile: development/Dockerfile
     image: "grimlock/grimlock-py${PYTHON_VER}"
-    command: sh -c "python /opt/grimlock/netbox/manage.py rqworker"
+    entrypoint: "python /opt/grimlock/netbox/manage.py rqworker"
     depends_on:
       - netbox
     env_file:
@@ -44,8 +42,8 @@ services:
     image: redis:5-alpine
     command:
       - sh
-      - -c  # this is to evaluate the $REDIS_PASSWORD from the env
-      - redis-server --appendonly yes --requirepass $$REDIS_PASSWORD  ## $$ because of docker-compose
+      - -c # this is to evaluate the $REDIS_PASSWORD from the env
+      - redis-server --appendonly yes --requirepass $$REDIS_PASSWORD ## $$ because of docker-compose
     env_file:
       - dev.env
 volumes:

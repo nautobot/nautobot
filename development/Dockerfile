@@ -19,3 +19,7 @@ RUN pip install -r /tmp/requirements.txt
 
 COPY requirements_dev.txt /tmp/
 RUN pip install -r /tmp/requirements_dev.txt
+
+COPY development/docker-entrypoint.sh /tmp/grimlock/docker-entrypoint.sh
+
+ENTRYPOINT [ "/tmp/grimlock/docker-entrypoint.sh" ]
