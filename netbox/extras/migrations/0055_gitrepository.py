@@ -82,9 +82,14 @@ class Migration(migrations.Migration):
                 ('current_head', models.CharField(blank=True, default='', max_length=48)),
             ],
             options={
-                'verbose_name_plural': 'git repositories',
                 'ordering': ['name'],
+                'verbose_name': 'Git repository',
+                'verbose_name_plural': 'Git repositories',
             },
+        ),
+        migrations.AlterModelOptions(
+            name='jobresult',
+            options={'ordering': ['-created']},
         ),
         migrations.RunPython(
             code=rename_jobresults,
