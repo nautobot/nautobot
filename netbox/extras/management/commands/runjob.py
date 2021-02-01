@@ -47,13 +47,16 @@ class Command(BaseCommand):
 
         # Report on success/failure
         for test_name, attrs in job_result.data.items():
-            if test_name == "total" or test_name == "output":
+
+            if test_name in ["total", "output"]:
                 continue
+
             self.stdout.write(
                 "\t{}: {} success, {} info, {} warning, {} failure".format(
                     test_name, attrs['success'], attrs['info'], attrs['warning'], attrs['failure']
                 )
             )
+
             for log_entry in attrs['log']:
                 status = log_entry[1]
                 if status == 'success':

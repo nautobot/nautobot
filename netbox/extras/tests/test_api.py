@@ -14,7 +14,7 @@ from rq import Worker
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Rack, RackGroup, RackRole, Site
 from extras.api.views import CustomJobViewSet
-from extras.models import ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, Tag
+from extras.models import ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, Tag
 from extras.custom_jobs import CustomJob, BooleanVar, IntegerVar, StringVar
 from utilities.testing import APITestCase, APIViewTestCases
 from utilities.testing.utils import disable_warnings
@@ -435,8 +435,30 @@ class CustomJobTest(APITestCase):
         url = reverse('extras-api:customjob-run', kwargs={'class_path': 'local/test_api/TestCustomJob'})
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-
         self.assertEqual(response.data['result']['status']['value'], 'pending')
+
+
+class JobResultTest(APITestCase):
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    def test_delete_custom_job_result_anonymous(self):
+        url = reverse('extras-api:jobresult-detail', kwargs={'pk': 1})
+        response = self.client.delete(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_delete_custom_job_result_without_permission(self):
+        url = reverse('extras-api:jobresult-detail', kwargs={'pk': 1})
+        with disable_warnings('django.request'):
+            response = self.client.delete(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_delete_custom_job_result_with_permission(self):
+        self.add_permissions('extras.delete_jobresult')
+        pk = JobResult.objects.create(name='test', job_id=1, obj_type_id=1)
+        url = reverse('extras-api:jobresult-detail', kwargs={'pk': pk})
+        response = self.client.delete(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
 
 
 class CreatedUpdatedFilterTest(APITestCase):
