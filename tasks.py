@@ -110,12 +110,9 @@ def destroy(context, python_ver=PYTHON_VER):
     """
     print("Destroying Netbox .. ")
 
+    # Removes volumes associated with the COMPOSE_PROJECT_NAME
     context.run(
-        f"{COMPOSE_COMMAND} down",
-        env={"PYTHON_VER": python_ver},
-    )
-    context.run(
-        f"docker volume rm -f pgdata_grimlock",
+        f"{COMPOSE_COMMAND} down --volumes",
         env={"PYTHON_VER": python_ver},
     )
 
