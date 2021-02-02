@@ -10,7 +10,7 @@ from taggit.managers import TaggableManager
 
 from dcim.choices import *
 from dcim.constants import *
-from dcim.fields import MACAddressField
+from dcim.fields import MACAddressCharField
 from extras.models import CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
 from extras.utils import extras_features
 from utilities.fields import NaturalOrderingField
@@ -472,7 +472,7 @@ class BaseInterface(RelationshipModel):
     enabled = models.BooleanField(
         default=True
     )
-    mac_address = MACAddressField(
+    mac_address = MACAddressCharField(
         null=True,
         blank=True,
         verbose_name='MAC Address'
