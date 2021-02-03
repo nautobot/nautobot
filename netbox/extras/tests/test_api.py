@@ -1,5 +1,6 @@
 import datetime
 import os.path
+import uuid
 from unittest import skipIf
 
 from django.contrib.contenttypes.models import ContentType
@@ -455,8 +456,10 @@ class JobResultTest(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_delete_custom_job_result_with_permission(self):
         self.add_permissions('extras.delete_jobresult')
-        pk = JobResult.objects.create(name='test', job_id=1, obj_type_id=1)
-        url = reverse('extras-api:jobresult-detail', kwargs={'pk': pk})
+        job_result = JobResult.objects.create(
+            name='test', job_id=uuid.uuid4(), obj_type=ContentType.objects.get_for_model(GitRepository)
+        )
+        url = reverse('extras-api:jobresult-detail', kwargs={'pk': job_result.pk})
         response = self.client.delete(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
 
