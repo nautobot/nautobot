@@ -31,10 +31,11 @@ __all__ = (
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql',
 )
-class ClusterType(ChangeLoggedModel):
+class ClusterType(ChangeLoggedModel, CustomFieldModel):
     """
     A type of Cluster.
     """
@@ -77,10 +78,11 @@ class ClusterType(ChangeLoggedModel):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class ClusterGroup(ChangeLoggedModel):
+class ClusterGroup(ChangeLoggedModel, CustomFieldModel):
     """
     An organizational group of Clusters.
     """

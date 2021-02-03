@@ -82,7 +82,7 @@ class ConnectedEndpointSerializer(ValidatedModelSerializer):
 # Regions/sites
 #
 
-class RegionSerializer(serializers.ModelSerializer):
+class RegionSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:region-detail')
     parent = NestedRegionSerializer(required=False, allow_null=True)
     site_count = serializers.IntegerField(read_only=True)
@@ -90,7 +90,10 @@ class RegionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Region
-        fields = ['id', 'url', 'name', 'slug', 'parent', 'description', 'site_count', '_depth']
+        fields = [
+            'id', 'url', 'name', 'slug', 'parent', 'description', 'site_count', '_depth', 'custom_fields',
+            'created', 'last_updated',
+        ]
 
 
 class SiteSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -120,7 +123,7 @@ class SiteSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 # Racks
 #
 
-class RackGroupSerializer(ValidatedModelSerializer):
+class RackGroupSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:rackgroup-detail')
     site = NestedSiteSerializer()
     parent = NestedRackGroupSerializer(required=False, allow_null=True)
@@ -129,16 +132,22 @@ class RackGroupSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = RackGroup
-        fields = ['id', 'url', 'name', 'slug', 'site', 'parent', 'description', 'rack_count', '_depth']
+        fields = [
+            'id', 'url', 'name', 'slug', 'site', 'parent', 'description', 'rack_count', '_depth',
+            'custom_fields', 'created', 'last_updated',
+        ]
 
 
-class RackRoleSerializer(ValidatedModelSerializer):
+class RackRoleSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:rackrole-detail')
     rack_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RackRole
-        fields = ['id', 'url', 'name', 'slug', 'color', 'description', 'rack_count']
+        fields = [
+            'id', 'url', 'name', 'slug', 'color', 'description', 'rack_count', 'custom_fields', 'created',
+            'last_updated',
+        ]
 
 
 class RackSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -242,7 +251,7 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
 # Device types
 #
 
-class ManufacturerSerializer(ValidatedModelSerializer):
+class ManufacturerSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:manufacturer-detail')
     devicetype_count = serializers.IntegerField(read_only=True)
     inventoryitem_count = serializers.IntegerField(read_only=True)
@@ -252,6 +261,7 @@ class ManufacturerSerializer(ValidatedModelSerializer):
         model = Manufacturer
         fields = [
             'id', 'url', 'name', 'slug', 'description', 'devicetype_count', 'inventoryitem_count', 'platform_count',
+            'custom_fields', 'created', 'last_updated',
         ]
 
 
@@ -270,7 +280,7 @@ class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
         ]
 
 
-class ConsolePortTemplateSerializer(ValidatedModelSerializer):
+class ConsolePortTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:consoleporttemplate-detail')
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(
@@ -281,10 +291,10 @@ class ConsolePortTemplateSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = ConsolePortTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'description']
+        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'description', 'custom_fields']
 
 
-class ConsoleServerPortTemplateSerializer(ValidatedModelSerializer):
+class ConsoleServerPortTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:consoleserverporttemplate-detail')
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(
@@ -295,10 +305,10 @@ class ConsoleServerPortTemplateSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = ConsoleServerPortTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'description']
+        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'description', 'custom_fields']
 
 
-class PowerPortTemplateSerializer(ValidatedModelSerializer):
+class PowerPortTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:powerporttemplate-detail')
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(
@@ -309,10 +319,13 @@ class PowerPortTemplateSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = PowerPortTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'maximum_draw', 'allocated_draw', 'description']
+        fields = [
+            'id', 'url', 'device_type', 'name', 'label', 'type', 'maximum_draw', 'allocated_draw',
+            'description', 'custom_fields'
+        ]
 
 
-class PowerOutletTemplateSerializer(ValidatedModelSerializer):
+class PowerOutletTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:poweroutlettemplate-detail')
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(
@@ -331,30 +344,33 @@ class PowerOutletTemplateSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = PowerOutletTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'power_port', 'feed_leg', 'description']
+        fields = [
+            'id', 'url', 'device_type', 'name', 'label', 'type', 'power_port', 'feed_leg',
+            'description', 'custom_fields'
+        ]
 
 
-class InterfaceTemplateSerializer(ValidatedModelSerializer):
+class InterfaceTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:interfacetemplate-detail')
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=InterfaceTypeChoices)
 
     class Meta:
         model = InterfaceTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'mgmt_only', 'description']
+        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'mgmt_only', 'description', 'custom_fields']
 
 
-class RearPortTemplateSerializer(ValidatedModelSerializer):
+class RearPortTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:rearporttemplate-detail')
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
         model = RearPortTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'positions', 'description']
+        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'positions', 'description', 'custom_fields']
 
 
-class FrontPortTemplateSerializer(ValidatedModelSerializer):
+class FrontPortTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:frontporttemplate-detail')
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PortTypeChoices)
@@ -362,23 +378,26 @@ class FrontPortTemplateSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = FrontPortTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'type', 'rear_port', 'rear_port_position', 'description']
+        fields = [
+            'id', 'url', 'device_type', 'name', 'label', 'type', 'rear_port', 'rear_port_position',
+            'description', 'custom_fields'
+        ]
 
 
-class DeviceBayTemplateSerializer(ValidatedModelSerializer):
+class DeviceBayTemplateSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:devicebaytemplate-detail')
     device_type = NestedDeviceTypeSerializer()
 
     class Meta:
         model = DeviceBayTemplate
-        fields = ['id', 'url', 'device_type', 'name', 'label', 'description']
+        fields = ['id', 'url', 'device_type', 'name', 'label', 'description', 'custom_fields']
 
 
 #
 # Devices
 #
 
-class DeviceRoleSerializer(ValidatedModelSerializer):
+class DeviceRoleSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:devicerole-detail')
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
@@ -387,10 +406,11 @@ class DeviceRoleSerializer(ValidatedModelSerializer):
         model = DeviceRole
         fields = [
             'id', 'url', 'name', 'slug', 'color', 'vm_role', 'description', 'device_count', 'virtualmachine_count',
+            'custom_fields', 'created', 'last_updated',
         ]
 
 
-class PlatformSerializer(ValidatedModelSerializer):
+class PlatformSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:platform-detail')
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
@@ -400,7 +420,7 @@ class PlatformSerializer(ValidatedModelSerializer):
         model = Platform
         fields = [
             'id', 'url', 'name', 'slug', 'manufacturer', 'napalm_driver', 'napalm_args', 'description', 'device_count',
-            'virtualmachine_count',
+            'virtualmachine_count', 'custom_fields', 'created', 'last_updated',
         ]
 
 
@@ -475,7 +495,12 @@ class DeviceNAPALMSerializer(serializers.Serializer):
     method = serializers.DictField()
 
 
-class ConsoleServerPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, ConnectedEndpointSerializer):
+class ConsoleServerPortSerializer(
+    TaggedObjectSerializer,
+    CableTerminationSerializer,
+    ConnectedEndpointSerializer,
+    CustomFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:consoleserverport-detail')
     device = NestedDeviceSerializer()
     type = ChoiceField(
@@ -489,11 +514,16 @@ class ConsoleServerPortSerializer(TaggedObjectSerializer, CableTerminationSerial
         model = ConsoleServerPort
         fields = [
             'id', 'url', 'device', 'name', 'label', 'type', 'description', 'cable', 'cable_peer', 'cable_peer_type',
-            'connected_endpoint', 'connected_endpoint_type', 'connected_endpoint_reachable', 'tags',
+            'connected_endpoint', 'connected_endpoint_type', 'connected_endpoint_reachable', 'tags', 'custom_fields',
         ]
 
 
-class ConsolePortSerializer(TaggedObjectSerializer, CableTerminationSerializer, ConnectedEndpointSerializer):
+class ConsolePortSerializer(
+    TaggedObjectSerializer,
+    CableTerminationSerializer,
+    ConnectedEndpointSerializer,
+    CustomFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:consoleport-detail')
     device = NestedDeviceSerializer()
     type = ChoiceField(
@@ -507,11 +537,16 @@ class ConsolePortSerializer(TaggedObjectSerializer, CableTerminationSerializer, 
         model = ConsolePort
         fields = [
             'id', 'url', 'device', 'name', 'label', 'type', 'description', 'cable', 'cable_peer', 'cable_peer_type',
-            'connected_endpoint', 'connected_endpoint_type', 'connected_endpoint_reachable', 'tags',
+            'connected_endpoint', 'connected_endpoint_type', 'connected_endpoint_reachable', 'tags', 'custom_fields',
         ]
 
 
-class PowerOutletSerializer(TaggedObjectSerializer, CableTerminationSerializer, ConnectedEndpointSerializer):
+class PowerOutletSerializer(
+    TaggedObjectSerializer,
+    CableTerminationSerializer,
+    ConnectedEndpointSerializer,
+    CustomFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:poweroutlet-detail')
     device = NestedDeviceSerializer()
     type = ChoiceField(
@@ -536,11 +571,16 @@ class PowerOutletSerializer(TaggedObjectSerializer, CableTerminationSerializer, 
         fields = [
             'id', 'url', 'device', 'name', 'label', 'type', 'power_port', 'feed_leg', 'description', 'cable',
             'cable_peer', 'cable_peer_type', 'connected_endpoint', 'connected_endpoint_type',
-            'connected_endpoint_reachable', 'tags',
+            'connected_endpoint_reachable', 'tags', 'custom_fields',
         ]
 
 
-class PowerPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, ConnectedEndpointSerializer):
+class PowerPortSerializer(
+    TaggedObjectSerializer,
+    CableTerminationSerializer,
+    ConnectedEndpointSerializer,
+    CustomFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:powerport-detail')
     device = NestedDeviceSerializer()
     type = ChoiceField(
@@ -555,11 +595,16 @@ class PowerPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, Co
         fields = [
             'id', 'url', 'device', 'name', 'label', 'type', 'maximum_draw', 'allocated_draw', 'description', 'cable',
             'cable_peer', 'cable_peer_type', 'connected_endpoint', 'connected_endpoint_type',
-            'connected_endpoint_reachable', 'tags',
+            'connected_endpoint_reachable', 'tags', 'custom_fields',
         ]
 
 
-class InterfaceSerializer(TaggedObjectSerializer, CableTerminationSerializer, ConnectedEndpointSerializer):
+class InterfaceSerializer(
+    TaggedObjectSerializer,
+    CableTerminationSerializer,
+    ConnectedEndpointSerializer,
+    CustomFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:interface-detail')
     device = NestedDeviceSerializer()
     type = ChoiceField(choices=InterfaceTypeChoices)
@@ -581,7 +626,7 @@ class InterfaceSerializer(TaggedObjectSerializer, CableTerminationSerializer, Co
             'id', 'url', 'device', 'name', 'label', 'type', 'enabled', 'lag', 'mtu', 'mac_address', 'mgmt_only',
             'description', 'mode', 'untagged_vlan', 'tagged_vlans', 'cable', 'cable_peer', 'cable_peer_type',
             'connected_endpoint', 'connected_endpoint_type', 'connected_endpoint_reachable', 'tags',
-            'count_ipaddresses',
+            'count_ipaddresses', 'custom_fields',
         ]
 
     def validate(self, data):
@@ -598,7 +643,7 @@ class InterfaceSerializer(TaggedObjectSerializer, CableTerminationSerializer, Co
         return super().validate(data)
 
 
-class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, ValidatedModelSerializer):
+class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:rearport-detail')
     device = NestedDeviceSerializer()
     type = ChoiceField(choices=PortTypeChoices)
@@ -608,7 +653,7 @@ class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, Val
         model = RearPort
         fields = [
             'id', 'url', 'device', 'name', 'label', 'type', 'positions', 'description', 'cable', 'cable_peer',
-            'cable_peer_type', 'tags',
+            'cable_peer_type', 'tags', 'custom_fields',
         ]
 
 
@@ -623,7 +668,7 @@ class FrontPortRearPortSerializer(WritableNestedSerializer):
         fields = ['id', 'url', 'name', 'label']
 
 
-class FrontPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, ValidatedModelSerializer):
+class FrontPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:frontport-detail')
     device = NestedDeviceSerializer()
     type = ChoiceField(choices=PortTypeChoices)
@@ -634,25 +679,25 @@ class FrontPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, Va
         model = FrontPort
         fields = [
             'id', 'url', 'device', 'name', 'label', 'type', 'rear_port', 'rear_port_position', 'description', 'cable',
-            'cable_peer', 'cable_peer_type', 'tags',
+            'cable_peer', 'cable_peer_type', 'tags', 'custom_fields',
         ]
 
 
-class DeviceBaySerializer(TaggedObjectSerializer, ValidatedModelSerializer):
+class DeviceBaySerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:devicebay-detail')
     device = NestedDeviceSerializer()
     installed_device = NestedDeviceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = DeviceBay
-        fields = ['id', 'url', 'device', 'name', 'label', 'description', 'installed_device', 'tags']
+        fields = ['id', 'url', 'device', 'name', 'label', 'description', 'installed_device', 'tags', 'custom_fields']
 
 
 #
 # Inventory items
 #
 
-class InventoryItemSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
+class InventoryItemSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:inventoryitem-detail')
     device = NestedDeviceSerializer()
     # Provide a default value to satisfy UniqueTogetherValidator
@@ -664,7 +709,7 @@ class InventoryItemSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
         model = InventoryItem
         fields = [
             'id', 'url', 'device', 'parent', 'name', 'label', 'manufacturer', 'part_id', 'serial', 'asset_tag',
-            'discovered', 'description', 'tags', '_depth',
+            'discovered', 'description', 'tags', '_depth', 'custom_fields',
         ]
 
 

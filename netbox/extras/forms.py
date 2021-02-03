@@ -82,12 +82,29 @@ class CustomFieldBulkEditForm(BulkEditForm):
         # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type)
         for cf in custom_fields:
+            name = self._get_field_name(cf.name)
             # Annotate non-required custom fields as nullable
             if not cf.required:
-                self.nullable_fields.append(cf.name)
-            self.fields[cf.name] = cf.to_form_field(set_initial=False, enforce_required=False)
+                self.nullable_fields.append(name)
+            self.fields[name] = cf.to_form_field(set_initial=False, enforce_required=False)
             # Annotate this as a custom field
-            self.custom_fields.append(cf.name)
+            self.custom_fields.append(name)
+
+    @staticmethod
+    def _get_field_name(name):
+        # Return the desired field name
+        return name
+
+
+class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
+    """
+    Adaptation of CustomFieldBulkEditForm which uses prefixed field names
+    """
+
+    @staticmethod
+    def _get_field_name(name):
+        # Return a prefixed version of the name
+        return 'cf_{}'.format(name)
 
 
 class CustomFieldFilterForm(forms.Form):
@@ -111,7 +128,7 @@ class CustomFieldFilterForm(forms.Form):
 # Tags
 #
 
-class TagForm(BootstrapMixin, forms.ModelForm):
+class TagForm(BootstrapMixin, CustomFieldModelForm):
     slug = SlugField()
 
     class Meta:
@@ -121,7 +138,7 @@ class TagForm(BootstrapMixin, forms.ModelForm):
         ]
 
 
-class TagCSVForm(CSVModelForm):
+class TagCSVForm(CustomFieldModelCSVForm):
     slug = SlugField()
 
     class Meta:
@@ -148,7 +165,7 @@ class AddRemoveTagsForm(forms.Form):
         )
 
 
-class TagFilterForm(BootstrapMixin, forms.Form):
+class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Tag
     q = forms.CharField(
         required=False,
@@ -156,7 +173,7 @@ class TagFilterForm(BootstrapMixin, forms.Form):
     )
 
 
-class TagBulkEditForm(BootstrapMixin, BulkEditForm):
+class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         widget=forms.MultipleHiddenInput

@@ -37,12 +37,13 @@ __all__ = (
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'export_templates',
     'graphql',
     'webhooks'
 )
-class Manufacturer(ChangeLoggedModel):
+class Manufacturer(ChangeLoggedModel, CustomFieldModel):
     """
     A Manufacturer represents a company which produces hardware devices; for example, Juniper or Dell.
     """
@@ -351,10 +352,11 @@ class DeviceType(ChangeLoggedModel, CustomFieldModel):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class DeviceRole(ChangeLoggedModel):
+class DeviceRole(ChangeLoggedModel, CustomFieldModel):
     """
     Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
     color to be used when displaying rack elevations. The vm_role field determines whether the role is applicable to
@@ -402,10 +404,11 @@ class DeviceRole(ChangeLoggedModel):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class Platform(ChangeLoggedModel):
+class Platform(ChangeLoggedModel, CustomFieldModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
     NetBox uses Platforms to determine how to interact with devices when pulling inventory data or other information by

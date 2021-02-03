@@ -22,7 +22,7 @@ from users.api.nested_serializers import NestedUserSerializer
 from utilities.api import get_serializer_for_model
 from virtualization.api.nested_serializers import NestedClusterGroupSerializer, NestedClusterSerializer
 from virtualization.models import Cluster, ClusterGroup
-
+from .customfields import CustomFieldModelSerializer
 from .fields import MultipleChoiceJSONField
 from .nested_serializers import *
 
@@ -94,13 +94,16 @@ class ExportTemplateSerializer(ValidatedModelSerializer):
 # Tags
 #
 
-class TagSerializer(ValidatedModelSerializer):
+class TagSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='extras-api:tag-detail')
     tagged_items = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Tag
-        fields = ['id', 'url', 'name', 'slug', 'color', 'description', 'tagged_items']
+        fields = [
+            'id', 'url', 'name', 'slug', 'color', 'description', 'tagged_items', 'custom_fields', 'created',
+            'last_updated',
+        ]
 
 
 class TaggedObjectSerializer(serializers.Serializer):
@@ -139,7 +142,7 @@ class TaggedObjectSerializer(serializers.Serializer):
 # Git repositories
 #
 
-class GitRepositorySerializer(ValidatedModelSerializer):
+class GitRepositorySerializer(CustomFieldModelSerializer):
     """Git repositories defined as a data source."""
     url = serializers.HyperlinkedIdentityField(view_name='extras-api:gitrepository-detail')
     token = serializers.CharField(source='_token', write_only=True, required=False)
@@ -164,6 +167,7 @@ class GitRepositorySerializer(ValidatedModelSerializer):
             'provided_contents',
             'created',
             'last_updated',
+            'custom_fields',
         ]
 
     def validate(self, data):

@@ -24,7 +24,7 @@ class TenancyRootView(APIRootView):
 # Tenant Groups
 #
 
-class TenantGroupViewSet(ModelViewSet):
+class TenantGroupViewSet(CustomFieldModelViewSet):
     queryset = TenantGroup.objects.add_related_count(
         TenantGroup.objects.all(),
         Tenant,

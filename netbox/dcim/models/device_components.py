@@ -11,7 +11,7 @@ from taggit.managers import TaggableManager
 from dcim.choices import *
 from dcim.constants import *
 from dcim.fields import MACAddressField
-from extras.models import ObjectChange, TaggedItem
+from extras.models import CustomFieldModel, ObjectChange, TaggedItem
 from extras.utils import extras_features
 from utilities.fields import NaturalOrderingField
 from utilities.mptt import TreeManager
@@ -37,7 +37,7 @@ __all__ = (
 )
 
 
-class ComponentModel(models.Model):
+class ComponentModel(CustomFieldModel):
     """
     An abstract model inherited by any model which has a parent Device.
     """
@@ -199,6 +199,7 @@ class PathEndpoint(models.Model):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'export_templates',
     'graphql',
@@ -240,6 +241,7 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql',
     'webhooks'
@@ -280,6 +282,7 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql',
     'export_templates',
@@ -394,6 +397,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql',
     'webhooks'
@@ -498,6 +502,7 @@ class BaseInterface(models.Model):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'export_templates',
     'graphql',
@@ -648,6 +653,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql',
     'webhooks'
@@ -715,6 +721,7 @@ class FrontPort(CableTermination, ComponentModel):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql',
     'webhooks'
@@ -772,6 +779,7 @@ class RearPort(CableTermination, ComponentModel):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql',
     'webhooks'
@@ -836,6 +844,7 @@ class DeviceBay(ComponentModel):
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'export_templates',
     'graphql',

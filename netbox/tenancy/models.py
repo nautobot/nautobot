@@ -17,10 +17,11 @@ __all__ = (
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class TenantGroup(MPTTModel, ChangeLoggedModel):
+class TenantGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel):
     """
     An arbitrary collection of Tenants.
     """

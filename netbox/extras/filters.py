@@ -90,38 +90,12 @@ class ExportTemplateFilterSet(BaseFilterSet):
         fields = ['id', 'content_type', 'owner_content_type', 'owner_object_id', 'name']
 
 
-class GitRepositoryFilterSet(BaseFilterSet):
-
-    class Meta:
-        model = GitRepository
-        fields = ['id', 'name', 'slug', 'remote_url', 'branch']
-
-
 class ImageAttachmentFilterSet(BaseFilterSet):
     content_type = ContentTypeFilter()
 
     class Meta:
         model = ImageAttachment
         fields = ['id', 'content_type_id', 'object_id', 'name']
-
-
-class TagFilterSet(BaseFilterSet):
-    q = django_filters.CharFilter(
-        method='search',
-        label='Search',
-    )
-
-    class Meta:
-        model = Tag
-        fields = ['id', 'name', 'slug', 'color']
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=value) |
-            Q(slug__icontains=value)
-        )
 
 
 class ConfigContextFilterSet(BaseFilterSet):
@@ -343,3 +317,37 @@ class ContentTypeFilterSet(django_filters.FilterSet):
     class Meta:
         model = ContentType
         fields = ['id', 'app_label', 'model']
+
+
+#
+# Tags
+#
+
+class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet):
+    q = django_filters.CharFilter(
+        method='search',
+        label='Search',
+    )
+
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'slug', 'color']
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(slug__icontains=value)
+        )
+
+
+#
+# Datasources
+#
+
+class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet):
+
+    class Meta:
+        model = GitRepository
+        fields = ['id', 'name', 'slug', 'remote_url', 'branch']

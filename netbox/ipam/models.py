@@ -177,10 +177,11 @@ class RouteTarget(ChangeLoggedModel, CustomFieldModel):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class RIR(ChangeLoggedModel):
+class RIR(ChangeLoggedModel, CustomFieldModel):
     """
     A Regional Internet Registry (RIR) is responsible for the allocation of a large portion of the global IP address
     space. This can be an organization like ARIN or RIPE, or a governing standard such as RFC 1918.
@@ -343,10 +344,11 @@ class Aggregate(ChangeLoggedModel, CustomFieldModel):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class Role(ChangeLoggedModel):
+class Role(ChangeLoggedModel, CustomFieldModel):
     """
     A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
     "Management."
@@ -878,10 +880,11 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class VLANGroup(ChangeLoggedModel):
+class VLANGroup(ChangeLoggedModel, CustomFieldModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """

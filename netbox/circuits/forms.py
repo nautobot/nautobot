@@ -127,7 +127,7 @@ class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
 # Circuit types
 #
 
-class CircuitTypeForm(BootstrapMixin, forms.ModelForm):
+class CircuitTypeForm(BootstrapMixin, CustomFieldModelForm):
     slug = SlugField()
 
     class Meta:
@@ -137,7 +137,7 @@ class CircuitTypeForm(BootstrapMixin, forms.ModelForm):
         ]
 
 
-class CircuitTypeCSVForm(CSVModelForm):
+class CircuitTypeCSVForm(CustomFieldModelCSVForm):
     slug = SlugField()
 
     class Meta:

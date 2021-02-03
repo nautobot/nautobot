@@ -40,10 +40,12 @@ __all__ = (
 #
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'export_templates',
-    'graphql')
-class RackGroup(MPTTModel, ChangeLoggedModel):
+    'graphql'
+)
+class RackGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel):
     """
     Racks can be grouped as subsets within a Site. The scope of a group will depend on how Sites are defined. For
     example, if a Site spans a corporate campus, a RackGroup might be defined to represent each building within that
@@ -120,10 +122,11 @@ class RackGroup(MPTTModel, ChangeLoggedModel):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class RackRole(ChangeLoggedModel):
+class RackRole(ChangeLoggedModel, CustomFieldModel):
     """
     Racks can be organized by functional role, similar to Devices.
     """

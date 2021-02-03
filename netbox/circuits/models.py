@@ -101,10 +101,11 @@ class Provider(ChangeLoggedModel, CustomFieldModel):
 
 
 @extras_features(
+    'custom_fields',
     'custom_validators',
     'graphql'
 )
-class CircuitType(ChangeLoggedModel):
+class CircuitType(ChangeLoggedModel, CustomFieldModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
     "Long Haul," "Metro," or "Out-of-Band".

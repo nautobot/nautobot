@@ -1077,9 +1077,11 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     def get(self, request):
 
         form = self.form(initial=request.GET)
+        model_form = self.model_form()
 
         return render(request, self.template_name, {
             'component_type': self.queryset.model._meta.verbose_name,
+            'model_form': model_form,
             'form': form,
             'return_url': self.get_return_url(request),
         })
@@ -1087,6 +1089,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     def post(self, request):
         logger = logging.getLogger('netbox.views.ComponentCreateView')
         form = self.form(request.POST, initial=request.GET)
+        model_form = self.model_form(request.POST)
 
         if form.is_valid():
 
@@ -1148,6 +1151,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         return render(request, self.template_name, {
             'component_type': self.queryset.model._meta.verbose_name,
             'form': form,
+            'model_form': model_form,
             'return_url': self.get_return_url(request),
         })
 
@@ -1172,6 +1176,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
         logger = logging.getLogger('netbox.views.BulkComponentCreateView')
         parent_model_name = self.parent_model._meta.verbose_name_plural
         model_name = self.queryset.model._meta.verbose_name_plural
+        model = self.queryset.model
 
         # Are we editing *all* objects in the queryset or just a selected subset?
         if request.POST.get('_all') and self.filterset is not None:
@@ -1186,7 +1191,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
         table = self.table(selected_objects)
 
         if '_create' in request.POST:
-            form = self.form(request.POST)
+            form = self.form(model, request.POST)
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
@@ -1248,7 +1253,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 logger.debug("Form validation failed")
 
         else:
-            form = self.form(initial={'pk': pk_list})
+            form = self.form(model, initial={'pk': pk_list})
 
         return render(request, self.template_name, {
             'form': form,

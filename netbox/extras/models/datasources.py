@@ -10,13 +10,18 @@ from django.urls import reverse
 from django_cryptography.fields import encrypt
 
 from extras.models.change_logging import ChangeLoggedModel
+from extras.models.customfields import CustomFieldModel
 from extras.models.models import ConfigContext, ExportTemplate
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 
 
-@extras_features('config_context_owners', 'export_template_owners')
-class GitRepository(ChangeLoggedModel):
+@extras_features(
+    'config_context_owners',
+    'custom_fields',
+    'export_template_owners'
+)
+class GitRepository(ChangeLoggedModel, CustomFieldModel):
     """Representation of a Git repository used as an external data source."""
 
     TOKEN_PLACEHOLDER = "********"

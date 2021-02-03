@@ -99,7 +99,7 @@ class ExportTemplateViewSet(ModelViewSet):
 # Tags
 #
 
-class TagViewSet(ModelViewSet):
+class TagViewSet(CustomFieldModelViewSet):
     queryset = Tag.objects.annotate(
         tagged_items=count_related(TaggedItem, 'tag')
     )
@@ -111,7 +111,7 @@ class TagViewSet(ModelViewSet):
 # Git repositories
 #
 
-class GitRepositoryViewSet(ModelViewSet):
+class GitRepositoryViewSet(CustomFieldModelViewSet):
     """
     Manage the use of Git repositories as external data sources.
     """

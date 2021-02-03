@@ -13,7 +13,7 @@ __all__ = (
 )
 
 
-class TenantGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class TenantGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         label='Tenant group (ID)',

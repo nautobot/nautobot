@@ -20,14 +20,19 @@ __all__ = (
 )
 
 
-class ClusterTypeFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class ClusterTypeFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
 
     class Meta:
         model = ClusterType
         fields = ['id', 'name', 'slug', 'description']
 
 
-class ClusterGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class ClusterGroupFilterSet(
+    BaseFilterSet,
+    NameSlugSearchFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet
+):
 
     class Meta:
         model = ClusterGroup

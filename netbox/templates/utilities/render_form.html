@@ -4,5 +4,7 @@
     {{ field }}
 {% endfor %}
 {% for field in form.visible_fields %}
-    {% render_field field %}
+    {% if not form.custom_fields or field.name not in form.custom_fields %}
+        {% render_field field %}
+    {% endif %}
 {% endfor %}

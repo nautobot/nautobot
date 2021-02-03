@@ -190,7 +190,7 @@ class RouteTargetFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilter
 # RIRs
 #
 
-class RIRForm(BootstrapMixin, forms.ModelForm):
+class RIRForm(BootstrapMixin, CustomFieldModelForm):
     slug = SlugField()
 
     class Meta:
@@ -200,7 +200,7 @@ class RIRForm(BootstrapMixin, forms.ModelForm):
         ]
 
 
-class RIRCSVForm(CSVModelForm):
+class RIRCSVForm(CustomFieldModelCSVForm):
     slug = SlugField()
 
     class Meta:
@@ -211,7 +211,8 @@ class RIRCSVForm(CSVModelForm):
         }
 
 
-class RIRFilterForm(BootstrapMixin, forms.Form):
+class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = RIR
     is_private = forms.NullBooleanField(
         required=False,
         label='Private',
@@ -323,7 +324,7 @@ class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
 # Roles
 #
 
-class RoleForm(BootstrapMixin, forms.ModelForm):
+class RoleForm(BootstrapMixin, CustomFieldModelForm):
     slug = SlugField()
 
     class Meta:
@@ -333,7 +334,7 @@ class RoleForm(BootstrapMixin, forms.ModelForm):
         ]
 
 
-class RoleCSVForm(CSVModelForm):
+class RoleCSVForm(CustomFieldModelCSVForm):
     slug = SlugField()
 
     class Meta:
@@ -1067,7 +1068,7 @@ class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
 # VLAN groups
 #
 
-class VLANGroupForm(BootstrapMixin, forms.ModelForm):
+class VLANGroupForm(BootstrapMixin, CustomFieldModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False,
@@ -1091,7 +1092,7 @@ class VLANGroupForm(BootstrapMixin, forms.ModelForm):
         ]
 
 
-class VLANGroupCSVForm(CSVModelForm):
+class VLANGroupCSVForm(CustomFieldModelCSVForm):
     site = CSVModelChoiceField(
         queryset=Site.objects.all(),
         required=False,
@@ -1105,7 +1106,8 @@ class VLANGroupCSVForm(CSVModelForm):
         fields = VLANGroup.csv_headers
 
 
-class VLANGroupFilterForm(BootstrapMixin, forms.Form):
+class VLANGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = VLANGroup
     region = DynamicModelMultipleChoiceField(
         queryset=Region.objects.all(),
         to_field_name='slug',

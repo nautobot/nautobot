@@ -66,7 +66,7 @@ class ProviderFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdated
         )
 
 
-class CircuitTypeFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class CircuitTypeFilterSet(BaseFilterSet, CustomFieldModelFilterSet, NameSlugSearchFilterSet, CreatedUpdatedFilterSet):
 
     class Meta:
         model = CircuitType

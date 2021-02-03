@@ -63,7 +63,7 @@ __all__ = (
 )
 
 
-class RegionFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class RegionFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Region.objects.all(),
         label='Parent region (ID)',
@@ -132,7 +132,7 @@ class SiteFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, 
         return queryset.filter(qs_filter)
 
 
-class RackGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class RackGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name='site__region',
@@ -172,7 +172,7 @@ class RackGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
         fields = ['id', 'name', 'slug', 'description']
 
 
-class RackRoleFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class RackRoleFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
 
     class Meta:
         model = RackRole
@@ -324,7 +324,12 @@ class RackReservationFilterSet(BaseFilterSet, TenancyFilterSet):
         )
 
 
-class ManufacturerFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class ManufacturerFilterSet(
+    BaseFilterSet,
+    NameSlugSearchFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet
+):
 
     class Meta:
         model = Manufacturer
@@ -417,7 +422,7 @@ class DeviceTypeFilterSet(BaseFilterSet, CustomFieldModelFilterSet, CreatedUpdat
         return queryset.exclude(devicebaytemplates__isnull=value)
 
 
-class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet):
+class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilterSet):
     devicetype_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         field_name='device_type_id',
@@ -481,14 +486,14 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ['id', 'name']
 
 
-class DeviceRoleFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class DeviceRoleFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
 
     class Meta:
         model = DeviceRole
         fields = ['id', 'name', 'slug', 'color', 'vm_role']
 
 
-class PlatformFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+class PlatformFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         field_name='manufacturer',
         queryset=Manufacturer.objects.all(),
@@ -704,7 +709,7 @@ class DeviceFilterSet(
         return queryset.exclude(devicebays__isnull=value)
 
 
-class DeviceComponentFilterSet(django_filters.FilterSet):
+class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
