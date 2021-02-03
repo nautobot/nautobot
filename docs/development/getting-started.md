@@ -1,15 +1,6 @@
 # Getting Started
 
-## Setting up a Development Environment
-
-Getting started with NetBox development is pretty straightforward, and should feel very familiar to anyone with Django development experience. There are a few things you'll need:
-
-* A Linux system or environment
-* A PostgreSQL server, which can be installed locally [per the documentation](/installation/1-postgresql/)
-* A Redis server, which can also be [installed locally](/installation/2-redis/)
-* A supported version of Python
-
-### Fork the Repo
+## Forking the Repo
 
 Assuming you'll be working on your own fork, your first step will be to fork the [official git repository](https://github.com/netbox-community/netbox). (If you're a maintainer who's going to be working directly with the official repo, skip this step.) You can then clone your GitHub fork locally for development:
 
@@ -35,7 +26,7 @@ The NetBox project utilizes three persistent git branches to track work:
 
 Typically, you'll base pull requests off of the `develop` branch, or off of `feature` if you're working on a new major release. **Never** merge pull requests into the `master` branch, which receives merged only from the `develop` branch.
 
-### Enable Pre-Commit Hooks
+## Enabling Pre-Commit Hooks
 
 NetBox ships with a [git pre-commit hook](https://githooks.com/) script that automatically checks for style compliance and missing database migrations prior to committing changes. This helps avoid erroneous commits that result in CI test failures. You are encouraged to enable it by creating a link to `scripts/git-hooks/pre-commit`:
 
@@ -44,7 +35,38 @@ $ cd .git/hooks/
 $ ln -s ../../scripts/git-hooks/pre-commit
 ```
 
-### Create a Python Virtual Environment
+## Setting up a Development Environment
+
+Getting started with NetBox development is pretty straightforward, and should feel very familiar to anyone with Django development experience. We can recommend either a [Docker Compose workflow](#docker-development-environment-workflow) (if you don't want to install dependencies such as PostgreSQL and Redis directly onto your system) or a [Python virtual environment workflow](#python-virtual-environment-workflow)
+
+### Docker Development Environment Workflow
+
+A development environment can be easily started up from the root of the project by installing the [Invoke](http://docs.pyinvoke.org/en/latest/invoke.html) Python library and then using the following commands:
+
+- `invoke build` - builds Netbox docker image.
+- `invoke createsuperuser` - creates a super user for the Django application.
+- `invoke debug` - starts linux system, postgreSQL, redis and work from docker compose and attaches their output to the shell (enter Control-C to stop the containers).
+
+Additional useful commands for the development environment:
+
+- `invoke start` - starts all docker compose containers to run in the background.
+- `invoke stop` - stops all containers created by `invoke start`.
+
+#### Docker-Compose Override
+
+To modify the docker compose file without making changes to the repository, create a file inside ```./development``` called ```docker-compose.override.yml```.
+This file will override any configuration in the main docker-compose file. Docker documentation can be found [here](https://docs.docker.com/compose/extends/).
+
+### Python Virtual Environment Workflow
+
+There are a few things you'll need:
+
+- A Linux system or environment
+- A PostgreSQL server, which can be installed locally [per the documentation](/installation/1-postgresql/)
+- A Redis server, which can also be [installed locally](/installation/2-redis/)
+- A supported version of Python
+
+#### Creating a Python Virtual Environment
 
 A [virtual environment](https://docs.python.org/3/tutorial/venv.html) is like a container for a set of Python packages. They allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, NetBox uses a virtual environment in production.
 
@@ -64,12 +86,12 @@ Once created, activate the virtual environment:
 
 ```no-highlight
 $ source ~/.venv/netbox/bin/activate
-(netbox) $ 
+(netbox) $
 ```
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
 
-### Install Dependencies
+#### Installing Dependencies
 
 With the virtual environment activated, install the project's required Python packages using the `pip` module:
 
@@ -81,7 +103,7 @@ Collecting Django==3.1 (from -r requirements.txt (line 1))
 ...
 ```
 
-### Configure NetBox
+#### Configuring NetBox
 
 Within the `netbox/netbox/` directory, copy `configuration.example.py` to `configuration.py` and update the following parameters:
 
@@ -92,7 +114,7 @@ Within the `netbox/netbox/` directory, copy `configuration.example.py` to `confi
 * `DEBUG`: Set to `True`
 * `DEVELOPER`: Set to `True` (this enables the creation of new database migrations)
 
-### Start the Development Server
+#### Starting the Development Server
 
 Django provides a lightweight, auto-updating HTTP/WSGI server for development use. NetBox extends this slightly to automatically import models and other utilities. Run the NetBox development server with the `nbshell` management command:
 
