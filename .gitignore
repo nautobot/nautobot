@@ -23,4 +23,4 @@ netbox.pid
 .coverage
 .vscode
 docker-compose.override.yml
-development/override.env
+override.env

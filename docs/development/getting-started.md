@@ -87,7 +87,8 @@ SUPERUSER_PASSWORD=admin
 SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 ```
 
-> Please name the **.env** file ``override.env`` to prevent credentials from being checked into Git. ``override.env`` is set in the ``.gitignore`` file.
+!!! warning
+    Please name the **.env** file ``override.env`` to prevent credentials from being checked into Git. ``override.env`` is set in the ``.gitignore`` file.
 
 These will create the user with the specified username, email, password, and API token.
 
