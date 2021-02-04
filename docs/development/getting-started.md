@@ -57,6 +57,42 @@ Additional useful commands for the development environment:
 To modify the docker compose file without making changes to the repository, create a file inside ```./development``` called ```docker-compose.override.yml```.
 This file will override any configuration in the main docker-compose file. Docker documentation can be found [here](https://docs.docker.com/compose/extends/).
 
+#### Docker-Compose Override - Automatically Create Super User
+
+There may be times where you want to bootstrap Nautobot with an already created user and token for either quick access or running within a CI/CD pipeline. Below will detail the steps required to bootstrap Nautobot with a user and token.
+
+```bash
+edit development/docker-compose.override.yml
+```
+
+```yaml
+---
+services:
+  netbox:
+    env_file:
+      - "override.env"
+    entrypoint: "/tmp/grimlock/docker-entrypoint.sh"
+    command: "python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
+
+```
+
+The `docker-entrypoint.sh` copied in during the Docker image build, but not set as the entrypoint until you override the entrypoint as seen above. The `docker-entrypoint.sh` will run any migrations and then look for specific variables set to create the super user. The **override.env** should look like the following:
+
+```bash
+# Super user information, but creation is disabled by default
+SKIP_SUPERUSER=false
+SUPERUSER_NAME=admin
+SUPERUSER_EMAIL=admin@example.com
+SUPERUSER_PASSWORD=admin
+SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
+```
+
+> Please name the **.env** file ``override.env`` to prevent credentials from being checked into Git. ``override.env`` is set in the ``.gitignore`` file.
+
+These will create the user with the specified username, email, password, and API token.
+
+After these two files are created, you can use the normal **invoke** commands to manage the development containers.
+
 ### Python Virtual Environment Workflow
 
 There are a few things you'll need:

@@ -21,7 +21,9 @@ PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
 COMPOSE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.yml")
 COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.override.yml")
-COMPOSE_COMMAND = f"docker-compose --project-directory \"{COMPOSE_DIR}\" -f \"{COMPOSE_FILE}\""
+COMPOSE_COMMAND = (
+    f'docker-compose --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
+)
 
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
@@ -47,8 +49,7 @@ def build(context, python_ver=PYTHON_VER):
     print("Building Grimlock .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} build"
-        f" --build-arg python_ver={python_ver}",
+        f"{COMPOSE_COMMAND} build" f" --build-arg python_ver={python_ver}",
         env={"PYTHON_VER": python_ver},
     )
 
@@ -67,8 +68,7 @@ def debug(context, python_ver=PYTHON_VER):
     print("Starting NetBox in debug mode.. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} up",
-        env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} up", env={"PYTHON_VER": python_ver},
     )
 
 
@@ -83,8 +83,7 @@ def start(context, python_ver=PYTHON_VER):
     print("Starting Netbox in detached mode .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} up -d",
-        env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} up -d", env={"PYTHON_VER": python_ver},
     )
 
 
@@ -99,8 +98,7 @@ def stop(context, python_ver=PYTHON_VER):
     print("Stopping Netbox .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} stop",
-        env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} stop", env={"PYTHON_VER": python_ver},
     )
 
 
@@ -116,8 +114,7 @@ def destroy(context, python_ver=PYTHON_VER):
 
     # Removes volumes associated with the COMPOSE_PROJECT_NAME
     context.run(
-        f"{COMPOSE_COMMAND} down --volumes",
-        env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} down --volumes", env={"PYTHON_VER": python_ver},
     )
 
 
@@ -158,9 +155,7 @@ def cli(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} exec netbox bash",
-        env={"PYTHON_VER": python_ver},
-        pty=True,
+        f"{COMPOSE_COMMAND} exec netbox bash", env={"PYTHON_VER": python_ver}, pty=True,
     )
 
 
@@ -227,8 +222,7 @@ def pycodestyle(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox"
-        f" sh -c \"cd {GRIMLOCK_ROOT} && pycodestyle --ignore=W504,E501 netbox/\"",
+        f"{COMPOSE_COMMAND} run netbox" f' "pycodestyle --ignore=W504,E501 netbox/"',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -245,7 +239,7 @@ def coverage_run(context, dir="netbox/", python_ver=PYTHON_VER):
     """
     context.run(
         f"{COMPOSE_COMMAND} run netbox"
-        f" sh -c \"cd {GRIMLOCK_ROOT} && coverage run --source=\"netbox/\" netbox/manage.py test {dir}\"",
+        f' "coverage run --source="netbox/" netbox/manage.py test {dir}"',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -261,7 +255,8 @@ def coverage_report(context, python_ver=PYTHON_VER):
     """
     context.run(
         f"{COMPOSE_COMMAND} run netbox"
-        f" sh -c \"cd {GRIMLOCK_ROOT} && coverage report --skip-covered --omit *migrations*\"",
+        f' "coverage report --skip-covered --omit *migrations*"',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
+
