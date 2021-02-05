@@ -26,6 +26,7 @@ from .context_managers import change_logging
 from .datasources.git import ensure_git_repository
 from .forms import CustomJobForm
 from .models import GitRepository
+from .registry import registry
 
 from ipam.formfields import IPAddressFormField, IPNetworkFormField
 from ipam.validators import MaxPrefixLengthValidator, MinPrefixLengthValidator, prefix_validator
@@ -117,13 +118,13 @@ class BaseCustomJob:
 
         Examples:
         local/my_script/MyScript
+        plugins/my_plugin.jobs/MyPluginJob
         git.my-repository/mycustomjob/MyCustomJob
-
-        (Future)
-        plugin.my_plugin/mymodule.mysubmodule/MyReport
         """
         # TODO: it'd be nice if this were derived more automatically instead of needing this logic
-        if (
+        if cls in registry['plugin_jobs']:
+            source_grouping = 'plugins'
+        elif (
             cls.file_path.startswith(settings.CUSTOM_JOBS_ROOT) or
             cls.file_path.startswith(settings.SCRIPTS_ROOT) or
             cls.file_path.startswith(settings.REPORTS_ROOT)
@@ -604,6 +605,9 @@ def get_custom_jobs():
             <module_name>: { ... },
         },
         ...
+        "plugins": {
+            <module_name>: { ... },
+        }
     }
     """
     custom_jobs = OrderedDict()
@@ -634,6 +638,15 @@ def get_custom_jobs():
             if module_jobs["jobs"]:
                 custom_jobs.setdefault(grouping, {})[module_name] = module_jobs
 
+    # Add jobs from plugins (which were already imported at startup)
+    for cls in registry['plugin_jobs']:
+        module = inspect.getmodule(cls)
+        human_readable_name = module.name if hasattr(module, "name") else module.__name__
+        custom_jobs.setdefault("plugins", {}).setdefault(
+            module.__name__, {"name": human_readable_name, "jobs": OrderedDict()}
+        )
+        custom_jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
+
     return custom_jobs
 
 
@@ -642,7 +655,8 @@ def _get_custom_job_source_paths():
     Helper function to get_custom_jobs().
 
     Constructs a dict of {"grouping": [filesystem_path, ...]}.
-    Current groupings are "local", "git.<repository_slug>"; in the future, we will likely have plugin groupings too.
+    Current groupings are "local", "git.<repository_slug>".
+    Plugin jobs aren't loaded dynamically from a source_path and so are not included in this function
     """
     paths = {}
     # Locally installed custom jobs, in the current preferred CUSTOM_JOBS_ROOT and the legacy SCRIPTS_ROOT/REPORTS_ROOT
@@ -687,8 +701,6 @@ def _get_custom_job_source_paths():
             if not GitRepository.objects.filter(slug=git_slug):
                 logger.warning(f"Deleting unmanaged (leftover?) dir at {os.path.join(settings.GIT_ROOT, git_slug)}")
                 shutil.rmtree(os.path.join(settings.GIT_ROOT, git_slug))
-
-    # TODO: add plugin job paths to "paths" as well
 
     return paths
 
@@ -741,7 +753,7 @@ def run_custom_job(data, request, job_result, commit=True, *args, **kwargs):
         job_result.log(
             f'Unable to locate job "{job_result.name}" to run it!',
             level_choice=LogLevelChoices.LOG_FAILURE,
-            keys=("initialization", "log"),
+            grouping="initialization",
             logger=logger,
         )
         job_result.status = JobResultStatusChoices.STATUS_ERRORED

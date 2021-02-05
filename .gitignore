@@ -10,6 +10,7 @@
 /netbox/scripts/*
 !/netbox/scripts/__init__.py
 /netbox/static
+/site/
 /venv/
 /*.sh
 local_requirements.txt

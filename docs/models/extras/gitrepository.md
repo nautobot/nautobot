@@ -2,16 +2,16 @@
 
 Some text-based content is more conveniently stored in a separate Git repository rather than internally in the NetBox database. Such a repository may currently include any or all of the following for NetBox to consume:
 
-* [Custom job](../../additional-features/custom-jobs.md) source files and associated data files,
-* [Configuration context](configcontext.md) data
-* [Export templates](../../additional-features/export-templates.md)
-* Additional data as [registered](../../plugins/development.md#loading-data-from-a-git-repository) by any installed plugins
+* Custom job source files and associated data files,
+* Configuration context data
+* Export templates
+* Additional data types as registered by any installed plugins
 
 ## Repository Configuration
 
 When defining a Git repository for NetBox to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for NetBox to be able to locate and access the specified repository. Additionally, if the repository is private on GitHub, you may specify a [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) that can be used to grant access to the repository.
 
-Whenever a Git repository record is created, updated, or deleted, NetBox automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../../../configuration/optional-settings/#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a [`JobResult`](jobresult.md) record that may be viewed from the Git repository user interface.
+Whenever a Git repository record is created, updated, or deleted, NetBox automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under `GIT_ROOT`) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
 ## Repository Structure
 

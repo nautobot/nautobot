@@ -23,7 +23,9 @@ if [ -d ./venv/ ]; then
 fi
 
 echo "Validating PEP8 compliance..."
-pycodestyle --ignore=W504,E501 netbox/
+pycodestyle \
+    --ignore=W504,E501 --exclude=netbox/scripts,netbox/reports,netbox/custom_jobs,netbox/git \
+    contrib/ development/ netbox/ tasks.py
 if [ $? != 0 ]; then
 	EXIT=1
 fi

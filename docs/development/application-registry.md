@@ -8,6 +8,37 @@ The registry can be inspected by importing `registry` from `extras.registry`.
 
 ## Stores
 
+### `datasource_contents`
+
+Definition of data types that can be provided by data source models (such as [Git repositories](../models/extras/gitrepository.md)). Implemented as a dictionary mapping the data source model name to a list of the types of data that it may contain and callback functions associated with those data types. The default mapping in NetBox is currently:
+
+```python
+{
+    "extras.GitRepository": [
+        DatasourceContent(
+            name='config contexts',
+            token='extras.ConfigContext',
+            icon='mdi-code-json',
+            callback=extras.datasources.git.refresh_git_config_contexts,
+        ),
+        DatasourceContent(
+            name='custom jobs',
+            token='extras.CustomJob',
+            icon='mdi-script-text',
+            callback=extras.datasources.git.refresh_git_custom_jobs,
+        ),
+        DatasourceContent(
+            name='export templates',
+            token='extras.ExportTemplate',
+            icon='mdi-database-export',
+            callback=extras.datasources.git.refresh_git_export_templates,
+        ),
+    ]
+}
+```
+
+Plugins may extend this dictionary with additional data sources and/or data types by calling `extras.registry.register_datasource_contents()` as desired.
+
 ### `model_features`
 
 A dictionary of particular features (e.g. custom fields) mapped to the NetBox models which support them, arranged by app. For example:
@@ -24,6 +55,41 @@ A dictionary of particular features (e.g. custom fields) mapped to the NetBox mo
     },
     ...
 }
+```
+
+### `plugin_custom_validators`
+
+Plugin [custom validator classes](../plugins/development.md#implementing-custom-validators) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `PluginCustomValidator` subclasses, for example:
+
+```python
+{
+    'circuits.circuit': [CircuitMustHaveDescriptionValidator],
+    'dcim.site': [SiteMustHaveRegionValidator, SiteNameMustIncludeCountryCodeValidator],
+}
+```
+
+### `plugin_graphql_types`
+
+List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL objects that are defined in a plugin will be automatically registered into this registry. An example:
+
+```python
+[
+    <DjangoObjectType>, <DjangoObjectType>
+]
+```
+
+### `plugin_jobs`
+
+[Custom jobs](../additional-features/custom-jobs.md) provided by plugins. A list of `CustomJob` classes, for example:
+
+```python
+[
+    demo_data_plugin.jobs.CreateDemoData,
+    demo_data_plugin.jobs.DestroyDemoData,
+    branch_creation_plugin.jobs.CreateNewSmallBranch,
+    branch_creation_plugin.jobs.CreateNewMediumBranch,
+    branch_creation_plugin.jobs.CreateNewLargeBranch,
+]
 ```
 
 ### `plugin_menu_items`
@@ -54,14 +120,4 @@ Plugin content that gets embedded into core NetBox templates. The store comprise
         <TemplateExtension>, <TemplateExtension>,
     ],
 }
-```
-
-### `plugin_graphql_types`
-
-List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL object that are defined in a plugin will be automatically registered into this registry. An example:
-
-```python
-[
-    <DjangoObjectType>, <DjangoObjectType>
-]   
 ```

@@ -14,7 +14,7 @@ Sometimes it is desirable to associate additional data with a group of devices o
 
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 
-Configuration contexts may be managed within NetBox via the UI and/or API; they may also be managed externally to NetBox in a [Git repository](gitrepository.md) if desired.
+Configuration contexts may be managed within NetBox via the UI and/or API; they may also be managed externally to NetBox in a Git repository if desired.
 
 ## Hierarchical Rendering
 

@@ -13,11 +13,12 @@ from utilities.choices import ButtonColorChoices
 
 
 # Initialize plugin registry stores
-registry['plugin_template_extensions'] = collections.defaultdict(list)
-registry['plugin_graphql_types'] = []
-registry['plugin_menu_items'] = {}
+# registry['datasource_content'] is a non-plugin-exclusive registry and is initialized in extras.registry
 registry['plugin_custom_validators'] = collections.defaultdict(list)
-# 'datasource_content' is a non-plugin-exclusive registry and is initialized in extras.registry
+registry['plugin_graphql_types'] = []
+registry['plugin_jobs'] = []
+registry['plugin_menu_items'] = {}
+registry['plugin_template_extensions'] = collections.defaultdict(list)
 
 
 #
@@ -64,6 +65,7 @@ class PluginConfig(AppConfig):
     custom_validators = 'custom_validators.custom_validators'
     datasource_contents = 'datasources.datasource_contents'
     graphql_types = 'graphql.types.graphql_types'
+    jobs = 'jobs.jobs'
     menu_items = 'navigation.menu_items'
     template_extensions = 'template_content.template_extensions'
 
@@ -83,6 +85,11 @@ class PluginConfig(AppConfig):
         graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
         if graphql_types is not None:
             register_graphql_types(graphql_types)
+
+        # Import custom jobs (if present)
+        jobs = import_object(f"{self.__module__}.{self.jobs}")
+        if jobs is not None:
+            register_jobs(jobs)
 
         # Register navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
@@ -218,7 +225,7 @@ def register_template_extensions(class_list):
     # Validation
     for template_extension in class_list:
         if not inspect.isclass(template_extension):
-            raise TypeError(f"PluginTemplateExtension class {template_extension} was passes as an instance!")
+            raise TypeError(f"PluginTemplateExtension class {template_extension} was passed as an instance!")
         if not issubclass(template_extension, PluginTemplateExtension):
             raise TypeError(f"{template_extension} is not a subclass of extras.plugins.PluginTemplateExtension!")
         if template_extension.model is None:
@@ -236,13 +243,28 @@ def register_graphql_types(class_list):
 
     for item in class_list:
         if not inspect.isclass(item):
-            raise TypeError(f"DjangoObjectType class {item} was passes as an instance!")
+            raise TypeError(f"DjangoObjectType class {item} was passed as an instance!")
         if not issubclass(item, DjangoObjectType):
-            raise TypeError(f"{item} is not a subclass of graphene_django.DjangoObjectType")
+            raise TypeError(f"{item} is not a subclass of graphene_django.DjangoObjectType!")
         if item._meta.model is None:
             raise TypeError(f"DjangoObjectType class {item} does not define a valid model!")
 
         registry['plugin_graphql_types'].append(item)
+
+
+def register_jobs(class_list):
+    """
+    Register a list of CustomJob classes
+    """
+    from extras.custom_jobs import CustomJob
+
+    for job in class_list:
+        if not inspect.isclass(job):
+            raise TypeError(f"CustomJob class {job} was passed as an instance!")
+        if not issubclass(job, CustomJob):
+            raise TypeError(f"{job} is not a subclass of extras.custom_jobs.CustomJob!")
+
+        registry['plugin_jobs'].append(job)
 
 
 #

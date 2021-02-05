@@ -21,13 +21,14 @@ if [[ ! -z $SYNTAX ]]; then
 	EXIT=1
 fi
 
-# Check all python source files for PEP 8 compliance, but explicitly
+# Check all built-in python source files for PEP 8 compliance, but explicitly
 # ignore:
 #  - W504: line break after binary operator
 #  - E501: line greater than 80 characters in length
 pycodestyle \
     --ignore=W504,E501 \
-    netbox/
+    --exclude=netbox/scripts,netbox/reports,netbox/custom_jobs,netbox/git \
+    contrib/ development/ netbox/ tasks.py
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more PEP 8 errors detected, failing build."

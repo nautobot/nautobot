@@ -376,8 +376,9 @@ class CustomJobTest(APITestCase):
         response = self.client.get(url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        # No custom jobs and we haven't monkey-patched the get_custom_jobs() function to fake any
-        self.assertEqual(response.data, [])
+        # At a minimum, the custom job provided by the dummy plugin should be present
+        self.assertNotEqual(response.data, [])
+        self.assertIn("plugins/extras.tests.dummy_plugin.jobs/DummyJob", [job["id"] for job in response.data])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'], CUSTOM_JOBS_ROOT=THIS_DIRECTORY)
     def test_get_custom_job_anonymous(self):

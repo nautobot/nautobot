@@ -84,3 +84,8 @@ Be diligent to ensure all of the relevant test suites are adapted or extended as
 ## 12. Update the model's documentation
 
 Each model has a dedicated page in the documentation, at `models/<app>/<model>.md`. Update this file to include any relevant information about the new field.
+
+Note that this documentation page will be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.
+
+!!! warning
+    Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks *between* NetBox documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.

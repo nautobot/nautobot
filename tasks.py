@@ -35,6 +35,7 @@ ENV_VARS = {
     "PYTHON_VER": PYTHON_VER,
 }
 
+
 # ------------------------------------------------------------------------------
 # BUILD
 # ------------------------------------------------------------------------------
@@ -223,7 +224,9 @@ def pycodestyle(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox pycodestyle --ignore=W504,E501 netbox/",
+        f"{COMPOSE_COMMAND} run netbox"
+        " pycodestyle --ignore=W504,E501 --exclude=netbox/scripts,netbox/reports,netbox/custom_jobs,netbox/git"
+        " contrib/ development/ netbox/ tasks.py\"",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )

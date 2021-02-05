@@ -6,6 +6,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from dcim.models import Site
+from extras.custom_jobs import get_custom_job, get_custom_job_classpaths, get_custom_jobs
 from extras.plugins.exceptions import PluginNotFound, PluginImproperlyConfigured
 from extras.plugins.utils import load_plugin
 from extras.plugins.validators import wrap_model_clean_methods
@@ -70,7 +71,7 @@ class PluginTest(TestCase):
 
     def test_custom_validators_registration(self):
         """
-        Check that plugin custom validators are registed correctly
+        Check that plugin custom validators are registered correctly.
         """
         from extras.tests.dummy_plugin.custom_validators import SiteCustomValidator
 
@@ -92,6 +93,24 @@ class PluginTest(TestCase):
 
         self.assertIn("dummy_plugin", registered_models.keys())
         self.assertIn("dummymodel", registered_models["dummy_plugin"])
+
+    def test_jobs_registration(self):
+        """
+        Check that plugin jobs are registered correctly and discoverable.
+        """
+        from extras.tests.dummy_plugin.jobs import DummyJob
+
+        self.assertIn(DummyJob, registry.get("plugin_jobs", []))
+
+        self.assertEqual(DummyJob, get_custom_job("plugins/extras.tests.dummy_plugin.jobs/DummyJob"))
+        self.assertIn("plugins/extras.tests.dummy_plugin.jobs/DummyJob", get_custom_job_classpaths())
+        jobs_dict = get_custom_jobs()
+        self.assertIn("plugins", jobs_dict)
+        self.assertIn("extras.tests.dummy_plugin.jobs", jobs_dict["plugins"])
+        self.assertEqual("DummyPlugin jobs", jobs_dict["plugins"]["extras.tests.dummy_plugin.jobs"].get("name"))
+        self.assertIn("jobs", jobs_dict["plugins"]["extras.tests.dummy_plugin.jobs"])
+        self.assertIn("DummyJob", jobs_dict["plugins"]["extras.tests.dummy_plugin.jobs"]["jobs"])
+        self.assertEqual(DummyJob, jobs_dict["plugins"]["extras.tests.dummy_plugin.jobs"]["jobs"]["DummyJob"])
 
     def test_git_datasource_contents(self):
         """

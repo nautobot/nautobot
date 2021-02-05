@@ -536,8 +536,7 @@ class CustomJobResultView(ContentTypePermissionRequiredMixin, View):
         job_result = get_object_or_404(JobResult.objects.all(), pk=pk, obj_type=custom_job_content_type)
 
         custom_job_class = get_custom_job(job_result.name)
-        if custom_job_class is not None:
-            custom_job = custom_job_class()
+        custom_job = custom_job_class() if custom_job_class else None
 
         return render(request, 'extras/customjob_result.html', {
             'custom_job': custom_job,
