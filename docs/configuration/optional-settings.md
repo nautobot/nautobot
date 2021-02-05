@@ -259,36 +259,46 @@ addresses (and [`DEBUG`](#debug) is true).
 
 By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
 
-The Django framework on which NetBox runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file:
+The Django framework on which NetBox runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from NetBox itself and from the RQ worker process to the console with added verbosity and colorization:
 
 ```python
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': '/var/log/netbox.log',
+    'formatters': {
+        'normal': {
+            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s : %(message)s',
+            'datefmt': '%H:%M:%S',
+        },
+        'verbose': {
+            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s',
+            'datefmt': '%H:%M:%S',
         },
     },
+    'handlers': {
+        'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/netbox.log', 'formatter': 'normal'},
+        'normal_console': {'level': 'INFO', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'normal'},
+        'verbose_console': {'level': 'DEBUG', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'verbose'},
+    },
     'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'INFO',
-        },
+        'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
+        'netbox': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
+        'rq.worker': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
     },
 }
 ```
 
 ### Available Loggers
 
-* `netbox.<app>.<model>` - Generic form for model-specific log messages
+* `django.*` - Generic Django operations (HTTP requests/responses, etc.)
+* `netbox.<app>.<module>` - Generic form for model- or module-specific log messages
 * `netbox.auth.*` - Authentication events
 * `netbox.api.views.*` - Views which handle business logic for the REST API
-* `netbox.custom_jobs.*` - Custom job execution (`* = module_name.JobName`)
+* `netbox.custom_jobs.*` - Custom job execution (`* = JobClassName`)
+* `netbox.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
 * `netbox.plugins.*` - Plugin loading and activity
 * `netbox.views.*` - Views which handle business logic for the web UI
+* `rq.worker` - Background task handling
 
 ---
 

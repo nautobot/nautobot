@@ -4,7 +4,7 @@ from django.apps import AppConfig
 from django.db.utils import ProgrammingError
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('netbox.extras.apps')
 
 
 class ExtrasConfig(AppConfig):

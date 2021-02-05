@@ -7,7 +7,7 @@ from graphene_django import DjangoObjectType
 
 from netbox.graphql.utils import str_to_var_name
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('netbox.graphql.generators')
 RESOLVER_PREFIX = "resolve_"
 
 

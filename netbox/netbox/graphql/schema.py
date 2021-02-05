@@ -22,7 +22,7 @@ from netbox.graphql.generators import (
     generate_attrs_for_schema_type,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('netbox.graphql.schema')
 
 STATIC_TYPES = {
     "dcim.site": SiteType,

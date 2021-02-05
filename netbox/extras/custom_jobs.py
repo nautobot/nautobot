@@ -49,7 +49,7 @@ __all__ = [
     'TextVar',
 ]
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('netbox.custom_jobs')
 
 
 class BaseCustomJob:
@@ -86,7 +86,7 @@ class BaseCustomJob:
         ])
 
     def __init__(self):
-        self.logger = logging.getLogger(f"netbox.custom_jobs.{self.class_path_dotted}")
+        self.logger = logging.getLogger(f"netbox.custom_jobs.{self.__class__.__name__}")
 
         self.request = None
         self.active_test = None

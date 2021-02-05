@@ -6,7 +6,7 @@ import os
 from git import Repo
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('netbox.utilities.git')
 
 
 class GitRepo:
