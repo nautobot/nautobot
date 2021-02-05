@@ -29,9 +29,10 @@ DatasourceContent = namedtuple('DatasourceContent', ['name', 'token', 'icon', 'c
 name (str): Human-readable name for this content type, such as "config contexts"
 token (str): Brief unique identifier of this content type, such as "extras.ConfigContext"
 icon (str): Material Design Icons icon name, such as "mdi-code-json" or "mdi-script-text"
-callback (callable): Callback function to invoke whenever a given datasource is updated,
-    if it provides this content type. This callback should take two arguments (model, job_result) where "model"
-    is the record that is being refreshed and "job_result" is an extras.JobResult record for logging purposes.
+callback (callable): Callback function to invoke whenever a given datasource is created, updated, or deleted.
+    This callback should take three arguments (record, job_result, delete) where "record" is the GitRepository, etc.
+    that is being refreshed, "job_result" is an extras.JobResult record for logging purposes, and
+    "delete" is a boolean flag to distinguish between the "create/update" and "delete" cases.
 """
 
 

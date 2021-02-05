@@ -179,3 +179,73 @@ class GitTest(TestCase):
                 pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
 
                 self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_FAILED, self.job_result.data)
+
+    def test_delete_git_repository_cleanup(self, MockGitRepo):
+        """
+        When deleting a GitRepository record, the data that it owned should also be deleted.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+                def populate_repo(path, url):
+                    os.makedirs(path)
+                    # Just make config_contexts and export_templates directories as we don't load custom_jobs
+                    os.makedirs(os.path.join(path, "config_contexts"))
+                    os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
+                    with open(os.path.join(path, "config_contexts", "context.yaml"), 'w') as fd:
+                        yaml.dump(
+                            {
+                                "_metadata": {
+                                    "name": "Region NYC servers",
+                                    "weight": 1500,
+                                    "description": "NTP servers for region NYC",
+                                    "is_active": True,
+                                },
+                                "ntp-servers": ["172.16.10.22", "172.16.10.33"]
+                            },
+                            fd)
+                    with open(os.path.join(path, "export_templates", "dcim", "device", "template.j2"), 'w') as fd:
+                        fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    return mock.DEFAULT
+
+                MockGitRepo.side_effect = populate_repo
+                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+
+                self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
+
+                # Make sure ConfigContext was successfully loaded from file
+                config_context = ConfigContext.objects.get(
+                    name="Region NYC servers",
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                )
+                self.assertIsNotNone(config_context)
+                self.assertEqual(1500, config_context.weight)
+                self.assertEqual("NTP servers for region NYC", config_context.description)
+                self.assertTrue(config_context.is_active)
+                self.assertEqual({"ntp-servers": ["172.16.10.22", "172.16.10.33"]}, config_context.data)
+
+                # Make sure ExportTemplate was successfully loaded from file
+                export_template = ExportTemplate.objects.get(
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    content_type=ContentType.objects.get_for_model(Device),
+                    name="template.j2",
+                )
+                self.assertIsNotNone(export_template)
+
+                # Now delete the GitRepository
+                self.repo.delete()
+
+                with self.assertRaises(ConfigContext.DoesNotExist):
+                    config_context = ConfigContext.objects.get(
+                        owner_object_id=self.repo.pk,
+                        owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    )
+
+                with self.assertRaises(ExportTemplate.DoesNotExist):
+                    export_template = ExportTemplate.objects.get(
+                        owner_object_id=self.repo.pk,
+                        owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    )

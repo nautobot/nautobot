@@ -2,7 +2,6 @@
 import os
 
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericRelation
 from django.core.validators import URLValidator
 from django.db import models, transaction
 from django.urls import reverse
@@ -19,7 +18,8 @@ from utilities.querysets import RestrictedQuerySet
 @extras_features(
     'config_context_owners',
     'custom_fields',
-    'export_template_owners'
+    'export_template_owners',
+    'job_results',
 )
 class GitRepository(ChangeLoggedModel, CustomFieldModel):
     """Representation of a Git repository used as an external data source."""
@@ -65,19 +65,6 @@ class GitRepository(ChangeLoggedModel, CustomFieldModel):
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(default=list, blank=True)
-
-    # GenericRelations back to the owned models so that we get the appropriate cascade behavior on deletion
-    # TODO: replace these with logic on delete to call refresh_datasource_content()
-    config_contexts = GenericRelation(
-        ConfigContext,
-        object_id_field='owner_object_id',
-        content_type_field='owner_content_type',
-    )
-    export_templates = GenericRelation(
-        ExportTemplate,
-        object_id_field='owner_object_id',
-        content_type_field='owner_content_type',
-    )
 
     class Meta:
         ordering = ['name']

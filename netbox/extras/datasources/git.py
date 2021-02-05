@@ -68,7 +68,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
             logger=logger,
         )
 
-        refresh_datasource_content('extras.GitRepository', repository_record, request, job_result)
+        refresh_datasource_content('extras.GitRepository', repository_record, request, job_result, delete=False)
 
     except Exception as exc:
         job_result.log(
@@ -140,9 +140,9 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
 #
 
 
-def refresh_git_config_contexts(repository_record, job_result):
+def refresh_git_config_contexts(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all ConfigContext records managed by this repository."""
-    if "extras.ConfigContext" in repository_record.provided_contents:
+    if "extras.ConfigContext" in repository_record.provided_contents and not delete:
         update_git_config_contexts(repository_record, job_result)
     else:
         delete_git_config_contexts(repository_record, job_result)
@@ -382,7 +382,7 @@ def delete_git_config_contexts(repository_record, job_result, preserve=()):
 #
 
 
-def refresh_git_custom_jobs(repository_record, job_result):
+def refresh_git_custom_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all CustomJob records managed by this repository."""
     # No-op as custom jobs are not currently stored in the DB but are instead refreshed on-request.
 
@@ -391,9 +391,9 @@ def refresh_git_custom_jobs(repository_record, job_result):
 #
 
 
-def refresh_git_export_templates(repository_record, job_result):
+def refresh_git_export_templates(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all ExportTemplate records managed by this repository."""
-    if "extras.ExportTemplate" in repository_record.provided_contents:
+    if "extras.ExportTemplate" in repository_record.provided_contents and not delete:
         update_git_export_templates(repository_record, job_result)
     else:
         delete_git_export_templates(repository_record, job_result)

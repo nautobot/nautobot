@@ -1,7 +1,7 @@
 from extras.registry import DatasourceContent
 
 
-def refresh_git_text_files(repository, job_result):
+def refresh_git_text_files(repository, job_result, delete=False):
     if "dummy_plugin.TextFile" in repository.provided_contents:
         job_result.log(message="Refreshed text files")
 
