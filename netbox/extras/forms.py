@@ -21,6 +21,7 @@ from utilities.forms import (
     JSONField,
     SlugField,
     StaticSelect2,
+    StaticSelect2Multiple,
     BOOLEAN_WITH_BLANK_CHOICES,
 )
 from virtualization.models import Cluster, ClusterGroup
