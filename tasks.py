@@ -263,4 +263,3 @@ def coverage_report(context, python_ver=PYTHON_VER):
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
-

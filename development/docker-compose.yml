@@ -6,9 +6,7 @@ services:
       context: ../
       dockerfile: development/Dockerfile
     image: "grimlock/grimlock-py${PYTHON_VER}"
-    command: >
-      sh -c "python /opt/grimlock/netbox/manage.py migrate &&
-             python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
+    command: "python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
     ports:
       - "8000:8000"
     depends_on:
@@ -25,7 +23,7 @@ services:
       context: ../
       dockerfile: development/Dockerfile
     image: "grimlock/grimlock-py${PYTHON_VER}"
-    command: sh -c "python /opt/grimlock/netbox/manage.py rqworker"
+    entrypoint: "python /opt/grimlock/netbox/manage.py rqworker"
     depends_on:
       - netbox
     env_file:

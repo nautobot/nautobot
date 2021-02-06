@@ -71,8 +71,6 @@ services:
   netbox:
     env_file:
       - "override.env"
-    command: "python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
-
 ```
 
 The `docker-entrypoint.sh` copied in during the Docker image build, but not set as the entrypoint until you override the entrypoint as seen above. The `docker-entrypoint.sh` will run any migrations and then look for specific variables set to create the super user. The **override.env** should look like the following:
