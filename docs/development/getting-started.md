@@ -71,7 +71,6 @@ services:
   netbox:
     env_file:
       - "override.env"
-    entrypoint: "/tmp/grimlock/docker-entrypoint.sh"
     command: "python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
 
 ```

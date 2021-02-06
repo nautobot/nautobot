@@ -24,3 +24,5 @@ RUN pip install -r /tmp/requirements_dev.txt
 COPY development/docker-entrypoint.sh /tmp/grimlock/docker-entrypoint.sh
 
 WORKDIR /opt/grimlock
+
+ENTRYPOINT ["/tmp/grimlock/docker-entrypoint.sh"]

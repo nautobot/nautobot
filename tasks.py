@@ -49,7 +49,8 @@ def build(context, python_ver=PYTHON_VER):
     print("Building Grimlock .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} build" f" --build-arg python_ver={python_ver}",
+        f"{COMPOSE_COMMAND} build"
+        f" --build-arg python_ver={python_ver}",
         env={"PYTHON_VER": python_ver},
     )
 
@@ -140,7 +141,7 @@ def nbshell(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} exec netbox python {MANAGE_COMMAND} nbshell",
+        f'{COMPOSE_COMMAND} exec netbox python {MANAGE_COMMAND} nbshell',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -155,7 +156,7 @@ def cli(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} exec netbox bash", env={"PYTHON_VER": python_ver}, pty=True,
+        f'{COMPOSE_COMMAND} exec netbox bash', env={"PYTHON_VER": python_ver}, pty=True,
     )
 
 
@@ -169,7 +170,7 @@ def createsuperuser(context, user="admin", python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} createsuperuser --username {user}",
+        f'{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} createsuperuser --username {user}',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -186,12 +187,12 @@ def makemigrations(context, name="", python_ver=PYTHON_VER):
     """
     if name:
         context.run(
-            f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations --name {name}",
+            f'{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations --name {name}',
             env={"PYTHON_VER": python_ver},
         )
     else:
         context.run(
-            f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations",
+            f'{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations',
             env={"PYTHON_VER": python_ver},
         )
 
@@ -222,7 +223,7 @@ def pycodestyle(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox" f' "pycodestyle --ignore=W504,E501 netbox/"',
+        f"{COMPOSE_COMMAND} run netbox pycodestyle --ignore=W504,E501 netbox/",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -238,8 +239,8 @@ def coverage_run(context, dir="netbox/", python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox"
-        f' "coverage run --source="netbox/" netbox/manage.py test {dir}"',
+        f'{COMPOSE_COMMAND} run netbox'
+        f' coverage run --source="netbox/" netbox/manage.py test {dir}',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -254,8 +255,8 @@ def coverage_report(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox"
-        f' "coverage report --skip-covered --omit *migrations*"',
+        f'{COMPOSE_COMMAND} run netbox'
+        f' coverage report --skip-covered --omit *migrations*',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
