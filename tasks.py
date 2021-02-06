@@ -21,9 +21,7 @@ PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
 COMPOSE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.yml")
 COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.override.yml")
-COMPOSE_COMMAND = (
-    f'docker-compose --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
-)
+COMPOSE_COMMAND = f"docker-compose --project-directory \"{COMPOSE_DIR}\" -f \"{COMPOSE_FILE}\""
 
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
@@ -70,7 +68,8 @@ def debug(context, python_ver=PYTHON_VER):
     print("Starting NetBox in debug mode.. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} up", env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} up",
+        env={"PYTHON_VER": python_ver},
     )
 
 
@@ -85,7 +84,8 @@ def start(context, python_ver=PYTHON_VER):
     print("Starting Netbox in detached mode .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} up -d", env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} up -d",
+        env={"PYTHON_VER": python_ver},
     )
 
 
@@ -100,7 +100,8 @@ def stop(context, python_ver=PYTHON_VER):
     print("Stopping Netbox .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} stop", env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} stop",
+        env={"PYTHON_VER": python_ver},
     )
 
 
@@ -116,7 +117,8 @@ def destroy(context, python_ver=PYTHON_VER):
 
     # Removes volumes associated with the COMPOSE_PROJECT_NAME
     context.run(
-        f"{COMPOSE_COMMAND} down --volumes", env={"PYTHON_VER": python_ver},
+        f"{COMPOSE_COMMAND} down --volumes",
+        env={"PYTHON_VER": python_ver},
     )
 
 
@@ -142,7 +144,7 @@ def nbshell(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f'{COMPOSE_COMMAND} exec netbox python {MANAGE_COMMAND} nbshell',
+        f"{COMPOSE_COMMAND} exec netbox python {MANAGE_COMMAND} nbshell",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -157,7 +159,9 @@ def cli(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f'{COMPOSE_COMMAND} exec netbox bash', env={"PYTHON_VER": python_ver}, pty=True,
+        f"{COMPOSE_COMMAND} exec netbox bash",
+        env={"PYTHON_VER": python_ver},
+        pty=True,
     )
 
 
@@ -171,7 +175,7 @@ def createsuperuser(context, user="admin", python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f'{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} createsuperuser --username {user}',
+        f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} createsuperuser --username {user}",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -188,12 +192,12 @@ def makemigrations(context, name="", python_ver=PYTHON_VER):
     """
     if name:
         context.run(
-            f'{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations --name {name}',
+            f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations --name {name}",
             env={"PYTHON_VER": python_ver},
         )
     else:
         context.run(
-            f'{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations',
+            f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations",
             env={"PYTHON_VER": python_ver},
         )
 
@@ -242,8 +246,8 @@ def coverage_run(context, dir="netbox/", python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f'{COMPOSE_COMMAND} run netbox'
-        f' coverage run --source="netbox/" netbox/manage.py test {dir}',
+        f"{COMPOSE_COMMAND} run netbox"
+        f" coverage run --source='netbox/' netbox/manage.py test {dir}",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -258,8 +262,8 @@ def coverage_report(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f'{COMPOSE_COMMAND} run netbox'
-        f' coverage report --skip-covered --omit *migrations*',
+        f"{COMPOSE_COMMAND} run netbox"
+        f" coverage report --skip-covered --omit *migrations*",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
