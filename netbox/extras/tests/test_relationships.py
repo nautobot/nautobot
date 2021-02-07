@@ -188,16 +188,71 @@ class RelationshipTest(RelationshipBaseTest):
 
 class RelationshipAssociationTest(RelationshipBaseTest):
 
-    # def test_clean_type(self):
-    #     # Create with the wrong source Type
-    #     with self.assertRaises(ValidationError):
-    #         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.sites[0], destination=self.vlans[0])
-    #         cra.save()
+    def test_clean_wrong_type(self):
+        # Create with the wrong source Type
+        with self.assertRaises(ValidationError):
+            cra = RelationshipAssociation(relationship=self.m2m_1, source=self.sites[0], destination=self.vlans[0])
+            cra.clean()
 
-    #     # Create with the wrong destination Type
-    #     with self.assertRaises(ValidationError):
-    #         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.racks[0])
-    #         cra.save()
+        # Create with the wrong destination Type
+        with self.assertRaises(ValidationError):
+            cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.racks[0])
+            cra.clean()
+
+    def test_clean_check_quantity_o2o(self):
+        """Validate that one-to-one relationships can't have more than one relationship association per side. """
+
+        cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0])
+        cra.clean()
+        cra.save()
+
+        cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[1], destination=self.sites[1])
+        cra.clean()
+        cra.save()
+
+        with self.assertRaises(ValidationError):
+            cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[2])
+            cra.clean()
+
+        with self.assertRaises(ValidationError):
+            cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[2], destination=self.sites[0])
+            cra.clean()
+
+    def test_clean_check_quantity_o2m(self):
+        """Validate that one-to-many relationships can't have more than one relationship association per source. """
+
+        cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[0])
+        cra.clean()
+        cra.save()
+
+        cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[1])
+        cra.clean()
+        cra.save()
+
+        cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[1], destination=self.vlans[2])
+        cra.clean()
+        cra.save()
+
+        with self.assertRaises(ValidationError):
+            cra = RelationshipAssociation(relationship=self.o2o_1, source=self.sites[2], destination=self.vlans[0])
+            cra.clean()
+
+    def test_clean_check_quantity_m2m(self):
+        """Validate that many-to-many relationship can have many relationship associations."""
+        cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
+        cra.clean()
+        cra.save()
+
+        cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1])
+        cra.clean()
+        cra.save()
+
+        cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[2])
+        cra.clean()
+        cra.save()
+
+        cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[2], destination=self.vlans[0])
+        cra.clean()
 
     def test_get_peer(self):
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])

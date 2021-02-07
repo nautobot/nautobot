@@ -416,12 +416,35 @@ class RelationshipAssociation(models.Model):
         elif obj == self.destination:
             return self.source
 
-    # def clean(self):
+    def clean(self):
 
-    #     raise ValidationError
+        if self.source_type != self.relationship.source_type:
+            raise ValidationError({'source_type': f'source_type has a different value than defined in {self.relationship}'})
 
-    #     if self.source_type != self.relationship.source_type:
-    #         raise ValidationError({'source_type': f'source_type has a different value than defined in {self.relationship}'})
+        if self.destination_type != self.relationship.destination_type:
+            raise ValidationError({'destination_type': f'destination_type has a different value than defined in {self.relationship}'})
 
-    #     if self.destination_type != self.relationship.destination_type:
-    #         raise ValidationError({'destination_type': f'destination_type has a different value than defined in {self.relationship}'})
+        # Check if a similar relationship already exist
+        if self.relationship.type != RelationshipTypeChoices.TYPE_MANY_TO_MANY:
+
+            count_dest = RelationshipAssociation.objects.filter(
+                relationship=self.relationship,
+                destination_type=self.destination_type,
+                destination_id=self.destination_id
+            ).count()
+
+            if count_dest != 0:
+                raise ValidationError({
+                    'destination': f'Unable to create more than one {self.relationship} association to {self.destination} (destination)'
+                })
+
+            if self.relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_ONE:
+
+                count_src = RelationshipAssociation.objects.filter(
+                    relationship=self.relationship,
+                    source_type=self.source_type,
+                    source_id=self.source_id
+                ).count()
+
+                if count_src != 0:
+                    raise ValidationError({'source': f'Unable to create more than one {self.relationship} association to {self.source} (source)'})
