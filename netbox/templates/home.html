@@ -19,14 +19,14 @@
 <div class="row">
     <div class="col-sm-6 col-md-4">
 
-    {% if perms.dcim.view_site or perms.tenancy.view_tenant or not settings.RESTRICT_UI %}
+    {% if perms.dcim.view_site or perms.tenancy.view_tenant or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Organization</strong>
             </div>
             <div class="list-group">
 
-            {% if perms.tenancy.view_tenant or not settings.RESTRICT_UI %}
+            {% if perms.tenancy.view_tenant or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_site %}
                         <span class="badge pull-right">{{ stats.site_count }}</span>
@@ -39,7 +39,7 @@
                 </div>
             {% endif %}
 
-            {% if perms.tenancy.view_tenant or not settings.RESTRICT_UI %}
+            {% if perms.tenancy.view_tenant or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.tenancy.view_tenant %}
                         <span class="badge pull-right">{{ stats.tenant_count }}</span>
@@ -55,14 +55,14 @@
         </div>
     {% endif %}
 
-    {% if perms.dcim.view_rack or perms.dcim.view_devicetype or perms.dcim.view_device or perms.dcim.view_cable or perms.dcim.view_interface or perms.dcim.view_consoleport or perms.dcim.view_powerport or not settings.RESTRICT_UI %}
+    {% if perms.dcim.view_rack or perms.dcim.view_devicetype or perms.dcim.view_device or perms.dcim.view_cable or perms.dcim.view_interface or perms.dcim.view_consoleport or perms.dcim.view_powerport or not settings.HIDE_RESTRICTED_UI %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>DCIM</strong>
             </div>
             <div class="list-group">
 
-            {% if perms.dcim.view_rack or not settings.RESTRICT_UI %}
+            {% if perms.dcim.view_rack or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
                     {% if perms.dcim.view_rack %}
                         <span class="badge pull-right">{{ stats.rack_count }}</span>
