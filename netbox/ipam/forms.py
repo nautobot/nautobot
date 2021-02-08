@@ -2,7 +2,8 @@ from django import forms
 
 from dcim.models import Device, Interface, Rack, Region, Site
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldModelCSVForm, CustomFieldModelForm, CustomFieldFilterForm,
+    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldModelCSVForm, CustomFieldModelForm,
+    RelationshipModelForm, CustomFieldFilterForm,
 )
 from extras.models import Tag
 from tenancy.forms import TenancyFilterForm, TenancyForm
@@ -30,7 +31,7 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice([
 # VRFs
 #
 
-class VRFForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class VRFForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     import_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(),
         required=False
@@ -120,7 +121,7 @@ class VRFFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
 # Route targets
 #
 
-class RouteTargetForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class RouteTargetForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     tags = DynamicModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False
@@ -190,7 +191,7 @@ class RouteTargetFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilter
 # RIRs
 #
 
-class RIRForm(BootstrapMixin, CustomFieldModelForm):
+class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
 
     class Meta:
@@ -226,7 +227,7 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 # Aggregates
 #
 
-class AggregateForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class AggregateForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     rir = DynamicModelChoiceField(
         queryset=RIR.objects.all(),
         label='RIR'
@@ -324,7 +325,7 @@ class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
 # Roles
 #
 
-class RoleForm(BootstrapMixin, CustomFieldModelForm):
+class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
 
     class Meta:
@@ -346,7 +347,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 # Prefixes
 #
 
-class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -615,7 +616,7 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm)
 # IP addresses
 #
 
-class IPAddressForm(BootstrapMixin, TenancyForm, ReturnURLForm, CustomFieldModelForm):
+class IPAddressForm(BootstrapMixin, TenancyForm, ReturnURLForm, CustomFieldModelForm, RelationshipModelForm):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -1068,7 +1069,7 @@ class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
 # VLAN groups
 #
 
-class VLANGroupForm(BootstrapMixin, CustomFieldModelForm):
+class VLANGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False,
@@ -1128,7 +1129,7 @@ class VLANGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
 # VLANs
 #
 
-class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False,
@@ -1322,7 +1323,7 @@ class VLANFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
 # Services
 #
 
-class ServiceForm(BootstrapMixin, CustomFieldModelForm):
+class ServiceForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     ports = NumericArrayField(
         base_field=forms.IntegerField(
             min_value=SERVICE_PORT_MIN,

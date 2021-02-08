@@ -6,7 +6,10 @@ from django.urls import reverse
 from taggit.managers import TaggableManager
 
 from dcim.models import BaseInterface, Device
-from extras.models import ChangeLoggedModel, ConfigContextModel, CustomFieldModel, ObjectChange, TaggedItem
+from extras.models import (
+    ChangeLoggedModel, ConfigContextModel, CustomFieldModel, ObjectChange,
+    RelationshipModel, TaggedItem
+)
 from extras.querysets import ConfigContextModelQuerySet
 from extras.utils import extras_features
 from utilities.fields import NaturalOrderingField
@@ -34,8 +37,9 @@ __all__ = (
     'custom_fields',
     'custom_validators',
     'graphql',
+    'relationships',
 )
-class ClusterType(ChangeLoggedModel, CustomFieldModel):
+class ClusterType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A type of Cluster.
     """
@@ -80,9 +84,10 @@ class ClusterType(ChangeLoggedModel, CustomFieldModel):
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class ClusterGroup(ChangeLoggedModel, CustomFieldModel):
+class ClusterGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     An organizational group of Clusters.
     """
@@ -130,9 +135,10 @@ class ClusterGroup(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
-    'webhooks'
+    'relationships',
+    'webhooks',
 )
-class Cluster(ChangeLoggedModel, CustomFieldModel):
+class Cluster(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A cluster of VirtualMachines. Each Cluster may optionally be associated with one or more Devices.
     """
@@ -221,9 +227,10 @@ class Cluster(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
-    'webhooks'
+    'relationships',
+    'webhooks',
 )
-class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
+class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, RelationshipModel):
     """
     A virtual machine which runs inside a Cluster.
     """
@@ -398,6 +405,7 @@ class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class VMInterface(BaseInterface):

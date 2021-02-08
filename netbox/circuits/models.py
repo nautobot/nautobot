@@ -4,7 +4,7 @@ from taggit.managers import TaggableManager
 
 from dcim.fields import ASNField
 from dcim.models import CableTermination, PathEndpoint
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 from utilities.utils import serialize_object
@@ -26,9 +26,10 @@ __all__ = (
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Provider(ChangeLoggedModel, CustomFieldModel):
+class Provider(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Each Circuit belongs to a Provider. This is usually a telecommunications company or similar organization. This model
     stores information pertinent to the user's relationship with the Provider.
@@ -103,9 +104,10 @@ class Provider(ChangeLoggedModel, CustomFieldModel):
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class CircuitType(ChangeLoggedModel, CustomFieldModel):
+class CircuitType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
     "Long Haul," "Metro," or "Out-of-Band".
@@ -150,9 +152,10 @@ class CircuitType(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Circuit(ChangeLoggedModel, CustomFieldModel):
+class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
     circuits. Each circuit is also assigned a CircuitType and a Site.  Circuit port speed and commit rate are measured
@@ -254,9 +257,10 @@ class Circuit(ChangeLoggedModel, CustomFieldModel):
 
 @extras_features(
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class CircuitTermination(PathEndpoint, CableTermination):
+class CircuitTermination(PathEndpoint, CableTermination, RelationshipModel):
     circuit = models.ForeignKey(
         to='circuits.Circuit',
         on_delete=models.CASCADE,

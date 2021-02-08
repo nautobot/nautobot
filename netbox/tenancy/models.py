@@ -3,7 +3,7 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from taggit.managers import TaggableManager
 
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
 from extras.utils import extras_features
 from utilities.mptt import TreeManager
 from utilities.querysets import RestrictedQuerySet
@@ -19,9 +19,10 @@ __all__ = (
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class TenantGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel):
+class TenantGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     An arbitrary collection of Tenants.
     """
@@ -86,9 +87,10 @@ class TenantGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Tenant(ChangeLoggedModel, CustomFieldModel):
+class Tenant(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A Tenant represents an organization served by the NetBox owner. This is typically a customer or an internal
     department.

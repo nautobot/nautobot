@@ -7,7 +7,8 @@ from dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldModelCSVForm, CustomFieldModelForm, CustomFieldFilterForm,
+    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldModelCSVForm, CustomFieldModelForm,
+    RelationshipModelForm, CustomFieldFilterForm,
 )
 from extras.models import Tag
 from ipam.models import IPAddress, VLAN
@@ -27,7 +28,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 # Cluster types
 #
 
-class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm):
+class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
 
     class Meta:
@@ -49,7 +50,7 @@ class ClusterTypeCSVForm(CustomFieldModelCSVForm):
 # Cluster groups
 #
 
-class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm):
+class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
 
     class Meta:
@@ -71,7 +72,7 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 # Clusters
 #
 
-class ClusterForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class ClusterForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     type = DynamicModelChoiceField(
         queryset=ClusterType.objects.all()
     )
@@ -280,7 +281,7 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 # Virtual Machines
 #
 
-class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,

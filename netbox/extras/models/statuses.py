@@ -8,6 +8,7 @@ from django.utils.hashable import make_hashable
 
 from extras.utils import extras_features, FeatureQuery
 from extras.models import ChangeLoggedModel
+from extras.models.relationships import RelationshipModel
 from utilities.querysets import RestrictedQuerySet
 from utilities.choices import ColorChoices
 from utilities.forms import DynamicModelChoiceField
@@ -25,8 +26,11 @@ class StatusQuerySet(RestrictedQuerySet):
         return self.filter(content_types=content_type)
 
 
-@extras_features('export_templates')
-class Status(ChangeLoggedModel):
+@extras_features(
+    'export_templates',
+    'relationships',
+)
+class Status(ChangeLoggedModel, RelationshipModel):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(

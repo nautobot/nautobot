@@ -3,6 +3,7 @@ from django.utils.text import slugify
 from taggit.models import TagBase, GenericTaggedItemBase
 
 from extras.models import ChangeLoggedModel, CustomFieldModel
+from extras.models.relationships import RelationshipModel
 from extras.utils import extras_features
 from utilities.choices import ColorChoices
 from utilities.fields import ColorField
@@ -15,9 +16,10 @@ from utilities.querysets import RestrictedQuerySet
 
 @extras_features(
     'custom_fields',
-    'custom_validators'
+    'custom_validators',
+    'relationships',
 )
-class Tag(TagBase, ChangeLoggedModel, CustomFieldModel):
+class Tag(TagBase, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     color = ColorField(
         default=ColorChoices.COLOR_GREY
     )

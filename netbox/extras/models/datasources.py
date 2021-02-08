@@ -11,6 +11,7 @@ from django_cryptography.fields import encrypt
 from extras.models.change_logging import ChangeLoggedModel
 from extras.models.customfields import CustomFieldModel
 from extras.models.models import ConfigContext, ExportTemplate
+from extras.models.relationships import RelationshipModel
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 
@@ -20,8 +21,9 @@ from utilities.querysets import RestrictedQuerySet
     'custom_fields',
     'export_template_owners',
     'job_results',
+    'relationships',
 )
-class GitRepository(ChangeLoggedModel, CustomFieldModel):
+class GitRepository(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """Representation of a Git repository used as an external data source."""
 
     TOKEN_PLACEHOLDER = "********"

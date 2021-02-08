@@ -1,7 +1,8 @@
 from django import forms
 
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldModelForm, CustomFieldBulkEditForm, CustomFieldFilterForm, CustomFieldModelCSVForm,
+    AddRemoveTagsForm, CustomFieldModelForm, RelationshipModelForm, CustomFieldBulkEditForm,
+    CustomFieldFilterForm, CustomFieldModelCSVForm,
 )
 from extras.models import Tag
 from utilities.forms import (
@@ -15,7 +16,7 @@ from .models import Tenant, TenantGroup
 # Tenant groups
 #
 
-class TenantGroupForm(BootstrapMixin, CustomFieldModelForm):
+class TenantGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     parent = DynamicModelChoiceField(
         queryset=TenantGroup.objects.all(),
         required=False
@@ -47,7 +48,7 @@ class TenantGroupCSVForm(CustomFieldModelCSVForm):
 # Tenants
 #
 
-class TenantForm(BootstrapMixin, CustomFieldModelForm):
+class TenantForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
     group = DynamicModelChoiceField(
         queryset=TenantGroup.objects.all(),

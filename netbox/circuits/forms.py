@@ -2,7 +2,7 @@ from django import forms
 
 from dcim.models import Region, Site
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldFilterForm, CustomFieldModelForm, CustomFieldModelCSVForm,
+    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldFilterForm, CustomFieldModelForm, RelationshipModelForm, CustomFieldModelCSVForm,
 )
 from extras.models import Tag
 from tenancy.forms import TenancyFilterForm, TenancyForm
@@ -20,7 +20,7 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider
 # Providers
 #
 
-class ProviderForm(BootstrapMixin, CustomFieldModelForm):
+class ProviderForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
     comments = CommentField()
     tags = DynamicModelMultipleChoiceField(
@@ -127,7 +127,7 @@ class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
 # Circuit types
 #
 
-class CircuitTypeForm(BootstrapMixin, CustomFieldModelForm):
+class CircuitTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
 
     class Meta:
@@ -152,7 +152,7 @@ class CircuitTypeCSVForm(CustomFieldModelCSVForm):
 # Circuits
 #
 
-class CircuitForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class CircuitForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     provider = DynamicModelChoiceField(
         queryset=Provider.objects.all()
     )
@@ -302,7 +302,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm
 # Circuit terminations
 #
 
-class CircuitTerminationForm(BootstrapMixin, forms.ModelForm):
+class CircuitTerminationForm(BootstrapMixin, RelationshipModelForm):
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
         required=False,

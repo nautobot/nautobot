@@ -11,7 +11,7 @@ from taggit.managers import TaggableManager
 from dcim.choices import *
 from dcim.constants import *
 from dcim.fields import MACAddressField
-from extras.models import CustomFieldModel, ObjectChange, TaggedItem
+from extras.models import CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
 from extras.utils import extras_features
 from utilities.fields import NaturalOrderingField
 from utilities.mptt import TreeManager
@@ -37,7 +37,7 @@ __all__ = (
 )
 
 
-class ComponentModel(CustomFieldModel):
+class ComponentModel(CustomFieldModel, RelationshipModel):
     """
     An abstract model inherited by any model which has a parent Device.
     """
@@ -203,6 +203,7 @@ class PathEndpoint(models.Model):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
@@ -244,6 +245,7 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
     'custom_fields',
     'custom_validators',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
@@ -284,8 +286,9 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql',
     'export_templates',
+    'graphql',
+    'relationships',
     'webhooks'
 )
 class PowerPort(CableTermination, PathEndpoint, ComponentModel):
@@ -400,6 +403,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
     'custom_fields',
     'custom_validators',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
@@ -461,7 +465,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 # Interfaces
 #
 
-class BaseInterface(models.Model):
+class BaseInterface(RelationshipModel):
     """
     Abstract base class for fields shared by dcim.Interface and virtualization.VMInterface.
     """
@@ -506,6 +510,7 @@ class BaseInterface(models.Model):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
@@ -656,6 +661,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     'custom_fields',
     'custom_validators',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class FrontPort(CableTermination, ComponentModel):
@@ -724,6 +730,7 @@ class FrontPort(CableTermination, ComponentModel):
     'custom_fields',
     'custom_validators',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class RearPort(CableTermination, ComponentModel):
@@ -782,6 +789,7 @@ class RearPort(CableTermination, ComponentModel):
     'custom_fields',
     'custom_validators',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class DeviceBay(ComponentModel):
@@ -848,6 +856,7 @@ class DeviceBay(ComponentModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
 class InventoryItem(MPTTModel, ComponentModel):

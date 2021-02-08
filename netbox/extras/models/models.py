@@ -16,6 +16,7 @@ from rest_framework.utils.encoders import JSONEncoder
 from extras.choices import *
 from extras.constants import *
 from extras.models import ChangeLoggedModel
+from extras.models.relationships import RelationshipModel
 from extras.querysets import ConfigContextQuerySet
 from extras.utils import extras_features, FeatureQuery, image_upload
 from utilities.querysets import RestrictedQuerySet
@@ -210,8 +211,11 @@ class CustomLink(models.Model):
 #
 # Export templates
 #
-@extras_features('graphql')
-class ExportTemplate(models.Model):
+@extras_features(
+    'graphql',
+    'relationships',
+)
+class ExportTemplate(RelationshipModel):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,

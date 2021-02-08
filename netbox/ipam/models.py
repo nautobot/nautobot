@@ -11,7 +11,7 @@ from django.urls import reverse
 from taggit.managers import TaggableManager
 
 from dcim.models import Device, Interface
-from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, ObjectChange, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 from utilities.utils import array_to_string, serialize_object
@@ -44,9 +44,10 @@ __all__ = (
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class VRF(ChangeLoggedModel, CustomFieldModel):
+class VRF(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A virtual routing and forwarding (VRF) table represents a discrete layer three forwarding domain (e.g. a routing
     table). Prefixes and IPAddresses can optionally be assigned to VRFs. (Prefixes and IPAddresses not assigned to a VRF
@@ -131,9 +132,10 @@ class VRF(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class RouteTarget(ChangeLoggedModel, CustomFieldModel):
+class RouteTarget(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A BGP extended community used to control the redistribution of routes among VRFs, as defined in RFC 4364.
     """
@@ -179,9 +181,10 @@ class RouteTarget(ChangeLoggedModel, CustomFieldModel):
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class RIR(ChangeLoggedModel, CustomFieldModel):
+class RIR(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A Regional Internet Registry (RIR) is responsible for the allocation of a large portion of the global IP address
     space. This can be an organization like ARIN or RIPE, or a governing standard such as RFC 1918.
@@ -234,9 +237,10 @@ class RIR(ChangeLoggedModel, CustomFieldModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Aggregate(ChangeLoggedModel, CustomFieldModel):
+class Aggregate(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     An aggregate exists at the root level of the IP address space hierarchy in NetBox. Aggregates are used to organize
     the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
@@ -346,9 +350,10 @@ class Aggregate(ChangeLoggedModel, CustomFieldModel):
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class Role(ChangeLoggedModel, CustomFieldModel):
+class Role(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
     "Management."
@@ -660,9 +665,10 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class IPAddress(ChangeLoggedModel, CustomFieldModel):
+class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -883,9 +889,10 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel):
 @extras_features(
     'custom_fields',
     'custom_validators',
-    'graphql'
+    'graphql',
+    'relationships',
 )
-class VLANGroup(ChangeLoggedModel, CustomFieldModel):
+class VLANGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
@@ -1080,9 +1087,10 @@ class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Service(ChangeLoggedModel, CustomFieldModel):
+class Service(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A Service represents a layer-four service (e.g. HTTP or SSH) running on a Device or VirtualMachine. A Service may
     optionally be tied to one or more specific IPAddresses belonging to its parent.

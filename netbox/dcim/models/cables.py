@@ -12,7 +12,7 @@ from dcim.choices import *
 from dcim.constants import *
 from dcim.fields import PathField
 from dcim.utils import decompile_path_node, object_to_path_node, path_node_to_object
-from extras.models import ChangeLoggedModel, CustomFieldModel, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, TaggedItem
 from extras.utils import extras_features
 from utilities.fields import ColorField
 from utilities.querysets import RestrictedQuerySet
@@ -37,9 +37,10 @@ __all__ = (
     'custom_validators',
     'export_templates',
     'graphql',
+    'relationships',
     'webhooks'
 )
-class Cable(ChangeLoggedModel, CustomFieldModel):
+class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     A physical connection between two endpoints.
     """
