@@ -1,4 +1,4 @@
-"""Custom jobs functionality - consolidates and replaces legacy "scripts" and "reports" features."""
+"""Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 import inspect
 import json
 import logging
@@ -24,7 +24,7 @@ from django_rq import job
 from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
 from .datasources.git import ensure_git_repository
-from .forms import CustomJobForm
+from .forms import JobForm
 from .models import GitRepository
 from .registry import registry
 
@@ -35,7 +35,7 @@ from utilities.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceF
 
 
 __all__ = [
-    'CustomJob',
+    'Job',
     'BooleanVar',
     'ChoiceVar',
     'FileVar',
@@ -50,18 +50,18 @@ __all__ = [
     'TextVar',
 ]
 
-logger = logging.getLogger('netbox.custom_jobs')
+logger = logging.getLogger('netbox.jobs')
 
 
-class BaseCustomJob:
-    """Base model for custom jobs (reports, scripts).
+class BaseJob:
+    """Base model for jobs (reports, scripts).
 
-    Users can subclass this directly if they want to provide their own base class for implementing multiple custom jobs
-    with shared functionality; if no such sharing is required, use CustomJob class instead.
+    Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
+    with shared functionality; if no such sharing is required, use Job class instead.
 
     For backward compatibility with NetBox, this class has several APIs that can be implemented by the user:
 
-    1. run(self, data, commit) - First method called when invoking a CustomJob, can handle setup and parameter storage.
+    1. run(self, data, commit) - First method called when invoking a Job, can handle setup and parameter storage.
     2. test_*(self) - Any method matching this pattern will be called next
     3. post_run(self) - Last method called, will be called even in case of an exception during the above methods
     """
@@ -87,7 +87,7 @@ class BaseCustomJob:
         ])
 
     def __init__(self):
-        self.logger = logging.getLogger(f"netbox.custom_jobs.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"netbox.jobs.{self.__class__.__name__}")
 
         self.request = None
         self.active_test = None
@@ -114,31 +114,29 @@ class BaseCustomJob:
     @classproperty
     def class_path(cls):
         """
-        Unique identifier of a specific CustomJob class, in the form <source_grouping>/<module_name>/<ClassName>.
+        Unique identifier of a specific Job class, in the form <source_grouping>/<module_name>/<ClassName>.
 
         Examples:
         local/my_script/MyScript
         plugins/my_plugin.jobs/MyPluginJob
-        git.my-repository/mycustomjob/MyCustomJob
+        git.my-repository/myjob/MyJob
         """
         # TODO: it'd be nice if this were derived more automatically instead of needing this logic
         if cls in registry['plugin_jobs']:
             source_grouping = 'plugins'
         elif (
-            cls.file_path.startswith(settings.CUSTOM_JOBS_ROOT) or
+            cls.file_path.startswith(settings.JOBS_ROOT) or
             cls.file_path.startswith(settings.SCRIPTS_ROOT) or
             cls.file_path.startswith(settings.REPORTS_ROOT)
         ):
             source_grouping = "local"
         elif cls.file_path.startswith(settings.GIT_ROOT):
-            # $GIT_ROOT/<repo_slug>/custom_jobs/customjob.py -> <repo_slug>
+            # $GIT_ROOT/<repo_slug>/jobs/job.py -> <repo_slug>
             source_grouping = ".".join(["git", os.path.basename(os.path.dirname(os.path.dirname(cls.file_path)))])
         else:
             raise RuntimeError(
-                f"Unknown/unexpected custom job file_path {cls.file_path}, should be one of " +
-                ", ".join([
-                    settings.CUSTOM_JOBS_ROOT, settings.SCRIPTS_ROOT, settings.REPORTS_ROOT, settings.GIT_ROOT
-                ])
+                f"Unknown/unexpected job file_path {cls.file_path}, should be one of " +
+                ", ".join([settings.JOBS_ROOT, settings.SCRIPTS_ROOT, settings.REPORTS_ROOT, settings.GIT_ROOT])
             )
 
         return "/".join([source_grouping, cls.__module__, cls.__name__])
@@ -187,9 +185,9 @@ class BaseCustomJob:
         for method_name in self.test_methods:
             value.data[method_name] = self._results_struct()
         # Only initialize results for run and post_run if they're actually implemented
-        if self.run.__func__ != BaseCustomJob.run:
+        if self.run.__func__ != BaseJob.run:
             value.data['run'] = self._results_struct()
-        if self.post_run.__func__ != BaseCustomJob.post_run:
+        if self.post_run.__func__ != BaseJob.post_run:
             value.data['post_run'] = self._results_struct()
 
         self._job_result = value
@@ -197,7 +195,7 @@ class BaseCustomJob:
     @property
     def results(self):
         """
-        The results (log messages and final output) generated by this custom job.
+        The results (log messages and final output) generated by this job.
 
         {
             "total": {
@@ -246,12 +244,12 @@ class BaseCustomJob:
 
     def as_form(self, data=None, files=None, initial=None):
         """
-        Return a Django form suitable for populating the context data required to run this CustomJob.
+        Return a Django form suitable for populating the context data required to run this Job.
         """
         fields = {
             name: var.as_field() for name, var in self._get_vars().items()
         }
-        FormClass = type('CustomJobForm', (CustomJobForm,), fields)
+        FormClass = type('JobForm', (JobForm,), fields)
 
         form = FormClass(data, files, initial=initial)
 
@@ -262,7 +260,7 @@ class BaseCustomJob:
 
     def run(self, data, commit):
         """
-        Method invoked when this CustomJob is run, before any "test_*" methods.
+        Method invoked when this Job is run, before any "test_*" methods.
         """
         pass
 
@@ -342,9 +340,9 @@ class BaseCustomJob:
         return data
 
 
-class CustomJob(BaseCustomJob):
+class Job(BaseJob):
     """
-    Classes which inherit from this model will appear in the list of available custom jobs.
+    Classes which inherit from this model will appear in the list of available jobs.
     """
 
 
@@ -562,15 +560,15 @@ class IPNetworkVar(ScriptVariable):
             )
 
 
-def is_custom_job(obj):
+def is_job(obj):
     """
-    Returns True if the given object is a CustomJob subclass.
+    Returns True if the given object is a Job subclass.
     """
     from .scripts import Script, BaseScript
     from .reports import Report
 
     try:
-        return issubclass(obj, CustomJob) and obj not in [CustomJob, Script, BaseScript, Report]
+        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report]
     except TypeError:
         return False
 
@@ -582,9 +580,9 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
-def get_custom_jobs():
+def get_jobs():
     """
-    Compile a dictionary of all custom jobs available across all modules in the jobs path(s).
+    Compile a dictionary of all jobs available across all modules in the jobs path(s).
 
     Returns an OrderedDict:
 
@@ -610,70 +608,70 @@ def get_custom_jobs():
         }
     }
     """
-    custom_jobs = OrderedDict()
+    jobs = OrderedDict()
 
-    paths = _get_custom_job_source_paths()
+    paths = _get_job_source_paths()
 
     # Iterate over all groupings (local, git.<slug1>, git.<slug2>, etc.)
     for grouping, path_list in paths.items():
         # Iterate over all modules (Python files) found in any of the directory paths identified for the given grouping
         for importer, module_name, _ in pkgutil.iter_modules(path_list):
             try:
-                # Dynamically import this module to make its contents (custom job(s)) available to Python
+                # Dynamically import this module to make its contents (job(s)) available to Python
                 module = importer.find_module(module_name).load_module(module_name)
             except Exception as exc:
-                logger.error(f"Unable to load custom job {module_name}: {exc}")
+                logger.error(f"Unable to load job {module_name}: {exc}")
                 continue
 
             # For each module, we construct a dict {"name": module_name, "jobs": {"job_name": job_class, ...}}
             human_readable_name = module.name if hasattr(module, "name") else module_name
             module_jobs = {"name": human_readable_name, "jobs": OrderedDict()}
-            # Get all CustomJob subclasses (which includes Script and Report subclasses as well) in this module,
+            # Get all Job subclasses (which includes Script and Report subclasses as well) in this module,
             # and add them to the dict
-            for name, cls in inspect.getmembers(module, is_custom_job):
+            for name, cls in inspect.getmembers(module, is_job):
                 module_jobs["jobs"][name] = cls
 
-            # If there were any CustomJob subclasses found, add the module_jobs dict to the overall custom_jobs dict
+            # If there were any Job subclasses found, add the module_jobs dict to the overall jobs dict
             # (otherwise skip it since there aren't any jobs in this module to report)
             if module_jobs["jobs"]:
-                custom_jobs.setdefault(grouping, {})[module_name] = module_jobs
+                jobs.setdefault(grouping, {})[module_name] = module_jobs
 
     # Add jobs from plugins (which were already imported at startup)
     for cls in registry['plugin_jobs']:
         module = inspect.getmodule(cls)
         human_readable_name = module.name if hasattr(module, "name") else module.__name__
-        custom_jobs.setdefault("plugins", {}).setdefault(
+        jobs.setdefault("plugins", {}).setdefault(
             module.__name__, {"name": human_readable_name, "jobs": OrderedDict()}
         )
-        custom_jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
+        jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
 
-    return custom_jobs
+    return jobs
 
 
-def _get_custom_job_source_paths():
+def _get_job_source_paths():
     """
-    Helper function to get_custom_jobs().
+    Helper function to get_jobs().
 
     Constructs a dict of {"grouping": [filesystem_path, ...]}.
     Current groupings are "local", "git.<repository_slug>".
     Plugin jobs aren't loaded dynamically from a source_path and so are not included in this function
     """
     paths = {}
-    # Locally installed custom jobs, in the current preferred CUSTOM_JOBS_ROOT and the legacy SCRIPTS_ROOT/REPORTS_ROOT
-    if settings.CUSTOM_JOBS_ROOT and os.path.exists(settings.CUSTOM_JOBS_ROOT):
-        paths.setdefault('local', []).append(settings.CUSTOM_JOBS_ROOT)
+    # Locally installed jobs, in the current preferred JOBS_ROOT and the legacy SCRIPTS_ROOT/REPORTS_ROOT
+    if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
+        paths.setdefault('local', []).append(settings.JOBS_ROOT)
     if settings.SCRIPTS_ROOT and settings.SCRIPTS_ROOT not in paths and os.path.exists(settings.SCRIPTS_ROOT):
-        logger.warning("settings.SCRIPTS_ROOT is deprecated; use settings.CUSTOM_JOBS_ROOT instead")
+        logger.warning("settings.SCRIPTS_ROOT is deprecated; use settings.JOBS_ROOT instead")
         paths.setdefault('local', []).append(settings.SCRIPTS_ROOT)
     if settings.REPORTS_ROOT and settings.REPORTS_ROOT not in paths and os.path.exists(settings.REPORTS_ROOT):
-        logger.warning("settings.REPORTS_ROOT is deprecated; use settings.CUSTOM_JOBS_ROOT instead")
+        logger.warning("settings.REPORTS_ROOT is deprecated; use settings.JOBS_ROOT instead")
         paths.setdefault('local', []).append(settings.REPORTS_ROOT)
 
-    # Custom jobs derived from Git repositories
+    # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
         for repository_record in GitRepository.objects.all():
-            if "extras.CustomJob" not in repository_record.provided_contents:
-                # This repository isn't marked as containing custom jobs that we should use.
+            if "extras.Job" not in repository_record.provided_contents:
+                # This repository isn't marked as containing jobs that we should use.
                 continue
 
             try:
@@ -685,12 +683,12 @@ def _get_custom_job_source_paths():
                 logger.error(f"Error during local clone of Git repository {repository_record}: {exc}")
                 continue
 
-            custom_jobs_path = os.path.join(repository_record.filesystem_path, 'custom_jobs')
-            if os.path.isdir(custom_jobs_path):
-                paths[f"git.{repository_record.slug}"] = [custom_jobs_path]
+            jobs_path = os.path.join(repository_record.filesystem_path, 'jobs')
+            if os.path.isdir(jobs_path):
+                paths[f"git.{repository_record.slug}"] = [jobs_path]
             else:
                 logger.warning(
-                    f"Git repository {repository_record} is configured to provide custom jobs, but none are found!"
+                    f"Git repository {repository_record} is configured to provide jobs, but none are found!"
                 )
 
         # TODO: when a Git repo is deleted or its slug is changed, we update the local filesystem
@@ -706,28 +704,28 @@ def _get_custom_job_source_paths():
 
 
 @cached(timeout=60)
-def get_custom_job_classpaths():
+def get_job_classpaths():
     """
-    Get a list of all known CustomJob class_path strings.
+    Get a list of all known Job class_path strings.
 
-    This is used as a cacheable, light-weight alternative to calling get_custom_jobs() or get_custom_job()
-    when all that's needed is to verify whether a given custom job exists.
+    This is used as a cacheable, light-weight alternative to calling get_jobs() or get_job()
+    when all that's needed is to verify whether a given job exists.
     """
-    custom_jobs_dict = get_custom_jobs()
+    jobs_dict = get_jobs()
     result = set()
-    for grouping_name, modules_dict in custom_jobs_dict.items():
+    for grouping_name, modules_dict in jobs_dict.items():
         for module_name in modules_dict:
             for class_name in modules_dict[module_name]["jobs"]:
                 result.add(f"{grouping_name}/{module_name}/{class_name}")
     return result
 
 
-def get_custom_job(class_path):
+def get_job(class_path):
     """
-    Retrieve a specific custom job class by its class_path.
+    Retrieve a specific job class by its class_path.
 
-    Note that this is built atop get_custom_jobs() and so is not a particularly light-weight API;
-    if all you need to do is to verify whether a given class_path exists, use get_custom_job_classpaths() instead.
+    Note that this is built atop get_jobs() and so is not a particularly light-weight API;
+    if all you need to do is to verify whether a given class_path exists, use get_job_classpaths() instead.
 
     Returns None if not found.
     """
@@ -737,19 +735,19 @@ def get_custom_job(class_path):
         logger.error(f'Invalid class_path value "{class_path}"')
         return None
 
-    custom_jobs = get_custom_jobs()
-    return custom_jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
+    jobs = get_jobs()
+    return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
 @job('default')
-def run_custom_job(data, request, job_result, commit=True, *args, **kwargs):
+def run_job(data, request, job_result, commit=True, *args, **kwargs):
     """
-    Helper function to call the "run()", "test_*()", and "post_run" methods on a CustomJob.
+    Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
 
     This gets around the inability to pickle an instance method for queueing into the background processor.
     """
-    custom_job_class = get_custom_job(job_result.name)
-    if not custom_job_class:
+    job_class = get_job(job_result.name)
+    if not job_class:
         job_result.log(
             f'Unable to locate job "{job_result.name}" to run it!',
             level_choice=LogLevelChoices.LOG_FAILURE,
@@ -760,12 +758,12 @@ def run_custom_job(data, request, job_result, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         return False
-    custom_job = custom_job_class()
-    custom_job.job_result = job_result
+    job = job_class()
+    job.job_result = job_result
 
     # TODO: validate that all args required by this job are set in the data or else log helpful errors?
 
-    custom_job.logger.info(f"Running custom job (commit={commit})")
+    job.logger.info(f"Running job (commit={commit})")
 
     job_result.status = JobResultStatusChoices.STATUS_RUNNING
     job_result.save()
@@ -777,70 +775,70 @@ def run_custom_job(data, request, job_result, commit=True, *args, **kwargs):
             data[field_name] = fileobj
 
     # Add the current request as a property of the job
-    custom_job.request = request
+    job.request = request
 
-    def _run_custom_job():
+    def _run_job():
         """
-        Core custom job execution task.
+        Core job execution task.
 
         We capture this within a subfunction to allow for conditionally wrapping it with the change_logging
         context manager (which is only relevant if commit == True).
         """
-        custom_job.results["output"] = ""
+        job.results["output"] = ""
         try:
             with transaction.atomic():
                 # Script-like behavior
-                custom_job.active_test = "run"
-                output = custom_job.run(data=data, commit=commit)
+                job.active_test = "run"
+                output = job.run(data=data, commit=commit)
                 if output:
-                    custom_job.results["output"] += "\n" + str(output)
+                    job.results["output"] += "\n" + str(output)
 
                 # Report-like behavior
-                for method_name in custom_job.test_methods:
-                    custom_job.active_test = method_name
-                    output = getattr(custom_job, method_name)()
+                for method_name in job.test_methods:
+                    job.active_test = method_name
+                    output = getattr(job, method_name)()
                     if output:
-                        custom_job.results["output"] += "\n" + str(output)
+                        job.results["output"] += "\n" + str(output)
 
-                if custom_job.failed:
-                    custom_job.logger.warning("Custom job failed")
+                if job.failed:
+                    job.logger.warning("job failed")
                     job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
                 else:
-                    custom_job.logger.info("Custom job completed successfully")
+                    job.logger.info("job completed successfully")
                     job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
 
                 if not commit:
                     raise AbortTransaction()
 
         except AbortTransaction:
-            custom_job.log_info(message="Database changes have been reverted automatically.")
+            job.log_info(message="Database changes have been reverted automatically.")
 
         except Exception as exc:
             stacktrace = traceback.format_exc()
-            custom_job.log_failure(
+            job.log_failure(
                 message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```"
             )
-            custom_job.log_info(message="Database changes have been reverted due to error.")
+            job.log_info(message="Database changes have been reverted due to error.")
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
         finally:
             job_result.save()
 
         # Perform any post-run tasks
-        custom_job.active_test = 'post_run'
-        output = custom_job.post_run()
+        job.active_test = 'post_run'
+        output = job.post_run()
         if output:
-            custom_job.results["output"] += "\n" + str(output)
+            job.results["output"] += "\n" + str(output)
 
         job_result.completed = timezone.now()
         job_result.save()
 
-        custom_job.logger.info(f"Custom job completed in {job_result.duration}")
+        job.logger.info(f"Job completed in {job_result.duration}")
 
-    # Execute the custom job. If commit == True, wrap it with the change_logging context manager to ensure we
+    # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
     if commit:
         with change_logging(request):
-            _run_custom_job()
+            _run_job()
     else:
-        _run_custom_job()
+        _run_job()

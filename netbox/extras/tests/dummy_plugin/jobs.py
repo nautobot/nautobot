@@ -1,10 +1,10 @@
-from extras.custom_jobs import CustomJob
+from extras.jobs import Job
 
 
 name = "DummyPlugin jobs"
 
 
-class DummyJob(CustomJob):
+class DummyJob(Job):
     class Meta:
         name = "Dummy job, does nothing"
 

@@ -22,10 +22,10 @@ Definition of data types that can be provided by data source models (such as [Gi
             callback=extras.datasources.git.refresh_git_config_contexts,
         ),
         DatasourceContent(
-            name='custom jobs',
-            token='extras.CustomJob',
+            name='jobs',
+            token='extras.Job',
             icon='mdi-script-text',
-            callback=extras.datasources.git.refresh_git_custom_jobs,
+            callback=extras.datasources.git.refresh_git_jobs,
         ),
         DatasourceContent(
             name='export templates',
@@ -80,7 +80,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 
 ### `plugin_jobs`
 
-[Custom jobs](../additional-features/custom-jobs.md) provided by plugins. A list of `CustomJob` classes, for example:
+[Jobs](../additional-features/jobs.md) provided by plugins. A list of `Job` classes, for example:
 
 ```python
 [

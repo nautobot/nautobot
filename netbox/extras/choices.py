@@ -119,7 +119,7 @@ class ObjectChangeActionChoices(ChoiceSet):
 
 
 #
-# Log Levels for Custom Jobs (formerly Reports and Scripts)
+# Log Levels for Jobs (formerly Reports and Custom Scripts)
 #
 
 class LogLevelChoices(ChoiceSet):

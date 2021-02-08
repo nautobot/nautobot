@@ -8,34 +8,34 @@ from django.http import request
 from django.utils import timezone
 
 from extras.choices import JobResultStatusChoices
-from extras.custom_jobs import get_custom_job, run_custom_job
+from extras.jobs import get_job, run_job
 from extras.models import JobResult
 from utilities.testing import TestCase
 
 
-class CustomJobTest(TestCase):
+class JobTest(TestCase):
     """
-    Test basic custom scripts to ensure importing works.
+    Test basic jobs to ensure importing works.
     """
-    def test_customjob_pass(self):
+    def test_job_pass(self):
         """
-        Custom script test with pass result.
+        Job test with pass result.
         """
-        with self.settings(CUSTOM_JOBS_ROOT=os.path.join(settings.BASE_DIR, 'extras/tests/dummy_customjobs')):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, 'extras/tests/dummy_jobs')):
 
             module = "test_pass"
             name = "TestPass"
-            custom_job_class = get_custom_job(f"local/{module}/{name}")
-            custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+            job_class = get_job(f"local/{module}/{name}")
+            job_content_type = ContentType.objects.get(app_label='extras', model='job')
 
             job_result = JobResult.objects.create(
-                name=custom_job_class.class_path,
-                obj_type=custom_job_content_type,
+                name=job_class.class_path,
+                obj_type=job_content_type,
                 user=None,
                 job_id=uuid.uuid4()
             )
 
-            run_custom_job(
+            run_job(
                 data={},
                 request=None,
                 commit=False,
@@ -43,23 +43,23 @@ class CustomJobTest(TestCase):
             )
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
 
-    def test_custom_fail(self):
+    def test_job_fail(self):
         """
-        Custom script test with fail result.
+        Job test with fail result.
         """
-        with self.settings(CUSTOM_JOBS_ROOT=os.path.join(settings.BASE_DIR, 'extras/tests/dummy_customjobs')):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, 'extras/tests/dummy_jobs')):
 
             module = "test_fail"
             name = "TestFail"
-            custom_job_class = get_custom_job(f"local/{module}/{name}")
-            custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+            job_class = get_job(f"local/{module}/{name}")
+            job_content_type = ContentType.objects.get(app_label='extras', model='job')
             job_result = JobResult.objects.create(
-                name=custom_job_class.class_path,
-                obj_type=custom_job_content_type,
+                name=job_class.class_path,
+                obj_type=job_content_type,
                 user=None,
                 job_id=uuid.uuid4()
             )
-            run_custom_job(
+            run_job(
                 data={},
                 request=None,
                 commit=False,

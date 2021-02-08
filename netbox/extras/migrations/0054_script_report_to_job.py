@@ -5,22 +5,22 @@ from django.db import migrations, models
 
 def migrate_jobresults(apps, schema_editor):
     """
-    Migrate JobResult records from Report/Script ContentType to CustomJob ContentType.
+    Migrate JobResult records from Report/Script ContentType to Job ContentType.
     """
     Report = apps.get_model('extras', 'Report')
     Script = apps.get_model('extras', 'Script')
-    CustomJob = apps.get_model('extras', 'CustomJob')
+    Job = apps.get_model('extras', 'Job')
     JobResult = apps.get_model('extras', 'JobResult')
     ContentType = apps.get_model('contenttypes', 'ContentType')
 
     report_content_type = ContentType.objects.get_for_model(Report)
     script_content_type = ContentType.objects.get_for_model(Script)
-    custom_job_content_type = ContentType.objects.get_for_model(CustomJob)
+    job_content_type = ContentType.objects.get_for_model(Job)
 
     # For Report result objects, transform the result data to the new format
     # This just entails adding an empty "output" key and the "total" dictionary to the result
     for job_result in JobResult.objects.filter(obj_type=report_content_type):
-        job_result.obj_type = custom_job_content_type
+        job_result.obj_type = job_content_type
         if job_result.data:
             totals = {
                 'success': 0,
@@ -39,7 +39,7 @@ def migrate_jobresults(apps, schema_editor):
     # Old: {"log": [{"status": "success", "message": "..."}, ...], "output": "..."}
     # New: {"run": {"log": [(time, status, object, url, message), ...], "output": "...", "total": {...}}}
     for job_result in JobResult.objects.filter(obj_type=script_content_type):
-        job_result.obj_type = custom_job_content_type
+        job_result.obj_type = job_content_type
         if job_result.data:
             new_data = {
                 "run": {
@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='CustomJob',
+            name='Job',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False)),
             ],

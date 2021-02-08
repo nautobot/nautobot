@@ -16,11 +16,11 @@ from utilities.utils import copy_safe_request, count_related, shallow_compare_di
 from utilities.views import ContentTypePermissionRequiredMixin
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
+from .jobs import get_job, get_jobs, run_job
 from .models import (
     ConfigContext, GitRepository, ImageAttachment, ObjectChange, JobResult,
     Relationship, RelationshipAssociation, Status, Tag, TaggedItem
 )
-from .custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
 from .datasources import get_datasource_contents, enqueue_pull_git_repository_and_refresh_data
 
 
@@ -411,130 +411,130 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 
 
 #
-# Custom jobs
+# Jobs
 #
 
-class CustomJobListView(ContentTypePermissionRequiredMixin, View):
+class JobListView(ContentTypePermissionRequiredMixin, View):
     """
-    Retrieve all of the available custom jobs from disk and the recorded JobResult (if any) for each.
+    Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
     """
     def get_required_permission(self):
-        return 'extras.view_customjob'
+        return 'extras.view_job'
 
     def get(self, request):
-        custom_jobs_dict = get_custom_jobs()
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        jobs_dict = get_jobs()
+        job_content_type = ContentType.objects.get(app_label='extras', model='job')
         # Get the newest results for each job name
         results = {
             r.name: r
             for r in JobResult.objects.filter(
-                obj_type=custom_job_content_type,
+                obj_type=job_content_type,
                 status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
             ).order_by('completed').defer('data')
         }
 
-        # get_custom_jobs() gives us a nested dict {grouping: {module: {"name": name, "jobs": [job, job, job]}}}
+        # get_jobs() gives us a nested dict {grouping: {module: {"name": name, "jobs": [job, job, job]}}}
         # But for presentation to the user we want to flatten this to {module_name: [job, job, job]}
 
         modules_dict = {}
-        for grouping, modules in custom_jobs_dict.items():
+        for grouping, modules in jobs_dict.items():
             for module, entry in modules.items():
-                module_custom_jobs = modules_dict.get(entry["name"], [])
-                for custom_job_class in entry['jobs'].values():
-                    custom_job = custom_job_class()
-                    custom_job.result = results.get(custom_job.class_path, None)
-                    module_custom_jobs.append(custom_job)
-                if module_custom_jobs:
-                    # TODO: should we sort module_custom_jobs by job name? Currently they're in source code order
-                    modules_dict[entry["name"]] = module_custom_jobs
+                module_jobs = modules_dict.get(entry["name"], [])
+                for job_class in entry['jobs'].values():
+                    job = job_class()
+                    job.result = results.get(job.class_path, None)
+                    module_jobs.append(job)
+                if module_jobs:
+                    # TODO: should we sort module_jobs by job name? Currently they're in source code order
+                    modules_dict[entry["name"]] = module_jobs
 
-        return render(request, 'extras/customjob_list.html', {
+        return render(request, 'extras/job_list.html', {
             # Order the jobs listing by case-insensitive sorting of the module human-readable name
-            'custom_jobs': sorted(modules_dict.items(), key=lambda kvpair: kvpair[0].lower()),
+            'jobs': sorted(modules_dict.items(), key=lambda kvpair: kvpair[0].lower()),
         })
 
 
-class CustomJobView(ContentTypePermissionRequiredMixin, View):
+class JobView(ContentTypePermissionRequiredMixin, View):
     """
-    View the parameters of a Custom Job and enqueue it if desired.
+    View the parameters of a Job and enqueue it if desired.
     """
 
     def get_required_permission(self):
-        return 'extras.view_customjob'
+        return 'extras.view_job'
 
     def get(self, request, class_path):
-        custom_job_class = get_custom_job(class_path)
-        if custom_job_class is None:
+        job_class = get_job(class_path)
+        if job_class is None:
             raise Http404
-        custom_job = custom_job_class()
+        job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
-        form = custom_job.as_form(initial=request.GET)
+        form = job.as_form(initial=request.GET)
 
-        return render(request, 'extras/customjob.html', {
+        return render(request, 'extras/job.html', {
             'grouping': grouping,
             'module': module,
-            'custom_job': custom_job,
+            'job': job,
             'form': form,
         })
 
     def post(self, request, class_path):
-        if not request.user.has_perm('extras.run_customjob'):
+        if not request.user.has_perm('extras.run_job'):
             return HttpResponseForbidden()
 
-        custom_job_class = get_custom_job(class_path)
-        if custom_job_class is None:
+        job_class = get_job(class_path)
+        if job_class is None:
             raise Http404
-        custom_job = custom_job_class()
+        job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
-        form = custom_job.as_form(request.POST, request.FILES)
+        form = job.as_form(request.POST, request.FILES)
 
         # Allow execution only if RQ worker process is running
         if not Worker.count(get_connection('default')):
-            messages.error(request, "Unable to run custom job: RQ worker process not running.")
+            messages.error(request, "Unable to run job: RQ worker process not running.")
 
         elif form.is_valid():
             # Run the job. A new JobResult is created.
             commit = form.cleaned_data.pop('_commit')
 
-            custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+            job_content_type = ContentType.objects.get(app_label='extras', model='job')
             job_result = JobResult.enqueue_job(
-                run_custom_job,
-                custom_job.class_path,
-                custom_job_content_type,
+                run_job,
+                job.class_path,
+                job_content_type,
                 request.user,
                 data=form.cleaned_data,
                 request=copy_safe_request(request),
                 commit=commit,
             )
 
-            return redirect('extras:customjob_jobresult', pk=job_result.pk)
+            return redirect('extras:job_jobresult', pk=job_result.pk)
 
-        return render(request, 'extras/customjob.html', {
+        return render(request, 'extras/job.html', {
             'grouping': grouping,
             'module': module,
-            'custom_job': custom_job,
+            'job': job,
             'form': form,
         })
 
 
-class CustomJobResultView(ContentTypePermissionRequiredMixin, View):
+class JobJobResultView(ContentTypePermissionRequiredMixin, View):
     """
-    Display a JobResult and its CustomJob data.
+    Display a JobResult and its Job data.
     """
 
     def get_required_permission(self):
         return 'extras.view_jobresult'
 
     def get(self, request, pk):
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
-        job_result = get_object_or_404(JobResult.objects.all(), pk=pk, obj_type=custom_job_content_type)
+        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job_result = get_object_or_404(JobResult.objects.all(), pk=pk, obj_type=job_content_type)
 
-        custom_job_class = get_custom_job(job_result.name)
-        custom_job = custom_job_class() if custom_job_class else None
+        job_class = get_job(job_result.name)
+        job = job_class() if job_class else None
 
-        return render(request, 'extras/customjob_result.html', {
-            'custom_job': custom_job,
+        return render(request, 'extras/job_jobresult.html', {
+            'job': job,
             'result': job_result,
         })
 
@@ -575,12 +575,12 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
         job_result = get_object_or_404(JobResult.objects.all(), pk=pk)
 
         associated_record = None
-        custom_job = None
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
-        if job_result.obj_type == custom_job_content_type:
-            custom_job_class = get_custom_job(job_result.name)
-            if custom_job_class is not None:
-                custom_job = custom_job_class()
+        job = None
+        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        if job_result.obj_type == job_content_type:
+            job_class = get_job(job_result.name)
+            if job_class is not None:
+                job = job_class()
         else:
             model_class = job_result.obj_type.model_class()
             try:
@@ -590,7 +590,7 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
 
         return render(request, 'extras/jobresult.html', {
             'associated_record': associated_record,
-            'custom_job': custom_job,
+            'job': job,
             'result': job_result,
         })
 

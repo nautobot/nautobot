@@ -53,7 +53,6 @@ BASE_PATH = ''
 if BASE_PATH:
     BASE_PATH = BASE_PATH.strip('/') + '/'  # Enforce trailing slash only
 CACHE_TIMEOUT = 900
-CUSTOM_JOBS_ROOT = os.path.join(BASE_DIR, 'custom_jobs').rstrip('/')
 CHANGELOG_RETENTION = 90
 DEVELOPER = False
 DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), 'docs')
@@ -75,6 +74,7 @@ EXEMPT_EXCLUDE_MODELS = (
 EXEMPT_VIEW_PERMISSIONS = []
 GIT_ROOT = os.path.join(BASE_DIR, 'git').rstrip('/')
 HTTP_PROXIES = None
+JOBS_ROOT = os.path.join(BASE_DIR, 'jobs').rstrip('/')
 LOGIN_TIMEOUT = None  # FIXME(jathan): Custom alias for SESSION_COOKIE_AGE
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000  # FIXME(jathan): This duplicates DRF built-in for settings.REST_FRAMEWORK['PAGE_SIZE']

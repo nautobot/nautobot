@@ -11,7 +11,7 @@ The NetBox plugin architecture allows for the following:
 * **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.)
 * **Add custom validation logic to existing data models.** A plugin can provide additional logic to customize the rules for validating created/updated data records.
 * **Add new URLs and views.** Plugins can register URLs under the `/plugins` root path to provide browsable views for users.
-* **Provide custom jobs.** Plugins can serve as a convenient way to package and install [custom jobs](../additional-features/custom-jobs.md).
+* **Provide jobs.** Plugins can serve as a convenient way to package and install [jobs](../additional-features/jobs.md).
 * **Add content to existing model templates.** A template content class can be used to inject custom HTML content within the view of a core NetBox model. This content can appear in the left side, right side, or bottom of the page.
 * **Add navigation menu items.** Each plugin can register new links in the navigation menu. Each link may have a set of buttons for specific actions, similar to the built-in navigation items.
 * **Add new REST API endpoints.** Plugins can register URLs under the `/api/plugins/` root path to provide new REST API views.

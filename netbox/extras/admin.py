@@ -218,7 +218,7 @@ class ExportTemplateAdmin(admin.ModelAdmin):
 
 
 #
-# Job results (custom jobs, scripts, reports)
+# Job results (jobs, scripts, reports, Git repository sync, etc.)
 #
 
 @admin.register(JobResult)

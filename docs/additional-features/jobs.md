@@ -1,6 +1,6 @@
-# Custom Jobs
+# Jobs
 
-Custom jobs are a way for users to execute custom logic on demand from within the NetBox UI. Custom jobs can interact directly with NetBox data to accomplish various data creation, modification, and validation tasks, such as:
+Jobs are a way for users to execute custom logic on demand from within the NetBox UI. Jobs can interact directly with NetBox data to accomplish various data creation, modification, and validation tasks, such as:
 
 * Automatically populate new devices and cables in preparation for a new site deployment
 * Create a range of new reserved prefixes or IP addresses
@@ -9,92 +9,92 @@ Custom jobs are a way for users to execute custom logic on demand from within th
 * Check and report whether every router has a loopback interface with an assigned IP address
 * Check and report whether all IP addresses have a parent prefix
 
-...and so on. Custom jobs are Python code and exist outside of the official NetBox code base, so they can be updated and changed without interfering with the core NetBox installation. And because they're completely customizable, there's practically no limit to what a custom job can accomplish.
+...and so on. Jobs are Python code and exist outside of the official NetBox code base, so they can be updated and changed without interfering with the core NetBox installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
 !!! note
-    Custom jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Custom jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `CustomJob` class API described below.
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below.
 
-## Writing Custom Jobs
+## Writing Jobs
 
-Custom jobs may be manually installed as files in the [`CUSTOM_JOBS_ROOT`](../../configuration/optional-settings/#custom_jobs_root) path (which defaults to `netbox/custom_jobs/`). Each file created within this path is considered a separate module. Each module holds one or more custom jobs (Python classes), each of which serves a specific purpose. The logic of each custom job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `netbox/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 !!! warning
-    The custom jobs path includes a file named `__init__.py`, which registers the path as a Python module. Do not delete this file.
+    The jobs path must include a file named `__init__.py`, which registers the path as a Python module. Do not delete this file.
 
-As an alternative to manually managing custom job files, you can store custom job files in an external [Git repository](../models/extras/gitrepository.md). The actual content of the files will be the same either way.
+As an alternative to manually managing job files, you can store job files in an external [Git repository](../models/extras/gitrepository.md). The actual content of the files will be the same either way.
 
-For example, we can create a module named `devices.py` to hold all of our custom jobs which pertain to devices in NetBox. Within that module, we might define several custom jobs. Each custom job is defined as a Python class inheriting from `extras.custom_jobs.CustomJob`, which provides the base functionality needed to accept user input and log activity.
+For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in NetBox. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
 ```python
-from extras.custom_jobs import CustomJob
+from extras.jobs import Job
 
-class CreateDevices(CustomJob):
+class CreateDevices(Job):
     ...
 
-class DeviceConnectionsReport(CustomJob):
+class DeviceConnectionsReport(Job):
     ...
 
-class DeviceIPsReport(CustomJob):
+class DeviceIPsReport(Job):
     ...
 ```
 
-Each custom job class will implement some or all of the following components:
+Each job class will implement some or all of the following components:
 
 * Module and class attributes, mostly for documentation and human readability
-* a set of variables for user input via the NetBox UI (if your custom job requires any user inputs)
+* a set of variables for user input via the NetBox UI (if your job requires any user inputs)
 * a `run()` method, which is executed first and receives the user input values, if any
-* any number of `test_*()` methods, which will be invoked next in order of declaration. Log messages generated by the custom job will be grouped together by the test method they were invoked from.
+* any number of `test_*()` methods, which will be invoked next in order of declaration. Log messages generated by the job will be grouped together by the test method they were invoked from.
 * a `post_run()` method, which is executed last and can be used to handle any necessary cleanup or final events (such as sending an email or triggering a webhook). The status of the overall job is available at this time as `self.failed` and the `JobResult` data object is available as `self.result`.
 
-You can implement the entire custom job within the `run()` function, but for more complex jobs, you may want to provide more granularity in the output and logging of activity. For this purpose, you can implement portions of the logic as `test_*()` methods (i.e., methods whose name begins with `test_*`) and/or a `post_run()` method. Log messages generated by the custom job logging APIs (more below on this topic) will be grouped together according to their base method (`run`, `test_a`, `test_b`, ..., `post_run`) which can aid in understanding the operation of the custom job.
+You can implement the entire job within the `run()` function, but for more complex jobs, you may want to provide more granularity in the output and logging of activity. For this purpose, you can implement portions of the logic as `test_*()` methods (i.e., methods whose name begins with `test_*`) and/or a `post_run()` method. Log messages generated by the job logging APIs (more below on this topic) will be grouped together according to their base method (`run`, `test_a`, `test_b`, ..., `post_run`) which can aid in understanding the operation of the job.
 
 !!! note
-    Your custom job can of course define additional Python methods to compartmentalize and reuse logic as required; however the `run`, `test_*`, and `post_run` methods are the only ones that will be automatically invoked by NetBox.
+    Your job can of course define additional Python methods to compartmentalize and reuse logic as required; however the `run`, `test_*`, and `post_run` methods are the only ones that will be automatically invoked by NetBox.
 
-It's important to understand that custom jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database as [`JobResult`](../models/extras/jobresult.md) records.
+It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database as [`JobResult`](../models/extras/jobresult.md) records.
 
 ### Module Attributes
 
 #### `name`
 
-You can define `name` within a custom job module (the Python file which contains one or more custom job classes) to set the name that will be displayed in the NetBox UI. If this value is not defined, the module's file name will be used.
+You can define `name` within a job module (the Python file which contains one or more job classes) to set the name that will be displayed in the NetBox UI. If this value is not defined, the module's file name will be used.
 
 !!! note
     In some UI elements and API endpoints, the module file name is displayed in addition to or in place of this attribute, so even if defining this attribute, you should still choose an appropriately explanatory file name as well.
 
 ### Class Attributes
 
-Job-specific attributes may be defined under a class named `Meta` within each custom job class you implement. All of these are optional, but encouraged.
+Job-specific attributes may be defined under a class named `Meta` within each job class you implement. All of these are optional, but encouraged.
 
 #### `name`
 
-This is the human-friendly name of your custom job, as will be displayed in the NetBox UI. If not set, the class name will be used.
+This is the human-friendly name of your job, as will be displayed in the NetBox UI. If not set, the class name will be used.
 
 !!! note
     In some UI elements and API endpoints, the class name is displayed in addition to or in place of this attribute, so even if defining this attribute, you should still choose an appropriately explanatory class name as well.
 
 #### `description`
 
-A human-friendly description of what this custom job does.
+A human-friendly description of what this job does.
 
 #### `commit_default`
 
-The checkbox to commit database changes when executing a custom job is checked by default in the NetBox UI. You can set `commit_default` to `False` under the `Meta` class if you want this option to instead be unchecked by default.
+The checkbox to commit database changes when executing a job is checked by default in the NetBox UI. You can set `commit_default` to `False` under the `Meta` class if you want this option to instead be unchecked by default.
 
 ```python
-class MyCustomJob(CustomJob):
+class MyJob(Job):
     class Meta:
         commit_default = False
 ```
 
 ### Variables
 
-Variables allow your custom job to accept user input via the NetBox UI, but they are optional; if your custom job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your custom job that has visibility into the variable values provided by the user.
+Variables allow your job to accept user input via the NetBox UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
 
 ```python
-from extras.custom_jobs import CustomJob, StringVar, IntegerVar, ObjectVar
+from extras.jobs import Job, StringVar, IntegerVar, ObjectVar
 
-class CreateDevices(CustomJob):
+class CreateDevices(Job):
     var1 = StringVar(...)
     var2 = IntegerVar(...)
     var3 = ObjectVar(...)
@@ -107,7 +107,7 @@ The remainder of this section documents the various supported variable types and
 
 #### Default Variable Options
 
-All custom job variables support the following default options:
+All job variables support the following default options:
 
 * `default` - The field's default value
 * `description` - A brief user-friendly description of the field
@@ -212,7 +212,7 @@ Similar to `ObjectVar`, but allows for the selection of multiple objects.
 
 #### `FileVar`
 
-An uploaded file. Note that uploaded files are present in memory only for the duration of the job's execution: They will not be automatically saved for future use. The custom job is responsible for writing file contents to disk where necessary.
+An uploaded file. Note that uploaded files are present in memory only for the duration of the job's execution: They will not be automatically saved for future use. The job is responsible for writing file contents to disk where necessary.
 
 #### `IPAddressVar`
 
@@ -237,9 +237,9 @@ The `run()` method, if you choose to implement it, should accept two arguments:
 2. `commit` - A boolean indicating whether database changes should be committed.
 
 ```python
-from extras.custom_jobs import CustomJob, StringVar, IntegerVar, ObjectVar
+from extras.jobs import Job, StringVar, IntegerVar, ObjectVar
 
-class CreateDevices(CustomJob):
+class CreateDevices(Job):
     var1 = StringVar(...)
     var2 = IntegerVar(...)
     var3 = ObjectVar(...)
@@ -248,7 +248,7 @@ class CreateDevices(CustomJob):
         ...
 ```
 
-Again, defining user variables is totally optional; you may create a custom job with just a `run()` method if no user input is needed, in which case `data` will be an empty dictionary.
+Again, defining user variables is totally optional; you may create a job with just a `run()` method if no user input is needed, in which case `data` will be an empty dictionary.
 
 !!! note
     The `test_*()` and `post_run()` methods do not accept any arguments; if you need to access user `data` or the `commit` flag, your `run()` method is responsible for storing these values in the job instance, such as:
@@ -261,18 +261,18 @@ Again, defining user variables is totally optional; you may create a custom job 
 
 ### The `test_*()` Methods
 
-If your custom job class defines any number of methods whose names begin with `test_`, these will be automatically invoked after the `run()` method (if any) completes. These methods must take no arguments (other than `self`).
+If your job class defines any number of methods whose names begin with `test_`, these will be automatically invoked after the `run()` method (if any) completes. These methods must take no arguments (other than `self`).
 
 Log messages generated by any of these methods will be automatically grouped together by the test method they were invoked from, which can be helpful for readability.
 
 
 ### The `post_run()` Method
 
-If your custom job class implements a `post_run()` method (which must take no arguments other than `self`), this method will be automatically invoked after the `run()` and `test_*()` methods (if any). It will be called even if one of the other methods raises an exception, so this method can be used to handle any necessary cleanup or final events (such as sending an email or triggering a webhook). The status of the overall job is available at this time as `self.failed` and the [`JobResult`](../models/extras/jobresult.md) data object is available as `self.result`.
+If your job class implements a `post_run()` method (which must take no arguments other than `self`), this method will be automatically invoked after the `run()` and `test_*()` methods (if any). It will be called even if one of the other methods raises an exception, so this method can be used to handle any necessary cleanup or final events (such as sending an email or triggering a webhook). The status of the overall job is available at this time as `self.failed` and the [`JobResult`](../models/extras/jobresult.md) data object is available as `self.result`.
 
 ### Logging
 
-The following instance methods are available to log results from an executing custom job to be stored into the associated [`JobResult`](../models/extras/jobresult.md) record:
+The following instance methods are available to log results from an executing job to be stored into the associated [`JobResult`](../models/extras/jobresult.md) record:
 
 * `self.log(message)`
 * `self.log_debug(message)`
@@ -283,13 +283,13 @@ The following instance methods are available to log results from an executing cu
 
 The recording of one or more failure messages will automatically flag the overall job as failed. It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
 
-Messages recorded with `log()` or `log_debug()` will appear in a custom job's results but are never associated with a particular object; the other `log_*` functions may be invoked with or without a provided object to associate the message with.
+Messages recorded with `log()` or `log_debug()` will appear in a job's results but are never associated with a particular object; the other `log_*` functions may be invoked with or without a provided object to associate the message with.
 
 Markdown rendering is supported for log messages.
 
 ### Accessing Request Data
 
-Details of the current HTTP request (the one being made to execute the custom job) are available as the instance attribute `self.request`. This can be used to infer, for example, the user executing the custom job and their client IP address:
+Details of the current HTTP request (the one being made to execute the job) are available as the instance attribute `self.request`. This can be used to infer, for example, the user executing the job and their client IP address:
 
 ```python
 username = self.request.user.username
@@ -302,36 +302,36 @@ For a complete list of available request parameters, please see the [Django docu
 
 ### Reading Data from Files
 
-The `CustomJob` class provides two convenience methods for reading data from files:
+The `Job` class provides two convenience methods for reading data from files:
 
 * `load_yaml`
 * `load_json`
 
-These two methods will load data in YAML or JSON format, respectively, from files within the local path (i.e. `CUSTOM_JOBS_ROOT/`).
+These two methods will load data in YAML or JSON format, respectively, from files within the local path (i.e. `JOBS_ROOT/`).
 
-## Running Custom Jobs
+## Running Jobs
 
 !!! note
-    To run any custom job, a user must be assigned the `extras.run_customjob` permission. This is achieved by assigning the user (or group) a permission on the `extras > custom job` object and specifying the `run` action in the admin UI as shown below.
+    To run any job, a user must be assigned the `extras.run_job` permission. This is achieved by assigning the user (or group) a permission on the `extras > job` object and specifying the `run` action in the admin UI as shown below.
 
     ![Adding the run action to a permission](../../media/admin_ui_run_permission.png)
 
 ### Via the Web UI
 
-Custom jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Custom Job" button.
+Jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Job" button.
 
-Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md) for that job will be summarized in the custom job list view.
+Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md) for that job will be summarized in the job list view.
 
 ### Via the API
 
-To run a custom job via the REST API, issue a POST request to the custom job's endpoint, with the option of specifying any required user input data and/or the `commit` flag.
+To run a job via the REST API, issue a POST request to the job's endpoint, with the option of specifying any required user input data and/or the `commit` flag.
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \
-http://netbox/api/extras/custom-jobs/example.MyCustomReport/run/
+http://netbox/api/extras/jobs/local/example/MyJobWithNoVars/run/
 ```
 
 ```no-highlight
@@ -339,23 +339,23 @@ curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \
-http://netbox/api/extras/custom-jobs/example.MyCustomJob/run/ \
+http://netbox/api/extras/jobs/local/example/MyJobWithVars/run/ \
 --data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
 ```
 
 ### Via the CLI
 
-Custom jobs that do not require user input can be run from the CLI by invoking the management command:
+Jobs that do not require user input can be run from the CLI by invoking the management command:
 
 ```no-highlight
-python3 manage.py runjob <module.JobName> [--commit]
+python3 manage.py runjob local/<module>/<JobName> [--commit]
 ```
 
-where ``<module>`` is the name of the python file (minus the ``.py`` extension) and ``JobName`` is the Python class name within that module.
+where ``<module>`` is the name of the python file (minus the ``.py`` extension) and ``<JobName>`` is the Python class name within that module.
 
 Provision of user inputs via the CLI is not supported at this time.
 
-## Example Custom Jobs
+## Example Jobs
 
 ### Creating objects for a planned site
 
@@ -365,17 +365,17 @@ This job prompts the user for three variables:
 * The device model (a filtered list of defined device types)
 * The number of access switches to create
 
-These variables are presented as a web form to be completed by the user. Once submitted, the custom job's `run()` method is called to create the appropriate objects, and it returns simple CSV output to the user summarizing the created objects.
+These variables are presented as a web form to be completed by the user. Once submitted, the job's `run()` method is called to create the appropriate objects, and it returns simple CSV output to the user summarizing the created objects.
 
 ```python
 from django.utils.text import slugify
 
 from dcim.choices import DeviceStatusChoices, SiteStatusChoices
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from extras.custom_jobs import *
+from extras.jobs import *
 
 
-class NewBranch(CustomJob):
+class NewBranch(Job):
 
     class Meta:
         name = "New Branch"
@@ -442,15 +442,15 @@ class NewBranch(CustomJob):
 
 ### Device validation
 
-A custom job to perform various validation of Device data in NetBox. As this job does not require any user input, it does not define any variables, nor does it implement a `run()` method.
+A job to perform various validation of Device data in NetBox. As this job does not require any user input, it does not define any variables, nor does it implement a `run()` method.
 
 ```python
 from dcim.choices import DeviceStatusChoices
 from dcim.models import ConsolePort, Device, PowerPort
-from extras.custom_jobs import CustomJob
+from extras.jobs import Job
 
 
-class DeviceConnectionsReport(CustomJob):
+class DeviceConnectionsReport(Job):
     description = "Validate the minimum physical connections for each device"
 
     def test_console_connection(self):

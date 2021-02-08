@@ -27,7 +27,7 @@ fi
 #  - E501: line greater than 80 characters in length
 pycodestyle \
     --ignore=W504,E501 \
-    --exclude=netbox/scripts,netbox/reports,netbox/custom_jobs,netbox/git \
+    --exclude=netbox/scripts,netbox/reports,netbox/jobs,netbox/git \
     contrib/ development/ netbox/ tasks.py
 RC=$?
 if [[ $RC != 0 ]]; then

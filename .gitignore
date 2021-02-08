@@ -2,8 +2,8 @@
 *.swp
 /netbox/netbox/configuration.py
 /netbox/netbox/ldap_config.py
-/netbox/custom_jobs/*
-!/netbox/custom_jobs/__init__.py
+/netbox/jobs/*
+!/netbox/jobs/__init__.py
 /netbox/git/*
 /netbox/reports/*
 !/netbox/reports/__init__.py

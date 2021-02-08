@@ -100,9 +100,9 @@ CORS_ORIGIN_REGEX_WHITELIST = [
     # r'^(https?://)?(\w+\.)?example\.com$',
 ]
 
-# The file path where custom jobs will be stored. A trailing slash is not needed. Note that the default value of
+# The file path where jobs will be stored. A trailing slash is not needed. Note that the default value of
 # this setting is derived from the installed location.
-# CUSTOM_JOBS_ROOT = '/opt/netbox/netbox/custom_jobs'
+# JOBS_ROOT = '/opt/netbox/netbox/jobs'
 
 # Set to True to enable server debugging. WARNING: Debugging introduces a substantial performance penalty and may reveal
 # sensitive information about your installation. Only enable debugging while performing testing. Never enable debugging
@@ -226,16 +226,8 @@ RELEASE_CHECK_TIMEOUT = 24 * 3600
 RELEASE_CHECK_URL = None
 # RELEASE_CHECK_URL = 'https://api.github.com/repos/netbox-community/netbox/releases'
 
-# The file path where custom reports will be stored. A trailing slash is not needed. Note that the default value of
-# this setting is derived from the installed location.
-# REPORTS_ROOT = '/opt/netbox/netbox/reports'
-
 # Maximum execution time for background tasks, in seconds.
 RQ_DEFAULT_TIMEOUT = 300
-
-# The file path where custom scripts will be stored. A trailing slash is not needed. Note that the default value of
-# this setting is derived from the installed location.
-# SCRIPTS_ROOT = '/opt/netbox/netbox/scripts'
 
 # By default, NetBox will store session data in the database. Alternatively, a file path can be specified here to use
 # local file storage instead. (This can be useful for enabling authentication on a standby instance with read-only

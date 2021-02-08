@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, ToggleColumn
-from .custom_jobs import get_custom_job_classpaths
+from .jobs import get_job_classpaths
 from .models import (
     ConfigContext, GitRepository, JobResult, ObjectChange, Relationship, RelationshipAssociation,
     Status, Tag, TaggedItem
@@ -171,9 +171,9 @@ class GitRepositoryBulkTable(BaseTable):
 
 
 def job_creator_link(value, record):
-    if record.obj_type == ContentType.objects.get(app_label='extras', model='customjob'):
-        if record.name in get_custom_job_classpaths():
-            return reverse('extras:customjob', kwargs={'class_path': record.name})
+    if record.obj_type == ContentType.objects.get(app_label='extras', model='job'):
+        if record.name in get_job_classpaths():
+            return reverse('extras:job', kwargs={'class_path': record.name})
     else:
         model_class = record.obj_type.model_class()
         try:

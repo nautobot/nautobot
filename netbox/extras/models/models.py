@@ -548,13 +548,13 @@ class ConfigContextModel(models.Model):
 
 
 #
-# Custom jobs
+# Jobs
 #
 
 @extras_features('job_results')
-class CustomJob(models.Model):
+class Job(models.Model):
     """
-    Dummy model used to generate permissions for custom jobs. Does not exist in the database.
+    Dummy model used to generate permissions for jobs. Does not exist in the database.
     """
     class Meta:
         managed = False

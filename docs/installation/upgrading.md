@@ -44,14 +44,14 @@ Be sure to replicate your uploaded media as well. (The exact action necessary wi
 sudo cp -pr /opt/netbox-X.Y.Z/netbox/media/ /opt/netbox/netbox/
 ```
 
-Also make sure to copy or link any custom jobs (scripts and reports) that you've made. Note that if these are stored outside the project root, you will not need to copy them. (Check the `SCRIPTS_ROOT` and `REPORTS_ROOT` parameters in the configuration file above if you're unsure.)
+Also make sure to copy or link any jobs (formerly "custom scripts" and "reports") that you've made. Note that if these are stored outside the project root, you will not need to copy them. (Check the `SCRIPTS_ROOT` and `REPORTS_ROOT` parameters in the configuration file above if you're unsure.)
 
 !!! note
-    When migrating to this release, note that `SCRIPTS_ROOT` and `REPORTS_ROOT` are deprecated and these files should be consolidated into a single shared `CUSTOM_JOBS_ROOT` directory.
+    When migrating to this release, note that `SCRIPTS_ROOT` and `REPORTS_ROOT` are deprecated and these files should be consolidated into a single shared `JOBS_ROOT` directory.
 
 ```no-highlight
-sudo cp /opt/netbox-X.Y.Z/netbox/scripts/*.py /opt/netbox/netbox/custom_jobs/
-sudo cp /opt/netbox-X.Y.Z/netbox/reports/*.py /opt/netbox/netbox/custom_jobs/
+sudo cp /opt/netbox-X.Y.Z/netbox/scripts/*.py /opt/netbox/netbox/jobs/
+sudo cp /opt/netbox-X.Y.Z/netbox/reports/*.py /opt/netbox/netbox/jobs/
 # If you have any script data files (YAML, JSON) stored in the SCRIPTS_ROOT directory, be sure to copy those as well
 ```
 

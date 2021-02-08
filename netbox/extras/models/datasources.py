@@ -124,7 +124,7 @@ class GitRepository(ChangeLoggedModel, CustomFieldModel):
                 # have its own clone of this repository on its own local filesystem; we need some way to ensure
                 # that all such clones are renamed.
                 # For now we just rename the one that we have locally and rely on other methods
-                # (notably get_custom_jobs()) to clean up other clones as they're encountered.
+                # (notably get_jobs()) to clean up other clones as they're encountered.
                 if os.path.exists(os.path.join(settings.GIT_ROOT, self.__initial_slug)):
                     os.rename(os.path.join(settings.GIT_ROOT, self.__initial_slug), self.filesystem_path)
 

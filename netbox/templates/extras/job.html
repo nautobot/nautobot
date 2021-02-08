@@ -3,21 +3,21 @@
 {% load form_helpers %}
 {% load log_levels %}
 
-{% block title %}{{ custom_job }}{% endblock %}
+{% block title %}{{ job }}{% endblock %}
 
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
             <ol class="breadcrumb">
-                <li><a href="{% url 'extras:customjob_list' %}">Custom Jobs</a></li>
-                <li><a href="{% url 'extras:customjob_list' %}#grouping.{{grouping}}">{{ grouping|bettertitle }}</a></li>
-                <li><a href="{% url 'extras:customjob_list' %}#grouping.{{grouping}}.module.{{ module }}">{{ module }}</a></li>
-                <li>{{ custom_job }}</li>
+                <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
+                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}">{{ grouping|bettertitle }}</a></li>
+                <li><a href="{% url 'extras:job_list' %}#grouping.{{grouping}}.module.{{ module }}">{{ module }}</a></li>
+                <li>{{ job }}</li>
             </ol>
         </div>
     </div>
-    <h1>{{ custom_job }}</h1>
-    <p>{{ custom_job.description }}</p>
+    <h1>{{ job }}</h1>
+    <p>{{ job.description }}</p>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
             <a href="#run" role="tab" data-toggle="tab" class="active">Run</a>
@@ -30,10 +30,10 @@
         <div role="tabpanel" class="tab-pane active" id="run">
             <div class="row">
                 <div class="col-md-6 col-md-offset-3">
-                    {% if not perms.extras.run_customjob %}
+                    {% if not perms.extras.run_job %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i>
-                            You do not have permission to run custom jobs.
+                            You do not have permission to run jobs.
                         </div>
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
@@ -41,7 +41,7 @@
                         {% if form.requires_input %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
-                                    <strong>Custom Job Data</strong>
+                                    <strong>Job Data</strong>
                                 </div>
                                 <div class="panel-body">
                                     {% render_form form %}
@@ -50,21 +50,21 @@
                         {% else %}
                              <div class="alert alert-info">
                                 <i class="mdi mdi-information"></i>
-                                This custom job does not require any input to run.
+                                This job does not require any input to run.
                             </div>
                             {% render_form form %}
                         {% endif %}
                         <div class="pull-right">
-                            <button type="submit" name="_run" class="btn btn-primary"{% if not perms.extras.run_customjob %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Run Custom Job</button>
-                            <a href="{% url 'extras:customjob_list' %}" class="btn btn-default">Cancel</a>
+                            <button type="submit" name="_run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Run Job</button>
+                            <a href="{% url 'extras:job_list' %}" class="btn btn-default">Cancel</a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
         <div role="tabpanel" class="tab-pane" id="source">
-            <p><code>{{ custom_job.filename }}</code></p>
-            <pre>{{ custom_job.source }}</pre>
+            <p><code>{{ job.filename }}</code></p>
+            <pre>{{ job.source }}</pre>
         </div>
     </div>
 {% endblock %}

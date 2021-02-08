@@ -16,7 +16,8 @@ from extras.models import (
     ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, ObjectChange,
     Relationship, RelationshipAssociation, Status, Tag, TaggedItem
 )
-from extras.custom_jobs import get_custom_job, get_custom_jobs, run_custom_job
+from extras.models import CustomField
+from extras.jobs import get_job, get_jobs, run_job
 from netbox.api.authentication import IsAuthenticated
 from netbox.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from netbox.api.views import ModelViewSet
@@ -144,75 +145,75 @@ class ConfigContextViewSet(ModelViewSet):
 
 
 #
-# Custom jobs
+# Jobs
 #
 
-class CustomJobViewSet(ViewSet):
+class JobViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
     lookup_field = "class_path"
-    lookup_value_regex = '[^/]+/[^/]+/[^/]+'  # e.g. "git.repo_name/module_name/CustomJobName"
+    lookup_value_regex = '[^/]+/[^/]+/[^/]+'  # e.g. "git.repo_name/module_name/JobName"
 
-    def _get_custom_job_class(self, class_path):
-        custom_job_class = get_custom_job(class_path)
-        if custom_job_class is None:
+    def _get_job_class(self, class_path):
+        job_class = get_job(class_path)
+        if job_class is None:
             raise Http404
 
-        return custom_job_class
+        return job_class
 
     def list(self, request):
-        if not request.user.has_perm('extras.view_customjob'):
-            raise PermissionDenied("This user does not have permission to view custom jobs.")
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        if not request.user.has_perm('extras.view_job'):
+            raise PermissionDenied("This user does not have permission to view jobs.")
+        job_content_type = ContentType.objects.get(app_label='extras', model='job')
         results = {
             r.name: r
             for r in JobResult.objects.filter(
-                obj_type=custom_job_content_type,
+                obj_type=job_content_type,
                 status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
             ).defer('data').order_by('created')
         }
 
-        custom_jobs = get_custom_jobs()
+        jobs = get_jobs()
         jobs_list = []
-        for grouping, modules in custom_jobs.items():
+        for grouping, modules in jobs.items():
             for module_name, entry in modules.items():
-                for custom_job_class in entry['jobs'].values():
-                    custom_job = custom_job_class()
-                    custom_job.result = results.get(custom_job.class_path, None)
-                    jobs_list.append(custom_job)
+                for job_class in entry['jobs'].values():
+                    job = job_class()
+                    job.result = results.get(job.class_path, None)
+                    jobs_list.append(job)
 
-        serializer = serializers.CustomJobSerializer(jobs_list, many=True, context={'request': request})
+        serializer = serializers.JobSerializer(jobs_list, many=True, context={'request': request})
 
         return Response(serializer.data)
 
     def retrieve(self, request, class_path):
-        if not request.user.has_perm('extras.view_customjob'):
-            raise PermissionDenied("This user does not have permission to view custom jobs.")
-        custom_job_class = self._get_custom_job_class(class_path)
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
-        custom_job = custom_job_class()
-        custom_job.result = JobResult.objects.filter(
-            obj_type=custom_job_content_type,
-            name=custom_job.class_path,
+        if not request.user.has_perm('extras.view_job'):
+            raise PermissionDenied("This user does not have permission to view jobs.")
+        job_class = self._get_job_class(class_path)
+        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job = job_class()
+        job.result = JobResult.objects.filter(
+            obj_type=job_content_type,
+            name=job.class_path,
             status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
         ).first()
 
-        serializer = serializers.CustomJobDetailSerializer(custom_job, context={'request': request})
+        serializer = serializers.JobDetailSerializer(job, context={'request': request})
 
         return Response(serializer.data)
 
-    @swagger_auto_schema(method='post', request_body=serializers.CustomJobInputSerializer)
+    @swagger_auto_schema(method='post', request_body=serializers.JobInputSerializer)
     @action(detail=True, methods=['post'])
     def run(self, request, class_path):
-        if not request.user.has_perm('extras.run_customjob'):
-            raise PermissionDenied("This user does not have permission to run custom jobs.")
+        if not request.user.has_perm('extras.run_job'):
+            raise PermissionDenied("This user does not have permission to run jobs.")
 
         # Check that at least one RQ worker is running
         if not Worker.count(get_connection('default')):
             raise RQWorkerNotRunningException()
 
-        custom_job_class = self._get_custom_job_class(class_path)
-        custom_job = custom_job_class()
-        input_serializer = serializers.CustomJobInputSerializer(data=request.data)
+        job_class = self._get_job_class(class_path)
+        job = job_class()
+        input_serializer = serializers.JobInputSerializer(data=request.data)
 
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -220,22 +221,22 @@ class CustomJobViewSet(ViewSet):
         data = input_serializer.data['data']
         commit = input_serializer.data['commit']
         if commit is None:
-            commit = getattr(custom_job_class.Meta, "commit_default", True)
+            commit = getattr(job_class.Meta, "commit_default", True)
 
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        job_content_type = ContentType.objects.get(app_label='extras', model='job')
 
         job_result = JobResult.enqueue_job(
-            run_custom_job,
-            custom_job.class_path,
-            custom_job_content_type,
+            run_job,
+            job.class_path,
+            job_content_type,
             request.user,
             data=data,
             request=copy_safe_request(request),
             commit=commit,
         )
-        custom_job.result = job_result
+        job.result = job_result
 
-        serializer = serializers.CustomJobDetailSerializer(custom_job, context={'request': request})
+        serializer = serializers.JobDetailSerializer(job, context={'request': request})
 
         return Response(serializer.data)
 

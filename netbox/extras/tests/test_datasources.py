@@ -72,7 +72,7 @@ class GitTest(TestCase):
             with self.settings(GIT_ROOT=tempdir):
                 def populate_repo(path, url):
                     os.makedirs(path)
-                    # Just make config_contexts and export_templates directories as we don't load custom_jobs
+                    # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
                     with open(os.path.join(path, "config_contexts", "context.yaml"), 'w') as fd:
@@ -156,7 +156,7 @@ class GitTest(TestCase):
             with self.settings(GIT_ROOT=tempdir):
                 def populate_repo(path, url):
                     os.makedirs(path)
-                    # Just make config_contexts and export_templates directories as we don't load custom_jobs
+                    # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "export_templates", "nosuchapp", "device"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "nosuchmodel"))
@@ -188,7 +188,7 @@ class GitTest(TestCase):
             with self.settings(GIT_ROOT=tempdir):
                 def populate_repo(path, url):
                     os.makedirs(path)
-                    # Just make config_contexts and export_templates directories as we don't load custom_jobs
+                    # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
                     with open(os.path.join(path, "config_contexts", "context.yaml"), 'w') as fd:

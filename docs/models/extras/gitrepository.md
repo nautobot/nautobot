@@ -2,7 +2,7 @@
 
 Some text-based content is more conveniently stored in a separate Git repository rather than internally in the NetBox database. Such a repository may currently include any or all of the following for NetBox to consume:
 
-* Custom job source files and associated data files,
+* Job source files and associated data files,
 * Configuration context data
 * Export templates
 * Additional data types as registered by any installed plugins
@@ -15,9 +15,9 @@ Whenever a Git repository record is created, updated, or deleted, NetBox automat
 
 ## Repository Structure
 
-### Custom Jobs
+### Jobs
 
-Custom jobs defined in Python files located in a `/custom_jobs/` directory at the root of a Git repository will automatically be discovered by NetBox and made available to be run as a custom job, just as they would be if manually installed to the `$CUSTOM_JOBS_ROOT` directory. Note that there **must** be an `__init__.py` file in the `/custom_jobs/` directory.
+Jobs defined in Python files located in a `/jobs/` directory at the root of a Git repository will automatically be discovered by NetBox and made available to be run as a job, just as they would be if manually installed to the `$JOBS_ROOT` directory. Note that there **must** be an `__init__.py` file in the `/jobs/` directory.
 
 ### Configuration Contexts
 

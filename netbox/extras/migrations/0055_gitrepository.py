@@ -9,15 +9,15 @@ import extras.utils
 
 def rename_jobresults(apps, schema_editor):
     """
-    Rename CustomJob-associated JobResult records from "module_name.ClassName" to "local/module_name/ClassName".
+    Rename Job-associated JobResult records from "module_name.ClassName" to "local/module_name/ClassName".
     """
-    CustomJob = apps.get_model('extras', 'CustomJob')
+    Job = apps.get_model('extras', 'Job')
     JobResult = apps.get_model('extras', 'JobResult')
     ContentType = apps.get_model('contenttypes', 'ContentType')
 
-    custom_job_content_type = ContentType.objects.get_for_model(CustomJob)
+    job_content_type = ContentType.objects.get_for_model(Job)
 
-    for job_result in JobResult.objects.filter(obj_type=custom_job_content_type):
+    for job_result in JobResult.objects.filter(obj_type=job_content_type):
         # Old name: module.ClassName
         # New name: local/module/ClassName
         module_name, class_name = job_result.name.split(".", 1)
@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('contenttypes', '0002_remove_content_type_name'),
-        ('extras', '0054_customjob'),
+        ('extras', '0054_script_report_to_job'),
     ]
 
     operations = [

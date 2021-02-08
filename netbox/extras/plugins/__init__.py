@@ -86,7 +86,7 @@ class PluginConfig(AppConfig):
         if graphql_types is not None:
             register_graphql_types(graphql_types)
 
-        # Import custom jobs (if present)
+        # Import jobs (if present)
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
             register_jobs(jobs)
@@ -254,15 +254,15 @@ def register_graphql_types(class_list):
 
 def register_jobs(class_list):
     """
-    Register a list of CustomJob classes
+    Register a list of Job classes
     """
-    from extras.custom_jobs import CustomJob
+    from extras.jobs import Job
 
     for job in class_list:
         if not inspect.isclass(job):
-            raise TypeError(f"CustomJob class {job} was passed as an instance!")
-        if not issubclass(job, CustomJob):
-            raise TypeError(f"{job} is not a subclass of extras.custom_jobs.CustomJob!")
+            raise TypeError(f"Job class {job} was passed as an instance!")
+        if not issubclass(job, Job):
+            raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
 
         registry['plugin_jobs'].append(job)
 

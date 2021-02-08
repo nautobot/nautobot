@@ -6,7 +6,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from dcim.models import Site
-from extras.custom_jobs import get_custom_job, get_custom_job_classpaths, get_custom_jobs
+from extras.jobs import get_job, get_job_classpaths, get_jobs
 from extras.plugins.exceptions import PluginNotFound, PluginImproperlyConfigured
 from extras.plugins.utils import load_plugin
 from extras.plugins.validators import wrap_model_clean_methods
@@ -102,9 +102,9 @@ class PluginTest(TestCase):
 
         self.assertIn(DummyJob, registry.get("plugin_jobs", []))
 
-        self.assertEqual(DummyJob, get_custom_job("plugins/extras.tests.dummy_plugin.jobs/DummyJob"))
-        self.assertIn("plugins/extras.tests.dummy_plugin.jobs/DummyJob", get_custom_job_classpaths())
-        jobs_dict = get_custom_jobs()
+        self.assertEqual(DummyJob, get_job("plugins/extras.tests.dummy_plugin.jobs/DummyJob"))
+        self.assertIn("plugins/extras.tests.dummy_plugin.jobs/DummyJob", get_job_classpaths())
+        jobs_dict = get_jobs()
         self.assertIn("plugins", jobs_dict)
         self.assertIn("extras.tests.dummy_plugin.jobs", jobs_dict["plugins"])
         self.assertEqual("DummyPlugin jobs", jobs_dict["plugins"]["extras.tests.dummy_plugin.jobs"].get("name"))

@@ -155,7 +155,7 @@ def git_repository_pre_delete(instance, **kwargs):
 
     # TODO: In a distributed NetBox deployment, each Django instance and/or RQ worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
-    # For now we just delete the one that we have locally and rely on other methods (notably get_custom_jobs())
+    # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
     # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)

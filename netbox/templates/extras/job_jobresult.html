@@ -8,11 +8,11 @@
     <div class="row noprint">
         <div class="col-md-12">
             <ol class="breadcrumb">
-                <li><a href="{% url 'extras:customjob_list' %}">Custom Jobs</a></li>
+                <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
                 <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
-                {% if custom_job %}
-                    <li><a href="{% url 'extras:jobresult_list' %}?name={{ custom_job.class_path|urlencode }}">
-                        {{ custom_job.class_path }}
+                {% if job %}
+                    <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
+                        {{ job.class_path }}
                     </a></li>
                 {% else %}
                     <li>{{ result.name }}</li>
@@ -23,12 +23,12 @@
     </div>
     <h1>
         {% block title %}
-            {% if custom_job %}{{ custom_job }}{% else %}{{ result.name }}{% endif %} - Job Result
+            {% if job %}{{ job }}{% else %}{{ result.name }}{% endif %} - Job Result
         {% endblock %}
     </h1>
 
-    {% if custom_job %}
-        <p>{{ custom_job.description }}</p>
+    {% if job %}
+        <p>{{ job.description }}</p>
     {% endif %}
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
@@ -39,7 +39,7 @@
                 <a href="#output" role="tab" data-toggle="tab">Output</a>
             </li>
         {% endif %}
-        {% if custom_job %}
+        {% if job %}
             <li role="presentation">
                 <a href="#source" role="tab" data-toggle="tab">Source</a>
             </li>
@@ -57,10 +57,10 @@
                 <pre>{{ result.data.output }}</pre>
             </div>
         {% endif %}
-        {% if custom_job %}
+        {% if job %}
             <div role="tabpanel" class="tab-pane" id="source">
-                <p><code>{{ custom_job.filename }}</code></p>
-                <pre>{{ custom_job.source }}</pre>
+                <p><code>{{ job.filename }}</code></p>
+                <pre>{{ job.source }}</pre>
             </div>
         {% endif %}
     </div>

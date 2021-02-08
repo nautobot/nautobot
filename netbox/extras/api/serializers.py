@@ -354,12 +354,12 @@ class JobResultSerializer(serializers.ModelSerializer):
 
 
 #
-# Custom jobs (fka Scripts, Reports)
+# Jobs (fka Custom Scripts, Reports)
 #
 
-class CustomJobSerializer(serializers.Serializer):
+class JobSerializer(serializers.Serializer):
     url = serializers.HyperlinkedIdentityField(
-        view_name='extras-api:customjob-detail',
+        view_name='extras-api:job-detail',
         lookup_field='class_path',
         lookup_url_kwarg='class_path',
     )
@@ -376,11 +376,11 @@ class CustomJobSerializer(serializers.Serializer):
         }
 
 
-class CustomJobDetailSerializer(CustomJobSerializer):
+class JobDetailSerializer(JobSerializer):
     result = JobResultSerializer()
 
 
-class CustomJobInputSerializer(serializers.Serializer):
+class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default="")
     commit = serializers.BooleanField(required=False, default=None)
 

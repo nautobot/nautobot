@@ -7,7 +7,7 @@ Plugins can do a lot, including:
 * Create Django models to store data in the database
 * Add custom validation logic to apply to existing data models
 * Provide their own "pages" (views) in the web user interface
-* Provide [custom jobs](../additional-features/custom-jobs.md)
+* Provide [jobs](../additional-features/jobs.md)
 * Inject template content and navigation links
 * Establish their own REST API endpoints
 * Add custom request/response middleware
@@ -36,7 +36,7 @@ plugin_name/
     - datasources.py        # Loading Data from a Git Repository
     - graphql/
       - types.py            # GraphQL Type Objects
-    - jobs.py               # Custom job classes
+    - jobs.py               # Job classes
     - middleware.py         # Request/response middleware
     - migrations/
       - 0001_initial.py     # Database Models
@@ -449,23 +449,23 @@ class SiteAnimalCount(PluginTemplateExtension):
 template_extensions = [SiteAnimalCount]
 ```
 
-## Including Custom Jobs
+## Including Jobs
 
-Plugins can provide [custom jobs](../additional-features/custom-jobs.md) to take advantage of all the built-in functionality provided by that feature (user input forms, background execution, results logging and reporting, etc.). This plugin feature is provided for convenience; it remains possible to instead install custom jobs manually into [`CUSTOM_JOBS_ROOT`](../configuration/optional-settings.md#custom_jobs_root) or provide them as part of a [Git repository](../models/extras/gitrepository.md) if desired.
+Plugins can provide [jobs](../additional-features/jobs.md) to take advantage of all the built-in functionality provided by that feature (user input forms, background execution, results logging and reporting, etc.). This plugin feature is provided for convenience; it remains possible to instead install jobs manually into [`JOBS_ROOT`](../configuration/optional-settings.md#jobs_root) or provide them as part of a [Git repository](../models/extras/gitrepository.md) if desired.
 
-By default, for each plugin, NetBox looks for an iterable named `jobs` within a `jobs.py` file. (This can be overridden by setting `jobs` to a custom value on the plugin's PluginConfig.) A brief example is below; for more details on custom job design and implementation, refer to the custom jobs documentation.
+By default, for each plugin, NetBox looks for an iterable named `jobs` within a `jobs.py` file. (This can be overridden by setting `jobs` to a custom value on the plugin's PluginConfig.) A brief example is below; for more details on job design and implementation, refer to the jobs feature documentation.
 
 ```python
 # jobs.py
-from extras.custom_jobs import CustomJob
+from extras.jobs import Job
 
-class CreateDevices(CustomJob):
+class CreateDevices(Job):
     ...
 
-class DeviceConnectionsReport(CustomJob):
+class DeviceConnectionsReport(Job):
     ...
 
-class DeviceIPsReport(CustomJob):
+class DeviceIPsReport(Job):
     ...
 
 jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]

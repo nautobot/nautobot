@@ -48,10 +48,10 @@ urlpatterns = [
     path('changelog/', views.ObjectChangeListView.as_view(), name='objectchange_list'),
     path('changelog/<int:pk>/', views.ObjectChangeView.as_view(), name='objectchange'),
 
-    # Custom jobs
-    path('custom-jobs/', views.CustomJobListView.as_view(), name='customjob_list'),
-    path('custom-jobs/results/<int:pk>/', views.CustomJobResultView.as_view(), name='customjob_jobresult'),
-    path('custom-jobs/<path:class_path>/', views.CustomJobView.as_view(), name='customjob'),
+    # Jobs
+    path('jobs/', views.JobListView.as_view(), name='job_list'),
+    path('jobs/results/<int:pk>/', views.JobJobResultView.as_view(), name='job_jobresult'),
+    path('jobs/<path:class_path>/', views.JobView.as_view(), name='job'),
 
     # Generic job results
     path('job-results/', views.JobResultListView.as_view(), name='jobresult_list'),

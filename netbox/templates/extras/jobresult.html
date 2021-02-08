@@ -5,7 +5,7 @@
 {% load static %}
 
 {% block title %}
-    {% if associated_record %}{{ associated_record }}{% elif custom_job %}{{ custom_job }}{% endif %}
+    {% if associated_record %}{{ associated_record }}{% elif job %}{{ job }}{% endif %}
     - {{ result.get_status_display }}
 {% endblock %}
 
@@ -18,9 +18,9 @@
                     <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
                         {{ associated_record.name }}
                     </a></li>
-                {% elif custom_job %}
-                    <li><a href="{% url 'extras:jobresult_list' %}?name={{ custom_job.class_path|urlencode }}">
-                        {{ custom_job.class_path }}
+                {% elif job %}
+                    <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
+                        {{ job.class_path }}
                     </a></li>
                 {% else %}
                     <li>{{ result.name }}</li>
@@ -32,8 +32,8 @@
     <h1>
         {% if associated_record %}
             {{ associated_record }}
-        {% elif custom_job %}
-            {{ custom_job }}
+        {% elif job %}
+            {{ job }}
         {% else %}
             {{ result.name }}
         {% endif %}
@@ -47,8 +47,8 @@
         {% endif %}
     </div>
 
-    {% if custom_job %}
-        <p>{{ custom_job.description }}</p>
+    {% if job %}
+        <p>{{ job.description }}</p>
     {% endif %}
     <div class="row">
         <div class="col-md-12">

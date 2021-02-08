@@ -28,8 +28,8 @@ from virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
-    ConfigContext, CustomField, CustomJob, Relationship, RelationshipAssociation,
-    GitRepository, ImageAttachment, JobResult, ObjectChange, Status, Tag
+    ConfigContext, CustomField, GitRepository, ImageAttachment, Job,
+    JobResult, ObjectChange, Relationship, RelationshipAssociation, Status, Tag
 )
 from .utils import FeatureQuery
 
@@ -497,10 +497,10 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 #
-# Custom Jobs
+# Jobs
 #
 
-class CustomJobForm(BootstrapMixin, forms.Form):
+class JobForm(BootstrapMixin, forms.Form):
     _commit = forms.BooleanField(
         required=False,
         initial=True,

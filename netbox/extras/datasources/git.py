@@ -378,13 +378,13 @@ def delete_git_config_contexts(repository_record, job_result, preserve=()):
             )
 
 #
-# Custom job handling
+# Job handling
 #
 
 
-def refresh_git_custom_jobs(repository_record, job_result, delete=False):
-    """Callback function for GitRepository updates - refresh all CustomJob records managed by this repository."""
-    # No-op as custom jobs are not currently stored in the DB but are instead refreshed on-request.
+def refresh_git_jobs(repository_record, job_result, delete=False):
+    """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
+    # No-op as jobs are not currently stored in the DB but are instead refreshed on-request.
 
 #
 # Export template handling
@@ -541,10 +541,10 @@ register_datasource_contents(
         (
             'extras.GitRepository',
             DatasourceContent(
-                name='custom jobs',
-                token='extras.CustomJob',
+                name='jobs',
+                token='extras.Job',
                 icon='mdi-script-text',
-                callback=refresh_git_custom_jobs,
+                callback=refresh_git_jobs,
             ),
         ),
         (

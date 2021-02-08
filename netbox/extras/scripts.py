@@ -1,7 +1,7 @@
-"""Legacy implementation of "scripts" API. New development should use extras.custom_jobs instead."""
-from .custom_jobs import (
-    BaseCustomJob,
-    CustomJob,
+"""Legacy implementation of "scripts" API. New development should use extras.jobs instead."""
+from .jobs import (
+    BaseJob,
+    Job,
     BooleanVar,
     ChoiceVar,
     FileVar,
@@ -38,7 +38,7 @@ __all__ = [
 #
 
 
-class BaseScript(BaseCustomJob):
+class BaseScript(BaseJob):
     """
     Base model for custom scripts. User classes should inherit from this model if they want to extend Script
     functionality for use in other subclasses.
@@ -62,7 +62,7 @@ class BaseScript(BaseCustomJob):
         super().log_failure(obj=None, message=message)
 
 
-class Script(BaseScript, CustomJob):
+class Script(BaseScript, Job):
     """
     Classes which inherit this model will appear in the list of available scripts.
     """

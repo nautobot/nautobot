@@ -724,7 +724,7 @@
                 </li>
             {% endif %}
 
-            {% if perms.extras.view_objectchange or perms.extras.view_gitrepository or perms.extras.view_configcontext or perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
+            {% if perms.extras.view_objectchange or perms.extras.view_gitrepository or perms.extras.view_configcontext or perms.extras.view_relationship or perms.extras.view_job or not settings.HIDE_RESTRICTED_UI %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Other <span class="caret"></span></a>
                     <ul class="dropdown-menu">
@@ -756,7 +756,7 @@
                         </li>
                 {% endif %}
 
-                {% if perms.extras.view_configcontext or perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
+                {% if perms.extras.view_configcontext or perms.extras.view_relationship or perms.extras.view_job or not settings.HIDE_RESTRICTED_UI %}
                         <li class="divider"></li>
                         <li class="dropdown-header">Miscellaneous</li>
 
@@ -771,7 +771,7 @@
                         </li>
                     {% endif %}
 
-                    {% if perms.extras.view_customjob or not settings.HIDE_RESTRICTED_UI %}
+                    {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
                         <li{% if not perms.extras.view_relationship %} class="disabled"{% endif %}>
                             {% if perms.extras.add_relationship %}
                                 <div class="buttons pull-right">
@@ -780,8 +780,11 @@
                             {% endif %}
                             <a href="{% url 'extras:relationship_list' %}">Relationships</a>
                         </li>
-                        <li{% if not perms.extras.view_customjob %} class="disabled"{% endif %}>
-                            <a href="{% url 'extras:customjob_list' %}">Custom Jobs</a>
+                    {% endif %}
+
+                    {% if perms.extras.view_job or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_job %} class="disabled"{% endif %}>
+                            <a href="{% url 'extras:job_list' %}">Jobs</a>
                         </li>
                     {% endif %}
                 {% endif %}

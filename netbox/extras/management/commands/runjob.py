@@ -6,11 +6,11 @@ from django.utils import timezone
 
 from extras.choices import JobResultStatusChoices
 from extras.models import JobResult
-from extras.custom_jobs import get_custom_job, run_custom_job
+from extras.jobs import get_job, run_job
 
 
 class Command(BaseCommand):
-    help = "Run a custom job (script, report) to validate or update data in NetBox"
+    help = "Run a job (script, report) to validate or update data in NetBox"
 
     def add_arguments(self, parser):
         parser.add_argument('job', help='Job to run')
@@ -19,21 +19,21 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if '/' not in options['job']:
             raise CommandError('Job must be specified in the form "grouping_name/module_name/JobClassName"')
-        custom_job_class = get_custom_job(options['job'])
-        if not custom_job_class:
+        job_class = get_job(options['job'])
+        if not job_class:
             raise CommandError('Job "%s" not found' % options['job'])
 
-        custom_job_content_type = ContentType.objects.get(app_label='extras', model='customjob')
+        job_content_type = ContentType.objects.get(app_label='extras', model='job')
 
         # Run the job and create a new JobResult
         self.stdout.write(
-            "[{:%H:%M:%S}] Running {}...".format(timezone.now(), custom_job_class.class_path)
+            "[{:%H:%M:%S}] Running {}...".format(timezone.now(), job_class.class_path)
         )
 
         job_result = JobResult.enqueue_job(
-            run_custom_job,
-            custom_job_class.class_path,
-            custom_job_content_type,
+            run_job,
+            job_class.class_path,
+            job_content_type,
             None,
             data={},  # TODO: parsing CLI args into a data dictionary is not currently implemented
             request=None,
@@ -83,12 +83,12 @@ class Command(BaseCommand):
         else:
             status = self.style.SUCCESS('SUCCESS')
         self.stdout.write(
-            "[{:%H:%M:%S}] {}: {}".format(timezone.now(), custom_job_class.class_path, status)
+            "[{:%H:%M:%S}] {}: {}".format(timezone.now(), job_class.class_path, status)
         )
 
         # Wrap things up
         self.stdout.write(
-            "[{:%H:%M:%S}] {}: Duration {}".format(timezone.now(), custom_job_class.class_path, job_result.duration)
+            "[{:%H:%M:%S}] {}: Duration {}".format(timezone.now(), job_class.class_path, job_result.duration)
         )
         self.stdout.write(
             "[{:%H:%M:%S}] Finished".format(timezone.now())

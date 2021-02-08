@@ -1,10 +1,10 @@
-"""Legacy implementation of "reports" API. New development should use extras.custom_jobs instead."""
-from .custom_jobs import (
-    CustomJob,
+"""Legacy implementation of "reports" API. New development should use extras.jobs instead."""
+from .jobs import (
+    Job,
 )
 
 
-class Report(CustomJob):
+class Report(Job):
     """
     NetBox users can extend this object to write custom reports to be used for validating data within NetBox. Each
     report must have one or more test methods named `test_*`.
