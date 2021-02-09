@@ -1077,7 +1077,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     def get(self, request):
 
         form = self.form(initial=request.GET)
-        model_form = self.model_form()
+        model_form = self.model_form(request.GET)
 
         return render(request, self.template_name, {
             'component_type': self.queryset.model._meta.verbose_name,
