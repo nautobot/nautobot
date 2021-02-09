@@ -72,10 +72,14 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         for region in regions:
             region.save()
 
+        statuses = Status.objects.get_for_model(Site)
+        status_active = statuses.get(name='active')
+        status_planned = statuses.get(name='planned')
+
         Site.objects.bulk_create([
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[0]),
-            Site(name='Site 3', slug='site-3', region=regions[0]),
+            Site(name='Site 1', slug='site-1', region=regions[0], status=status_planned),
+            Site(name='Site 2', slug='site-2', region=regions[0], status=status_planned),
+            Site(name='Site 3', slug='site-3', region=regions[0], status=status_planned),
         ])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
@@ -83,7 +87,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             'name': 'Site X',
             'slug': 'site-x',
-            'status': SiteStatusChoices.STATUS_PLANNED,
+            'status': status_planned.pk,
             'region': regions[1].pk,
             'tenant': None,
             'facility': 'Facility X',
@@ -109,7 +113,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            'status': SiteStatusChoices.STATUS_PLANNED,
+            'status': status_active.pk,
             'region': regions[1].pk,
             'tenant': None,
             'asn': 65009,

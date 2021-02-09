@@ -97,9 +97,8 @@ class RegionSerializer(CustomFieldModelSerializer):
         ]
 
 
-class SiteSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:site-detail')
-    status = ChoiceField(choices=SiteStatusChoices, required=False)
     region = NestedRegionSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     time_zone = TimeZoneField(required=False)

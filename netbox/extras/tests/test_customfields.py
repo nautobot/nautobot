@@ -7,7 +7,7 @@ from dcim.filters import SiteFilterSet
 from dcim.forms import SiteCSVForm
 from dcim.models import Site, Rack
 from extras.choices import *
-from extras.models import CustomField
+from extras.models import CustomField, Status
 from utilities.testing import APITestCase, TestCase
 from virtualization.models import VirtualMachine
 
@@ -142,10 +142,12 @@ class CustomFieldAPITest(APITestCase):
         cls.cf_select.save()
         cls.cf_select.content_types.set([content_type])
 
+        statuses = Status.objects.get_for_model(Site)
+
         # Create some sites
         cls.sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site(name='Site 1', slug='site-1', status=statuses.get(name='active')),
+            Site(name='Site 2', slug='site-2', status=statuses.get(name='active')),
         )
         Site.objects.bulk_create(cls.sites)
 
@@ -202,6 +204,7 @@ class CustomFieldAPITest(APITestCase):
         data = {
             'name': 'Site 3',
             'slug': 'site-3',
+            'status': 'active',
         }
         url = reverse('dcim-api:site-list')
         self.add_permissions('dcim.add_site')
@@ -234,6 +237,7 @@ class CustomFieldAPITest(APITestCase):
         data = {
             'name': 'Site 3',
             'slug': 'site-3',
+            'status': 'active',
             'custom_fields': {
                 'text_field': 'bar',
                 'number_field': 456,
@@ -277,14 +281,17 @@ class CustomFieldAPITest(APITestCase):
             {
                 'name': 'Site 3',
                 'slug': 'site-3',
+                'status': 'active',
             },
             {
                 'name': 'Site 4',
                 'slug': 'site-4',
+                'status': 'active',
             },
             {
                 'name': 'Site 5',
                 'slug': 'site-5',
+                'status': 'active',
             },
         )
         url = reverse('dcim-api:site-list')
@@ -330,16 +337,19 @@ class CustomFieldAPITest(APITestCase):
             {
                 'name': 'Site 3',
                 'slug': 'site-3',
+                'status': 'active',
                 'custom_fields': custom_field_data,
             },
             {
                 'name': 'Site 4',
                 'slug': 'site-4',
+                'status': 'active',
                 'custom_fields': custom_field_data,
             },
             {
                 'name': 'Site 5',
                 'slug': 'site-5',
+                'status': 'active',
                 'custom_fields': custom_field_data,
             },
         )
@@ -451,6 +461,7 @@ class CustomFieldImportTest(TestCase):
     user_permissions = (
         'dcim.view_site',
         'dcim.add_site',
+        'extras.view_status',
     )
 
     @classmethod
@@ -473,10 +484,10 @@ class CustomFieldImportTest(TestCase):
         Import a Site in CSV format, including a value for each CustomField.
         """
         data = (
-            ('name', 'slug', 'cf_text', 'cf_integer', 'cf_boolean', 'cf_date', 'cf_url', 'cf_select'),
-            ('Site 1', 'site-1', 'ABC', '123', 'True', '2020-01-01', 'http://example.com/1', 'Choice A'),
-            ('Site 2', 'site-2', 'DEF', '456', 'False', '2020-01-02', 'http://example.com/2', 'Choice B'),
-            ('Site 3', 'site-3', '', '', '', '', '', ''),
+            ('name', 'slug', 'status', 'cf_text', 'cf_integer', 'cf_boolean', 'cf_date', 'cf_url', 'cf_select'),
+            ('Site 1', 'site-1', 'active', 'ABC', '123', 'True', '2020-01-01', 'http://example.com/1', 'Choice A'),
+            ('Site 2', 'site-2', 'active', 'DEF', '456', 'False', '2020-01-02', 'http://example.com/2', 'Choice B'),
+            ('Site 3', 'site-3', 'active', '', '', '', '', '', ''),
         )
         csv_data = '\n'.join(','.join(row) for row in data)
 

@@ -2,10 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
-from dcim.choices import SiteStatusChoices
 from dcim.models import Site
 from extras.choices import *
-from extras.models import CustomField, ObjectChange, Tag
+from extras.models import CustomField, ObjectChange, Status, Tag
 from utilities.testing import APITestCase
 from utilities.testing.utils import post_data
 from utilities.testing.views import ModelViewTestCase
@@ -42,7 +41,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         form_data = {
             'name': 'Test Site 1',
             'slug': 'test-site-1',
-            'status': SiteStatusChoices.STATUS_ACTIVE,
+            'status': Status.objects.get(name='active').pk,
             'cf_my_field': 'ABC',
             'cf_my_field_select': 'Bar',
             'tags': [tag.pk for tag in tags],
@@ -52,7 +51,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             'path': self._get_url('add'),
             'data': post_data(form_data),
         }
-        self.add_permissions('dcim.add_site', 'extras.view_tag')
+        self.add_permissions('dcim.add_site', 'extras.view_tag', 'extras.view_status')
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
@@ -70,7 +69,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc_list[1].object_data['tags'], ['Tag 1', 'Tag 2'])
 
     def test_update_object(self):
-        site = Site(name='Test Site 1', slug='test-site-1')
+        site = Site(name='Test Site 1', slug='test-site-1', status=Status.objects.get(name='active'))
         site.save()
         tags = self.create_tags('Tag 1', 'Tag 2', 'Tag 3')
         site.tags.set('Tag 1', 'Tag 2')
@@ -78,7 +77,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         form_data = {
             'name': 'Test Site X',
             'slug': 'test-site-x',
-            'status': SiteStatusChoices.STATUS_PLANNED,
+            'status': Status.objects.get(name='planned').pk,
             'cf_my_field': 'DEF',
             'cf_my_field_select': 'Foo',
             'tags': [tags[2].pk],
@@ -88,7 +87,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             'path': self._get_url('edit', instance=site),
             'data': post_data(form_data),
         }
-        self.add_permissions('dcim.change_site', 'extras.view_tag')
+        self.add_permissions('dcim.change_site', 'extras.view_tag', 'extras.view_status')
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
@@ -167,10 +166,13 @@ class ChangeLogAPITest(APITestCase):
         )
         Tag.objects.bulk_create(tags)
 
+        self.statuses = Status.objects.get_for_model(Site)
+
     def test_create_object(self):
         data = {
             'name': 'Test Site 1',
             'slug': 'test-site-1',
+            'status': self.statuses.get(name='active').name,
             'custom_fields': {
                 'my_field': 'ABC',
                 'my_field_select': 'Bar',
@@ -182,7 +184,7 @@ class ChangeLogAPITest(APITestCase):
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
         url = reverse('dcim-api:site-list')
-        self.add_permissions('dcim.add_site')
+        self.add_permissions('dcim.add_site', 'extras.view_status')
 
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -200,12 +202,13 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc_list[1].object_data['tags'], ['Tag 1', 'Tag 2'])
 
     def test_update_object(self):
-        site = Site(name='Test Site 1', slug='test-site-1')
+        site = Site(name='Test Site 1', slug='test-site-1', status=self.statuses.get(name='planned'))
         site.save()
 
         data = {
             'name': 'Test Site X',
             'slug': 'test-site-x',
+            'status': self.statuses.get(name='active').name,
             'custom_fields': {
                 'my_field': 'DEF',
                 'my_field_select': 'Foo',
@@ -215,7 +218,7 @@ class ChangeLogAPITest(APITestCase):
             ]
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
-        self.add_permissions('dcim.change_site')
+        self.add_permissions('dcim.change_site', 'extras.view_status')
         url = reverse('dcim-api:site-detail', kwargs={'pk': site.pk})
 
         response = self.client.put(url, data, format='json', **self.header)
@@ -236,6 +239,7 @@ class ChangeLogAPITest(APITestCase):
         site = Site(
             name='Test Site 1',
             slug='test-site-1',
+            status=self.statuses.get(name='active'),
             custom_field_data={
                 'my_field': 'ABC',
                 'my_field_select': 'Bar'
@@ -244,7 +248,7 @@ class ChangeLogAPITest(APITestCase):
         site.save()
         site.tags.set(*Tag.objects.all()[:2])
         self.assertEqual(ObjectChange.objects.count(), 0)
-        self.add_permissions('dcim.delete_site')
+        self.add_permissions('dcim.delete_site', 'extras.view_status')
         url = reverse('dcim-api:site-detail', kwargs={'pk': site.pk})
 
         response = self.client.delete(url, **self.header)

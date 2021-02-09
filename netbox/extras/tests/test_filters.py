@@ -401,7 +401,7 @@ class ObjectChangeTestCase(TestCase):
 
 
 class StatusTestCase(TestCase):
-    queryset = Status.objects.all()
+    queryset = Status.objects.all().distinct()
     filterset = StatusFilterSet
 
     @classmethod

@@ -2,6 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from dcim.models import Site
+from extras.models import Status
 from utilities.testing import APITestCase
 
 
@@ -14,6 +15,7 @@ class TaggedItemTest(APITestCase):
         data = {
             'name': 'Test Site',
             'slug': 'test-site',
+            'status': 'active',
             'tags': [t.pk for t in tags]
         }
         url = reverse('dcim-api:site-list')
@@ -34,7 +36,8 @@ class TaggedItemTest(APITestCase):
     def test_update_tagged_item(self):
         site = Site.objects.create(
             name='Test Site',
-            slug='test-site'
+            slug='test-site',
+            status=Status.objects.get(name='active'),
         )
         site.tags.add("Foo", "Bar", "Baz")
         self.create_tags("New Tag")
@@ -63,7 +66,8 @@ class TaggedItemTest(APITestCase):
     def test_clear_tagged_item(self):
         site = Site.objects.create(
             name='Test Site',
-            slug='test-site'
+            slug='test-site',
+            status=Status.objects.get(name='active'),
         )
         site.tags.add("Foo", "Bar", "Baz")
         data = {

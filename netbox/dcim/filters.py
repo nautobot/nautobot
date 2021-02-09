@@ -82,14 +82,10 @@ class RegionFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFi
         fields = ['id', 'name', 'slug', 'description']
 
 
-class SiteFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class SiteFilterSet(BaseFilterSet, TenancyFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=SiteStatusChoices,
-        null_value=None
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),

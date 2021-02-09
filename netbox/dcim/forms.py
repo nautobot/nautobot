@@ -251,7 +251,6 @@ class SiteForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipMo
                     'rows': 3,
                 }
             ),
-            'status': StaticSelect2(),
             'time_zone': StaticSelect2(),
         }
         help_texts = {
@@ -267,12 +266,7 @@ class SiteForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipMo
         }
 
 
-class SiteCSVForm(CustomFieldModelCSVForm):
-    status = CSVChoiceField(
-        choices=SiteStatusChoices,
-        required=False,
-        help_text='Operational status'
-    )
+class SiteCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     region = CSVModelChoiceField(
         queryset=Region.objects.all(),
         required=False,
@@ -296,16 +290,10 @@ class SiteCSVForm(CustomFieldModelCSVForm):
         }
 
 
-class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=Site.objects.all(),
         widget=forms.MultipleHiddenInput
-    )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(SiteStatusChoices),
-        required=False,
-        initial='',
-        widget=StaticSelect2()
     )
     region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
@@ -337,17 +325,12 @@ class SiteBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditFor
         ]
 
 
-class SiteFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class SiteFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = Site
     field_order = ['q', 'status', 'region', 'tenant_group', 'tenant']
     q = forms.CharField(
         required=False,
         label='Search'
-    )
-    status = forms.MultipleChoiceField(
-        choices=SiteStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     region = DynamicModelMultipleChoiceField(
         queryset=Region.objects.all(),

@@ -66,6 +66,7 @@ def create_custom_statuses(
     # Add new mappings here as other models are supported.
     CHOICESET_MAP = [
         ("dcim.Device", dcim_choices.DeviceStatusChoices),
+        ("dcim.Site", dcim_choices.SiteStatusChoices),
     ]
 
     # Iterate choiceset kwargs to create status objects if they don't exist

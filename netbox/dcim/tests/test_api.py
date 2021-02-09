@@ -114,24 +114,35 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         )
         Site.objects.bulk_create(sites)
 
+        statuses = Status.objects.get_for_model(Site)
+        status_active = statuses.get(name='active')
+
+        # FIXME(jathan): The writable serializer for `Device.status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
+
         cls.create_data = [
             {
                 'name': 'Site 4',
                 'slug': 'site-4',
                 'region': regions[1].pk,
-                'status': SiteStatusChoices.STATUS_ACTIVE,
+                'status': status_active.name,
             },
             {
                 'name': 'Site 5',
                 'slug': 'site-5',
                 'region': regions[1].pk,
-                'status': SiteStatusChoices.STATUS_ACTIVE,
+                'status': status_active.name,
             },
             {
                 'name': 'Site 6',
                 'slug': 'site-6',
                 'region': regions[1].pk,
-                'status': SiteStatusChoices.STATUS_ACTIVE,
+                'status': status_active.name,
             },
         ]
 

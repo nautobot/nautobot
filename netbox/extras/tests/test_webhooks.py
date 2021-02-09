@@ -11,7 +11,7 @@ from rest_framework import status
 
 from dcim.models import Site
 from extras.choices import ObjectChangeActionChoices
-from extras.models import Webhook
+from extras.models import Status, Webhook
 from extras.webhooks import enqueue_webhooks, generate_signature
 from extras.webhooks_worker import process_webhook
 from utilities.testing import APITestCase
@@ -46,6 +46,7 @@ class WebhookTest(APITestCase):
         data = {
             'name': 'Test Site',
             'slug': 'test-site',
+            'status': 'active',
         }
         url = reverse('dcim-api:site-list')
         self.add_permissions('dcim.add_site')
@@ -63,7 +64,7 @@ class WebhookTest(APITestCase):
 
     def test_enqueue_webhook_update(self):
         # Update an object via the REST API
-        site = Site.objects.create(name='Site 1', slug='site-1')
+        site = Site.objects.create(name='Site 1', slug='site-1', status=Status.objects.get(name='active'))
         data = {
             'comments': 'Updated the site',
         }
