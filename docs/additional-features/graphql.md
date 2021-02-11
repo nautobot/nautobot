@@ -65,7 +65,40 @@ A GraphQL Query must be encapsulated in a JSON payload with the `query` key and 
 
 ## Working with Custom Fields
 
-By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+GraphQL custom fields data data is provided in two formats, a "greedy" and a "prefixed" format. The greedy format provides all custom field data associated with this record under a single "custom_field_data" key. This is helpful in situations where custom fields are likely to be added at a later date, the data will simply be added to the same root key and immediately accessible without the need to adjust the query.
+
+```graphql
+query {
+  sites {
+    name
+    custom_field_data
+  }
+}
+```
+
+Result
+```json
+{
+  "data": {
+    "sites": [
+      {
+        "name": "nyc-site-01",
+        "custom_field_data": {
+          "site_type": "large"
+        }
+      },
+      {
+        "name": "nyc-site-02",
+        "custom_field_data": {
+          "site_type": "small"
+        }
+      }
+    ]
+  }
+}
+```
+
+Additionally, by default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
 
 ```graphql
 query {
@@ -75,6 +108,7 @@ query {
   }
 }
 ```
+
 Result
 ```json
 {

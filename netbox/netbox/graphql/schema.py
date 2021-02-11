@@ -136,9 +136,6 @@ def extend_schema_type_custom_field(schema_type, model):
         else:
             schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
 
-    if cfs:
-        del(schema_type._meta.fields["custom_field_data"])
-
     return schema_type
 
 
