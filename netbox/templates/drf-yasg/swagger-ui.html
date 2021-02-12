@@ -35,6 +35,11 @@
         div.loading-container div.loading {
             display: inline;
         }
+        /* Override a setting in drf-yasg/style.css that was interfering with nav menu rendering */
+        .nav .divider {
+            width: auto;
+        }
+
     </style>
 {% endblock %}
 
