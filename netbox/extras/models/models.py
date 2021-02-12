@@ -513,6 +513,24 @@ class ConfigContextModel(models.Model):
         blank=True,
         null=True,
     )
+    # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    local_context_data_owner_content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery('config_context_owners'),
+        default=None,
+        null=True,
+        blank=True
+    )
+    local_context_data_owner_object_id = models.PositiveIntegerField(
+        default=None,
+        null=True,
+        blank=True
+    )
+    local_context_data_owner = GenericForeignKey(
+        ct_field='local_context_data_owner_content_type',
+        fk_field='local_context_data_owner_object_id',
+    )
 
     class Meta:
         abstract = True

@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 from unittest import mock
@@ -9,12 +10,12 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase
 
-from dcim.models import Device
+from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 
 from extras.choices import JobResultStatusChoices
 from extras.datasources.git import pull_git_repository_and_refresh_data
 from extras.datasources.registry import get_datasource_contents
-from extras.models import GitRepository, JobResult, ConfigContext, ExportTemplate
+from extras.models import ConfigContext, ExportTemplate, GitRepository, JobResult, Status
 
 
 @mock.patch('extras.datasources.git.GitRepo')
@@ -29,6 +30,19 @@ class GitTest(TestCase):
         self.dummy_request.user = self.user
         # Needed for use with the change_logging decorator
         self.dummy_request.id = uuid.uuid4()
+
+        self.site = Site.objects.create(name='Test Site', slug='test-site')
+        self.manufacturer = Manufacturer.objects.create(name='Acme', slug='acme')
+        self.device_type = DeviceType.objects.create(manufacturer=self.manufacturer, model='Frobozz 1000', slug='frobozz1000')
+        self.role = DeviceRole.objects.create(name='router', slug='router')
+        self.device_status = Status.objects.get_for_model(Device).get(name='active')
+        self.device = Device.objects.create(
+            name="test-device",
+            device_role=self.role,
+            device_type=self.device_type,
+            site=self.site,
+            status=self.device_status
+        )
 
         self.repo = GitRepository(
             name="Test Git Repository",
@@ -74,6 +88,7 @@ class GitTest(TestCase):
                     os.makedirs(path)
                     # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
+                    os.makedirs(os.path.join(path, "config_contexts", "devices"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
                     with open(os.path.join(path, "config_contexts", "context.yaml"), 'w') as fd:
                         yaml.dump(
@@ -87,6 +102,8 @@ class GitTest(TestCase):
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"]
                             },
                             fd)
+                    with open(os.path.join(path, "config_contexts", "devices", "test-device.json"), 'w') as fd:
+                        json.dump({"dns-servers": ["8.8.8.8"]}, fd)
                     with open(os.path.join(path, "export_templates", "dcim", "device", "template.j2"), 'w') as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     return mock.DEFAULT
@@ -110,6 +127,12 @@ class GitTest(TestCase):
                 self.assertTrue(config_context.is_active)
                 self.assertEqual({"ntp-servers": ["172.16.10.22", "172.16.10.33"]}, config_context.data)
 
+                # Make sure Device local config context was successfully populated from file
+                device = Device.objects.get(name=self.device.name)
+                self.assertIsNotNone(device.local_context_data)
+                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
+                self.assertEqual(device.local_context_data_owner, self.repo)
+
                 # Make sure ExportTemplate was successfully loaded from file
                 export_template = ExportTemplate.objects.get(
                     owner_object_id=self.repo.pk,
@@ -122,6 +145,7 @@ class GitTest(TestCase):
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 def empty_repo(path, url):
                     os.remove(os.path.join(path, "config_contexts", "context.yaml"))
+                    os.remove(os.path.join(path, "config_contexts", "devices", "test-device.json"))
                     os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))
                     return mock.DEFAULT
 
@@ -147,6 +171,9 @@ class GitTest(TestCase):
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                     owner_object_id=self.repo.pk,
                 )))
+                device = Device.objects.get(name=self.device.name)
+                self.assertIsNone(device.local_context_data)
+                self.assertIsNone(device.local_context_data_owner)
 
     def test_pull_git_repository_and_refresh_data_with_bad_data(self, MockGitRepo):
         """
@@ -158,6 +185,7 @@ class GitTest(TestCase):
                     os.makedirs(path)
                     # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
+                    os.makedirs(os.path.join(path, "config_contexts", "devices"))
                     os.makedirs(os.path.join(path, "export_templates", "nosuchapp", "device"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "nosuchmodel"))
                     # Malformed JSON
@@ -165,6 +193,9 @@ class GitTest(TestCase):
                         fd.write('{"data": ')
                     # Valid JSON but missing required keys
                     with open(os.path.join(path, "config_contexts", "context2.json"), 'w') as fd:
+                        fd.write('{}')
+                    # No such device
+                    with open(os.path.join(path, "config_contexts", "devices", "nosuchdevice.json"), 'w') as fd:
                         fd.write('{}')
                     # Invalid paths
                     with open(os.path.join(path, "export_templates", "nosuchapp", "device", "template.j2"), 'w') as fd:
@@ -190,6 +221,7 @@ class GitTest(TestCase):
                     os.makedirs(path)
                     # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
+                    os.makedirs(os.path.join(path, "config_contexts", "devices"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
                     with open(os.path.join(path, "config_contexts", "context.yaml"), 'w') as fd:
                         yaml.dump(
@@ -203,6 +235,8 @@ class GitTest(TestCase):
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"]
                             },
                             fd)
+                    with open(os.path.join(path, "config_contexts", "devices", "test-device.json"), 'w') as fd:
+                        json.dump({"dns-servers": ["8.8.8.8"]}, fd)
                     with open(os.path.join(path, "export_templates", "dcim", "device", "template.j2"), 'w') as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     return mock.DEFAULT
@@ -225,6 +259,12 @@ class GitTest(TestCase):
                 self.assertEqual("NTP servers for region NYC", config_context.description)
                 self.assertTrue(config_context.is_active)
                 self.assertEqual({"ntp-servers": ["172.16.10.22", "172.16.10.33"]}, config_context.data)
+
+                # Make sure Device local config context was successfully populated from file
+                device = Device.objects.get(name=self.device.name)
+                self.assertIsNotNone(device.local_context_data)
+                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
+                self.assertEqual(device.local_context_data_owner, self.repo)
 
                 # Make sure ExportTemplate was successfully loaded from file
                 export_template = ExportTemplate.objects.get(
@@ -249,3 +289,7 @@ class GitTest(TestCase):
                         owner_object_id=self.repo.pk,
                         owner_content_type=ContentType.objects.get_for_model(GitRepository),
                     )
+
+                device = Device.objects.get(name=self.device.name)
+                self.assertIsNone(device.local_context_data)
+                self.assertIsNone(device.local_context_data_owner)

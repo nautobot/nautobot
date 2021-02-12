@@ -3,21 +3,24 @@ import logging
 import os
 import re
 
+from collections import defaultdict
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
 
 from django_rq import job
 
 import yaml
 
-from dcim.models import Region, Site, DeviceRole, Platform
+from dcim.models import Device, DeviceRole, Platform, Region, Site
 from extras.choices import LogLevelChoices, JobResultStatusChoices
 from extras.models import ConfigContext, ExportTemplate, GitRepository, JobResult, Tag
 from extras.registry import DatasourceContent, register_datasource_contents
 from utilities.git import GitRepo
 from utilities.utils import copy_safe_request
-from virtualization.models import ClusterGroup, Cluster
+from virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from tenancy.models import TenantGroup, Tenant
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
@@ -155,6 +158,7 @@ def update_git_config_contexts(repository_record, job_result):
         return
 
     managed_config_contexts = set()
+    managed_local_config_contexts = defaultdict(set)
 
     # First, handle the "flat file" case - data files in the root config_context_path,
     # whose metadata is expressed purely within the contents of the file:
@@ -189,7 +193,7 @@ def update_git_config_contexts(repository_record, job_result):
             )
             job_result.save()
 
-    # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.[json|yaml]
+    # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
     for filter_type in (
         'regions', 'sites', 'roles', 'platforms', 'cluster_groups', 'clusters', 'tenant_groups', 'tenants', 'tags',
     ):
@@ -225,8 +229,38 @@ def update_git_config_contexts(repository_record, job_result):
                 )
                 job_result.save()
 
+    # Finally, handle device- and virtual-machine-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
+    for local_type in ('devices', 'virtual_machines'):
+        dir_path = os.path.join(config_context_path, local_type)
+        if not os.path.isdir(dir_path):
+            continue
+
+        for file_name in os.listdir(dir_path):
+            device_name = os.path.splitext(file_name)[0]
+            job_result.log(
+                f'Loading local config context for `{device_name}` from `{local_type}/{file_name}`',
+                grouping='local config contexts',
+                logger=logger,
+            )
+            try:
+                with open(os.path.join(dir_path, file_name), 'r') as fd:
+                    try:
+                        context_data = yaml.safe_load(fd)
+                    except Exception as exc:
+                        raise RuntimeError(f"Error in loading local config context from `{file_name}`: {exc}")
+
+                import_local_config_context(local_type, device_name, context_data, repository_record, job_result, logger)
+                managed_local_config_contexts[local_type].add(device_name)
+            except Exception as exc:
+                job_result.log(
+                    str(exc), level_choice=LogLevelChoices.LOG_FAILURE, grouping='local config contexts', logger=logger,
+                )
+                job_result.save()
+
     # Delete any prior contexts that are owned by this repository but were not created/updated above
-    delete_git_config_contexts(repository_record, job_result, preserve=managed_config_contexts)
+    delete_git_config_contexts(
+        repository_record, job_result, preserve=managed_config_contexts, preserve_local=managed_local_config_contexts,
+    )
 
 
 def import_config_context(context_data, repository_record, job_result, logger):
@@ -362,8 +396,72 @@ def import_config_context(context_data, repository_record, job_result, logger):
     return context_record.name if context_record else None
 
 
-def delete_git_config_contexts(repository_record, job_result, preserve=()):
+def import_local_config_context(local_type, device_name, context_data, repository_record, job_result, logger):
+    """
+    Create/update the local config context data associated with a Device or VirtualMachine.
+    """
+    try:
+        if local_type == "devices":
+            record = Device.objects.get(name=device_name)
+        elif local_type == "virtual_machines":
+            record = VirtualMachine.objects.get(name=device_name)
+    except MultipleObjectsReturned:
+        # Possible for Device as name is not guaranteed globally unique
+        # TODO: come up with a design that accounts for non-unique names, as well as un-named Devices.
+        job_result.log(
+            "Multiple records with the same name found; unable to determine which one to apply to!",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="local config contexts",
+            logger=logger,
+        )
+        return
+    except ObjectDoesNotExist:
+        job_result.log(
+            "Record not found!",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="local config contexts",
+            logger=logger,
+        )
+        return
+
+    if record.local_context_data_owner is not None and record.local_context_data_owner != repository_record:
+        job_result.log(
+            f"DATA CONFLICT: Local context data is owned by another owner, {record.local_context_data_owner}",
+            obj=record,
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="local config contexts",
+            logger=logger,
+        )
+        return
+
+    if record.local_context_data == context_data and record.local_context_data_owner == repository_record:
+        job_result.log(
+            "No change to local config context",
+            obj=record,
+            level_choice=LogLevelChoices.LOG_INFO,
+            grouping="local config contexts",
+            logger=logger,
+        )
+        return
+
+    record.local_context_data = context_data
+    record.local_context_data_owner = repository_record
+    record.clean()
+    record.save()
+    job_result.log(
+        "Successfully updated local config context",
+        obj=record,
+        level_choice=LogLevelChoices.LOG_SUCCESS,
+        grouping="local config contexts",
+        logger=logger,
+    )
+
+
+def delete_git_config_contexts(repository_record, job_result, preserve=(), preserve_local=None):
     """Delete config contexts owned by this Git repository that are not in the preserve list (if any)."""
+    if not preserve_local:
+        preserve_local = defaultdict(set)
+
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
     for context_record in ConfigContext.objects.filter(
         owner_content_type=git_repository_content_type, owner_object_id=repository_record.pk
@@ -376,6 +474,27 @@ def delete_git_config_contexts(repository_record, job_result, preserve=()):
                 grouping="config contexts",
                 logger=logger,
             )
+
+    for grouping, model in (
+        ("devices", Device),
+        ("virtual_machines", VirtualMachine),
+    ):
+        for record in model.objects.filter(
+            local_context_data_owner_content_type=git_repository_content_type,
+            local_context_data_owner_object_id=repository_record.pk
+        ):
+            if record.name not in preserve_local[grouping]:
+                record.local_context_data = None
+                record.local_context_data_owner = None
+                record.clean()
+                record.save()
+                job_result.log(
+                    f"Deleted local config context",
+                    obj=record,
+                    level_choice=LogLevelChoices.LOG_WARNING,
+                    grouping="local config contexts",
+                    logger=logger,
+                )
 
 #
 # Job handling

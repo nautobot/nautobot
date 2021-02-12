@@ -25,19 +25,25 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 
 Files in the root of the `/config_contexts/` directory will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context will be taken from the `_metadata` within the file, not the filename).
 
-Alternatively, files can be placed in `/config_contexts/<filter>/<slug>.[json|yaml]`, in which case their path and filename will be taken as an implied grouping for the scope of the context. For example:
+Additionally or as an alternative, files can be placed in `/config_contexts/<filter>/<slug>.[json|yaml]`, in which case their path and filename will be taken as an implied scope for the context. For example:
 
 ```shell
 config_contexts/
-  context_1.json   # JSON data will be imported as-is
-  context_2.yaml   # YAML data will be imported as-is
+  context_1.json   # JSON data will be imported as-is, with scoping derived from its contents
+  context_2.yaml   # YAML data will be imported as-is, with scoping derived from its contents
+  devices/
+    rtr-01.yaml    # YAML data, local to the Device named "rtr-01"
   regions/
     nyc.yaml       # YAML data, with implied scoping to the Region with slug "nyc"
   sites/
     nyc-01.json    # JSON data, with implied scoping to the Site with slug "nyc-01"
+  virtual_machines/
+    vm001.json     # JSON data, local to the VirtualMachine named "vm001"
 ```
 
-After loading and potentially extending the JSON or YAML data, the key `_metadata` will be extracted from the loaded data and used to define the config context's metadata; all remaining data will form the config context data dictionary. For example, the below JSON file defines a config context with two keys `ntp-servers` and `syslog-servers` in its data:
+#### Grouped/Scoped Configuration Contexts
+
+After loading and potentially extending the JSON or YAML data with any implied scoping, the key `_metadata` will be extracted from the loaded data and used to define the config context's metadata; all remaining data will form the config context data dictionary. For example, the below JSON file defines a config context with weight 1000, scoped to the region with slug `nyc`, with two keys `ntp-servers` and `syslog-servers` in its config context data:
 
 ```json
 {
@@ -61,7 +67,7 @@ After loading and potentially extending the JSON or YAML data, the key `_metadat
 
 Within the `_metadata`, the `name` key is always required; all other metadata keys are optional and will take on default values if omitted.
 
-For files in the root of the `/config_contexts/` directory, a single file may define a single config context, or it may contain a list of config context data definitions, as in the following example:
+For files in the root of the `/config_contexts/` directory, a single file may define a single config context as above, or alternatively it may contain a list of config context data definitions, as in the following example:
 
 ```yaml
 ---
@@ -89,8 +95,12 @@ For files in the root of the `/config_contexts/` directory, a single file may de
 ...
 ```
 
+#### Local Configuration Contexts
+
+Files in a `config_contexts/devices/` and/or `config_contexts/virtual_machines/` directory will be used to populate "local" config context data for individual devices or virtual machines. For these files, the device/VM name will always be taken from the filename, and the data in the file will be used precisely as-is (there is no need, or support, for a `_metadata` key in these files).
+
 !!! note
-    Git repositories cannot currently be used to define per-device or per-virtual-machine "local" configuration context data.
+    While virtual machines are always uniquely identified by their name, it is possible for devices associated with different sites and/or tenants to share an identical name. Currently, Nautobot is unable to automatically apply local config context via Git to devices that have a non-globally-unique name (or no name at all).
 
 ### Export Templates
 

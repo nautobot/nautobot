@@ -750,6 +750,7 @@
                             {% if perms.extras.add_gitrepository %}
                                 <div class="buttons pull-right">
                                     <a href="{% url 'extras:gitrepository_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'extras:gitrepository_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
                                 </div>
                             {% endif %}
                             <a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a>

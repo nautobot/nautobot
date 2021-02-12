@@ -24,6 +24,11 @@
                 </div>
                 <div class="panel-body">
                     {% if object.local_context_data %}
+                        {% if object.local_context_data_owner %}
+                            Owned by <a href="{{ object.local_context_data_owner.get_absolute_url }}"><strong>
+                                {{ object.local_context_data_owner }}
+                            </strong></a>
+                        {% endif %}
                         {% include 'extras/inc/configcontext_data.html' with data=object.local_context_data format=format %}
                     {% else %}
                         <span class="text-muted">None</span>
@@ -45,7 +50,7 @@
                         <div class="pull-right">
                             <span class="text-muted">{{ context.weight }}</span>
                         </div>
-                        <a href="{{ context.get_absolute_url }}"><strong>{{ context.name }}</strong></a>
+                        <a href="{{ context.get_absolute_url }}"><strong>{{ context }}</strong></a>
                         {% if context.description %}
                             <br /><small>{{ context.description }}</small>
                         {% endif %}
