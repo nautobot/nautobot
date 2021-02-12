@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django_tables2 import RequestConfig
 
 from dcim.models import Device
 from dcim.tables import DeviceTable
@@ -11,6 +12,7 @@ from ipam.models import IPAddress, Service
 from ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
 from netbox.views import generic
 from secrets.models import Secret
+from utilities.paginator import EnhancedPaginator, get_paginate_count
 from utilities.utils import count_related
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -25,6 +27,32 @@ class ClusterTypeListView(generic.ObjectListView):
         cluster_count=count_related(Cluster, 'type')
     )
     table = tables.ClusterTypeTable
+
+
+class ClusterTypeView(generic.ObjectView):
+    queryset = ClusterType.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Clusters
+        clusters = Cluster.objects.restrict(request.user, 'view').filter(
+            type=instance
+        ).prefetch_related(
+            'group', 'site', 'tenant'
+        )
+
+        cluster_table = tables.ClusterTable(clusters)
+        cluster_table.columns.hide('type')
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(cluster_table)
+
+        return {
+            'cluster_table': cluster_table,
+        }
 
 
 class ClusterTypeEditView(generic.ObjectEditView):
@@ -58,6 +86,32 @@ class ClusterGroupListView(generic.ObjectListView):
         cluster_count=count_related(Cluster, 'group')
     )
     table = tables.ClusterGroupTable
+
+
+class ClusterGroupView(generic.ObjectView):
+    queryset = ClusterGroup.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Clusters
+        clusters = Cluster.objects.restrict(request.user, 'view').filter(
+            group=instance
+        ).prefetch_related(
+            'type', 'site', 'tenant'
+        )
+
+        cluster_table = tables.ClusterTable(clusters)
+        cluster_table.columns.hide('group')
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(cluster_table)
+
+        return {
+            'cluster_table': cluster_table,
+        }
 
 
 class ClusterGroupEditView(generic.ObjectEditView):

@@ -3,6 +3,7 @@ import django_tables2 as tables
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django_tables2.utils import Accessor
 
 from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, ToggleColumn
 from .jobs import get_job_classpaths
@@ -57,6 +58,10 @@ OBJECTCHANGE_REQUEST_ID = """
 
 class TagTable(BaseTable):
     pk = ToggleColumn()
+    name = tables.LinkColumn(
+        viewname='extras:tag',
+        args=[Accessor('slug')]
+    )
     color = ColorColumn()
     actions = ButtonsColumn(Tag, pk_field='slug')
 

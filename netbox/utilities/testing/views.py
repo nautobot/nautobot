@@ -1020,6 +1020,7 @@ class ViewTestCases:
         maxDiff = None
 
     class OrganizationalObjectViewTestCase(
+        GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
         CreateObjectViewTestCase,
         EditObjectViewTestCase,

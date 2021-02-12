@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
+from django_tables2 import RequestConfig
 
 from circuits.models import Circuit
 from extras.views import ObjectChangeLogView, ObjectConfigContextView
@@ -109,6 +110,31 @@ class RegionListView(generic.ObjectListView):
     filterset = filters.RegionFilterSet
     filterset_form = forms.RegionFilterForm
     table = tables.RegionTable
+
+
+class RegionView(generic.ObjectView):
+    queryset = Region.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Sites
+        sites = Site.objects.restrict(request.user, 'view').filter(
+            region__in=instance.get_descendants(include_self=True)
+        ).prefetch_related(
+            'parent', 'region', 'tenant'
+        )
+
+        sites_table = tables.SiteTable(sites)
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(sites_table)
+
+        return {
+            'sites_table': sites_table,
+        }
 
 
 class RegionEditView(generic.ObjectEditView):
@@ -221,6 +247,32 @@ class RackGroupListView(generic.ObjectListView):
     table = tables.RackGroupTable
 
 
+class RackGroupView(generic.ObjectView):
+    queryset = RackGroup.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Racks
+        racks = Rack.objects.restrict(request.user, 'view').filter(
+            group__in=instance.get_descendants(include_self=True)
+        ).prefetch_related(
+            'role', 'site', 'tenant'
+        )
+
+        rack_table = tables.RackTable(racks)
+        rack_table.columns.hide('group')
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(rack_table)
+
+        return {
+            'rack_table': rack_table,
+        }
+
+
 class RackGroupEditView(generic.ObjectEditView):
     queryset = RackGroup.objects.all()
     model_form = forms.RackGroupForm
@@ -257,6 +309,32 @@ class RackRoleListView(generic.ObjectListView):
         rack_count=count_related(Rack, 'role')
     )
     table = tables.RackRoleTable
+
+
+class RackRoleView(generic.ObjectView):
+    queryset = RackRole.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Racks
+        racks = Rack.objects.restrict(request.user, 'view').filter(
+            role=instance
+        ).prefetch_related(
+            'group', 'site', 'tenant'
+        )
+
+        rack_table = tables.RackTable(racks)
+        rack_table.columns.hide('role')
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(rack_table)
+
+        return {
+            'rack_table': rack_table,
+        }
 
 
 class RackRoleEditView(generic.ObjectEditView):
@@ -475,6 +553,31 @@ class ManufacturerListView(generic.ObjectListView):
         platform_count=count_related(Platform, 'manufacturer')
     )
     table = tables.ManufacturerTable
+
+
+class ManufacturerView(generic.ObjectView):
+    queryset = Manufacturer.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Devcies
+        devices = Device.objects.restrict(request.user, 'view').filter(
+            device_type__manufacturer=instance
+        ).prefetch_related(
+            'status', 'site', 'tenant', 'device_role', 'rack', 'device_type'
+        )
+
+        device_table = tables.DeviceTable(devices)
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(device_table)
+
+        return {
+            'device_table': device_table,
+        }
 
 
 class ManufacturerEditView(generic.ObjectEditView):
@@ -919,6 +1022,32 @@ class DeviceRoleListView(generic.ObjectListView):
     table = tables.DeviceRoleTable
 
 
+class DeviceRoleView(generic.ObjectView):
+    queryset = DeviceRole.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Devcies
+        devices = Device.objects.restrict(request.user, 'view').filter(
+            device_role=instance
+        ).prefetch_related(
+            'status', 'site', 'tenant', 'rack', 'device_type'
+        )
+
+        device_table = tables.DeviceTable(devices)
+        device_table.columns.hide('device_role')
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(device_table)
+
+        return {
+            'device_table': device_table,
+        }
+
+
 class DeviceRoleEditView(generic.ObjectEditView):
     queryset = DeviceRole.objects.all()
     model_form = forms.DeviceRoleForm
@@ -949,6 +1078,31 @@ class PlatformListView(generic.ObjectListView):
         vm_count=count_related(VirtualMachine, 'platform')
     )
     table = tables.PlatformTable
+
+
+class PlatformView(generic.ObjectView):
+    queryset = Platform.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Devcies
+        devices = Device.objects.restrict(request.user, 'view').filter(
+            platform=instance
+        ).prefetch_related(
+            'status', 'site', 'tenant', 'rack', 'device_type', 'device_role'
+        )
+
+        device_table = tables.DeviceTable(devices)
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(device_table)
+
+        return {
+            'device_table': device_table,
+        }
 
 
 class PlatformEditView(generic.ObjectEditView):

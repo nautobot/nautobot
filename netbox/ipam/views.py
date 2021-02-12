@@ -148,6 +148,31 @@ class RIRListView(generic.ObjectListView):
     template_name = 'ipam/rir_list.html'
 
 
+class RIRView(generic.ObjectView):
+    queryset = RIR.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Aggregates
+        aggregates = Aggregate.objects.restrict(request.user, 'view').filter(
+            rir=instance
+        ).prefetch_related(
+            'tenant'
+        )
+
+        aggregate_table = tables.AggregateTable(aggregates)
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(aggregate_table)
+
+        return {
+            'aggregate_table': aggregate_table,
+        }
+
+
 class RIREditView(generic.ObjectEditView):
     queryset = RIR.objects.all()
     model_form = forms.RIRForm
@@ -281,6 +306,45 @@ class RoleListView(generic.ObjectListView):
         vlan_count=count_related(VLAN, 'role')
     )
     table = tables.RoleTable
+
+
+class RoleView(generic.ObjectView):
+    queryset = Role.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Prefixes
+        prefixes = Prefix.objects.restrict(request.user, 'view').filter(
+            role=instance
+        ).prefetch_related(
+            'tenant', 'vrf', 'site', 'vlan'
+        )
+
+        prefix_table = tables.PrefixTable(prefixes)
+        prefix_table.columns.hide('role')
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
+
+        # VLANs
+        vlans = VLAN.objects.restrict(request.user, 'view').filter(
+            role=instance
+        ).prefetch_related(
+            'tenant', 'site', 'group'
+        )
+
+        vlan_table = tables.VLANTable(vlans)
+        vlan_table.columns.hide('role')
+
+        RequestConfig(request, paginate).configure(vlan_table)
+
+        return {
+            'prefix_table': prefix_table,
+            'vlan_table': vlan_table,
+        }
 
 
 class RoleEditView(generic.ObjectEditView):
@@ -640,32 +704,8 @@ class VLANGroupListView(generic.ObjectListView):
     table = tables.VLANGroupTable
 
 
-class VLANGroupEditView(generic.ObjectEditView):
+class VLANGroupView(generic.ObjectView):
     queryset = VLANGroup.objects.all()
-    model_form = forms.VLANGroupForm
-
-
-class VLANGroupDeleteView(generic.ObjectDeleteView):
-    queryset = VLANGroup.objects.all()
-
-
-class VLANGroupBulkImportView(generic.BulkImportView):
-    queryset = VLANGroup.objects.all()
-    model_form = forms.VLANGroupCSVForm
-    table = tables.VLANGroupTable
-
-
-class VLANGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLANGroup.objects.prefetch_related('site').annotate(
-        vlan_count=count_related(VLAN, 'group')
-    )
-    filterset = filters.VLANGroupFilterSet
-    table = tables.VLANGroupTable
-
-
-class VLANGroupVLANsView(generic.ObjectView):
-    queryset = VLANGroup.objects.all()
-    template_name = 'ipam/vlangroup_vlans.html'
 
     def get_extra_context(self, request, instance):
         vlans = VLAN.objects.restrict(request.user, 'view').filter(group=instance).prefetch_related(
@@ -698,6 +738,29 @@ class VLANGroupVLANsView(generic.ObjectView):
             'vlan_table': vlan_table,
             'permissions': permissions,
         }
+
+
+class VLANGroupEditView(generic.ObjectEditView):
+    queryset = VLANGroup.objects.all()
+    model_form = forms.VLANGroupForm
+
+
+class VLANGroupDeleteView(generic.ObjectDeleteView):
+    queryset = VLANGroup.objects.all()
+
+
+class VLANGroupBulkImportView(generic.BulkImportView):
+    queryset = VLANGroup.objects.all()
+    model_form = forms.VLANGroupCSVForm
+    table = tables.VLANGroupTable
+
+
+class VLANGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = VLANGroup.objects.prefetch_related('site').annotate(
+        vlan_count=count_related(VLAN, 'group')
+    )
+    filterset = filters.VLANGroupFilterSet
+    table = tables.VLANGroupTable
 
 
 #

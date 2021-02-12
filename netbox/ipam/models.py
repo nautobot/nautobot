@@ -220,7 +220,7 @@ class RIR(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name
 
     def get_absolute_url(self):
-        return "{}?rir={}".format(reverse('ipam:aggregate_list'), self.slug)
+        return reverse("ipam:rir", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -383,6 +383,9 @@ class Role(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse("ipam:role", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -931,7 +934,7 @@ class VLANGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('ipam:vlangroup_vlans', args=[self.pk])
+        return reverse('ipam:vlangroup', args=[self.pk])
 
     def to_csv(self):
         return (

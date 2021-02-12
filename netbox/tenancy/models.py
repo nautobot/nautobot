@@ -61,7 +61,7 @@ class TenantGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipMo
         return self.name
 
     def get_absolute_url(self):
-        return "{}?group={}".format(reverse('tenancy:tenant_list'), self.slug)
+        return reverse('tenancy:tenantgroup', args=[self.slug])
 
     def to_csv(self):
         return (

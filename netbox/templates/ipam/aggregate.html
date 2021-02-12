@@ -71,7 +71,7 @@
                 <tr>
                     <td>RIR</td>
                     <td>
-                        <a href="{% url 'ipam:aggregate_list' %}?rir={{ object.rir.slug }}">{{ object.rir }}</a>
+                        <a href="{{ object.rir.get_absolute_url }}">{{ object.rir }}</a>
                     </td>
                 </tr>
                 <tr>

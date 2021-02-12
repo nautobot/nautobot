@@ -75,6 +75,12 @@ class ClusterTable(BaseTable):
     site = tables.Column(
         linkify=True
     )
+    type = tables.Column(
+        linkify=True
+    )
+    group = tables.Column(
+        linkify=True
+    )
     device_count = LinkedCountColumn(
         viewname='dcim:device_list',
         url_params={'cluster_id': 'pk'},

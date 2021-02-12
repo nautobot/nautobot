@@ -37,6 +37,30 @@ class TagListView(generic.ObjectListView):
     table = tables.TagTable
 
 
+class TagView(generic.ObjectView):
+    queryset = Tag.objects.all()
+
+    def get_extra_context(self, request, instance):
+        tagged_items = TaggedItem.objects.filter(
+            tag=instance
+        ).prefetch_related(
+            'content_type', 'content_object'
+        )
+
+        # Generate a table of all items tagged with this Tag
+        items_table = tables.TaggedItemTable(tagged_items)
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(items_table)
+
+        return {
+            'items_count': tagged_items.count(),
+            'items_table': items_table,
+        }
+
+
 class TagEditView(generic.ObjectEditView):
     queryset = Tag.objects.all()
     model_form = forms.TagForm

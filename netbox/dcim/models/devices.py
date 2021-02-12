@@ -74,7 +74,7 @@ class Manufacturer(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name
 
     def get_absolute_url(self):
-        return "{}?manufacturer={}".format(reverse('dcim:devicetype_list'), self.slug)
+        return reverse('dcim:manufacturer', args=[self.slug])
 
     def to_csv(self):
         return (
@@ -395,6 +395,9 @@ class DeviceRole(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     class Meta:
         ordering = ['name']
 
+    def get_absolute_url(self):
+        return reverse('dcim:devicerole', args=[self.slug])
+
     def __str__(self):
         return self.name
 
@@ -464,7 +467,7 @@ class Platform(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name
 
     def get_absolute_url(self):
-        return "{}?platform={}".format(reverse('dcim:device_list'), self.slug)
+        return reverse('dcim:platform', args=[self.slug])
 
     def to_csv(self):
         return (

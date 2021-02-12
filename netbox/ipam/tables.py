@@ -244,6 +244,7 @@ class AggregateDetailTable(AggregateTable):
 
 class RoleTable(BaseTable):
     pk = ToggleColumn()
+    name = tables.LinkColumn()
     prefix_count = LinkedCountColumn(
         viewname='ipam:prefix_list',
         url_params={'role': 'slug'},
@@ -479,7 +480,7 @@ class VLANTable(BaseTable):
         args=[Accessor('site__slug')]
     )
     group = tables.LinkColumn(
-        viewname='ipam:vlangroup_vlans',
+        viewname='ipam:vlangroup',
         args=[Accessor('group__pk')]
     )
     tenant = tables.TemplateColumn(

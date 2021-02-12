@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load static %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+
+{% block title %}{{ object }}{% endblock %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'ipam:role_list' %}">Roles</a></li>
+                <li>{{ object }}</li>
+            </ol>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url 'ipam:role_list' %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.ipam.add_role %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.ipam.change_role %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.ipam.delete_role %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+    <h1>{{ object }}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Role</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'ipam:role_changelog' slug=object.slug %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Role</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Weight</td>
+                    <td>{{ object.weight }}</td>
+                </tr>
+                <tr>
+                    <td>Prefixes</td>
+                    <td>
+                        <a href="{% url 'ipam:prefix_list' %}?role={{ object.slug }}">{{ prefix_table.rows|length }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>VLANs</td>
+                    <td>
+                        <a href="{% url 'ipam:vlan_list' %}?role={{ object.slug }}">{{ vlan_table.rows|length }}</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        {% include 'inc/custom_fields_panel.html' %}
+        {% plugin_left_page object %}
+	</div>
+	<div class="col-md-8">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Prefixes</strong>
+            </div>
+            {% include 'inc/table.html' with table=prefix_table %}
+            {% if perms.ipam.add_prefix %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add prefix
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>VLANs</strong>
+            </div>
+            {% include 'inc/table.html' with table=vlan_table %}
+            {% if perms.ipam.add_vlan %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add vlan
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
+    {% plugin_right_page object %}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        {% plugin_full_width_page object %}
+    </div>
+</div>
+{% endblock %}

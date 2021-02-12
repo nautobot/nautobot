@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from django.utils.text import slugify
 from taggit.models import TagBase, GenericTaggedItemBase
 
@@ -34,6 +35,9 @@ class Tag(TagBase, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
 
     class Meta:
         ordering = ['name']
+
+    def get_absolute_url(self):
+        return reverse('extras:tag', args=[self.slug])
 
     def slugify(self, tag, i=None):
         # Allow Unicode in Tag slugs (avoids empty slugs for Tags with all-Unicode names)

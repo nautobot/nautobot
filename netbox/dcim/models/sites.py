@@ -76,7 +76,7 @@ class Region(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name
 
     def get_absolute_url(self):
-        return "{}?region={}".format(reverse('dcim:site_list'), self.slug)
+        return reverse('dcim:region', args=[self.pk])
 
     def to_csv(self):
         return (

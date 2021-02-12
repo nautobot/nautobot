@@ -93,6 +93,32 @@ class CircuitTypeListView(generic.ObjectListView):
     table = tables.CircuitTypeTable
 
 
+class CircuitTypeView(generic.ObjectView):
+    queryset = CircuitType.objects.all()
+
+    def get_extra_context(self, request, instance):
+
+        # Circuits
+        circuits = Circuit.objects.restrict(request.user, 'view').filter(
+            type=instance
+        ).prefetch_related(
+            'type', 'tenant', 'terminations__site'
+        ).annotate_sites()
+
+        circuits_table = tables.CircuitTable(circuits)
+        circuits_table.columns.hide('type')
+
+        paginate = {
+            'paginator_class': EnhancedPaginator,
+            'per_page': get_paginate_count(request)
+        }
+        RequestConfig(request, paginate).configure(circuits_table)
+
+        return {
+            'circuits_table': circuits_table,
+        }
+
+
 class CircuitTypeEditView(generic.ObjectEditView):
     queryset = CircuitType.objects.all()
     model_form = forms.CircuitTypeForm

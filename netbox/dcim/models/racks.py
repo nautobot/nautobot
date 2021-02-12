@@ -94,7 +94,7 @@ class RackGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipMode
         return self.name
 
     def get_absolute_url(self):
-        return "{}?group_id={}".format(reverse('dcim:rack_list'), self.pk)
+        return reverse('dcim:rackgroup', args=[self.pk])
 
     def to_csv(self):
         return (
@@ -159,7 +159,7 @@ class RackRole(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name
 
     def get_absolute_url(self):
-        return "{}?role={}".format(reverse('dcim:rack_list'), self.slug)
+        return reverse('dcim:rackrole', args=[self.pk])
 
     def to_csv(self):
         return (

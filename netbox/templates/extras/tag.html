@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
+{% load buttons %}
 {% load helpers %}
+{% load plugins %}
 
 {% block header %}
     <div class="row">
@@ -22,18 +24,16 @@
             </form>
         </div>
     </div>
-    <div class="pull-right">
-        {% if perms.taggit.change_tag %}
-            <a href="{% url 'extras:tag_edit' slug=object.slug %}" class="btn btn-warning">
-                <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                Edit this tag
-            </a>
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.extras.add_tag %}
+            {% clone_button object %}
         {% endif %}
-        {% if perms.taggit.delete_tag %}
-            <a href="{% url 'extras:tag_delete' slug=object.slug %}" class="btn btn-danger">
-                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                Delete this tag
-            </a>
+        {% if perms.extras.change_tag %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_tag %}
+            {% delete_button object %}
         {% endif %}
     </div>
     <h1>{% block title %}Tag: {{ object }}{% endblock %}</h1>

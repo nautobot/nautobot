@@ -136,7 +136,7 @@ class CircuitType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name
 
     def get_absolute_url(self):
-        return "{}?type={}".format(reverse('circuits:circuit_list'), self.slug)
+        return reverse('circuits:circuittype', args=[self.slug])
 
     def to_csv(self):
         return (
