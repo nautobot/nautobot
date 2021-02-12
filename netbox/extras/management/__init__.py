@@ -1,10 +1,20 @@
 from django.apps import apps as global_apps
-from django.db import DEFAULT_DB_ALIAS
+from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
 
 #
 # Statuses
 #
+
+def populate_status_choices(apps, schema_editor, **kwargs):
+    """
+    Explicitly run the `create_custom_statuses` signal since it is only ran at
+    post-migrate.
+
+    When it is ran again post-migrate will be a noop.
+    """
+    app_config = apps.get_app_config('extras')
+    create_custom_statuses(app_config, **kwargs)
 
 
 def export_statuses_from_choiceset(choiceset):
@@ -67,6 +77,7 @@ def create_custom_statuses(
     CHOICESET_MAP = [
         ("dcim.Device", dcim_choices.DeviceStatusChoices),
         ("dcim.Site", dcim_choices.SiteStatusChoices),
+        ("dcim.Rack", dcim_choices.RackStatusChoices),
     ]
 
     # Iterate choiceset kwargs to create status objects if they don't exist
@@ -79,7 +90,20 @@ def create_custom_statuses(
             # other enums. We'll need to make sure they are normalized in
             # `export_statuses_from_choiceset` when we go to add `status` field
             # for other object types.
-            obj, created = Status.objects.get_or_create(**choice_kwargs)
+            try:
+                obj, created = Status.objects.get_or_create(**choice_kwargs)
+            # This will likely be a duplicate key violation due to a Status
+            # already existing (e.g. "active") albeit with a different `color`.
+            # Pop the color and try again.
+            except IntegrityError as err:
+                choice_kwargs.pop('color')
+                obj, created = Status.objects.get_or_create(**choice_kwargs)
+            # If this subsequent .get_or_create fails, fail immediately.
+            except Exception as err:
+                raise SystemExit(
+                    f'Unexpected error while running data migration to populate'
+                    f'status for {model_path}: {err}'
+                )
 
             # Make sure the content-type is associated.
             obj.content_types.add(content_type)

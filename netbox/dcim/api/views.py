@@ -115,7 +115,7 @@ class RegionViewSet(CustomFieldModelViewSet):
 # Sites
 #
 
-class SiteViewSet(CustomFieldModelViewSet):
+class SiteViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = Site.objects.prefetch_related(
         'region', 'tenant', 'tags'
     ).annotate(
@@ -162,9 +162,9 @@ class RackRoleViewSet(CustomFieldModelViewSet):
 # Racks
 #
 
-class RackViewSet(CustomFieldModelViewSet):
+class RackViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = Rack.objects.prefetch_related(
-        'site', 'group__site', 'role', 'tenant', 'tags'
+        'site', 'group__site', 'status', 'role', 'tenant', 'tags'
     ).annotate(
         device_count=count_related(Device, 'rack'),
         powerfeed_count=count_related(PowerFeed, 'rack')

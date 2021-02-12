@@ -495,14 +495,13 @@ class RackForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipMo
             'u_height': "Height in rack units",
         }
         widgets = {
-            'status': StaticSelect2(),
             'type': StaticSelect2(),
             'width': StaticSelect2(),
             'outer_unit': StaticSelect2(),
         }
 
 
-class RackCSVForm(CustomFieldModelCSVForm):
+class RackCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     site = CSVModelChoiceField(
         queryset=Site.objects.all(),
         to_field_name='name'
@@ -517,11 +516,6 @@ class RackCSVForm(CustomFieldModelCSVForm):
         required=False,
         to_field_name='name',
         help_text='Name of assigned tenant'
-    )
-    status = CSVChoiceField(
-        choices=RackStatusChoices,
-        required=False,
-        help_text='Operational status'
     )
     role = CSVModelChoiceField(
         queryset=RackRole.objects.all(),
@@ -558,7 +552,7 @@ class RackCSVForm(CustomFieldModelCSVForm):
             self.fields['group'].queryset = self.fields['group'].queryset.filter(**params)
 
 
-class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         widget=forms.MultipleHiddenInput
@@ -587,12 +581,6 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditFor
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False
-    )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(RackStatusChoices),
-        required=False,
-        initial='',
-        widget=StaticSelect2()
     )
     role = DynamicModelChoiceField(
         queryset=RackRole.objects.all(),
@@ -650,7 +638,7 @@ class RackBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditFor
         ]
 
 
-class RackFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class RackFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = Rack
     field_order = ['q', 'region', 'site', 'group_id', 'status', 'role', 'tenant_group', 'tenant']
     q = forms.CharField(
@@ -678,11 +666,6 @@ class RackFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
         query_params={
             'site': '$site'
         }
-    )
-    status = forms.MultipleChoiceField(
-        choices=RackStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     type = forms.MultipleChoiceField(
         choices=RackTypeChoices,

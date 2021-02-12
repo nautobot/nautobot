@@ -16,7 +16,14 @@ from taggit.managers import TaggableManager
 from dcim.choices import *
 from dcim.constants import *
 from dcim.elevations import RackElevationSVG
-from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, ObjectChange, TaggedItem
+from extras.models import (
+    ChangeLoggedModel,
+    CustomFieldModel,
+    ObjectChange,
+    RelationshipModel,
+    StatusModel,
+    TaggedItem,
+)
 from extras.utils import extras_features
 from utilities.choices import ColorChoices
 from utilities.fields import ColorField, NaturalOrderingField
@@ -177,9 +184,10 @@ class RackRole(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks'
 )
-class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Site and (optionally) a RackGroup.
@@ -218,11 +226,6 @@ class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         related_name='racks',
         blank=True,
         null=True
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=RackStatusChoices,
-        default=RackStatusChoices.STATUS_ACTIVE
     )
     role = models.ForeignKey(
         to='dcim.RackRole',
@@ -384,9 +387,6 @@ class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         if self.facility_id:
             return f'{self.name} ({self.facility_id})'
         return self.name
-
-    def get_status_class(self):
-        return RackStatusChoices.CSS_CLASSES.get(self.status)
 
     def get_rack_units(self, user=None, face=DeviceFaceChoices.FACE_FRONT, exclude=None, expand_devices=True):
         """

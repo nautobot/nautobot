@@ -256,12 +256,22 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         )
         RackRole.objects.bulk_create(rack_roles)
 
+        statuses = Status.objects.get_for_model(Rack)
+
         racks = (
-            Rack(site=sites[0], group=rack_groups[0], role=rack_roles[0], name='Rack 1'),
-            Rack(site=sites[0], group=rack_groups[0], role=rack_roles[0], name='Rack 2'),
-            Rack(site=sites[0], group=rack_groups[0], role=rack_roles[0], name='Rack 3'),
+            Rack(site=sites[0], group=rack_groups[0], role=rack_roles[0], name='Rack 1', status=statuses[0]),
+            Rack(site=sites[0], group=rack_groups[0], role=rack_roles[0], name='Rack 2', status=statuses[0]),
+            Rack(site=sites[0], group=rack_groups[0], role=rack_roles[0], name='Rack 3', status=statuses[0]),
         )
         Rack.objects.bulk_create(racks)
+
+        # FIXME(jathan): The writable serializer for `Device.status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
 
         cls.create_data = [
             {
@@ -269,18 +279,21 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                 'site': sites[1].pk,
                 'group': rack_groups[1].pk,
                 'role': rack_roles[1].pk,
+                'status': statuses[1].name,
             },
             {
                 'name': 'Test Rack 5',
                 'site': sites[1].pk,
                 'group': rack_groups[1].pk,
                 'role': rack_roles[1].pk,
+                'status': statuses[1].name,
             },
             {
                 'name': 'Test Rack 6',
                 'site': sites[1].pk,
                 'group': rack_groups[1].pk,
                 'role': rack_roles[1].pk,
+                'status': statuses[1].name,
             },
         ]
 

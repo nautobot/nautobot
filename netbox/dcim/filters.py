@@ -177,7 +177,13 @@ class RackRoleFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModel
         fields = ['id', 'name', 'slug', 'color']
 
 
-class RackFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class RackFilterSet(
+    BaseFilterSet,
+    TenancyFilterSet,
+    StatusModelFilterSetMixin,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet
+):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
@@ -217,10 +223,6 @@ class RackFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, 
         lookup_expr='in',
         to_field_name='slug',
         label='Rack group (slug)',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=RackStatusChoices,
-        null_value=None
     )
     type = django_filters.MultipleChoiceFilter(
         choices=RackTypeChoices

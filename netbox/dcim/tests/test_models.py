@@ -48,6 +48,7 @@ class RackTestCase(TestCase):
 
     def setUp(self):
 
+        self.status = Status.objects.get_for_model(Rack).first()
         self.site1 = Site.objects.create(
             name='TestSite1',
             slug='test-site-1'
@@ -71,6 +72,7 @@ class RackTestCase(TestCase):
             facility_id='A101',
             site=self.site1,
             group=self.group1,
+            status=self.status,
             u_height=42
         )
         self.manufacturer = Manufacturer.objects.create(
@@ -117,6 +119,7 @@ class RackTestCase(TestCase):
             name='TestRack2',
             facility_id='A102',
             site=self.site1,
+            status=self.status,
             u_height=42
         )
         rack1.save()
@@ -141,6 +144,7 @@ class RackTestCase(TestCase):
             name='TestRack2',
             facility_id='A102',
             site=self.site1,
+            status=self.status,
             u_height=42,
             group=self.group2
         )
@@ -207,7 +211,7 @@ class RackTestCase(TestCase):
         )
 
         # Create Rack1 in Site A
-        rack1 = Rack.objects.create(site=site_a, name='Rack 1')
+        rack1 = Rack.objects.create(site=site_a, name='Rack 1', status=self.status)
 
         # Create Device1 in Rack1
         device1 = Device.objects.create(site=site_a, rack=rack1, device_type=device_type, device_role=device_role)

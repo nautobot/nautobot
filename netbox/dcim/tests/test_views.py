@@ -254,10 +254,13 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         RackRole.objects.bulk_create(rackroles)
 
+        statuses = Status.objects.get_for_model(Rack)
+        status_active = statuses.get(name='active')
+
         Rack.objects.bulk_create((
-            Rack(name='Rack 1', site=sites[0]),
-            Rack(name='Rack 2', site=sites[0]),
-            Rack(name='Rack 3', site=sites[0]),
+            Rack(name='Rack 1', site=sites[0], status=status_active),
+            Rack(name='Rack 2', site=sites[0], status=status_active),
+            Rack(name='Rack 3', site=sites[0], status=status_active),
         ))
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
@@ -268,7 +271,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'site': sites[1].pk,
             'group': rackgroups[1].pk,
             'tenant': None,
-            'status': RackStatusChoices.STATUS_PLANNED,
+            'status': statuses.get(name='planned').pk,
             'role': rackroles[1].pk,
             'serial': '123456',
             'asset_tag': 'ABCDEF',
@@ -284,17 +287,17 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "site,group,name,width,u_height",
-            "Site 1,,Rack 4,19,42",
-            "Site 1,Rack Group 1,Rack 5,19,42",
-            "Site 2,Rack Group 2,Rack 6,19,42",
+            "site,group,name,width,u_height,status",
+            "Site 1,,Rack 4,19,42,planned",
+            "Site 1,Rack Group 1,Rack 5,19,42,active",
+            "Site 2,Rack Group 2,Rack 6,19,42,reserved",
         )
 
         cls.bulk_edit_data = {
             'site': sites[1].pk,
             'group': rackgroups[1].pk,
             'tenant': None,
-            'status': RackStatusChoices.STATUS_DEPRECATED,
+            'status': statuses.get(name='deprecated').pk,
             'role': rackroles[1].pk,
             'serial': '654321',
             'type': RackTypeChoices.TYPE_4POST,
