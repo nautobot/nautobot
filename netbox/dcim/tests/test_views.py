@@ -1670,6 +1670,8 @@ class CableTestCase(
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
+        statuses = Status.objects.get_for_model(Cable)
+
         interface_ct = ContentType.objects.get_for_model(Interface)
         cls.form_data = {
             # Changing terminations not supported when editing an existing Cable
@@ -1678,7 +1680,7 @@ class CableTestCase(
             'termination_b_type': interface_ct.pk,
             'termination_b_id': interfaces[3].pk,
             'type': CableTypeChoices.TYPE_CAT6,
-            'status': CableStatusChoices.STATUS_PLANNED,
+            'status': statuses.get(name='planned').pk,
             'label': 'Label',
             'color': 'c0c0c0',
             'length': 100,
@@ -1687,15 +1689,15 @@ class CableTestCase(
         }
 
         cls.csv_data = (
-            "side_a_device,side_a_type,side_a_name,side_b_device,side_b_type,side_b_name",
-            "Device 3,dcim.interface,Interface 1,Device 4,dcim.interface,Interface 1",
-            "Device 3,dcim.interface,Interface 2,Device 4,dcim.interface,Interface 2",
-            "Device 3,dcim.interface,Interface 3,Device 4,dcim.interface,Interface 3",
+            "side_a_device,side_a_type,side_a_name,side_b_device,side_b_type,side_b_name,status",
+            "Device 3,dcim.interface,Interface 1,Device 4,dcim.interface,Interface 1,planned",
+            "Device 3,dcim.interface,Interface 2,Device 4,dcim.interface,Interface 2,planned",
+            "Device 3,dcim.interface,Interface 3,Device 4,dcim.interface,Interface 3,planned",
         )
 
         cls.bulk_edit_data = {
             'type': CableTypeChoices.TYPE_CAT5E,
-            'status': CableStatusChoices.STATUS_CONNECTED,
+            'status': statuses.get(name='connected').pk,
             'label': 'New label',
             'color': '00ff00',
             'length': 50,

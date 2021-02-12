@@ -6,7 +6,6 @@ from django.db.models.signals import post_save, post_delete, pre_delete
 from django.db import transaction
 from django.dispatch import receiver
 
-from .choices import CableStatusChoices
 from .models import Cable, CablePath, Device, PathEndpoint, PowerPanel, Rack, RackGroup, VirtualChassis
 
 
@@ -135,7 +134,7 @@ def update_connected_endpoints(instance, created, raw=False, **kwargs):
         # We currently don't support modifying either termination of an existing Cable. (This
         # may change in the future.) However, we do need to capture status changes and update
         # any CablePaths accordingly.
-        if instance.status != CableStatusChoices.STATUS_CONNECTED:
+        if instance.status != Cable.STATUS_CONNECTED:
             CablePath.objects.filter(path__contains=instance).update(is_active=False)
         else:
             rebuild_paths(instance)

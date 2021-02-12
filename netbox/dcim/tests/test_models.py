@@ -438,7 +438,8 @@ class CableTestCase(TestCase):
         self.interface1 = Interface.objects.create(device=self.device1, name='eth0')
         self.interface2 = Interface.objects.create(device=self.device2, name='eth0')
         self.interface3 = Interface.objects.create(device=self.device2, name='eth1')
-        self.cable = Cable(termination_a=self.interface1, termination_b=self.interface2)
+        self.status = Status.objects.get_for_model(Cable).get(name='connected')
+        self.cable = Cable(termination_a=self.interface1, termination_b=self.interface2, status=self.status)
         self.cable.save()
 
         self.power_port1 = PowerPort.objects.create(device=self.device2, name='psu1')
@@ -540,22 +541,22 @@ class CableTestCase(TestCase):
         Test various combinations of RearPort connections.
         """
         # Connecting a single-position RearPort to a multi-position RearPort is ok
-        Cable(termination_a=self.rear_port1, termination_b=self.rear_port2).full_clean()
+        Cable(termination_a=self.rear_port1, termination_b=self.rear_port2, status=self.status).full_clean()
 
         # Connecting a single-position RearPort to an Interface is ok
-        Cable(termination_a=self.rear_port1, termination_b=self.interface3).full_clean()
+        Cable(termination_a=self.rear_port1, termination_b=self.interface3, status=self.status).full_clean()
 
         # Connecting a single-position RearPort to a CircuitTermination is ok
-        Cable(termination_a=self.rear_port1, termination_b=self.circuittermination1).full_clean()
+        Cable(termination_a=self.rear_port1, termination_b=self.circuittermination1, status=self.status).full_clean()
 
         # Connecting a multi-position RearPort to another RearPort with the same number of positions is ok
-        Cable(termination_a=self.rear_port3, termination_b=self.rear_port4).full_clean()
+        Cable(termination_a=self.rear_port3, termination_b=self.rear_port4, status=self.status).full_clean()
 
         # Connecting a multi-position RearPort to an Interface is ok
-        Cable(termination_a=self.rear_port2, termination_b=self.interface3).full_clean()
+        Cable(termination_a=self.rear_port2, termination_b=self.interface3, status=self.status).full_clean()
 
         # Connecting a multi-position RearPort to a CircuitTermination is ok
-        Cable(termination_a=self.rear_port2, termination_b=self.circuittermination1).full_clean()
+        Cable(termination_a=self.rear_port2, termination_b=self.circuittermination1, status=self.status).full_clean()
 
         # Connecting a two-position RearPort to a three-position RearPort is NOT ok
         with self.assertRaises(

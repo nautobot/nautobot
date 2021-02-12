@@ -6,13 +6,21 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
+from django.utils.functional import classproperty
 from taggit.managers import TaggableManager
 
 from dcim.choices import *
 from dcim.constants import *
 from dcim.fields import PathField
 from dcim.utils import decompile_path_node, object_to_path_node, path_node_to_object
-from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, TaggedItem
+from extras.models import (
+    ChangeLoggedModel,
+    CustomFieldModel,
+    RelationshipModel,
+    Status,
+    StatusModel,
+    TaggedItem,
+)
 from extras.utils import extras_features
 from utilities.fields import ColorField
 from utilities.querysets import RestrictedQuerySet
@@ -38,9 +46,10 @@ __all__ = (
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks'
 )
-class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     A physical connection between two endpoints.
     """
@@ -70,11 +79,6 @@ class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=50,
         choices=CableTypeChoices,
         blank=True
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=CableStatusChoices,
-        default=CableStatusChoices.STATUS_CONNECTED
     )
     label = models.CharField(
         max_length=100,
@@ -160,6 +164,13 @@ class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
 
     def get_absolute_url(self):
         return reverse('dcim:cable', args=[self.pk])
+
+    @classproperty
+    def STATUS_CONNECTED(cls):
+        """Return a cached "connected" `Status` object for later reference."""
+        if getattr(cls, '__status_connected', None) is None:
+            cls.__status_connected = Status.objects.get_for_model(Cable).get(name='connected')
+        return cls.__status_connected
 
     def clean(self):
         from circuits.models import CircuitTermination
@@ -301,9 +312,6 @@ class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
             self.length_unit,
         )
 
-    def get_status_class(self):
-        return CableStatusChoices.CSS_CLASSES.get(self.status)
-
     def get_compatible_types(self):
         """
         Return all termination types compatible with termination A.
@@ -406,7 +414,7 @@ class CablePath(models.Model):
 
         node = origin
         while node.cable is not None:
-            if node.cable.status != CableStatusChoices.STATUS_CONNECTED:
+            if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 
             # Follow the cable to its far-end termination

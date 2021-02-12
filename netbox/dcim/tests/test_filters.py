@@ -1507,9 +1507,12 @@ class ConsolePortTestCase(TestCase):
         )
         ConsolePort.objects.bulk_create(console_ports)
 
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
         # Cables
-        Cable(termination_a=console_ports[0], termination_b=console_server_ports[0]).save()
-        Cable(termination_a=console_ports[1], termination_b=console_server_ports[1]).save()
+        Cable(termination_a=console_ports[0], termination_b=console_server_ports[0], status=status_connected).save()
+        Cable(termination_a=console_ports[1], termination_b=console_server_ports[1], status=status_connected).save()
         # Third port is not connected
 
     def test_id(self):
@@ -1603,9 +1606,12 @@ class ConsoleServerPortTestCase(TestCase):
         )
         ConsoleServerPort.objects.bulk_create(console_server_ports)
 
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
         # Cables
-        Cable(termination_a=console_server_ports[0], termination_b=console_ports[0]).save()
-        Cable(termination_a=console_server_ports[1], termination_b=console_ports[1]).save()
+        Cable(termination_a=console_server_ports[0], termination_b=console_ports[0], status=status_connected).save()
+        Cable(termination_a=console_server_ports[1], termination_b=console_ports[1], status=status_connected).save()
         # Third port is not connected
 
     def test_id(self):
@@ -1699,9 +1705,12 @@ class PowerPortTestCase(TestCase):
         )
         PowerPort.objects.bulk_create(power_ports)
 
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
         # Cables
-        Cable(termination_a=power_ports[0], termination_b=power_outlets[0]).save()
-        Cable(termination_a=power_ports[1], termination_b=power_outlets[1]).save()
+        Cable(termination_a=power_ports[0], termination_b=power_outlets[0], status=status_connected).save()
+        Cable(termination_a=power_ports[1], termination_b=power_outlets[1], status=status_connected).save()
         # Third port is not connected
 
     def test_id(self):
@@ -1803,9 +1812,12 @@ class PowerOutletTestCase(TestCase):
         )
         PowerOutlet.objects.bulk_create(power_outlets)
 
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
         # Cables
-        Cable(termination_a=power_outlets[0], termination_b=power_ports[0]).save()
-        Cable(termination_a=power_outlets[1], termination_b=power_ports[1]).save()
+        Cable(termination_a=power_outlets[0], termination_b=power_ports[0], status=status_connected).save()
+        Cable(termination_a=power_outlets[1], termination_b=power_ports[1], status=status_connected).save()
         # Third port is not connected
 
     def test_id(self):
@@ -1901,9 +1913,12 @@ class InterfaceTestCase(TestCase):
         )
         Interface.objects.bulk_create(interfaces)
 
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
         # Cables
-        Cable(termination_a=interfaces[0], termination_b=interfaces[3]).save()
-        Cable(termination_a=interfaces[1], termination_b=interfaces[4]).save()
+        Cable(termination_a=interfaces[0], termination_b=interfaces[3], status=status_connected).save()
+        Cable(termination_a=interfaces[1], termination_b=interfaces[4], status=status_connected).save()
         # Third pair is not connected
 
     def test_id(self):
@@ -2038,9 +2053,12 @@ class FrontPortTestCase(TestCase):
         )
         FrontPort.objects.bulk_create(front_ports)
 
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
         # Cables
-        Cable(termination_a=front_ports[0], termination_b=front_ports[3]).save()
-        Cable(termination_a=front_ports[1], termination_b=front_ports[4]).save()
+        Cable(termination_a=front_ports[0], termination_b=front_ports[3], status=status_connected).save()
+        Cable(termination_a=front_ports[1], termination_b=front_ports[4], status=status_connected).save()
         # Third port is not connected
 
     def test_id(self):
@@ -2130,9 +2148,12 @@ class RearPortTestCase(TestCase):
         )
         RearPort.objects.bulk_create(rear_ports)
 
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
         # Cables
-        Cable(termination_a=rear_ports[0], termination_b=rear_ports[3]).save()
-        Cable(termination_a=rear_ports[1], termination_b=rear_ports[4]).save()
+        Cable(termination_a=rear_ports[0], termination_b=rear_ports[3], status=status_connected).save()
+        Cable(termination_a=rear_ports[1], termination_b=rear_ports[4], status=status_connected).save()
         # Third port is not connected
 
     def test_id(self):
@@ -2513,13 +2534,17 @@ class CableTestCase(TestCase):
         )
         Interface.objects.bulk_create(interfaces)
 
+        statuses = Status.objects.get_for_model(Cable)
+        cls.status_connected = statuses.get(name='connected')
+        cls.status_planned = statuses.get(name='planned')
+
         # Cables
-        Cable(termination_a=interfaces[1], termination_b=interfaces[2], label='Cable 1', type=CableTypeChoices.TYPE_CAT3, status=CableStatusChoices.STATUS_CONNECTED, color='aa1409', length=10, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[3], termination_b=interfaces[4], label='Cable 2', type=CableTypeChoices.TYPE_CAT3, status=CableStatusChoices.STATUS_CONNECTED, color='aa1409', length=20, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[5], termination_b=interfaces[6], label='Cable 3', type=CableTypeChoices.TYPE_CAT5E, status=CableStatusChoices.STATUS_CONNECTED, color='f44336', length=30, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[7], termination_b=interfaces[8], label='Cable 4', type=CableTypeChoices.TYPE_CAT5E, status=CableStatusChoices.STATUS_PLANNED, color='f44336', length=40, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[9], termination_b=interfaces[10], label='Cable 5', type=CableTypeChoices.TYPE_CAT6, status=CableStatusChoices.STATUS_PLANNED, color='e91e63', length=10, length_unit=CableLengthUnitChoices.UNIT_METER).save()
-        Cable(termination_a=interfaces[11], termination_b=interfaces[0], label='Cable 6', type=CableTypeChoices.TYPE_CAT6, status=CableStatusChoices.STATUS_PLANNED, color='e91e63', length=20, length_unit=CableLengthUnitChoices.UNIT_METER).save()
+        Cable(termination_a=interfaces[1], termination_b=interfaces[2], label='Cable 1', type=CableTypeChoices.TYPE_CAT3, status=cls.status_connected, color='aa1409', length=10, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
+        Cable(termination_a=interfaces[3], termination_b=interfaces[4], label='Cable 2', type=CableTypeChoices.TYPE_CAT3, status=cls.status_connected, color='aa1409', length=20, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
+        Cable(termination_a=interfaces[5], termination_b=interfaces[6], label='Cable 3', type=CableTypeChoices.TYPE_CAT5E, status=cls.status_connected, color='f44336', length=30, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
+        Cable(termination_a=interfaces[7], termination_b=interfaces[8], label='Cable 4', type=CableTypeChoices.TYPE_CAT5E, status=cls.status_planned, color='f44336', length=40, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
+        Cable(termination_a=interfaces[9], termination_b=interfaces[10], label='Cable 5', type=CableTypeChoices.TYPE_CAT6, status=cls.status_planned, color='e91e63', length=10, length_unit=CableLengthUnitChoices.UNIT_METER).save()
+        Cable(termination_a=interfaces[11], termination_b=interfaces[0], label='Cable 6', type=CableTypeChoices.TYPE_CAT6, status=cls.status_planned, color='e91e63', length=20, length_unit=CableLengthUnitChoices.UNIT_METER).save()
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -2542,9 +2567,9 @@ class CableTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        params = {'status': [CableStatusChoices.STATUS_CONNECTED]}
+        params = {'status': [self.status_connected]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {'status': [CableStatusChoices.STATUS_PLANNED]}
+        params = {'status': [self.status_planned]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_color(self):
@@ -2697,8 +2722,12 @@ class PowerFeedTestCase(TestCase):
             PowerPort(device=device, name='Power Port 2'),
         ]
         PowerPort.objects.bulk_create(power_ports)
-        Cable(termination_a=power_feeds[0], termination_b=power_ports[0]).save()
-        Cable(termination_a=power_feeds[1], termination_b=power_ports[1]).save()
+
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
+        Cable(termination_a=power_feeds[0], termination_b=power_ports[0], status=status_connected).save()
+        Cable(termination_a=power_feeds[1], termination_b=power_ports[1], status=status_connected).save()
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}

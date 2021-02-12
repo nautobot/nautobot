@@ -715,7 +715,7 @@ class InventoryItemSerializer(TaggedObjectSerializer, CustomFieldModelSerializer
 # Cables
 #
 
-class CableSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class CableSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:cable-detail')
     termination_a_type = ContentTypeField(
         queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS)
@@ -725,7 +725,6 @@ class CableSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     )
     termination_a = serializers.SerializerMethodField(read_only=True)
     termination_b = serializers.SerializerMethodField(read_only=True)
-    status = ChoiceField(choices=CableStatusChoices, required=False)
     length_unit = ChoiceField(choices=CableLengthUnitChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -760,7 +759,7 @@ class CableSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
         return self._get_termination(obj, 'b')
 
 
-class TracedCableSerializer(serializers.ModelSerializer):
+class TracedCableSerializer(StatusModelSerializerMixin, serializers.ModelSerializer):
     """
     Used only while tracing a cable path.
     """

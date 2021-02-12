@@ -1080,16 +1080,13 @@ class VirtualChassisFilterSet(BaseFilterSet):
         return queryset.filter(qs_filter)
 
 
-class CableFilterSet(BaseFilterSet):
+class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
     )
     type = django_filters.MultipleChoiceFilter(
         choices=CableTypeChoices
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=CableStatusChoices
     )
     color = django_filters.MultipleChoiceFilter(
         choices=ColorChoices

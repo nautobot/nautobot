@@ -4,6 +4,7 @@ from circuits.choices import *
 from circuits.filters import *
 from circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from dcim.models import Cable, Region, Site
+from extras.models import Status
 from tenancy.models import Tenant, TenantGroup
 
 
@@ -286,7 +287,10 @@ class CircuitTerminationTestCase(TestCase):
         ))
         CircuitTermination.objects.bulk_create(circuit_terminations)
 
-        Cable(termination_a=circuit_terminations[0], termination_b=circuit_terminations[1]).save()
+        cable_statuses = Status.objects.get_for_model(Cable)
+        status_connected = cable_statuses.get(name='connected')
+
+        Cable(termination_a=circuit_terminations[0], termination_b=circuit_terminations[1], status=status_connected).save()
 
     def test_term_side(self):
         params = {'term_side': 'A'}
