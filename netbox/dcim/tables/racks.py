@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from dcim.models import Rack, RackGroup, RackReservation, RackRole
+from extras.tables import StatusTableMixin
 from tenancy.tables import COL_TENANT
 from utilities.tables import (
     BaseTable, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, LinkedCountColumn, TagColumn,
@@ -69,7 +70,7 @@ class RackRoleTable(BaseTable):
 # Racks
 #
 
-class RackTable(BaseTable):
+class RackTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(
         order_by=('_name',),
@@ -84,7 +85,6 @@ class RackTable(BaseTable):
     tenant = tables.TemplateColumn(
         template_code=COL_TENANT
     )
-    status = ChoiceFieldColumn()
     role = ColoredLabelColumn()
     u_height = tables.TemplateColumn(
         template_code="{{ record.u_height }}U",

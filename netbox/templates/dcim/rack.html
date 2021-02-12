@@ -121,7 +121,7 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        {{ object.get_status_display }}
+                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                     </td>
                 </tr>
                 <tr>
