@@ -2706,10 +2706,13 @@ class PowerFeedTestCase(TestCase):
         )
         PowerPanel.objects.bulk_create(power_panels)
 
+        pf_statuses = Status.objects.get_for_model(PowerFeed)
+        pf_status_map = {s.name: s for s in pf_statuses.all()}
+
         power_feeds = (
-            PowerFeed(power_panel=power_panels[0], rack=racks[0], name='Power Feed 1', status=PowerFeedStatusChoices.STATUS_ACTIVE, type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=100, amperage=100, max_utilization=10),
-            PowerFeed(power_panel=power_panels[1], rack=racks[1], name='Power Feed 2', status=PowerFeedStatusChoices.STATUS_FAILED, type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=200, amperage=200, max_utilization=20),
-            PowerFeed(power_panel=power_panels[2], rack=racks[2], name='Power Feed 3', status=PowerFeedStatusChoices.STATUS_OFFLINE, type=PowerFeedTypeChoices.TYPE_REDUNDANT, supply=PowerFeedSupplyChoices.SUPPLY_DC, phase=PowerFeedPhaseChoices.PHASE_SINGLE, voltage=300, amperage=300, max_utilization=30),
+            PowerFeed(power_panel=power_panels[0], rack=racks[0], name='Power Feed 1', status=pf_status_map['active'], type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=100, amperage=100, max_utilization=10),
+            PowerFeed(power_panel=power_panels[1], rack=racks[1], name='Power Feed 2', status=pf_status_map['failed'], type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=200, amperage=200, max_utilization=20),
+            PowerFeed(power_panel=power_panels[2], rack=racks[2], name='Power Feed 3', status=pf_status_map['offline'], type=PowerFeedTypeChoices.TYPE_REDUNDANT, supply=PowerFeedSupplyChoices.SUPPLY_DC, phase=PowerFeedPhaseChoices.PHASE_SINGLE, voltage=300, amperage=300, max_utilization=30),
         )
         PowerFeed.objects.bulk_create(power_feeds)
 
@@ -2738,9 +2741,9 @@ class PowerFeedTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        # TODO: Test for multiple values
-        params = {'status': PowerFeedStatusChoices.STATUS_ACTIVE}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        pf_statuses = Status.objects.get_for_model(PowerFeed)
+        params = {'status': [pf_statuses.get(name='active').name, pf_statuses.get(name='offline').name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
         params = {'type': PowerFeedTypeChoices.TYPE_PRIMARY}

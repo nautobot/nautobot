@@ -596,7 +596,7 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 class CableViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
     queryset = Cable.objects.prefetch_related(
-        'termination_a', 'termination_b'
+        'status', 'termination_a', 'termination_b'
     )
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
@@ -635,7 +635,7 @@ class PowerPanelViewSet(ModelViewSet):
 
 class PowerFeedViewSet(PathEndpointMixin, CustomFieldModelViewSet):
     queryset = PowerFeed.objects.prefetch_related(
-        'power_panel', 'rack', '_path__destination', 'cable', '_cable_peer', 'tags'
+        'power_panel', 'rack', '_path__destination', 'cable', '_cable_peer', 'status', 'tags'
     )
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet

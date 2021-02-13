@@ -877,6 +877,7 @@ class PowerFeedSerializer(
     TaggedObjectSerializer,
     CableTerminationSerializer,
     ConnectedEndpointSerializer,
+    StatusModelSerializerMixin,
     CustomFieldModelSerializer
 ):
     url = serializers.HyperlinkedIdentityField(view_name='dcim-api:powerfeed-detail')
@@ -889,10 +890,6 @@ class PowerFeedSerializer(
     type = ChoiceField(
         choices=PowerFeedTypeChoices,
         default=PowerFeedTypeChoices.TYPE_PRIMARY
-    )
-    status = ChoiceField(
-        choices=PowerFeedStatusChoices,
-        default=PowerFeedStatusChoices.STATUS_ACTIVE
     )
     supply = ChoiceField(
         choices=PowerFeedSupplyChoices,

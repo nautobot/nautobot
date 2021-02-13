@@ -1847,11 +1847,14 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
+        statuses = Status.objects.get_for_model(PowerFeed)
+        status_planned = statuses.get(name='planned')
+
         cls.form_data = {
             'name': 'Power Feed X',
             'power_panel': powerpanels[1].pk,
             'rack': racks[1].pk,
-            'status': PowerFeedStatusChoices.STATUS_PLANNED,
+            'status': status_planned.pk,
             'type': PowerFeedTypeChoices.TYPE_REDUNDANT,
             'supply': PowerFeedSupplyChoices.SUPPLY_DC,
             'phase': PowerFeedPhaseChoices.PHASE_3PHASE,
@@ -1863,16 +1866,16 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "site,power_panel,name,voltage,amperage,max_utilization",
-            "Site 1,Power Panel 1,Power Feed 4,120,20,80",
-            "Site 1,Power Panel 1,Power Feed 5,120,20,80",
-            "Site 1,Power Panel 1,Power Feed 6,120,20,80",
+            "site,power_panel,name,voltage,amperage,max_utilization,status",
+            "Site 1,Power Panel 1,Power Feed 4,120,20,80,active",
+            "Site 1,Power Panel 1,Power Feed 5,120,20,80,failed",
+            "Site 1,Power Panel 1,Power Feed 6,120,20,80,offline",
         )
 
         cls.bulk_edit_data = {
             'power_panel': powerpanels[1].pk,
             'rack': racks[1].pk,
-            'status': PowerFeedStatusChoices.STATUS_PLANNED,
+            'status': status_planned.pk,
             'type': PowerFeedTypeChoices.TYPE_REDUNDANT,
             'supply': PowerFeedSupplyChoices.SUPPLY_DC,
             'phase': PowerFeedPhaseChoices.PHASE_3PHASE,

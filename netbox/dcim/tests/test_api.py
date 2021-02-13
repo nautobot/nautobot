@@ -1719,17 +1719,29 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         )
         PowerFeed.objects.bulk_create(power_feeds)
 
+        statuses = Status.objects.get_for_model(PowerFeed)
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
+
         cls.create_data = [
             {
                 'name': 'Power Feed 4A',
                 'power_panel': power_panels[0].pk,
                 'rack': racks[3].pk,
+                'status': statuses[0].name,
                 'type': PRIMARY,
             },
             {
                 'name': 'Power Feed 4B',
                 'power_panel': power_panels[1].pk,
                 'rack': racks[3].pk,
+                'status': statuses[0].name,
                 'type': REDUNDANT,
             },
         ]

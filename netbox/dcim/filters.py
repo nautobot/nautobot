@@ -1261,6 +1261,7 @@ class PowerFeedFilterSet(
     BaseFilterSet,
     CableTerminationFilterSet,
     PathEndpointFilterSet,
+    StatusModelFilterSetMixin,
     CustomFieldModelFilterSet,
     CreatedUpdatedFilterSet
 ):

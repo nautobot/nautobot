@@ -6,7 +6,7 @@ from taggit.managers import TaggableManager
 
 from dcim.choices import *
 from dcim.constants import *
-from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, TaggedItem
+from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel, TaggedItem
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 from utilities.validators import ExclusionValidator
@@ -88,9 +88,17 @@ class PowerPanel(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks'
 )
-class PowerFeed(ChangeLoggedModel, PathEndpoint, CableTermination, CustomFieldModel, RelationshipModel):
+class PowerFeed(
+    ChangeLoggedModel,
+    PathEndpoint,
+    CableTermination,
+    CustomFieldModel,
+    RelationshipModel,
+    StatusModel
+):
     """
     An electrical circuit delivered from a PowerPanel.
     """
@@ -107,11 +115,6 @@ class PowerFeed(ChangeLoggedModel, PathEndpoint, CableTermination, CustomFieldMo
     )
     name = models.CharField(
         max_length=100
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=PowerFeedStatusChoices,
-        default=PowerFeedStatusChoices.STATUS_ACTIVE
     )
     type = models.CharField(
         max_length=50,
@@ -220,6 +223,3 @@ class PowerFeed(ChangeLoggedModel, PathEndpoint, CableTermination, CustomFieldMo
 
     def get_type_class(self):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)
-
-    def get_status_class(self):
-        return PowerFeedStatusChoices.CSS_CLASSES.get(self.status)

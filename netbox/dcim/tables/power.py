@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from dcim.models import PowerFeed, PowerPanel
+from extras.tables import StatusTableMixin
 from utilities.tables import BaseTable, ChoiceFieldColumn, LinkedCountColumn, TagColumn, ToggleColumn
 from .devices import CableTerminationTable
 from .template_code import POWERFEED_CABLE, POWERFEED_CABLETERMINATION
@@ -44,7 +45,7 @@ class PowerPanelTable(BaseTable):
 
 # We're not using PathEndpointTable for PowerFeed because power connections
 # cannot traverse pass-through ports.
-class PowerFeedTable(CableTerminationTable):
+class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     power_panel = tables.Column(
@@ -53,7 +54,6 @@ class PowerFeedTable(CableTerminationTable):
     rack = tables.Column(
         linkify=True
     )
-    status = ChoiceFieldColumn()
     type = ChoiceFieldColumn()
     max_utilization = tables.TemplateColumn(
         template_code="{{ value }}%"

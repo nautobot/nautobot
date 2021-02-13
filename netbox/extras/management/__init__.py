@@ -79,6 +79,7 @@ def create_custom_statuses(
         ("dcim.Site", dcim_choices.SiteStatusChoices),
         ("dcim.Rack", dcim_choices.RackStatusChoices),
         ("dcim.Cable", dcim_choices.CableStatusChoices),
+        ("dcim.PowerFeed", dcim_choices.PowerFeedStatusChoices),
     ]
 
     # Iterate choiceset kwargs to create status objects if they don't exist

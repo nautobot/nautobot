@@ -4476,14 +4476,13 @@ class PowerFeedForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm)
             'max_utilization', 'comments', 'tags',
         ]
         widgets = {
-            'status': StaticSelect2(),
             'type': StaticSelect2(),
             'supply': StaticSelect2(),
             'phase': StaticSelect2(),
         }
 
 
-class PowerFeedCSVForm(CustomFieldModelCSVForm):
+class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     site = CSVModelChoiceField(
         queryset=Site.objects.all(),
         to_field_name='name',
@@ -4505,11 +4504,6 @@ class PowerFeedCSVForm(CustomFieldModelCSVForm):
         to_field_name='name',
         required=False,
         help_text='Rack'
-    )
-    status = CSVChoiceField(
-        choices=PowerFeedStatusChoices,
-        required=False,
-        help_text='Operational status'
     )
     type = CSVChoiceField(
         choices=PowerFeedTypeChoices,
@@ -4552,7 +4546,7 @@ class PowerFeedCSVForm(CustomFieldModelCSVForm):
             self.fields['rack'].queryset = self.fields['rack'].queryset.filter(**params)
 
 
-class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=PowerFeed.objects.all(),
         widget=forms.MultipleHiddenInput
@@ -4565,12 +4559,6 @@ class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEd
         queryset=Rack.objects.all(),
         required=False,
         display_field='display_name'
-    )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(PowerFeedStatusChoices),
-        required=False,
-        initial='',
-        widget=StaticSelect2()
     )
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
@@ -4610,7 +4598,7 @@ class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEd
         ]
 
 
-class PowerFeedFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class PowerFeedFilterForm(BootstrapMixin, StatusFilterFormMixin, CustomFieldFilterForm):
     model = PowerFeed
     q = forms.CharField(
         required=False,
@@ -4646,11 +4634,6 @@ class PowerFeedFilterForm(BootstrapMixin, CustomFieldFilterForm):
         query_params={
             'site': '$site'
         }
-    )
-    status = forms.MultipleChoiceField(
-        choices=PowerFeedStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
