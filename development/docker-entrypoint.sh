@@ -22,9 +22,7 @@ if [ "${CUR_DB_WAIT_TIME}" -ge "${MAX_DB_WAIT_TIME}" ]; then
 fi
 
 # Create Superuser if required
-if [ "$SKIP_SUPERUSER" == "true" ]; then
-  echo "↩️ Skip creating the superuser"
-else
+if [ "$CREATE_SUPERUSER" == "true" ]; then
   if [ -z ${SUPERUSER_NAME+x} ]; then
     SUPERUSER_NAME='admin'
   fi
@@ -67,6 +65,8 @@ else:
 END
 
   echo "💡 Superuser Username: ${SUPERUSER_NAME}, E-Mail: ${SUPERUSER_EMAIL}"
+else
+  echo "↩️ Skip creating the superuser"
 fi
 
 

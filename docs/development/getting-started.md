@@ -77,7 +77,7 @@ The `docker-entrypoint.sh` copied in during the Docker image build, but not set 
 
 ```bash
 # Super user information, but creation is disabled by default
-SKIP_SUPERUSER=false
+CREATE_SUPERUSER=true
 SUPERUSER_NAME=admin
 SUPERUSER_EMAIL=admin@example.com
 SUPERUSER_PASSWORD=admin
