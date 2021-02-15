@@ -16,16 +16,13 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         tenants = (
-            Tenant(name='Tenant A', slug='tenant-a'),
-            Tenant(name='Tenant B', slug='tenant-b'),
+            Tenant.objects.create(name='Tenant A', slug='tenant-a'),
+            Tenant.objects.create(name='Tenant B', slug='tenant-b'),
         )
-        Tenant.objects.bulk_create(tenants)
 
-        VRF.objects.bulk_create([
-            VRF(name='VRF 1', rd='65000:1'),
-            VRF(name='VRF 2', rd='65000:2'),
-            VRF(name='VRF 3', rd='65000:3'),
-        ])
+        VRF.objects.create(name='VRF 1', rd='65000:1'),
+        VRF.objects.create(name='VRF 2', rd='65000:2'),
+        VRF.objects.create(name='VRF 3', rd='65000:3'),
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -59,19 +56,15 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         tenants = (
-            Tenant(name='Tenant A', slug='tenant-a'),
-            Tenant(name='Tenant B', slug='tenant-b'),
+            Tenant.objects.create(name='Tenant A', slug='tenant-a'),
+            Tenant.objects.create(name='Tenant B', slug='tenant-b'),
         )
-        Tenant.objects.bulk_create(tenants)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
-        route_targets = (
-            RouteTarget(name='65000:1001', tenant=tenants[0]),
-            RouteTarget(name='65000:1002', tenant=tenants[1]),
-            RouteTarget(name='65000:1003'),
-        )
-        RouteTarget.objects.bulk_create(route_targets)
+        RouteTarget.objects.create(name='65000:1001', tenant=tenants[0]),
+        RouteTarget.objects.create(name='65000:1002', tenant=tenants[1]),
+        RouteTarget.objects.create(name='65000:1003'),
 
         cls.form_data = {
             'name': '65000:100',
@@ -126,16 +119,13 @@ class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         rirs = (
-            RIR(name='RIR 1', slug='rir-1'),
-            RIR(name='RIR 2', slug='rir-2'),
+            RIR.objects.create(name='RIR 1', slug='rir-1'),
+            RIR.objects.create(name='RIR 2', slug='rir-2'),
         )
-        RIR.objects.bulk_create(rirs)
 
-        Aggregate.objects.bulk_create([
-            Aggregate(prefix=IPNetwork('10.1.0.0/16'), rir=rirs[0]),
-            Aggregate(prefix=IPNetwork('10.2.0.0/16'), rir=rirs[0]),
-            Aggregate(prefix=IPNetwork('10.3.0.0/16'), rir=rirs[0]),
-        ])
+        Aggregate.objects.create(prefix=IPNetwork('10.1.0.0/16'), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork('10.2.0.0/16'), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork('10.3.0.0/16'), rir=rirs[0]),
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -195,27 +185,23 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
         vrfs = (
-            VRF(name='VRF 1', rd='65000:1'),
-            VRF(name='VRF 2', rd='65000:2'),
+            VRF.objects.create(name='VRF 1', rd='65000:1'),
+            VRF.objects.create(name='VRF 2', rd='65000:2'),
         )
-        VRF.objects.bulk_create(vrfs)
 
         roles = (
-            Role(name='Role 1', slug='role-1'),
-            Role(name='Role 2', slug='role-2'),
+            Role.objects.create(name='Role 1', slug='role-1'),
+            Role.objects.create(name='Role 2', slug='role-2'),
         )
 
-        Prefix.objects.bulk_create([
-            Prefix(prefix=IPNetwork('10.1.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0]),
-            Prefix(prefix=IPNetwork('10.2.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0]),
-            Prefix(prefix=IPNetwork('10.3.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0]),
-        ])
+        Prefix.objects.create(prefix=IPNetwork('10.1.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0])
+        Prefix.objects.create(prefix=IPNetwork('10.2.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0])
+        Prefix.objects.create(prefix=IPNetwork('10.3.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -257,16 +243,13 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         vrfs = (
-            VRF(name='VRF 1', rd='65000:1'),
-            VRF(name='VRF 2', rd='65000:2'),
+            VRF.objects.create(name='VRF 1', rd='65000:1'),
+            VRF.objects.create(name='VRF 2', rd='65000:2'),
         )
-        VRF.objects.bulk_create(vrfs)
 
-        IPAddress.objects.bulk_create([
-            IPAddress(address=IPNetwork('192.0.2.1/24'), vrf=vrfs[0]),
-            IPAddress(address=IPNetwork('192.0.2.2/24'), vrf=vrfs[0]),
-            IPAddress(address=IPNetwork('192.0.2.3/24'), vrf=vrfs[0]),
-        ])
+        IPAddress.objects.create(address=IPNetwork('192.0.2.1/24'), vrf=vrfs[0]),
+        IPAddress.objects.create(address=IPNetwork('192.0.2.2/24'), vrf=vrfs[0]),
+        IPAddress.objects.create(address=IPNetwork('192.0.2.3/24'), vrf=vrfs[0]),
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -335,28 +318,23 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
         vlangroups = (
-            VLANGroup(name='VLAN Group 1', slug='vlan-group-1', site=sites[0]),
-            VLANGroup(name='VLAN Group 2', slug='vlan-group-2', site=sites[1]),
+            VLANGroup.objects.create(name='VLAN Group 1', slug='vlan-group-1', site=sites[0]),
+            VLANGroup.objects.create(name='VLAN Group 2', slug='vlan-group-2', site=sites[1]),
         )
-        VLANGroup.objects.bulk_create(vlangroups)
 
         roles = (
-            Role(name='Role 1', slug='role-1'),
-            Role(name='Role 2', slug='role-2'),
+            Role.objects.create(name='Role 1', slug='role-1'),
+            Role.objects.create(name='Role 2', slug='role-2'),
         )
-        Role.objects.bulk_create(roles)
 
-        VLAN.objects.bulk_create([
-            VLAN(group=vlangroups[0], vid=101, name='VLAN101', site=sites[0], role=roles[0]),
-            VLAN(group=vlangroups[0], vid=102, name='VLAN102', site=sites[0], role=roles[0]),
-            VLAN(group=vlangroups[0], vid=103, name='VLAN103', site=sites[0], role=roles[0]),
-        ])
+        VLAN.objects.create(group=vlangroups[0], vid=101, name='VLAN101', site=sites[0], role=roles[0]),
+        VLAN.objects.create(group=vlangroups[0], vid=102, name='VLAN102', site=sites[0], role=roles[0]),
+        VLAN.objects.create(group=vlangroups[0], vid=103, name='VLAN103', site=sites[0], role=roles[0]),
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 

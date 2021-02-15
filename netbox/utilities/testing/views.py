@@ -163,9 +163,7 @@ class TestCase(_TestCase):
         """
         Create and return a Tag instance for each name given.
         """
-        tags = [Tag(name=name, slug=slugify(name)) for name in names]
-        Tag.objects.bulk_create(tags)
-        return tags
+        return [Tag.objects.create(name=name, slug=slugify(name)) for name in names]
 
 
 class ModelTestCase(TestCase):
@@ -767,7 +765,7 @@ class ViewTestCases:
         bulk_edit_data = {}
 
         def test_bulk_edit_objects_without_permission(self):
-            pk_list = self._get_queryset().values_list('pk', flat=True)[:3]
+            pk_list = list(self._get_queryset().values_list('pk', flat=True)[:3])
             data = {
                 'pk': pk_list,
                 '_apply': True,  # Form button
@@ -783,7 +781,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
         def test_bulk_edit_objects_with_permission(self):
-            pk_list = self._get_queryset().values_list('pk', flat=True)[:3]
+            pk_list = list(self._get_queryset().values_list('pk', flat=True)[:3])
             data = {
                 'pk': pk_list,
                 '_apply': True,  # Form button
@@ -851,7 +849,7 @@ class ViewTestCases:
         """
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):
-            pk_list = self._get_queryset().values_list('pk', flat=True)[:3]
+            pk_list = list(self._get_queryset().values_list('pk', flat=True)[:3])
             data = {
                 'pk': pk_list,
                 'confirm': True,
@@ -931,7 +929,7 @@ class ViewTestCases:
         }
 
         def test_bulk_rename_objects_without_permission(self):
-            pk_list = self._get_queryset().values_list('pk', flat=True)[:3]
+            pk_list = list(self._get_queryset().values_list('pk', flat=True)[:3])
             data = {
                 'pk': pk_list,
                 '_apply': True,  # Form button
@@ -948,7 +946,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
         def test_bulk_rename_objects_with_permission(self):
-            objects = self._get_queryset().all()[:3]
+            objects = list(self._get_queryset().all()[:3])
             pk_list = [obj.pk for obj in objects]
             data = {
                 'pk': pk_list,
@@ -972,7 +970,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
         def test_bulk_rename_objects_with_constrained_permission(self):
-            objects = self._get_queryset().all()[:3]
+            objects = list(self._get_queryset().all()[:3])
             pk_list = [obj.pk for obj in objects]
             data = {
                 'pk': pk_list,

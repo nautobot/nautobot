@@ -38,28 +38,28 @@ class TestAggregate(TestCase):
 class TestPrefix(TestCase):
 
     def test_get_duplicates(self):
-        prefixes = Prefix.objects.bulk_create((
-            Prefix(prefix=netaddr.IPNetwork('192.0.2.0/24')),
-            Prefix(prefix=netaddr.IPNetwork('192.0.2.0/24')),
-            Prefix(prefix=netaddr.IPNetwork('192.0.2.0/24')),
-        ))
+        prefixes = (
+            Prefix.objects.create(prefix=netaddr.IPNetwork('192.0.2.0/24')),
+            Prefix.objects.create(prefix=netaddr.IPNetwork('192.0.2.0/24')),
+            Prefix.objects.create(prefix=netaddr.IPNetwork('192.0.2.0/24')),
+        )
         duplicate_prefix_pks = [p.pk for p in prefixes[0].get_duplicates()]
 
         self.assertSetEqual(set(duplicate_prefix_pks), {prefixes[1].pk, prefixes[2].pk})
 
     def test_get_child_prefixes(self):
-        vrfs = VRF.objects.bulk_create((
-            VRF(name='VRF 1'),
-            VRF(name='VRF 2'),
-            VRF(name='VRF 3'),
-        ))
-        prefixes = Prefix.objects.bulk_create((
-            Prefix(prefix=netaddr.IPNetwork('10.0.0.0/16'), status=PrefixStatusChoices.STATUS_CONTAINER),
-            Prefix(prefix=netaddr.IPNetwork('10.0.0.0/24'), vrf=None),
-            Prefix(prefix=netaddr.IPNetwork('10.0.1.0/24'), vrf=vrfs[0]),
-            Prefix(prefix=netaddr.IPNetwork('10.0.2.0/24'), vrf=vrfs[1]),
-            Prefix(prefix=netaddr.IPNetwork('10.0.3.0/24'), vrf=vrfs[2]),
-        ))
+        vrfs = (
+            VRF.objects.create(name='VRF 1'),
+            VRF.objects.create(name='VRF 2'),
+            VRF.objects.create(name='VRF 3'),
+        )
+        prefixes = (
+            Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.0.0/16'), status=PrefixStatusChoices.STATUS_CONTAINER),
+            Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.0.0/24'), vrf=None),
+            Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.1.0/24'), vrf=vrfs[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.2.0/24'), vrf=vrfs[1]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.3.0/24'), vrf=vrfs[2]),
+        )
         child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes()}
 
         # Global container should return all children
@@ -73,20 +73,20 @@ class TestPrefix(TestCase):
         self.assertSetEqual(child_prefix_pks, {prefixes[2].pk})
 
     def test_get_child_ips(self):
-        vrfs = VRF.objects.bulk_create((
-            VRF(name='VRF 1'),
-            VRF(name='VRF 2'),
-            VRF(name='VRF 3'),
-        ))
+        vrfs = (
+            VRF.objects.create(name='VRF 1'),
+            VRF.objects.create(name='VRF 2'),
+            VRF.objects.create(name='VRF 3'),
+        )
         parent_prefix = Prefix.objects.create(
             prefix=netaddr.IPNetwork('10.0.0.0/16'), status=PrefixStatusChoices.STATUS_CONTAINER
         )
-        ips = IPAddress.objects.bulk_create((
-            IPAddress(address=netaddr.IPNetwork('10.0.0.1/24'), vrf=None),
-            IPAddress(address=netaddr.IPNetwork('10.0.1.1/24'), vrf=vrfs[0]),
-            IPAddress(address=netaddr.IPNetwork('10.0.2.1/24'), vrf=vrfs[1]),
-            IPAddress(address=netaddr.IPNetwork('10.0.3.1/24'), vrf=vrfs[2]),
-        ))
+        ips = (
+            IPAddress.objects.create(address=netaddr.IPNetwork('10.0.0.1/24'), vrf=None),
+            IPAddress.objects.create(address=netaddr.IPNetwork('10.0.1.1/24'), vrf=vrfs[0]),
+            IPAddress.objects.create(address=netaddr.IPNetwork('10.0.2.1/24'), vrf=vrfs[1]),
+            IPAddress.objects.create(address=netaddr.IPNetwork('10.0.3.1/24'), vrf=vrfs[2]),
+        )
         child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
 
         # Global container should return all children
@@ -222,11 +222,13 @@ class TestPrefix(TestCase):
 class TestIPAddress(TestCase):
 
     def test_get_duplicates(self):
-        ips = IPAddress.objects.bulk_create((
-            IPAddress(address=netaddr.IPNetwork('192.0.2.1/24')),
-            IPAddress(address=netaddr.IPNetwork('192.0.2.1/24')),
-            IPAddress(address=netaddr.IPNetwork('192.0.2.1/24')),
-        ))
+        one = IPAddress(address=netaddr.IPNetwork('192.0.2.1/24'))
+        two = IPAddress(address=netaddr.IPNetwork('192.0.2.1/24'))
+        three = IPAddress(address=netaddr.IPNetwork('192.0.2.1/24'))
+        one.save()
+        two.save()
+        three.save()
+        ips = (one, two, three)
         duplicate_ip_pks = [p.pk for p in ips[0].get_duplicates()]
 
         self.assertSetEqual(set(duplicate_ip_pks), {ips[1].pk, ips[2].pk})

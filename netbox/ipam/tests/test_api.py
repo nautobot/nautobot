@@ -124,17 +124,13 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         rirs = (
-            RIR(name='RIR 1', slug='rir-1'),
-            RIR(name='RIR 2', slug='rir-2'),
+            RIR.objects.create(name='RIR 1', slug='rir-1'),
+            RIR.objects.create(name='RIR 2', slug='rir-2'),
         )
-        RIR.objects.bulk_create(rirs)
 
-        aggregates = (
-            Aggregate(prefix=IPNetwork('10.0.0.0/8'), rir=rirs[0]),
-            Aggregate(prefix=IPNetwork('172.16.0.0/12'), rir=rirs[0]),
-            Aggregate(prefix=IPNetwork('192.168.0.0/16'), rir=rirs[0]),
-        )
-        Aggregate.objects.bulk_create(aggregates)
+        Aggregate.objects.create(prefix=IPNetwork('10.0.0.0/8'), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork('172.16.0.0/12'), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork('192.168.0.0/16'), rir=rirs[0]),
 
         cls.create_data = [
             {
@@ -206,11 +202,10 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         prefixes = (
-            Prefix(prefix=IPNetwork('192.168.1.0/24')),
-            Prefix(prefix=IPNetwork('192.168.2.0/24')),
-            Prefix(prefix=IPNetwork('192.168.3.0/24')),
+            Prefix.objects.create(prefix=IPNetwork('192.168.1.0/24')),
+            Prefix.objects.create(prefix=IPNetwork('192.168.2.0/24')),
+            Prefix.objects.create(prefix=IPNetwork('192.168.3.0/24')),
         )
-        Prefix.objects.bulk_create(prefixes)
 
     def test_list_available_prefixes(self):
         """
@@ -379,12 +374,9 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ip_addresses = (
-            IPAddress(address=IPNetwork('192.168.0.1/24')),
-            IPAddress(address=IPNetwork('192.168.0.2/24')),
-            IPAddress(address=IPNetwork('192.168.0.3/24')),
-        )
-        IPAddress.objects.bulk_create(ip_addresses)
+        IPAddress.objects.create(address=IPNetwork('192.168.0.1/24')),
+        IPAddress.objects.create(address=IPNetwork('192.168.0.2/24')),
+        IPAddress.objects.create(address=IPNetwork('192.168.0.3/24')),
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
@@ -494,17 +486,13 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         devicerole = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', site=site, device_type=devicetype, device_role=devicerole),
-            Device(name='Device 2', site=site, device_type=devicetype, device_role=devicerole),
+            Device.objects.create(name='Device 1', site=site, device_type=devicetype, device_role=devicerole),
+            Device.objects.create(name='Device 2', site=site, device_type=devicetype, device_role=devicerole),
         )
-        Device.objects.bulk_create(devices)
 
-        services = (
-            Service(device=devices[0], name='Service 1', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[1]),
-            Service(device=devices[0], name='Service 2', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[2]),
-            Service(device=devices[0], name='Service 3', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[3]),
-        )
-        Service.objects.bulk_create(services)
+        Service.objects.create(device=devices[0], name='Service 1', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[1]),
+        Service.objects.create(device=devices[0], name='Service 2', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[2]),
+        Service.objects.create(device=devices[0], name='Service 3', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[3]),
 
         cls.create_data = [
             {

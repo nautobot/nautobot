@@ -16,36 +16,31 @@ class VRFTestCase(TestCase):
     def setUpTestData(cls):
 
         route_targets = (
-            RouteTarget(name='65000:1001'),
-            RouteTarget(name='65000:1002'),
-            RouteTarget(name='65000:1003'),
+            RouteTarget.objects.create(name='65000:1001'),
+            RouteTarget.objects.create(name='65000:1002'),
+            RouteTarget.objects.create(name='65000:1003'),
         )
-        RouteTarget.objects.bulk_create(route_targets)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
         vrfs = (
-            VRF(name='VRF 1', rd='65000:100', tenant=tenants[0], enforce_unique=False),
-            VRF(name='VRF 2', rd='65000:200', tenant=tenants[0], enforce_unique=False),
-            VRF(name='VRF 3', rd='65000:300', tenant=tenants[1], enforce_unique=False),
-            VRF(name='VRF 4', rd='65000:400', tenant=tenants[1], enforce_unique=True),
-            VRF(name='VRF 5', rd='65000:500', tenant=tenants[2], enforce_unique=True),
-            VRF(name='VRF 6', rd='65000:600', tenant=tenants[2], enforce_unique=True),
+            VRF.objects.create(name='VRF 1', rd='65000:100', tenant=tenants[0], enforce_unique=False),
+            VRF.objects.create(name='VRF 2', rd='65000:200', tenant=tenants[0], enforce_unique=False),
+            VRF.objects.create(name='VRF 3', rd='65000:300', tenant=tenants[1], enforce_unique=False),
+            VRF.objects.create(name='VRF 4', rd='65000:400', tenant=tenants[1], enforce_unique=True),
+            VRF.objects.create(name='VRF 5', rd='65000:500', tenant=tenants[2], enforce_unique=True),
+            VRF.objects.create(name='VRF 6', rd='65000:600', tenant=tenants[2], enforce_unique=True),
         )
-        VRF.objects.bulk_create(vrfs)
         vrfs[0].import_targets.add(route_targets[0])
         vrfs[0].export_targets.add(route_targets[0])
         vrfs[1].import_targets.add(route_targets[1])
@@ -108,42 +103,37 @@ class RouteTargetTestCase(TestCase):
     def setUpTestData(cls):
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
         route_targets = (
-            RouteTarget(name='65000:1001', tenant=tenants[0]),
-            RouteTarget(name='65000:1002', tenant=tenants[0]),
-            RouteTarget(name='65000:1003', tenant=tenants[0]),
-            RouteTarget(name='65000:1004', tenant=tenants[0]),
-            RouteTarget(name='65000:2001', tenant=tenants[1]),
-            RouteTarget(name='65000:2002', tenant=tenants[1]),
-            RouteTarget(name='65000:2003', tenant=tenants[1]),
-            RouteTarget(name='65000:2004', tenant=tenants[1]),
-            RouteTarget(name='65000:3001', tenant=tenants[2]),
-            RouteTarget(name='65000:3002', tenant=tenants[2]),
-            RouteTarget(name='65000:3003', tenant=tenants[2]),
-            RouteTarget(name='65000:3004', tenant=tenants[2]),
+            RouteTarget.objects.create(name='65000:1001', tenant=tenants[0]),
+            RouteTarget.objects.create(name='65000:1002', tenant=tenants[0]),
+            RouteTarget.objects.create(name='65000:1003', tenant=tenants[0]),
+            RouteTarget.objects.create(name='65000:1004', tenant=tenants[0]),
+            RouteTarget.objects.create(name='65000:2001', tenant=tenants[1]),
+            RouteTarget.objects.create(name='65000:2002', tenant=tenants[1]),
+            RouteTarget.objects.create(name='65000:2003', tenant=tenants[1]),
+            RouteTarget.objects.create(name='65000:2004', tenant=tenants[1]),
+            RouteTarget.objects.create(name='65000:3001', tenant=tenants[2]),
+            RouteTarget.objects.create(name='65000:3002', tenant=tenants[2]),
+            RouteTarget.objects.create(name='65000:3003', tenant=tenants[2]),
+            RouteTarget.objects.create(name='65000:3004', tenant=tenants[2]),
         )
-        RouteTarget.objects.bulk_create(route_targets)
 
         vrfs = (
-            VRF(name='VRF 1', rd='65000:100'),
-            VRF(name='VRF 2', rd='65000:200'),
-            VRF(name='VRF 3', rd='65000:300'),
+            VRF.objects.create(name='VRF 1', rd='65000:100'),
+            VRF.objects.create(name='VRF 2', rd='65000:200'),
+            VRF.objects.create(name='VRF 3', rd='65000:300'),
         )
-        VRF.objects.bulk_create(vrfs)
         vrfs[0].import_targets.add(route_targets[0], route_targets[1])
         vrfs[0].export_targets.add(route_targets[2], route_targets[3])
         vrfs[1].import_targets.add(route_targets[4], route_targets[5])
@@ -193,15 +183,12 @@ class RIRTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        rirs = (
-            RIR(name='RIR 1', slug='rir-1', is_private=False, description='A'),
-            RIR(name='RIR 2', slug='rir-2', is_private=False, description='B'),
-            RIR(name='RIR 3', slug='rir-3', is_private=False, description='C'),
-            RIR(name='RIR 4', slug='rir-4', is_private=True, description='D'),
-            RIR(name='RIR 5', slug='rir-5', is_private=True, description='E'),
-            RIR(name='RIR 6', slug='rir-6', is_private=True, description='F'),
-        )
-        RIR.objects.bulk_create(rirs)
+        RIR.objects.create(name='RIR 1', slug='rir-1', is_private=False, description='A'),
+        RIR.objects.create(name='RIR 2', slug='rir-2', is_private=False, description='B'),
+        RIR.objects.create(name='RIR 3', slug='rir-3', is_private=False, description='C'),
+        RIR.objects.create(name='RIR 4', slug='rir-4', is_private=True, description='D'),
+        RIR.objects.create(name='RIR 5', slug='rir-5', is_private=True, description='E'),
+        RIR.objects.create(name='RIR 6', slug='rir-6', is_private=True, description='F'),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -234,36 +221,29 @@ class AggregateTestCase(TestCase):
     def setUpTestData(cls):
 
         rirs = (
-            RIR(name='RIR 1', slug='rir-1'),
-            RIR(name='RIR 2', slug='rir-2'),
-            RIR(name='RIR 3', slug='rir-3'),
+            RIR.objects.create(name='RIR 1', slug='rir-1'),
+            RIR.objects.create(name='RIR 2', slug='rir-2'),
+            RIR.objects.create(name='RIR 3', slug='rir-3'),
         )
-        RIR.objects.bulk_create(rirs)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
-        aggregates = (
-            Aggregate(prefix='10.1.0.0/16', rir=rirs[0], tenant=tenants[0], date_added='2020-01-01'),
-            Aggregate(prefix='10.2.0.0/16', rir=rirs[0], tenant=tenants[1], date_added='2020-01-02'),
-            Aggregate(prefix='10.3.0.0/16', rir=rirs[1], tenant=tenants[2], date_added='2020-01-03'),
-            Aggregate(prefix='2001:db8:1::/48', rir=rirs[1], tenant=tenants[0], date_added='2020-01-04'),
-            Aggregate(prefix='2001:db8:2::/48', rir=rirs[2], tenant=tenants[1], date_added='2020-01-05'),
-            Aggregate(prefix='2001:db8:3::/48', rir=rirs[2], tenant=tenants[2], date_added='2020-01-06'),
-        )
-        Aggregate.objects.bulk_create(aggregates)
+        Aggregate.objects.create(prefix='10.1.0.0/16', rir=rirs[0], tenant=tenants[0], date_added='2020-01-01'),
+        Aggregate.objects.create(prefix='10.2.0.0/16', rir=rirs[0], tenant=tenants[1], date_added='2020-01-02'),
+        Aggregate.objects.create(prefix='10.3.0.0/16', rir=rirs[1], tenant=tenants[2], date_added='2020-01-03'),
+        Aggregate.objects.create(prefix='2001:db8:1::/48', rir=rirs[1], tenant=tenants[0], date_added='2020-01-04'),
+        Aggregate.objects.create(prefix='2001:db8:3::/48', rir=rirs[2], tenant=tenants[2], date_added='2020-01-06'),
+        Aggregate.objects.create(prefix='2001:db8:2::/48', rir=rirs[2], tenant=tenants[1], date_added='2020-01-05'),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -311,12 +291,9 @@ class RoleTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        roles = (
-            Role(name='Role 1', slug='role-1'),
-            Role(name='Role 2', slug='role-2'),
-            Role(name='Role 3', slug='role-3'),
-        )
-        Role.objects.bulk_create(roles)
+        Role.objects.create(name='Role 1', slug='role-1'),
+        Role.objects.create(name='Role 2', slug='role-2'),
+        Role.objects.create(name='Role 3', slug='role-3'),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -339,80 +316,66 @@ class PrefixTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
-            Region(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 3', slug='test-region-3'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1', region=regions[0]),
-            Site(name='Test Site 2', slug='test-site-2', region=regions[1]),
-            Site(name='Test Site 3', slug='test-site-3', region=regions[2]),
+            Site.objects.create(name='Test Site 1', slug='test-site-1', region=regions[0]),
+            Site.objects.create(name='Test Site 2', slug='test-site-2', region=regions[1]),
+            Site.objects.create(name='Test Site 3', slug='test-site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         route_targets = (
-            RouteTarget(name='65000:100'),
-            RouteTarget(name='65000:200'),
-            RouteTarget(name='65000:300'),
+            RouteTarget.objects.create(name='65000:100'),
+            RouteTarget.objects.create(name='65000:200'),
+            RouteTarget.objects.create(name='65000:300'),
         )
-        RouteTarget.objects.bulk_create(route_targets)
 
         vrfs = (
-            VRF(name='VRF 1', rd='65000:100'),
-            VRF(name='VRF 2', rd='65000:200'),
-            VRF(name='VRF 3', rd='65000:300'),
+            VRF.objects.create(name='VRF 1', rd='65000:100'),
+            VRF.objects.create(name='VRF 2', rd='65000:200'),
+            VRF.objects.create(name='VRF 3', rd='65000:300'),
         )
-        VRF.objects.bulk_create(vrfs)
         vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
         vrfs[1].export_targets.add(route_targets[1])
         vrfs[2].export_targets.add(route_targets[2])
 
         vlans = (
-            VLAN(vid=1, name='VLAN 1'),
-            VLAN(vid=2, name='VLAN 2'),
-            VLAN(vid=3, name='VLAN 3'),
+            VLAN.objects.create(vid=1, name='VLAN 1'),
+            VLAN.objects.create(vid=2, name='VLAN 2'),
+            VLAN.objects.create(vid=3, name='VLAN 3'),
         )
-        VLAN.objects.bulk_create(vlans)
 
         roles = (
-            Role(name='Role 1', slug='role-1'),
-            Role(name='Role 2', slug='role-2'),
-            Role(name='Role 3', slug='role-3'),
+            Role.objects.create(name='Role 1', slug='role-1'),
+            Role.objects.create(name='Role 2', slug='role-2'),
+            Role.objects.create(name='Role 3', slug='role-3'),
         )
-        Role.objects.bulk_create(roles)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
-        prefixes = (
-            Prefix(prefix='10.0.0.0/24', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True),
-            Prefix(prefix='10.0.1.0/24', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0]),
-            Prefix(prefix='10.0.2.0/24', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=PrefixStatusChoices.STATUS_DEPRECATED),
-            Prefix(prefix='10.0.3.0/24', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=PrefixStatusChoices.STATUS_RESERVED),
-            Prefix(prefix='2001:db8::/64', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True),
-            Prefix(prefix='2001:db8:0:1::/64', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0]),
-            Prefix(prefix='2001:db8:0:2::/64', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=PrefixStatusChoices.STATUS_DEPRECATED),
-            Prefix(prefix='2001:db8:0:3::/64', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=PrefixStatusChoices.STATUS_RESERVED),
-            Prefix(prefix='10.0.0.0/16'),
-            Prefix(prefix='2001:db8::/32'),
-        )
-        Prefix.objects.bulk_create(prefixes)
+        Prefix.objects.create(prefix='10.0.0.0/24', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True),
+        Prefix.objects.create(prefix='10.0.1.0/24', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0]),
+        Prefix.objects.create(prefix='10.0.2.0/24', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=PrefixStatusChoices.STATUS_DEPRECATED),
+        Prefix.objects.create(prefix='10.0.3.0/24', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=PrefixStatusChoices.STATUS_RESERVED),
+        Prefix.objects.create(prefix='2001:db8::/64', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True),
+        Prefix.objects.create(prefix='2001:db8:0:1::/64', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0]),
+        Prefix.objects.create(prefix='2001:db8:0:2::/64', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=PrefixStatusChoices.STATUS_DEPRECATED),
+        Prefix.objects.create(prefix='2001:db8:0:3::/64', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=PrefixStatusChoices.STATUS_RESERVED),
+        Prefix.objects.create(prefix='10.0.0.0/16'),
+        Prefix.objects.create(prefix='2001:db8::/32'),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -517,11 +480,10 @@ class IPAddressTestCase(TestCase):
     def setUpTestData(cls):
 
         vrfs = (
-            VRF(name='VRF 1', rd='65000:100'),
-            VRF(name='VRF 2', rd='65000:200'),
-            VRF(name='VRF 3', rd='65000:300'),
+            VRF.objects.create(name='VRF 1', rd='65000:100'),
+            VRF.objects.create(name='VRF 2', rd='65000:200'),
+            VRF.objects.create(name='VRF 3', rd='65000:300'),
         )
-        VRF.objects.bulk_create(vrfs)
 
         site = Site.objects.create(name='Site 1', slug='site-1')
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
@@ -529,64 +491,54 @@ class IPAddressTestCase(TestCase):
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(device_type=device_type, name='Device 1', site=site, device_role=device_role),
-            Device(device_type=device_type, name='Device 2', site=site, device_role=device_role),
-            Device(device_type=device_type, name='Device 3', site=site, device_role=device_role),
+            Device.objects.create(device_type=device_type, name='Device 1', site=site, device_role=device_role),
+            Device.objects.create(device_type=device_type, name='Device 2', site=site, device_role=device_role),
+            Device.objects.create(device_type=device_type, name='Device 3', site=site, device_role=device_role),
         )
-        Device.objects.bulk_create(devices)
 
         interfaces = (
-            Interface(device=devices[0], name='Interface 1'),
-            Interface(device=devices[1], name='Interface 2'),
-            Interface(device=devices[2], name='Interface 3'),
+            Interface.objects.create(device=devices[0], name='Interface 1'),
+            Interface.objects.create(device=devices[1], name='Interface 2'),
+            Interface.objects.create(device=devices[2], name='Interface 3'),
         )
-        Interface.objects.bulk_create(interfaces)
 
         clustertype = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
         cluster = Cluster.objects.create(type=clustertype, name='Cluster 1')
 
         virtual_machines = (
-            VirtualMachine(name='Virtual Machine 1', cluster=cluster),
-            VirtualMachine(name='Virtual Machine 2', cluster=cluster),
-            VirtualMachine(name='Virtual Machine 3', cluster=cluster),
+            VirtualMachine.objects.create(name='Virtual Machine 1', cluster=cluster),
+            VirtualMachine.objects.create(name='Virtual Machine 2', cluster=cluster),
+            VirtualMachine.objects.create(name='Virtual Machine 3', cluster=cluster),
         )
-        VirtualMachine.objects.bulk_create(virtual_machines)
 
         vminterfaces = (
-            VMInterface(virtual_machine=virtual_machines[0], name='Interface 1'),
-            VMInterface(virtual_machine=virtual_machines[1], name='Interface 2'),
-            VMInterface(virtual_machine=virtual_machines[2], name='Interface 3'),
+            VMInterface.objects.create(virtual_machine=virtual_machines[0], name='Interface 1'),
+            VMInterface.objects.create(virtual_machine=virtual_machines[1], name='Interface 2'),
+            VMInterface.objects.create(virtual_machine=virtual_machines[2], name='Interface 3'),
         )
-        VMInterface.objects.bulk_create(vminterfaces)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
-        ipaddresses = (
-            IPAddress(address='10.0.0.1/24', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-a'),
-            IPAddress(address='10.0.0.2/24', tenant=tenants[0], vrf=vrfs[0], assigned_object=interfaces[0], status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-b'),
-            IPAddress(address='10.0.0.3/24', tenant=tenants[1], vrf=vrfs[1], assigned_object=interfaces[1], status=IPAddressStatusChoices.STATUS_RESERVED, role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
-            IPAddress(address='10.0.0.4/24', tenant=tenants[2], vrf=vrfs[2], assigned_object=interfaces[2], status=IPAddressStatusChoices.STATUS_DEPRECATED, role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
-            IPAddress(address='10.0.0.1/25', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE),
-            IPAddress(address='2001:db8::1/64', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-a'),
-            IPAddress(address='2001:db8::2/64', tenant=tenants[0], vrf=vrfs[0], assigned_object=vminterfaces[0], status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-b'),
-            IPAddress(address='2001:db8::3/64', tenant=tenants[1], vrf=vrfs[1], assigned_object=vminterfaces[1], status=IPAddressStatusChoices.STATUS_RESERVED, role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
-            IPAddress(address='2001:db8::4/64', tenant=tenants[2], vrf=vrfs[2], assigned_object=vminterfaces[2], status=IPAddressStatusChoices.STATUS_DEPRECATED, role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
-            IPAddress(address='2001:db8::1/65', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE),
-        )
-        IPAddress.objects.bulk_create(ipaddresses)
+        IPAddress.objects.create(address='10.0.0.1/24', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-a'),
+        IPAddress.objects.create(address='10.0.0.2/24', tenant=tenants[0], vrf=vrfs[0], assigned_object=interfaces[0], status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-b'),
+        IPAddress.objects.create(address='10.0.0.3/24', tenant=tenants[1], vrf=vrfs[1], assigned_object=interfaces[1], status=IPAddressStatusChoices.STATUS_RESERVED, role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
+        IPAddress.objects.create(address='10.0.0.4/24', tenant=tenants[2], vrf=vrfs[2], assigned_object=interfaces[2], status=IPAddressStatusChoices.STATUS_DEPRECATED, role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
+        IPAddress.objects.create(address='10.0.0.1/25', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE),
+        IPAddress.objects.create(address='2001:db8::1/64', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-a'),
+        IPAddress.objects.create(address='2001:db8::2/64', tenant=tenants[0], vrf=vrfs[0], assigned_object=vminterfaces[0], status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-b'),
+        IPAddress.objects.create(address='2001:db8::3/64', tenant=tenants[1], vrf=vrfs[1], assigned_object=vminterfaces[1], status=IPAddressStatusChoices.STATUS_RESERVED, role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
+        IPAddress.objects.create(address='2001:db8::4/64', tenant=tenants[2], vrf=vrfs[2], assigned_object=vminterfaces[2], status=IPAddressStatusChoices.STATUS_DEPRECATED, role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
+        IPAddress.objects.create(address='2001:db8::1/65', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -697,28 +649,21 @@ class VLANGroupTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
-            Region(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 3', slug='test-region-3'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1', region=regions[0]),
-            Site(name='Test Site 2', slug='test-site-2', region=regions[1]),
-            Site(name='Test Site 3', slug='test-site-3', region=regions[2]),
+            Site.objects.create(name='Test Site 1', slug='test-site-1', region=regions[0]),
+            Site.objects.create(name='Test Site 2', slug='test-site-2', region=regions[1]),
+            Site.objects.create(name='Test Site 3', slug='test-site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
-        vlan_groups = (
-            VLANGroup(name='VLAN Group 1', slug='vlan-group-1', site=sites[0], description='A'),
-            VLANGroup(name='VLAN Group 2', slug='vlan-group-2', site=sites[1], description='B'),
-            VLANGroup(name='VLAN Group 3', slug='vlan-group-3', site=sites[2], description='C'),
-            VLANGroup(name='VLAN Group 4', slug='vlan-group-4', site=None),
-        )
-        VLANGroup.objects.bulk_create(vlan_groups)
+        VLANGroup.objects.create(name='VLAN Group 1', slug='vlan-group-1', site=sites[0], description='A'),
+        VLANGroup.objects.create(name='VLAN Group 2', slug='vlan-group-2', site=sites[1], description='B'),
+        VLANGroup.objects.create(name='VLAN Group 3', slug='vlan-group-3', site=sites[2], description='C'),
+        VLANGroup.objects.create(name='VLAN Group 4', slug='vlan-group-4', site=None),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -759,59 +704,47 @@ class VLANTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
-            Region(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 3', slug='test-region-3'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1', region=regions[0]),
-            Site(name='Test Site 2', slug='test-site-2', region=regions[1]),
-            Site(name='Test Site 3', slug='test-site-3', region=regions[2]),
+            Site.objects.create(name='Test Site 1', slug='test-site-1', region=regions[0]),
+            Site.objects.create(name='Test Site 2', slug='test-site-2', region=regions[1]),
+            Site.objects.create(name='Test Site 3', slug='test-site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         roles = (
-            Role(name='Role 1', slug='role-1'),
-            Role(name='Role 2', slug='role-2'),
-            Role(name='Role 3', slug='role-3'),
+            Role.objects.create(name='Role 1', slug='role-1'),
+            Role.objects.create(name='Role 2', slug='role-2'),
+            Role.objects.create(name='Role 3', slug='role-3'),
         )
-        Role.objects.bulk_create(roles)
 
         groups = (
-            VLANGroup(name='VLAN Group 1', slug='vlan-group-1', site=sites[0]),
-            VLANGroup(name='VLAN Group 2', slug='vlan-group-2', site=sites[1]),
-            VLANGroup(name='VLAN Group 3', slug='vlan-group-3', site=None),
+            VLANGroup.objects.create(name='VLAN Group 1', slug='vlan-group-1', site=sites[0]),
+            VLANGroup.objects.create(name='VLAN Group 2', slug='vlan-group-2', site=sites[1]),
+            VLANGroup.objects.create(name='VLAN Group 3', slug='vlan-group-3', site=None),
         )
-        VLANGroup.objects.bulk_create(groups)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
-        vlans = (
-            VLAN(vid=101, name='VLAN 101', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=VLANStatusChoices.STATUS_ACTIVE),
-            VLAN(vid=102, name='VLAN 102', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=VLANStatusChoices.STATUS_ACTIVE),
-            VLAN(vid=201, name='VLAN 201', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=VLANStatusChoices.STATUS_DEPRECATED),
-            VLAN(vid=202, name='VLAN 202', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=VLANStatusChoices.STATUS_DEPRECATED),
-            VLAN(vid=301, name='VLAN 301', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=VLANStatusChoices.STATUS_RESERVED),
-            VLAN(vid=302, name='VLAN 302', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=VLANStatusChoices.STATUS_RESERVED),
-        )
-        VLAN.objects.bulk_create(vlans)
+        VLAN.objects.create(vid=101, name='VLAN 101', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=VLANStatusChoices.STATUS_ACTIVE)
+        VLAN.objects.create(vid=102, name='VLAN 102', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=VLANStatusChoices.STATUS_ACTIVE)
+        VLAN.objects.create(vid=201, name='VLAN 201', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=VLANStatusChoices.STATUS_DEPRECATED)
+        VLAN.objects.create(vid=202, name='VLAN 202', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=VLANStatusChoices.STATUS_DEPRECATED)
+        VLAN.objects.create(vid=301, name='VLAN 301', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=VLANStatusChoices.STATUS_RESERVED)
+        VLAN.objects.create(vid=302, name='VLAN 302', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=VLANStatusChoices.STATUS_RESERVED)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -885,31 +818,26 @@ class ServiceTestCase(TestCase):
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(device_type=device_type, name='Device 1', site=site, device_role=device_role),
-            Device(device_type=device_type, name='Device 2', site=site, device_role=device_role),
-            Device(device_type=device_type, name='Device 3', site=site, device_role=device_role),
+            Device.objects.create(device_type=device_type, name='Device 1', site=site, device_role=device_role),
+            Device.objects.create(device_type=device_type, name='Device 2', site=site, device_role=device_role),
+            Device.objects.create(device_type=device_type, name='Device 3', site=site, device_role=device_role),
         )
-        Device.objects.bulk_create(devices)
 
         clustertype = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
         cluster = Cluster.objects.create(type=clustertype, name='Cluster 1')
 
         virtual_machines = (
-            VirtualMachine(name='Virtual Machine 1', cluster=cluster),
-            VirtualMachine(name='Virtual Machine 2', cluster=cluster),
-            VirtualMachine(name='Virtual Machine 3', cluster=cluster),
+            VirtualMachine.objects.create(name='Virtual Machine 1', cluster=cluster),
+            VirtualMachine.objects.create(name='Virtual Machine 2', cluster=cluster),
+            VirtualMachine.objects.create(name='Virtual Machine 3', cluster=cluster),
         )
-        VirtualMachine.objects.bulk_create(virtual_machines)
 
-        services = (
-            Service(device=devices[0], name='Service 1', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[1001]),
-            Service(device=devices[1], name='Service 2', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[1002]),
-            Service(device=devices[2], name='Service 3', protocol=ServiceProtocolChoices.PROTOCOL_UDP, ports=[1003]),
-            Service(virtual_machine=virtual_machines[0], name='Service 4', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[2001]),
-            Service(virtual_machine=virtual_machines[1], name='Service 5', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[2002]),
-            Service(virtual_machine=virtual_machines[2], name='Service 6', protocol=ServiceProtocolChoices.PROTOCOL_UDP, ports=[2003]),
-        )
-        Service.objects.bulk_create(services)
+        Service.objects.create(device=devices[0], name='Service 1', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[1001]),
+        Service.objects.create(device=devices[1], name='Service 2', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[1002]),
+        Service.objects.create(device=devices[2], name='Service 3', protocol=ServiceProtocolChoices.PROTOCOL_UDP, ports=[1003]),
+        Service.objects.create(virtual_machine=virtual_machines[0], name='Service 4', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[2001]),
+        Service.objects.create(virtual_machine=virtual_machines[1], name='Service 5', protocol=ServiceProtocolChoices.PROTOCOL_TCP, ports=[2002]),
+        Service.objects.create(virtual_machine=virtual_machines[2], name='Service 6', protocol=ServiceProtocolChoices.PROTOCOL_UDP, ports=[2003]),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:3]}
