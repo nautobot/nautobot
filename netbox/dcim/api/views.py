@@ -117,7 +117,7 @@ class RegionViewSet(CustomFieldModelViewSet):
 
 class SiteViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = Site.objects.prefetch_related(
-        'region', 'tenant', 'tags'
+        'region', 'status', 'tenant', 'tags'
     ).annotate(
         device_count=count_related(Device, 'site'),
         rack_count=count_related(Rack, 'site'),
@@ -593,7 +593,7 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 # Cables
 #
 
-class CableViewSet(ModelViewSet):
+class CableViewSet(StatusViewSetMixin, ModelViewSet):
     metadata_class = ContentTypeMetadata
     queryset = Cable.objects.prefetch_related(
         'status', 'termination_a', 'termination_b'
@@ -633,7 +633,7 @@ class PowerPanelViewSet(ModelViewSet):
 # Power feeds
 #
 
-class PowerFeedViewSet(PathEndpointMixin, CustomFieldModelViewSet):
+class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = PowerFeed.objects.prefetch_related(
         'power_panel', 'rack', '_path__destination', 'cable', '_cable_peer', 'status', 'tags'
     )
