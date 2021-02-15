@@ -4,7 +4,7 @@ from rest_framework.routers import APIRootView
 from circuits import filters
 from circuits.models import Provider, CircuitTermination, CircuitType, Circuit
 from dcim.api.views import PathEndpointMixin
-from extras.api.views import CustomFieldModelViewSet
+from extras.api.views import CustomFieldModelViewSet, StatusViewSetMixin
 from netbox.api.views import ModelViewSet
 from utilities.utils import count_related
 from . import serializers
@@ -46,10 +46,10 @@ class CircuitTypeViewSet(CustomFieldModelViewSet):
 # Circuits
 #
 
-class CircuitViewSet(CustomFieldModelViewSet):
+class CircuitViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = Circuit.objects.prefetch_related(
         Prefetch('terminations', queryset=CircuitTermination.objects.prefetch_related('site')),
-        'type', 'tenant', 'provider',
+        'status', 'type', 'tenant', 'provider',
     ).prefetch_related('tags')
     serializer_class = serializers.CircuitSerializer
     filterset_class = filters.CircuitFilterSet

@@ -2,6 +2,7 @@ import datetime
 
 from circuits.choices import *
 from circuits.models import Circuit, CircuitType, Provider
+from extras.models import Status
 from utilities.testing import ViewTestCases
 
 
@@ -92,10 +93,12 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         CircuitType.objects.bulk_create(circuittypes)
 
+        statuses = Status.objects.get_for_model(Circuit)
+
         Circuit.objects.bulk_create([
-            Circuit(cid='Circuit 1', provider=providers[0], type=circuittypes[0]),
-            Circuit(cid='Circuit 2', provider=providers[0], type=circuittypes[0]),
-            Circuit(cid='Circuit 3', provider=providers[0], type=circuittypes[0]),
+            Circuit(cid='Circuit 1', provider=providers[0], type=circuittypes[0], status=statuses[0]),
+            Circuit(cid='Circuit 2', provider=providers[0], type=circuittypes[0], status=statuses[0]),
+            Circuit(cid='Circuit 3', provider=providers[0], type=circuittypes[0], status=statuses[0]),
         ])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
@@ -104,7 +107,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'cid': 'Circuit X',
             'provider': providers[1].pk,
             'type': circuittypes[1].pk,
-            'status': CircuitStatusChoices.STATUS_DECOMMISSIONED,
+            'status': statuses.get(name='decommissioned').pk,
             'tenant': None,
             'install_date': datetime.date(2020, 1, 1),
             'commit_rate': 1000,
@@ -114,16 +117,16 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "cid,provider,type",
-            "Circuit 4,Provider 1,Circuit Type 1",
-            "Circuit 5,Provider 1,Circuit Type 1",
-            "Circuit 6,Provider 1,Circuit Type 1",
+            "cid,provider,type,status",
+            "Circuit 4,Provider 1,Circuit Type 1,active",
+            "Circuit 5,Provider 1,Circuit Type 1,planned",
+            "Circuit 6,Provider 1,Circuit Type 1,decommissioned",
         )
 
         cls.bulk_edit_data = {
             'provider': providers[1].pk,
             'type': circuittypes[1].pk,
-            'status': CircuitStatusChoices.STATUS_DECOMMISSIONED,
+            'status': statuses.get(name='decommissioned').pk,
             'tenant': None,
             'commit_rate': 2000,
             'description': 'New description',

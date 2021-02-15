@@ -4,7 +4,14 @@ from taggit.managers import TaggableManager
 
 from dcim.fields import ASNField
 from dcim.models import CableTermination, PathEndpoint
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
+from extras.models import (
+    ChangeLoggedModel,
+    CustomFieldModel,
+    ObjectChange,
+    RelationshipModel,
+    StatusModel,
+    TaggedItem
+)
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 from utilities.utils import serialize_object
@@ -153,9 +160,10 @@ class CircuitType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks'
 )
-class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
     circuits. Each circuit is also assigned a CircuitType and a Site.  Circuit port speed and commit rate are measured
@@ -174,11 +182,6 @@ class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         to='CircuitType',
         on_delete=models.PROTECT,
         related_name='circuits'
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=CircuitStatusChoices,
-        default=CircuitStatusChoices.STATUS_ACTIVE
     )
     tenant = models.ForeignKey(
         to='tenancy.Tenant',
@@ -236,9 +239,6 @@ class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
             self.description,
             self.comments,
         )
-
-    def get_status_class(self):
-        return CircuitStatusChoices.CSS_CLASSES.get(self.status)
 
     def _get_termination(self, side):
         for ct in self.terminations.all():

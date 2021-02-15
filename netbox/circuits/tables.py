@@ -1,6 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from extras.tables import StatusTableMixin
 from tenancy.tables import COL_TENANT
 from utilities.tables import BaseTable, ButtonsColumn, ChoiceFieldColumn, TagColumn, ToggleColumn
 from .models import Circuit, CircuitType, Provider
@@ -51,7 +52,7 @@ class CircuitTypeTable(BaseTable):
 # Circuits
 #
 
-class CircuitTable(BaseTable):
+class CircuitTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     cid = tables.LinkColumn(
         verbose_name='ID'
@@ -60,7 +61,6 @@ class CircuitTable(BaseTable):
         viewname='circuits:provider',
         args=[Accessor('provider__slug')]
     )
-    status = ChoiceFieldColumn()
     tenant = tables.TemplateColumn(
         template_code=COL_TENANT
     )

@@ -3,7 +3,7 @@ from django.db.models import Q
 
 from dcim.filters import CableTerminationFilterSet, PathEndpointFilterSet
 from dcim.models import Region, Site
-from extras.filters import CustomFieldModelFilterSet, CreatedUpdatedFilterSet
+from extras.filters import CustomFieldModelFilterSet, CreatedUpdatedFilterSet, StatusModelFilterSetMixin
 from tenancy.filters import TenancyFilterSet
 from utilities.filters import (
     BaseFilterSet, NameSlugSearchFilterSet, TagFilter, TreeNodeMultipleChoiceFilter
@@ -73,7 +73,7 @@ class CircuitTypeFilterSet(BaseFilterSet, CustomFieldModelFilterSet, NameSlugSea
         fields = ['id', 'name', 'slug']
 
 
-class CircuitFilterSet(BaseFilterSet, CustomFieldModelFilterSet, TenancyFilterSet, CreatedUpdatedFilterSet):
+class CircuitFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSet, TenancyFilterSet, CreatedUpdatedFilterSet):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
@@ -97,10 +97,6 @@ class CircuitFilterSet(BaseFilterSet, CustomFieldModelFilterSet, TenancyFilterSe
         queryset=CircuitType.objects.all(),
         to_field_name='slug',
         label='Circuit type (slug)',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=CircuitStatusChoices,
-        null_value=None
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
         field_name='terminations__site',

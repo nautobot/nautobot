@@ -16,7 +16,6 @@ from dcim.models import (
 from dcim.utils import decompile_path_node
 from extras.api.customfields import CustomFieldModelSerializer
 from extras.api.serializers import TaggedObjectSerializer, StatusModelSerializerMixin
-from extras.api.fields import StatusSerializerField
 from ipam.api.nested_serializers import NestedIPAddressSerializer, NestedVLANSerializer
 from ipam.models import VLAN
 from netbox.api import (

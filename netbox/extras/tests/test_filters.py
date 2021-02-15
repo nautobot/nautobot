@@ -435,8 +435,14 @@ class StatusTestCase(TestCase):
         )
 
     def test_color(self):
+        """Test the color search field."""
         params = {'color': ['777777', '00ff00']}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        # This current expected count may change as more `Status` objects are
+        # imported by way of `extras.management.create_custom_statuses`. If as
+        # these objects are imported, and this test fails, this number will need
+        # to be adjusted.
+        expected_count = 2
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
 
     def test_search(self):
         params = {'q': 'active'}

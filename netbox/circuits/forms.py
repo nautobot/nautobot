@@ -2,7 +2,15 @@ from django import forms
 
 from dcim.models import Region, Site
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldFilterForm, CustomFieldModelForm, RelationshipModelForm, CustomFieldModelCSVForm,
+    AddRemoveTagsForm,
+    CustomFieldBulkEditForm,
+    CustomFieldFilterForm,
+    CustomFieldModelForm,
+    CustomFieldModelCSVForm,
+    RelationshipModelForm,
+    StatusBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusFilterFormMixin,
 )
 from extras.models import Tag
 from tenancy.forms import TenancyFilterForm, TenancyForm
@@ -12,7 +20,6 @@ from utilities.forms import (
     DynamicModelChoiceField, DynamicModelMultipleChoiceField, SmallTextarea, SlugField, StaticSelect2,
     StaticSelect2Multiple, TagFilterField,
 )
-from .choices import CircuitStatusChoices
 from .models import Circuit, CircuitTermination, CircuitType, Provider
 
 
@@ -176,12 +183,11 @@ class CircuitForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationshi
             'commit_rate': "Committed rate",
         }
         widgets = {
-            'status': StaticSelect2(),
             'install_date': DatePicker(),
         }
 
 
-class CircuitCSVForm(CustomFieldModelCSVForm):
+class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     provider = CSVModelChoiceField(
         queryset=Provider.objects.all(),
         to_field_name='name',
@@ -191,11 +197,6 @@ class CircuitCSVForm(CustomFieldModelCSVForm):
         queryset=CircuitType.objects.all(),
         to_field_name='name',
         help_text='Type of circuit'
-    )
-    status = CSVChoiceField(
-        choices=CircuitStatusChoices,
-        required=False,
-        help_text='Operational status'
     )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -211,7 +212,7 @@ class CircuitCSVForm(CustomFieldModelCSVForm):
         ]
 
 
-class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=Circuit.objects.all(),
         widget=forms.MultipleHiddenInput
@@ -223,12 +224,6 @@ class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdit
     provider = DynamicModelChoiceField(
         queryset=Provider.objects.all(),
         required=False
-    )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(CircuitStatusChoices),
-        required=False,
-        initial='',
-        widget=StaticSelect2()
     )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -253,7 +248,7 @@ class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdit
         ]
 
 
-class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = Circuit
     field_order = [
         'q', 'type', 'provider', 'status', 'region', 'site', 'tenant_group', 'tenant', 'commit_rate',
@@ -271,11 +266,6 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm
         queryset=Provider.objects.all(),
         to_field_name='slug',
         required=False
-    )
-    status = forms.MultipleChoiceField(
-        choices=CircuitStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     region = DynamicModelMultipleChoiceField(
         queryset=Region.objects.all(),

@@ -3,6 +3,7 @@ from django.urls import reverse
 from circuits.choices import *
 from circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from dcim.models import Site
+from extras.models import Status
 from utilities.testing import APITestCase, APIViewTestCases
 
 
@@ -101,28 +102,41 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
         )
         CircuitType.objects.bulk_create(circuit_types)
 
+        statuses = Status.objects.get_for_model(Circuit)
+
         circuits = (
-            Circuit(cid='Circuit 1', provider=providers[0], type=circuit_types[0]),
-            Circuit(cid='Circuit 2', provider=providers[0], type=circuit_types[0]),
-            Circuit(cid='Circuit 3', provider=providers[0], type=circuit_types[0]),
+            Circuit(cid='Circuit 1', provider=providers[0], type=circuit_types[0], status=statuses[0]),
+            Circuit(cid='Circuit 2', provider=providers[0], type=circuit_types[0], status=statuses[0]),
+            Circuit(cid='Circuit 3', provider=providers[0], type=circuit_types[0], status=statuses[0]),
         )
         Circuit.objects.bulk_create(circuits)
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
 
         cls.create_data = [
             {
                 'cid': 'Circuit 4',
                 'provider': providers[1].pk,
                 'type': circuit_types[1].pk,
+                'status': statuses[1].name,
             },
             {
                 'cid': 'Circuit 5',
                 'provider': providers[1].pk,
                 'type': circuit_types[1].pk,
+                'status': statuses[1].name,
             },
             {
                 'cid': 'Circuit 6',
                 'provider': providers[1].pk,
                 'type': circuit_types[1].pk,
+                'status': statuses[1].name,
             },
         ]
 
