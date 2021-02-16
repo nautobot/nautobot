@@ -212,10 +212,10 @@ class StatusTestCase(
         }
 
         cls.csv_data = (
-            'content_types,color,name'
-            '"dcim.device",ffffff,test_status1'
-            '"dcim.device",ffffff,test_status2'
-            '"dcim.device",ffffff,test_status3'
+            'name,color,content_types'
+            'test_status1,ffffff,"dcim.device"'
+            'test_status2,ffffff,"dcim.device,dcim.rack"'
+            'test_status3,ffffff,"dcim.device,dcim.site"'
         )
 
         cls.bulk_edit_data = {

@@ -45,7 +45,7 @@ class Status(ChangeLoggedModel, RelationshipModel):
 
     objects = StatusQuerySet.as_manager()
 
-    csv_headers = ['content_types', 'color', 'name']
+    csv_headers = ['name', 'color', 'content_types']
 
     class Meta:
         ordering = ['name']
@@ -68,9 +68,9 @@ class Status(ChangeLoggedModel, RelationshipModel):
             f'{ct.app_label}.{ct.model}' for ct in self.content_types.all()
         )
         return (
-            f'"{labels}"',  # Wrap labels in double quotes for CSV
             self.name,
             self.color,
+            f'"{labels}"',  # Wrap labels in double quotes for CSV
         )
 
 
