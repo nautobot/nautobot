@@ -2,6 +2,7 @@ import os
 import tempfile
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase, TransactionTestCase
@@ -10,6 +11,7 @@ from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, 
 from extras.models import ConfigContext, GitRepository, Status, Tag
 from extras.plugins.validators import custom_validator_clean
 from tenancy.models import Tenant, TenantGroup
+from utilities.choices import ColorChoices
 from virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 
@@ -436,7 +438,7 @@ class StatusTest(TestCase):
     """
 
     def setUp(self):
-        self.status = Status.objects.create(name='delete_me')
+        self.status = Status.objects.create(name='delete_me', color=ColorChoices.COLOR_RED)
 
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1')
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1')
@@ -467,6 +469,18 @@ class StatusTest(TestCase):
         # Now that it's not in use, delete will succeed.
         self.status.delete()
         self.assertEqual(self.status.pk, None)
+
+    def test_color(self):
+        self.assertEqual(self.status.color, ColorChoices.COLOR_RED)
+
+        # Valid color
+        self.status.color = ColorChoices.COLOR_PURPLE
+        self.status.full_clean()
+
+        # Invalid color
+        self.status.color = 'red'
+        with self.assertRaises(ValidationError):
+            self.status.full_clean()
 
     def test_name(self):
         # Test a bunch of wackado names.

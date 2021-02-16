@@ -10,6 +10,7 @@ from extras.filters import *
 from extras.models import ConfigContext, ExportTemplate, ImageAttachment, ObjectChange, Status, Tag
 from ipam.models import IPAddress
 from tenancy.models import Tenant, TenantGroup
+from utilities.choices import ColorChoices
 from virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
@@ -436,7 +437,7 @@ class StatusTestCase(TestCase):
 
     def test_color(self):
         """Test the color search field."""
-        params = {'color': ['777777', '00ff00']}
+        params = {'color': [ColorChoices.COLOR_GREY]}
         # This current expected count may change as more `Status` objects are
         # imported by way of `extras.management.create_custom_statuses`. If as
         # these objects are imported, and this test fails, this number will need

@@ -1,6 +1,20 @@
 from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
+from utilities.choices import ColorChoices
+
+# Map of css_class -> hex_color used when importing color choices in
+# `export_statuses_from_choiceset()`. These hex_color values map to named color
+# values defined in `utilities.choices.ColorChoices`.
+COLOR_MAP = {
+    "success": ColorChoices.COLOR_GREEN,  # active (green)
+    "warning": ColorChoices.COLOR_AMBER,  # offline, decommissioning (amber)
+    "info": ColorChoices.COLOR_CYAN,      # planned (cyan)
+    "primary": ColorChoices.COLOR_BLUE,   # staged (blue)
+    "danger": ColorChoices.COLOR_RED,     # failed (red)
+    "default": ColorChoices.COLOR_GREY,   # inventory (grey)
+}
+
 
 #
 # Statuses
@@ -17,33 +31,27 @@ def populate_status_choices(apps, schema_editor, **kwargs):
     create_custom_statuses(app_config, **kwargs)
 
 
-def export_statuses_from_choiceset(choiceset):
+def export_statuses_from_choiceset(choiceset, color_map=None):
     """
     e.g. `export_choices_from_choiceset(DeviceStatusChoices, content_type)`
 
     This is called by `extras.management.create_custom_statuses` for use in
     performing data migrations to populate `Status` objects.
     """
-    choices = []
+    if color_map is None:
+        color_map = COLOR_MAP
 
-    # Map of css_class -> hex_color
-    COLOR_MAP = {
-        "success": "5cb85c",  # active
-        "warning": "f0ad4e",  # offline, decommissioning
-        "info": "5bc0de",  # planned
-        "primary": "337ab7",  # staged
-        "danger": "d9534f",  # failed
-        "default": "777777",  # inventory
-    }
+    choices = []
 
     for value_lower, value in choiceset.CHOICES:
         css_class = choiceset.CSS_CLASSES[value_lower]
 
         choice_kwargs = dict(
             name=value_lower,
-            color=COLOR_MAP[css_class],
+            color=color_map[css_class],
         )
         choices.append(choice_kwargs)
+
     return choices
 
 
