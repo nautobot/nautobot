@@ -222,13 +222,11 @@ class TestPrefix(TestCase):
 class TestIPAddress(TestCase):
 
     def test_get_duplicates(self):
-        one = IPAddress(address=netaddr.IPNetwork('192.0.2.1/24'))
-        two = IPAddress(address=netaddr.IPNetwork('192.0.2.1/24'))
-        three = IPAddress(address=netaddr.IPNetwork('192.0.2.1/24'))
-        one.save()
-        two.save()
-        three.save()
-        ips = (one, two, three)
+        ips = (
+            IPAddress.objects.create(address=netaddr.IPNetwork('192.0.2.1/24')),
+            IPAddress.objects.create(address=netaddr.IPNetwork('192.0.2.1/24')),
+            IPAddress.objects.create(address=netaddr.IPNetwork('192.0.2.1/24')),
+        )
         duplicate_ip_pks = [p.pk for p in ips[0].get_duplicates()]
 
         self.assertSetEqual(set(duplicate_ip_pks), {ips[1].pk, ips[2].pk})
