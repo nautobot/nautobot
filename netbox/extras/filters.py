@@ -412,7 +412,7 @@ class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet):
         return queryset.filter(
             Q(content_types__model__icontains=value) |
             Q(name__icontains=value)
-        )
+        ).distinct()
 
 
 class StatusModelFilterSetMixin(django_filters.FilterSet):
