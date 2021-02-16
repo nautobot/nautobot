@@ -71,7 +71,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
             logger=logger,
         )
 
-        refresh_datasource_content('extras.GitRepository', repository_record, request, job_result, delete=False)
+        refresh_datasource_content('extras.gitrepository', repository_record, request, job_result, delete=False)
 
     except Exception as exc:
         job_result.log(
@@ -145,7 +145,7 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
 
 def refresh_git_config_contexts(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all ConfigContext records managed by this repository."""
-    if "extras.ConfigContext" in repository_record.provided_contents and not delete:
+    if "extras.configcontext" in repository_record.provided_contents and not delete:
         update_git_config_contexts(repository_record, job_result)
     else:
         delete_git_config_contexts(repository_record, job_result)
@@ -512,7 +512,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
 
 def refresh_git_export_templates(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all ExportTemplate records managed by this repository."""
-    if "extras.ExportTemplate" in repository_record.provided_contents and not delete:
+    if "extras.exporttemplate" in repository_record.provided_contents and not delete:
         update_git_export_templates(repository_record, job_result)
     else:
         delete_git_export_templates(repository_record, job_result)
@@ -649,28 +649,28 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
 register_datasource_contents(
     [
         (
-            'extras.GitRepository',
+            'extras.gitrepository',
             DatasourceContent(
                 name='config contexts',
-                token='extras.ConfigContext',
+                content_identifier='extras.configcontext',
                 icon='mdi-code-json',
                 callback=refresh_git_config_contexts,
             ),
         ),
         (
-            'extras.GitRepository',
+            'extras.gitrepository',
             DatasourceContent(
                 name='jobs',
-                token='extras.Job',
+                content_identifier='extras.job',
                 icon='mdi-script-text',
                 callback=refresh_git_jobs,
             ),
         ),
         (
-            'extras.GitRepository',
+            'extras.gitrepository',
             DatasourceContent(
                 name='export templates',
-                token='extras.ExportTemplate',
+                content_identifier='extras.exporttemplate',
                 icon='mdi-database-export',
                 callback=refresh_git_export_templates,
             ),

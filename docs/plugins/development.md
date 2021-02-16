@@ -128,8 +128,12 @@ NetBox looks for the `config` variable within a plugin's `__init__.py` to load i
 | `max_version` | Maximum version of NetBox with which the plugin is compatible |
 | `middleware` | A list of middleware classes to append after NetBox's build-in middleware |
 | `caching_config` | Plugin-specific cache configuration
-| `template_extensions` | The dotted path to the list of template extension classes (default: `template_content.template_extensions`) |
+| `custom_validators` | The dotted path to the list of custom validator classes (default: `custom_validators.custom_validators`) |
+| `datasource_contents` | The dotted path to the list of datasource (Git, etc.) content types to register (default: `datasources.datasource_contents` |
+| `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types` |
+| `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs` |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
+| `template_extensions` | The dotted path to the list of template extension classes (default: `template_content.template_extensions`) |
 
 All required settings must be configured by the user. If a configuration parameter is listed in both `required_settings` and `default_settings`, the default setting will be ignored.
 
@@ -573,12 +577,12 @@ def refresh_git_animals(repository_record, job_result):
 # and register the callback function used to do so
 datasource_contents = [
     (
-        'extras.GitRepository',         # datasource class we are registering for
+        'extras.gitrepository',                                # datasource class we are registering for
         DatasourceContent(
-            name='animals',                       # human-readable name to display in the UI
-            token='netbox_animal_sounds.Animal',  # internal slug to identify the data type
-            icon='mdi-paw',                       # Material Design Icons icon to use in UI
-            callback=refresh_git_animals,         # callback function on GitRepository refresh
+            name='animals',                                    # human-readable name to display in the UI
+            content_identifier='netbox_animal_sounds.animal',  # internal slug to identify the data type
+            icon='mdi-paw',                                    # Material Design Icons icon to use in UI
+            callback=refresh_git_animals,                      # callback function on GitRepository refresh
         )
     )
 ]

@@ -2,16 +2,16 @@ from extras.registry import DatasourceContent
 
 
 def refresh_git_text_files(repository, job_result, delete=False):
-    if "dummy_plugin.TextFile" in repository.provided_contents:
+    if "dummy_plugin.textfile" in repository.provided_contents:
         job_result.log(message="Refreshed text files")
 
 
 datasource_contents = [
     (
-        'extras.GitRepository',
+        'extras.gitrepository',
         DatasourceContent(
             name='text files',
-            token='dummy_plugin.TextFile',
+            content_identifier='dummy_plugin.textfile',
             icon='mdi-note-text',
             callback=refresh_git_text_files,
         ),

@@ -116,12 +116,12 @@ class PluginTest(TestCase):
         """
         Check that plugin DatasourceContents are registered.
         """
-        registered_datasources = registry.get("datasource_contents", {}).get("extras.GitRepository", [])
+        registered_datasources = registry.get("datasource_contents", {}).get("extras.gitrepository", [])
 
         self.assertIn(
             DatasourceContent(
                 name='text files',
-                token='dummy_plugin.TextFile',
+                content_identifier='dummy_plugin.textfile',
                 icon='mdi-note-text',
                 callback=refresh_git_text_files,
             ),

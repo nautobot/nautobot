@@ -24,10 +24,10 @@ class Registry(dict):
 registry = Registry()
 
 
-DatasourceContent = namedtuple('DatasourceContent', ['name', 'token', 'icon', 'callback'])
+DatasourceContent = namedtuple('DatasourceContent', ['name', 'content_identifier', 'icon', 'callback'])
 """
 name (str): Human-readable name for this content type, such as "config contexts"
-token (str): Brief unique identifier of this content type, such as "extras.ConfigContext"
+content_identifier (str): Brief unique identifier of this content type; by convention a string such as "extras.configcontext"
 icon (str): Material Design Icons icon name, such as "mdi-code-json" or "mdi-script-text"
 callback (callable): Callback function to invoke whenever a given datasource is created, updated, or deleted.
     This callback should take three arguments (record, job_result, delete) where "record" is the GitRepository, etc.

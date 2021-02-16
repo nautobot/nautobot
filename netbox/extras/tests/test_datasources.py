@@ -49,7 +49,7 @@ class GitTest(TestCase):
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
             # Provide everything we know we can provide
-            provided_contents=[entry.token for entry in get_datasource_contents("extras.GitRepository")],
+            provided_contents=[entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")],
         )
         self.repo.save(trigger_resync=False)
 

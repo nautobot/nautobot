@@ -150,7 +150,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     token = serializers.CharField(source='_token', write_only=True, required=False)
 
     provided_contents = MultipleChoiceJSONField(
-        choices=get_datasource_content_choices('extras.GitRepository'),
+        choices=get_datasource_content_choices('extras.gitrepository'),
         allow_blank=True,
         required=False,
     )

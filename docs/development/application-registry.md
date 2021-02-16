@@ -14,22 +14,22 @@ Definition of data types that can be provided by data source models (such as [Gi
 
 ```python
 {
-    "extras.GitRepository": [
+    "extras.gitrepository": [
         DatasourceContent(
             name='config contexts',
-            token='extras.ConfigContext',
+            content_identifier='extras.configcontext',
             icon='mdi-code-json',
             callback=extras.datasources.git.refresh_git_config_contexts,
         ),
         DatasourceContent(
             name='jobs',
-            token='extras.Job',
+            content_identifier='extras.job',
             icon='mdi-script-text',
             callback=extras.datasources.git.refresh_git_jobs,
         ),
         DatasourceContent(
             name='export templates',
-            token='extras.ExportTemplate',
+            content_identifier='extras.exporttemplate',
             icon='mdi-database-export',
             callback=extras.datasources.git.refresh_git_export_templates,
         ),

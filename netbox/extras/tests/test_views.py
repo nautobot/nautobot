@@ -177,7 +177,7 @@ class GitRepositoryTestCase(
             'remote_url': 'http://example.com/a_new_git_repository.git',
             'branch': 'develop',
             '_token': '1234567890abcdef1234567890abcdef',
-            'provided_contents': ['extras.ConfigContext', 'extras.Job', 'extras.ExportTemplate'],
+            'provided_contents': ['extras.configcontext', 'extras.job', 'extras.exporttemplate'],
         }
 
 

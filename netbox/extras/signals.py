@@ -147,7 +147,7 @@ def git_repository_pre_delete(instance, **kwargs):
         status=JobResultStatusChoices.STATUS_RUNNING,
     )
 
-    refresh_datasource_content('extras.GitRepository', instance, None, job_result, delete=True)
+    refresh_datasource_content('extras.gitrepository', instance, None, job_result, delete=True)
 
     if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)

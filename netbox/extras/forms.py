@@ -534,7 +534,7 @@ class LocalConfigContextFilterForm(forms.Form):
 #
 
 def get_git_datasource_content_choices():
-    return get_datasource_content_choices("extras.GitRepository")
+    return get_datasource_content_choices("extras.gitrepository")
 
 
 class PasswordInputWithPlaceholder(forms.PasswordInput):

@@ -670,7 +670,7 @@ def _get_job_source_paths():
     # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
         for repository_record in GitRepository.objects.all():
-            if "extras.Job" not in repository_record.provided_contents:
+            if "extras.job" not in repository_record.provided_contents:
                 # This repository isn't marked as containing jobs that we should use.
                 continue
 

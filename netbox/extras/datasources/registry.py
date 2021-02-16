@@ -11,7 +11,7 @@ def get_datasource_contents(model_name):
 
 def get_datasource_content_choices(model_name):
     """Get a list (suitable for use with forms.ChoiceField, etc.) of valid datasource content choices."""
-    return sorted([(entry.token, entry.name) for entry in registry['datasource_contents'].get(model_name, [])])
+    return sorted([(entry.content_identifier, entry.name) for entry in registry['datasource_contents'].get(model_name, [])])
 
 
 def refresh_datasource_content(model_name, record, request, job_result, delete=False):
@@ -22,7 +22,7 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
     providing content but has now been changed to no longer provide that content.
 
     Args:
-        model_name (str): Identifier of the datasource owner, such as "extras.GitRepository"
+        model_name (str): Identifier of the datasource owner, such as "extras.gitrepository"
         record (models.Model): Datasource model instance, such as a GitRepository record
         request (HttpRequest): Initiating request for this refresh, optional, used for change logging if provided
         job_result (JobResult): Passed through to the callback functions to use with logging their actions.

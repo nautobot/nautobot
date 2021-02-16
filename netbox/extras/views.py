@@ -307,7 +307,7 @@ class GitRepositoryListView(generic.ObjectListView):
         }
         return {
             'job_results': results,
-            'datasource_contents': get_datasource_contents('extras.GitRepository'),
+            'datasource_contents': get_datasource_contents('extras.gitrepository'),
         }
 
 
@@ -316,7 +316,7 @@ class GitRepositoryView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         return {
-            'datasource_contents': get_datasource_contents('extras.GitRepository'),
+            'datasource_contents': get_datasource_contents('extras.gitrepository'),
         }
 
 
@@ -358,7 +358,7 @@ class GitRepositoryBulkEditView(generic.BulkEditView):
 
     def extra_context(self):
         return {
-            'datasource_contents': get_datasource_contents('extras.GitRepository'),
+            'datasource_contents': get_datasource_contents('extras.gitrepository'),
         }
 
 
@@ -368,7 +368,7 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
 
     def extra_context(self):
         return {
-            'datasource_contents': get_datasource_contents('extras.GitRepository'),
+            'datasource_contents': get_datasource_contents('extras.gitrepository'),
         }
 
 
