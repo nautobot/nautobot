@@ -9,6 +9,12 @@ While NetBox has many configuration settings, only a few of them must be defined
 * [Required settings](required-settings.md)
 * [Optional settings](optional-settings.md)
 
+## Optional Authentication Configuration
+
+* [LDAP Authentication](authentication/ldap.md)
+* [Remote User Authentication](authentication/remote.md)
+* [SSO Authentication](authentication/sso.md)
+
 ## Changing the Configuration
 
 Configuration settings may be changed at any time. However, the WSGI service (e.g. Gunicorn) must be restarted before the changes will take effect:

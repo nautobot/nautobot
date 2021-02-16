@@ -95,6 +95,9 @@ if settings.METRICS_ENABLED:
         path('', include('django_prometheus.urls')),
     ]
 
+if settings.SOCIAL_AUTH_ENABLED:
+    _patterns += [path('', include('social_django.urls', namespace=settings.SOCIAL_AUTH_URL_NAMESPACE))]
+
 # Prepend BASE_PATH
 urlpatterns = [
     path('{}'.format(settings.BASE_PATH), include(_patterns))

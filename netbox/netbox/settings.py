@@ -11,7 +11,7 @@ from django.contrib.messages import constants as messages
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.validators import URLValidator
 
-from extras.plugins.utils import load_plugins
+from extras.plugins.utils import load_plugins, get_sso_backend_name
 
 
 #
@@ -130,6 +130,16 @@ SCRIPTS_ROOT = os.path.join(BASE_DIR, 'scripts').rstrip('/')
 
 # Secrets
 SECRETS_MIN_PUBKEY_SIZE = 2048
+
+# SSO
+SOCIAL_AUTH_ENABLED = False
+SOCIAL_AUTH_MODULE = ''
+SOCIAL_AUTH_DEFAULT_GROUPS = []
+SOCIAL_AUTH_DEFAULT_PERMISSIONS = {}
+SOCIAL_AUTH_DEFAULT_STAFF = False
+SOCIAL_AUTH_DEFAULT_SUPERUSER = False
+SOCIAL_AUTH_POSTGRES_JSONFIELD = False
+SOCIAL_AUTH_URL_NAMESPACE = 'sso'
 
 # Storage
 STORAGE_BACKEND = None
@@ -368,6 +378,7 @@ MESSAGE_TAGS = {
 
 # Authentication URLs
 LOGIN_URL = '/{}login/'.format(BASE_PATH)
+LOGIN_REDIRECT_URL = '/'
 
 CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 
@@ -664,6 +675,15 @@ RQ_QUEUES = {
     'check_releases': RQ_PARAMS,
 }
 
+#
+# SSO
+#
+
+if SOCIAL_AUTH_ENABLED:
+    INSTALLED_APPS.append("social_django")
+    AUTHENTICATION_BACKENDS.insert(0, SOCIAL_AUTH_MODULE)
+    backend_name = get_sso_backend_name(SOCIAL_AUTH_MODULE)
+    LOGIN_URL = '/{}login/{}/'.format(BASE_PATH, backend_name)
 
 #
 # Plugins

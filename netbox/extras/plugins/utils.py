@@ -5,6 +5,8 @@ Plugin utilities.
 import importlib.util
 import logging
 import sys
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.module_loading import import_string
 
 from .exceptions import PluginError, PluginNotFound, PluginImproperlyConfigured
 
@@ -97,3 +99,19 @@ def load_plugin(plugin_name, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE
     CACHEOPS.update({
         f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()
     })
+
+
+def get_sso_backend_name(social_auth_module):
+    """
+    Return the name parameter of the social auth module defined in the module itself.
+
+    :param social_auth_module: The social auth python module to read the name parameter from
+    """
+    try:
+        backend_class = import_string(social_auth_module)
+    except ImportError:
+        raise ImproperlyConfigured(
+            f"Unable to import Social Auth Module {social_auth_module}."
+        )
+    backend_name = backend_class.name
+    return backend_name

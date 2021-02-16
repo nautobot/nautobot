@@ -234,6 +234,9 @@ RQ_DEFAULT_TIMEOUT = 300
 # database access.) Note that the user as which NetBox runs must have read and write permissions to this path.
 SESSION_FILE_PATH = None
 
+# Configure SSO, for more information see docs/configuration/authentication/sso.md
+SOCIAL_AUTH_ENABLED = False
+
 # Time zone (default: UTC)
 TIME_ZONE = 'UTC'
 

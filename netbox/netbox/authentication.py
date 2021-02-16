@@ -10,6 +10,8 @@ from django.db.models import Q
 from users.models import ObjectPermission
 from utilities.permissions import permission_is_exempt, resolve_permission, resolve_permission_ct
 
+logger = logging.getLogger('netbox.authentication')
+
 
 class ObjectPermissionBackend(ModelBackend):
 
@@ -98,34 +100,10 @@ class RemoteUserBackend(_RemoteUserBackend):
         logger = logging.getLogger('netbox.authentication.RemoteUserBackend')
 
         # Assign default groups to the user
-        group_list = []
-        for name in settings.REMOTE_AUTH_DEFAULT_GROUPS:
-            try:
-                group_list.append(Group.objects.get(name=name))
-            except Group.DoesNotExist:
-                logging.error(f"Could not assign group {name} to remotely-authenticated user {user}: Group not found")
-        if group_list:
-            user.groups.add(*group_list)
-            logger.debug(f"Assigned groups to remotely-authenticated user {user}: {group_list}")
+        assign_groups_to_user(user, settings.REMOTE_AUTH_DEFAULT_GROUPS)
 
         # Assign default object permissions to the user
-        permissions_list = []
-        for permission_name, constraints in settings.REMOTE_AUTH_DEFAULT_PERMISSIONS.items():
-            try:
-                object_type, action = resolve_permission_ct(permission_name)
-                # TODO: Merge multiple actions into a single ObjectPermission per content type
-                obj_perm = ObjectPermission(actions=[action], constraints=constraints)
-                obj_perm.save()
-                obj_perm.users.add(user)
-                obj_perm.object_types.add(object_type)
-                permissions_list.append(permission_name)
-            except ValueError:
-                logging.error(
-                    f"Invalid permission name: '{permission_name}'. Permissions must be in the form "
-                    "<app>.<action>_<model>. (Example: dcim.add_site)"
-                )
-        if permissions_list:
-            logger.debug(f"Assigned permissions to remotely-authenticated user {user}: {permissions_list}")
+        assign_permissions_to_user(user, settings.REMOTE_AUTH_DEFAULT_PERMISSIONS)
 
         return user
 
@@ -213,3 +191,51 @@ class LDAPBackend:
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
         return obj
+
+
+def assign_groups_to_user(user, groups=None):
+    """
+    Assign a specified user a given list of groups.
+
+    :param user: The user to assign the permissions
+    :param group: A list of group names to add the user to
+    """
+    if groups is None:
+        groups = []
+    group_list = []
+    for name in groups:
+        try:
+            group_list.append(Group.objects.get(name=name))
+        except Group.DoesNotExist:
+            logging.error(f"Could not assign group {name} to remotely-authenticated user {user}: Group not found")
+    if group_list:
+        user.groups.add(*group_list)
+        logger.debug(f"Assigned groups to remotely-authenticated user {user}: {group_list}")
+
+
+def assign_permissions_to_user(user, permissions=None):
+    """
+    Assign a specified user a given set of permissions.
+
+    :param user: The user to assign the permissions
+    :param permissions: A dictionary of permissions, with the permission name <app_label>.<action>_<model> as the key and constraints as values
+    """
+    if permissions is None:
+        permissions = {}
+    permissions_list = []
+    for permission_name, constraints in permissions.items():
+        try:
+            object_type, action = resolve_permission_ct(permission_name)
+            # TODO: Merge multiple actions into a single ObjectPermission per content type
+            obj_perm = ObjectPermission(name=permission_name, actions=[action], constraints=constraints)
+            obj_perm.save()
+            obj_perm.users.add(user)
+            obj_perm.object_types.add(object_type)
+            permissions_list.append(permission_name)
+        except ValueError:
+            logging.error(
+                f"Invalid permission name: '{permission_name}'. Permissions must be in the form "
+                "<app>.<action>_<model>. (Example: dcim.add_site)"
+            )
+    if permissions_list:
+        logger.debug(f"Assigned permissions to remotely-authenticated user {user}: {permissions_list}")

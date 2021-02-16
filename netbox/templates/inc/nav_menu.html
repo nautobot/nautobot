@@ -816,11 +816,10 @@
                         </ul>
                     </li>
                 {% else %}
-                    {% url 'login' as login_url %}
-                    {% if request.path == login_url %}
+                    {% if request.path == settings.LOGIN_URL %}
                         <li><a href="{{ request.get_full_path }}"><i class="mdi mdi-login"></i> Log in</a></li>
                     {% else %}
-                        <li><a href="{{ login_url }}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
+                        <li><a href="{{ settings.LOGIN_URL }}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
                     {% endif %}
                 {% endif %}
             </ul>

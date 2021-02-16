@@ -6,3 +6,4 @@ This guide explains how to implement authentication using an external server. Us
 
 - [LDAP Authentication](../configuration/authentication/ldap.md)
 - [Remote User Authentication](../configuration/authentication/remote.md)
+- [SSO Authentication](../configuration/authentication/sso.md)
