@@ -1,7 +1,7 @@
 from django.urls import path
 
 from extras import views
-from extras.models import ConfigContext, GitRepository, Status, Tag
+from extras.models import ConfigContext, CustomLink, ExportTemplate, GitRepository, Tag, Status, Webhook
 
 
 app_name = 'extras'
@@ -59,6 +59,33 @@ urlpatterns = [
     path('job-results/<int:pk>/', views.JobResultView.as_view(), name='jobresult'),
     path('job-results/delete/', views.JobResultBulkDeleteView.as_view(), name='jobresult_bulk_delete'),
     path('job-results/<int:pk>/delete/', views.JobResultDeleteView.as_view(), name='jobresult_delete'),
+
+    # Export Templates
+    path('export-templates/', views.ExportTemplateListView.as_view(), name='exporttemplate_list'),
+    path('export-templates/add/', views.ExportTemplateEditView.as_view(), name='exporttemplate_add'),
+    path('export-templates/delete/', views.ExportTemplateBulkDeleteView.as_view(), name='exporttemplate_bulk_delete'),
+    path('export-templates/<int:pk>/', views.ExportTemplateView.as_view(), name='exporttemplate'),
+    path('export-templates/<int:pk>/edit/', views.ExportTemplateEditView.as_view(), name='exporttemplate_edit'),
+    path('export-templates/<int:pk>/delete/', views.ExportTemplateDeleteView.as_view(), name='exporttemplate_delete'),
+    path('export-templates/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='exporttemplate_changelog', kwargs={'model': ExportTemplate}),
+
+    # Custom links
+    path('custom-links/', views.CustomLinkListView.as_view(), name='customlink_list'),
+    path('custom-links/add/', views.CustomLinkEditView.as_view(), name='customlink_add'),
+    path('custom-links/delete/', views.CustomLinkBulkDeleteView.as_view(), name='customlink_bulk_delete'),
+    path('custom-links/<int:pk>/', views.CustomLinkView.as_view(), name='customlink'),
+    path('custom-links/<int:pk>/edit/', views.CustomLinkEditView.as_view(), name='customlink_edit'),
+    path('custom-links/<int:pk>/delete/', views.CustomLinkDeleteView.as_view(), name='customlink_delete'),
+    path('custom-links/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='customlink_changelog', kwargs={'model': CustomLink}),
+
+    # Webhook
+    path('webhooks/', views.WebhookListView.as_view(), name='webhook_list'),
+    path('webhooks/add/', views.WebhookEditView.as_view(), name='webhook_add'),
+    path('webhooks/delete/', views.WebhookBulkDeleteView.as_view(), name='webhook_bulk_delete'),
+    path('webhooks/<int:pk>/', views.WebhookView.as_view(), name='webhook'),
+    path('webhooks/<int:pk>/edit/', views.WebhookEditView.as_view(), name='webhook_edit'),
+    path('webhooks/<int:pk>/delete/', views.WebhookDeleteView.as_view(), name='webhook_delete'),
+    path('webhooks/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='webhook_changelog', kwargs={'model': Webhook}),
 
     # Custom statuses
     path('statuses/', views.StatusListView.as_view(), name='status_list'),

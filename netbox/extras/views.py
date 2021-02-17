@@ -16,11 +16,22 @@ from utilities.utils import copy_safe_request, count_related, shallow_compare_di
 from utilities.views import ContentTypePermissionRequiredMixin
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
-from .jobs import get_job, get_jobs, run_job
 from .models import (
-    ConfigContext, GitRepository, ImageAttachment, ObjectChange, JobResult,
-    Relationship, RelationshipAssociation, Status, Tag, TaggedItem
+    ConfigContext,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    ImageAttachment,
+    ObjectChange,
+    JobResult,
+    Relationship,
+    RelationshipAssociation,
+    Status,
+    Tag,
+    TaggedItem,
+    Webhook
 )
+from .jobs import get_job, get_jobs, run_job
 from .datasources import get_datasource_contents, enqueue_pull_git_repository_and_refresh_data
 
 
@@ -617,6 +628,89 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
             'job': job,
             'result': job_result,
         })
+
+
+class ExportTemplateListView(generic.ObjectListView):
+    queryset = ExportTemplate.objects.all()
+    table = tables.ExportTemplateTable
+    filterset = filters.ExportTemplateFilterSet
+    filterset_form = forms.ExportTemplateFilterForm
+    action_buttons = ('add',)
+
+
+class ExportTemplateView(generic.ObjectView):
+    queryset = ExportTemplate.objects.all()
+
+
+class ExportTemplateEditView(generic.ObjectEditView):
+    queryset = ExportTemplate.objects.all()
+    model_form = forms.ExportTemplateForm
+
+
+class ExportTemplateDeleteView(generic.ObjectDeleteView):
+    queryset = ExportTemplate.objects.all()
+
+
+class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
+    queryset = ExportTemplate.objects.all()
+    table = tables.ExportTemplateTable
+
+
+class CustomLinkListView(generic.ObjectListView):
+    queryset = CustomLink.objects.all()
+    table = tables.CustomLinkTable
+    filterset = filters.CustomLinkFilterSet
+    filterset_form = forms.CustomLinkFilterForm
+    action_buttons = ('add',)
+
+
+class CustomLinkView(generic.ObjectView):
+    queryset = CustomLink.objects.all()
+
+
+class CustomLinkEditView(generic.ObjectEditView):
+    queryset = CustomLink.objects.all()
+    model_form = forms.CustomLinkForm
+
+
+class CustomLinkDeleteView(generic.ObjectDeleteView):
+    queryset = CustomLink.objects.all()
+
+
+class CustomLinkBulkDeleteView(generic.BulkDeleteView):
+    queryset = CustomLink.objects.all()
+    table = tables.CustomLinkTable
+
+
+class WebhookListView(generic.ObjectListView):
+    queryset = Webhook.objects.all()
+    table = tables.WebhookTable
+    filterset = filters.WebhookFilterSet
+    filterset_form = forms.WebhookFilterForm
+    action_buttons = ('add',)
+
+
+class WebhookView(generic.ObjectView):
+    queryset = Webhook.objects.all()
+
+    def get_extra_context(self, request, instance):
+        return {
+            'content_types': instance.content_types.order_by('app_label', 'model')
+        }
+
+
+class WebhookEditView(generic.ObjectEditView):
+    queryset = Webhook.objects.all()
+    model_form = forms.WebhookForm
+
+
+class WebhookDeleteView(generic.ObjectDeleteView):
+    queryset = Webhook.objects.all()
+
+
+class WebhookBulkDeleteView(generic.BulkDeleteView):
+    queryset = Webhook.objects.all()
+    table = tables.WebhookTable
 
 
 #

@@ -13,8 +13,19 @@ from rq import Worker
 from extras import filters
 from extras.choices import JobResultStatusChoices
 from extras.models import (
-    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, ObjectChange,
-    Relationship, RelationshipAssociation, Status, Tag, TaggedItem
+    ConfigContext,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    ImageAttachment,
+    JobResult,
+    ObjectChange,
+    Relationship,
+    RelationshipAssociation,
+    Status,
+    Tag,
+    TaggedItem,
+    Webhook,
 )
 from extras.models import CustomField
 from extras.jobs import get_job, get_jobs, run_job
@@ -279,6 +290,32 @@ class ContentTypeViewSet(ReadOnlyModelViewSet):
     queryset = ContentType.objects.order_by('app_label', 'model')
     serializer_class = serializers.ContentTypeSerializer
     filterset_class = filters.ContentTypeFilterSet
+
+
+#
+# Custom Links
+#
+
+class CustomLinkViewSet(ModelViewSet):
+    """
+    Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+    queryset = CustomLink.objects.all()
+    serializer_class = serializers.CustomLinkSerializer
+    filterset_class = filters.CustomLinkFilterSet
+
+
+#
+# Webhooks
+#
+
+class WebhooksViewSet(ModelViewSet):
+    """
+    Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+    queryset = Webhook.objects.all()
+    serializer_class = serializers.WebhookSerializer
+    filterset_class = filters.WebhookFilterSet
 
 
 #

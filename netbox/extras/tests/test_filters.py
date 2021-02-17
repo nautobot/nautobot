@@ -6,8 +6,9 @@ from django.test import TestCase
 
 from dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from extras.choices import ObjectChangeActionChoices
+from extras.constants import *
 from extras.filters import *
-from extras.models import ConfigContext, ExportTemplate, ImageAttachment, ObjectChange, Status, Tag
+from extras.models import ConfigContext, CustomLink, ExportTemplate, ImageAttachment, ObjectChange, Tag, Status, Webhook
 from ipam.models import IPAddress
 from tenancy.models import Tenant, TenantGroup
 from utilities.choices import ColorChoices
@@ -41,6 +42,10 @@ class ExportTemplateTestCase(TestCase):
     def test_content_type(self):
         params = {'content_type': ContentType.objects.get(model='site').pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        params = {'q': "export"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
 class ImageAttachmentTestCase(TestCase):
@@ -398,6 +403,123 @@ class ObjectChangeTestCase(TestCase):
 
     def test_changed_object_type_id(self):
         params = {'changed_object_type_id': ContentType.objects.get(app_label='dcim', model='site').pk}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class CustomLinkTestCase(TestCase):
+    queryset = CustomLink.objects.all()
+    filterset = CustomLinkFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        customlinks = (
+            CustomLink(
+                content_type=obj_type,
+                name="customlink-1",
+                text="customlink text 1",
+                target_url="http://customlink1.com",
+                weight=100,
+                button_class="default",
+                new_window=False,
+            ),
+            CustomLink(
+                content_type=obj_type,
+                name="customlink-2",
+                text="customlink text 2",
+                target_url="http://customlink2.com",
+                weight=100,
+                button_class="default",
+                new_window=False,
+            ),
+            CustomLink(
+                content_type=obj_type,
+                name="customlink-3",
+                text="customlink text 3",
+                target_url="http://customlink3.com",
+                weight=100,
+                button_class="default",
+                new_window=False,
+            ),
+        )
+
+        for link in customlinks:
+            link.save()
+
+    def test_name(self):
+        params = {'name': ['customlink-1']}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_target_url(self):
+        params = {'target_url': ['http://customlink1.com']}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_weight(self):
+        params = {'weight': [100]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_search(self):
+        params = {'q': "customlink"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class WebhookTestCase(TestCase):
+    queryset = Webhook.objects.all()
+    filterset = WebhookFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        webhooks = (
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                payload_url="http://test-url.com/test-1",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_update=True,
+                payload_url="http://test-url.com/test-2",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-3",
+                enabled=True,
+                type_delete=True,
+                payload_url="http://test-url.com/test-3",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+        )
+        obj_type = ContentType.objects.get_for_model(Site)
+        for webhook in webhooks:
+            webhook.save()
+            webhook.content_types.set([obj_type])
+
+    def test_name(self):
+        params = {'name': ['webhook-1']}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_create(self):
+        params = {'type_create': True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_update(self):
+        params = {'type_update': True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_delete(self):
+        params = {'type_delete': True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_enabled(self):
+        params = {'enabled': True}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_search(self):
+        params = {'q': "webhook"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 

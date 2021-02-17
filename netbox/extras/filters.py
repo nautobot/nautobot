@@ -15,8 +15,19 @@ from utilities.filters import (
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .models import (
-    ConfigContext, CustomField, Relationship, RelationshipAssociation, ExportTemplate,
-    GitRepository, ImageAttachment, JobResult, ObjectChange, Status, Tag,
+    ConfigContext,
+    CustomField,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    ImageAttachment,
+    JobResult,
+    ObjectChange,
+    Relationship,
+    RelationshipAssociation,
+    Status,
+    Tag,
+    Webhook,
 )
 
 
@@ -26,15 +37,18 @@ __all__ = (
     'CreatedUpdatedFilterSet',
     'CustomFieldFilter',
     'CustomFieldModelFilterSet',
+    'CustomLinkFilterSet',
     'ExportTemplateFilterSet',
+    'GitRepositoryFilterSet',
     'ImageAttachmentFilterSet',
     'JobResultFilterSet',
     'LocalConfigContextFilterSet',
     'ObjectChangeFilterSet',
-    'TagFilterSet',
     'StatusFilter',
     'StatusFilterSet',
     'StatusModelFilterSetMixin',
+    'TagFilterSet',
+    'WebhookFilterSet',
 )
 
 EXACT_FILTER_TYPES = (
@@ -92,11 +106,27 @@ class CustomFieldFilterSet(django_filters.FilterSet):
 
 
 class ExportTemplateFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method='search',
+        label='Search',
+    )
     owner_content_type = ContentTypeFilter()
 
     class Meta:
         model = ExportTemplate
         fields = ['id', 'content_type', 'owner_content_type', 'owner_object_id', 'name']
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(owner_content_type__app_label__icontains=value) |
+            Q(owner_content_type__model__icontains=value) |
+            Q(content_type__app_label__icontains=value) |
+            Q(content_type__model__icontains=value) |
+            Q(description__icontains=value)
+        )
 
 
 class ImageAttachmentFilterSet(BaseFilterSet):
@@ -360,6 +390,70 @@ class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomField
     class Meta:
         model = GitRepository
         fields = ['id', 'name', 'slug', 'remote_url', 'branch']
+
+
+#
+# Custom Links
+#
+
+class CustomLinkFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method='search',
+        label='Search',
+    )
+    content_type = ContentTypeFilter()
+
+    class Meta:
+        model = CustomLink
+        fields = (
+            'content_type',
+            'name',
+            'text',
+            'target_url',
+            'weight',
+            'group_name',
+            'button_class',
+            'new_window',
+        )
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(target_url__icontains=value) |
+            Q(text__icontains=value) |
+            Q(content_type__app_label__icontains=value) |
+            Q(content_type__model__icontains=value)
+        )
+
+
+#
+# Webhooks
+#
+
+class WebhookFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method='search',
+        label='Search',
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery('webhooks').get_choices,
+    )
+
+    class Meta:
+        model = Webhook
+        fields = ['name', 'payload_url', 'enabled', 'content_types', 'type_create', 'type_update', 'type_delete']
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(payload_url__icontains=value) |
+            Q(additional_headers__icontains=value) |
+            Q(body_template__icontains=value)
+        )
 
 
 #

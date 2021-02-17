@@ -579,8 +579,8 @@ def update_git_export_templates(repository_record, job_result):
                 template_record.mime_type = 'text/plain'
                 modified = True
 
-            if template_record.file_extension != os.path.splitext(file_name)[-1]:
-                template_record.file_extension = os.path.splitext(file_name)[-1]
+            if template_record.file_extension != file_name.rsplit(os.extsep, 1)[-1]:
+                template_record.file_extension = file_name.rsplit(os.extsep, 1)[-1]
                 modified = True
 
             if modified:

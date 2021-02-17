@@ -1,6 +1,6 @@
 # Webhooks
 
-A webhook is a mechanism for conveying to some external system a change that took place in NetBox. For example, you may want to notify a monitoring system whenever the status of a device is updated in NetBox. This can be done by creating a webhook for the device model in NetBox and identifying the webhook receiver. When NetBox detects a change to a device, an HTTP request containing the details of the change and who made it be sent to the specified receiver. Webhooks are configured in the admin UI under Extras > Webhooks.
+A webhook is a mechanism for conveying to some external system a change that took place in NetBox. For example, you may want to notify a monitoring system whenever the status of a device is updated in NetBox. This can be done by creating a webhook for the device model in NetBox and identifying the webhook receiver. When NetBox detects a change to a device, an HTTP request containing the details of the change and who made it be sent to the specified receiver. Webhooks are configured in the web UI under Other > Miscellaneous > Webhooks.
 
 ## Configuration
 
@@ -55,7 +55,7 @@ If no body template is specified, the request body will be populated with a JSON
         "id": 19,
         "name": "Site 1",
         "slug": "site-1",
-        "status": 
+        "status":
             "value": "active",
             "label": "Active",
             "id": 1

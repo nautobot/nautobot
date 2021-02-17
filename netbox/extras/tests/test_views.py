@@ -6,9 +6,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 
-from dcim.models import Device, Site
+from dcim.models import ConsolePort, Device, Site
 from extras.choices import ObjectChangeActionChoices
-from extras.models import ConfigContext, CustomLink, GitRepository, ObjectChange, Status, Tag
+from extras.constants import *
+from extras.models import ConfigContext, CustomLink, ExportTemplate, GitRepository, ObjectChange, Status, Tag, Webhook
 from utilities.testing import ViewTestCases, TestCase
 
 
@@ -136,7 +137,7 @@ class CustomLinkTest(TestCase):
             content_type=ContentType.objects.get_for_model(Site),
             name='Test',
             text='FOO {{ obj.name }} BAR',
-            url='http://example.com/?site={{ obj.slug }}',
+            target_url='http://example.com/?site={{ obj.slug }}',
             new_window=False
         )
         customlink.save()
@@ -220,4 +221,157 @@ class StatusTestCase(
 
         cls.bulk_edit_data = {
             'color': '000000',
+        }
+
+
+class ExportTemplateTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ExportTemplate
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        templates = (
+            ExportTemplate(
+                name="template-1",
+                template_code="template-1 test1",
+                content_type=obj_type,
+            ),
+            ExportTemplate(
+                name="template-2",
+                template_code="template-2 test2",
+                content_type=obj_type,
+            ),
+            ExportTemplate(
+                name="template-3",
+                template_code="template-3 test3",
+                content_type=obj_type,
+            ),
+        )
+
+        for template in templates:
+            template.save()
+
+        cls.form_data = {
+            'name': 'template-4',
+            'content_type': obj_type.pk,
+            'template_code': 'template-4 test4'
+        }
+
+
+class CustomLinkTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = CustomLink
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        customlinks = (
+            CustomLink(
+                content_type=obj_type,
+                name="customlink-1",
+                text="customlink text 1",
+                target_url="http://customlink1.com",
+                weight=100,
+                button_class="default",
+                new_window=False,
+            ),
+            CustomLink(
+                content_type=obj_type,
+                name="customlink-2",
+                text="customlink text 2",
+                target_url="http://customlink2.com",
+                weight=100,
+                button_class="default",
+                new_window=False,
+            ),
+            CustomLink(
+                content_type=obj_type,
+                name="customlink-3",
+                text="customlink text 3",
+                target_url="http://customlink3.com",
+                weight=100,
+                button_class="default",
+                new_window=False,
+            ),
+        )
+
+        for link in customlinks:
+            link.save()
+
+        cls.form_data = {
+            'content_type': obj_type.pk,
+            'name': 'customlink-4',
+            'text': 'customlink text 4',
+            'target_url': 'http://customlink4.com',
+            'weight': 100,
+            "button_class": "default",
+            'new_window': False,
+        }
+
+
+class WebhookTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = Webhook
+
+    @classmethod
+    def setUpTestData(cls):
+        webhooks = (
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                payload_url="http://test-url.com/test-1",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_update=True,
+                payload_url="http://test-url.com/test-2",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-3",
+                enabled=True,
+                type_delete=True,
+                payload_url="http://test-url.com/test-3",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+        )
+
+        obj_type = ContentType.objects.get_for_model(ConsolePort)
+
+        for webhook in webhooks:
+            webhook.save()
+            webhook.content_types.set([obj_type])
+
+        cls.form_data = {
+            'name': 'webhook-4',
+            'content_types': [obj_type.pk],
+            'enabled': True,
+            'type_create': True,
+            'payload_url': 'http://test-url.com/test-4',
+            'http_method': 'POST',
+            'http_content_type': 'application/json',
         }

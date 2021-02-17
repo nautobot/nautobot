@@ -11,8 +11,19 @@ from dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from extras.choices import *
 from extras.datasources import get_datasource_content_choices
 from extras.models import (
-    ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult,
-    ObjectChange, Relationship, RelationshipAssociation, Status, Tag,
+    ConfigContext,
+    CustomField,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    ImageAttachment,
+    JobResult,
+    ObjectChange,
+    Relationship,
+    RelationshipAssociation,
+    Status,
+    Tag,
+    Webhook
 )
 from extras.api.fields import StatusSerializerField
 from extras.utils import FeatureQuery
@@ -447,6 +458,68 @@ class ContentTypeSerializer(serializers.ModelSerializer):
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_display_name(self, obj):
         return obj.app_labeled_name
+
+
+#
+# Custom Links
+#
+
+class CustomLinkSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:customlink-detail')
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('custom_links').get_query()
+        ).order_by('app_label', 'model'),
+    )
+
+    class Meta:
+        model = CustomLink
+        fields = (
+            'id',
+            'url',
+            'target_url',
+            'name',
+            'content_type',
+            'text',
+            'weight',
+            'group_name',
+            'button_class',
+            'new_window',
+        )
+
+
+#
+# Webhook
+#
+
+class WebhookSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:webhook-detail')
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('webhooks').get_query()
+        ).order_by('app_label', 'model'),
+        many=True,
+    )
+
+    class Meta:
+        model = Webhook
+        fields = [
+            'id',
+            'url',
+            'content_types',
+            'name',
+            'type_create',
+            'type_update',
+            'type_delete',
+            'payload_url',
+            'http_method',
+            'http_content_type',
+            'additional_headers',
+            'body_template',
+            'secret',
+            'ssl_verification',
+            'ca_file_path',
+        ]
 
 
 #

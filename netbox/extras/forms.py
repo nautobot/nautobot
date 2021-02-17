@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
 from dcim.models import DeviceRole, Platform, Region, Site
+from netbox.api import ContentTypeField
 from tenancy.models import Tenant, TenantGroup
 from utilities.forms import (
     add_blank_choice,
@@ -28,8 +29,19 @@ from virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
-    ConfigContext, CustomField, GitRepository, ImageAttachment, Job,
-    JobResult, ObjectChange, Relationship, RelationshipAssociation, Status, Tag
+    ConfigContext,
+    CustomField,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    ImageAttachment,
+    JobResult,
+    ObjectChange,
+    Relationship,
+    RelationshipAssociation,
+    Status,
+    Tag,
+    Webhook,
 )
 from .utils import FeatureQuery
 
@@ -718,6 +730,140 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         choices=add_blank_choice(JobResultStatusChoices),
         required=False,
         widget=StaticSelect2(),
+    )
+
+
+class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('export_templates').get_query()
+        ).order_by('app_label', 'model'),
+        required=False,
+        label='Content Types',
+    )
+
+    class Meta:
+        model = ExportTemplate
+        fields = (
+            "content_type",
+            "name",
+            "description",
+            "template_code",
+            "mime_type",
+            "file_extension",
+        )
+
+
+class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
+    model = ExportTemplate
+    q = forms.CharField(
+        required=False,
+        label='Search'
+    )
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('export_templates').get_query()
+        ).order_by('app_label', 'model'),
+        required=False,
+        label='Content Types',
+    )
+
+
+class CustomLinkForm(BootstrapMixin, forms.ModelForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('custom_links').get_query()
+        ).order_by('app_label', 'model'),
+        required=False,
+        label='Content Types',
+    )
+
+    class Meta:
+        model = CustomLink
+        fields = (
+            'content_type',
+            'name',
+            'text',
+            'target_url',
+            'weight',
+            'group_name',
+            'button_class',
+            'new_window',
+        )
+
+
+class CustomLinkFilterForm(BootstrapMixin, forms.Form):
+    model = CustomLink
+    q = forms.CharField(
+        required=False,
+        label='Search'
+    )
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('custom_links').get_query()
+        ).order_by('app_label', 'model'),
+        required=False,
+        label='Content Types',
+    )
+
+
+class WebhookForm(BootstrapMixin, forms.ModelForm):
+    content_types = forms.ModelMultipleChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('webhooks').get_query()
+        ).order_by('app_label', 'model'),
+        required=False,
+        label='Content Types',
+    )
+
+    class Meta:
+        model = Webhook
+        fields = (
+            'name',
+            'content_types',
+            'enabled',
+            'type_create',
+            'type_update',
+            'type_delete',
+            'payload_url',
+            'http_method',
+            'http_content_type',
+            'additional_headers',
+            'body_template',
+            'secret',
+            'ssl_verification',
+            'ca_file_path',
+        )
+
+
+class WebhookFilterForm(BootstrapMixin, forms.Form):
+    model = Webhook
+    q = forms.CharField(
+        required=False,
+        label='Search'
+    )
+    content_types = forms.ModelMultipleChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('webhooks').get_query()
+        ).order_by('app_label', 'model'),
+        required=False,
+        label='Content Types',
+    )
+    type_create = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    type_update = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    type_delete = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    enabled = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
     )
 
 

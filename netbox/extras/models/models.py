@@ -27,7 +27,7 @@ from utilities.utils import deepmerge, render_jinja2
 # Webhooks
 #
 @extras_features('graphql')
-class Webhook(models.Model):
+class Webhook(ChangeLoggedModel):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in NetBox. The request will contain a representation of the object, which the remote application can act on.
@@ -111,6 +111,8 @@ class Webhook(models.Model):
                   'Leave blank to use the system defaults.'
     )
 
+    objects = RestrictedQuerySet.as_manager()
+
     class Meta:
         ordering = ('name',)
         unique_together = ('payload_url', 'type_create', 'type_update', 'type_delete',)
@@ -155,12 +157,15 @@ class Webhook(models.Model):
         else:
             return json.dumps(context, cls=JSONEncoder)
 
+    def get_absolute_url(self):
+        return reverse('extras:webhook', kwargs={'pk': self.pk})
+
 
 #
 # Custom links
 #
 @extras_features('graphql')
-class CustomLink(models.Model):
+class CustomLink(ChangeLoggedModel):
     """
     A custom link to an external representation of a NetBox object. The link text and URL fields accept Jinja2 template
     code to be rendered with an object as context.
@@ -178,7 +183,7 @@ class CustomLink(models.Model):
         max_length=500,
         help_text="Jinja2 template code for link text"
     )
-    url = models.CharField(
+    target_url = models.CharField(
         max_length=500,
         verbose_name='URL',
         help_text="Jinja2 template code for link URL"
@@ -201,21 +206,27 @@ class CustomLink(models.Model):
         help_text="Force link to open in a new window"
     )
 
+    objects = RestrictedQuerySet.as_manager()
+
     class Meta:
         ordering = ['group_name', 'weight', 'name']
 
     def __str__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return reverse('extras:customlink', kwargs={'pk': self.pk})
+
 
 #
 # Export templates
 #
+
 @extras_features(
     'graphql',
     'relationships',
 )
-class ExportTemplate(RelationshipModel):
+class ExportTemplate(ChangeLoggedModel, RelationshipModel):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -235,7 +246,6 @@ class ExportTemplate(RelationshipModel):
         ct_field='owner_content_type',
         fk_field='owner_object_id',
     )
-
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
@@ -307,9 +317,13 @@ class ExportTemplate(RelationshipModel):
 
         return response
 
-    # def get_absolute_url(self):
-    # FIXME: need to address as part of #19
-    #    return reverse('extras:exporttemplate', kwargs={'pk': self.pk})
+    def get_absolute_url(self):
+        return reverse('extras:exporttemplate', kwargs={'pk': self.pk})
+
+    def clean(self):
+        super().clean()
+        if self.file_extension.startswith('.'):
+            self.file_extension = self.file_extension[1:]
 
 
 #

@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:exporttemplate_list' %}">Export Templates</a></li>
+                {% if object.name %}
+                    <li><a href="{% url 'extras:exporttemplate' pk=object.pk %}">{{ object.name }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.extras.add_exporttemplate %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_exporttemplate %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_exporttemplate %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Export Templates</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:exporttemplate_changelog' pk=object.pk %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+
+{% endblock %}
+{% block content %}
+
+<div class="row">
+	<div class="col-md-3">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Details</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <tr>
+                        <td>Name</td>
+                        <td><span>{{ object.name }}</span></td>
+                    </tr>
+                </tr>
+                <tr>
+                    <tr>
+                        <td>Owner</td>
+                        <td><span>{{ object.owner }}</span></td>
+                    </tr>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Template</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Object Type</td>
+                    <td><span>{{ object.content_type }}</span></td>
+                </tr>
+                <tr>
+                    <td>Mime Type</td>
+                    <td><span>{{ object.mime_type }}</span></td>
+                </tr>
+                <tr>
+                    <td>File Extension</td>
+                    <td><span>{{ object.file_extension }}</span></td>
+                </tr>
+            </table>
+        </div>
+
+    </div>
+
+    <div class="col-md-9">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Code Template</strong>
+            </div>
+                {% if object.template_code %} <pre>{{ object.template_code }}</pre> {% else %} {{ None }} {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

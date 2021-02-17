@@ -1,18 +1,21 @@
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
 from extras import choices, models
-from netbox.api import ChoiceField, WritableNestedSerializer
+from netbox.api import ChoiceField, ContentTypeField, WritableNestedSerializer
 from users.api.nested_serializers import NestedUserSerializer
 
 __all__ = [
     'NestedConfigContextSerializer',
     'NestedCustomFieldSerializer',
+    'NestedCustomLinkSerializer',
     'NestedExportTemplateSerializer',
     'NestedGitRepositorySerializer',
     'NestedImageAttachmentSerializer',
     'NestedJobResultSerializer',
     'NestedRelationshipSerializer',
     'NestedTagSerializer',
+    'NestedWebhookSerializer',
 ]
 
 
@@ -74,6 +77,25 @@ class NestedJobResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.JobResult
         fields = ['url', 'created', 'completed', 'user', 'status']
+
+
+class NestedCustomLinkSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:customlink-detail')
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.all(),
+    )
+
+    class Meta:
+        model = models.CustomLink
+        fields = ['content_type', 'id', 'name', 'url']
+
+
+class NestedWebhookSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:webhook-detail')
+
+    class Meta:
+        model = models.Webhook
+        fields = ['id', 'url', 'name']
 
 
 class NestedRelationshipSerializer(WritableNestedSerializer):

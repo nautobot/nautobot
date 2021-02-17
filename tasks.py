@@ -29,10 +29,6 @@ if os.path.isfile(COMPOSE_OVERRIDE_FILE):
 GRIMLOCK_ROOT = "/opt/grimlock/"
 MANAGE_COMMAND = os.path.join(GRIMLOCK_ROOT, "netbox/manage.py")
 
-ENV_VARS = {
-    "PYTHON_VER": PYTHON_VER,
-}
-
 
 # ------------------------------------------------------------------------------
 # BUILD
@@ -123,13 +119,13 @@ def destroy(context, python_ver=PYTHON_VER):
 
 
 @task
-def vscode(context):
+def vscode(context, python_ver=PYTHON_VER):
     """Launch Visual Studio Code with the appropriate Environment variables to run in a container.
 
     Args:
         context (obj): Used to run specific commands
     """
-    context.run("code grimlock.code-workspace", env=ENV_VARS)
+    context.run("code grimlock.code-workspace", env={"PYTHON_VER": python_ver})
 
 
 # ------------------------------------------------------------------------------

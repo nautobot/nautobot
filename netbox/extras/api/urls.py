@@ -35,6 +35,12 @@ router.register('job-results', views.JobResultViewSet)
 # ContentTypes
 router.register('content-types', views.ContentTypeViewSet)
 
+# Custom Links
+router.register('custom-links', views.CustomLinkViewSet)
+
+# Webhooks
+router.register('webhooks', views.WebhooksViewSet)
+
 # Statuses
 router.register('statuses', views.StatusViewSet)
 

@@ -8,8 +8,18 @@ from django_tables2.utils import Accessor
 from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, ToggleColumn
 from .jobs import get_job_classpaths
 from .models import (
-    ConfigContext, GitRepository, JobResult, ObjectChange, Relationship, RelationshipAssociation,
-    Status, Tag, TaggedItem
+    ConfigContext,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    JobResult,
+    ObjectChange,
+    Relationship,
+    RelationshipAssociation,
+    Status,
+    Tag,
+    TaggedItem,
+    Webhook,
 )
 
 TAGGED_ITEM = """
@@ -53,6 +63,11 @@ OBJECTCHANGE_OBJECT = """
 
 OBJECTCHANGE_REQUEST_ID = """
 <a href="{% url 'extras:objectchange_list' %}?request_id={{ value }}">{{ value }}</a>
+"""
+
+# TODO: Webhook content_types in table order_by
+WEBHOOK_CONTENT_TYPES = """
+{{ value.all|join:", "|truncatewords:15 }}
 """
 
 
@@ -235,6 +250,93 @@ class ObjectChangeTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = ObjectChange
         fields = ('time', 'user_name', 'action', 'changed_object_type', 'object_repr', 'request_id')
+
+
+class ExportTemplateTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    owner = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = ExportTemplate
+        fields = (
+            "pk",
+            "owner",
+            "content_type",
+            "name",
+            "description",
+            "mime_type",
+            "file_extension",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "file_extension",
+        )
+
+
+class CustomLinkTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    new_window = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomLink
+        fields = (
+            'pk',
+            'name',
+            'content_type',
+            'text',
+            'target_url',
+            'weight',
+            'group_name',
+            'button_class',
+            'new_window',
+        )
+        default_columns = (
+            'pk',
+            'name',
+            'content_type',
+            'group_name',
+            'weight',
+        )
+
+
+class WebhookTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
+    enabled = BooleanColumn()
+    type_create = BooleanColumn()
+    type_update = BooleanColumn()
+    type_delete = BooleanColumn()
+    ssl_verification = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = Webhook
+        fields = (
+            'pk',
+            'name',
+            'content_types',
+            'payload_url',
+            'http_content_type',
+            'http_method',
+            'enabled',
+            'type_create',
+            'type_update',
+            'type_delete',
+            'ssl_verification',
+            'ca_file_path'
+        )
+        default_columns = (
+            'pk',
+            'name',
+            'content_types',
+            'payload_url',
+            'http_content_type',
+            'enabled',
+        )
 
 
 #

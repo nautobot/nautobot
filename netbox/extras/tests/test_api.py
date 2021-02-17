@@ -15,7 +15,18 @@ from rq import Worker
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Rack, RackGroup, RackRole, Site
 from extras.api.views import JobViewSet
-from extras.models import ConfigContext, CustomField, ExportTemplate, GitRepository, ImageAttachment, JobResult, Status, Tag
+from extras.models import (
+    ConfigContext,
+    CustomField,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    ImageAttachment,
+    JobResult,
+    Status,
+    Tag,
+    Webhook,
+)
 from extras.jobs import Job, BooleanVar, IntegerVar, StringVar
 from utilities.testing import APITestCase, APIViewTestCases
 from utilities.testing.utils import disable_warnings
@@ -552,6 +563,140 @@ class ContentTypeTest(APITestCase):
 
         url = reverse('extras-api:contenttype-detail', kwargs={'pk': contenttype.pk})
         self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
+
+
+class CustomLinkTest(APIViewTestCases.APIViewTestCase):
+    model = CustomLink
+    brief_fields = ['content_type', 'id', 'name', 'url']
+    create_data = [
+        {
+            "content_type": "dcim.site",
+            "name": "api-test-4",
+            "text": "API customlink text 4",
+            "target_url": "http://api-test-4.com/test4",
+            "weight": 100,
+            "new_window": False,
+        },
+        {
+            "content_type": "dcim.site",
+            "name": "api-test-5",
+            "text": "API customlink text 5",
+            "target_url": "http://api-test-5.com/test5",
+            "weight": 100,
+            "new_window": False,
+        },
+        {
+            "content_type": "dcim.site",
+            "name": "api-test-6",
+            "text": "API customlink text 6",
+            "target_url": "http://api-test-6.com/test6",
+            "weight": 100,
+            "new_window": False,
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        customlinks = (
+            CustomLink(
+                content_type=obj_type,
+                name="api-test-1",
+                text="API customlink text 1",
+                target_url="http://api-test-1.com/test1",
+                weight=100,
+                new_window=False,
+            ),
+            CustomLink(
+                content_type=obj_type,
+                name="api-test-2",
+                text="API customlink text 2",
+                target_url="http://api-test-2.com/test2",
+                weight=100,
+                new_window=False,
+            ),
+            CustomLink(
+                content_type=obj_type,
+                name="api-test-3",
+                text="API customlink text 3",
+                target_url="http://api-test-3.com/test3",
+                weight=100,
+                new_window=False,
+            ),
+        )
+
+        for link in customlinks:
+            link.save()
+
+
+class WebhookTest(APIViewTestCases.APIViewTestCase):
+    model = Webhook
+    brief_fields = ['id', 'name', 'url']
+    create_data = [
+        {
+            "content_types": ["dcim.consoleport"],
+            "name": "api-test-4",
+            "type_create": True,
+            "payload_url": "http://api-test-4.com/test4",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "ssl_verification": True,
+        },
+        {
+            "content_types": ["dcim.consoleport"],
+            "name": "api-test-5",
+            "type_update": True,
+            "payload_url": "http://api-test-5.com/test5",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "ssl_verification": True,
+        },
+        {
+            "content_types": ["dcim.consoleport"],
+            "name": "api-test-6",
+            "type_delete": True,
+            "payload_url": "http://api-test-6.com/test6",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "ssl_verification": True,
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        webhooks = (
+            Webhook(
+                name="api-test-1",
+                type_create=True,
+                payload_url="http://api-test-1.com/test1",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+            Webhook(
+                name="api-test-2",
+                type_update=True,
+                payload_url="http://api-test-2.com/test2",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+            Webhook(
+                name="api-test-3",
+                type_delete=True,
+                payload_url="http://api-test-3.com/test3",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+        )
+
+        obj_type = ContentType.objects.get_for_model(DeviceType)
+
+        for webhook in webhooks:
+            webhook.save()
+            webhook.content_types.set([obj_type])
 
 
 class StatusTest(APIViewTestCases.APIViewTestCase):

@@ -54,7 +54,7 @@ def custom_links(context, obj):
             try:
                 text_rendered = render_jinja2(cl.text, link_context)
                 if text_rendered:
-                    link_rendered = render_jinja2(cl.url, link_context)
+                    link_rendered = render_jinja2(cl.target_url, link_context)
                     link_target = ' target="_blank"' if cl.new_window else ''
                     template_code += LINK_BUTTON.format(
                         link_rendered, link_target, cl.button_class, text_rendered
@@ -73,7 +73,7 @@ def custom_links(context, obj):
                 text_rendered = render_jinja2(cl.text, link_context)
                 if text_rendered:
                     link_target = ' target="_blank"' if cl.new_window else ''
-                    link_rendered = render_jinja2(cl.url, link_context)
+                    link_rendered = render_jinja2(cl.target_url, link_context)
                     links_rendered.append(
                         GROUP_LINK.format(link_rendered, link_target, text_rendered)
                     )
