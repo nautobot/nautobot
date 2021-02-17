@@ -5,7 +5,16 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django_tables2.utils import Accessor
 
-from utilities.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, ToggleColumn
+from utilities.tables import (
+    BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
+    ChoiceFieldColumn,
+    ColorColumn,
+    ColoredLabelColumn,
+    ContentTypesColumn,
+    ToggleColumn,
+)
 from .jobs import get_job_classpaths
 from .models import (
     ConfigContext,
@@ -348,6 +357,7 @@ class StatusTable(BaseTable):
     pk = ToggleColumn()
     color = ColorColumn()
     actions = ButtonsColumn(Status)
+    content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
         model = Status
@@ -355,7 +365,7 @@ class StatusTable(BaseTable):
 
 
 class StatusTableMixin(BaseTable):
-    """Mixing to add a `status` field to a table."""
+    """Mixin to add a `status` field to a table."""
     status = ColoredLabelColumn()
 
 

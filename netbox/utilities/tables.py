@@ -5,6 +5,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
 
 
@@ -267,3 +268,36 @@ class TagColumn(tables.TemplateColumn):
             template_code=self.template_code,
             extra_context={'url_name': url_name}
         )
+
+
+class ContentTypesColumn(tables.ManyToManyColumn):
+    """
+    Display a list of `content_types` m2m assigned to an object.
+
+    Default sorting of content-types is by pk. This sorting comes at a per-row
+    performance hit to querysets for table views. If this becomes an issue,
+    set `sort_items=False`.
+
+    :param sort_items: Whether to sort by `(app_label, name)`. (default: True)
+    :param truncate_words:
+        Number of words at which to truncate, or `None` to disable. (default: None)
+    """
+
+    def __init__(self, sort_items=True, truncate_words=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sort_items = sort_items
+        self.truncate_words = truncate_words
+
+    def filter(self, qs):
+        """Overload filter to optionally sort items."""
+        if self.sort_items:
+            qs = qs.order_by('app_label', 'model')
+        return qs.all()
+
+    def render(self, value):
+        """Overload render to optionally truncate words."""
+        value = super().render(value)
+        if self.truncate_words is not None:
+            trunc = Truncator(value)
+            value = trunc.words(self.truncate_words)
+        return value

@@ -760,6 +760,12 @@ class StatusView(generic.ObjectView):
     """Detail view for a single `Status` object."""
     queryset = Status.objects.all()
 
+    def get_extra_context(self, request, instance):
+        """Return ordered content types."""
+        return {
+            "content_types": instance.content_types.order_by("app_label", "model")
+        }
+
 
 #
 # Relationship

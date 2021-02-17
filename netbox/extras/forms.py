@@ -873,6 +873,12 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
 
 class StatusForm(BootstrapMixin, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
+    content_types = forms.ModelMultipleChoiceField(
+        queryset=ContentType.objects.filter(
+            FeatureQuery('statuses').get_query()
+        ).order_by('app_label', 'model'),
+        label='Content type(s)',
+    )
 
     class Meta:
         model = Status
@@ -888,8 +894,13 @@ class StatusCSVForm(CSVModelForm):
     content_types = CSVMultipleContentTypeField(
         queryset=ContentType.objects.filter(
             FeatureQuery('statuses').get_query()
+        ).order_by('app_label', 'model'),
+        help_text=mark_safe(
+            'The object types to which this status applies. Multiple values '
+            'must be comma-separated and wrapped in double quotes. (e.g. '
+            '<code>"dcim.device,dcim.rack"</code>)'
         ),
-        help_text='The object type to which this status applies.'
+        label='Content type(s)',
     )
 
     class Meta:
@@ -913,7 +924,7 @@ class StatusFilterForm(BootstrapMixin, forms.Form):
     content_types = CSVMultipleContentTypeField(
         queryset=ContentType.objects.filter(
             FeatureQuery('statuses').get_query()
-        ),
+        ).order_by('app_label', 'model'),
         required=False,
         label='Content type(s)',
     )
@@ -939,7 +950,7 @@ class StatusBulkEditForm(BootstrapMixin, BulkEditForm):
     content_types = forms.ModelMultipleChoiceField(
         queryset=ContentType.objects.filter(
             FeatureQuery('statuses').get_query()
-        ),
+        ).order_by('app_label', 'model'),
         label='Content type(s)',
         required=False,
     )
