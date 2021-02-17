@@ -5,7 +5,7 @@ from django.db.models import Q
 from netaddr.core import AddrFormatError
 
 from dcim.models import Device, Interface, Region, Site
-from extras.filters import CustomFieldModelFilterSet, CreatedUpdatedFilterSet
+from extras.filters import CustomFieldModelFilterSet, CreatedUpdatedFilterSet, StatusModelFilterSetMixin
 from tenancy.filters import TenancyFilterSet
 from utilities.filters import (
     BaseFilterSet, MultiValueCharFilter, MultiValueNumberFilter, NameSlugSearchFilterSet, NumericArrayFilter, TagFilter,
@@ -183,7 +183,13 @@ class RoleFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldModelFilt
         fields = ['id', 'name', 'slug']
 
 
-class PrefixFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class PrefixFilterSet(
+    BaseFilterSet,
+    TenancyFilterSet,
+    StatusModelFilterSetMixin,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet
+):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
@@ -281,10 +287,6 @@ class PrefixFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet
         queryset=Role.objects.all(),
         to_field_name='slug',
         label='Role (slug)',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=PrefixStatusChoices,
-        null_value=None
     )
     tag = TagFilter()
 

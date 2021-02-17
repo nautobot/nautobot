@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
+from extras.models import Status
 from ipam.choices import *
 from ipam.filters import *
 from ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, RouteTarget, Service, VLAN, VLANGroup, VRF
@@ -366,16 +367,19 @@ class PrefixTestCase(TestCase):
             Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
 
-        Prefix.objects.create(prefix='10.0.0.0/24', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True),
-        Prefix.objects.create(prefix='10.0.1.0/24', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0]),
-        Prefix.objects.create(prefix='10.0.2.0/24', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=PrefixStatusChoices.STATUS_DEPRECATED),
-        Prefix.objects.create(prefix='10.0.3.0/24', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=PrefixStatusChoices.STATUS_RESERVED),
-        Prefix.objects.create(prefix='2001:db8::/64', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True),
-        Prefix.objects.create(prefix='2001:db8:0:1::/64', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0]),
-        Prefix.objects.create(prefix='2001:db8:0:2::/64', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=PrefixStatusChoices.STATUS_DEPRECATED),
-        Prefix.objects.create(prefix='2001:db8:0:3::/64', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=PrefixStatusChoices.STATUS_RESERVED),
-        Prefix.objects.create(prefix='10.0.0.0/16'),
-        Prefix.objects.create(prefix='2001:db8::/32'),
+        statuses = Status.objects.get_for_model(Prefix)
+        status_map = {s.name: s for s in statuses.all()}
+
+        Prefix.objects.create(prefix='10.0.0.0/24', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True, status=status_map['active'])
+        Prefix.objects.create(prefix='10.0.1.0/24', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0], status=status_map['active']),
+        Prefix.objects.create(prefix='10.0.2.0/24', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=status_map['deprecated']),
+        Prefix.objects.create(prefix='10.0.3.0/24', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=status_map['reserved']),
+        Prefix.objects.create(prefix='2001:db8::/64', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True, status=status_map['active']),
+        Prefix.objects.create(prefix='2001:db8:0:1::/64', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0], status=status_map['active']),
+        Prefix.objects.create(prefix='2001:db8:0:2::/64', tenant=tenants[1], site=sites[1], vrf=vrfs[1], vlan=vlans[1], role=roles[1], status=status_map['deprecated']),
+        Prefix.objects.create(prefix='2001:db8:0:3::/64', tenant=tenants[2], site=sites[2], vrf=vrfs[2], vlan=vlans[2], role=roles[2], status=status_map['reserved']),
+        Prefix.objects.create(prefix='10.0.0.0/16', status=status_map['active']),
+        Prefix.objects.create(prefix='2001:db8::/32', status=status_map['active']),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -454,7 +458,8 @@ class PrefixTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        params = {'status': [PrefixStatusChoices.STATUS_DEPRECATED, PrefixStatusChoices.STATUS_RESERVED]}
+        statuses = Status.objects.get_for_model(Prefix)
+        params = {'status': [statuses.get(name='deprecated').name, statuses.get(name='reserved').name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_tenant(self):

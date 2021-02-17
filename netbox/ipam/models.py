@@ -8,10 +8,19 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F
 from django.urls import reverse
+from django.utils.functional import classproperty
 from taggit.managers import TaggableManager
 
 from dcim.models import Device, Interface
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
+from extras.models import (
+    ChangeLoggedModel,
+    CustomFieldModel,
+    ObjectChange,
+    RelationshipModel,
+    Status,
+    StatusModel,
+    TaggedItem
+)
 from extras.utils import extras_features
 from utilities.querysets import RestrictedQuerySet
 from utilities.utils import array_to_string, serialize_object
@@ -403,9 +412,10 @@ class Role(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks'
 )
-class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length. Prefixes can optionally be assigned to Sites and
     VRFs. A Prefix must be assigned a status and may optionally be assigned a used-define Role. A Prefix can also be
@@ -444,13 +454,6 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         null=True,
         verbose_name='VLAN'
     )
-    status = models.CharField(
-        max_length=50,
-        choices=PrefixStatusChoices,
-        default=PrefixStatusChoices.STATUS_ACTIVE,
-        verbose_name='Status',
-        help_text='Operational status of this prefix'
-    )
     role = models.ForeignKey(
         to='ipam.Role',
         on_delete=models.SET_NULL,
@@ -488,6 +491,13 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
 
     def get_absolute_url(self):
         return reverse('ipam:prefix', args=[self.pk])
+
+    @classproperty
+    def STATUS_CONTAINER(cls):
+        """Return a cached "container" `Status` object for later reference."""
+        if getattr(cls, '__status_container', None) is None:
+            cls.__status_container = Status.objects.get_for_model(Prefix).get(name='container')
+        return cls.__status_container
 
     def clean(self):
         super().clean()
@@ -559,9 +569,6 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
             self.prefix.prefixlen = value
     prefix_length = property(fset=_set_prefix_length)
 
-    def get_status_class(self):
-        return PrefixStatusChoices.CSS_CLASSES.get(self.status)
-
     def get_duplicates(self):
         return Prefix.objects.filter(vrf=self.vrf, prefix=str(self.prefix)).exclude(pk=self.pk)
 
@@ -570,7 +577,7 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
         Prefixes belonging to any VRF.
         """
-        if self.vrf is None and self.status == PrefixStatusChoices.STATUS_CONTAINER:
+        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
             return Prefix.objects.filter(prefix__net_contained=str(self.prefix))
         else:
             return Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
@@ -580,7 +587,7 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         Return all IPAddresses within this Prefix and VRF. If this Prefix is a container in the global table, return
         child IPAddresses belonging to any VRF.
         """
-        if self.vrf is None and self.status == PrefixStatusChoices.STATUS_CONTAINER:
+        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
             return IPAddress.objects.filter(address__net_host_contained=str(self.prefix))
         else:
             return IPAddress.objects.filter(address__net_host_contained=str(self.prefix), vrf=self.vrf)
@@ -646,7 +653,7 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         Determine the utilization of the prefix and return it as a percentage. For Prefixes with a status of
         "container", calculate utilization based on child prefixes. For all others, count child IP addresses.
         """
-        if self.status == PrefixStatusChoices.STATUS_CONTAINER:
+        if self.status == Prefix.STATUS_CONTAINER:
             queryset = Prefix.objects.filter(
                 prefix__net_contained=str(self.prefix),
                 vrf=self.vrf

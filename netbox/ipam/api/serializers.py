@@ -7,7 +7,7 @@ from rest_framework.validators import UniqueTogetherValidator
 
 from dcim.api.nested_serializers import NestedDeviceSerializer, NestedSiteSerializer
 from extras.api.customfields import CustomFieldModelSerializer
-from extras.api.serializers import TaggedObjectSerializer
+from extras.api.serializers import StatusModelSerializerMixin, TaggedObjectSerializer
 from ipam.choices import *
 from ipam.constants import IPADDRESS_ASSIGNMENT_MODELS
 from ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, RouteTarget, Service, VLAN, VLANGroup, VRF
@@ -173,14 +173,13 @@ class VLANSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 # Prefixes
 #
 
-class PrefixSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='ipam-api:prefix-detail')
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     site = NestedSiteSerializer(required=False, allow_null=True)
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
-    status = ChoiceField(choices=PrefixStatusChoices, required=False)
     role = NestedRoleSerializer(required=False, allow_null=True)
 
     class Meta:

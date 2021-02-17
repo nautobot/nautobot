@@ -2,8 +2,15 @@ from django import forms
 
 from dcim.models import Device, Interface, Rack, Region, Site
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldModelCSVForm, CustomFieldModelForm,
-    RelationshipModelForm, CustomFieldFilterForm,
+    AddRemoveTagsForm,
+    CustomFieldBulkEditForm,
+    CustomFieldFilterForm,
+    CustomFieldModelCSVForm,
+    CustomFieldModelForm,
+    RelationshipModelForm,
+    StatusBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusFilterFormMixin,
 )
 from extras.models import Tag
 from tenancy.forms import TenancyFilterForm, TenancyForm
@@ -406,9 +413,6 @@ class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
             'prefix', 'vrf', 'site', 'vlan', 'status', 'role', 'is_pool', 'description', 'tenant_group', 'tenant',
             'tags',
         ]
-        widgets = {
-            'status': StaticSelect2(),
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -416,7 +420,7 @@ class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         self.fields['vrf'].empty_label = 'Global'
 
 
-class PrefixCSVForm(CustomFieldModelCSVForm):
+class PrefixCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name='name',
@@ -447,10 +451,6 @@ class PrefixCSVForm(CustomFieldModelCSVForm):
         to_field_name='vid',
         help_text="Assigned VLAN"
     )
-    status = CSVChoiceField(
-        choices=PrefixStatusChoices,
-        help_text='Operational status'
-    )
     role = CSVModelChoiceField(
         queryset=Role.objects.all(),
         required=False,
@@ -475,7 +475,12 @@ class PrefixCSVForm(CustomFieldModelCSVForm):
             self.fields['vlan'].queryset = self.fields['vlan'].queryset.filter(**params)
 
 
-class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class PrefixBulkEditForm(
+    BootstrapMixin,
+    AddRemoveTagsForm,
+    StatusBulkEditFormMixin,
+    CustomFieldBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         widget=forms.MultipleHiddenInput()
@@ -507,11 +512,6 @@ class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditF
         queryset=Tenant.objects.all(),
         required=False
     )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(PrefixStatusChoices),
-        required=False,
-        widget=StaticSelect2()
-    )
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
         required=False
@@ -532,7 +532,7 @@ class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditF
         ]
 
 
-class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = Prefix
     field_order = [
         'q', 'within_include', 'family', 'mask_length', 'vrf_id', 'present_in_vrf_id', 'status', 'region', 'site',
@@ -576,11 +576,6 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm)
         queryset=VRF.objects.all(),
         required=False,
         label='Present in VRF'
-    )
-    status = forms.MultipleChoiceField(
-        choices=PrefixStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     region = DynamicModelMultipleChoiceField(
         queryset=Region.objects.all(),

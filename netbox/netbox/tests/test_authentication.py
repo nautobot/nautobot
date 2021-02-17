@@ -8,7 +8,7 @@ from netaddr import IPNetwork
 from rest_framework.test import APIClient
 
 from dcim.models import Site
-from ipam.choices import PrefixStatusChoices
+from extras.models import Status
 from ipam.models import Prefix
 from users.models import ObjectPermission, Token
 from utilities.testing import TestCase
@@ -183,18 +183,19 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         )
         Site.objects.bulk_create(cls.sites)
 
-        cls.prefixes = (
-            Prefix(prefix=IPNetwork('10.0.0.0/24'), site=cls.sites[0]),
-            Prefix(prefix=IPNetwork('10.0.1.0/24'), site=cls.sites[0]),
-            Prefix(prefix=IPNetwork('10.0.2.0/24'), site=cls.sites[0]),
-            Prefix(prefix=IPNetwork('10.0.3.0/24'), site=cls.sites[1]),
-            Prefix(prefix=IPNetwork('10.0.4.0/24'), site=cls.sites[1]),
-            Prefix(prefix=IPNetwork('10.0.5.0/24'), site=cls.sites[1]),
-            Prefix(prefix=IPNetwork('10.0.6.0/24'), site=cls.sites[2]),
-            Prefix(prefix=IPNetwork('10.0.7.0/24'), site=cls.sites[2]),
-            Prefix(prefix=IPNetwork('10.0.8.0/24'), site=cls.sites[2]),
-        )
-        Prefix.objects.bulk_create(cls.prefixes)
+        statuses = Status.objects.get_for_model(Prefix)
+
+        cls.prefixes = [
+            Prefix.objects.create(prefix=IPNetwork('10.0.0.0/24'), site=cls.sites[0], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.1.0/24'), site=cls.sites[0], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.2.0/24'), site=cls.sites[0], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.3.0/24'), site=cls.sites[1], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.4.0/24'), site=cls.sites[1], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.5.0/24'), site=cls.sites[1], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.6.0/24'), site=cls.sites[2], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.7.0/24'), site=cls.sites[2], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('10.0.8.0/24'), site=cls.sites[2], status=statuses[0]),
+        ]
 
     def setUp(self):
         """
@@ -261,6 +262,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         data = {
             'prefix': '10.0.9.0/24',
             'site': self.sites[1].pk,
+            'status': 'active',
         }
         initial_count = Prefix.objects.count()
 

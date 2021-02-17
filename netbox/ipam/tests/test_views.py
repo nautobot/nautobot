@@ -3,6 +3,7 @@ import datetime
 from netaddr import IPNetwork
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from extras.models import Status
 from ipam.choices import *
 from ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, RouteTarget, Service, VLAN, VLANGroup, VRF
 from tenancy.models import Tenant
@@ -199,9 +200,12 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Role.objects.create(name='Role 2', slug='role-2'),
         )
 
-        Prefix.objects.create(prefix=IPNetwork('10.1.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0])
-        Prefix.objects.create(prefix=IPNetwork('10.2.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0])
-        Prefix.objects.create(prefix=IPNetwork('10.3.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0])
+        statuses = Status.objects.get_for_model(Prefix)
+        status_reserved = statuses.get(name='reserved')
+
+        Prefix.objects.create(prefix=IPNetwork('10.1.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0], status=statuses[0])
+        Prefix.objects.create(prefix=IPNetwork('10.2.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0], status=statuses[0])
+        Prefix.objects.create(prefix=IPNetwork('10.3.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0], status=statuses[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -211,7 +215,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'vrf': vrfs[1].pk,
             'tenant': None,
             'vlan': None,
-            'status': PrefixStatusChoices.STATUS_RESERVED,
+            'status': status_reserved.pk,
             'role': roles[1].pk,
             'is_pool': True,
             'description': 'A new prefix',
@@ -229,7 +233,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'site': sites[1].pk,
             'vrf': vrfs[1].pk,
             'tenant': None,
-            'status': PrefixStatusChoices.STATUS_RESERVED,
+            'status': status_reserved.pk,
             'role': roles[1].pk,
             'is_pool': False,
             'description': 'New description',

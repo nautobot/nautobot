@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
-from extras.api.views import CustomFieldModelViewSet
+from extras.api.views import CustomFieldModelViewSet, StatusViewSetMixin
 from ipam import filters
 from ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, RouteTarget, Service, VLAN, VLANGroup, VRF
 from netbox.api.views import ModelViewSet
@@ -88,9 +88,15 @@ class RoleViewSet(CustomFieldModelViewSet):
 # Prefixes
 #
 
-class PrefixViewSet(CustomFieldModelViewSet):
+class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = Prefix.objects.prefetch_related(
-        'site', 'vrf__tenant', 'tenant', 'vlan', 'role', 'tags'
+        'role',
+        'site',
+        'status',
+        'tags',
+        'tenant',
+        'vlan',
+        'vrf__tenant',
     )
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet

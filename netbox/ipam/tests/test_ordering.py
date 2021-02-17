@@ -1,9 +1,9 @@
 from django.test import TestCase
+import netaddr
 
+from extras.models import Status
 from ipam.choices import IPAddressStatusChoices, PrefixStatusChoices
 from ipam.models import IPAddress, Prefix, VRF
-
-import netaddr
 
 
 class OrderingTestBase(TestCase):
@@ -18,6 +18,9 @@ class OrderingTestBase(TestCase):
             VRF.objects.create(name="VRF B"),
             VRF.objects.create(name="VRF C"),
         )
+
+        self.statuses = Status.objects.get_for_model(Prefix)
+        self.status_active = self.statuses.get(name='active')
 
     def _compare(self, queryset, objectset):
         """
@@ -45,45 +48,45 @@ class PrefixOrderingTestCase(OrderingTestBase):
 
         # Setup Prefixes
         prefixes = (
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_CONTAINER, vrf=None, prefix=netaddr.IPNetwork('192.168.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('192.168.0.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('192.168.1.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('192.168.2.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('192.168.3.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('192.168.4.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('192.168.5.0/24')),
+            Prefix.objects.create(status=Prefix.STATUS_CONTAINER, vrf=None, prefix=netaddr.IPNetwork('192.168.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('192.168.0.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('192.168.1.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('192.168.2.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('192.168.3.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('192.168.4.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('192.168.5.0/24')),
 
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/8')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.1.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.2.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.3.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.4.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.1.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.2.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.3.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.4.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.1.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.2.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.3.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.4.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/8')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.1.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.2.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.3.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.4.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.1.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.2.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.3.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.4.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.1.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.2.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.3.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.2.4.0/24')),
 
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_CONTAINER, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.0.0/12')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_CONTAINER, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.0.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.1.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.2.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.3.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.4.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_CONTAINER, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.0.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.1.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.2.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.3.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.4.0/24')),
+            Prefix.objects.create(status=Prefix.STATUS_CONTAINER, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.0.0/12')),
+            Prefix.objects.create(status=Prefix.STATUS_CONTAINER, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.0.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.1.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.2.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.3.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.16.4.0/24')),
+            Prefix.objects.create(status=Prefix.STATUS_CONTAINER, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.0.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.1.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.2.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.3.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfb, prefix=netaddr.IPNetwork('172.17.4.0/24')),
         )
 
         # Test
@@ -110,15 +113,15 @@ class PrefixOrderingTestCase(OrderingTestBase):
 
         # Setup Prefixes
         prefixes = [
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_CONTAINER, vrf=None, prefix=netaddr.IPNetwork('10.0.0.0/8')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_CONTAINER, vrf=None, prefix=netaddr.IPNetwork('10.0.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('10.1.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=None, prefix=netaddr.IPNetwork('192.168.0.0/16')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.1.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.1.0/25')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.0.0/24')),
-            Prefix.objects.create(status=PrefixStatusChoices.STATUS_ACTIVE, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.1.0/24')),
+            Prefix.objects.create(status=Prefix.STATUS_CONTAINER, vrf=None, prefix=netaddr.IPNetwork('10.0.0.0/8')),
+            Prefix.objects.create(status=Prefix.STATUS_CONTAINER, vrf=None, prefix=netaddr.IPNetwork('10.0.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('10.1.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=None, prefix=netaddr.IPNetwork('192.168.0.0/16')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.0.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.1.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.0.1.0/25')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.0.0/24')),
+            Prefix.objects.create(status=self.status_active, vrf=vrfa, prefix=netaddr.IPNetwork('10.1.1.0/24')),
         ]
 
         # Test

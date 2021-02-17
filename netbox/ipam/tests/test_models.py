@@ -2,7 +2,8 @@ import netaddr
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 
-from ipam.choices import IPAddressRoleChoices, PrefixStatusChoices
+from extras.models import Status
+from ipam.choices import IPAddressRoleChoices
 from ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
 
 
@@ -37,6 +38,10 @@ class TestAggregate(TestCase):
 
 class TestPrefix(TestCase):
 
+    def setUp(self):
+        super().setUp()
+        self.statuses = Status.objects.get_for_model(Prefix)
+
     def test_get_duplicates(self):
         prefixes = (
             Prefix.objects.create(prefix=netaddr.IPNetwork('192.0.2.0/24')),
@@ -54,7 +59,7 @@ class TestPrefix(TestCase):
             VRF.objects.create(name='VRF 3'),
         )
         prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.0.0/16'), status=PrefixStatusChoices.STATUS_CONTAINER),
+            Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.0.0/16'), status=Prefix.STATUS_CONTAINER),
             Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.0.0/24'), vrf=None),
             Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.1.0/24'), vrf=vrfs[0]),
             Prefix.objects.create(prefix=netaddr.IPNetwork('10.0.2.0/24'), vrf=vrfs[1]),
@@ -79,7 +84,7 @@ class TestPrefix(TestCase):
             VRF.objects.create(name='VRF 3'),
         )
         parent_prefix = Prefix.objects.create(
-            prefix=netaddr.IPNetwork('10.0.0.0/16'), status=PrefixStatusChoices.STATUS_CONTAINER
+            prefix=netaddr.IPNetwork('10.0.0.0/16'), status=Prefix.STATUS_CONTAINER
         )
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork('10.0.0.1/24'), vrf=None),
@@ -173,7 +178,7 @@ class TestPrefix(TestCase):
         # Container Prefix
         prefix = Prefix.objects.create(
             prefix=netaddr.IPNetwork('10.0.0.0/24'),
-            status=PrefixStatusChoices.STATUS_CONTAINER
+            status=Prefix.STATUS_CONTAINER
         )
         Prefix.objects.bulk_create((
             Prefix(prefix=netaddr.IPNetwork('10.0.0.0/26')),
@@ -182,7 +187,7 @@ class TestPrefix(TestCase):
         self.assertEqual(prefix.get_utilization(), 50)
 
         # Non-container Prefix
-        prefix.status = PrefixStatusChoices.STATUS_ACTIVE
+        prefix.status = self.statuses.get(name='active')
         prefix.save()
         IPAddress.objects.bulk_create(
             # Create 32 IPAddresses within the Prefix

@@ -564,7 +564,7 @@ class StatusTestCase(TestCase):
         # imported by way of `extras.management.create_custom_statuses`. If as
         # these objects are imported, and this test fails, this number will need
         # to be adjusted.
-        expected_count = 2
+        expected_count = 3
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
 
     def test_search(self):

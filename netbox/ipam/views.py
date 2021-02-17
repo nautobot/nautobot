@@ -380,7 +380,14 @@ class PrefixListView(generic.ObjectListView):
 
 
 class PrefixView(generic.ObjectView):
-    queryset = Prefix.objects.prefetch_related('vrf', 'site__region', 'tenant__group', 'vlan__group', 'role')
+    queryset = Prefix.objects.prefetch_related(
+        'role',
+        'site__region',
+        'status',
+        'tenant__group',
+        'vlan__group',
+        'vrf',
+    )
 
     def get_extra_context(self, request, instance):
         try:
@@ -396,7 +403,7 @@ class PrefixView(generic.ObjectView):
         ).filter(
             prefix__net_contains=str(instance.prefix)
         ).prefetch_related(
-            'site', 'role'
+            'site', 'status', 'role'
         ).annotate_tree()
         parent_prefix_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
         parent_prefix_table.exclude = ('vrf',)
@@ -407,7 +414,7 @@ class PrefixView(generic.ObjectView):
         ).exclude(
             pk=instance.pk
         ).prefetch_related(
-            'site', 'role'
+            'site', 'status', 'role'
         )
         duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes), orderable=False)
         duplicate_prefix_table.exclude = ('vrf',)
@@ -426,7 +433,7 @@ class PrefixPrefixesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Child prefixes table
         child_prefixes = instance.get_child_prefixes().restrict(request.user, 'view').prefetch_related(
-            'site', 'vlan', 'role',
+            'site', 'status', 'vlan', 'role',
         ).annotate_tree()
 
         # Add available prefixes to the table if requested
@@ -523,14 +530,14 @@ class PrefixBulkImportView(generic.BulkImportView):
 
 
 class PrefixBulkEditView(generic.BulkEditView):
-    queryset = Prefix.objects.prefetch_related('site', 'vrf__tenant', 'tenant', 'vlan', 'role')
+    queryset = Prefix.objects.prefetch_related('site', 'status', 'vrf__tenant', 'tenant', 'vlan', 'role')
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
     form = forms.PrefixBulkEditForm
 
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
-    queryset = Prefix.objects.prefetch_related('site', 'vrf__tenant', 'tenant', 'vlan', 'role')
+    queryset = Prefix.objects.prefetch_related('site', 'status', 'vrf__tenant', 'tenant', 'vlan', 'role')
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
 

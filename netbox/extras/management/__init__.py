@@ -80,6 +80,7 @@ def create_custom_statuses(
     # Import libs we need so we can map it for object creation.
     from dcim import choices as dcim_choices
     from circuits import choices as circuit_choices
+    from ipam import choices as ipam_choices
 
     # List of 2-tuples of (model_path, choiceset)
     # Add new mappings here as other models are supported.
@@ -90,6 +91,7 @@ def create_custom_statuses(
         ("dcim.Cable", dcim_choices.CableStatusChoices),
         ("dcim.PowerFeed", dcim_choices.PowerFeedStatusChoices),
         ("circuits.Circuit", circuit_choices.CircuitStatusChoices),
+        ("ipam.Prefix", ipam_choices.PrefixStatusChoices),
     ]
 
     # Iterate choiceset kwargs to create status objects if they don't exist

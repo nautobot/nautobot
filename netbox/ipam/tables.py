@@ -3,6 +3,7 @@ from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 
 from dcim.models import Interface
+from extras.tables import StatusTableMixin
 from tenancy.tables import COL_TENANT
 from utilities.tables import (
     BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, LinkedCountColumn, TagColumn, ToggleColumn,
@@ -267,14 +268,11 @@ class RoleTable(BaseTable):
 # Prefixes
 #
 
-class PrefixTable(BaseTable):
+class PrefixTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     prefix = tables.TemplateColumn(
         template_code=PREFIX_LINK,
         attrs={'td': {'class': 'text-nowrap'}}
-    )
-    status = ChoiceFieldColumn(
-        default=AVAILABLE_LABEL
     )
     vrf = tables.TemplateColumn(
         template_code=VRF_LINK,

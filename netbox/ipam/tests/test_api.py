@@ -5,6 +5,7 @@ from netaddr import IPNetwork
 from rest_framework import status
 
 from dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from extras.models import Status
 from ipam.choices import *
 from ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, RouteTarget, Service, VLAN, VLANGroup, VRF
 from utilities.testing import APITestCase, APIViewTestCases, disable_warnings
@@ -183,37 +184,56 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
     brief_fields = ['family', 'id', 'prefix', 'url']
+
     create_data = [
         {
             'prefix': '192.168.4.0/24',
+            'status': 'active',
         },
         {
             'prefix': '192.168.5.0/24',
+            'status': 'active',
         },
         {
             'prefix': '192.168.6.0/24',
+            'status': 'active',
         },
     ]
     bulk_update_data = {
         'description': 'New description',
     }
 
+    def setUp(self):
+        super().setUp()
+        self.statuses = Status.objects.get_for_model(Prefix)
+        self.status_active = self.statuses.get(name='active')
+
     @classmethod
     def setUpTestData(cls):
 
+        statuses = Status.objects.get_for_model(Prefix)
+
         prefixes = (
-            Prefix.objects.create(prefix=IPNetwork('192.168.1.0/24')),
-            Prefix.objects.create(prefix=IPNetwork('192.168.2.0/24')),
-            Prefix.objects.create(prefix=IPNetwork('192.168.3.0/24')),
+            Prefix.objects.create(prefix=IPNetwork('192.168.1.0/24'), status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('192.168.2.0/24'), status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork('192.168.3.0/24'), status=statuses[0]),
         )
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
 
     def test_list_available_prefixes(self):
         """
         Test retrieval of all available prefixes within a parent prefix.
         """
         prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/24'))
-        Prefix.objects.create(prefix=IPNetwork('192.0.2.64/26'))
-        Prefix.objects.create(prefix=IPNetwork('192.0.2.192/27'))
+        Prefix.objects.create(prefix=IPNetwork('192.0.2.64/26'), status=self.status_active)
+        Prefix.objects.create(prefix=IPNetwork('192.0.2.192/27'), status=self.status_active)
         url = reverse('ipam-api:prefix-available-prefixes', kwargs={'pk': prefix.pk})
         self.add_permissions('ipam.view_prefix')
 
@@ -228,7 +248,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of the first available prefix within a parent prefix.
         """
         vrf = VRF.objects.create(name='Test VRF 1', rd='1234')
-        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/28'), vrf=vrf, is_pool=True)
+        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/28'), vrf=vrf, is_pool=True, status=self.status_active)
         url = reverse('ipam-api:prefix-available-prefixes', kwargs={'pk': prefix.pk})
         self.add_permissions('ipam.add_prefix')
 
@@ -242,7 +262,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(4):
             data = {
                 'prefix_length': 30,
-                'description': 'Test Prefix {}'.format(i + 1)
+                'status': 'active',
+                'description': 'Test Prefix {}'.format(i + 1),
             }
             response = self.client.post(url, data, format='json', **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -270,11 +291,11 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
 
         # Try to create five /30s (only four are available)
         data = [
-            {'prefix_length': 30, 'description': 'Test Prefix 1'},
-            {'prefix_length': 30, 'description': 'Test Prefix 2'},
-            {'prefix_length': 30, 'description': 'Test Prefix 3'},
-            {'prefix_length': 30, 'description': 'Test Prefix 4'},
-            {'prefix_length': 30, 'description': 'Test Prefix 5'},
+            {'prefix_length': 30, 'description': 'Test Prefix 1', 'status': 'active'},
+            {'prefix_length': 30, 'description': 'Test Prefix 2', 'status': 'active'},
+            {'prefix_length': 30, 'description': 'Test Prefix 3', 'status': 'active'},
+            {'prefix_length': 30, 'description': 'Test Prefix 4', 'status': 'active'},
+            {'prefix_length': 30, 'description': 'Test Prefix 5', 'status': 'active'},
         ]
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
@@ -294,7 +315,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Test retrieval of all available IP addresses within a parent prefix.
         """
-        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/29'), is_pool=True)
+        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/29'), is_pool=True, status=self.status_active)
         url = reverse('ipam-api:prefix-available-ips', kwargs={'pk': prefix.pk})
         self.add_permissions('ipam.view_prefix', 'ipam.view_ipaddress')
 
@@ -313,7 +334,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of the first available IP address within a parent prefix.
         """
         vrf = VRF.objects.create(name='Test VRF 1', rd='1234')
-        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/30'), vrf=vrf, is_pool=True)
+        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/30'), vrf=vrf, is_pool=True, status=self.status_active)
         url = reverse('ipam-api:prefix-available-ips', kwargs={'pk': prefix.pk})
         self.add_permissions('ipam.view_prefix', 'ipam.add_ipaddress')
 
@@ -336,7 +357,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Test the creation of available IP addresses within a parent prefix.
         """
-        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/29'), is_pool=True)
+        prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/29'), is_pool=True, status=self.status_active)
         url = reverse('ipam-api:prefix-available-ips', kwargs={'pk': prefix.pk})
         self.add_permissions('ipam.view_prefix', 'ipam.add_ipaddress')
 
@@ -374,9 +395,9 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        IPAddress.objects.create(address=IPNetwork('192.168.0.1/24')),
-        IPAddress.objects.create(address=IPNetwork('192.168.0.2/24')),
-        IPAddress.objects.create(address=IPNetwork('192.168.0.3/24')),
+        IPAddress.objects.create(address=IPNetwork('192.168.0.1/24'))
+        IPAddress.objects.create(address=IPNetwork('192.168.0.2/24'))
+        IPAddress.objects.create(address=IPNetwork('192.168.0.3/24'))
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
