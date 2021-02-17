@@ -724,9 +724,9 @@
                 </li>
             {% endif %}
 
-            {% if perms.extras.view_objectchange or perms.extras.view_gitrepository or perms.extras.view_configcontext or perms.extras.view_relationship or perms.extras.view_job or not settings.HIDE_RESTRICTED_UI %}
+            {% if perms.extras.view_objectchange or perms.extras.view_jobresult or perms.extras.view_gitrepository or perms.extras.view_relationship or perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Other <span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extensibility <span class="caret"></span></a>
                     <ul class="dropdown-menu">
                 {% if perms.extras.view_objectchange or perms.extras.view_jobresult or not settings.HIDE_RESTRICTED_UI %}
                         <li class="dropdown-header">Logging</li>
@@ -757,21 +757,9 @@
                         </li>
                 {% endif %}
 
-                {% if perms.extras.view_configcontext or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_exporttemplate or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+                {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
                         <li class="divider"></li>
-                        <li class="dropdown-header">Miscellaneous</li>
-
-                    {% if perms.extras.view_configcontext or not settings.HIDE_RESTRICTED_UI %}
-                        <li{% if not perms.extras.view_configcontext %} class="disabled"{% endif %}>
-                            {% if perms.extras.add_configcontext %}
-                                <div class="buttons pull-right">
-                                    <a href="{% url 'extras:configcontext_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
-                                </div>
-                            {% endif %}
-                            <a href="{% url 'extras:configcontext_list' %}">Config Contexts</a>
-                        </li>
-                    {% endif %}
-
+                        <li class="dropdown-header">Data Management</li>
                     {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
                         <li{% if not perms.extras.view_relationship %} class="disabled"{% endif %}>
                             {% if perms.extras.add_relationship %}
@@ -782,10 +770,19 @@
                             <a href="{% url 'extras:relationship_list' %}">Relationships</a>
                         </li>
                     {% endif %}
+                {% endif %}
 
-                    {% if perms.extras.view_job or not settings.HIDE_RESTRICTED_UI %}
-                        <li{% if not perms.extras.view_job %} class="disabled"{% endif %}>
-                            <a href="{% url 'extras:job_list' %}">Jobs</a>
+                {% if perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Automation</li>
+                    {% if perms.extras.view_configcontext or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_configcontext %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_configcontext %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:configcontext_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:configcontext_list' %}">Config Contexts</a>
                         </li>
                     {% endif %}
                     {% if perms.extras.view_exporttemplate or not settings.HIDE_RESTRICTED_UI %}
@@ -798,14 +795,9 @@
                             <a href="{% url 'extras:exporttemplate_list' %}">Export Templates</a>
                         </li>
                     {% endif %}
-                    {% if perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
-                        <li{% if not perms.extras.view_customlink %} class="disabled"{% endif %}>
-                            {% if perms.extras.add_customlink %}
-                                <div class="buttons pull-right">
-                                    <a href="{% url 'extras:customlink_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
-                                </div>
-                            {% endif %}
-                            <a href="{% url 'extras:customlink_list' %}">Custom Links</a>
+                    {% if perms.extras.view_job or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_job %} class="disabled"{% endif %}>
+                            <a href="{% url 'extras:job_list' %}">Jobs</a>
                         </li>
                     {% endif %}
                     {% if perms.extras.view_webhook or not settings.HIDE_RESTRICTED_UI %}
@@ -816,6 +808,22 @@
                                 </div>
                             {% endif %}
                             <a href="{% url 'extras:webhook_list' %}">Webhooks</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Miscellaneous</li>
+
+                    {% if perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_customlink %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_customlink %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:customlink_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:customlink_list' %}">Custom Links</a>
                         </li>
                     {% endif %}
                 {% endif %}
