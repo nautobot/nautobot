@@ -98,8 +98,9 @@
                 </tr>
 		    </table>
         </div>
-        {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='ipam:vrf_list' %}
         {% include 'inc/custom_fields_panel.html' %}
+        {% include 'inc/relationships_panel.html' %}
+        {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='ipam:vrf_list' %}
         {% plugin_left_page object %}
 	</div>
 	<div class="col-md-6">

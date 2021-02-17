@@ -30,12 +30,7 @@
             {% render_field form.tagged_vlans %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tags</strong></div>
-        <div class="panel-body">
-            {% render_field form.tags %}
-        </div>
-    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock %}
 
 {% block buttons %}

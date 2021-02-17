@@ -24,14 +24,7 @@
                     {% render_form form %}
                 </div>
             </div>
-            {% if model_form.custom_fields %}
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Custom Fields</strong></div>
-                    <div class="panel-body">
-                        {% render_custom_fields model_form %}
-                    </div>
-                </div>
-            {% endif %}
+            {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
             <div class="form-group">
                 <div class="col-md-9 col-md-offset-3">
                     <button type="submit" name="_create" class="btn btn-primary">Create</button>

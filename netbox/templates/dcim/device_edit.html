@@ -78,32 +78,11 @@
             {% render_field form.tenant %}
         </div>
     </div>
-    {% if form.custom_fields %}
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Custom Fields</strong></div>
-            <div class="panel-body">
-                {% render_custom_fields form %}
-            </div>
-        </div>
-    {% endif %}
-    {% if form.relationships %}
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Relationships</strong></div>
-            <div class="panel-body">
-                {% render_relationships form %}
-            </div>
-        </div>
-    {% endif %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Local Config Context Data</strong></div>
         <div class="panel-body">
             {% render_field form.local_context_data %}
-        </div>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tags</strong></div>
-        <div class="panel-body">
-            {% render_field form.tags %}
         </div>
     </div>
     <div class="panel panel-default">

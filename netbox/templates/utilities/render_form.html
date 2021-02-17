@@ -5,6 +5,8 @@
 {% endfor %}
 {% for field in form.visible_fields %}
     {% if not form.custom_fields or field.name not in form.custom_fields %}
-        {% render_field field %}
+        {% if field.name != 'tags' %}
+            {% render_field field %}
+        {% endif %}
     {% endif %}
 {% endfor %}
