@@ -7,8 +7,13 @@ from taggit.managers import TaggableManager
 
 from dcim.models import BaseInterface, Device
 from extras.models import (
-    ChangeLoggedModel, ConfigContextModel, CustomFieldModel, ObjectChange,
-    RelationshipModel, TaggedItem
+    ChangeLoggedModel,
+    ConfigContextModel,
+    CustomFieldModel,
+    ObjectChange,
+    RelationshipModel,
+    StatusModel,
+    TaggedItem,
 )
 from extras.querysets import ConfigContextModelQuerySet
 from extras.utils import extras_features
@@ -228,9 +233,10 @@ class Cluster(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks',
 )
-class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, RelationshipModel):
+class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     A virtual machine which runs inside a Cluster.
     """
@@ -255,12 +261,6 @@ class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, Re
     )
     name = models.CharField(
         max_length=64
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=VirtualMachineStatusChoices,
-        default=VirtualMachineStatusChoices.STATUS_ACTIVE,
-        verbose_name='Status'
     )
     role = models.ForeignKey(
         to='dcim.DeviceRole',
@@ -371,9 +371,6 @@ class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, Re
             self.disk,
             self.comments,
         )
-
-    def get_status_class(self):
-        return VirtualMachineStatusChoices.CSS_CLASSES.get(self.status)
 
     @property
     def primary_ip(self):

@@ -2,6 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from dcim.choices import InterfaceModeChoices
+from extras.models import Status
 from ipam.models import VLAN
 from utilities.testing import APITestCase, APIViewTestCases
 from virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -147,25 +148,37 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         )
         Cluster.objects.bulk_create(clusters)
 
+        statuses = Status.objects.get_for_model(VirtualMachine)
+
         virtual_machines = (
-            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], local_context_data={'A': 1}),
-            VirtualMachine(name='Virtual Machine 2', cluster=clusters[0], local_context_data={'B': 2}),
-            VirtualMachine(name='Virtual Machine 3', cluster=clusters[0], local_context_data={'C': 3}),
+            VirtualMachine.objects.create(name='Virtual Machine 1', cluster=clusters[0], local_context_data={'A': 1}, status=statuses[0]),
+            VirtualMachine.objects.create(name='Virtual Machine 2', cluster=clusters[0], local_context_data={'B': 2}, status=statuses[0]),
+            VirtualMachine.objects.create(name='Virtual Machine 3', cluster=clusters[0], local_context_data={'C': 3}, status=statuses[0]),
         )
-        VirtualMachine.objects.bulk_create(virtual_machines)
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
 
         cls.create_data = [
             {
                 'name': 'Virtual Machine 4',
                 'cluster': clusters[1].pk,
+                'status': 'active',
             },
             {
                 'name': 'Virtual Machine 5',
                 'cluster': clusters[1].pk,
+                'status': 'active',
             },
             {
                 'name': 'Virtual Machine 6',
                 'cluster': clusters[1].pk,
+                'status': 'active',
             },
         ]
 
@@ -197,6 +210,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         data = {
             'name': 'Virtual Machine 1',
             'cluster': Cluster.objects.first().pk,
+            'status': 'active',
         }
         url = reverse('virtualization-api:virtualmachine-list')
         self.add_permissions('virtualization.add_virtualmachine')

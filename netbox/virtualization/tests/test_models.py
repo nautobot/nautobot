@@ -1,28 +1,33 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from virtualization.models import *
+from extras.models import Status
 from tenancy.models import Tenant
+from virtualization.models import *
 
 
 class VirtualMachineTestCase(TestCase):
 
     def setUp(self):
+        statuses = Status.objects.get_for_model(VirtualMachine)
 
         cluster_type = ClusterType.objects.create(name='Test Cluster Type 1', slug='Test Cluster Type 1')
         self.cluster = Cluster.objects.create(name='Test Cluster 1', type=cluster_type)
+        self.status = statuses.get(name='active')
 
     def test_vm_duplicate_name_per_cluster(self):
 
         vm1 = VirtualMachine(
             cluster=self.cluster,
-            name='Test VM 1'
+            name='Test VM 1',
+            status=self.status,
         )
         vm1.save()
 
         vm2 = VirtualMachine(
             cluster=vm1.cluster,
-            name=vm1.name
+            name=vm1.name,
+            status=self.status,
         )
 
         # Two VMs assigned to the same Cluster and no Tenant should fail validation

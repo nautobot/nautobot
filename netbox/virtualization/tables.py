@@ -1,6 +1,7 @@
 import django_tables2 as tables
 
 from dcim.tables.devices import BaseInterfaceTable
+from extras.tables import StatusTableMixin
 from tenancy.tables import COL_TENANT
 from utilities.tables import (
     BaseTable, ButtonsColumn, ChoiceFieldColumn, ColoredLabelColumn, LinkedCountColumn, TagColumn, ToggleColumn,
@@ -105,10 +106,9 @@ class ClusterTable(BaseTable):
 # Virtual machines
 #
 
-class VirtualMachineTable(BaseTable):
+class VirtualMachineTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    status = ChoiceFieldColumn()
     cluster = tables.Column(
         linkify=True
     )

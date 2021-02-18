@@ -7,8 +7,15 @@ from dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
 from extras.forms import (
-    AddRemoveTagsForm, CustomFieldBulkEditForm, CustomFieldModelCSVForm, CustomFieldModelForm,
-    RelationshipModelForm, CustomFieldFilterForm,
+    AddRemoveTagsForm,
+    CustomFieldBulkEditForm,
+    CustomFieldFilterForm,
+    CustomFieldModelCSVForm,
+    CustomFieldModelForm,
+    RelationshipModelForm,
+    StatusBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusFilterFormMixin,
 )
 from extras.models import Tag
 from ipam.models import IPAddress, VLAN
@@ -327,7 +334,6 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
                                   "config context",
         }
         widgets = {
-            "status": StaticSelect2(),
             'primary_ip4': StaticSelect2(),
             'primary_ip6': StaticSelect2(),
         }
@@ -373,12 +379,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
             self.fields['primary_ip6'].widget.attrs['readonly'] = True
 
 
-class VirtualMachineCSVForm(CustomFieldModelCSVForm):
-    status = CSVChoiceField(
-        choices=VirtualMachineStatusChoices,
-        required=False,
-        help_text='Operational status of device'
-    )
+class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     cluster = CSVModelChoiceField(
         queryset=Cluster.objects.all(),
         to_field_name='name',
@@ -410,16 +411,10 @@ class VirtualMachineCSVForm(CustomFieldModelCSVForm):
         fields = VirtualMachine.csv_headers
 
 
-class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=VirtualMachine.objects.all(),
         widget=forms.MultipleHiddenInput()
-    )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(VirtualMachineStatusChoices),
-        required=False,
-        initial='',
-        widget=StaticSelect2(),
     )
     cluster = DynamicModelChoiceField(
         queryset=Cluster.objects.all(),
@@ -465,7 +460,7 @@ class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldB
         ]
 
 
-class VirtualMachineFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class VirtualMachineFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = VirtualMachine
     field_order = [
         'q', 'cluster_group', 'cluster_type', 'cluster_id', 'status', 'role', 'region', 'site', 'tenant_group',
@@ -514,11 +509,6 @@ class VirtualMachineFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFil
         query_params={
             'vm_role': "True"
         }
-    )
-    status = forms.MultipleChoiceField(
-        choices=VirtualMachineStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     platform = DynamicModelMultipleChoiceField(
         queryset=Platform.objects.all(),

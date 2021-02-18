@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from dcim.models import DeviceRole, Platform, Region, Site
+from extras.models import Status
 from ipam.models import IPAddress
 from tenancy.models import Tenant, TenantGroup
 from virtualization.choices import *
@@ -253,10 +254,13 @@ class VirtualMachineTestCase(TestCase):
         )
         Tenant.objects.bulk_create(tenants)
 
+        statuses = Status.objects.get_for_model(VirtualMachine)
+        status_map = {s.name: s for s in statuses.all()}
+
         vms = (
-            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], platform=platforms[0], role=roles[0], tenant=tenants[0], status=VirtualMachineStatusChoices.STATUS_ACTIVE, vcpus=1, memory=1, disk=1, local_context_data={"foo": 123}),
-            VirtualMachine(name='Virtual Machine 2', cluster=clusters[1], platform=platforms[1], role=roles[1], tenant=tenants[1], status=VirtualMachineStatusChoices.STATUS_STAGED, vcpus=2, memory=2, disk=2),
-            VirtualMachine(name='Virtual Machine 3', cluster=clusters[2], platform=platforms[2], role=roles[2], tenant=tenants[2], status=VirtualMachineStatusChoices.STATUS_OFFLINE, vcpus=3, memory=3, disk=3),
+            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], platform=platforms[0], role=roles[0], tenant=tenants[0], status=status_map['active'], vcpus=1, memory=1, disk=1, local_context_data={"foo": 123}),
+            VirtualMachine(name='Virtual Machine 2', cluster=clusters[1], platform=platforms[1], role=roles[1], tenant=tenants[1], status=status_map['staged'], vcpus=2, memory=2, disk=2),
+            VirtualMachine(name='Virtual Machine 3', cluster=clusters[2], platform=platforms[2], role=roles[2], tenant=tenants[2], status=status_map['offline'], vcpus=3, memory=3, disk=3),
         )
         VirtualMachine.objects.bulk_create(vms)
 
@@ -297,7 +301,7 @@ class VirtualMachineTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {'status': [VirtualMachineStatusChoices.STATUS_ACTIVE, VirtualMachineStatusChoices.STATUS_STAGED]}
+        params = {'status': ['active', 'staged']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_cluster_group(self):

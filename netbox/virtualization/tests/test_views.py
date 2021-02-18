@@ -2,6 +2,7 @@ from netaddr import EUI
 
 from dcim.choices import InterfaceModeChoices
 from dcim.models import DeviceRole, Platform, Site
+from extras.models import Status
 from ipam.models import VLAN
 from utilities.testing import ViewTestCases
 from virtualization.choices import *
@@ -144,10 +145,13 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         Cluster.objects.bulk_create(clusters)
 
+        statuses = Status.objects.get_for_model(VirtualMachine)
+        status_staged = statuses.get(name='staged')
+
         VirtualMachine.objects.bulk_create([
-            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], role=deviceroles[0], platform=platforms[0]),
-            VirtualMachine(name='Virtual Machine 2', cluster=clusters[0], role=deviceroles[0], platform=platforms[0]),
-            VirtualMachine(name='Virtual Machine 3', cluster=clusters[0], role=deviceroles[0], platform=platforms[0]),
+            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0]),
+            VirtualMachine(name='Virtual Machine 2', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0]),
+            VirtualMachine(name='Virtual Machine 3', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0]),
         ])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
@@ -157,7 +161,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'tenant': None,
             'platform': platforms[1].pk,
             'name': 'Virtual Machine X',
-            'status': VirtualMachineStatusChoices.STATUS_STAGED,
+            'status': status_staged.pk,
             'role': deviceroles[1].pk,
             'primary_ip4': None,
             'primary_ip6': None,
@@ -170,17 +174,17 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,cluster",
-            "Virtual Machine 4,Cluster 1",
-            "Virtual Machine 5,Cluster 1",
-            "Virtual Machine 6,Cluster 1",
+            "name,cluster,status",
+            "Virtual Machine 4,Cluster 1,active",
+            "Virtual Machine 5,Cluster 1,active",
+            "Virtual Machine 6,Cluster 1,staged",
         )
 
         cls.bulk_edit_data = {
             'cluster': clusters[1].pk,
             'tenant': None,
             'platform': platforms[1].pk,
-            'status': VirtualMachineStatusChoices.STATUS_STAGED,
+            'status': status_staged.pk,
             'role': deviceroles[1].pk,
             'vcpus': 8,
             'memory': 65535,

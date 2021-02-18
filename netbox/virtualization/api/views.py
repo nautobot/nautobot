@@ -1,7 +1,7 @@
 from rest_framework.routers import APIRootView
 
 from dcim.models import Device
-from extras.api.views import ConfigContextQuerySetMixin, CustomFieldModelViewSet, ModelViewSet
+from extras.api.views import ConfigContextQuerySetMixin, CustomFieldModelViewSet, ModelViewSet, StatusViewSetMixin
 from utilities.utils import count_related
 from virtualization import filters
 from virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -51,9 +51,16 @@ class ClusterViewSet(CustomFieldModelViewSet):
 # Virtual machines
 #
 
-class VirtualMachineViewSet(ConfigContextQuerySetMixin, CustomFieldModelViewSet):
+class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = VirtualMachine.objects.prefetch_related(
-        'cluster__site', 'role', 'tenant', 'platform', 'primary_ip4', 'primary_ip6', 'tags'
+        'cluster__site',
+        'platform',
+        'primary_ip4',
+        'primary_ip6',
+        'status',
+        'role',
+        'tenant',
+        'tags',
     )
     filterset_class = filters.VirtualMachineFilterSet
 

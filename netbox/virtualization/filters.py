@@ -2,7 +2,12 @@ import django_filters
 from django.db.models import Q
 
 from dcim.models import DeviceRole, Platform, Region, Site
-from extras.filters import CustomFieldModelFilterSet, CreatedUpdatedFilterSet, LocalConfigContextFilterSet
+from extras.filters import (
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+    LocalConfigContextFilterSet,
+    StatusModelFilterSetMixin,
+)
 from tenancy.filters import TenancyFilterSet
 from utilities.filters import (
     BaseFilterSet, MultiValueMACAddressFilter, NameSlugSearchFilterSet, TagFilter,
@@ -106,16 +111,13 @@ class VirtualMachineFilterSet(
     BaseFilterSet,
     LocalConfigContextFilterSet,
     TenancyFilterSet,
+    StatusModelFilterSetMixin,
     CustomFieldModelFilterSet,
     CreatedUpdatedFilterSet
 ):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=VirtualMachineStatusChoices,
-        null_value=None
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name='cluster__group',

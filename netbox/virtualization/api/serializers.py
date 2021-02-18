@@ -4,7 +4,7 @@ from rest_framework import serializers
 from dcim.api.nested_serializers import NestedDeviceRoleSerializer, NestedPlatformSerializer, NestedSiteSerializer
 from dcim.choices import InterfaceModeChoices
 from extras.api.customfields import CustomFieldModelSerializer
-from extras.api.serializers import TaggedObjectSerializer
+from extras.api.serializers import StatusModelSerializerMixin, TaggedObjectSerializer
 from ipam.api.nested_serializers import NestedIPAddressSerializer, NestedVLANSerializer
 from ipam.models import VLAN
 from netbox.api import ChoiceField, SerializedPKRelatedField, ValidatedModelSerializer
@@ -63,9 +63,8 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 # Virtual machines
 #
 
-class VirtualMachineSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='virtualization-api:virtualmachine-detail')
-    status = ChoiceField(choices=VirtualMachineStatusChoices, required=False)
     site = NestedSiteSerializer(read_only=True)
     cluster = NestedClusterSerializer()
     role = NestedDeviceRoleSerializer(required=False, allow_null=True)

@@ -339,14 +339,14 @@ class VirtualMachineBulkImportView(generic.BulkImportView):
 
 
 class VirtualMachineBulkEditView(generic.BulkEditView):
-    queryset = VirtualMachine.objects.prefetch_related('cluster', 'tenant', 'role')
+    queryset = VirtualMachine.objects.prefetch_related('cluster', 'role', 'status', 'tenant')
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
     form = forms.VirtualMachineBulkEditForm
 
 
 class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
-    queryset = VirtualMachine.objects.prefetch_related('cluster', 'tenant', 'role')
+    queryset = VirtualMachine.objects.prefetch_related('cluster', 'role', 'status', 'tenant')
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
 
