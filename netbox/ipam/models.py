@@ -676,9 +676,10 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks'
 )
-class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -706,12 +707,6 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         related_name='ip_addresses',
         blank=True,
         null=True
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=IPAddressStatusChoices,
-        default=IPAddressStatusChoices.STATUS_ACTIVE,
-        help_text='The operational status of this IP'
     )
     role = models.CharField(
         max_length=50,
@@ -784,6 +779,13 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
             address__net_host=str(self.address.ip)
         ).exclude(pk=self.pk)
 
+    @classproperty
+    def STATUS_SLAAC(cls):
+        """Return a cached "slaac" `Status` object for later reference."""
+        if getattr(cls, '__status_slaac', None) is None:
+            cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(name='slaac')
+        return cls.__status_slaac
+
     def clean(self):
         super().clean()
 
@@ -826,7 +828,7 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
                     })
 
         # Validate IP status selection
-        if self.status == IPAddressStatusChoices.STATUS_SLAAC and self.family != 6:
+        if self.status == IPAddress.STATUS_SLAAC and self.family != 6:
             raise ValidationError({
                 'status': "Only IPv6 addresses can be assigned SLAAC status"
             })
@@ -888,9 +890,6 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         if self.address is not None:
             self.address.prefixlen = value
     mask_length = property(fset=_set_mask_length)
-
-    def get_status_class(self):
-        return IPAddressStatusChoices.CSS_CLASSES.get(self.status)
 
     def get_role_class(self):
         return IPAddressRoleChoices.CSS_CLASSES.get(self.role)

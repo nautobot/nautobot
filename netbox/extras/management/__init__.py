@@ -92,6 +92,7 @@ def create_custom_statuses(
         ("dcim.PowerFeed", dcim_choices.PowerFeedStatusChoices),
         ("circuits.Circuit", circuit_choices.CircuitStatusChoices),
         ("ipam.Prefix", ipam_choices.PrefixStatusChoices),
+        ("ipam.IPAddress", ipam_choices.IPAddressStatusChoices),
     ]
 
     # Iterate choiceset kwargs to create status objects if they don't exist
@@ -100,10 +101,9 @@ def create_custom_statuses(
         choices = export_statuses_from_choiceset(choiceset)
 
         for choice_kwargs in choices:
-            # TODO(jathan): I'm concerned that `color` value may differ between
-            # other enums. We'll need to make sure they are normalized in
-            # `export_statuses_from_choiceset` when we go to add `status` field
-            # for other object types.
+            # The value of `color` may differ between other enums. We'll need to
+            # make sure they are normalized in `export_statuses_from_choiceset`
+            # when we go to add `status` field for other object types.
             try:
                 obj, created = Status.objects.get_or_create(**choice_kwargs)
             # This will likely be a duplicate key violation due to a Status
@@ -119,8 +119,11 @@ def create_custom_statuses(
                     f'status for {model_path}: {err}'
                 )
 
-            # Make sure the content-type is associated.
-            obj.content_types.add(content_type)
-
             if created and verbosity >= 2:
                 print(f"Adding status {model_path} | {obj.name}")
+
+            # Make sure the content-type is associated.
+            if content_type not in obj.content_types.all():
+                if verbosity >= 2:
+                    print(f"Linking {model_path} to status {obj.name}")
+                obj.content_types.add(content_type)

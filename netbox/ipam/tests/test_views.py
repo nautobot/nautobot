@@ -251,9 +251,12 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             VRF.objects.create(name='VRF 2', rd='65000:2'),
         )
 
-        IPAddress.objects.create(address=IPNetwork('192.0.2.1/24'), vrf=vrfs[0]),
-        IPAddress.objects.create(address=IPNetwork('192.0.2.2/24'), vrf=vrfs[0]),
-        IPAddress.objects.create(address=IPNetwork('192.0.2.3/24'), vrf=vrfs[0]),
+        statuses = Status.objects.get_for_model(IPAddress)
+        status_reserved = statuses.get(name='reserved')
+
+        IPAddress.objects.create(address=IPNetwork('192.0.2.1/24'), vrf=vrfs[0], status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork('192.0.2.2/24'), vrf=vrfs[0], status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork('192.0.2.3/24'), vrf=vrfs[0], status=statuses[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -261,7 +264,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'vrf': vrfs[1].pk,
             'address': IPNetwork('192.0.2.99/24'),
             'tenant': None,
-            'status': IPAddressStatusChoices.STATUS_RESERVED,
+            'status': status_reserved.pk,
             'role': IPAddressRoleChoices.ROLE_ANYCAST,
             'nat_inside': None,
             'dns_name': 'example',
@@ -279,7 +282,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             'vrf': vrfs[1].pk,
             'tenant': None,
-            'status': IPAddressStatusChoices.STATUS_RESERVED,
+            'status': status_reserved.pk,
             'role': IPAddressRoleChoices.ROLE_ANYCAST,
             'dns_name': 'example',
             'description': 'New description',

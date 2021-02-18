@@ -403,7 +403,7 @@ class PrefixView(generic.ObjectView):
         ).filter(
             prefix__net_contains=str(instance.prefix)
         ).prefetch_related(
-            'site', 'status', 'role'
+            'role', 'site', 'status'
         ).annotate_tree()
         parent_prefix_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
         parent_prefix_table.exclude = ('vrf',)
@@ -414,7 +414,7 @@ class PrefixView(generic.ObjectView):
         ).exclude(
             pk=instance.pk
         ).prefetch_related(
-            'site', 'status', 'role'
+            'role', 'site', 'status'
         )
         duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes), orderable=False)
         duplicate_prefix_table.exclude = ('vrf',)
@@ -433,7 +433,7 @@ class PrefixPrefixesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Child prefixes table
         child_prefixes = instance.get_child_prefixes().restrict(request.user, 'view').prefetch_related(
-            'site', 'status', 'vlan', 'role',
+            'site', 'status', 'role', 'vlan'
         ).annotate_tree()
 
         # Add available prefixes to the table if requested
@@ -476,7 +476,7 @@ class PrefixIPAddressesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
         ipaddresses = instance.get_child_ips().restrict(request.user, 'view').prefetch_related(
-            'vrf', 'primary_ip4_for', 'primary_ip6_for'
+            'vrf', 'primary_ip4_for', 'primary_ip6_for', 'status'
         )
 
         # Add available IP addresses to the table if requested
@@ -562,7 +562,7 @@ class IPAddressView(generic.ObjectView):
             vrf=instance.vrf,
             prefix__net_contains=str(instance.address.ip)
         ).prefetch_related(
-            'site', 'role'
+            'site', 'status', 'role'
         )
         parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
         parent_prefixes_table.exclude = ('vrf',)
@@ -686,14 +686,14 @@ class IPAddressBulkImportView(generic.BulkImportView):
 
 
 class IPAddressBulkEditView(generic.BulkEditView):
-    queryset = IPAddress.objects.prefetch_related('vrf__tenant', 'tenant')
+    queryset = IPAddress.objects.prefetch_related('status', 'tenant', 'vrf__tenant')
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
     form = forms.IPAddressBulkEditForm
 
 
 class IPAddressBulkDeleteView(generic.BulkDeleteView):
-    queryset = IPAddress.objects.prefetch_related('vrf__tenant', 'tenant')
+    queryset = IPAddress.objects.prefetch_related('status', 'tenant', 'vrf__tenant')
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
 

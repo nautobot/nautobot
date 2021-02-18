@@ -357,7 +357,13 @@ class PrefixFilterSet(
         )
 
 
-class IPAddressFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class IPAddressFilterSet(
+    BaseFilterSet,
+    TenancyFilterSet,
+    StatusModelFilterSetMixin,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
@@ -444,10 +450,6 @@ class IPAddressFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
     assigned_to_interface = django_filters.BooleanFilter(
         method='_assigned_to_interface',
         label='Is assigned to an interface',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=IPAddressStatusChoices,
-        null_value=None
     )
     role = django_filters.MultipleChoiceFilter(
         choices=IPAddressRoleChoices

@@ -264,9 +264,15 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 # IP addresses
 #
 
-class IPAddressViewSet(CustomFieldModelViewSet):
+class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = IPAddress.objects.prefetch_related(
-        'vrf__tenant', 'tenant', 'nat_inside', 'nat_outside', 'tags', 'assigned_object'
+        'assigned_object',
+        'nat_inside',
+        'nat_outside',
+        'status',
+        'tags',
+        'tenant',
+        'vrf__tenant',
     )
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet

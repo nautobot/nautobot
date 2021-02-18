@@ -332,7 +332,7 @@ class PrefixDetailTable(PrefixTable):
 # IPAddresses
 #
 
-class IPAddressTable(BaseTable):
+class IPAddressTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     address = tables.TemplateColumn(
         template_code=IPADDRESS_LINK,
@@ -341,9 +341,6 @@ class IPAddressTable(BaseTable):
     vrf = tables.TemplateColumn(
         template_code=VRF_LINK,
         verbose_name='VRF'
-    )
-    status = ChoiceFieldColumn(
-        default=AVAILABLE_LABEL
     )
     role = ChoiceFieldColumn()
     tenant = tables.TemplateColumn(
@@ -399,12 +396,11 @@ class IPAddressDetailTable(IPAddressTable):
         )
 
 
-class IPAddressAssignTable(BaseTable):
+class IPAddressAssignTable(StatusTableMixin, BaseTable):
     address = tables.TemplateColumn(
         template_code=IPADDRESS_ASSIGN_LINK,
         verbose_name='IP Address'
     )
-    status = ChoiceFieldColumn()
     assigned_object = tables.Column(
         orderable=False
     )
@@ -415,7 +411,7 @@ class IPAddressAssignTable(BaseTable):
         orderable = False
 
 
-class InterfaceIPAddressTable(BaseTable):
+class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     """
     List IP addresses assigned to a specific Interface.
     """
@@ -426,7 +422,6 @@ class InterfaceIPAddressTable(BaseTable):
         template_code=VRF_LINK,
         verbose_name='VRF'
     )
-    status = ChoiceFieldColumn()
     tenant = tables.TemplateColumn(
         template_code=TENANT_LINK
     )

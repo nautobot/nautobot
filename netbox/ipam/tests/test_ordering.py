@@ -2,7 +2,7 @@ from django.test import TestCase
 import netaddr
 
 from extras.models import Status
-from ipam.choices import IPAddressStatusChoices, PrefixStatusChoices
+from ipam.choices import PrefixStatusChoices
 from ipam.models import IPAddress, Prefix, VRF
 
 
@@ -137,41 +137,43 @@ class IPAddressOrderingTestCase(OrderingTestBase):
         # Setup VRFs
         vrfa, vrfb, vrfc = self.vrfs
 
+        status_active = Status.objects.get_for_model(IPAddress).get(name='active')
+
         # Setup Addresses
         addresses = (
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.0.0.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.0.1.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.0.2.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.0.3.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.0.4.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.1.0.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.1.1.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.1.2.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.1.3.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.1.4.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.2.0.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.2.1.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.2.2.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.2.3.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfa, address=netaddr.IPNetwork('10.2.4.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.0.0.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.0.1.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.0.2.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.0.3.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.0.4.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.1.0.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.1.1.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.1.2.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.1.3.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.1.4.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.2.0.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.2.1.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.2.2.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.2.3.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork('10.2.4.1/24')),
 
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.16.0.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.16.1.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.16.2.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.16.3.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.16.4.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.17.0.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.17.1.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.17.2.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.17.3.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=vrfb, address=netaddr.IPNetwork('172.17.4.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.16.0.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.16.1.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.16.2.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.16.3.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.16.4.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.17.0.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.17.1.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.17.2.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.17.3.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=vrfb, address=netaddr.IPNetwork('172.17.4.1/24')),
 
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=None, address=netaddr.IPNetwork('192.168.0.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=None, address=netaddr.IPNetwork('192.168.1.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=None, address=netaddr.IPNetwork('192.168.2.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=None, address=netaddr.IPNetwork('192.168.3.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=None, address=netaddr.IPNetwork('192.168.4.1/24')),
-            IPAddress.objects.create(status=IPAddressStatusChoices.STATUS_ACTIVE, vrf=None, address=netaddr.IPNetwork('192.168.5.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=None, address=netaddr.IPNetwork('192.168.0.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=None, address=netaddr.IPNetwork('192.168.1.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=None, address=netaddr.IPNetwork('192.168.2.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=None, address=netaddr.IPNetwork('192.168.3.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=None, address=netaddr.IPNetwork('192.168.4.1/24')),
+            IPAddress.objects.create(status=status_active, vrf=None, address=netaddr.IPNetwork('192.168.5.1/24')),
         )
 
         # Test

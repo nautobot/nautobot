@@ -336,12 +336,13 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         vrf = VRF.objects.create(name='Test VRF 1', rd='1234')
         prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/30'), vrf=vrf, is_pool=True, status=self.status_active)
         url = reverse('ipam-api:prefix-available-ips', kwargs={'pk': prefix.pk})
-        self.add_permissions('ipam.view_prefix', 'ipam.add_ipaddress')
+        self.add_permissions('ipam.view_prefix', 'ipam.add_ipaddress', 'extras.view_status')
 
         # Create all four available IPs with individual requests
         for i in range(1, 5):
             data = {
-                'description': 'Test IP {}'.format(i)
+                'description': 'Test IP {}'.format(i),
+                'status': 'active',
             }
             response = self.client.post(url, data, format='json', **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -359,16 +360,16 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         prefix = Prefix.objects.create(prefix=IPNetwork('192.0.2.0/29'), is_pool=True, status=self.status_active)
         url = reverse('ipam-api:prefix-available-ips', kwargs={'pk': prefix.pk})
-        self.add_permissions('ipam.view_prefix', 'ipam.add_ipaddress')
+        self.add_permissions('ipam.view_prefix', 'ipam.add_ipaddress', 'extras.view_status')
 
         # Try to create nine IPs (only eight are available)
-        data = [{'description': f'Test IP {i}'} for i in range(1, 10)]  # 9 IPs
+        data = [{'description': f'Test IP {i}', 'status': 'active'} for i in range(1, 10)]  # 9 IPs
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn('detail', response.data)
 
         # Create all eight available IPs in a single request
-        data = [{'description': 'Test IP {}'.format(i)} for i in range(1, 9)]  # 8 IPs
+        data = [{'description': f'Test IP {i}', 'status': 'active'} for i in range(1, 9)]  # 8 IPs
         response = self.client.post(url, data, format='json', **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 8)
@@ -380,12 +381,15 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             'address': '192.168.0.4/24',
+            'status': 'active',
         },
         {
             'address': '192.168.0.5/24',
+            'status': 'active',
         },
         {
             'address': '192.168.0.6/24',
+            'status': 'active',
         },
     ]
     bulk_update_data = {
@@ -395,9 +399,19 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        IPAddress.objects.create(address=IPNetwork('192.168.0.1/24'))
-        IPAddress.objects.create(address=IPNetwork('192.168.0.2/24'))
-        IPAddress.objects.create(address=IPNetwork('192.168.0.3/24'))
+        statuses = Status.objects.get_for_model(IPAddress)
+
+        IPAddress.objects.create(address=IPNetwork('192.168.0.1/24'), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork('192.168.0.2/24'), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork('192.168.0.3/24'), status=statuses[0])
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):

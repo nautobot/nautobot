@@ -534,16 +534,19 @@ class IPAddressTestCase(TestCase):
             Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
 
-        IPAddress.objects.create(address='10.0.0.1/24', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-a'),
-        IPAddress.objects.create(address='10.0.0.2/24', tenant=tenants[0], vrf=vrfs[0], assigned_object=interfaces[0], status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-b'),
-        IPAddress.objects.create(address='10.0.0.3/24', tenant=tenants[1], vrf=vrfs[1], assigned_object=interfaces[1], status=IPAddressStatusChoices.STATUS_RESERVED, role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
-        IPAddress.objects.create(address='10.0.0.4/24', tenant=tenants[2], vrf=vrfs[2], assigned_object=interfaces[2], status=IPAddressStatusChoices.STATUS_DEPRECATED, role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
-        IPAddress.objects.create(address='10.0.0.1/25', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE),
-        IPAddress.objects.create(address='2001:db8::1/64', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-a'),
-        IPAddress.objects.create(address='2001:db8::2/64', tenant=tenants[0], vrf=vrfs[0], assigned_object=vminterfaces[0], status=IPAddressStatusChoices.STATUS_ACTIVE, dns_name='ipaddress-b'),
-        IPAddress.objects.create(address='2001:db8::3/64', tenant=tenants[1], vrf=vrfs[1], assigned_object=vminterfaces[1], status=IPAddressStatusChoices.STATUS_RESERVED, role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
-        IPAddress.objects.create(address='2001:db8::4/64', tenant=tenants[2], vrf=vrfs[2], assigned_object=vminterfaces[2], status=IPAddressStatusChoices.STATUS_DEPRECATED, role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
-        IPAddress.objects.create(address='2001:db8::1/65', tenant=None, vrf=None, assigned_object=None, status=IPAddressStatusChoices.STATUS_ACTIVE),
+        statuses = Status.objects.get_for_model(IPAddress)
+        status_map = {s.name: s for s in statuses.all()}
+
+        IPAddress.objects.create(address='10.0.0.1/24', tenant=None, vrf=None, assigned_object=None, status=status_map['active'], dns_name='ipaddress-a'),
+        IPAddress.objects.create(address='10.0.0.2/24', tenant=tenants[0], vrf=vrfs[0], assigned_object=interfaces[0], status=status_map['active'], dns_name='ipaddress-b'),
+        IPAddress.objects.create(address='10.0.0.3/24', tenant=tenants[1], vrf=vrfs[1], assigned_object=interfaces[1], status=status_map['reserved'], role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
+        IPAddress.objects.create(address='10.0.0.4/24', tenant=tenants[2], vrf=vrfs[2], assigned_object=interfaces[2], status=status_map['deprecated'], role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
+        IPAddress.objects.create(address='10.0.0.1/25', tenant=None, vrf=None, assigned_object=None, status=status_map['active']),
+        IPAddress.objects.create(address='2001:db8::1/64', tenant=None, vrf=None, assigned_object=None, status=status_map['active'], dns_name='ipaddress-a'),
+        IPAddress.objects.create(address='2001:db8::2/64', tenant=tenants[0], vrf=vrfs[0], assigned_object=vminterfaces[0], status=status_map['active'], dns_name='ipaddress-b'),
+        IPAddress.objects.create(address='2001:db8::3/64', tenant=tenants[1], vrf=vrfs[1], assigned_object=vminterfaces[1], status=status_map['reserved'], role=IPAddressRoleChoices.ROLE_VIP, dns_name='ipaddress-c'),
+        IPAddress.objects.create(address='2001:db8::4/64', tenant=tenants[2], vrf=vrfs[2], assigned_object=vminterfaces[2], status=status_map['deprecated'], role=IPAddressRoleChoices.ROLE_SECONDARY, dns_name='ipaddress-d'),
+        IPAddress.objects.create(address='2001:db8::1/65', tenant=None, vrf=None, assigned_object=None, status=status_map['active']),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -624,7 +627,8 @@ class IPAddressTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        params = {'status': [PrefixStatusChoices.STATUS_DEPRECATED, PrefixStatusChoices.STATUS_RESERVED]}
+        statuses = Status.objects.get_for_model(IPAddress)
+        params = {'status': [statuses.get(name='deprecated').name, statuses.get(name='reserved').name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_role(self):

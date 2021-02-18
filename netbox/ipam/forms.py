@@ -731,7 +731,6 @@ class IPAddressForm(BootstrapMixin, TenancyForm, ReturnURLForm, CustomFieldModel
             'tags',
         ]
         widgets = {
-            'status': StaticSelect2(),
             'role': StaticSelect2(),
         }
 
@@ -830,7 +829,6 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
             'address', 'vrf', 'status', 'role', 'dns_name', 'description', 'tenant_group', 'tenant', 'tags',
         ]
         widgets = {
-            'status': StaticSelect2(),
             'role': StaticSelect2(),
         }
 
@@ -839,7 +837,7 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
         self.fields['vrf'].empty_label = 'Global'
 
 
-class IPAddressCSVForm(CustomFieldModelCSVForm):
+class IPAddressCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name='name',
@@ -851,11 +849,6 @@ class IPAddressCSVForm(CustomFieldModelCSVForm):
         to_field_name='name',
         required=False,
         help_text='Assigned tenant'
-    )
-    status = CSVChoiceField(
-        choices=IPAddressStatusChoices,
-        required=False,
-        help_text='Operational status'
     )
     role = CSVChoiceField(
         choices=IPAddressRoleChoices,
@@ -940,7 +933,12 @@ class IPAddressCSVForm(CustomFieldModelCSVForm):
         return ipaddress
 
 
-class IPAddressBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class IPAddressBulkEditForm(
+    BootstrapMixin,
+    AddRemoveTagsForm,
+    StatusBulkEditFormMixin,
+    CustomFieldBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),
         widget=forms.MultipleHiddenInput()
@@ -959,11 +957,6 @@ class IPAddressBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEd
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False
-    )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(IPAddressStatusChoices),
-        required=False,
-        widget=StaticSelect2()
     )
     role = forms.ChoiceField(
         choices=add_blank_choice(IPAddressRoleChoices),
@@ -998,7 +991,7 @@ class IPAddressAssignForm(BootstrapMixin, forms.Form):
     )
 
 
-class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = IPAddress
     field_order = [
         'q', 'parent', 'family', 'mask_length', 'vrf_id', 'present_in_vrf_id', 'status', 'role',
@@ -1039,11 +1032,6 @@ class IPAddressFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterFo
         queryset=VRF.objects.all(),
         required=False,
         label='Present in VRF'
-    )
-    status = forms.MultipleChoiceField(
-        choices=IPAddressStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     role = forms.MultipleChoiceField(
         choices=IPAddressRoleChoices,
