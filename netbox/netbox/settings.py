@@ -128,9 +128,6 @@ RQ_DEFAULT_TIMEOUT = 300
 # Scripts
 SCRIPTS_ROOT = os.path.join(BASE_DIR, 'scripts').rstrip('/')
 
-# Secrets
-SECRETS_MIN_PUBKEY_SIZE = 2048
-
 # SSO
 SOCIAL_AUTH_ENABLED = False
 SOCIAL_AUTH_MODULE = ''
@@ -636,7 +633,6 @@ CACHEOPS = {
     'dcim.*': {'ops': 'all'},
     'ipam.*': {'ops': 'all'},
     'extras.*': {'ops': 'all'},
-    'secrets.*': {'ops': 'all'},
     'users.*': {'ops': 'all'},
     'tenancy.tenantgroup': None,  # MPTT models are exempt due to raw SQL
     'tenancy.*': {'ops': 'all'},

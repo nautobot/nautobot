@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # This script will generate a random 50-character string suitable for use as a SECRET_KEY.
-import secrets
+from random import SystemRandom
+choice = SystemRandom().choice
 
 charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)'
-print(''.join(secrets.choice(charset) for _ in range(50)))
+print(''.join(choice(charset) for _ in range(50)))

@@ -690,40 +690,6 @@
                 </li>
             {% endif %}
 
-            {% if perms.secrets.view_secret or perms.secrets.view_secretrole or not settings.HIDE_RESTRICTED_UI %}
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Secrets <span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-
-                {% if perms.secrets.view_secret or perms.secrets.view_secretrole or not settings.HIDE_RESTRICTED_UI %}
-                        <li class="dropdown-header">Secrets</li>
-                    {% if perms.secrets.view_secret or not settings.HIDE_RESTRICTED_UI %}
-                        <li{% if not perms.secrets.view_secret %} class="disabled"{% endif %}>
-                            {% if perms.secrets.add_secret %}
-                                <div class="buttons pull-right">
-                                    <a href="{% url 'secrets:secret_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
-                                    <a href="{% url 'secrets:secret_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
-                                </div>
-                            {% endif %}
-                            <a href="{% url 'secrets:secret_list' %}">Secrets</a>
-                        </li>
-                    {% endif %}
-                    {% if perms.secrets.view_secretrole or not settings.HIDE_RESTRICTED_UI %}
-                        <li{% if not perms.secrets.view_secretrole %} class="disabled"{% endif %}>
-                            {% if perms.secrets.add_secretrole %}
-                                <div class="buttons pull-right">
-                                    <a href="{% url 'secrets:secretrole_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
-                                    <a href="{% url 'secrets:secretrole_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
-                                </div>
-                            {% endif %}
-                            <a href="{% url 'secrets:secretrole_list' %}">Secret Roles</a>
-                        </li>
-                    {% endif %}
-                {% endif %}
-                    </ul>
-                </li>
-            {% endif %}
-
             {% if perms.extras.view_objectchange or perms.extras.view_jobresult or perms.extras.view_gitrepository or perms.extras.view_relationship or perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extensibility <span class="caret"></span></a>

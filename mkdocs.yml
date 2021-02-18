@@ -40,7 +40,6 @@ nav:
         - Service Mapping: 'core-functionality/services.md'
         - Circuits: 'core-functionality/circuits.md'
         - Power Tracking: 'core-functionality/power.md'
-        - Secrets: 'core-functionality/secrets.md'
         - Tenancy: 'core-functionality/tenancy.md'
     - Additional Features:
         - Caching: 'additional-features/caching.md'
@@ -67,7 +66,6 @@ nav:
         - Overview: 'rest-api/overview.md'
         - Filtering: 'rest-api/filtering.md'
         - Authentication: 'rest-api/authentication.md'
-        - Working with Secrets: 'rest-api/working-with-secrets.md'
     - GraphQL API:
         - Overview: 'additional-features/graphql.md'
     - Development:

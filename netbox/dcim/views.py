@@ -17,7 +17,6 @@ from extras.views import ObjectChangeLogView, ObjectConfigContextView
 from ipam.models import IPAddress, Prefix, Service, VLAN
 from ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
 from netbox.views import generic
-from secrets.models import Secret
 from utilities.forms import ConfirmationForm
 from utilities.paginator import EnhancedPaginator, get_paginate_count
 from utilities.permissions import get_permission_for_model
@@ -1154,12 +1153,8 @@ class DeviceView(generic.ObjectView):
         # Services
         services = Service.objects.restrict(request.user, 'view').filter(device=instance)
 
-        # Secrets
-        secrets = Secret.objects.restrict(request.user, 'view').filter(device=instance)
-
         return {
             'services': services,
-            'secrets': secrets,
             'vc_members': vc_members,
             'active_tab': 'device',
         }

@@ -24,7 +24,6 @@ from ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from netbox.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from netbox.forms import SearchForm
 from netbox.releases import get_latest_release
-from secrets.models import Secret
 from tenancy.models import Tenant
 from virtualization.models import Cluster, VirtualMachine
 
@@ -78,9 +77,6 @@ class HomeView(View):
             # Circuits
             'provider_count': Provider.objects.restrict(request.user, 'view').count(),
             'circuit_count': Circuit.objects.restrict(request.user, 'view').count(),
-
-            # Secrets
-            'secret_count': Secret.objects.restrict(request.user, 'view').count(),
 
             # Virtualization
             'cluster_count': Cluster.objects.restrict(request.user, 'view').count(),

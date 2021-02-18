@@ -248,21 +248,6 @@
                                     </table>
                                 </div>
                             {% endif %}
-                            {% if perms.secrets.view_secret %}
-                                <div class="panel panel-default">
-                                    <div class="panel-heading">
-                                        <strong>Secrets</strong>
-                                    </div>
-                                    {% include 'secrets/inc/assigned_secrets.html' %}
-                                    {% if perms.secrets.add_secret %}
-                                        <div class="panel-footer text-right noprint">
-                                            <a href="{% url 'secrets:secret_add' %}?device={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-xs btn-primary">
-                                                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add secret
-                                            </a>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Services</strong>
@@ -312,9 +297,4 @@
             </div>
         </div>
     </div>
-    {% include 'secrets/inc/private_key_modal.html' %}
-{% endblock %}
-
-{% block javascript %}
-  <script src="{% static 'js/secrets.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock %}
