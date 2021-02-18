@@ -355,6 +355,7 @@ class WebhookTable(BaseTable):
 class StatusTable(BaseTable):
     """Table for list view of `Status` objects."""
     pk = ToggleColumn()
+    name = tables.LinkColumn()
     color = ColorColumn()
     actions = ButtonsColumn(Status)
     content_types = ContentTypesColumn(truncate_words=15)

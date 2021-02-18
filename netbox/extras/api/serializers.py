@@ -526,7 +526,7 @@ class WebhookSerializer(ValidatedModelSerializer):
 # Custom statuses
 #
 
-class StatusSerializer(ValidatedModelSerializer):
+class StatusSerializer(CustomFieldModelSerializer):
     """Serializer for `Status` objects."""
     url = serializers.HyperlinkedIdentityField(view_name='extras-api:status-detail')
     label = serializers.SerializerMethodField()
@@ -538,7 +538,8 @@ class StatusSerializer(ValidatedModelSerializer):
     class Meta:
         model = Status
         fields = [
-            'id', 'url', 'content_types', 'name', 'label', 'color'
+            'id', 'url', 'content_types', 'name', 'label', 'color', 'custom_fields', 'created',
+            'last_updated',
         ]
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)

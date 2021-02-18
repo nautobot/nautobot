@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
 {% load helpers %}
+{% load plugins %}
 
 {% block header %}
     <div class="row">
@@ -23,21 +26,24 @@
         </div>
     </div>
     <div class="pull-right">
-        {% if perms.extras.change_status %}
-            <a href="{% url 'extras:status_edit' pk=object.pk %}" class="btn btn-warning">
-                <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                Edit this status
-            </a>
-        {% endif %}
-        {% if perms.extras.delete_status %}
-            <a href="{% url 'extras:status_delete' pk=object.pk %}" class="btn btn-danger">
-                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                Delete this status
-            </a>
-        {% endif %}
+        <div class="pull-right noprint">
+            {% plugin_buttons object %}
+            {% if perms.extras.add_status %}
+                {% clone_button object %}
+            {% endif %}
+            {% if perms.extras.change_status %}
+                {% edit_button object %}
+            {% endif %}
+            {% if perms.extras.delete_status %}
+                {% delete_button object %}
+            {% endif %}
+        </div>
     </div>
     <h1>{% block title %}Status: {{ object }}{% endblock %}</h1>
     {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
     <ul class="nav nav-tabs">
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Status</a>
@@ -65,9 +71,11 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Model</td>
+                        <td>Content type(s)</td>
                         <td>
-                            {{ object.content_type }}
+                            {% for ct in content_types %}
+                                {{ ct }}<br>
+                            {% endfor %}
                         </td>
                     </tr>
                     <tr>
@@ -76,17 +84,21 @@
                             <span class="label color-block" style="background-color: #{{ object.color }}">&nbsp;</span>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Protected</td>
-                        <td>
-                            {{ object.protected|placeholder }}
-                        </td>
                 </table>
             </div>
+            {% include 'inc/custom_fields_panel.html' %}
+            {% include 'inc/relationships_panel.html' %}
+            {% plugin_left_page object %}
         </div>
         <div class="col-md-6">
             {% include 'panel_table.html' with table=items_table heading='Tagged Objects' %}
             {% include 'inc/paginator.html' with paginator=items_table.paginator page=items_table.page %}
+            {% plugin_right_page object %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% plugin_full_width_page object %}
         </div>
     </div>
 {% endblock %}

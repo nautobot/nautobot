@@ -230,8 +230,14 @@ def prepare_cloned_fields(instance):
         if field_value is False:
             field_value = ''
 
+        # This is likely an m2m field
+        if isinstance(field_value, list):
+            for fv in field_value:
+                item_value = getattr(fv, 'pk', str(fv))  # pk or str()
+                params.append((field_name, item_value))
+
         # Omit empty values
-        if field_value not in (None, ''):
+        elif field_value not in (None, ''):
             params.append((field_name, field_value))
 
     # Copy tags

@@ -14,6 +14,7 @@ __all__ = [
     'NestedImageAttachmentSerializer',
     'NestedJobResultSerializer',
     'NestedRelationshipSerializer',
+    'NestedStatusSerializer',
     'NestedTagSerializer',
     'NestedWebhookSerializer',
 ]
@@ -95,6 +96,14 @@ class NestedWebhookSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Webhook
+        fields = ['id', 'url', 'name']
+
+
+class NestedStatusSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='extras-api:status-detail')
+
+    class Meta:
+        model = models.Status
         fields = ['id', 'url', 'name']
 
 

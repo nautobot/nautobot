@@ -1,5 +1,5 @@
 {% with relationships=object.get_relationships_data %}
-    {% if relationships %}
+    {% if relationships.source or relationships.destination %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Relationships</strong>

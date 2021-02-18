@@ -322,7 +322,7 @@ class WebhooksViewSet(ModelViewSet):
 # Statuses
 #
 
-class StatusViewSet(ModelViewSet):
+class StatusViewSet(CustomFieldModelViewSet):
     """
     View and manage custom status choices for objects with a `status` field.
     """

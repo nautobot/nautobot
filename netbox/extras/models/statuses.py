@@ -8,6 +8,7 @@ from django.utils.hashable import make_hashable
 
 from extras.utils import extras_features, FeatureQuery
 from extras.models import ChangeLoggedModel
+from extras.models.customfields import CustomFieldModel
 from extras.models.relationships import RelationshipModel
 from utilities.querysets import RestrictedQuerySet
 from utilities.choices import ColorChoices
@@ -27,10 +28,15 @@ class StatusQuerySet(RestrictedQuerySet):
 
 
 @extras_features(
+    'custom_fields',
+    'custom_links',
+    'custom_validators',
     'export_templates',
+    'graphql',
     'relationships',
+    'webhooks'
 )
-class Status(ChangeLoggedModel, RelationshipModel):
+class Status(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(
@@ -46,6 +52,7 @@ class Status(ChangeLoggedModel, RelationshipModel):
     objects = StatusQuerySet.as_manager()
 
     csv_headers = ['name', 'color', 'content_types']
+    clone_fields = ['color', 'content_types']
 
     class Meta:
         ordering = ['name']

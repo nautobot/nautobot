@@ -871,7 +871,7 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
 # Statuses
 #
 
-class StatusForm(BootstrapMixin, RelationshipModelForm):
+class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
     content_types = forms.ModelMultipleChoiceField(
         queryset=ContentType.objects.filter(
@@ -885,10 +885,10 @@ class StatusForm(BootstrapMixin, RelationshipModelForm):
         widgets = {
             'color': ColorSelect()
         }
-        fields = ['content_types', 'color', 'name']
+        fields = ['name', 'content_types', 'color']
 
 
-class StatusCSVForm(CSVModelForm):
+class StatusCSVForm(CustomFieldModelCSVForm):
     """Generic CSV bulk import form for `Status` objects."""
 
     content_types = CSVMultipleContentTypeField(
@@ -911,7 +911,7 @@ class StatusCSVForm(CSVModelForm):
         }
 
 
-class StatusFilterForm(BootstrapMixin, forms.Form):
+class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
     """Filtering/search form for `Status` objects."""
 
     model = Status
@@ -935,7 +935,7 @@ class StatusFilterForm(BootstrapMixin, forms.Form):
     )
 
 
-class StatusBulkEditForm(BootstrapMixin, BulkEditForm):
+class StatusBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
     """Bulk edit/delete form for `Status` objects."""
 
     pk = forms.ModelMultipleChoiceField(

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load buttons %}
+{% load custom_links %}
 {% load helpers %}
 {% load plugins %}
 
@@ -38,6 +39,9 @@
     </div>
     <h1>{% block title %}Tag: {{ object }}{% endblock %}</h1>
     {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
     <ul class="nav nav-tabs">
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Tag</a>
@@ -91,10 +95,17 @@
             </div>
             {% include 'inc/custom_fields_panel.html' %}
             {% include 'inc/relationships_panel.html' %}
+            {% plugin_left_page object %}
         </div>
         <div class="col-md-6">
             {% include 'panel_table.html' with table=items_table heading='Tagged Objects' %}
             {% include 'inc/paginator.html' with paginator=items_table.paginator page=items_table.page %}
+            {% plugin_right_page object %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% plugin_full_width_page object %}
         </div>
     </div>
 {% endblock %}

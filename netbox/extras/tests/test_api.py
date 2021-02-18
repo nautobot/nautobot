@@ -701,7 +701,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
-    brief_fields = ['color', 'content_types', 'id', 'label', 'name', 'url']
+    brief_fields = ['id', 'name', 'url']
     bulk_update_data = {
         'color': '000000',
     }

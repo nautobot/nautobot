@@ -23,7 +23,7 @@ def populate_circuit_status_db(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0057_status_field'),
+        ('extras', '0061_status_custom_field_data'),
         ('circuits', '0025_add_custom_fields'),
     ]
 

@@ -484,7 +484,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         return {name: getattr(value, to_field_name)}
 
 
-class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet):
+class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet):
     """API filter for filtering custom status object fields."""
     q = django_filters.CharFilter(
         method='search',
