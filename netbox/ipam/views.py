@@ -317,7 +317,11 @@ class RoleView(generic.ObjectView):
         prefixes = Prefix.objects.restrict(request.user, 'view').filter(
             role=instance
         ).prefetch_related(
-            'tenant', 'vrf', 'site', 'vlan'
+            'site',
+            'status',
+            'tenant',
+            'vlan',
+            'vrf',
         )
 
         prefix_table = tables.PrefixTable(prefixes)
@@ -333,7 +337,10 @@ class RoleView(generic.ObjectView):
         vlans = VLAN.objects.restrict(request.user, 'view').filter(
             role=instance
         ).prefetch_related(
-            'tenant', 'site', 'group'
+            'group',
+            'site',
+            'status',
+            'tenant',
         )
 
         vlan_table = tables.VLANTable(vlans)
@@ -782,11 +789,19 @@ class VLANListView(generic.ObjectListView):
 
 
 class VLANView(generic.ObjectView):
-    queryset = VLAN.objects.prefetch_related('site__region', 'tenant__group', 'role')
+    queryset = VLAN.objects.prefetch_related(
+        'role',
+        'site__region',
+        'status',
+        'tenant__group',
+    )
 
     def get_extra_context(self, request, instance):
         prefixes = Prefix.objects.restrict(request.user, 'view').filter(vlan=instance).prefetch_related(
-            'vrf', 'site', 'role'
+            'site',
+            'status',
+            'role',
+            'vrf',
         )
         prefix_table = tables.PrefixTable(list(prefixes), orderable=False)
         prefix_table.exclude = ('vlan',)
@@ -853,14 +868,26 @@ class VLANBulkImportView(generic.BulkImportView):
 
 
 class VLANBulkEditView(generic.BulkEditView):
-    queryset = VLAN.objects.prefetch_related('site', 'group', 'tenant', 'role')
+    queryset = VLAN.objects.prefetch_related(
+        'group',
+        'site',
+        'status',
+        'tenant',
+        'role',
+    )
     filterset = filters.VLANFilterSet
     table = tables.VLANTable
     form = forms.VLANBulkEditForm
 
 
 class VLANBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLAN.objects.prefetch_related('site', 'group', 'tenant', 'role')
+    queryset = VLAN.objects.prefetch_related(
+        'group',
+        'site',
+        'status',
+        'tenant',
+        'role',
+    )
     filterset = filters.VLANFilterSet
     table = tables.VLANTable
 

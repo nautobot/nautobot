@@ -93,6 +93,7 @@ def create_custom_statuses(
         ("circuits.Circuit", circuit_choices.CircuitStatusChoices),
         ("ipam.Prefix", ipam_choices.PrefixStatusChoices),
         ("ipam.IPAddress", ipam_choices.IPAddressStatusChoices),
+        ("ipam.VLAN", ipam_choices.VLANStatusChoices),
     ]
 
     # Iterate choiceset kwargs to create status objects if they don't exist

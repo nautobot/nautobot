@@ -339,9 +339,12 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Role.objects.create(name='Role 2', slug='role-2'),
         )
 
-        VLAN.objects.create(group=vlangroups[0], vid=101, name='VLAN101', site=sites[0], role=roles[0]),
-        VLAN.objects.create(group=vlangroups[0], vid=102, name='VLAN102', site=sites[0], role=roles[0]),
-        VLAN.objects.create(group=vlangroups[0], vid=103, name='VLAN103', site=sites[0], role=roles[0]),
+        statuses = Status.objects.get_for_model(VLAN)
+        status_reserved = statuses.get(name='reserved')
+
+        VLAN.objects.create(group=vlangroups[0], vid=101, name='VLAN101', site=sites[0], role=roles[0], status=statuses[0])
+        VLAN.objects.create(group=vlangroups[0], vid=102, name='VLAN102', site=sites[0], role=roles[0], status=statuses[0])
+        VLAN.objects.create(group=vlangroups[0], vid=103, name='VLAN103', site=sites[0], role=roles[0], status=statuses[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -351,7 +354,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'vid': 999,
             'name': 'VLAN999',
             'tenant': None,
-            'status': VLANStatusChoices.STATUS_RESERVED,
+            'status': status_reserved.pk,
             'role': roles[1].pk,
             'description': 'A new VLAN',
             'tags': [t.pk for t in tags],
@@ -368,7 +371,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'site': sites[1].pk,
             'group': vlangroups[1].pk,
             'tenant': None,
-            'status': VLANStatusChoices.STATUS_RESERVED,
+            'status': status_reserved.pk,
             'role': roles[1].pk,
             'description': 'New description',
         }

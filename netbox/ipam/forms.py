@@ -1157,12 +1157,9 @@ class VLANForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipMo
             'status': "Operational status of this VLAN",
             'role': "The primary function of this VLAN",
         }
-        widgets = {
-            'status': StaticSelect2(),
-        }
 
 
-class VLANCSVForm(CustomFieldModelCSVForm):
+class VLANCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     site = CSVModelChoiceField(
         queryset=Site.objects.all(),
         required=False,
@@ -1180,10 +1177,6 @@ class VLANCSVForm(CustomFieldModelCSVForm):
         to_field_name='name',
         required=False,
         help_text='Assigned tenant'
-    )
-    status = CSVChoiceField(
-        choices=VLANStatusChoices,
-        help_text='Operational status'
     )
     role = CSVModelChoiceField(
         queryset=Role.objects.all(),
@@ -1210,7 +1203,7 @@ class VLANCSVForm(CustomFieldModelCSVForm):
             self.fields['group'].queryset = self.fields['group'].queryset.filter(**params)
 
 
-class VLANBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class VLANBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         widget=forms.MultipleHiddenInput()
@@ -1238,11 +1231,6 @@ class VLANBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditFor
         queryset=Tenant.objects.all(),
         required=False
     )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(VLANStatusChoices),
-        required=False,
-        widget=StaticSelect2()
-    )
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
         required=False
@@ -1258,7 +1246,7 @@ class VLANBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditFor
         ]
 
 
-class VLANFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class VLANFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
     model = VLAN
     field_order = ['q', 'region', 'site', 'group_id', 'status', 'role', 'tenant_group', 'tenant']
     q = forms.CharField(
@@ -1287,11 +1275,6 @@ class VLANFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
         query_params={
             'region': '$region'
         }
-    )
-    status = forms.MultipleChoiceField(
-        choices=VLANStatusChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
     )
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.all(),

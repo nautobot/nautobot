@@ -138,12 +138,11 @@ class VLANGroupSerializer(CustomFieldModelSerializer):
         return data
 
 
-class VLANSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class VLANSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='ipam-api:vlan-detail')
     site = NestedSiteSerializer(required=False, allow_null=True)
     group = NestedVLANGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    status = ChoiceField(choices=VLANStatusChoices, required=False)
     role = NestedRoleSerializer(required=False, allow_null=True)
     prefix_count = serializers.IntegerField(read_only=True)
 

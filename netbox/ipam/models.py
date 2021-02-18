@@ -968,9 +968,10 @@ class VLANGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'export_templates',
     'graphql',
     'relationships',
+    'statuses',
     'webhooks'
 )
-class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094). Each VLAN must be assigned
     to a Site, however VLAN IDs need not be unique within a Site. A VLAN may optionally be assigned to a VLANGroup,
@@ -1006,11 +1007,6 @@ class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         related_name='vlans',
         blank=True,
         null=True
-    )
-    status = models.CharField(
-        max_length=50,
-        choices=VLANStatusChoices,
-        default=VLANStatusChoices.STATUS_ACTIVE
     )
     role = models.ForeignKey(
         to='ipam.Role',
@@ -1071,9 +1067,6 @@ class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     @property
     def display_name(self):
         return f'{self.name} ({self.vid})'
-
-    def get_status_class(self):
-        return VLANStatusChoices.CSS_CLASSES.get(self.status)
 
     def get_interfaces(self):
         # Return all device interfaces assigned to this VLAN

@@ -462,7 +462,7 @@ class VLANGroupTable(BaseTable):
 # VLANs
 #
 
-class VLANTable(BaseTable):
+class VLANTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(
         template_code=VLAN_LINK,
@@ -478,9 +478,6 @@ class VLANTable(BaseTable):
     )
     tenant = tables.TemplateColumn(
         template_code=COL_TENANT
-    )
-    status = ChoiceFieldColumn(
-        default=AVAILABLE_LABEL
     )
     role = tables.TemplateColumn(
         template_code=VLAN_ROLE_LINK
@@ -543,7 +540,7 @@ class VLANVirtualMachinesTable(VLANMembersTable):
         fields = ('virtual_machine', 'name', 'tagged', 'actions')
 
 
-class InterfaceVLANTable(BaseTable):
+class InterfaceVLANTable(StatusTableMixin, BaseTable):
     """
     List VLANs assigned to a specific Interface.
     """
@@ -563,7 +560,6 @@ class InterfaceVLANTable(BaseTable):
     tenant = tables.TemplateColumn(
         template_code=COL_TENANT
     )
-    status = ChoiceFieldColumn()
     role = tables.TemplateColumn(
         template_code=VLAN_ROLE_LINK
     )

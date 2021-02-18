@@ -29,6 +29,7 @@ class WritableNestedSerializerTest(APITestCase):
             'vid': 100,
             'name': 'Test VLAN 100',
             'site': self.site1.pk,
+            'status': 'active',
         }
         url = reverse('ipam-api:vlan-list')
         self.add_permissions('ipam.add_vlan')
@@ -44,6 +45,7 @@ class WritableNestedSerializerTest(APITestCase):
             'vid': 100,
             'name': 'Test VLAN 100',
             'site': 999,
+            'status': 'active',
         }
         url = reverse('ipam-api:vlan-list')
         self.add_permissions('ipam.add_vlan')
@@ -58,6 +60,7 @@ class WritableNestedSerializerTest(APITestCase):
         data = {
             'vid': 100,
             'name': 'Test VLAN 100',
+            'status': 'active',
             'site': {
                 'name': 'Site 1'
             },
@@ -75,6 +78,7 @@ class WritableNestedSerializerTest(APITestCase):
         data = {
             'vid': 100,
             'name': 'Test VLAN 100',
+            'status': 'active',
             'site': {
                 'name': 'Site X'
             },
@@ -92,6 +96,7 @@ class WritableNestedSerializerTest(APITestCase):
         data = {
             'vid': 100,
             'name': 'Test VLAN 100',
+            'status': 'active',
             'site': {
                 'region': {
                     "name": "Region A",
@@ -112,6 +117,7 @@ class WritableNestedSerializerTest(APITestCase):
             'vid': 100,
             'name': 'Test VLAN 100',
             'site': 'XXX',
+            'status': 'active',
         }
         url = reverse('ipam-api:vlan-list')
         self.add_permissions('ipam.add_vlan')

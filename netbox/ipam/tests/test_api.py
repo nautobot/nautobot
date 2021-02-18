@@ -457,33 +457,44 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         vlan_groups = (
-            VLANGroup(name='VLAN Group 1', slug='vlan-group-1'),
-            VLANGroup(name='VLAN Group 2', slug='vlan-group-2'),
+            VLANGroup.objects.create(name='VLAN Group 1', slug='vlan-group-1'),
+            VLANGroup.objects.create(name='VLAN Group 2', slug='vlan-group-2'),
         )
-        VLANGroup.objects.bulk_create(vlan_groups)
+
+        statuses = Status.objects.get_for_model(VLAN)
 
         vlans = (
-            VLAN(name='VLAN 1', vid=1, group=vlan_groups[0]),
-            VLAN(name='VLAN 2', vid=2, group=vlan_groups[0]),
-            VLAN(name='VLAN 3', vid=3, group=vlan_groups[0]),
+            VLAN.objects.create(name='VLAN 1', vid=1, group=vlan_groups[0], status=statuses[0]),
+            VLAN.objects.create(name='VLAN 2', vid=2, group=vlan_groups[0], status=statuses[0]),
+            VLAN.objects.create(name='VLAN 3', vid=3, group=vlan_groups[0], status=statuses[0]),
         )
-        VLAN.objects.bulk_create(vlans)
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ['status']
 
         cls.create_data = [
             {
                 'vid': 4,
                 'name': 'VLAN 4',
                 'group': vlan_groups[1].pk,
+                'status': 'active',
             },
             {
                 'vid': 5,
                 'name': 'VLAN 5',
                 'group': vlan_groups[1].pk,
+                'status': 'active',
             },
             {
                 'vid': 6,
                 'name': 'VLAN 6',
                 'group': vlan_groups[1].pk,
+                'status': 'active',
             },
         ]
 

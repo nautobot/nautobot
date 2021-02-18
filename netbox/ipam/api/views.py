@@ -294,9 +294,14 @@ class VLANGroupViewSet(CustomFieldModelViewSet):
 # VLANs
 #
 
-class VLANViewSet(CustomFieldModelViewSet):
+class VLANViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     queryset = VLAN.objects.prefetch_related(
-        'site', 'group', 'tenant', 'role', 'tags'
+        'group',
+        'site',
+        'status',
+        'role',
+        'tags',
+        'tenant',
     ).annotate(
         prefix_count=count_related(Prefix, 'vlan')
     )

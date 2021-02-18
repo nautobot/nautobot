@@ -748,12 +748,15 @@ class VLANTestCase(TestCase):
             Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
 
-        VLAN.objects.create(vid=101, name='VLAN 101', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=VLANStatusChoices.STATUS_ACTIVE)
-        VLAN.objects.create(vid=102, name='VLAN 102', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=VLANStatusChoices.STATUS_ACTIVE)
-        VLAN.objects.create(vid=201, name='VLAN 201', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=VLANStatusChoices.STATUS_DEPRECATED)
-        VLAN.objects.create(vid=202, name='VLAN 202', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=VLANStatusChoices.STATUS_DEPRECATED)
-        VLAN.objects.create(vid=301, name='VLAN 301', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=VLANStatusChoices.STATUS_RESERVED)
-        VLAN.objects.create(vid=302, name='VLAN 302', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=VLANStatusChoices.STATUS_RESERVED)
+        statuses = Status.objects.get_for_model(VLAN)
+        status_map = {s.name: s for s in statuses.all()}
+
+        VLAN.objects.create(vid=101, name='VLAN 101', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=status_map['active'])
+        VLAN.objects.create(vid=102, name='VLAN 102', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=status_map['active'])
+        VLAN.objects.create(vid=201, name='VLAN 201', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=status_map['deprecated'])
+        VLAN.objects.create(vid=202, name='VLAN 202', site=sites[1], group=groups[1], role=roles[1], tenant=tenants[1], status=status_map['deprecated'])
+        VLAN.objects.create(vid=301, name='VLAN 301', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=status_map['reserved'])
+        VLAN.objects.create(vid=302, name='VLAN 302', site=sites[2], group=groups[2], role=roles[2], tenant=tenants[2], status=status_map['reserved'])
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -796,7 +799,7 @@ class VLANTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        params = {'status': [VLANStatusChoices.STATUS_ACTIVE, VLANStatusChoices.STATUS_DEPRECATED]}
+        params = {'status': ['active', 'deprecated']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_tenant(self):

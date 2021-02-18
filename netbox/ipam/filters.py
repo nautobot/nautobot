@@ -555,7 +555,13 @@ class VLANGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet, CustomFieldMode
         fields = ['id', 'name', 'slug', 'description']
 
 
-class VLANFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, CreatedUpdatedFilterSet):
+class VLANFilterSet(
+    BaseFilterSet,
+    TenancyFilterSet,
+    StatusModelFilterSetMixin,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet
+):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
@@ -602,10 +608,6 @@ class VLANFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilterSet, 
         queryset=Role.objects.all(),
         to_field_name='slug',
         label='Role (slug)',
-    )
-    status = django_filters.MultipleChoiceFilter(
-        choices=VLANStatusChoices,
-        null_value=None
     )
     tag = TagFilter()
 
