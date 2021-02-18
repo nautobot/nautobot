@@ -24,23 +24,17 @@ class RegionTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1', description='A'),
-            Region(name='Region 2', slug='region-2', description='B'),
-            Region(name='Region 3', slug='region-3', description='C'),
+            Region.objects.create(name='Region 1', slug='region-1', description='A'),
+            Region.objects.create(name='Region 2', slug='region-2', description='B'),
+            Region.objects.create(name='Region 3', slug='region-3', description='C'),
         )
-        for region in regions:
-            region.save()
 
-        child_regions = (
-            Region(name='Region 1A', slug='region-1a', parent=regions[0]),
-            Region(name='Region 1B', slug='region-1b', parent=regions[0]),
-            Region(name='Region 2A', slug='region-2a', parent=regions[1]),
-            Region(name='Region 2B', slug='region-2b', parent=regions[1]),
-            Region(name='Region 3A', slug='region-3a', parent=regions[2]),
-            Region(name='Region 3B', slug='region-3b', parent=regions[2]),
-        )
-        for region in child_regions:
-            region.save()
+        Region.objects.create(name='Region 1A', slug='region-1a', parent=regions[0])
+        Region.objects.create(name='Region 1B', slug='region-1b', parent=regions[0])
+        Region.objects.create(name='Region 2A', slug='region-2a', parent=regions[1])
+        Region.objects.create(name='Region 2B', slug='region-2b', parent=regions[1])
+        Region.objects.create(name='Region 3A', slug='region-3a', parent=regions[2])
+        Region.objects.create(name='Region 3B', slug='region-3b', parent=regions[2])
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -74,37 +68,29 @@ class SiteTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
         statuses = Status.objects.get_for_model(Site)
         status_map = {s.name: s for s in statuses.all()}
 
-        sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0], tenant=tenants[0], status=status_map['active'], facility='Facility 1', asn=65001, latitude=10, longitude=10, contact_name='Contact 1', contact_phone='123-555-0001', contact_email='contact1@example.com'),
-            Site(name='Site 2', slug='site-2', region=regions[1], tenant=tenants[1], status=status_map['planned'], facility='Facility 2', asn=65002, latitude=20, longitude=20, contact_name='Contact 2', contact_phone='123-555-0002', contact_email='contact2@example.com'),
-            Site(name='Site 3', slug='site-3', region=regions[2], tenant=tenants[2], status=status_map['retired'], facility='Facility 3', asn=65003, latitude=30, longitude=30, contact_name='Contact 3', contact_phone='123-555-0003', contact_email='contact3@example.com'),
-        )
-        Site.objects.bulk_create(sites)
+        Site.objects.create(name='Site 1', slug='site-1', region=regions[0], tenant=tenants[0], status=status_map['active'], facility='Facility 1', asn=65001, latitude=10, longitude=10, contact_name='Contact 1', contact_phone='123-555-0001', contact_email='contact1@example.com')
+        Site.objects.create(name='Site 2', slug='site-2', region=regions[1], tenant=tenants[1], status=status_map['planned'], facility='Facility 2', asn=65002, latitude=20, longitude=20, contact_name='Contact 2', contact_phone='123-555-0002', contact_email='contact2@example.com')
+        Site.objects.create(name='Site 3', slug='site-3', region=regions[2], tenant=tenants[2], status=status_map['retired'], facility='Facility 3', asn=65003, latitude=30, longitude=30, contact_name='Contact 3', contact_phone='123-555-0003', contact_email='contact3@example.com')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -181,35 +167,26 @@ class RackGroupTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         parent_rack_groups = (
-            RackGroup(name='Parent Rack Group 1', slug='parent-rack-group-1', site=sites[0]),
-            RackGroup(name='Parent Rack Group 2', slug='parent-rack-group-2', site=sites[1]),
-            RackGroup(name='Parent Rack Group 3', slug='parent-rack-group-3', site=sites[2]),
+            RackGroup.objects.create(name='Parent Rack Group 1', slug='parent-rack-group-1', site=sites[0]),
+            RackGroup.objects.create(name='Parent Rack Group 2', slug='parent-rack-group-2', site=sites[1]),
+            RackGroup.objects.create(name='Parent Rack Group 3', slug='parent-rack-group-3', site=sites[2]),
         )
-        for rackgroup in parent_rack_groups:
-            rackgroup.save()
 
-        rack_groups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=sites[0], parent=parent_rack_groups[0], description='A'),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=sites[1], parent=parent_rack_groups[1], description='B'),
-            RackGroup(name='Rack Group 3', slug='rack-group-3', site=sites[2], parent=parent_rack_groups[2], description='C'),
-        )
-        for rackgroup in rack_groups:
-            rackgroup.save()
+        RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=sites[0], parent=parent_rack_groups[0], description='A')
+        RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=sites[1], parent=parent_rack_groups[1], description='B')
+        RackGroup.objects.create(name='Rack Group 3', slug='rack-group-3', site=sites[2], parent=parent_rack_groups[2], description='C')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -256,12 +233,9 @@ class RackRoleTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        rack_roles = (
-            RackRole(name='Rack Role 1', slug='rack-role-1', color='ff0000'),
-            RackRole(name='Rack Role 2', slug='rack-role-2', color='00ff00'),
-            RackRole(name='Rack Role 3', slug='rack-role-3', color='0000ff'),
-        )
-        RackRole.objects.bulk_create(rack_roles)
+        RackRole.objects.create(name='Rack Role 1', slug='rack-role-1', color='ff0000')
+        RackRole.objects.create(name='Rack Role 2', slug='rack-role-2', color='00ff00')
+        RackRole.objects.create(name='Rack Role 3', slug='rack-role-3', color='0000ff')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -288,59 +262,47 @@ class RackTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         rack_groups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
-            RackGroup(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
+            RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
+            RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
+            RackGroup.objects.create(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
         )
-        for rackgroup in rack_groups:
-            rackgroup.save()
 
         rack_roles = (
-            RackRole(name='Rack Role 1', slug='rack-role-1'),
-            RackRole(name='Rack Role 2', slug='rack-role-2'),
-            RackRole(name='Rack Role 3', slug='rack-role-3'),
+            RackRole.objects.create(name='Rack Role 1', slug='rack-role-1'),
+            RackRole.objects.create(name='Rack Role 2', slug='rack-role-2'),
+            RackRole.objects.create(name='Rack Role 3', slug='rack-role-3'),
         )
-        RackRole.objects.bulk_create(rack_roles)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
         statuses = Status.objects.get_for_model(Rack)
         status_map = {s.name: s for s in statuses.all()}
 
-        racks = (
-            Rack(name='Rack 1', facility_id='rack-1', site=sites[0], group=rack_groups[0], tenant=tenants[0], status=status_map['active'], role=rack_roles[0], serial='ABC', asset_tag='1001', type=RackTypeChoices.TYPE_2POST, width=RackWidthChoices.WIDTH_19IN, u_height=42, desc_units=False, outer_width=100, outer_depth=100, outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER),
-            Rack(name='Rack 2', facility_id='rack-2', site=sites[1], group=rack_groups[1], tenant=tenants[1], status=status_map['planned'], role=rack_roles[1], serial='DEF', asset_tag='1002', type=RackTypeChoices.TYPE_4POST, width=RackWidthChoices.WIDTH_21IN, u_height=43, desc_units=False, outer_width=200, outer_depth=200, outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER),
-            Rack(name='Rack 3', facility_id='rack-3', site=sites[2], group=rack_groups[2], tenant=tenants[2], status=status_map['reserved'], role=rack_roles[2], serial='GHI', asset_tag='1003', type=RackTypeChoices.TYPE_CABINET, width=RackWidthChoices.WIDTH_23IN, u_height=44, desc_units=True, outer_width=300, outer_depth=300, outer_unit=RackDimensionUnitChoices.UNIT_INCH),
-        )
-        Rack.objects.bulk_create(racks)
+        Rack.objects.create(name='Rack 1', facility_id='rack-1', site=sites[0], group=rack_groups[0], tenant=tenants[0], status=status_map['active'], role=rack_roles[0], serial='ABC', asset_tag='1001', type=RackTypeChoices.TYPE_2POST, width=RackWidthChoices.WIDTH_19IN, u_height=42, desc_units=False, outer_width=100, outer_depth=100, outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER)
+        Rack.objects.create(name='Rack 2', facility_id='rack-2', site=sites[1], group=rack_groups[1], tenant=tenants[1], status=status_map['planned'], role=rack_roles[1], serial='DEF', asset_tag='1002', type=RackTypeChoices.TYPE_4POST, width=RackWidthChoices.WIDTH_21IN, u_height=43, desc_units=False, outer_width=200, outer_depth=200, outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER)
+        Rack.objects.create(name='Rack 3', facility_id='rack-3', site=sites[2], group=rack_groups[2], tenant=tenants[2], status=status_map['reserved'], role=rack_roles[2], serial='GHI', asset_tag='1003', type=RackTypeChoices.TYPE_CABINET, width=RackWidthChoices.WIDTH_23IN, u_height=44, desc_units=True, outer_width=300, outer_depth=300, outer_unit=RackDimensionUnitChoices.UNIT_INCH)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -451,55 +413,44 @@ class RackReservationTestCase(TestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
-            Site(name='Site 3', slug='site-3'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 3', slug='site-3'),
         )
-        Site.objects.bulk_create(sites)
 
         rack_groups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
-            RackGroup(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
+            RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
+            RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
+            RackGroup.objects.create(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
         )
-        for rackgroup in rack_groups:
-            rackgroup.save()
 
         racks = (
-            Rack(name='Rack 1', site=sites[0], group=rack_groups[0]),
-            Rack(name='Rack 2', site=sites[1], group=rack_groups[1]),
-            Rack(name='Rack 3', site=sites[2], group=rack_groups[2]),
+            Rack.objects.create(name='Rack 1', site=sites[0], group=rack_groups[0]),
+            Rack.objects.create(name='Rack 2', site=sites[1], group=rack_groups[1]),
+            Rack.objects.create(name='Rack 3', site=sites[2], group=rack_groups[2]),
         )
-        Rack.objects.bulk_create(racks)
 
         users = (
-            User(username='User 1'),
-            User(username='User 2'),
-            User(username='User 3'),
+            User.objects.create(username='User 1'),
+            User.objects.create(username='User 2'),
+            User.objects.create(username='User 3'),
         )
-        User.objects.bulk_create(users)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
-        reservations = (
-            RackReservation(rack=racks[0], units=[1, 2, 3], user=users[0], tenant=tenants[0]),
-            RackReservation(rack=racks[1], units=[4, 5, 6], user=users[1], tenant=tenants[1]),
-            RackReservation(rack=racks[2], units=[7, 8, 9], user=users[2], tenant=tenants[2]),
-        )
-        RackReservation.objects.bulk_create(reservations)
+        RackReservation.objects.create(rack=racks[0], units=[1, 2, 3], user=users[0], tenant=tenants[0])
+        RackReservation.objects.create(rack=racks[1], units=[4, 5, 6], user=users[1], tenant=tenants[1])
+        RackReservation.objects.create(rack=racks[2], units=[7, 8, 9], user=users[2], tenant=tenants[2])
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -548,12 +499,9 @@ class ManufacturerTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        manufacturers = (
-            Manufacturer(name='Manufacturer 1', slug='manufacturer-1', description='A'),
-            Manufacturer(name='Manufacturer 2', slug='manufacturer-2', description='B'),
-            Manufacturer(name='Manufacturer 3', slug='manufacturer-3', description='C'),
-        )
-        Manufacturer.objects.bulk_create(manufacturers)
+        Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1', description='A')
+        Manufacturer.objects.create(name='Manufacturer 2', slug='manufacturer-2', description='B')
+        Manufacturer.objects.create(name='Manufacturer 3', slug='manufacturer-3', description='C')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -580,53 +528,43 @@ class DeviceTypeTestCase(TestCase):
     def setUpTestData(cls):
 
         manufacturers = (
-            Manufacturer(name='Manufacturer 1', slug='manufacturer-1'),
-            Manufacturer(name='Manufacturer 2', slug='manufacturer-2'),
-            Manufacturer(name='Manufacturer 3', slug='manufacturer-3'),
+            Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1'),
+            Manufacturer.objects.create(name='Manufacturer 2', slug='manufacturer-2'),
+            Manufacturer.objects.create(name='Manufacturer 3', slug='manufacturer-3'),
         )
-        Manufacturer.objects.bulk_create(manufacturers)
 
         device_types = (
-            DeviceType(manufacturer=manufacturers[0], model='Model 1', slug='model-1', part_number='Part Number 1', u_height=1, is_full_depth=True),
-            DeviceType(manufacturer=manufacturers[1], model='Model 2', slug='model-2', part_number='Part Number 2', u_height=2, is_full_depth=True, subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
-            DeviceType(manufacturer=manufacturers[2], model='Model 3', slug='model-3', part_number='Part Number 3', u_height=3, is_full_depth=False, subdevice_role=SubdeviceRoleChoices.ROLE_CHILD),
+            DeviceType.objects.create(manufacturer=manufacturers[0], model='Model 1', slug='model-1', part_number='Part Number 1', u_height=1, is_full_depth=True),
+            DeviceType.objects.create(manufacturer=manufacturers[1], model='Model 2', slug='model-2', part_number='Part Number 2', u_height=2, is_full_depth=True, subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
+            DeviceType.objects.create(manufacturer=manufacturers[2], model='Model 3', slug='model-3', part_number='Part Number 3', u_height=3, is_full_depth=False, subdevice_role=SubdeviceRoleChoices.ROLE_CHILD),
         )
-        DeviceType.objects.bulk_create(device_types)
 
         # Add component templates for filtering
-        ConsolePortTemplate.objects.bulk_create((
-            ConsolePortTemplate(device_type=device_types[0], name='Console Port 1'),
-            ConsolePortTemplate(device_type=device_types[1], name='Console Port 2'),
-        ))
-        ConsoleServerPortTemplate.objects.bulk_create((
-            ConsoleServerPortTemplate(device_type=device_types[0], name='Console Server Port 1'),
-            ConsoleServerPortTemplate(device_type=device_types[1], name='Console Server Port 2'),
-        ))
-        PowerPortTemplate.objects.bulk_create((
-            PowerPortTemplate(device_type=device_types[0], name='Power Port 1'),
-            PowerPortTemplate(device_type=device_types[1], name='Power Port 2'),
-        ))
-        PowerOutletTemplate.objects.bulk_create((
-            PowerOutletTemplate(device_type=device_types[0], name='Power Outlet 1'),
-            PowerOutletTemplate(device_type=device_types[1], name='Power Outlet 2'),
-        ))
-        InterfaceTemplate.objects.bulk_create((
-            InterfaceTemplate(device_type=device_types[0], name='Interface 1'),
-            InterfaceTemplate(device_type=device_types[1], name='Interface 2'),
-        ))
+        ConsolePortTemplate.objects.create(device_type=device_types[0], name='Console Port 1')
+        ConsolePortTemplate.objects.create(device_type=device_types[1], name='Console Port 2')
+
+        ConsoleServerPortTemplate.objects.create(device_type=device_types[0], name='Console Server Port 1')
+        ConsoleServerPortTemplate.objects.create(device_type=device_types[1], name='Console Server Port 2')
+
+        PowerPortTemplate.objects.create(device_type=device_types[0], name='Power Port 1')
+        PowerPortTemplate.objects.create(device_type=device_types[1], name='Power Port 2')
+
+        PowerOutletTemplate.objects.create(device_type=device_types[0], name='Power Outlet 1')
+        PowerOutletTemplate.objects.create(device_type=device_types[1], name='Power Outlet 2')
+
+        InterfaceTemplate.objects.create(device_type=device_types[0], name='Interface 1')
+        InterfaceTemplate.objects.create(device_type=device_types[1], name='Interface 2')
+
         rear_ports = (
-            RearPortTemplate(device_type=device_types[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C),
-            RearPortTemplate(device_type=device_types[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C),
+            RearPortTemplate.objects.create(device_type=device_types[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C),
+            RearPortTemplate.objects.create(device_type=device_types[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C),
         )
-        RearPortTemplate.objects.bulk_create(rear_ports)
-        FrontPortTemplate.objects.bulk_create((
-            FrontPortTemplate(device_type=device_types[0], name='Front Port 1', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[0]),
-            FrontPortTemplate(device_type=device_types[1], name='Front Port 2', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[1]),
-        ))
-        DeviceBayTemplate.objects.bulk_create((
-            DeviceBayTemplate(device_type=device_types[0], name='Device Bay 1'),
-            DeviceBayTemplate(device_type=device_types[1], name='Device Bay 2'),
-        ))
+
+        FrontPortTemplate.objects.create(device_type=device_types[0], name='Front Port 1', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[0])
+        FrontPortTemplate.objects.create(device_type=device_types[1], name='Front Port 2', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[1])
+
+        DeviceBayTemplate.objects.create(device_type=device_types[0], name='Device Bay 1')
+        DeviceBayTemplate.objects.create(device_type=device_types[1], name='Device Bay 2')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -718,17 +656,14 @@ class ConsolePortTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
-        ConsolePortTemplate.objects.bulk_create((
-            ConsolePortTemplate(device_type=device_types[0], name='Console Port 1'),
-            ConsolePortTemplate(device_type=device_types[1], name='Console Port 2'),
-            ConsolePortTemplate(device_type=device_types[2], name='Console Port 3'),
-        ))
+        ConsolePortTemplate.objects.create(device_type=device_types[0], name='Console Port 1')
+        ConsolePortTemplate.objects.create(device_type=device_types[1], name='Console Port 2')
+        ConsolePortTemplate.objects.create(device_type=device_types[2], name='Console Port 3')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -754,17 +689,14 @@ class ConsoleServerPortTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
-        ConsoleServerPortTemplate.objects.bulk_create((
-            ConsoleServerPortTemplate(device_type=device_types[0], name='Console Server Port 1'),
-            ConsoleServerPortTemplate(device_type=device_types[1], name='Console Server Port 2'),
-            ConsoleServerPortTemplate(device_type=device_types[2], name='Console Server Port 3'),
-        ))
+        ConsoleServerPortTemplate.objects.create(device_type=device_types[0], name='Console Server Port 1')
+        ConsoleServerPortTemplate.objects.create(device_type=device_types[1], name='Console Server Port 2')
+        ConsoleServerPortTemplate.objects.create(device_type=device_types[2], name='Console Server Port 3')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -790,17 +722,14 @@ class PowerPortTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
-        PowerPortTemplate.objects.bulk_create((
-            PowerPortTemplate(device_type=device_types[0], name='Power Port 1', maximum_draw=100, allocated_draw=50),
-            PowerPortTemplate(device_type=device_types[1], name='Power Port 2', maximum_draw=200, allocated_draw=100),
-            PowerPortTemplate(device_type=device_types[2], name='Power Port 3', maximum_draw=300, allocated_draw=150),
-        ))
+        PowerPortTemplate.objects.create(device_type=device_types[0], name='Power Port 1', maximum_draw=100, allocated_draw=50)
+        PowerPortTemplate.objects.create(device_type=device_types[1], name='Power Port 2', maximum_draw=200, allocated_draw=100)
+        PowerPortTemplate.objects.create(device_type=device_types[2], name='Power Port 3', maximum_draw=300, allocated_draw=150)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -834,17 +763,14 @@ class PowerOutletTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
-        PowerOutletTemplate.objects.bulk_create((
-            PowerOutletTemplate(device_type=device_types[0], name='Power Outlet 1', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A),
-            PowerOutletTemplate(device_type=device_types[1], name='Power Outlet 2', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B),
-            PowerOutletTemplate(device_type=device_types[2], name='Power Outlet 3', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C),
-        ))
+        PowerOutletTemplate.objects.create(device_type=device_types[0], name='Power Outlet 1', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A)
+        PowerOutletTemplate.objects.create(device_type=device_types[1], name='Power Outlet 2', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B)
+        PowerOutletTemplate.objects.create(device_type=device_types[2], name='Power Outlet 3', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -875,17 +801,14 @@ class InterfaceTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
-        InterfaceTemplate.objects.bulk_create((
-            InterfaceTemplate(device_type=device_types[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED, mgmt_only=True),
-            InterfaceTemplate(device_type=device_types[1], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_GBIC, mgmt_only=False),
-            InterfaceTemplate(device_type=device_types[2], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_SFP, mgmt_only=False),
-        ))
+        InterfaceTemplate.objects.create(device_type=device_types[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED, mgmt_only=True)
+        InterfaceTemplate.objects.create(device_type=device_types[1], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_GBIC, mgmt_only=False)
+        InterfaceTemplate.objects.create(device_type=device_types[2], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_SFP, mgmt_only=False)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -922,24 +845,20 @@ class FrontPortTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
         rear_ports = (
-            RearPortTemplate(device_type=device_types[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C),
-            RearPortTemplate(device_type=device_types[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C),
-            RearPortTemplate(device_type=device_types[2], name='Rear Port 3', type=PortTypeChoices.TYPE_8P8C),
+            RearPortTemplate.objects.create(device_type=device_types[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C),
+            RearPortTemplate.objects.create(device_type=device_types[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C),
+            RearPortTemplate.objects.create(device_type=device_types[2], name='Rear Port 3', type=PortTypeChoices.TYPE_8P8C),
         )
-        RearPortTemplate.objects.bulk_create(rear_ports)
 
-        FrontPortTemplate.objects.bulk_create((
-            FrontPortTemplate(device_type=device_types[0], name='Front Port 1', rear_port=rear_ports[0], type=PortTypeChoices.TYPE_8P8C),
-            FrontPortTemplate(device_type=device_types[1], name='Front Port 2', rear_port=rear_ports[1], type=PortTypeChoices.TYPE_110_PUNCH),
-            FrontPortTemplate(device_type=device_types[2], name='Front Port 3', rear_port=rear_ports[2], type=PortTypeChoices.TYPE_BNC),
-        ))
+        FrontPortTemplate.objects.create(device_type=device_types[0], name='Front Port 1', rear_port=rear_ports[0], type=PortTypeChoices.TYPE_8P8C)
+        FrontPortTemplate.objects.create(device_type=device_types[1], name='Front Port 2', rear_port=rear_ports[1], type=PortTypeChoices.TYPE_110_PUNCH)
+        FrontPortTemplate.objects.create(device_type=device_types[2], name='Front Port 3', rear_port=rear_ports[2], type=PortTypeChoices.TYPE_BNC)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -970,17 +889,14 @@ class RearPortTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
-        RearPortTemplate.objects.bulk_create((
-            RearPortTemplate(device_type=device_types[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C, positions=1),
-            RearPortTemplate(device_type=device_types[1], name='Rear Port 2', type=PortTypeChoices.TYPE_110_PUNCH, positions=2),
-            RearPortTemplate(device_type=device_types[2], name='Rear Port 3', type=PortTypeChoices.TYPE_BNC, positions=3),
-        ))
+        RearPortTemplate.objects.create(device_type=device_types[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C, positions=1)
+        RearPortTemplate.objects.create(device_type=device_types[1], name='Rear Port 2', type=PortTypeChoices.TYPE_110_PUNCH, positions=2)
+        RearPortTemplate.objects.create(device_type=device_types[2], name='Rear Port 3', type=PortTypeChoices.TYPE_BNC, positions=3)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -1015,17 +931,14 @@ class DeviceBayTemplateTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         device_types = (
-            DeviceType(manufacturer=manufacturer, model='Model 1', slug='model-1'),
-            DeviceType(manufacturer=manufacturer, model='Model 2', slug='model-2'),
-            DeviceType(manufacturer=manufacturer, model='Model 3', slug='model-3'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 2', slug='model-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Model 3', slug='model-3'),
         )
-        DeviceType.objects.bulk_create(device_types)
 
-        DeviceBayTemplate.objects.bulk_create((
-            DeviceBayTemplate(device_type=device_types[0], name='Device Bay 1'),
-            DeviceBayTemplate(device_type=device_types[1], name='Device Bay 2'),
-            DeviceBayTemplate(device_type=device_types[2], name='Device Bay 3'),
-        ))
+        DeviceBayTemplate.objects.create(device_type=device_types[0], name='Device Bay 1')
+        DeviceBayTemplate.objects.create(device_type=device_types[1], name='Device Bay 2')
+        DeviceBayTemplate.objects.create(device_type=device_types[2], name='Device Bay 3')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -1049,11 +962,10 @@ class DeviceRoleTestCase(TestCase):
     def setUpTestData(cls):
 
         device_roles = (
-            DeviceRole(name='Device Role 1', slug='device-role-1', color='ff0000', vm_role=True),
-            DeviceRole(name='Device Role 2', slug='device-role-2', color='00ff00', vm_role=True),
-            DeviceRole(name='Device Role 3', slug='device-role-3', color='0000ff', vm_role=False),
+            DeviceRole.objects.create(name='Device Role 1', slug='device-role-1', color='ff0000', vm_role=True),
+            DeviceRole.objects.create(name='Device Role 2', slug='device-role-2', color='00ff00', vm_role=True),
+            DeviceRole.objects.create(name='Device Role 3', slug='device-role-3', color='0000ff', vm_role=False),
         )
-        DeviceRole.objects.bulk_create(device_roles)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -1086,18 +998,14 @@ class PlatformTestCase(TestCase):
     def setUpTestData(cls):
 
         manufacturers = (
-            Manufacturer(name='Manufacturer 1', slug='manufacturer-1'),
-            Manufacturer(name='Manufacturer 2', slug='manufacturer-2'),
-            Manufacturer(name='Manufacturer 3', slug='manufacturer-3'),
+            Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1'),
+            Manufacturer.objects.create(name='Manufacturer 2', slug='manufacturer-2'),
+            Manufacturer.objects.create(name='Manufacturer 3', slug='manufacturer-3'),
         )
-        Manufacturer.objects.bulk_create(manufacturers)
 
-        platforms = (
-            Platform(name='Platform 1', slug='platform-1', manufacturer=manufacturers[0], napalm_driver='driver-1', description='A'),
-            Platform(name='Platform 2', slug='platform-2', manufacturer=manufacturers[1], napalm_driver='driver-2', description='B'),
-            Platform(name='Platform 3', slug='platform-3', manufacturer=manufacturers[2], napalm_driver='driver-3', description='C'),
-        )
-        Platform.objects.bulk_create(platforms)
+        Platform.objects.create(name='Platform 1', slug='platform-1', manufacturer=manufacturers[0], napalm_driver='driver-1', description='A')
+        Platform.objects.create(name='Platform 2', slug='platform-2', manufacturer=manufacturers[1], napalm_driver='driver-2', description='B')
+        Platform.objects.create(name='Platform 3', slug='platform-3', manufacturer=manufacturers[2], napalm_driver='driver-3', description='C')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -1135,138 +1043,117 @@ class DeviceTestCase(TestCase):
     def setUpTestData(cls):
 
         manufacturers = (
-            Manufacturer(name='Manufacturer 1', slug='manufacturer-1'),
-            Manufacturer(name='Manufacturer 2', slug='manufacturer-2'),
-            Manufacturer(name='Manufacturer 3', slug='manufacturer-3'),
+            Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1'),
+            Manufacturer.objects.create(name='Manufacturer 2', slug='manufacturer-2'),
+            Manufacturer.objects.create(name='Manufacturer 3', slug='manufacturer-3'),
         )
-        Manufacturer.objects.bulk_create(manufacturers)
 
         device_types = (
-            DeviceType(manufacturer=manufacturers[0], model='Model 1', slug='model-1', is_full_depth=True),
-            DeviceType(manufacturer=manufacturers[1], model='Model 2', slug='model-2', is_full_depth=True),
-            DeviceType(manufacturer=manufacturers[2], model='Model 3', slug='model-3', is_full_depth=False),
+            DeviceType.objects.create(manufacturer=manufacturers[0], model='Model 1', slug='model-1', is_full_depth=True),
+            DeviceType.objects.create(manufacturer=manufacturers[1], model='Model 2', slug='model-2', is_full_depth=True),
+            DeviceType.objects.create(manufacturer=manufacturers[2], model='Model 3', slug='model-3', is_full_depth=False),
         )
-        DeviceType.objects.bulk_create(device_types)
 
         device_roles = (
-            DeviceRole(name='Device Role 1', slug='device-role-1'),
-            DeviceRole(name='Device Role 2', slug='device-role-2'),
-            DeviceRole(name='Device Role 3', slug='device-role-3'),
+            DeviceRole.objects.create(name='Device Role 1', slug='device-role-1'),
+            DeviceRole.objects.create(name='Device Role 2', slug='device-role-2'),
+            DeviceRole.objects.create(name='Device Role 3', slug='device-role-3'),
         )
-        DeviceRole.objects.bulk_create(device_roles)
 
         device_statuses = Status.objects.get_for_model(Device)
         device_status_map = {ds.name: ds for ds in device_statuses.all()}
 
         platforms = (
-            Platform(name='Platform 1', slug='platform-1'),
-            Platform(name='Platform 2', slug='platform-2'),
-            Platform(name='Platform 3', slug='platform-3'),
+            Platform.objects.create(name='Platform 1', slug='platform-1'),
+            Platform.objects.create(name='Platform 2', slug='platform-2'),
+            Platform.objects.create(name='Platform 3', slug='platform-3'),
         )
-        Platform.objects.bulk_create(platforms)
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         rack_groups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
-            RackGroup(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
+            RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
+            RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
+            RackGroup.objects.create(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
         )
-        for rackgroup in rack_groups:
-            rackgroup.save()
 
         racks = (
-            Rack(name='Rack 1', site=sites[0], group=rack_groups[0]),
-            Rack(name='Rack 2', site=sites[1], group=rack_groups[1]),
-            Rack(name='Rack 3', site=sites[2], group=rack_groups[2]),
+            Rack.objects.create(name='Rack 1', site=sites[0], group=rack_groups[0]),
+            Rack.objects.create(name='Rack 2', site=sites[1], group=rack_groups[1]),
+            Rack.objects.create(name='Rack 3', site=sites[2], group=rack_groups[2]),
         )
-        Rack.objects.bulk_create(racks)
 
         cluster_type = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
         clusters = (
-            Cluster(name='Cluster 1', type=cluster_type),
-            Cluster(name='Cluster 2', type=cluster_type),
-            Cluster(name='Cluster 3', type=cluster_type),
+            Cluster.objects.create(name='Cluster 1', type=cluster_type),
+            Cluster.objects.create(name='Cluster 2', type=cluster_type),
+            Cluster.objects.create(name='Cluster 3', type=cluster_type),
         )
-        Cluster.objects.bulk_create(clusters)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
         devices = (
-            Device(name='Device 1', device_type=device_types[0], device_role=device_roles[0], platform=platforms[0], tenant=tenants[0], serial='ABC', asset_tag='1001', site=sites[0], rack=racks[0], position=1, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['active'], cluster=clusters[0], local_context_data={"foo": 123}),
-            Device(name='Device 2', device_type=device_types[1], device_role=device_roles[1], platform=platforms[1], tenant=tenants[1], serial='DEF', asset_tag='1002', site=sites[1], rack=racks[1], position=2, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['staged'], cluster=clusters[1]),
-            Device(name='Device 3', device_type=device_types[2], device_role=device_roles[2], platform=platforms[2], tenant=tenants[2], serial='GHI', asset_tag='1003', site=sites[2], rack=racks[2], position=3, face=DeviceFaceChoices.FACE_REAR, status=device_status_map['failed'], cluster=clusters[2]),
+            Device.objects.create(name='Device 1', device_type=device_types[0], device_role=device_roles[0], platform=platforms[0], tenant=tenants[0], serial='ABC', asset_tag='1001', site=sites[0], rack=racks[0], position=1, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['active'], cluster=clusters[0], local_context_data={"foo": 123}),
+            Device.objects.create(name='Device 2', device_type=device_types[1], device_role=device_roles[1], platform=platforms[1], tenant=tenants[1], serial='DEF', asset_tag='1002', site=sites[1], rack=racks[1], position=2, face=DeviceFaceChoices.FACE_FRONT, status=device_status_map['staged'], cluster=clusters[1]),
+            Device.objects.create(name='Device 3', device_type=device_types[2], device_role=device_roles[2], platform=platforms[2], tenant=tenants[2], serial='GHI', asset_tag='1003', site=sites[2], rack=racks[2], position=3, face=DeviceFaceChoices.FACE_REAR, status=device_status_map['failed'], cluster=clusters[2]),
         )
-        Device.objects.bulk_create(devices)
 
         # Add components for filtering
-        ConsolePort.objects.bulk_create((
-            ConsolePort(device=devices[0], name='Console Port 1'),
-            ConsolePort(device=devices[1], name='Console Port 2'),
-        ))
-        ConsoleServerPort.objects.bulk_create((
-            ConsoleServerPort(device=devices[0], name='Console Server Port 1'),
-            ConsoleServerPort(device=devices[1], name='Console Server Port 2'),
-        ))
-        PowerPort.objects.bulk_create((
-            PowerPort(device=devices[0], name='Power Port 1'),
-            PowerPort(device=devices[1], name='Power Port 2'),
-        ))
-        PowerOutlet.objects.bulk_create((
-            PowerOutlet(device=devices[0], name='Power Outlet 1'),
-            PowerOutlet(device=devices[1], name='Power Outlet 2'),
-        ))
+        ConsolePort.objects.create(device=devices[0], name='Console Port 1'),
+        ConsolePort.objects.create(device=devices[1], name='Console Port 2'),
+
+        ConsoleServerPort.objects.create(device=devices[0], name='Console Server Port 1'),
+        ConsoleServerPort.objects.create(device=devices[1], name='Console Server Port 2'),
+
+        PowerPort.objects.create(device=devices[0], name='Power Port 1'),
+        PowerPort.objects.create(device=devices[1], name='Power Port 2'),
+
+        PowerOutlet.objects.create(device=devices[0], name='Power Outlet 1'),
+        PowerOutlet.objects.create(device=devices[1], name='Power Outlet 2'),
+
         interfaces = (
-            Interface(device=devices[0], name='Interface 1', mac_address='00-00-00-00-00-01'),
-            Interface(device=devices[1], name='Interface 2', mac_address='00-00-00-00-00-02'),
+            Interface.objects.create(device=devices[0], name='Interface 1', mac_address='00-00-00-00-00-01'),
+            Interface.objects.create(device=devices[1], name='Interface 2', mac_address='00-00-00-00-00-02'),
         )
-        Interface.objects.bulk_create(interfaces)
+
         rear_ports = (
-            RearPort(device=devices[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C),
-            RearPort(device=devices[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=devices[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=devices[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C),
         )
-        RearPort.objects.bulk_create(rear_ports)
-        FrontPort.objects.bulk_create((
-            FrontPort(device=devices[0], name='Front Port 1', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[0]),
-            FrontPort(device=devices[1], name='Front Port 2', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[1]),
-        ))
-        DeviceBay.objects.bulk_create((
-            DeviceBay(device=devices[0], name='Device Bay 1'),
-            DeviceBay(device=devices[1], name='Device Bay 2'),
-        ))
+
+        FrontPort.objects.create(device=devices[0], name='Front Port 1', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[0]),
+        FrontPort.objects.create(device=devices[1], name='Front Port 2', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[1]),
+
+        DeviceBay.objects.create(device=devices[0], name='Device Bay 1'),
+        DeviceBay.objects.create(device=devices[1], name='Device Bay 2'),
 
         # Assign primary IPs for filtering
+
         ipaddresses = (
-            IPAddress(address='192.0.2.1/24', assigned_object=interfaces[0]),
-            IPAddress(address='192.0.2.2/24', assigned_object=interfaces[1]),
+            IPAddress.objects.create(address='192.0.2.1/24', assigned_object=interfaces[0]),
+            IPAddress.objects.create(address='192.0.2.2/24', assigned_object=interfaces[1]),
         )
-        IPAddress.objects.bulk_create(ipaddresses)
+
         Device.objects.filter(pk=devices[0].pk).update(primary_ip4=ipaddresses[0])
         Device.objects.filter(pk=devices[1].pk).update(primary_ip4=ipaddresses[1])
 
@@ -1470,49 +1357,45 @@ class ConsolePortTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
-            Device(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
         )
-        Device.objects.bulk_create(devices)
 
         console_server_ports = (
-            ConsoleServerPort(device=devices[3], name='Console Server Port 1'),
-            ConsoleServerPort(device=devices[3], name='Console Server Port 2'),
+            ConsoleServerPort.objects.create(device=devices[3], name='Console Server Port 1'),
+            ConsoleServerPort.objects.create(device=devices[3], name='Console Server Port 2'),
         )
-        ConsoleServerPort.objects.bulk_create(console_server_ports)
 
         console_ports = (
-            ConsolePort(device=devices[0], name='Console Port 1', description='First'),
-            ConsolePort(device=devices[1], name='Console Port 2', description='Second'),
-            ConsolePort(device=devices[2], name='Console Port 3', description='Third'),
+            ConsolePort.objects.create(device=devices[0], name='Console Port 1', description='First'),
+            ConsolePort.objects.create(device=devices[1], name='Console Port 2', description='Second'),
+            ConsolePort.objects.create(device=devices[2], name='Console Port 3', description='Third'),
         )
-        ConsolePort.objects.bulk_create(console_ports)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
         # Cables
-        Cable(termination_a=console_ports[0], termination_b=console_server_ports[0], status=status_connected).save()
-        Cable(termination_a=console_ports[1], termination_b=console_server_ports[1], status=status_connected).save()
+        Cable.objects.create(termination_a=console_ports[0], termination_b=console_server_ports[0], status=status_connected)
+        Cable.objects.create(termination_a=console_ports[1], termination_b=console_server_ports[1], status=status_connected)
         # Third port is not connected
 
     def test_id(self):
@@ -1569,49 +1452,45 @@ class ConsoleServerPortTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
-            Device(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
         )
-        Device.objects.bulk_create(devices)
 
         console_ports = (
-            ConsolePort(device=devices[3], name='Console Server Port 1'),
-            ConsolePort(device=devices[3], name='Console Server Port 2'),
+            ConsolePort.objects.create(device=devices[3], name='Console Server Port 1'),
+            ConsolePort.objects.create(device=devices[3], name='Console Server Port 2'),
         )
-        ConsolePort.objects.bulk_create(console_ports)
 
         console_server_ports = (
-            ConsoleServerPort(device=devices[0], name='Console Server Port 1', description='First'),
-            ConsoleServerPort(device=devices[1], name='Console Server Port 2', description='Second'),
-            ConsoleServerPort(device=devices[2], name='Console Server Port 3', description='Third'),
+            ConsoleServerPort.objects.create(device=devices[0], name='Console Server Port 1', description='First'),
+            ConsoleServerPort.objects.create(device=devices[1], name='Console Server Port 2', description='Second'),
+            ConsoleServerPort.objects.create(device=devices[2], name='Console Server Port 3', description='Third'),
         )
-        ConsoleServerPort.objects.bulk_create(console_server_ports)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
         # Cables
-        Cable(termination_a=console_server_ports[0], termination_b=console_ports[0], status=status_connected).save()
-        Cable(termination_a=console_server_ports[1], termination_b=console_ports[1], status=status_connected).save()
+        Cable.objects.create(termination_a=console_server_ports[0], termination_b=console_ports[0], status=status_connected)
+        Cable.objects.create(termination_a=console_server_ports[1], termination_b=console_ports[1], status=status_connected)
         # Third port is not connected
 
     def test_id(self):
@@ -1668,49 +1547,45 @@ class PowerPortTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
-            Device(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
         )
-        Device.objects.bulk_create(devices)
 
         power_outlets = (
-            PowerOutlet(device=devices[3], name='Power Outlet 1'),
-            PowerOutlet(device=devices[3], name='Power Outlet 2'),
+            PowerOutlet.objects.create(device=devices[3], name='Power Outlet 1'),
+            PowerOutlet.objects.create(device=devices[3], name='Power Outlet 2'),
         )
-        PowerOutlet.objects.bulk_create(power_outlets)
 
         power_ports = (
-            PowerPort(device=devices[0], name='Power Port 1', maximum_draw=100, allocated_draw=50, description='First'),
-            PowerPort(device=devices[1], name='Power Port 2', maximum_draw=200, allocated_draw=100, description='Second'),
-            PowerPort(device=devices[2], name='Power Port 3', maximum_draw=300, allocated_draw=150, description='Third'),
+            PowerPort.objects.create(device=devices[0], name='Power Port 1', maximum_draw=100, allocated_draw=50, description='First'),
+            PowerPort.objects.create(device=devices[1], name='Power Port 2', maximum_draw=200, allocated_draw=100, description='Second'),
+            PowerPort.objects.create(device=devices[2], name='Power Port 3', maximum_draw=300, allocated_draw=150, description='Third'),
         )
-        PowerPort.objects.bulk_create(power_ports)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
         # Cables
-        Cable(termination_a=power_ports[0], termination_b=power_outlets[0], status=status_connected).save()
-        Cable(termination_a=power_ports[1], termination_b=power_outlets[1], status=status_connected).save()
+        Cable.objects.create(termination_a=power_ports[0], termination_b=power_outlets[0], status=status_connected)
+        Cable.objects.create(termination_a=power_ports[1], termination_b=power_outlets[1], status=status_connected)
         # Third port is not connected
 
     def test_id(self):
@@ -1775,49 +1650,45 @@ class PowerOutletTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
-            Device(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
         )
-        Device.objects.bulk_create(devices)
 
         power_ports = (
-            PowerPort(device=devices[3], name='Power Outlet 1'),
-            PowerPort(device=devices[3], name='Power Outlet 2'),
+            PowerPort.objects.create(device=devices[3], name='Power Outlet 1'),
+            PowerPort.objects.create(device=devices[3], name='Power Outlet 2'),
         )
-        PowerPort.objects.bulk_create(power_ports)
 
         power_outlets = (
-            PowerOutlet(device=devices[0], name='Power Outlet 1', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A, description='First'),
-            PowerOutlet(device=devices[1], name='Power Outlet 2', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B, description='Second'),
-            PowerOutlet(device=devices[2], name='Power Outlet 3', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C, description='Third'),
+            PowerOutlet.objects.create(device=devices[0], name='Power Outlet 1', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A, description='First'),
+            PowerOutlet.objects.create(device=devices[1], name='Power Outlet 2', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B, description='Second'),
+            PowerOutlet.objects.create(device=devices[2], name='Power Outlet 3', feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C, description='Third'),
         )
-        PowerOutlet.objects.bulk_create(power_outlets)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
         # Cables
-        Cable(termination_a=power_outlets[0], termination_b=power_ports[0], status=status_connected).save()
-        Cable(termination_a=power_outlets[1], termination_b=power_ports[1], status=status_connected).save()
+        Cable.objects.create(termination_a=power_outlets[0], termination_b=power_ports[0], status=status_connected)
+        Cable.objects.create(termination_a=power_outlets[1], termination_b=power_ports[1], status=status_connected)
         # Third port is not connected
 
     def test_id(self):
@@ -1879,46 +1750,43 @@ class InterfaceTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
-            Device(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
         )
-        Device.objects.bulk_create(devices)
 
         interfaces = (
-            Interface(device=devices[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_SFP, enabled=True, mgmt_only=True, mtu=100, mode=InterfaceModeChoices.MODE_ACCESS, mac_address='00-00-00-00-00-01', description='First'),
-            Interface(device=devices[1], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_GBIC, enabled=True, mgmt_only=True, mtu=200, mode=InterfaceModeChoices.MODE_TAGGED, mac_address='00-00-00-00-00-02', description='Second'),
-            Interface(device=devices[2], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED, enabled=False, mgmt_only=False, mtu=300, mode=InterfaceModeChoices.MODE_TAGGED_ALL, mac_address='00-00-00-00-00-03', description='Third'),
-            Interface(device=devices[3], name='Interface 4', type=InterfaceTypeChoices.TYPE_OTHER, enabled=True, mgmt_only=True),
-            Interface(device=devices[3], name='Interface 5', type=InterfaceTypeChoices.TYPE_OTHER, enabled=True, mgmt_only=True),
-            Interface(device=devices[3], name='Interface 6', type=InterfaceTypeChoices.TYPE_OTHER, enabled=False, mgmt_only=False),
+            Interface.objects.create(device=devices[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_SFP, enabled=True, mgmt_only=True, mtu=100, mode=InterfaceModeChoices.MODE_ACCESS, mac_address='00-00-00-00-00-01', description='First'),
+            Interface.objects.create(device=devices[1], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_GBIC, enabled=True, mgmt_only=True, mtu=200, mode=InterfaceModeChoices.MODE_TAGGED, mac_address='00-00-00-00-00-02', description='Second'),
+            Interface.objects.create(device=devices[2], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED, enabled=False, mgmt_only=False, mtu=300, mode=InterfaceModeChoices.MODE_TAGGED_ALL, mac_address='00-00-00-00-00-03', description='Third'),
+            Interface.objects.create(device=devices[3], name='Interface 4', type=InterfaceTypeChoices.TYPE_OTHER, enabled=True, mgmt_only=True),
+            Interface.objects.create(device=devices[3], name='Interface 5', type=InterfaceTypeChoices.TYPE_OTHER, enabled=True, mgmt_only=True),
+            Interface.objects.create(device=devices[3], name='Interface 6', type=InterfaceTypeChoices.TYPE_OTHER, enabled=False, mgmt_only=False),
         )
-        Interface.objects.bulk_create(interfaces)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
         # Cables
-        Cable(termination_a=interfaces[0], termination_b=interfaces[3], status=status_connected).save()
-        Cable(termination_a=interfaces[1], termination_b=interfaces[4], status=status_connected).save()
+        Cable.objects.create(termination_a=interfaces[0], termination_b=interfaces[3], status=status_connected)
+        Cable.objects.create(termination_a=interfaces[1], termination_b=interfaces[4], status=status_connected)
         # Third pair is not connected
 
     def test_id(self):
@@ -2009,56 +1877,52 @@ class FrontPortTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
-            Device(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
         )
-        Device.objects.bulk_create(devices)
 
         rear_ports = (
-            RearPort(device=devices[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C, positions=6),
-            RearPort(device=devices[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C, positions=6),
-            RearPort(device=devices[2], name='Rear Port 3', type=PortTypeChoices.TYPE_8P8C, positions=6),
-            RearPort(device=devices[3], name='Rear Port 4', type=PortTypeChoices.TYPE_8P8C, positions=6),
-            RearPort(device=devices[3], name='Rear Port 5', type=PortTypeChoices.TYPE_8P8C, positions=6),
-            RearPort(device=devices[3], name='Rear Port 6', type=PortTypeChoices.TYPE_8P8C, positions=6),
+            RearPort.objects.create(device=devices[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C, positions=6),
+            RearPort.objects.create(device=devices[1], name='Rear Port 2', type=PortTypeChoices.TYPE_8P8C, positions=6),
+            RearPort.objects.create(device=devices[2], name='Rear Port 3', type=PortTypeChoices.TYPE_8P8C, positions=6),
+            RearPort.objects.create(device=devices[3], name='Rear Port 4', type=PortTypeChoices.TYPE_8P8C, positions=6),
+            RearPort.objects.create(device=devices[3], name='Rear Port 5', type=PortTypeChoices.TYPE_8P8C, positions=6),
+            RearPort.objects.create(device=devices[3], name='Rear Port 6', type=PortTypeChoices.TYPE_8P8C, positions=6),
         )
-        RearPort.objects.bulk_create(rear_ports)
 
         front_ports = (
-            FrontPort(device=devices[0], name='Front Port 1', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[0], rear_port_position=1, description='First'),
-            FrontPort(device=devices[1], name='Front Port 2', type=PortTypeChoices.TYPE_110_PUNCH, rear_port=rear_ports[1], rear_port_position=2, description='Second'),
-            FrontPort(device=devices[2], name='Front Port 3', type=PortTypeChoices.TYPE_BNC, rear_port=rear_ports[2], rear_port_position=3, description='Third'),
-            FrontPort(device=devices[3], name='Front Port 4', type=PortTypeChoices.TYPE_FC, rear_port=rear_ports[3], rear_port_position=1),
-            FrontPort(device=devices[3], name='Front Port 5', type=PortTypeChoices.TYPE_FC, rear_port=rear_ports[4], rear_port_position=1),
-            FrontPort(device=devices[3], name='Front Port 6', type=PortTypeChoices.TYPE_FC, rear_port=rear_ports[5], rear_port_position=1),
+            FrontPort.objects.create(device=devices[0], name='Front Port 1', type=PortTypeChoices.TYPE_8P8C, rear_port=rear_ports[0], rear_port_position=1, description='First'),
+            FrontPort.objects.create(device=devices[1], name='Front Port 2', type=PortTypeChoices.TYPE_110_PUNCH, rear_port=rear_ports[1], rear_port_position=2, description='Second'),
+            FrontPort.objects.create(device=devices[2], name='Front Port 3', type=PortTypeChoices.TYPE_BNC, rear_port=rear_ports[2], rear_port_position=3, description='Third'),
+            FrontPort.objects.create(device=devices[3], name='Front Port 4', type=PortTypeChoices.TYPE_FC, rear_port=rear_ports[3], rear_port_position=1),
+            FrontPort.objects.create(device=devices[3], name='Front Port 5', type=PortTypeChoices.TYPE_FC, rear_port=rear_ports[4], rear_port_position=1),
+            FrontPort.objects.create(device=devices[3], name='Front Port 6', type=PortTypeChoices.TYPE_FC, rear_port=rear_ports[5], rear_port_position=1),
         )
-        FrontPort.objects.bulk_create(front_ports)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
         # Cables
-        Cable(termination_a=front_ports[0], termination_b=front_ports[3], status=status_connected).save()
-        Cable(termination_a=front_ports[1], termination_b=front_ports[4], status=status_connected).save()
+        Cable.objects.create(termination_a=front_ports[0], termination_b=front_ports[3], status=status_connected)
+        Cable.objects.create(termination_a=front_ports[1], termination_b=front_ports[4], status=status_connected)
         # Third port is not connected
 
     def test_id(self):
@@ -2114,46 +1978,43 @@ class RearPortTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
-            Device(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name=None, device_type=device_type, device_role=device_role, site=sites[3]),  # For cable connections
         )
-        Device.objects.bulk_create(devices)
 
         rear_ports = (
-            RearPort(device=devices[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C, positions=1, description='First'),
-            RearPort(device=devices[1], name='Rear Port 2', type=PortTypeChoices.TYPE_110_PUNCH, positions=2, description='Second'),
-            RearPort(device=devices[2], name='Rear Port 3', type=PortTypeChoices.TYPE_BNC, positions=3, description='Third'),
-            RearPort(device=devices[3], name='Rear Port 4', type=PortTypeChoices.TYPE_FC, positions=4),
-            RearPort(device=devices[3], name='Rear Port 5', type=PortTypeChoices.TYPE_FC, positions=5),
-            RearPort(device=devices[3], name='Rear Port 6', type=PortTypeChoices.TYPE_FC, positions=6),
+            RearPort.objects.create(device=devices[0], name='Rear Port 1', type=PortTypeChoices.TYPE_8P8C, positions=1, description='First'),
+            RearPort.objects.create(device=devices[1], name='Rear Port 2', type=PortTypeChoices.TYPE_110_PUNCH, positions=2, description='Second'),
+            RearPort.objects.create(device=devices[2], name='Rear Port 3', type=PortTypeChoices.TYPE_BNC, positions=3, description='Third'),
+            RearPort.objects.create(device=devices[3], name='Rear Port 4', type=PortTypeChoices.TYPE_FC, positions=4),
+            RearPort.objects.create(device=devices[3], name='Rear Port 5', type=PortTypeChoices.TYPE_FC, positions=5),
+            RearPort.objects.create(device=devices[3], name='Rear Port 6', type=PortTypeChoices.TYPE_FC, positions=6),
         )
-        RearPort.objects.bulk_create(rear_ports)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
         # Cables
-        Cable(termination_a=rear_ports[0], termination_b=rear_ports[3], status=status_connected).save()
-        Cable(termination_a=rear_ports[1], termination_b=rear_ports[4], status=status_connected).save()
+        Cable.objects.create(termination_a=rear_ports[0], termination_b=rear_ports[3], status=status_connected)
+        Cable.objects.create(termination_a=rear_ports[1], termination_b=rear_ports[4], status=status_connected)
         # Third port is not connected
 
     def test_id(self):
@@ -2213,35 +2074,30 @@ class DeviceBayTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
-        sites = Site.objects.bulk_create((
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
-            Site(name='Site X', slug='site-x'),
-        ))
+
+        sites = (
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site X', slug='site-x'),
+        )
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
         )
-        Device.objects.bulk_create(devices)
 
-        device_bays = (
-            DeviceBay(device=devices[0], name='Device Bay 1', description='First'),
-            DeviceBay(device=devices[1], name='Device Bay 2', description='Second'),
-            DeviceBay(device=devices[2], name='Device Bay 3', description='Third'),
-        )
-        DeviceBay.objects.bulk_create(device_bays)
+        DeviceBay.objects.create(device=devices[0], name='Device Bay 1', description='First')
+        DeviceBay.objects.create(device=devices[1], name='Device Bay 2', description='Second')
+        DeviceBay.objects.create(device=devices[2], name='Device Bay 3', description='Third')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -2285,52 +2141,41 @@ class InventoryItemTestCase(TestCase):
     def setUpTestData(cls):
 
         manufacturers = (
-            Manufacturer(name='Manufacturer 1', slug='manufacturer-1'),
-            Manufacturer(name='Manufacturer 2', slug='manufacturer-2'),
-            Manufacturer(name='Manufacturer 3', slug='manufacturer-3'),
+            Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1'),
+            Manufacturer.objects.create(name='Manufacturer 2', slug='manufacturer-2'),
+            Manufacturer.objects.create(name='Manufacturer 3', slug='manufacturer-3'),
         )
-        Manufacturer.objects.bulk_create(manufacturers)
 
         device_type = DeviceType.objects.create(manufacturer=manufacturers[0], model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[1]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[2]),
         )
-        Device.objects.bulk_create(devices)
 
         inventory_items = (
-            InventoryItem(device=devices[0], manufacturer=manufacturers[0], name='Inventory Item 1', part_id='1001', serial='ABC', asset_tag='1001', discovered=True, description='First'),
-            InventoryItem(device=devices[1], manufacturer=manufacturers[1], name='Inventory Item 2', part_id='1002', serial='DEF', asset_tag='1002', discovered=True, description='Second'),
-            InventoryItem(device=devices[2], manufacturer=manufacturers[2], name='Inventory Item 3', part_id='1003', serial='GHI', asset_tag='1003', discovered=False, description='Third'),
+            InventoryItem.objects.create(device=devices[0], manufacturer=manufacturers[0], name='Inventory Item 1', part_id='1001', serial='ABC', asset_tag='1001', discovered=True, description='First'),
+            InventoryItem.objects.create(device=devices[1], manufacturer=manufacturers[1], name='Inventory Item 2', part_id='1002', serial='DEF', asset_tag='1002', discovered=True, description='Second'),
+            InventoryItem.objects.create(device=devices[2], manufacturer=manufacturers[2], name='Inventory Item 3', part_id='1003', serial='GHI', asset_tag='1003', discovered=False, description='Third'),
         )
-        for i in inventory_items:
-            i.save()
 
-        child_inventory_items = (
-            InventoryItem(device=devices[0], name='Inventory Item 1A', parent=inventory_items[0]),
-            InventoryItem(device=devices[1], name='Inventory Item 2A', parent=inventory_items[1]),
-            InventoryItem(device=devices[2], name='Inventory Item 3A', parent=inventory_items[2]),
-        )
-        for i in child_inventory_items:
-            i.save()
+        InventoryItem.objects.create(device=devices[0], name='Inventory Item 1A', parent=inventory_items[0])
+        InventoryItem.objects.create(device=devices[1], name='Inventory Item 2A', parent=inventory_items[1])
+        InventoryItem.objects.create(device=devices[2], name='Inventory Item 3A', parent=inventory_items[2])
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -2408,36 +2253,31 @@ class VirtualChassisTestCase(TestCase):
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0], vc_position=1),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[0], vc_position=2),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[1], vc_position=1),
-            Device(name='Device 4', device_type=device_type, device_role=device_role, site=sites[1], vc_position=2),
-            Device(name='Device 5', device_type=device_type, device_role=device_role, site=sites[2], vc_position=1),
-            Device(name='Device 6', device_type=device_type, device_role=device_role, site=sites[2], vc_position=2),
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0], vc_position=1),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[0], vc_position=2),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[1], vc_position=1),
+            Device.objects.create(name='Device 4', device_type=device_type, device_role=device_role, site=sites[1], vc_position=2),
+            Device.objects.create(name='Device 5', device_type=device_type, device_role=device_role, site=sites[2], vc_position=1),
+            Device.objects.create(name='Device 6', device_type=device_type, device_role=device_role, site=sites[2], vc_position=2),
         )
-        Device.objects.bulk_create(devices)
 
         virtual_chassis = (
-            VirtualChassis(name='VC 1', master=devices[0], domain='Domain 1'),
-            VirtualChassis(name='VC 2', master=devices[2], domain='Domain 2'),
-            VirtualChassis(name='VC 3', master=devices[4], domain='Domain 3'),
+            VirtualChassis.objects.create(name='VC 1', master=devices[0], domain='Domain 1'),
+            VirtualChassis.objects.create(name='VC 2', master=devices[2], domain='Domain 2'),
+            VirtualChassis.objects.create(name='VC 3', master=devices[4], domain='Domain 3'),
         )
-        VirtualChassis.objects.bulk_create(virtual_chassis)
 
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis[0])
         Device.objects.filter(pk=devices[3].pk).update(virtual_chassis=virtual_chassis[1])
@@ -2485,66 +2325,61 @@ class CableTestCase(TestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
-            Site(name='Site 3', slug='site-3'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 3', slug='site-3'),
         )
-        Site.objects.bulk_create(sites)
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1'),
-            Tenant(name='Tenant 2', slug='tenant-2'),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1'),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2'),
         )
-        Tenant.objects.bulk_create(tenants)
 
         racks = (
-            Rack(name='Rack 1', site=sites[0]),
-            Rack(name='Rack 2', site=sites[1]),
-            Rack(name='Rack 3', site=sites[2]),
+            Rack.objects.create(name='Rack 1', site=sites[0]),
+            Rack.objects.create(name='Rack 2', site=sites[1]),
+            Rack.objects.create(name='Rack 3', site=sites[2]),
         )
-        Rack.objects.bulk_create(racks)
 
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model 1', slug='model-1')
         device_role = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0], rack=racks[0], position=1, tenant=tenants[0]),
-            Device(name='Device 2', device_type=device_type, device_role=device_role, site=sites[0], rack=racks[0], position=2, tenant=tenants[0]),
-            Device(name='Device 3', device_type=device_type, device_role=device_role, site=sites[1], rack=racks[1], position=1, tenant=tenants[1]),
-            Device(name='Device 4', device_type=device_type, device_role=device_role, site=sites[1], rack=racks[1], position=2),
-            Device(name='Device 5', device_type=device_type, device_role=device_role, site=sites[2], rack=racks[2], position=1),
-            Device(name='Device 6', device_type=device_type, device_role=device_role, site=sites[2], rack=racks[2], position=2),
+            Device.objects.create(name='Device 1', device_type=device_type, device_role=device_role, site=sites[0], rack=racks[0], position=1, tenant=tenants[0]),
+            Device.objects.create(name='Device 2', device_type=device_type, device_role=device_role, site=sites[0], rack=racks[0], position=2, tenant=tenants[0]),
+            Device.objects.create(name='Device 3', device_type=device_type, device_role=device_role, site=sites[1], rack=racks[1], position=1, tenant=tenants[1]),
+            Device.objects.create(name='Device 4', device_type=device_type, device_role=device_role, site=sites[1], rack=racks[1], position=2),
+            Device.objects.create(name='Device 5', device_type=device_type, device_role=device_role, site=sites[2], rack=racks[2], position=1),
+            Device.objects.create(name='Device 6', device_type=device_type, device_role=device_role, site=sites[2], rack=racks[2], position=2),
         )
-        Device.objects.bulk_create(devices)
 
         interfaces = (
-            Interface(device=devices[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[0], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[1], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[1], name='Interface 4', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[2], name='Interface 5', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[2], name='Interface 6', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[3], name='Interface 7', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[3], name='Interface 8', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[4], name='Interface 9', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[4], name='Interface 10', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[5], name='Interface 11', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[5], name='Interface 12', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[0], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[1], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[1], name='Interface 4', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[2], name='Interface 5', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[2], name='Interface 6', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[3], name='Interface 7', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[3], name='Interface 8', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[4], name='Interface 9', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[4], name='Interface 10', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[5], name='Interface 11', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[5], name='Interface 12', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
         )
-        Interface.objects.bulk_create(interfaces)
 
         statuses = Status.objects.get_for_model(Cable)
         cls.status_connected = statuses.get(name='connected')
         cls.status_planned = statuses.get(name='planned')
 
         # Cables
-        Cable(termination_a=interfaces[1], termination_b=interfaces[2], label='Cable 1', type=CableTypeChoices.TYPE_CAT3, status=cls.status_connected, color='aa1409', length=10, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[3], termination_b=interfaces[4], label='Cable 2', type=CableTypeChoices.TYPE_CAT3, status=cls.status_connected, color='aa1409', length=20, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[5], termination_b=interfaces[6], label='Cable 3', type=CableTypeChoices.TYPE_CAT5E, status=cls.status_connected, color='f44336', length=30, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[7], termination_b=interfaces[8], label='Cable 4', type=CableTypeChoices.TYPE_CAT5E, status=cls.status_planned, color='f44336', length=40, length_unit=CableLengthUnitChoices.UNIT_FOOT).save()
-        Cable(termination_a=interfaces[9], termination_b=interfaces[10], label='Cable 5', type=CableTypeChoices.TYPE_CAT6, status=cls.status_planned, color='e91e63', length=10, length_unit=CableLengthUnitChoices.UNIT_METER).save()
-        Cable(termination_a=interfaces[11], termination_b=interfaces[0], label='Cable 6', type=CableTypeChoices.TYPE_CAT6, status=cls.status_planned, color='e91e63', length=20, length_unit=CableLengthUnitChoices.UNIT_METER).save()
+        Cable.objects.create(termination_a=interfaces[1], termination_b=interfaces[2], label='Cable 1', type=CableTypeChoices.TYPE_CAT3, status=cls.status_connected, color='aa1409', length=10, length_unit=CableLengthUnitChoices.UNIT_FOOT)
+        Cable.objects.create(termination_a=interfaces[3], termination_b=interfaces[4], label='Cable 2', type=CableTypeChoices.TYPE_CAT3, status=cls.status_connected, color='aa1409', length=20, length_unit=CableLengthUnitChoices.UNIT_FOOT)
+        Cable.objects.create(termination_a=interfaces[5], termination_b=interfaces[6], label='Cable 3', type=CableTypeChoices.TYPE_CAT5E, status=cls.status_connected, color='f44336', length=30, length_unit=CableLengthUnitChoices.UNIT_FOOT)
+        Cable.objects.create(termination_a=interfaces[7], termination_b=interfaces[8], label='Cable 4', type=CableTypeChoices.TYPE_CAT5E, status=cls.status_planned, color='f44336', length=40, length_unit=CableLengthUnitChoices.UNIT_FOOT)
+        Cable.objects.create(termination_a=interfaces[9], termination_b=interfaces[10], label='Cable 5', type=CableTypeChoices.TYPE_CAT6, status=cls.status_planned, color='e91e63', length=10, length_unit=CableLengthUnitChoices.UNIT_METER)
+        Cable.objects.create(termination_a=interfaces[11], termination_b=interfaces[0], label='Cable 6', type=CableTypeChoices.TYPE_CAT6, status=cls.status_planned, color='e91e63', length=20, length_unit=CableLengthUnitChoices.UNIT_METER)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -2613,34 +2448,26 @@ class PowerPanelTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         rack_groups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
-            RackGroup(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
+            RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
+            RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
+            RackGroup.objects.create(name='Rack Group 3', slug='rack-group-3', site=sites[2]),
         )
-        for rackgroup in rack_groups:
-            rackgroup.save()
 
-        power_panels = (
-            PowerPanel(name='Power Panel 1', site=sites[0], rack_group=rack_groups[0]),
-            PowerPanel(name='Power Panel 2', site=sites[1], rack_group=rack_groups[1]),
-            PowerPanel(name='Power Panel 3', site=sites[2], rack_group=rack_groups[2]),
-        )
-        PowerPanel.objects.bulk_create(power_panels)
+        PowerPanel.objects.create(name='Power Panel 1', site=sites[0], rack_group=rack_groups[0]),
+        PowerPanel.objects.create(name='Power Panel 2', site=sites[1], rack_group=rack_groups[1]),
+        PowerPanel.objects.create(name='Power Panel 3', site=sites[2], rack_group=rack_groups[2]),
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -2678,59 +2505,52 @@ class PowerFeedTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         sites = (
-            Site(name='Site 1', slug='site-1', region=regions[0]),
-            Site(name='Site 2', slug='site-2', region=regions[1]),
-            Site(name='Site 3', slug='site-3', region=regions[2]),
+            Site.objects.create(name='Site 1', slug='site-1', region=regions[0]),
+            Site.objects.create(name='Site 2', slug='site-2', region=regions[1]),
+            Site.objects.create(name='Site 3', slug='site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         racks = (
-            Rack(name='Rack 1', site=sites[0]),
-            Rack(name='Rack 2', site=sites[1]),
-            Rack(name='Rack 3', site=sites[2]),
+            Rack.objects.create(name='Rack 1', site=sites[0]),
+            Rack.objects.create(name='Rack 2', site=sites[1]),
+            Rack.objects.create(name='Rack 3', site=sites[2]),
         )
-        Rack.objects.bulk_create(racks)
 
         power_panels = (
-            PowerPanel(name='Power Panel 1', site=sites[0]),
-            PowerPanel(name='Power Panel 2', site=sites[1]),
-            PowerPanel(name='Power Panel 3', site=sites[2]),
+            PowerPanel.objects.create(name='Power Panel 1', site=sites[0]),
+            PowerPanel.objects.create(name='Power Panel 2', site=sites[1]),
+            PowerPanel.objects.create(name='Power Panel 3', site=sites[2]),
         )
-        PowerPanel.objects.bulk_create(power_panels)
 
         pf_statuses = Status.objects.get_for_model(PowerFeed)
         pf_status_map = {s.name: s for s in pf_statuses.all()}
 
         power_feeds = (
-            PowerFeed(power_panel=power_panels[0], rack=racks[0], name='Power Feed 1', status=pf_status_map['active'], type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=100, amperage=100, max_utilization=10),
-            PowerFeed(power_panel=power_panels[1], rack=racks[1], name='Power Feed 2', status=pf_status_map['failed'], type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=200, amperage=200, max_utilization=20),
-            PowerFeed(power_panel=power_panels[2], rack=racks[2], name='Power Feed 3', status=pf_status_map['offline'], type=PowerFeedTypeChoices.TYPE_REDUNDANT, supply=PowerFeedSupplyChoices.SUPPLY_DC, phase=PowerFeedPhaseChoices.PHASE_SINGLE, voltage=300, amperage=300, max_utilization=30),
+            PowerFeed.objects.create(power_panel=power_panels[0], rack=racks[0], name='Power Feed 1', status=pf_status_map['active'], type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=100, amperage=100, max_utilization=10),
+            PowerFeed.objects.create(power_panel=power_panels[1], rack=racks[1], name='Power Feed 2', status=pf_status_map['failed'], type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=200, amperage=200, max_utilization=20),
+            PowerFeed.objects.create(power_panel=power_panels[2], rack=racks[2], name='Power Feed 3', status=pf_status_map['offline'], type=PowerFeedTypeChoices.TYPE_REDUNDANT, supply=PowerFeedSupplyChoices.SUPPLY_DC, phase=PowerFeedPhaseChoices.PHASE_SINGLE, voltage=300, amperage=300, max_utilization=30),
         )
-        PowerFeed.objects.bulk_create(power_feeds)
 
         manufacturer = Manufacturer.objects.create(name='Manufacturer', slug='manufacturer')
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model='Model', slug='model')
         device_role = DeviceRole.objects.create(name='Device Role', slug='device-role')
         device = Device.objects.create(name='Device', device_type=device_type, device_role=device_role, site=sites[0])
-        power_ports = [
-            PowerPort(device=device, name='Power Port 1'),
-            PowerPort(device=device, name='Power Port 2'),
-        ]
-        PowerPort.objects.bulk_create(power_ports)
+        power_ports = (
+            PowerPort.objects.create(device=device, name='Power Port 1'),
+            PowerPort.objects.create(device=device, name='Power Port 2'),
+        )
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(name='connected')
 
-        Cable(termination_a=power_feeds[0], termination_b=power_ports[0], status=status_connected).save()
-        Cable(termination_a=power_feeds[1], termination_b=power_ports[1], status=status_connected).save()
+        Cable.objects.create(termination_a=power_feeds[0], termination_b=power_ports[0], status=status_connected)
+        Cable.objects.create(termination_a=power_feeds[1], termination_b=power_ports[1], status=status_connected)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}

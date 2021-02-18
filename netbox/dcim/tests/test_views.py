@@ -37,12 +37,10 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         # Create three Regions
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
-            Region(name='Region 3', slug='region-3'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 3', slug='region-3'),
         )
-        for region in regions:
-            region.save()
 
         cls.form_data = {
             'name': 'Region X',
@@ -66,21 +64,17 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Region 1', slug='region-1'),
-            Region(name='Region 2', slug='region-2'),
+            Region.objects.create(name='Region 1', slug='region-1'),
+            Region.objects.create(name='Region 2', slug='region-2'),
         )
-        for region in regions:
-            region.save()
 
         statuses = Status.objects.get_for_model(Site)
         status_active = statuses.get(name='active')
         status_planned = statuses.get(name='planned')
 
-        Site.objects.bulk_create([
-            Site(name='Site 1', slug='site-1', region=regions[0], status=status_planned),
-            Site(name='Site 2', slug='site-2', region=regions[0], status=status_planned),
-            Site(name='Site 3', slug='site-3', region=regions[0], status=status_planned),
-        ])
+        Site.objects.create(name='Site 1', slug='site-1', region=regions[0], status=status_planned)
+        Site.objects.create(name='Site 2', slug='site-2', region=regions[0], status=status_planned)
+        Site.objects.create(name='Site 3', slug='site-3', region=regions[0], status=status_planned)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -128,16 +122,11 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site(name='Site 1', slug='site-1')
-        site.save()
+        site = Site.objects.create(name='Site 1', slug='site-1')
 
-        rack_groups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=site),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=site),
-            RackGroup(name='Rack Group 3', slug='rack-group-3', site=site),
-        )
-        for rackgroup in rack_groups:
-            rackgroup.save()
+        RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=site)
+        RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=site)
+        RackGroup.objects.create(name='Rack Group 3', slug='rack-group-3', site=site)
 
         cls.form_data = {
             'name': 'Rack Group X',
@@ -160,11 +149,9 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        RackRole.objects.bulk_create([
-            RackRole(name='Rack Role 1', slug='rack-role-1'),
-            RackRole(name='Rack Role 2', slug='rack-role-2'),
-            RackRole(name='Rack Role 3', slug='rack-role-3'),
-        ])
+        RackRole.objects.create(name='Rack Role 1', slug='rack-role-1')
+        RackRole.objects.create(name='Rack Role 2', slug='rack-role-2')
+        RackRole.objects.create(name='Rack Role 3', slug='rack-role-3')
 
         cls.form_data = {
             'name': 'Rack Role X',
@@ -192,17 +179,13 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         site = Site.objects.create(name='Site 1', slug='site-1')
 
-        rack_group = RackGroup(name='Rack Group 1', slug='rack-group-1', site=site)
-        rack_group.save()
+        rack_group = RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=site)
 
-        rack = Rack(name='Rack 1', site=site, group=rack_group)
-        rack.save()
+        rack = Rack.objects.create(name='Rack 1', site=site, group=rack_group)
 
-        RackReservation.objects.bulk_create([
-            RackReservation(rack=rack, user=user2, units=[1, 2, 3], description='Reservation 1'),
-            RackReservation(rack=rack, user=user2, units=[4, 5, 6], description='Reservation 2'),
-            RackReservation(rack=rack, user=user2, units=[7, 8, 9], description='Reservation 3'),
-        ])
+        RackReservation.objects.create(rack=rack, user=user2, units=[1, 2, 3], description='Reservation 1')
+        RackReservation.objects.create(rack=rack, user=user2, units=[4, 5, 6], description='Reservation 2')
+        RackReservation.objects.create(rack=rack, user=user2, units=[7, 8, 9], description='Reservation 3')
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -236,32 +219,26 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
         rackgroups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=sites[1])
+            RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
+            RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
         )
-        for rackgroup in rackgroups:
-            rackgroup.save()
 
         rackroles = (
-            RackRole(name='Rack Role 1', slug='rack-role-1'),
-            RackRole(name='Rack Role 2', slug='rack-role-2'),
+            RackRole.objects.create(name='Rack Role 1', slug='rack-role-1'),
+            RackRole.objects.create(name='Rack Role 2', slug='rack-role-2'),
         )
-        RackRole.objects.bulk_create(rackroles)
 
         statuses = Status.objects.get_for_model(Rack)
         status_active = statuses.get(name='active')
 
-        Rack.objects.bulk_create((
-            Rack(name='Rack 1', site=sites[0], status=status_active),
-            Rack(name='Rack 2', site=sites[0], status=status_active),
-            Rack(name='Rack 3', site=sites[0], status=status_active),
-        ))
+        Rack.objects.create(name='Rack 1', site=sites[0], status=status_active)
+        Rack.objects.create(name='Rack 2', site=sites[0], status=status_active)
+        Rack.objects.create(name='Rack 3', site=sites[0], status=status_active)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -325,11 +302,9 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Manufacturer.objects.bulk_create([
-            Manufacturer(name='Manufacturer 1', slug='manufacturer-1'),
-            Manufacturer(name='Manufacturer 2', slug='manufacturer-2'),
-            Manufacturer(name='Manufacturer 3', slug='manufacturer-3'),
-        ])
+        Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
+        Manufacturer.objects.create(name='Manufacturer 2', slug='manufacturer-2')
+        Manufacturer.objects.create(name='Manufacturer 3', slug='manufacturer-3')
 
         cls.form_data = {
             'name': 'Manufacturer X',
@@ -363,16 +338,13 @@ class DeviceTypeTestCase(
     def setUpTestData(cls):
 
         manufacturers = (
-            Manufacturer(name='Manufacturer 1', slug='manufacturer-1'),
-            Manufacturer(name='Manufacturer 2', slug='manufacturer-2')
+            Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1'),
+            Manufacturer.objects.create(name='Manufacturer 2', slug='manufacturer-2'),
         )
-        Manufacturer.objects.bulk_create(manufacturers)
 
-        DeviceType.objects.bulk_create([
-            DeviceType(model='Device Type 1', slug='device-type-1', manufacturer=manufacturers[0]),
-            DeviceType(model='Device Type 2', slug='device-type-2', manufacturer=manufacturers[0]),
-            DeviceType(model='Device Type 3', slug='device-type-3', manufacturer=manufacturers[0]),
-        ])
+        DeviceType.objects.create(model='Device Type 1', slug='device-type-1', manufacturer=manufacturers[0])
+        DeviceType.objects.create(model='Device Type 2', slug='device-type-2', manufacturer=manufacturers[0])
+        DeviceType.objects.create(model='Device Type 3', slug='device-type-3', manufacturer=manufacturers[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -472,7 +444,7 @@ device-bays:
 """
 
         # Create the manufacturer
-        Manufacturer(name='Generic', slug='generic').save()
+        Manufacturer.objects.create(name='Generic', slug='generic')
 
         # Add all required permissions to the test user
         self.add_permissions(
@@ -565,16 +537,13 @@ class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         devicetypes = (
-            DeviceType(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
-            DeviceType(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
         )
-        DeviceType.objects.bulk_create(devicetypes)
 
-        ConsolePortTemplate.objects.bulk_create((
-            ConsolePortTemplate(device_type=devicetypes[0], name='Console Port Template 1'),
-            ConsolePortTemplate(device_type=devicetypes[0], name='Console Port Template 2'),
-            ConsolePortTemplate(device_type=devicetypes[0], name='Console Port Template 3'),
-        ))
+        ConsolePortTemplate.objects.create(device_type=devicetypes[0], name='Console Port Template 1')
+        ConsolePortTemplate.objects.create(device_type=devicetypes[0], name='Console Port Template 2')
+        ConsolePortTemplate.objects.create(device_type=devicetypes[0], name='Console Port Template 3')
 
         cls.form_data = {
             'device_type': devicetypes[1].pk,
@@ -600,16 +569,13 @@ class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateVie
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         devicetypes = (
-            DeviceType(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
-            DeviceType(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
         )
-        DeviceType.objects.bulk_create(devicetypes)
 
-        ConsoleServerPortTemplate.objects.bulk_create((
-            ConsoleServerPortTemplate(device_type=devicetypes[0], name='Console Server Port Template 1'),
-            ConsoleServerPortTemplate(device_type=devicetypes[0], name='Console Server Port Template 2'),
-            ConsoleServerPortTemplate(device_type=devicetypes[0], name='Console Server Port Template 3'),
-        ))
+        ConsoleServerPortTemplate.objects.create(device_type=devicetypes[0], name='Console Server Port Template 1')
+        ConsoleServerPortTemplate.objects.create(device_type=devicetypes[0], name='Console Server Port Template 2')
+        ConsoleServerPortTemplate.objects.create(device_type=devicetypes[0], name='Console Server Port Template 3')
 
         cls.form_data = {
             'device_type': devicetypes[1].pk,
@@ -635,16 +601,13 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         devicetypes = (
-            DeviceType(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
-            DeviceType(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
         )
-        DeviceType.objects.bulk_create(devicetypes)
 
-        PowerPortTemplate.objects.bulk_create((
-            PowerPortTemplate(device_type=devicetypes[0], name='Power Port Template 1'),
-            PowerPortTemplate(device_type=devicetypes[0], name='Power Port Template 2'),
-            PowerPortTemplate(device_type=devicetypes[0], name='Power Port Template 3'),
-        ))
+        PowerPortTemplate.objects.create(device_type=devicetypes[0], name='Power Port Template 1')
+        PowerPortTemplate.objects.create(device_type=devicetypes[0], name='Power Port Template 2')
+        PowerPortTemplate.objects.create(device_type=devicetypes[0], name='Power Port Template 3')
 
         cls.form_data = {
             'device_type': devicetypes[1].pk,
@@ -677,16 +640,13 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1')
 
-        PowerOutletTemplate.objects.bulk_create((
-            PowerOutletTemplate(device_type=devicetype, name='Power Outlet Template 1'),
-            PowerOutletTemplate(device_type=devicetype, name='Power Outlet Template 2'),
-            PowerOutletTemplate(device_type=devicetype, name='Power Outlet Template 3'),
-        ))
+        PowerOutletTemplate.objects.create(device_type=devicetype, name='Power Outlet Template 1')
+        PowerOutletTemplate.objects.create(device_type=devicetype, name='Power Outlet Template 2')
+        PowerOutletTemplate.objects.create(device_type=devicetype, name='Power Outlet Template 3')
 
         powerports = (
-            PowerPortTemplate(device_type=devicetype, name='Power Port Template 1'),
+            PowerPortTemplate.objects.create(device_type=devicetype, name='Power Port Template 1'),
         )
-        PowerPortTemplate.objects.bulk_create(powerports)
 
         cls.form_data = {
             'device_type': devicetype.pk,
@@ -717,16 +677,13 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         devicetypes = (
-            DeviceType(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
-            DeviceType(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
         )
-        DeviceType.objects.bulk_create(devicetypes)
 
-        InterfaceTemplate.objects.bulk_create((
-            InterfaceTemplate(device_type=devicetypes[0], name='Interface Template 1'),
-            InterfaceTemplate(device_type=devicetypes[0], name='Interface Template 2'),
-            InterfaceTemplate(device_type=devicetypes[0], name='Interface Template 3'),
-        ))
+        InterfaceTemplate.objects.create(device_type=devicetypes[0], name='Interface Template 1')
+        InterfaceTemplate.objects.create(device_type=devicetypes[0], name='Interface Template 2')
+        InterfaceTemplate.objects.create(device_type=devicetypes[0], name='Interface Template 3')
 
         cls.form_data = {
             'device_type': devicetypes[1].pk,
@@ -759,20 +716,17 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1')
 
         rearports = (
-            RearPortTemplate(device_type=devicetype, name='Rear Port Template 1'),
-            RearPortTemplate(device_type=devicetype, name='Rear Port Template 2'),
-            RearPortTemplate(device_type=devicetype, name='Rear Port Template 3'),
-            RearPortTemplate(device_type=devicetype, name='Rear Port Template 4'),
-            RearPortTemplate(device_type=devicetype, name='Rear Port Template 5'),
-            RearPortTemplate(device_type=devicetype, name='Rear Port Template 6'),
+            RearPortTemplate.objects.create(device_type=devicetype, name='Rear Port Template 1'),
+            RearPortTemplate.objects.create(device_type=devicetype, name='Rear Port Template 2'),
+            RearPortTemplate.objects.create(device_type=devicetype, name='Rear Port Template 3'),
+            RearPortTemplate.objects.create(device_type=devicetype, name='Rear Port Template 4'),
+            RearPortTemplate.objects.create(device_type=devicetype, name='Rear Port Template 5'),
+            RearPortTemplate.objects.create(device_type=devicetype, name='Rear Port Template 6'),
         )
-        RearPortTemplate.objects.bulk_create(rearports)
 
-        FrontPortTemplate.objects.bulk_create((
-            FrontPortTemplate(device_type=devicetype, name='Front Port Template 1', rear_port=rearports[0], rear_port_position=1),
-            FrontPortTemplate(device_type=devicetype, name='Front Port Template 2', rear_port=rearports[1], rear_port_position=1),
-            FrontPortTemplate(device_type=devicetype, name='Front Port Template 3', rear_port=rearports[2], rear_port_position=1),
-        ))
+        FrontPortTemplate.objects.create(device_type=devicetype, name='Front Port Template 1', rear_port=rearports[0], rear_port_position=1)
+        FrontPortTemplate.objects.create(device_type=devicetype, name='Front Port Template 2', rear_port=rearports[1], rear_port_position=1)
+        FrontPortTemplate.objects.create(device_type=devicetype, name='Front Port Template 3', rear_port=rearports[2], rear_port_position=1)
 
         cls.form_data = {
             'device_type': devicetype.pk,
@@ -803,16 +757,13 @@ class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         devicetypes = (
-            DeviceType(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
-            DeviceType(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1'),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2'),
         )
-        DeviceType.objects.bulk_create(devicetypes)
 
-        RearPortTemplate.objects.bulk_create((
-            RearPortTemplate(device_type=devicetypes[0], name='Rear Port Template 1'),
-            RearPortTemplate(device_type=devicetypes[0], name='Rear Port Template 2'),
-            RearPortTemplate(device_type=devicetypes[0], name='Rear Port Template 3'),
-        ))
+        RearPortTemplate.objects.create(device_type=devicetypes[0], name='Rear Port Template 1')
+        RearPortTemplate.objects.create(device_type=devicetypes[0], name='Rear Port Template 2')
+        RearPortTemplate.objects.create(device_type=devicetypes[0], name='Rear Port Template 3')
 
         cls.form_data = {
             'device_type': devicetypes[1].pk,
@@ -840,16 +791,13 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
         devicetypes = (
-            DeviceType(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1', subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
-            DeviceType(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2', subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1', subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
+            DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 2', slug='device-type-2', subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
         )
-        DeviceType.objects.bulk_create(devicetypes)
 
-        DeviceBayTemplate.objects.bulk_create((
-            DeviceBayTemplate(device_type=devicetypes[0], name='Device Bay Template 1'),
-            DeviceBayTemplate(device_type=devicetypes[0], name='Device Bay Template 2'),
-            DeviceBayTemplate(device_type=devicetypes[0], name='Device Bay Template 3'),
-        ))
+        DeviceBayTemplate.objects.create(device_type=devicetypes[0], name='Device Bay Template 1')
+        DeviceBayTemplate.objects.create(device_type=devicetypes[0], name='Device Bay Template 2')
+        DeviceBayTemplate.objects.create(device_type=devicetypes[0], name='Device Bay Template 3')
 
         cls.form_data = {
             'device_type': devicetypes[1].pk,
@@ -872,11 +820,9 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        DeviceRole.objects.bulk_create([
-            DeviceRole(name='Device Role 1', slug='device-role-1'),
-            DeviceRole(name='Device Role 2', slug='device-role-2'),
-            DeviceRole(name='Device Role 3', slug='device-role-3'),
-        ])
+        DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
+        DeviceRole.objects.create(name='Device Role 2', slug='device-role-2')
+        DeviceRole.objects.create(name='Device Role 3', slug='device-role-3')
 
         cls.form_data = {
             'name': 'Devie Role X',
@@ -902,11 +848,9 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
-        Platform.objects.bulk_create([
-            Platform(name='Platform 1', slug='platform-1', manufacturer=manufacturer),
-            Platform(name='Platform 2', slug='platform-2', manufacturer=manufacturer),
-            Platform(name='Platform 3', slug='platform-3', manufacturer=manufacturer),
-        ])
+        Platform.objects.create(name='Platform 1', slug='platform-1', manufacturer=manufacturer)
+        Platform.objects.create(name='Platform 2', slug='platform-2', manufacturer=manufacturer)
+        Platform.objects.create(name='Platform 3', slug='platform-3', manufacturer=manufacturer)
 
         cls.form_data = {
             'name': 'Platform X',
@@ -932,48 +876,40 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
-        rack_group = RackGroup(site=sites[0], name='Rack Group 1', slug='rack-group-1')
-        rack_group.save()
+        rack_group = RackGroup.objects.create(site=sites[0], name='Rack Group 1', slug='rack-group-1')
 
         racks = (
-            Rack(name='Rack 1', site=sites[0], group=rack_group),
-            Rack(name='Rack 2', site=sites[1]),
+            Rack.objects.create(name='Rack 1', site=sites[0], group=rack_group),
+            Rack.objects.create(name='Rack 2', site=sites[1]),
         )
-        Rack.objects.bulk_create(racks)
 
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
 
         devicetypes = (
-            DeviceType(model='Device Type 1', slug='device-type-1', manufacturer=manufacturer),
-            DeviceType(model='Device Type 2', slug='device-type-2', manufacturer=manufacturer),
+            DeviceType.objects.create(model='Device Type 1', slug='device-type-1', manufacturer=manufacturer),
+            DeviceType.objects.create(model='Device Type 2', slug='device-type-2', manufacturer=manufacturer),
         )
-        DeviceType.objects.bulk_create(devicetypes)
 
         deviceroles = (
-            DeviceRole(name='Device Role 1', slug='device-role-1'),
-            DeviceRole(name='Device Role 2', slug='device-role-2'),
+            DeviceRole.objects.create(name='Device Role 1', slug='device-role-1'),
+            DeviceRole.objects.create(name='Device Role 2', slug='device-role-2'),
         )
-        DeviceRole.objects.bulk_create(deviceroles)
 
         platforms = (
-            Platform(name='Platform 1', slug='platform-1'),
-            Platform(name='Platform 2', slug='platform-2'),
+            Platform.objects.create(name='Platform 1', slug='platform-1'),
+            Platform.objects.create(name='Platform 2', slug='platform-2'),
         )
-        Platform.objects.bulk_create(platforms)
 
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses.get(name='active')
 
-        Device.objects.bulk_create([
-            Device(name='Device 1', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active),
-            Device(name='Device 2', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active),
-            Device(name='Device 3', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active),
-        ])
+        Device.objects.create(name='Device 1', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active)
+        Device.objects.create(name='Device 2', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active)
+        Device.objects.create(name='Device 3', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1020,12 +956,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_consoleports(self):
         device = Device.objects.first()
-        console_ports = (
-            ConsolePort(device=device, name='Console Port 1'),
-            ConsolePort(device=device, name='Console Port 2'),
-            ConsolePort(device=device, name='Console Port 3'),
-        )
-        ConsolePort.objects.bulk_create(console_ports)
+
+        ConsolePort.objects.create(device=device, name='Console Port 1')
+        ConsolePort.objects.create(device=device, name='Console Port 2')
+        ConsolePort.objects.create(device=device, name='Console Port 3')
 
         url = reverse('dcim:device_consoleports', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1033,12 +967,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_consoleserverports(self):
         device = Device.objects.first()
-        console_server_ports = (
-            ConsoleServerPort(device=device, name='Console Server Port 1'),
-            ConsoleServerPort(device=device, name='Console Server Port 2'),
-            ConsoleServerPort(device=device, name='Console Server Port 3'),
-        )
-        ConsoleServerPort.objects.bulk_create(console_server_ports)
+
+        ConsoleServerPort.objects.create(device=device, name='Console Server Port 1')
+        ConsoleServerPort.objects.create(device=device, name='Console Server Port 2')
+        ConsoleServerPort.objects.create(device=device, name='Console Server Port 3')
 
         url = reverse('dcim:device_consoleserverports', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1046,12 +978,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_powerports(self):
         device = Device.objects.first()
-        power_ports = (
-            PowerPort(device=device, name='Power Port 1'),
-            PowerPort(device=device, name='Power Port 2'),
-            PowerPort(device=device, name='Power Port 3'),
-        )
-        PowerPort.objects.bulk_create(power_ports)
+
+        PowerPort.objects.create(device=device, name='Power Port 1')
+        PowerPort.objects.create(device=device, name='Power Port 2')
+        PowerPort.objects.create(device=device, name='Power Port 3')
 
         url = reverse('dcim:device_powerports', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1059,12 +989,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_poweroutlets(self):
         device = Device.objects.first()
-        power_outlets = (
-            PowerOutlet(device=device, name='Power Outlet 1'),
-            PowerOutlet(device=device, name='Power Outlet 2'),
-            PowerOutlet(device=device, name='Power Outlet 3'),
-        )
-        PowerOutlet.objects.bulk_create(power_outlets)
+
+        PowerOutlet.objects.create(device=device, name='Power Outlet 1')
+        PowerOutlet.objects.create(device=device, name='Power Outlet 2')
+        PowerOutlet.objects.create(device=device, name='Power Outlet 3')
 
         url = reverse('dcim:device_poweroutlets', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1072,12 +1000,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_interfaces(self):
         device = Device.objects.first()
-        interfaces = (
-            Interface(device=device, name='Interface 1'),
-            Interface(device=device, name='Interface 2'),
-            Interface(device=device, name='Interface 3'),
-        )
-        Interface.objects.bulk_create(interfaces)
+
+        Interface.objects.create(device=device, name='Interface 1')
+        Interface.objects.create(device=device, name='Interface 2')
+        Interface.objects.create(device=device, name='Interface 3')
 
         url = reverse('dcim:device_interfaces', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1085,12 +1011,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_rearports(self):
         device = Device.objects.first()
-        rear_ports = (
-            RearPort(device=device, name='Rear Port 1'),
-            RearPort(device=device, name='Rear Port 2'),
-            RearPort(device=device, name='Rear Port 3'),
-        )
-        RearPort.objects.bulk_create(rear_ports)
+
+        RearPort.objects.create(device=device, name='Rear Port 1')
+        RearPort.objects.create(device=device, name='Rear Port 2')
+        RearPort.objects.create(device=device, name='Rear Port 3')
 
         url = reverse('dcim:device_rearports', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1099,17 +1023,14 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_device_frontports(self):
         device = Device.objects.first()
         rear_ports = (
-            RearPort(device=device, name='Rear Port 1'),
-            RearPort(device=device, name='Rear Port 2'),
-            RearPort(device=device, name='Rear Port 3'),
+            RearPort.objects.create(device=device, name='Rear Port 1'),
+            RearPort.objects.create(device=device, name='Rear Port 2'),
+            RearPort.objects.create(device=device, name='Rear Port 3'),
         )
-        RearPort.objects.bulk_create(rear_ports)
-        front_ports = (
-            FrontPort(device=device, name='Front Port 1', rear_port=rear_ports[0], rear_port_position=1),
-            FrontPort(device=device, name='Front Port 2', rear_port=rear_ports[1], rear_port_position=1),
-            FrontPort(device=device, name='Front Port 3', rear_port=rear_ports[2], rear_port_position=1),
-        )
-        FrontPort.objects.bulk_create(front_ports)
+
+        FrontPort.objects.create(device=device, name='Front Port 1', rear_port=rear_ports[0], rear_port_position=1)
+        FrontPort.objects.create(device=device, name='Front Port 2', rear_port=rear_ports[1], rear_port_position=1)
+        FrontPort.objects.create(device=device, name='Front Port 3', rear_port=rear_ports[2], rear_port_position=1)
 
         url = reverse('dcim:device_frontports', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1117,12 +1038,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_devicebays(self):
         device = Device.objects.first()
-        device_bays = (
-            DeviceBay(device=device, name='Device Bay 1'),
-            DeviceBay(device=device, name='Device Bay 2'),
-            DeviceBay(device=device, name='Device Bay 3'),
-        )
-        DeviceBay.objects.bulk_create(device_bays)
+
+        DeviceBay.objects.create(device=device, name='Device Bay 1')
+        DeviceBay.objects.create(device=device, name='Device Bay 2')
+        DeviceBay.objects.create(device=device, name='Device Bay 3')
 
         url = reverse('dcim:device_devicebays', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1130,13 +1049,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
     def test_device_inventory(self):
         device = Device.objects.first()
-        inventory_items = (
-            InventoryItem(device=device, name='Inventory Item 1'),
-            InventoryItem(device=device, name='Inventory Item 2'),
-            InventoryItem(device=device, name='Inventory Item 3'),
-        )
-        for item in inventory_items:
-            item.save()
+
+        InventoryItem.objects.create(device=device, name='Inventory Item 1'),
+        InventoryItem.objects.create(device=device, name='Inventory Item 2'),
+        InventoryItem.objects.create(device=device, name='Inventory Item 3'),
 
         url = reverse('dcim:device_inventory', kwargs={'pk': device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1149,11 +1065,9 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device('Device 1')
 
-        ConsolePort.objects.bulk_create([
-            ConsolePort(device=device, name='Console Port 1'),
-            ConsolePort(device=device, name='Console Port 2'),
-            ConsolePort(device=device, name='Console Port 3'),
-        ])
+        ConsolePort.objects.create(device=device, name='Console Port 1')
+        ConsolePort.objects.create(device=device, name='Console Port 2')
+        ConsolePort.objects.create(device=device, name='Console Port 3')
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1195,11 +1109,9 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device('Device 1')
 
-        ConsoleServerPort.objects.bulk_create([
-            ConsoleServerPort(device=device, name='Console Server Port 1'),
-            ConsoleServerPort(device=device, name='Console Server Port 2'),
-            ConsoleServerPort(device=device, name='Console Server Port 3'),
-        ])
+        ConsoleServerPort.objects.create(device=device, name='Console Server Port 1')
+        ConsoleServerPort.objects.create(device=device, name='Console Server Port 2')
+        ConsoleServerPort.objects.create(device=device, name='Console Server Port 3')
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1239,11 +1151,9 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device('Device 1')
 
-        PowerPort.objects.bulk_create([
-            PowerPort(device=device, name='Power Port 1'),
-            PowerPort(device=device, name='Power Port 2'),
-            PowerPort(device=device, name='Power Port 3'),
-        ])
+        PowerPort.objects.create(device=device, name='Power Port 1')
+        PowerPort.objects.create(device=device, name='Power Port 2')
+        PowerPort.objects.create(device=device, name='Power Port 3')
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1290,16 +1200,13 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
         device = create_test_device('Device 1')
 
         powerports = (
-            PowerPort(device=device, name='Power Port 1'),
-            PowerPort(device=device, name='Power Port 2'),
+            PowerPort.objects.create(device=device, name='Power Port 1'),
+            PowerPort.objects.create(device=device, name='Power Port 2'),
         )
-        PowerPort.objects.bulk_create(powerports)
 
-        PowerOutlet.objects.bulk_create([
-            PowerOutlet(device=device, name='Power Outlet 1', power_port=powerports[0]),
-            PowerOutlet(device=device, name='Power Outlet 2', power_port=powerports[0]),
-            PowerOutlet(device=device, name='Power Outlet 3', power_port=powerports[0]),
-        ])
+        PowerOutlet.objects.create(device=device, name='Power Outlet 1', power_port=powerports[0])
+        PowerOutlet.objects.create(device=device, name='Power Outlet 2', power_port=powerports[0])
+        PowerOutlet.objects.create(device=device, name='Power Outlet 3', power_port=powerports[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1346,20 +1253,18 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         device = create_test_device('Device 1')
 
         interfaces = (
-            Interface(device=device, name='Interface 1'),
-            Interface(device=device, name='Interface 2'),
-            Interface(device=device, name='Interface 3'),
-            Interface(device=device, name='LAG', type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(device=device, name='Interface 1'),
+            Interface.objects.create(device=device, name='Interface 2'),
+            Interface.objects.create(device=device, name='Interface 3'),
+            Interface.objects.create(device=device, name='LAG', type=InterfaceTypeChoices.TYPE_LAG),
         )
-        Interface.objects.bulk_create(interfaces)
 
         vlans = (
-            VLAN(vid=1, name='VLAN1', site=device.site),
-            VLAN(vid=101, name='VLAN101', site=device.site),
-            VLAN(vid=102, name='VLAN102', site=device.site),
-            VLAN(vid=103, name='VLAN103', site=device.site),
+            VLAN.objects.create(vid=1, name='VLAN1', site=device.site),
+            VLAN.objects.create(vid=101, name='VLAN101', site=device.site),
+            VLAN.objects.create(vid=102, name='VLAN102', site=device.site),
+            VLAN.objects.create(vid=103, name='VLAN103', site=device.site),
         )
-        VLAN.objects.bulk_create(vlans)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1425,20 +1330,17 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         device = create_test_device('Device 1')
 
         rearports = (
-            RearPort(device=device, name='Rear Port 1'),
-            RearPort(device=device, name='Rear Port 2'),
-            RearPort(device=device, name='Rear Port 3'),
-            RearPort(device=device, name='Rear Port 4'),
-            RearPort(device=device, name='Rear Port 5'),
-            RearPort(device=device, name='Rear Port 6'),
+            RearPort.objects.create(device=device, name='Rear Port 1'),
+            RearPort.objects.create(device=device, name='Rear Port 2'),
+            RearPort.objects.create(device=device, name='Rear Port 3'),
+            RearPort.objects.create(device=device, name='Rear Port 4'),
+            RearPort.objects.create(device=device, name='Rear Port 5'),
+            RearPort.objects.create(device=device, name='Rear Port 6'),
         )
-        RearPort.objects.bulk_create(rearports)
 
-        FrontPort.objects.bulk_create([
-            FrontPort(device=device, name='Front Port 1', rear_port=rearports[0]),
-            FrontPort(device=device, name='Front Port 2', rear_port=rearports[1]),
-            FrontPort(device=device, name='Front Port 3', rear_port=rearports[2]),
-        ])
+        FrontPort.objects.create(device=device, name='Front Port 1', rear_port=rearports[0])
+        FrontPort.objects.create(device=device, name='Front Port 2', rear_port=rearports[1])
+        FrontPort.objects.create(device=device, name='Front Port 3', rear_port=rearports[2])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1483,11 +1385,9 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device('Device 1')
 
-        RearPort.objects.bulk_create([
-            RearPort(device=device, name='Rear Port 1'),
-            RearPort(device=device, name='Rear Port 2'),
-            RearPort(device=device, name='Rear Port 3'),
-        ])
+        RearPort.objects.create(device=device, name='Rear Port 1')
+        RearPort.objects.create(device=device, name='Rear Port 2')
+        RearPort.objects.create(device=device, name='Rear Port 3')
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1532,11 +1432,9 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
         # Update the DeviceType subdevice role to allow adding DeviceBays
         DeviceType.objects.update(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
 
-        DeviceBay.objects.bulk_create([
-            DeviceBay(device=device, name='Device Bay 1'),
-            DeviceBay(device=device, name='Device Bay 2'),
-            DeviceBay(device=device, name='Device Bay 3'),
-        ])
+        DeviceBay.objects.create(device=device, name='Device Bay 1')
+        DeviceBay.objects.create(device=device, name='Device Bay 2')
+        DeviceBay.objects.create(device=device, name='Device Bay 3')
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1641,32 +1539,30 @@ class CableTestCase(
         devicerole = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
 
         devices = (
-            Device(name='Device 1', site=site, device_type=devicetype, device_role=devicerole),
-            Device(name='Device 2', site=site, device_type=devicetype, device_role=devicerole),
-            Device(name='Device 3', site=site, device_type=devicetype, device_role=devicerole),
-            Device(name='Device 4', site=site, device_type=devicetype, device_role=devicerole),
+            Device.objects.create(name='Device 1', site=site, device_type=devicetype, device_role=devicerole),
+            Device.objects.create(name='Device 2', site=site, device_type=devicetype, device_role=devicerole),
+            Device.objects.create(name='Device 3', site=site, device_type=devicetype, device_role=devicerole),
+            Device.objects.create(name='Device 4', site=site, device_type=devicetype, device_role=devicerole),
         )
-        Device.objects.bulk_create(devices)
 
         interfaces = (
-            Interface(device=devices[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[0], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[0], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[1], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[1], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[1], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[2], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[2], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[2], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[3], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[3], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-            Interface(device=devices[3], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[0], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[0], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[0], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[1], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[1], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[1], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[2], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[2], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[2], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[3], name='Interface 1', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[3], name='Interface 2', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
+            Interface.objects.create(device=devices[3], name='Interface 3', type=InterfaceTypeChoices.TYPE_1GE_FIXED),
         )
-        Interface.objects.bulk_create(interfaces)
 
-        Cable(termination_a=interfaces[0], termination_b=interfaces[3], type=CableTypeChoices.TYPE_CAT6).save()
-        Cable(termination_a=interfaces[1], termination_b=interfaces[4], type=CableTypeChoices.TYPE_CAT6).save()
-        Cable(termination_a=interfaces[2], termination_b=interfaces[5], type=CableTypeChoices.TYPE_CAT6).save()
+        Cable.objects.create(termination_a=interfaces[0], termination_b=interfaces[3], type=CableTypeChoices.TYPE_CAT6)
+        Cable.objects.create(termination_a=interfaces[1], termination_b=interfaces[4], type=CableTypeChoices.TYPE_CAT6)
+        Cable.objects.create(termination_a=interfaces[2], termination_b=interfaces[5], type=CableTypeChoices.TYPE_CAT6)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1721,20 +1617,19 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         devices = (
-            Device(device_type=device_type, device_role=device_role, name='Device 1', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 2', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 3', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 4', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 5', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 6', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 7', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 8', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 9', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 10', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 11', site=site),
-            Device(device_type=device_type, device_role=device_role, name='Device 12', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 1', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 2', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 3', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 4', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 5', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 6', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 7', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 8', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 9', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 10', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 11', site=site),
+            Device.objects.create(device_type=device_type, device_role=device_role, name='Device 12', site=site),
         )
-        Device.objects.bulk_create(devices)
 
         # Create three VirtualChassis with three members each
         vc1 = VirtualChassis.objects.create(name='VC1', master=devices[0], domain='domain-1')
@@ -1779,23 +1674,18 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
         rackgroups = (
-            RackGroup(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
-            RackGroup(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
+            RackGroup.objects.create(name='Rack Group 1', slug='rack-group-1', site=sites[0]),
+            RackGroup.objects.create(name='Rack Group 2', slug='rack-group-2', site=sites[1]),
         )
-        for rackgroup in rackgroups:
-            rackgroup.save()
 
-        PowerPanel.objects.bulk_create((
-            PowerPanel(site=sites[0], rack_group=rackgroups[0], name='Power Panel 1'),
-            PowerPanel(site=sites[0], rack_group=rackgroups[0], name='Power Panel 2'),
-            PowerPanel(site=sites[0], rack_group=rackgroups[0], name='Power Panel 3'),
-        ))
+        PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name='Power Panel 1')
+        PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name='Power Panel 2')
+        PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name='Power Panel 3')
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -1828,22 +1718,18 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         site = Site.objects.create(name='Site 1', slug='site-1')
 
         powerpanels = (
-            PowerPanel(site=site, name='Power Panel 1'),
-            PowerPanel(site=site, name='Power Panel 2'),
+            PowerPanel.objects.create(site=site, name='Power Panel 1'),
+            PowerPanel.objects.create(site=site, name='Power Panel 2'),
         )
-        PowerPanel.objects.bulk_create(powerpanels)
 
         racks = (
-            Rack(site=site, name='Rack 1'),
-            Rack(site=site, name='Rack 2'),
+            Rack.objects.create(site=site, name='Rack 1'),
+            Rack.objects.create(site=site, name='Rack 2'),
         )
-        Rack.objects.bulk_create(racks)
 
-        PowerFeed.objects.bulk_create((
-            PowerFeed(name='Power Feed 1', power_panel=powerpanels[0], rack=racks[0]),
-            PowerFeed(name='Power Feed 2', power_panel=powerpanels[0], rack=racks[0]),
-            PowerFeed(name='Power Feed 3', power_panel=powerpanels[0], rack=racks[0]),
-        ))
+        PowerFeed.objects.create(name='Power Feed 1', power_panel=powerpanels[0], rack=racks[0])
+        PowerFeed.objects.create(name='Power Feed 2', power_panel=powerpanels[0], rack=racks[0])
+        PowerFeed.objects.create(name='Power Feed 3', power_panel=powerpanels[0], rack=racks[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
