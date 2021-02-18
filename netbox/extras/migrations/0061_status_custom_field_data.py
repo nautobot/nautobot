@@ -2,6 +2,7 @@
 
 import django.core.serializers.json
 from django.db import migrations, models
+import extras.management
 
 
 class Migration(migrations.Migration):
@@ -15,5 +16,9 @@ class Migration(migrations.Migration):
             model_name='status',
             name='custom_field_data',
             field=models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+        ),
+        migrations.RunPython(
+            extras.management.populate_status_choices,
+            migrations.RunPython.noop,
         ),
     ]

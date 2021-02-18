@@ -873,6 +873,8 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
 
 class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
+
+    slug = SlugField()
     content_types = forms.ModelMultipleChoiceField(
         queryset=ContentType.objects.filter(
             FeatureQuery('statuses').get_query()
@@ -885,12 +887,13 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
         widgets = {
             'color': ColorSelect()
         }
-        fields = ['name', 'content_types', 'color']
+        fields = ['name', 'slug', 'description', 'content_types', 'color']
 
 
 class StatusCSVForm(CustomFieldModelCSVForm):
     """Generic CSV bulk import form for `Status` objects."""
 
+    slug = SlugField()
     content_types = CSVMultipleContentTypeField(
         queryset=ContentType.objects.filter(
             FeatureQuery('statuses').get_query()
@@ -968,7 +971,7 @@ class StatusBulkEditFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={'content_types': self.model._meta.label_lower},
-            display_field='label',
+            display_field='name',
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -984,8 +987,8 @@ class StatusFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={'content_types': self.model._meta.label_lower},
-            display_field='label',
-            to_field_name='name',
+            display_field='name',
+            to_field_name='slug',
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -995,6 +998,6 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
     status = CSVModelChoiceField(
         queryset=Status.objects.all(),
-        to_field_name='name',
+        to_field_name='slug',
         help_text='Operational status'
     )

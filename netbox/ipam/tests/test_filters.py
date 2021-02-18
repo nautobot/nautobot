@@ -368,7 +368,7 @@ class PrefixTestCase(TestCase):
         )
 
         statuses = Status.objects.get_for_model(Prefix)
-        status_map = {s.name: s for s in statuses.all()}
+        status_map = {s.slug: s for s in statuses.all()}
 
         Prefix.objects.create(prefix='10.0.0.0/24', tenant=None, site=None, vrf=None, vlan=None, role=None, is_pool=True, status=status_map['active'])
         Prefix.objects.create(prefix='10.0.1.0/24', tenant=tenants[0], site=sites[0], vrf=vrfs[0], vlan=vlans[0], role=roles[0], status=status_map['active']),
@@ -458,8 +458,7 @@ class PrefixTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        statuses = Status.objects.get_for_model(Prefix)
-        params = {'status': [statuses.get(name='deprecated').name, statuses.get(name='reserved').name]}
+        params = {'status': ['deprecated', 'reserved']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_tenant(self):
@@ -535,7 +534,7 @@ class IPAddressTestCase(TestCase):
         )
 
         statuses = Status.objects.get_for_model(IPAddress)
-        status_map = {s.name: s for s in statuses.all()}
+        status_map = {s.slug: s for s in statuses.all()}
 
         IPAddress.objects.create(address='10.0.0.1/24', tenant=None, vrf=None, assigned_object=None, status=status_map['active'], dns_name='ipaddress-a'),
         IPAddress.objects.create(address='10.0.0.2/24', tenant=tenants[0], vrf=vrfs[0], assigned_object=interfaces[0], status=status_map['active'], dns_name='ipaddress-b'),
@@ -627,8 +626,7 @@ class IPAddressTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        statuses = Status.objects.get_for_model(IPAddress)
-        params = {'status': [statuses.get(name='deprecated').name, statuses.get(name='reserved').name]}
+        params = {'status': ['deprecated', 'reserved']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_role(self):
@@ -749,7 +747,7 @@ class VLANTestCase(TestCase):
         )
 
         statuses = Status.objects.get_for_model(VLAN)
-        status_map = {s.name: s for s in statuses.all()}
+        status_map = {s.slug: s for s in statuses.all()}
 
         VLAN.objects.create(vid=101, name='VLAN 101', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=status_map['active'])
         VLAN.objects.create(vid=102, name='VLAN 102', site=sites[0], group=groups[0], role=roles[0], tenant=tenants[0], status=status_map['active'])

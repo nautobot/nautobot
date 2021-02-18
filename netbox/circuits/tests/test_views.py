@@ -107,7 +107,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'cid': 'Circuit X',
             'provider': providers[1].pk,
             'type': circuittypes[1].pk,
-            'status': statuses.get(name='decommissioned').pk,
+            'status': statuses.get(slug='decommissioned').pk,
             'tenant': None,
             'install_date': datetime.date(2020, 1, 1),
             'commit_rate': 1000,
@@ -126,7 +126,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             'provider': providers[1].pk,
             'type': circuittypes[1].pk,
-            'status': statuses.get(name='decommissioned').pk,
+            'status': statuses.get(slug='decommissioned').pk,
             'tenant': None,
             'commit_rate': 2000,
             'description': 'New description',

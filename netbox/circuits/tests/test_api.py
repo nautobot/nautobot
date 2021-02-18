@@ -124,19 +124,19 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
                 'cid': 'Circuit 4',
                 'provider': providers[1].pk,
                 'type': circuit_types[1].pk,
-                'status': statuses[1].name,
+                'status': 'offline',
             },
             {
                 'cid': 'Circuit 5',
                 'provider': providers[1].pk,
                 'type': circuit_types[1].pk,
-                'status': statuses[1].name,
+                'status': 'offline',
             },
             {
                 'cid': 'Circuit 6',
                 'provider': providers[1].pk,
                 'type': circuit_types[1].pk,
-                'status': statuses[1].name,
+                'status': 'offline',
             },
         ]
 

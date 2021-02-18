@@ -20,7 +20,7 @@ class OrderingTestBase(TestCase):
         )
 
         self.statuses = Status.objects.get_for_model(Prefix)
-        self.status_active = self.statuses.get(name='active')
+        self.status_active = self.statuses.get(slug='active')
 
     def _compare(self, queryset, objectset):
         """
@@ -137,7 +137,7 @@ class IPAddressOrderingTestCase(OrderingTestBase):
         # Setup VRFs
         vrfa, vrfb, vrfc = self.vrfs
 
-        status_active = Status.objects.get_for_model(IPAddress).get(name='active')
+        status_active = Status.objects.get_for_model(IPAddress).get(slug='active')
 
         # Setup Addresses
         addresses = (

@@ -355,14 +355,17 @@ class WebhookTable(BaseTable):
 class StatusTable(BaseTable):
     """Table for list view of `Status` objects."""
     pk = ToggleColumn()
-    name = tables.LinkColumn()
+    name = tables.LinkColumn(
+        viewname='extras:status',
+        args=[Accessor('slug')]
+    )
     color = ColorColumn()
-    actions = ButtonsColumn(Status)
+    actions = ButtonsColumn(Status, pk_field='slug')
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
         model = Status
-        fields = ['pk', 'name', 'content_types', 'color']
+        fields = ['pk', 'name', 'slug', 'color', 'content_types', 'description']
 
 
 class StatusTableMixin(BaseTable):

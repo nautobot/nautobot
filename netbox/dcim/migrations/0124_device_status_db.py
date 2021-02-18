@@ -3,18 +3,6 @@
 from django.db import migrations
 import django.db.models.deletion
 import extras.models.statuses
-import extras.management
-
-
-def populate_status_choices(apps, schema_editor):
-    """
-    Explicitly run the `create_custom_statuses` signal since it is only ran at
-    post-migrate.
-
-    When it is ran again post-migrate will be a noop.
-    """
-    app_config = apps.get_app_config('extras')
-    extras.management.create_custom_statuses(app_config)
 
 
 def populate_device_status_db(apps, schema_editor):
@@ -29,7 +17,7 @@ def populate_device_status_db(apps, schema_editor):
     custom_statuses = Status.objects.filter(content_types=content_type)
 
     for device in Device.objects.all():
-        device.status_db = custom_statuses.get(name=device.status)
+        device.status_db = custom_statuses.get(slug=device.status)
         device.save()
 
 
@@ -44,11 +32,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='device',
             name='status_db',
-            field=extras.models.statuses.StatusField(null=True, on_delete=django.db.models.deletion.PROTECT, to='extras.status', related_name='devices'),
-        ),
-        migrations.RunPython(
-            populate_status_choices,
-            migrations.RunPython.noop,
+            field=extras.models.statuses.StatusField(null=True, on_delete=django.db.models.deletion.PROTECT, to='extras.status', related_name='dcim_device_related'),
         ),
         migrations.RunPython(
             populate_device_status_db,

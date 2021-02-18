@@ -146,7 +146,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Cluster.objects.bulk_create(clusters)
 
         statuses = Status.objects.get_for_model(VirtualMachine)
-        status_staged = statuses.get(name='staged')
+        status_staged = statuses.get(slug='staged')
 
         VirtualMachine.objects.bulk_create([
             VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0]),

@@ -531,7 +531,7 @@ class StatusTestCase(TestCase):
     def setUpTestData(cls):
         """
         Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's beacuse they are
+        testing against those. If this seems magical, it's because they are
         imported from `ChoiceSet` enum objects.
 
         This method is defined just so it's clear that there is no need to
@@ -545,7 +545,11 @@ class StatusTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {'name': ['active', 'offline']}
+        params = {'name': ['Active', 'Offline']}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_slug(self):
+        params = {'slug': ['active', 'offline']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):

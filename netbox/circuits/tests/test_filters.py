@@ -167,7 +167,7 @@ class CircuitTestCase(TestCase):
         Provider.objects.bulk_create(providers)
 
         circ_statuses = Status.objects.get_for_model(Circuit)
-        circ_status_map = {s.name: s for s in circ_statuses.all()}
+        circ_status_map = {s.slug: s for s in circ_statuses.all()}
 
         circuits = (
             Circuit(provider=providers[0], tenant=tenants[0], type=circuit_types[0], cid='Test Circuit 1', install_date='2020-01-01', commit_rate=1000, status=circ_status_map['active']),
@@ -217,8 +217,7 @@ class CircuitTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_status(self):
-        statuses = Status.objects.get_for_model(Circuit)
-        params = {'status': [statuses.get(name='active').name, statuses.get(name='planned').name]}
+        params = {'status': ['active', 'planned']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_region(self):
@@ -292,7 +291,7 @@ class CircuitTerminationTestCase(TestCase):
         CircuitTermination.objects.bulk_create(circuit_terminations)
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         Cable(termination_a=circuit_terminations[0], termination_b=circuit_terminations[1], status=status_connected).save()
 

@@ -41,7 +41,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         form_data = {
             'name': 'Test Site 1',
             'slug': 'test-site-1',
-            'status': Status.objects.get(name='active').pk,
+            'status': Status.objects.get(slug='active').pk,
             'cf_my_field': 'ABC',
             'cf_my_field_select': 'Bar',
             'tags': [tag.pk for tag in tags],
@@ -69,7 +69,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc_list[1].object_data['tags'], ['Tag 1', 'Tag 2'])
 
     def test_update_object(self):
-        site = Site(name='Test Site 1', slug='test-site-1', status=Status.objects.get(name='active'))
+        site = Site(name='Test Site 1', slug='test-site-1', status=Status.objects.get(slug='active'))
         site.save()
         tags = self.create_tags('Tag 1', 'Tag 2', 'Tag 3')
         site.tags.set('Tag 1', 'Tag 2')
@@ -77,7 +77,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         form_data = {
             'name': 'Test Site X',
             'slug': 'test-site-x',
-            'status': Status.objects.get(name='planned').pk,
+            'status': Status.objects.get(slug='planned').pk,
             'cf_my_field': 'DEF',
             'cf_my_field_select': 'Foo',
             'tags': [tags[2].pk],
@@ -172,7 +172,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             'name': 'Test Site 1',
             'slug': 'test-site-1',
-            'status': self.statuses.get(name='active').name,
+            'status': 'active',
             'custom_fields': {
                 'my_field': 'ABC',
                 'my_field_select': 'Bar',
@@ -202,13 +202,13 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc_list[1].object_data['tags'], ['Tag 1', 'Tag 2'])
 
     def test_update_object(self):
-        site = Site(name='Test Site 1', slug='test-site-1', status=self.statuses.get(name='planned'))
+        site = Site(name='Test Site 1', slug='test-site-1', status=self.statuses.get(slug='planned'))
         site.save()
 
         data = {
             'name': 'Test Site X',
             'slug': 'test-site-x',
-            'status': self.statuses.get(name='active').name,
+            'status': 'active',
             'custom_fields': {
                 'my_field': 'DEF',
                 'my_field_select': 'Foo',
@@ -239,7 +239,7 @@ class ChangeLogAPITest(APITestCase):
         site = Site(
             name='Test Site 1',
             slug='test-site-1',
-            status=self.statuses.get(name='active'),
+            status=self.statuses.get(slug='active'),
             custom_field_data={
                 'my_field': 'ABC',
                 'my_field_select': 'Bar'

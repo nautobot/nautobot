@@ -529,7 +529,6 @@ class WebhookSerializer(ValidatedModelSerializer):
 class StatusSerializer(CustomFieldModelSerializer):
     """Serializer for `Status` objects."""
     url = serializers.HyperlinkedIdentityField(view_name='extras-api:status-detail')
-    label = serializers.SerializerMethodField()
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery('statuses').get_query()),
         many=True,
@@ -538,14 +537,9 @@ class StatusSerializer(CustomFieldModelSerializer):
     class Meta:
         model = Status
         fields = [
-            'id', 'url', 'content_types', 'name', 'label', 'color', 'custom_fields', 'created',
+            'id', 'url', 'content_types', 'name', 'slug', 'color', 'custom_fields', 'created',
             'last_updated',
         ]
-
-    @swagger_serializer_method(serializer_or_field=serializers.CharField)
-    def get_label(self, obj):
-        """Stringify the instance as the label."""
-        return str(obj)
 
 
 class StatusModelSerializerMixin(serializers.Serializer):

@@ -438,7 +438,7 @@ class StatusTest(TestCase):
     """
 
     def setUp(self):
-        self.status = Status.objects.create(name='delete_me', color=ColorChoices.COLOR_RED)
+        self.status = Status.objects.create(name='delete_me', slug='delete-me', color=ColorChoices.COLOR_RED)
 
         manufacturer = Manufacturer.objects.create(name='Manufacturer 1')
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1')
@@ -493,14 +493,3 @@ class StatusTest(TestCase):
             self.status.name = test
             self.status.clean()
             self.status.save()
-
-    def test_clean_name(self):
-        # Assert that cleaning makes the name lowercase.
-        self.status.name = 'CAPSLOCK'
-        self.status.clean()
-        self.status.save()
-        self.status.refresh_from_db()
-        self.assertEqual(self.status.name, 'capslock')
-
-        # And str(status) capitalizes
-        self.assertEqual(str(self.status), 'Capslock')

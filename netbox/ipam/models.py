@@ -496,7 +496,7 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel
     def STATUS_CONTAINER(cls):
         """Return a cached "container" `Status` object for later reference."""
         if getattr(cls, '__status_container', None) is None:
-            cls.__status_container = Status.objects.get_for_model(Prefix).get(name='container')
+            cls.__status_container = Status.objects.get_for_model(Prefix).get(slug='container')
         return cls.__status_container
 
     def clean(self):
@@ -783,7 +783,7 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusMo
     def STATUS_SLAAC(cls):
         """Return a cached "slaac" `Status` object for later reference."""
         if getattr(cls, '__status_slaac', None) is None:
-            cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(name='slaac')
+            cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(slug='slaac')
         return cls.__status_slaac
 
     def clean(self):

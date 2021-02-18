@@ -187,7 +187,7 @@ class TestPrefix(TestCase):
         self.assertEqual(prefix.get_utilization(), 50)
 
         # Non-container Prefix
-        prefix.status = self.statuses.get(name='active')
+        prefix.status = self.statuses.get(slug='active')
         prefix.save()
         IPAddress.objects.bulk_create(
             # Create 32 IPAddresses within the Prefix

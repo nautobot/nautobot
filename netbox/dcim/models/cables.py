@@ -169,7 +169,7 @@ class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel)
     def STATUS_CONNECTED(cls):
         """Return a cached "connected" `Status` object for later reference."""
         if getattr(cls, '__status_connected', None) is None:
-            cls.__status_connected = Status.objects.get_for_model(Cable).get(name='connected')
+            cls.__status_connected = Status.objects.get_for_model(Cable).get(slug='connected')
         return cls.__status_connected
 
     def clean(self):

@@ -35,7 +35,7 @@ class GitTest(TestCase):
         self.manufacturer = Manufacturer.objects.create(name='Acme', slug='acme')
         self.device_type = DeviceType.objects.create(manufacturer=self.manufacturer, model='Frobozz 1000', slug='frobozz1000')
         self.role = DeviceRole.objects.create(name='router', slug='router')
-        self.device_status = Status.objects.get_for_model(Device).get(name='active')
+        self.device_status = Status.objects.get_for_model(Device).get(slug='active')
         self.device = Device.objects.create(
             name="test-device",
             device_role=self.role,

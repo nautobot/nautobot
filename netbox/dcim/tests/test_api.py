@@ -111,9 +111,6 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         Site.objects.create(region=regions[0], name='Site 2', slug='site-2')
         Site.objects.create(region=regions[0], name='Site 3', slug='site-3')
 
-        statuses = Status.objects.get_for_model(Site)
-        status_active = statuses.get(name='active')
-
         # FIXME(jathan): The writable serializer for `Device.status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
@@ -127,19 +124,19 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
                 'name': 'Site 4',
                 'slug': 'site-4',
                 'region': regions[1].pk,
-                'status': status_active.name,
+                'status': 'active',
             },
             {
                 'name': 'Site 5',
                 'slug': 'site-5',
                 'region': regions[1].pk,
-                'status': status_active.name,
+                'status': 'active',
             },
             {
                 'name': 'Site 6',
                 'slug': 'site-6',
                 'region': regions[1].pk,
-                'status': status_active.name,
+                'status': 'active',
             },
         ]
 
@@ -267,21 +264,21 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                 'site': sites[1].pk,
                 'group': rack_groups[1].pk,
                 'role': rack_roles[1].pk,
-                'status': statuses[1].name,
+                'status': 'available',
             },
             {
                 'name': 'Test Rack 5',
                 'site': sites[1].pk,
                 'group': rack_groups[1].pk,
                 'role': rack_roles[1].pk,
-                'status': statuses[1].name,
+                'status': 'available',
             },
             {
                 'name': 'Test Rack 6',
                 'site': sites[1].pk,
                 'group': rack_groups[1].pk,
                 'role': rack_roles[1].pk,
-                'status': statuses[1].name,
+                'status': 'available',
             },
         ]
 
@@ -891,7 +888,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 'device_type': device_types[1].pk,
                 'device_role': device_roles[1].pk,
-                'status': device_statuses[1].name,
+                'status': 'offline',
                 'name': 'Test Device 4',
                 'site': sites[1].pk,
                 'rack': racks[1].pk,
@@ -900,7 +897,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 'device_type': device_types[1].pk,
                 'device_role': device_roles[1].pk,
-                'status': device_statuses[1].name,
+                'status': 'offline',
                 'name': 'Test Device 5',
                 'site': sites[1].pk,
                 'rack': racks[1].pk,
@@ -909,7 +906,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 'device_type': device_types[1].pk,
                 'device_role': device_roles[1].pk,
-                'status': device_statuses[1].name,
+                'status': 'offline',
                 'name': 'Test Device 6',
                 'site': sites[1].pk,
                 'rack': racks[1].pk,
@@ -1393,7 +1390,7 @@ class CableTest(APIViewTestCases.APIViewTestCase):
                 'termination_a_id': interfaces[4].pk,
                 'termination_b_type': 'dcim.interface',
                 'termination_b_id': interfaces[14].pk,
-                'status': statuses[1].name,
+                'status': 'planned',
                 'label': 'Cable 4',
             },
             {
@@ -1401,7 +1398,7 @@ class CableTest(APIViewTestCases.APIViewTestCase):
                 'termination_a_id': interfaces[5].pk,
                 'termination_b_type': 'dcim.interface',
                 'termination_b_id': interfaces[15].pk,
-                'status': statuses[1].name,
+                'status': 'planned',
                 'label': 'Cable 5',
             },
             {
@@ -1409,7 +1406,7 @@ class CableTest(APIViewTestCases.APIViewTestCase):
                 'termination_a_id': interfaces[6].pk,
                 'termination_b_type': 'dcim.interface',
                 'termination_b_id': interfaces[16].pk,
-                'status': statuses[1].name,
+                'status': 'planned',
                 'label': 'Cable 6',
             },
         ]
@@ -1614,8 +1611,6 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         PowerFeed.objects.create(power_panel=power_panels[0], rack=racks[2], name='Power Feed 3A', type=PRIMARY)
         PowerFeed.objects.create(power_panel=power_panels[1], rack=racks[2], name='Power Feed 3B', type=REDUNDANT)
 
-        statuses = Status.objects.get_for_model(PowerFeed)
-
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
@@ -1629,14 +1624,14 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
                 'name': 'Power Feed 4A',
                 'power_panel': power_panels[0].pk,
                 'rack': racks[3].pk,
-                'status': statuses[0].name,
+                'status': 'active',
                 'type': PRIMARY,
             },
             {
                 'name': 'Power Feed 4B',
                 'power_panel': power_panels[1].pk,
                 'rack': racks[3].pk,
-                'status': statuses[0].name,
+                'status': 'active',
                 'type': REDUNDANT,
             },
         ]

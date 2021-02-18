@@ -361,7 +361,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         DeviceRole.objects.bulk_create(device_roles)
 
         device_statuses = Status.objects.get_for_model(Device)
-        device_status_map = {ds.name: ds for ds in device_statuses.all()}
+        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
 
         platforms = (
             Platform(name='Platform 1', slug='platform-1'),

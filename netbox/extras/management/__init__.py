@@ -15,6 +15,30 @@ COLOR_MAP = {
     "default": ColorChoices.COLOR_GREY,   # inventory (grey)
 }
 
+# Map of slug -> description used when importing status choices in
+# `export_statuses_from_choiceset()`.
+DESCRIPTION_MAP = {
+    "active": "Unit is active",
+    "available": "Unit is available",
+    "connected": "Cable is connected",
+    "container": "Network contains children",
+    "dhcp": "Dynamically assigned IPv4/IPv6 address",
+    "decommissioned": "Circuit has been decommissioned",
+    "decommissioning": "Unit is being decommissioned",
+    "deprecated": "Unit has been deprecated",
+    "deprovisioning": "Circuit is being deprovisioned",
+    "failed": "Unit has failed",
+    "inventory": "Device is in inventory",
+    "offline": "Unit is offline",
+    "planned": "Unit has been planned",
+    "provisioning": "Circuit is being provisioned",
+    "reserved": "Unit is reserved",
+    "retired": "Site has been retired",
+    "slaac": "Dynamically assigned IPv6 address",
+    "staged": "Unit has been staged",
+    "staging": "Site is in the process of being staged",
+}
+
 
 #
 # Statuses
@@ -22,32 +46,39 @@ COLOR_MAP = {
 
 def populate_status_choices(apps, schema_editor, **kwargs):
     """
-    Explicitly run the `create_custom_statuses` signal since it is only ran at
-    post-migrate.
+    Populate `Status` model choices.
+
+    This will run the `create_custom_statuses` function during data migrations.
 
     When it is ran again post-migrate will be a noop.
     """
+
     app_config = apps.get_app_config('extras')
     create_custom_statuses(app_config, **kwargs)
 
 
-def export_statuses_from_choiceset(choiceset, color_map=None):
+def export_statuses_from_choiceset(choiceset, color_map=None, description_map=None):
     """
     e.g. `export_choices_from_choiceset(DeviceStatusChoices, content_type)`
 
     This is called by `extras.management.create_custom_statuses` for use in
     performing data migrations to populate `Status` objects.
     """
+
     if color_map is None:
         color_map = COLOR_MAP
+    if description_map is None:
+        description_map = DESCRIPTION_MAP
 
     choices = []
 
-    for value_lower, value in choiceset.CHOICES:
-        css_class = choiceset.CSS_CLASSES[value_lower]
+    for slug, value in choiceset.CHOICES:
+        css_class = choiceset.CSS_CLASSES[slug]
 
         choice_kwargs = dict(
-            name=value_lower,
+            name=value,
+            slug=slug,
+            description=description_map[slug],
             color=color_map[css_class],
         )
         choices.append(choice_kwargs)
@@ -123,7 +154,7 @@ def create_custom_statuses(
                 )
 
             if created and verbosity >= 2:
-                print(f"Adding status {model_path} | {obj.name}")
+                print(f"Adding status {obj.name}")
 
             # Make sure the content-type is associated.
             if content_type not in obj.content_types.all():

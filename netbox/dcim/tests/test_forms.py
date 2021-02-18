@@ -12,7 +12,7 @@ def get_id(model, slug):
 
 class DeviceTestCase(TestCase):
     def setUp(self):
-        self.device_status = Status.objects.get_for_model(Device).get(name='active')
+        self.device_status = Status.objects.get_for_model(Device).get(slug='active')
 
     @classmethod
     def setUpTestData(cls):
@@ -63,7 +63,7 @@ class DeviceTestCase(TestCase):
             'face': DeviceFaceChoices.FACE_FRONT,
             'position': 1,
             'platform': Platform.objects.first().pk,
-            'status': DeviceStatusChoices.STATUS_ACTIVE,
+            'status': self.device_status.pk,
         })
         self.assertFalse(form.is_valid())
         self.assertIn('position', form.errors)

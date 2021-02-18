@@ -1,7 +1,6 @@
 from django.db import migrations
 import django.db.models.deletion
 import extras.models.statuses
-import extras.management
 
 
 def populate_prefix_status_db(apps, schema_editor):
@@ -16,7 +15,7 @@ def populate_prefix_status_db(apps, schema_editor):
     custom_statuses = Status.objects.filter(content_types=content_type)
 
     for prefix in Prefix.objects.all():
-        prefix.status_db = custom_statuses.get(name=prefix.status)
+        prefix.status_db = custom_statuses.get(slug=prefix.status)
         prefix.save()
 
 
@@ -31,11 +30,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='prefix',
             name='status_db',
-            field=extras.models.statuses.StatusField(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='prefixs', to='extras.status'),
-        ),
-        migrations.RunPython(
-            extras.management.populate_status_choices,
-            migrations.RunPython.noop,
+            field=extras.models.statuses.StatusField(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='ipam_prefix_related', to='extras.status'),
         ),
         migrations.RunPython(
             populate_prefix_status_db,

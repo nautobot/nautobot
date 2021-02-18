@@ -255,7 +255,7 @@ class VirtualMachineTestCase(TestCase):
         Tenant.objects.bulk_create(tenants)
 
         statuses = Status.objects.get_for_model(VirtualMachine)
-        status_map = {s.name: s for s in statuses.all()}
+        status_map = {s.slug: s for s in statuses.all()}
 
         vms = (
             VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], platform=platforms[0], role=roles[0], tenant=tenants[0], status=status_map['active'], vcpus=1, memory=1, disk=1, local_context_data={"foo": 123}),

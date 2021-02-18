@@ -34,8 +34,8 @@ class CablePathTestCase(TestCase):
         cls.circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid='Circuit 1')
 
         cls.statuses = Status.objects.get_for_model(Cable)
-        cls.status = cls.statuses.get(name='connected')
-        cls.status_planned = cls.statuses.get(name='planned')
+        cls.status = cls.statuses.get(slug='connected')
+        cls.status_planned = cls.statuses.get(slug='planned')
 
     def assertPathExists(self, origin, destination, path=None, is_active=None, msg=None):
         """

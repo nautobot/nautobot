@@ -701,25 +701,27 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
-    brief_fields = ['id', 'name', 'url']
+    brief_fields = ['id', 'name', 'slug', 'url']
     bulk_update_data = {
         'color': '000000',
     }
 
-    # We can only create statuses for `dcim.device` at this time.
     create_data = [
         {
             'name': 'Pizza',
+            'slug': 'pizza',
             'color': '0000ff',
-            'content_types': ['dcim.device'],
+            'content_types': ['dcim.device', 'dcim.rack'],
         },
         {
             'name': 'Oysters',
+            'slug': 'oysters',
             'color': '00ff00',
-            'content_types': ['dcim.device'],
+            'content_types': ['ipam.ipaddress', 'ipam.prefix'],
         },
         {
             'name': 'Bad combinations',
+            'slug': 'bad-combinations',
             'color': 'ff0000',
             'content_types': ['dcim.device'],
         },
@@ -729,7 +731,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         """
         Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's beacuse they are
+        testing against those. If this seems magical, it's because they are
         imported from `ChoiceSet` enum objects.
 
         This method is defined just so it's clear that there is no need to

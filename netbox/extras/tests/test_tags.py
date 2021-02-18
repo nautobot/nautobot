@@ -37,7 +37,7 @@ class TaggedItemTest(APITestCase):
         site = Site.objects.create(
             name='Test Site',
             slug='test-site',
-            status=Status.objects.get(name='active'),
+            status=Status.objects.get(slug='active'),
         )
         site.tags.add("Foo", "Bar", "Baz")
         self.create_tags("New Tag")
@@ -67,7 +67,7 @@ class TaggedItemTest(APITestCase):
         site = Site.objects.create(
             name='Test Site',
             slug='test-site',
-            status=Status.objects.get(name='active'),
+            status=Status.objects.get(slug='active'),
         )
         site.tags.add("Foo", "Bar", "Baz")
         data = {

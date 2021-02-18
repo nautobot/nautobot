@@ -64,7 +64,7 @@ class WebhookTest(APITestCase):
 
     def test_enqueue_webhook_update(self):
         # Update an object via the REST API
-        site = Site.objects.create(name='Site 1', slug='site-1', status=Status.objects.get(name='active'))
+        site = Site.objects.create(name='Site 1', slug='site-1', status=Status.objects.get(slug='active'))
         data = {
             'comments': 'Updated the site',
         }

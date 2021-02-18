@@ -104,7 +104,7 @@ class NestedStatusSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Status
-        fields = ['id', 'url', 'name']
+        fields = ['id', 'url', 'name', 'slug']
 
 
 class NestedRelationshipSerializer(WritableNestedSerializer):

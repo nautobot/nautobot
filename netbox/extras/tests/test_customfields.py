@@ -146,8 +146,8 @@ class CustomFieldAPITest(APITestCase):
 
         # Create some sites
         cls.sites = (
-            Site(name='Site 1', slug='site-1', status=statuses.get(name='active')),
-            Site(name='Site 2', slug='site-2', status=statuses.get(name='active')),
+            Site(name='Site 1', slug='site-1', status=statuses.get(slug='active')),
+            Site(name='Site 2', slug='site-2', status=statuses.get(slug='active')),
         )
         Site.objects.bulk_create(cls.sites)
 

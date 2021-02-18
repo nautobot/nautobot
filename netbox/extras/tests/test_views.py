@@ -197,26 +197,26 @@ class StatusTestCase(
 
         # Status objects to test.
         statuses = (
-            Status(name='status1'),
-            Status(name='status2'),
-            Status(name='status3'),
+            Status.objects.create(name='Status 1', slug='status-1'),
+            Status.objects.create(name='Status 2', slug='status-2'),
+            Status.objects.create(name='Status 3', slug='status-3'),
         )
-        for status in statuses:
-            status.save()
 
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
             'name': 'new_status',
+            'slug': 'new-status',
+            'description': 'I am a new status object.',
             'color': 'ffcc00',
             'content_types': [content_type.pk],
         }
 
         cls.csv_data = (
-            'name,color,content_types'
-            'test_status1,ffffff,"dcim.device"'
-            'test_status2,ffffff,"dcim.device,dcim.rack"'
-            'test_status3,ffffff,"dcim.device,dcim.site"'
+            'name,slug,color,content_types'
+            'test_status1,test-status1,ffffff,"dcim.device"'
+            'test_status2,test-status2,ffffff,"dcim.device,dcim.rack"'
+            'test_status3,test-status3,ffffff,"dcim.device,dcim.site"'
         )
 
         cls.bulk_edit_data = {

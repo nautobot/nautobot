@@ -236,7 +236,7 @@ class DeviceTestCase(TestCase):
         self.device_role = DeviceRole.objects.create(
             name='Test Device Role 1', slug='test-device-role-1', color='ff0000'
         )
-        self.device_status = Status.objects.get_for_model(Device).get(name='active')
+        self.device_status = Status.objects.get_for_model(Device).get(slug='active')
 
         # Create DeviceType components
         ConsolePortTemplate(
@@ -438,7 +438,7 @@ class CableTestCase(TestCase):
         self.interface1 = Interface.objects.create(device=self.device1, name='eth0')
         self.interface2 = Interface.objects.create(device=self.device2, name='eth0')
         self.interface3 = Interface.objects.create(device=self.device2, name='eth1')
-        self.status = Status.objects.get_for_model(Cable).get(name='connected')
+        self.status = Status.objects.get_for_model(Cable).get(slug='connected')
         self.cable = Cable(termination_a=self.interface1, termination_b=self.interface2, status=self.status)
         self.cable.save()
 

@@ -201,7 +201,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Prefix)
-        status_reserved = statuses.get(name='reserved')
+        status_reserved = statuses.get(slug='reserved')
 
         Prefix.objects.create(prefix=IPNetwork('10.1.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0], status=statuses[0])
         Prefix.objects.create(prefix=IPNetwork('10.2.0.0/16'), vrf=vrfs[0], site=sites[0], role=roles[0], status=statuses[0])
@@ -252,7 +252,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(IPAddress)
-        status_reserved = statuses.get(name='reserved')
+        status_reserved = statuses.get(slug='reserved')
 
         IPAddress.objects.create(address=IPNetwork('192.0.2.1/24'), vrf=vrfs[0], status=statuses[0])
         IPAddress.objects.create(address=IPNetwork('192.0.2.2/24'), vrf=vrfs[0], status=statuses[0])
@@ -340,7 +340,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(VLAN)
-        status_reserved = statuses.get(name='reserved')
+        status_reserved = statuses.get(slug='reserved')
 
         VLAN.objects.create(group=vlangroups[0], vid=101, name='VLAN101', site=sites[0], role=roles[0], status=statuses[0])
         VLAN.objects.create(group=vlangroups[0], vid=102, name='VLAN102', site=sites[0], role=roles[0], status=statuses[0])

@@ -86,7 +86,7 @@ class SiteTestCase(TestCase):
         )
 
         statuses = Status.objects.get_for_model(Site)
-        status_map = {s.name: s for s in statuses.all()}
+        status_map = {s.slug: s for s in statuses.all()}
 
         Site.objects.create(name='Site 1', slug='site-1', region=regions[0], tenant=tenants[0], status=status_map['active'], facility='Facility 1', asn=65001, latitude=10, longitude=10, contact_name='Contact 1', contact_phone='123-555-0001', contact_email='contact1@example.com')
         Site.objects.create(name='Site 2', slug='site-2', region=regions[1], tenant=tenants[1], status=status_map['planned'], facility='Facility 2', asn=65002, latitude=20, longitude=20, contact_name='Contact 2', contact_phone='123-555-0002', contact_email='contact2@example.com')
@@ -133,8 +133,7 @@ class SiteTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        statuses = Status.objects.get_for_model(Site)
-        params = {'status': [statuses.get(name='active').name, statuses.get(name='planned').name]}
+        params = {'status': ['active', 'planned']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
@@ -298,7 +297,7 @@ class RackTestCase(TestCase):
         )
 
         statuses = Status.objects.get_for_model(Rack)
-        status_map = {s.name: s for s in statuses.all()}
+        status_map = {s.slug: s for s in statuses.all()}
 
         Rack.objects.create(name='Rack 1', facility_id='rack-1', site=sites[0], group=rack_groups[0], tenant=tenants[0], status=status_map['active'], role=rack_roles[0], serial='ABC', asset_tag='1001', type=RackTypeChoices.TYPE_2POST, width=RackWidthChoices.WIDTH_19IN, u_height=42, desc_units=False, outer_width=100, outer_depth=100, outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER)
         Rack.objects.create(name='Rack 2', facility_id='rack-2', site=sites[1], group=rack_groups[1], tenant=tenants[1], status=status_map['planned'], role=rack_roles[1], serial='DEF', asset_tag='1002', type=RackTypeChoices.TYPE_4POST, width=RackWidthChoices.WIDTH_21IN, u_height=43, desc_units=False, outer_width=200, outer_depth=200, outer_unit=RackDimensionUnitChoices.UNIT_MILLIMETER)
@@ -373,8 +372,7 @@ class RackTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        statuses = Status.objects.get_for_model(Rack)
-        params = {'status': [statuses.get(name='active').name, statuses.get(name='planned').name]}
+        params = {'status': ['active', 'planned']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_role(self):
@@ -1061,7 +1059,7 @@ class DeviceTestCase(TestCase):
         )
 
         device_statuses = Status.objects.get_for_model(Device)
-        device_status_map = {ds.name: ds for ds in device_statuses.all()}
+        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
 
         platforms = (
             Platform.objects.create(name='Platform 1', slug='platform-1'),
@@ -1250,8 +1248,7 @@ class DeviceTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        statuses = Status.objects.get_for_model(Device)
-        params = {'status': [statuses.get(name='active').name, statuses.get(name='staged').name]}
+        params = {'status': ['active', 'staged']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_is_full_depth(self):
@@ -1391,7 +1388,7 @@ class ConsolePortTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         # Cables
         Cable.objects.create(termination_a=console_ports[0], termination_b=console_server_ports[0], status=status_connected)
@@ -1486,7 +1483,7 @@ class ConsoleServerPortTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         # Cables
         Cable.objects.create(termination_a=console_server_ports[0], termination_b=console_ports[0], status=status_connected)
@@ -1581,7 +1578,7 @@ class PowerPortTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         # Cables
         Cable.objects.create(termination_a=power_ports[0], termination_b=power_outlets[0], status=status_connected)
@@ -1684,7 +1681,7 @@ class PowerOutletTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         # Cables
         Cable.objects.create(termination_a=power_outlets[0], termination_b=power_ports[0], status=status_connected)
@@ -1782,7 +1779,7 @@ class InterfaceTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         # Cables
         Cable.objects.create(termination_a=interfaces[0], termination_b=interfaces[3], status=status_connected)
@@ -1918,7 +1915,7 @@ class FrontPortTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         # Cables
         Cable.objects.create(termination_a=front_ports[0], termination_b=front_ports[3], status=status_connected)
@@ -2010,7 +2007,7 @@ class RearPortTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         # Cables
         Cable.objects.create(termination_a=rear_ports[0], termination_b=rear_ports[3], status=status_connected)
@@ -2370,8 +2367,8 @@ class CableTestCase(TestCase):
         )
 
         statuses = Status.objects.get_for_model(Cable)
-        cls.status_connected = statuses.get(name='connected')
-        cls.status_planned = statuses.get(name='planned')
+        cls.status_connected = statuses.get(slug='connected')
+        cls.status_planned = statuses.get(slug='planned')
 
         # Cables
         Cable.objects.create(termination_a=interfaces[1], termination_b=interfaces[2], label='Cable 1', type=CableTypeChoices.TYPE_CAT3, status=cls.status_connected, color='aa1409', length=10, length_unit=CableLengthUnitChoices.UNIT_FOOT)
@@ -2402,9 +2399,9 @@ class CableTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        params = {'status': [self.status_connected]}
+        params = {'status': ['connected']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {'status': [self.status_planned]}
+        params = {'status': ['planned']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_color(self):
@@ -2529,7 +2526,7 @@ class PowerFeedTestCase(TestCase):
         )
 
         pf_statuses = Status.objects.get_for_model(PowerFeed)
-        pf_status_map = {s.name: s for s in pf_statuses.all()}
+        pf_status_map = {s.slug: s for s in pf_statuses.all()}
 
         power_feeds = (
             PowerFeed.objects.create(power_panel=power_panels[0], rack=racks[0], name='Power Feed 1', status=pf_status_map['active'], type=PowerFeedTypeChoices.TYPE_PRIMARY, supply=PowerFeedSupplyChoices.SUPPLY_AC, phase=PowerFeedPhaseChoices.PHASE_3PHASE, voltage=100, amperage=100, max_utilization=10),
@@ -2547,7 +2544,7 @@ class PowerFeedTestCase(TestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(name='connected')
+        status_connected = cable_statuses.get(slug='connected')
 
         Cable.objects.create(termination_a=power_feeds[0], termination_b=power_ports[0], status=status_connected)
         Cable.objects.create(termination_a=power_feeds[1], termination_b=power_ports[1], status=status_connected)
@@ -2561,8 +2558,7 @@ class PowerFeedTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        pf_statuses = Status.objects.get_for_model(PowerFeed)
-        params = {'status': [pf_statuses.get(name='active').name, pf_statuses.get(name='offline').name]}
+        params = {'status': ['active', 'offline']}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):

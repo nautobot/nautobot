@@ -206,7 +206,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
     def setUp(self):
         super().setUp()
         self.statuses = Status.objects.get_for_model(Prefix)
-        self.status_active = self.statuses.get(name='active')
+        self.status_active = self.statuses.get(slug='active')
 
     @classmethod
     def setUpTestData(cls):

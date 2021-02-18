@@ -16,7 +16,7 @@ class StatusSerializerField(serializers.SlugRelatedField):
     show_choices = True
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('slug_field', 'name')
+        kwargs.setdefault('slug_field', 'slug')
         super().__init__(**kwargs)
 
     def to_representation(self, obj):
@@ -25,7 +25,7 @@ class StatusSerializerField(serializers.SlugRelatedField):
             return None
 
         return OrderedDict([
-            ('value', obj.name),
+            ('value', obj.slug),
             ('label', str(obj)),
         ])
 
@@ -54,7 +54,7 @@ class StatusSerializerField(serializers.SlugRelatedField):
 
         return OrderedDict([
             (
-                item.name,
+                item.slug,
                 self.display_value(item)
             )
             for item in queryset

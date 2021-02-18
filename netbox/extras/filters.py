@@ -469,7 +469,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
     filterset.
     """
     def __init__(self, *args, **kwargs):
-        kwargs['to_field_name'] = 'name'
+        kwargs['to_field_name'] = 'slug'
         super().__init__(*args, **kwargs)
 
     def get_queryset(self, request):
@@ -478,7 +478,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
 
     def get_filter_predicate(self, value):
         """Always use the field's name and the `to_field_name` attribute as predicate."""
-        # e.g. `status__name`
+        # e.g. `status__slug`
         to_field_name = self.field.to_field_name
         name = f'{self.field_name}__{to_field_name}'
         return {name: getattr(value, to_field_name)}
@@ -497,15 +497,16 @@ class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterS
     class Meta:
         model = Status
         fields = [
-            'id', 'content_types', 'color', 'name', 'created', 'last_updated'
+            'id', 'content_types', 'color', 'name', 'slug', 'created', 'last_updated'
         ]
 
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(content_types__model__icontains=value) |
-            Q(name__icontains=value)
+            Q(name__icontains=value) |
+            Q(slug__icontains=value) |
+            Q(content_types__model__icontains=value)
         ).distinct()
 
 

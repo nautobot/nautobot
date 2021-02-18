@@ -46,12 +46,24 @@ class Status(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         limit_choices_to=FeatureQuery('statuses'),
         help_text='The content type(s) to which this status applies.'
     )
-    name = models.CharField(max_length=50, unique=True)
-    color = ColorField(default=ColorChoices.COLOR_GREY)
+    name = models.CharField(
+        max_length=50,
+        unique=True
+    )
+    color = ColorField(
+        default=ColorChoices.COLOR_GREY
+    )
+    slug = models.SlugField(
+        max_length=50, unique=True
+    )
+    description = models.CharField(
+        max_length=200,
+        blank=True,
+    )
 
     objects = StatusQuerySet.as_manager()
 
-    csv_headers = ['name', 'color', 'content_types']
+    csv_headers = ['name', 'slug', 'color', 'content_types', 'description']
     clone_fields = ['color', 'content_types']
 
     class Meta:
@@ -62,13 +74,7 @@ class Status(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         return self.name.capitalize()
 
     def get_absolute_url(self):
-        return reverse('extras:status', args=[self.pk])
-
-    def clean(self):
-        super().clean()
-
-        # Forcibly lowercase the `name` so lookups can be uniform.
-        self.name = self.name.lower()
+        return reverse('extras:status', args=[self.slug])
 
     def to_csv(self):
         labels = ','.join(
@@ -76,8 +82,10 @@ class Status(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         )
         return (
             self.name,
+            self.slug,
             self.color,
             f'"{labels}"',  # Wrap labels in double quotes for CSV
+            self.description,
         )
 
 
@@ -153,7 +161,7 @@ class StatusField(models.ForeignKey):
         """Return a prepped formfield for use in model forms."""
         defaults = {
             'form_class': DynamicModelChoiceField,
-            'display_field': 'label',
+            'display_field': 'name',
             'queryset': Status.objects.all(),
             # label_lower e.g. "dcim.device"
             'query_params': {'content_types': self.model._meta.label_lower},
@@ -169,7 +177,7 @@ class StatusModel(models.Model):
 
     status = StatusField(
         on_delete=models.PROTECT,
-        related_name='%(class)ss',  # Pluralizes the class name
+        related_name='%(app_label)s_%(class)s_related',  # e.g. dcim_device_related
     )
 
     class Meta:

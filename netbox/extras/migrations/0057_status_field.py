@@ -19,6 +19,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=50, unique=True)),
+                ('description', models.CharField(max_length=200, blank=True)),
+                ('slug', models.SlugField(max_length=50, unique=True)),
                 ('color', utilities.fields.ColorField(default='9e9e9e', max_length=6)),
                 ('content_types', models.ManyToManyField(limit_choices_to=extras.utils.FeatureQuery('statuses'), related_name='statuses', to='contenttypes.ContentType')),
                 ('created', models.DateField(auto_now_add=True, null=True)),

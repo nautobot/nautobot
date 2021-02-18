@@ -69,8 +69,8 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Site)
-        status_active = statuses.get(name='active')
-        status_planned = statuses.get(name='planned')
+        status_active = statuses.get(slug='active')
+        status_planned = statuses.get(slug='planned')
 
         Site.objects.create(name='Site 1', slug='site-1', region=regions[0], status=status_planned)
         Site.objects.create(name='Site 2', slug='site-2', region=regions[0], status=status_planned)
@@ -234,7 +234,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Rack)
-        status_active = statuses.get(name='active')
+        status_active = statuses.get(slug='active')
 
         Rack.objects.create(name='Rack 1', site=sites[0], status=status_active)
         Rack.objects.create(name='Rack 2', site=sites[0], status=status_active)
@@ -248,7 +248,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'site': sites[1].pk,
             'group': rackgroups[1].pk,
             'tenant': None,
-            'status': statuses.get(name='planned').pk,
+            'status': statuses.get(slug='planned').pk,
             'role': rackroles[1].pk,
             'serial': '123456',
             'asset_tag': 'ABCDEF',
@@ -274,7 +274,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'site': sites[1].pk,
             'group': rackgroups[1].pk,
             'tenant': None,
-            'status': statuses.get(name='deprecated').pk,
+            'status': statuses.get(slug='deprecated').pk,
             'role': rackroles[1].pk,
             'serial': '654321',
             'type': RackTypeChoices.TYPE_4POST,
@@ -905,7 +905,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Device)
-        status_active = statuses.get(name='active')
+        status_active = statuses.get(slug='active')
 
         Device.objects.create(name='Device 1', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active)
         Device.objects.create(name='Device 2', site=sites[0], rack=racks[0], device_type=devicetypes[0], device_role=deviceroles[0], platform=platforms[0], status=status_active)
@@ -925,7 +925,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'rack': racks[1].pk,
             'position': 1,
             'face': DeviceFaceChoices.FACE_FRONT,
-            'status': statuses.get(name='planned').pk,
+            'status': statuses.get(slug='planned').pk,
             'primary_ip4': None,
             'primary_ip6': None,
             'cluster': None,
@@ -950,7 +950,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             'tenant': None,
             'platform': platforms[1].pk,
             'serial': '123456',
-            'status': statuses.get(name='decommissioning').pk,
+            'status': statuses.get(slug='decommissioning').pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
@@ -1576,7 +1576,7 @@ class CableTestCase(
             'termination_b_type': interface_ct.pk,
             'termination_b_id': interfaces[3].pk,
             'type': CableTypeChoices.TYPE_CAT6,
-            'status': statuses.get(name='planned').pk,
+            'status': statuses.get(slug='planned').pk,
             'label': 'Label',
             'color': 'c0c0c0',
             'length': 100,
@@ -1593,7 +1593,7 @@ class CableTestCase(
 
         cls.bulk_edit_data = {
             'type': CableTypeChoices.TYPE_CAT5E,
-            'status': statuses.get(name='connected').pk,
+            'status': statuses.get(slug='connected').pk,
             'label': 'New label',
             'color': '00ff00',
             'length': 50,
@@ -1734,7 +1734,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
         statuses = Status.objects.get_for_model(PowerFeed)
-        status_planned = statuses.get(name='planned')
+        status_planned = statuses.get(slug='planned')
 
         cls.form_data = {
             'name': 'Power Feed X',
