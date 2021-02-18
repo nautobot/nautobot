@@ -300,32 +300,6 @@
                                     </div>
                                 {% endif %}
                             </div>
-                            <div class="panel panel-default noprint">
-                                <div class="panel-heading">
-                                    <strong>Related Devices</strong>
-                                </div>
-                                {% if related_devices %}
-                                    <table class="table table-hover panel-body">
-                                        {% for rd in related_devices %}
-                                            <tr>
-                                                <td>
-                                                    <a href="{% url 'dcim:device' pk=rd.pk %}">{{ rd }}</a>
-                                                </td>
-                                                <td>
-                                                    {% if rd.rack %}
-                                                        <a href="{% url 'dcim:rack' pk=rd.rack.pk %}">Rack {{ rd.rack }}</a>
-                                                    {% else %}
-                                                        <span class="text-muted">&mdash;</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>{{ rd.device_type.display_name }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </table>
-                                {% else %}
-                                    <div class="panel-body text-muted">None found</div>
-                                {% endif %}
-                            </div>
                             {% plugin_right_page object %}
                         </div>
                     </div>
