@@ -30,6 +30,3 @@ Below is a simplified overview of the Nautobot application stack for reference:
 ## Upgrading
 
 If you are upgrading from an existing installation, please consult the [upgrading guide](upgrading.md).
-
-!!! note
-    Beginning with v2.5.9, the official documentation calls for systemd to be used for managing the WSGI workers in place of supervisord.  Please see the instructions for [migrating to systemd](migrating-to-systemd.md) if you are still using supervisord.

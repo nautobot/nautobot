@@ -105,6 +105,3 @@ Finally, restart the gunicorn and RQ services:
 ```no-highlight
 sudo systemctl restart nautobot nautobot-rq
 ```
-
-!!! note
-    If upgrading from an installation that uses supervisord, please see the instructions for [migrating to systemd](migrating-to-systemd.md). The use of supervisord is no longer supported.

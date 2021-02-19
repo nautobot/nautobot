@@ -25,7 +25,6 @@ nav:
         - 5. HTTP Server: 'installation/5-http-server.md'
         - 6. External Authentication (Optional): 'installation/6-external-authentication.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
-        - Migrating to systemd: 'installation/migrating-to-systemd.md'
     - Configuration:
         - Configuring Nautobot: 'configuration/index.md'
         - Required Settings: 'configuration/required-settings.md'
