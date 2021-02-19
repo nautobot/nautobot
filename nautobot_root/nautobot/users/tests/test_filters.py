@@ -14,46 +14,44 @@ class UserTestCase(TestCase):
     def setUpTestData(cls):
 
         groups = (
-            Group(name='Group 1'),
-            Group(name='Group 2'),
-            Group(name='Group 3'),
+            Group.objects.create(name='Group 1'),
+            Group.objects.create(name='Group 2'),
+            Group.objects.create(name='Group 3'),
         )
-        Group.objects.bulk_create(groups)
 
         users = (
-            User(
+            User.objects.create(
                 username='User1',
                 first_name='Hank',
                 last_name='Hill',
                 email='hank@stricklandpropane.com',
                 is_staff=True
             ),
-            User(
+            User.objects.create(
                 username='User2',
                 first_name='Dale',
                 last_name='Gribble',
                 email='dale@dalesdeadbug.com'
             ),
-            User(
+            User.objects.create(
                 username='User3',
                 first_name='Bill',
                 last_name='Dauterive',
                 email='bill.dauterive@army.mil'
             ),
-            User(
+            User.objects.create(
                 username='User4',
                 first_name='Jeff',
                 last_name='Boomhauer',
                 email='boomhauer@dangolemail.com'
             ),
-            User(
+            User.objects.create(
                 username='User5',
                 first_name='Debbie',
                 last_name='Grund',
                 is_active=False
             )
         )
-        User.objects.bulk_create(users)
 
         users[0].groups.set([groups[0]])
         users[1].groups.set([groups[1]])
@@ -102,12 +100,9 @@ class GroupTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        groups = (
-            Group(name='Group 1'),
-            Group(name='Group 2'),
-            Group(name='Group 3'),
-        )
-        Group.objects.bulk_create(groups)
+        Group.objects.create(name='Group 1')
+        Group.objects.create(name='Group 2')
+        Group.objects.create(name='Group 3')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -126,18 +121,16 @@ class ObjectPermissionTestCase(TestCase):
     def setUpTestData(cls):
 
         groups = (
-            Group(name='Group 1'),
-            Group(name='Group 2'),
-            Group(name='Group 3'),
+            Group.objects.create(name='Group 1'),
+            Group.objects.create(name='Group 2'),
+            Group.objects.create(name='Group 3'),
         )
-        Group.objects.bulk_create(groups)
 
         users = (
-            User(username='User1'),
-            User(username='User2'),
-            User(username='User3'),
+            User.objects.create(username='User1'),
+            User.objects.create(username='User2'),
+            User.objects.create(username='User3'),
         )
-        User.objects.bulk_create(users)
 
         object_types = (
             ContentType.objects.get(app_label='dcim', model='site'),
@@ -146,15 +139,14 @@ class ObjectPermissionTestCase(TestCase):
         )
 
         permissions = (
-            ObjectPermission(name='Permission 1', actions=['view', 'add', 'change', 'delete']),
-            ObjectPermission(name='Permission 2', actions=['view', 'add', 'change', 'delete']),
-            ObjectPermission(name='Permission 3', actions=['view', 'add', 'change', 'delete']),
-            ObjectPermission(name='Permission 4', actions=['view'], enabled=False),
-            ObjectPermission(name='Permission 5', actions=['add'], enabled=False),
-            ObjectPermission(name='Permission 6', actions=['change'], enabled=False),
-            ObjectPermission(name='Permission 7', actions=['delete'], enabled=False),
+            ObjectPermission.objects.create(name='Permission 1', actions=['view', 'add', 'change', 'delete']),
+            ObjectPermission.objects.create(name='Permission 2', actions=['view', 'add', 'change', 'delete']),
+            ObjectPermission.objects.create(name='Permission 3', actions=['view', 'add', 'change', 'delete']),
+            ObjectPermission.objects.create(name='Permission 4', actions=['view'], enabled=False),
+            ObjectPermission.objects.create(name='Permission 5', actions=['add'], enabled=False),
+            ObjectPermission.objects.create(name='Permission 6', actions=['change'], enabled=False),
+            ObjectPermission.objects.create(name='Permission 7', actions=['delete'], enabled=False),
         )
-        ObjectPermission.objects.bulk_create(permissions)
         for i in range(0, 3):
             permissions[i].groups.set([groups[i]])
             permissions[i].users.set([users[i]])

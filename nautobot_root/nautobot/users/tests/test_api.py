@@ -40,12 +40,9 @@ class UserTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        users = (
-            User(username='User_1'),
-            User(username='User_2'),
-            User(username='User_3'),
-        )
-        User.objects.bulk_create(users)
+        User.objects.create(username='User_1')
+        User.objects.create(username='User_2')
+        User.objects.create(username='User_3')
 
 
 class GroupTest(APIViewTestCases.APIViewTestCase):
@@ -67,13 +64,9 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        users = (
-            Group(name='Group 1'),
-            Group(name='Group 2'),
-            Group(name='Group 3'),
-        )
-        Group.objects.bulk_create(users)
-
+        Group.objects.create(name='Group 1')
+        Group.objects.create(name='Group 2')
+        Group.objects.create(name='Group 3')
 
 class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
     model = ObjectPermission
@@ -83,28 +76,25 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         groups = (
-            Group(name='Group 1'),
-            Group(name='Group 2'),
-            Group(name='Group 3'),
+            Group.objects.create(name='Group 1'),
+            Group.objects.create(name='Group 2'),
+            Group.objects.create(name='Group 3'),
         )
-        Group.objects.bulk_create(groups)
 
         users = (
-            User(username='User 1', is_active=True),
-            User(username='User 2', is_active=True),
-            User(username='User 3', is_active=True),
+            User.objects.create(username='User 1', is_active=True),
+            User.objects.create(username='User 2', is_active=True),
+            User.objects.create(username='User 3', is_active=True),
         )
-        User.objects.bulk_create(users)
 
         object_type = ContentType.objects.get(app_label='dcim', model='device')
 
         for i in range(3):
-            objectpermission = ObjectPermission(
+            objectpermission = ObjectPermission.objects.create(
                 name=f'Permission {i+1}',
                 actions=['view', 'add', 'change', 'delete'],
                 constraints={'name': f'TEST{i+1}'}
             )
-            objectpermission.save()
             objectpermission.object_types.add(object_type)
             objectpermission.groups.add(groups[i])
             objectpermission.users.add(users[i])
