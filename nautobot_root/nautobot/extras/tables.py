@@ -52,7 +52,7 @@ GITREPOSITORY_PROVIDES = """
 <span class="text-nowrap">
 {% for entry in datasource_contents %}
 <span style="display: inline-block" title="{{ entry.name|title }}"
-class="label label-{% if entry.token in record.provided_contents %}success{% else %}default{% endif %}">
+class="label label-{% if entry.content_identifier in record.provided_contents %}success{% else %}default{% endif %}">
 <i class="mdi {{ entry.icon }}"></i></span>
 {% endfor %}
 </span>

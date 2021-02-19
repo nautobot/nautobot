@@ -98,7 +98,7 @@
                                 </span>
                                 {{ entry.name|title }}</td>
                             <td>
-                                {% if entry.token in object.provided_contents %}
+                                {% if entry.content_identifier in object.provided_contents %}
                                     <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
                                 {% else %}
                                     <span class="text-danger"><i class="mdi mdi-close"></i></span>
