@@ -68,6 +68,7 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
         Group.objects.create(name='Group 2')
         Group.objects.create(name='Group 3')
 
+
 class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
     model = ObjectPermission
     brief_fields = ['actions', 'enabled', 'groups', 'id', 'name', 'object_types', 'url', 'users']
