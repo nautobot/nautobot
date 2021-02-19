@@ -8,13 +8,9 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        tenant_groups = (
-            TenantGroup(name='Tenant Group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant Group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant Group 3', slug='tenant-group-3'),
-        )
-        for tenanantgroup in tenant_groups:
-            tenanantgroup.save()
+        TenantGroup.objects.create(name='Tenant Group 1', slug='tenant-group-1')
+        TenantGroup.objects.create(name='Tenant Group 2', slug='tenant-group-2')
+        TenantGroup.objects.create(name='Tenant Group 3', slug='tenant-group-3')
 
         cls.form_data = {
             'name': 'Tenant Group X',
@@ -37,17 +33,13 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         tenant_groups = (
-            TenantGroup(name='Tenant Group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant Group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant Group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant Group 2', slug='tenant-group-2'),
         )
-        for tenanantgroup in tenant_groups:
-            tenanantgroup.save()
 
-        Tenant.objects.bulk_create([
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[0]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[0]),
-        ])
+        Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0])
+        Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[0])
+        Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 

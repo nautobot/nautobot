@@ -67,12 +67,9 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
             TenantGroup.objects.create(name='Tenant Group 2', slug='tenant-group-2'),
         )
 
-        tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[0]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[0]),
-        )
-        Tenant.objects.bulk_create(tenants)
+        Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0])
+        Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[0])
+        Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[0])
 
         cls.create_data = [
             {
