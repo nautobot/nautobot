@@ -16,44 +16,35 @@ class ProviderTestCase(TestCase):
     def setUpTestData(cls):
 
         providers = (
-            Provider(name='Provider 1', slug='provider-1', asn=65001, account='1234'),
-            Provider(name='Provider 2', slug='provider-2', asn=65002, account='2345'),
-            Provider(name='Provider 3', slug='provider-3', asn=65003, account='3456'),
-            Provider(name='Provider 4', slug='provider-4', asn=65004, account='4567'),
-            Provider(name='Provider 5', slug='provider-5', asn=65005, account='5678'),
+            Provider.objects.create(name='Provider 1', slug='provider-1', asn=65001, account='1234'),
+            Provider.objects.create(name='Provider 2', slug='provider-2', asn=65002, account='2345'),
+            Provider.objects.create(name='Provider 3', slug='provider-3', asn=65003, account='3456'),
+            Provider.objects.create(name='Provider 4', slug='provider-4', asn=65004, account='4567'),
+            Provider.objects.create(name='Provider 5', slug='provider-5', asn=65005, account='5678'),
         )
-        Provider.objects.bulk_create(providers)
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1', region=regions[0]),
-            Site(name='Test Site 2', slug='test-site-2', region=regions[1]),
+            Site.objects.create(name='Test Site 1', slug='test-site-1', region=regions[0]),
+            Site.objects.create(name='Test Site 2', slug='test-site-2', region=regions[1]),
         )
-        Site.objects.bulk_create(sites)
 
         circuit_types = (
-            CircuitType(name='Test Circuit Type 1', slug='test-circuit-type-1'),
-            CircuitType(name='Test Circuit Type 2', slug='test-circuit-type-2'),
+            CircuitType.objects.create(name='Test Circuit Type 1', slug='test-circuit-type-1'),
+            CircuitType.objects.create(name='Test Circuit Type 2', slug='test-circuit-type-2'),
         )
-        CircuitType.objects.bulk_create(circuit_types)
 
         circuits = (
-            Circuit(provider=providers[0], type=circuit_types[0], cid='Test Circuit 1'),
-            Circuit(provider=providers[1], type=circuit_types[1], cid='Test Circuit 1'),
+            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid='Test Circuit 1'),
+            Circuit.objects.create(provider=providers[1], type=circuit_types[1], cid='Test Circuit 1'),
         )
-        Circuit.objects.bulk_create(circuits)
 
-        CircuitTermination.objects.bulk_create((
-            CircuitTermination(circuit=circuits[0], site=sites[0], term_side='A'),
-            CircuitTermination(circuit=circuits[1], site=sites[0], term_side='A'),
-        ))
+        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side='A')
+        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side='A')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -97,11 +88,9 @@ class CircuitTypeTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        CircuitType.objects.bulk_create((
-            CircuitType(name='Circuit Type 1', slug='circuit-type-1'),
-            CircuitType(name='Circuit Type 2', slug='circuit-type-2'),
-            CircuitType(name='Circuit Type 3', slug='circuit-type-3'),
-        ))
+        CircuitType.objects.create(name='Circuit Type 1', slug='circuit-type-1')
+        CircuitType.objects.create(name='Circuit Type 2', slug='circuit-type-2')
+        CircuitType.objects.create(name='Circuit Type 3', slug='circuit-type-3')
 
     def test_id(self):
         params = {'id': [self.queryset.first().pk]}
@@ -124,67 +113,54 @@ class CircuitTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
-            Region(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 3', slug='test-region-3'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1', region=regions[0]),
-            Site(name='Test Site 2', slug='test-site-2', region=regions[1]),
-            Site(name='Test Site 3', slug='test-site-3', region=regions[2]),
+            Site.objects.create(name='Test Site 1', slug='test-site-1', region=regions[0]),
+            Site.objects.create(name='Test Site 2', slug='test-site-2', region=regions[1]),
+            Site.objects.create(name='Test Site 3', slug='test-site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
         circuit_types = (
-            CircuitType(name='Test Circuit Type 1', slug='test-circuit-type-1'),
-            CircuitType(name='Test Circuit Type 2', slug='test-circuit-type-2'),
+            CircuitType.objects.create(name='Test Circuit Type 1', slug='test-circuit-type-1'),
+            CircuitType.objects.create(name='Test Circuit Type 2', slug='test-circuit-type-2'),
         )
-        CircuitType.objects.bulk_create(circuit_types)
 
         providers = (
-            Provider(name='Provider 1', slug='provider-1'),
-            Provider(name='Provider 2', slug='provider-2'),
+            Provider.objects.create(name='Provider 1', slug='provider-1'),
+            Provider.objects.create(name='Provider 2', slug='provider-2'),
         )
-        Provider.objects.bulk_create(providers)
 
         circ_statuses = Status.objects.get_for_model(Circuit)
         circ_status_map = {s.slug: s for s in circ_statuses.all()}
 
         circuits = (
-            Circuit(provider=providers[0], tenant=tenants[0], type=circuit_types[0], cid='Test Circuit 1', install_date='2020-01-01', commit_rate=1000, status=circ_status_map['active']),
-            Circuit(provider=providers[0], tenant=tenants[0], type=circuit_types[0], cid='Test Circuit 2', install_date='2020-01-02', commit_rate=2000, status=circ_status_map['active']),
-            Circuit(provider=providers[0], tenant=tenants[1], type=circuit_types[0], cid='Test Circuit 3', install_date='2020-01-03', commit_rate=3000, status=circ_status_map['planned']),
-            Circuit(provider=providers[1], tenant=tenants[1], type=circuit_types[1], cid='Test Circuit 4', install_date='2020-01-04', commit_rate=4000, status=circ_status_map['planned']),
-            Circuit(provider=providers[1], tenant=tenants[2], type=circuit_types[1], cid='Test Circuit 5', install_date='2020-01-05', commit_rate=5000, status=circ_status_map['offline']),
-            Circuit(provider=providers[1], tenant=tenants[2], type=circuit_types[1], cid='Test Circuit 6', install_date='2020-01-06', commit_rate=6000, status=circ_status_map['offline']),
+            Circuit.objects.create(provider=providers[0], tenant=tenants[0], type=circuit_types[0], cid='Test Circuit 1', install_date='2020-01-01', commit_rate=1000, status=circ_status_map['active']),
+            Circuit.objects.create(provider=providers[0], tenant=tenants[0], type=circuit_types[0], cid='Test Circuit 2', install_date='2020-01-02', commit_rate=2000, status=circ_status_map['active']),
+            Circuit.objects.create(provider=providers[0], tenant=tenants[1], type=circuit_types[0], cid='Test Circuit 3', install_date='2020-01-03', commit_rate=3000, status=circ_status_map['planned']),
+            Circuit.objects.create(provider=providers[1], tenant=tenants[1], type=circuit_types[1], cid='Test Circuit 4', install_date='2020-01-04', commit_rate=4000, status=circ_status_map['planned']),
+            Circuit.objects.create(provider=providers[1], tenant=tenants[2], type=circuit_types[1], cid='Test Circuit 5', install_date='2020-01-05', commit_rate=5000, status=circ_status_map['offline']),
+            Circuit.objects.create(provider=providers[1], tenant=tenants[2], type=circuit_types[1], cid='Test Circuit 6', install_date='2020-01-06', commit_rate=6000, status=circ_status_map['offline']),
         )
-        Circuit.objects.bulk_create(circuits)
 
-        circuit_terminations = ((
-            CircuitTermination(circuit=circuits[0], site=sites[0], term_side='A'),
-            CircuitTermination(circuit=circuits[1], site=sites[1], term_side='A'),
-            CircuitTermination(circuit=circuits[2], site=sites[2], term_side='A'),
-        ))
-        CircuitTermination.objects.bulk_create(circuit_terminations)
+        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side='A')
+        CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side='A')
+        CircuitTermination.objects.create(circuit=circuits[2], site=sites[2], term_side='A')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -257,43 +233,38 @@ class CircuitTerminationTestCase(TestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1'),
-            Site(name='Test Site 2', slug='test-site-2'),
-            Site(name='Test Site 3', slug='test-site-3'),
+            Site.objects.create(name='Test Site 1', slug='test-site-1'),
+            Site.objects.create(name='Test Site 2', slug='test-site-2'),
+            Site.objects.create(name='Test Site 3', slug='test-site-3'),
         )
-        Site.objects.bulk_create(sites)
 
         circuit_types = (
-            CircuitType(name='Test Circuit Type 1', slug='test-circuit-type-1'),
+            CircuitType.objects.create(name='Test Circuit Type 1', slug='test-circuit-type-1'),
         )
-        CircuitType.objects.bulk_create(circuit_types)
 
         providers = (
-            Provider(name='Provider 1', slug='provider-1'),
+            Provider.objects.create(name='Provider 1', slug='provider-1'),
         )
-        Provider.objects.bulk_create(providers)
 
         circuits = (
-            Circuit(provider=providers[0], type=circuit_types[0], cid='Test Circuit 1'),
-            Circuit(provider=providers[0], type=circuit_types[0], cid='Test Circuit 2'),
-            Circuit(provider=providers[0], type=circuit_types[0], cid='Test Circuit 3'),
+            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid='Test Circuit 1'),
+            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid='Test Circuit 2'),
+            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid='Test Circuit 3'),
         )
-        Circuit.objects.bulk_create(circuits)
 
-        circuit_terminations = ((
-            CircuitTermination(circuit=circuits[0], site=sites[0], term_side='A', port_speed=1000, upstream_speed=1000, xconnect_id='ABC'),
-            CircuitTermination(circuit=circuits[0], site=sites[1], term_side='Z', port_speed=1000, upstream_speed=1000, xconnect_id='DEF'),
-            CircuitTermination(circuit=circuits[1], site=sites[1], term_side='A', port_speed=2000, upstream_speed=2000, xconnect_id='GHI'),
-            CircuitTermination(circuit=circuits[1], site=sites[2], term_side='Z', port_speed=2000, upstream_speed=2000, xconnect_id='JKL'),
-            CircuitTermination(circuit=circuits[2], site=sites[2], term_side='A', port_speed=3000, upstream_speed=3000, xconnect_id='MNO'),
-            CircuitTermination(circuit=circuits[2], site=sites[0], term_side='Z', port_speed=3000, upstream_speed=3000, xconnect_id='PQR'),
-        ))
-        CircuitTermination.objects.bulk_create(circuit_terminations)
+        circuit_terminations = (
+            CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side='A', port_speed=1000, upstream_speed=1000, xconnect_id='ABC'),
+            CircuitTermination.objects.create(circuit=circuits[0], site=sites[1], term_side='Z', port_speed=1000, upstream_speed=1000, xconnect_id='DEF'),
+            CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side='A', port_speed=2000, upstream_speed=2000, xconnect_id='GHI'),
+            CircuitTermination.objects.create(circuit=circuits[1], site=sites[2], term_side='Z', port_speed=2000, upstream_speed=2000, xconnect_id='JKL'),
+            CircuitTermination.objects.create(circuit=circuits[2], site=sites[2], term_side='A', port_speed=3000, upstream_speed=3000, xconnect_id='MNO'),
+            CircuitTermination.objects.create(circuit=circuits[2], site=sites[0], term_side='Z', port_speed=3000, upstream_speed=3000, xconnect_id='PQR'),
+        )
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug='connected')
 
-        Cable(termination_a=circuit_terminations[0], termination_b=circuit_terminations[1], status=status_connected).save()
+        Cable.objects.create(termination_a=circuit_terminations[0], termination_b=circuit_terminations[1], status=status_connected)
 
     def test_term_side(self):
         params = {'term_side': 'A'}

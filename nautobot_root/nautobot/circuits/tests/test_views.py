@@ -12,11 +12,9 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Provider.objects.bulk_create([
-            Provider(name='Provider 1', slug='provider-1', asn=65001),
-            Provider(name='Provider 2', slug='provider-2', asn=65002),
-            Provider(name='Provider 3', slug='provider-3', asn=65003),
-        ])
+        Provider.objects.create(name='Provider 1', slug='provider-1', asn=65001)
+        Provider.objects.create(name='Provider 2', slug='provider-2', asn=65002)
+        Provider.objects.create(name='Provider 3', slug='provider-3', asn=65003)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -55,11 +53,9 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        CircuitType.objects.bulk_create([
-            CircuitType(name='Circuit Type 1', slug='circuit-type-1'),
-            CircuitType(name='Circuit Type 2', slug='circuit-type-2'),
-            CircuitType(name='Circuit Type 3', slug='circuit-type-3'),
-        ])
+        CircuitType.objects.create(name='Circuit Type 1', slug='circuit-type-1')
+        CircuitType.objects.create(name='Circuit Type 2', slug='circuit-type-2')
+        CircuitType.objects.create(name='Circuit Type 3', slug='circuit-type-3')
 
         cls.form_data = {
             'name': 'Circuit Type X',
@@ -82,24 +78,20 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         providers = (
-            Provider(name='Provider 1', slug='provider-1', asn=65001),
-            Provider(name='Provider 2', slug='provider-2', asn=65002),
+            Provider.objects.create(name='Provider 1', slug='provider-1', asn=65001),
+            Provider.objects.create(name='Provider 2', slug='provider-2', asn=65002),
         )
-        Provider.objects.bulk_create(providers)
 
         circuittypes = (
-            CircuitType(name='Circuit Type 1', slug='circuit-type-1'),
-            CircuitType(name='Circuit Type 2', slug='circuit-type-2'),
+            CircuitType.objects.create(name='Circuit Type 1', slug='circuit-type-1'),
+            CircuitType.objects.create(name='Circuit Type 2', slug='circuit-type-2'),
         )
-        CircuitType.objects.bulk_create(circuittypes)
 
         statuses = Status.objects.get_for_model(Circuit)
 
-        Circuit.objects.bulk_create([
-            Circuit(cid='Circuit 1', provider=providers[0], type=circuittypes[0], status=statuses[0]),
-            Circuit(cid='Circuit 2', provider=providers[0], type=circuittypes[0], status=statuses[0]),
-            Circuit(cid='Circuit 3', provider=providers[0], type=circuittypes[0], status=statuses[0]),
-        ])
+        Circuit.objects.create(cid='Circuit 1', provider=providers[0], type=circuittypes[0], status=statuses[0])
+        Circuit.objects.create(cid='Circuit 2', provider=providers[0], type=circuittypes[0], status=statuses[0])
+        Circuit.objects.create(cid='Circuit 3', provider=providers[0], type=circuittypes[0], status=statuses[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 

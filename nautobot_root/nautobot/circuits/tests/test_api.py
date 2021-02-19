@@ -40,12 +40,9 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        providers = (
-            Provider(name='Provider 1', slug='provider-1'),
-            Provider(name='Provider 2', slug='provider-2'),
-            Provider(name='Provider 3', slug='provider-3'),
-        )
-        Provider.objects.bulk_create(providers)
+        Provider.objects.create(name='Provider 1', slug='provider-1')
+        Provider.objects.create(name='Provider 2', slug='provider-2')
+        Provider.objects.create(name='Provider 3', slug='provider-3')
 
 
 class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
@@ -72,12 +69,9 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        circuit_types = (
-            CircuitType(name='Circuit Type 1', slug='circuit-type-1'),
-            CircuitType(name='Circuit Type 2', slug='circuit-type-2'),
-            CircuitType(name='Circuit Type 3', slug='circuit-type-3'),
-        )
-        CircuitType.objects.bulk_create(circuit_types)
+        CircuitType.objects.create(name='Circuit Type 1', slug='circuit-type-1')
+        CircuitType.objects.create(name='Circuit Type 2', slug='circuit-type-2')
+        CircuitType.objects.create(name='Circuit Type 3', slug='circuit-type-3')
 
 
 class CircuitTest(APIViewTestCases.APIViewTestCase):
@@ -91,25 +85,20 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         providers = (
-            Provider(name='Provider 1', slug='provider-1'),
-            Provider(name='Provider 2', slug='provider-2'),
+            Provider.objects.create(name='Provider 1', slug='provider-1'),
+            Provider.objects.create(name='Provider 2', slug='provider-2'),
         )
-        Provider.objects.bulk_create(providers)
 
         circuit_types = (
-            CircuitType(name='Circuit Type 1', slug='circuit-type-1'),
-            CircuitType(name='Circuit Type 2', slug='circuit-type-2'),
+            CircuitType.objects.create(name='Circuit Type 1', slug='circuit-type-1'),
+            CircuitType.objects.create(name='Circuit Type 2', slug='circuit-type-2'),
         )
-        CircuitType.objects.bulk_create(circuit_types)
 
         statuses = Status.objects.get_for_model(Circuit)
 
-        circuits = (
-            Circuit(cid='Circuit 1', provider=providers[0], type=circuit_types[0], status=statuses[0]),
-            Circuit(cid='Circuit 2', provider=providers[0], type=circuit_types[0], status=statuses[0]),
-            Circuit(cid='Circuit 3', provider=providers[0], type=circuit_types[0], status=statuses[0]),
-        )
-        Circuit.objects.bulk_create(circuits)
+        Circuit.objects.create(cid='Circuit 1', provider=providers[0], type=circuit_types[0], status=statuses[0])
+        Circuit.objects.create(cid='Circuit 2', provider=providers[0], type=circuit_types[0], status=statuses[0])
+        Circuit.objects.create(cid='Circuit 3', provider=providers[0], type=circuit_types[0], status=statuses[0])
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -151,28 +140,23 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         SIDE_Z = CircuitTerminationSideChoices.SIDE_Z
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
         provider = Provider.objects.create(name='Provider 1', slug='provider-1')
         circuit_type = CircuitType.objects.create(name='Circuit Type 1', slug='circuit-type-1')
 
         circuits = (
-            Circuit(cid='Circuit 1', provider=provider, type=circuit_type),
-            Circuit(cid='Circuit 2', provider=provider, type=circuit_type),
-            Circuit(cid='Circuit 3', provider=provider, type=circuit_type),
+            Circuit.objects.create(cid='Circuit 1', provider=provider, type=circuit_type),
+            Circuit.objects.create(cid='Circuit 2', provider=provider, type=circuit_type),
+            Circuit.objects.create(cid='Circuit 3', provider=provider, type=circuit_type),
         )
-        Circuit.objects.bulk_create(circuits)
 
-        circuit_terminations = (
-            CircuitTermination(circuit=circuits[0], site=sites[0], term_side=SIDE_A),
-            CircuitTermination(circuit=circuits[0], site=sites[1], term_side=SIDE_Z),
-            CircuitTermination(circuit=circuits[1], site=sites[0], term_side=SIDE_A),
-            CircuitTermination(circuit=circuits[1], site=sites[1], term_side=SIDE_Z),
-        )
-        CircuitTermination.objects.bulk_create(circuit_terminations)
+        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side=SIDE_A)
+        CircuitTermination.objects.create(circuit=circuits[0], site=sites[1], term_side=SIDE_Z)
+        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side=SIDE_A)
+        CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side=SIDE_Z)
 
         cls.create_data = [
             {
