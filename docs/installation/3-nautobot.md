@@ -247,6 +247,20 @@ Password (again):
 Superuser created successfully.
 ```
 
+## Start the RQ Workers
+
+[The previous section](2-redis.md) had you install Redis for caching and queuing.
+Additionally, a separate "worker" process needs to be running to pick up and execute queued tasks; if no such process is running, tasks will remain enqueued indefinitely.
+
+In production environments, it is advised to use a process manager for running workers;
+[the next section](4-gunicorn.md) provides instructions for setting up systemd with Nautobot.
+If not using a process manager, you must use the `rqworker` Django management command to start the workers.
+
+```no-highlight
+(venv) $ cd /opt/nautobot/nautobot_root/
+(venv) $ python3 manage.py rqworker
+```
+
 ## Test the Application
 
 At this point, we should be able to run Nautobot's development server for testing. We can check by starting a development instance:
