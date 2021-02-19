@@ -6,6 +6,7 @@ from dcim.choices import *
 from dcim.constants import *
 from extras.models import CustomFieldModel, ObjectChange, RelationshipModel
 from extras.utils import extras_features
+from netbox.models import BaseModel
 from utilities.fields import NaturalOrderingField
 from utilities.querysets import RestrictedQuerySet
 from utilities.ordering import naturalize_interface
@@ -27,7 +28,7 @@ __all__ = (
 )
 
 
-class ComponentTemplateModel(CustomFieldModel, RelationshipModel):
+class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
     device_type = models.ForeignKey(
         to='dcim.DeviceType',
         on_delete=models.CASCADE,
@@ -50,8 +51,6 @@ class ComponentTemplateModel(CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     class Meta:
         abstract = True

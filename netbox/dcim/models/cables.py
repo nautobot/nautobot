@@ -7,23 +7,21 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 from django.utils.functional import classproperty
-from taggit.managers import TaggableManager
 
 from dcim.choices import *
 from dcim.constants import *
 from dcim.fields import PathField
 from dcim.utils import decompile_path_node, object_to_path_node, path_node_to_object
 from extras.models import (
-    ChangeLoggedModel,
-    CustomFieldModel,
-    RelationshipModel,
     Status,
-    StatusModel,
-    TaggedItem,
+    StatusModel
 )
 from extras.utils import extras_features
+from netbox.models.generics import (
+    BaseModel,
+    PrimaryModel
+)
 from utilities.fields import ColorField
-from utilities.querysets import RestrictedQuerySet
 from utilities.utils import to_meters
 from .devices import Device
 from .device_components import FrontPort, RearPort
@@ -49,7 +47,7 @@ __all__ = (
     'statuses',
     'webhooks'
 )
-class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
+class Cable(PrimaryModel, StatusModel):
     """
     A physical connection between two endpoints.
     """
@@ -119,9 +117,6 @@ class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel)
         blank=True,
         null=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = [
         'termination_a_type', 'termination_a_id', 'termination_b_type', 'termination_b_id', 'type', 'status', 'label',
@@ -322,7 +317,7 @@ class Cable(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel)
 
 
 @extras_features('graphql')
-class CablePath(models.Model):
+class CablePath(BaseModel):
     """
     A CablePath instance represents the physical path from an origin to a destination, including all intermediate
     elements in the path. Every instance must specify an `origin`, whereas `destination` may be null (for paths which do

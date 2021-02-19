@@ -2,12 +2,15 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
-from taggit.managers import TaggableManager
 
 from dcim.choices import *
 from dcim.constants import *
-from extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel, TaggedItem
+from extras.models import StatusModel
 from extras.utils import extras_features
+from netbox.models.generics import (
+    OrganizationalModel,
+    PrimaryModel
+)
 from utilities.querysets import RestrictedQuerySet
 from utilities.validators import ExclusionValidator
 from .device_components import CableTermination, PathEndpoint
@@ -31,7 +34,7 @@ __all__ = (
     'relationships',
     'webhooks'
 )
-class PowerPanel(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class PowerPanel(PrimaryModel):
     """
     A distribution point for electrical power; e.g. a data center RPP.
     """
@@ -48,9 +51,6 @@ class PowerPanel(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     name = models.CharField(
         max_length=100
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['site', 'rack_group', 'name']
 
@@ -92,11 +92,9 @@ class PowerPanel(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'webhooks'
 )
 class PowerFeed(
-    ChangeLoggedModel,
+    PrimaryModel,
     PathEndpoint,
     CableTermination,
-    CustomFieldModel,
-    RelationshipModel,
     StatusModel
 ):
     """
@@ -151,9 +149,6 @@ class PowerFeed(
     comments = models.TextField(
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = [
         'site', 'power_panel', 'rack_group', 'rack', 'name', 'status', 'type', 'supply', 'phase', 'voltage',

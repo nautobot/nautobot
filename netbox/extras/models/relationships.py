@@ -1,16 +1,14 @@
 import logging
-
 from collections import OrderedDict
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.validators import ValidationError
-
-
 from django.db import models
 
 from extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from extras.utils import FeatureQuery
 from extras.models import ChangeLoggedModel
+from netbox.models import BaseModel
 from utilities.utils import get_filterset_for_model
 from utilities.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from utilities.querysets import RestrictedQuerySet
@@ -154,7 +152,7 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         return self.get_queryset().filter(source_type=content_type), self.get_queryset().filter(destination_type=content_type)
 
 
-class Relationship(ChangeLoggedModel):
+class Relationship(BaseModel, ChangeLoggedModel):
 
     name = models.CharField(
         max_length=100,
@@ -371,7 +369,7 @@ class Relationship(ChangeLoggedModel):
                 )
 
 
-class RelationshipAssociation(models.Model):
+class RelationshipAssociation(BaseModel):
     relationship = models.ForeignKey(
         to='extras.Relationship',
         on_delete=models.CASCADE,
@@ -399,8 +397,6 @@ class RelationshipAssociation(models.Model):
         ct_field='destination_type',
         fk_field='destination_id'
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     class Meta:
         unique_together = ('relationship', 'source_type', 'source_id', 'destination_type', 'destination_id')

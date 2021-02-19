@@ -10,7 +10,8 @@ from tenancy.models import Tenant, TenantGroup
 from utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
-    ContentTypeMultipleChoiceFilter
+    ContentTypeMultipleChoiceFilter,
+    TagFilter
 )
 from virtualization.models import Cluster, ClusterGroup
 from .choices import *
@@ -386,10 +387,29 @@ class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet)
 #
 
 class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet):
+    q = django_filters.CharFilter(
+        method='search',
+        label='Search',
+    )
+    tag = TagFilter()
 
     class Meta:
         model = GitRepository
         fields = ['id', 'name', 'slug', 'remote_url', 'branch']
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        qs_filter = (
+            Q(name__icontains=value) |
+            Q(remote_url__icontains=value) |
+            Q(branch__icontains=value)
+        )
+        try:
+            qs_filter |= Q(asn=int(value.strip()))
+        except ValueError:
+            pass
+        return queryset.filter(qs_filter)
 
 
 #

@@ -534,7 +534,7 @@ class VirtualMachineFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFo
 # VM interfaces
 #
 
-class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, forms.ModelForm):
+class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm, RelationshipModelForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -658,7 +658,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             self.fields['tagged_vlans'].widget.add_query_param('site_id', site.pk)
 
 
-class VMInterfaceCSVForm(CSVModelForm):
+class VMInterfaceCSVForm(CustomFieldModelCSVForm):
     virtual_machine = CSVModelChoiceField(
         queryset=VirtualMachine.objects.all(),
         to_field_name='name'
@@ -681,7 +681,7 @@ class VMInterfaceCSVForm(CSVModelForm):
             return self.cleaned_data['enabled']
 
 
-class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, BulkEditForm):
+class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=VMInterface.objects.all(),
         widget=forms.MultipleHiddenInput()
@@ -756,7 +756,7 @@ class VMInterfaceBulkRenameForm(BulkRenameForm):
     )
 
 
-class VMInterfaceFilterForm(forms.Form):
+class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),

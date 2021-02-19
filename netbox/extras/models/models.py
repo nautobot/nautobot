@@ -19,7 +19,7 @@ from extras.models import ChangeLoggedModel
 from extras.models.relationships import RelationshipModel
 from extras.querysets import ConfigContextQuerySet
 from extras.utils import extras_features, FeatureQuery, image_upload
-from utilities.querysets import RestrictedQuerySet
+from netbox.models import BaseModel
 from utilities.utils import deepmerge, render_jinja2
 
 
@@ -27,7 +27,7 @@ from utilities.utils import deepmerge, render_jinja2
 # Webhooks
 #
 @extras_features('graphql')
-class Webhook(ChangeLoggedModel):
+class Webhook(BaseModel, ChangeLoggedModel):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in NetBox. The request will contain a representation of the object, which the remote application can act on.
@@ -111,8 +111,6 @@ class Webhook(ChangeLoggedModel):
                   'Leave blank to use the system defaults.'
     )
 
-    objects = RestrictedQuerySet.as_manager()
-
     class Meta:
         ordering = ('name',)
         unique_together = ('payload_url', 'type_create', 'type_update', 'type_delete',)
@@ -165,7 +163,7 @@ class Webhook(ChangeLoggedModel):
 # Custom links
 #
 @extras_features('graphql')
-class CustomLink(ChangeLoggedModel):
+class CustomLink(BaseModel, ChangeLoggedModel):
     """
     A custom link to an external representation of a NetBox object. The link text and URL fields accept Jinja2 template
     code to be rendered with an object as context.
@@ -206,8 +204,6 @@ class CustomLink(ChangeLoggedModel):
         help_text="Force link to open in a new window"
     )
 
-    objects = RestrictedQuerySet.as_manager()
-
     class Meta:
         ordering = ['group_name', 'weight', 'name']
 
@@ -226,7 +222,7 @@ class CustomLink(ChangeLoggedModel):
     'graphql',
     'relationships',
 )
-class ExportTemplate(ChangeLoggedModel, RelationshipModel):
+class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -272,8 +268,6 @@ class ExportTemplate(ChangeLoggedModel, RelationshipModel):
         blank=True,
         help_text='Extension to append to the rendered filename'
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     class Meta:
         ordering = ['content_type', 'name']
@@ -330,7 +324,7 @@ class ExportTemplate(ChangeLoggedModel, RelationshipModel):
 # Image attachments
 #
 
-class ImageAttachment(models.Model):
+class ImageAttachment(BaseModel):
     """
     An uploaded image which is associated with an object.
     """
@@ -357,8 +351,6 @@ class ImageAttachment(models.Model):
     created = models.DateTimeField(
         auto_now_add=True
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     class Meta:
         ordering = ('name', 'pk')  # name may be non-unique
@@ -406,7 +398,7 @@ class ImageAttachment(models.Model):
 # Config contexts
 #
 @extras_features('graphql')
-class ConfigContext(ChangeLoggedModel):
+class ConfigContext(BaseModel, ChangeLoggedModel):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
@@ -600,7 +592,7 @@ class Job(models.Model):
 # Job results
 #
 @extras_features('graphql')
-class JobResult(models.Model):
+class JobResult(BaseModel):
     """
     This model stores the results from running a user-defined report.
     """
@@ -682,8 +674,6 @@ class JobResult(models.Model):
 
     class Meta:
         ordering = ['-created']
-
-    objects = RestrictedQuerySet.as_manager()
 
     def __str__(self):
         return str(self.job_id)

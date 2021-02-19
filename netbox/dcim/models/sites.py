@@ -2,23 +2,21 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-from taggit.managers import TaggableManager
 from timezone_field import TimeZoneField
 
 from dcim.choices import *
 from dcim.constants import *
 from dcim.fields import ASNField
 from extras.models import (
-    ChangeLoggedModel,
-    CustomFieldModel,
     ObjectChange,
-    RelationshipModel,
-    StatusModel,
-    TaggedItem
+    StatusModel
 )
 from extras.utils import extras_features
+from netbox.models.generics import (
+    OrganizationalModel,
+    PrimaryModel
+)
 from utilities.fields import NaturalOrderingField
-from utilities.querysets import RestrictedQuerySet
 from utilities.mptt import TreeManager
 from utilities.utils import serialize_object
 
@@ -40,7 +38,7 @@ __all__ = (
     'relationships',
     'webhooks'
 )
-class Region(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Region(MPTTModel, OrganizationalModel):
     """
     Sites can be grouped within geographic Regions.
     """
@@ -116,7 +114,7 @@ class Region(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'statuses',
     'webhooks'
 )
-class Site(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
+class Site(PrimaryModel, StatusModel):
     """
     A Site represents a geographic location within a network; typically a building or campus. The optional facility
     field can be used to include an external designation, such as a data center name (e.g. Equinix SV6).
@@ -206,9 +204,6 @@ class Site(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     images = GenericRelation(
         to='extras.ImageAttachment'
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = [
         'name', 'slug', 'status', 'region', 'tenant', 'facility', 'asn', 'time_zone', 'description', 'physical_address',

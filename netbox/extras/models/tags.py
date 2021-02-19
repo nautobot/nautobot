@@ -6,9 +6,9 @@ from taggit.models import TagBase, GenericTaggedItemBase
 from extras.models import ChangeLoggedModel, CustomFieldModel
 from extras.models.relationships import RelationshipModel
 from extras.utils import extras_features
+from netbox.models import BaseModel
 from utilities.choices import ColorChoices
 from utilities.fields import ColorField
-from utilities.querysets import RestrictedQuerySet
 
 
 #
@@ -20,7 +20,13 @@ from utilities.querysets import RestrictedQuerySet
     'custom_validators',
     'relationships',
 )
-class Tag(TagBase, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Tag(
+    TagBase,
+    BaseModel,
+    ChangeLoggedModel,
+    CustomFieldModel,
+    RelationshipModel
+):
     color = ColorField(
         default=ColorChoices.COLOR_GREY
     )
@@ -28,8 +34,6 @@ class Tag(TagBase, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True,
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'color', 'description']
 

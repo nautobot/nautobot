@@ -84,11 +84,13 @@
                 </tr>
             </table>
         </div>
-          {% plugin_left_page object %}
+        {% include 'inc/custom_fields_panel.html' %}
+        {% include 'inc/relationships_panel.html' %}
+        {% include 'extras/inc/tags_panel.html' with tags=object.tags.all %}
+        {% plugin_left_page object %}
     </div>
     <div class="col-md-6">
-        {% include 'extras/inc/tags_panel.html' with tags=object.tags.all %}
-          {% plugin_right_page object %}
+        {% plugin_right_page object %}
     </div>
 </div>
 <div class="row">

@@ -1,19 +1,19 @@
 from django.db import models
 from django.urls import reverse
-from taggit.managers import TaggableManager
 
 from dcim.fields import ASNField
 from dcim.models import CableTermination, PathEndpoint
 from extras.models import (
-    ChangeLoggedModel,
-    CustomFieldModel,
     ObjectChange,
     RelationshipModel,
-    StatusModel,
-    TaggedItem
+    StatusModel
 )
 from extras.utils import extras_features
-from utilities.querysets import RestrictedQuerySet
+from netbox.models.generics import (
+    BaseModel,
+    OrganizationalModel,
+    PrimaryModel
+)
 from utilities.utils import serialize_object
 from .choices import *
 from .querysets import CircuitQuerySet
@@ -36,7 +36,7 @@ __all__ = (
     'relationships',
     'webhooks'
 )
-class Provider(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Provider(PrimaryModel):
     """
     Each Circuit belongs to a Provider. This is usually a telecommunications company or similar organization. This model
     stores information pertinent to the user's relationship with the Provider.
@@ -75,9 +75,6 @@ class Provider(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     comments = models.TextField(
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = [
         'name', 'slug', 'asn', 'account', 'portal_url', 'noc_contact', 'admin_contact', 'comments',
@@ -114,7 +111,7 @@ class Provider(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'graphql',
     'relationships',
 )
-class CircuitType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class CircuitType(OrganizationalModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
     "Long Haul," "Metro," or "Out-of-Band".
@@ -131,8 +128,6 @@ class CircuitType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True,
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'description']
 
@@ -163,7 +158,7 @@ class CircuitType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'statuses',
     'webhooks'
 )
-class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
+class Circuit(PrimaryModel, StatusModel):
     """
     A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
     circuits. Each circuit is also assigned a CircuitType and a Site.  Circuit port speed and commit rate are measured
@@ -208,7 +203,6 @@ class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusMode
     )
 
     objects = CircuitQuerySet.as_manager()
-    tags = TaggableManager(through=TaggedItem)
 
     csv_headers = [
         'cid', 'provider', 'type', 'status', 'tenant', 'install_date', 'commit_rate', 'description', 'comments',
@@ -260,7 +254,12 @@ class Circuit(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusMode
     'graphql',
     'relationships',
 )
-class CircuitTermination(PathEndpoint, CableTermination, RelationshipModel):
+class CircuitTermination(
+    BaseModel,
+    PathEndpoint,
+    CableTermination,
+    RelationshipModel
+):
     circuit = models.ForeignKey(
         to='circuits.Circuit',
         on_delete=models.CASCADE,
@@ -301,8 +300,6 @@ class CircuitTermination(PathEndpoint, CableTermination, RelationshipModel):
         max_length=200,
         blank=True
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     class Meta:
         ordering = ['circuit', 'term_side']

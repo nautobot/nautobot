@@ -586,6 +586,11 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         choices=get_git_datasource_content_choices,
     )
 
+    tags = DynamicModelMultipleChoiceField(
+        queryset=Tag.objects.all(),
+        required=False
+    )
+
     class Meta:
         model = GitRepository
         fields = [
@@ -595,6 +600,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             'branch',
             '_token',
             'provided_contents',
+            'tags',
         ]
 
 

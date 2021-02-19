@@ -13,7 +13,7 @@ from extras.models.customfields import CustomFieldModel
 from extras.models.models import ConfigContext, ExportTemplate
 from extras.models.relationships import RelationshipModel
 from extras.utils import extras_features
-from utilities.querysets import RestrictedQuerySet
+from netbox.models.generics import PrimaryModel
 
 
 @extras_features(
@@ -22,8 +22,9 @@ from utilities.querysets import RestrictedQuerySet
     'export_template_owners',
     'job_results',
     'relationships',
+    'webhooks',
 )
-class GitRepository(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""
 
     TOKEN_PLACEHOLDER = "********"
@@ -68,6 +69,9 @@ class GitRepository(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(default=list, blank=True)
 
+    csv_headers = ['name', 'slug', 'remote_url', 'branch', 'provided_contents']
+    clone_fields = ['remote_url', 'provided_contents']
+
     class Meta:
         ordering = ['name']
         verbose_name = 'Git repository'
@@ -96,10 +100,6 @@ class GitRepository(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
             self.branch,
             self.provided_contents,
         )
-
-    objects = RestrictedQuerySet.as_manager()
-
-    csv_headers = ['name', 'slug', 'remote_url', 'branch', 'provided_contents']
 
     @property
     def token_rendered(self):

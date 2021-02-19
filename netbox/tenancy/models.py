@@ -1,12 +1,14 @@
 from django.db import models
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-from taggit.managers import TaggableManager
 
-from extras.models import ChangeLoggedModel, CustomFieldModel, ObjectChange, RelationshipModel, TaggedItem
+from extras.models import ObjectChange
 from extras.utils import extras_features
+from netbox.models.generics import (
+    OrganizationalModel,
+    PrimaryModel
+)
 from utilities.mptt import TreeManager
-from utilities.querysets import RestrictedQuerySet
 from utilities.utils import serialize_object
 
 
@@ -22,7 +24,7 @@ __all__ = (
     'graphql',
     'relationships',
 )
-class TenantGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class TenantGroup(MPTTModel, OrganizationalModel):
     """
     An arbitrary collection of Tenants.
     """
@@ -90,7 +92,7 @@ class TenantGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipMo
     'relationships',
     'webhooks'
 )
-class Tenant(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Tenant(PrimaryModel):
     """
     A Tenant represents an organization served by the NetBox owner. This is typically a customer or an internal
     department.
@@ -117,9 +119,6 @@ class Tenant(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     comments = models.TextField(
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'group', 'description', 'comments']
     clone_fields = [

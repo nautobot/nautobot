@@ -10,6 +10,7 @@ from extras.utils import extras_features, FeatureQuery
 from extras.models import ChangeLoggedModel
 from extras.models.customfields import CustomFieldModel
 from extras.models.relationships import RelationshipModel
+from netbox.models import BaseModel
 from utilities.querysets import RestrictedQuerySet
 from utilities.choices import ColorChoices
 from utilities.forms import DynamicModelChoiceField
@@ -36,7 +37,12 @@ class StatusQuerySet(RestrictedQuerySet):
     'relationships',
     'webhooks'
 )
-class Status(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Status(
+    BaseModel,
+    ChangeLoggedModel,
+    CustomFieldModel,
+    RelationshipModel
+):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(

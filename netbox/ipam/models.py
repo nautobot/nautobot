@@ -9,20 +9,18 @@ from django.db import models
 from django.db.models import F
 from django.urls import reverse
 from django.utils.functional import classproperty
-from taggit.managers import TaggableManager
 
 from dcim.models import Device, Interface
 from extras.models import (
-    ChangeLoggedModel,
-    CustomFieldModel,
     ObjectChange,
-    RelationshipModel,
     Status,
-    StatusModel,
-    TaggedItem
+    StatusModel
 )
 from extras.utils import extras_features
-from utilities.querysets import RestrictedQuerySet
+from netbox.models.generics import (
+    OrganizationalModel,
+    PrimaryModel
+)
 from utilities.utils import array_to_string, serialize_object
 from virtualization.models import VirtualMachine, VMInterface
 from .choices import *
@@ -56,7 +54,7 @@ __all__ = (
     'relationships',
     'webhooks'
 )
-class VRF(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class VRF(PrimaryModel):
     """
     A virtual routing and forwarding (VRF) table represents a discrete layer three forwarding domain (e.g. a routing
     table). Prefixes and IPAddresses can optionally be assigned to VRFs. (Prefixes and IPAddresses not assigned to a VRF
@@ -99,9 +97,6 @@ class VRF(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         related_name='exporting_vrfs',
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'rd', 'tenant', 'enforce_unique', 'description']
     clone_fields = [
@@ -144,7 +139,7 @@ class VRF(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'relationships',
     'webhooks'
 )
-class RouteTarget(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class RouteTarget(PrimaryModel):
     """
     A BGP extended community used to control the redistribution of routes among VRFs, as defined in RFC 4364.
     """
@@ -164,9 +159,6 @@ class RouteTarget(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         blank=True,
         null=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'description', 'tenant']
 
@@ -193,7 +185,7 @@ class RouteTarget(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'graphql',
     'relationships',
 )
-class RIR(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class RIR(OrganizationalModel):
     """
     A Regional Internet Registry (RIR) is responsible for the allocation of a large portion of the global IP address
     space. This can be an organization like ARIN or RIPE, or a governing standard such as RFC 1918.
@@ -215,8 +207,6 @@ class RIR(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'is_private', 'description']
 
@@ -249,7 +239,7 @@ class RIR(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'relationships',
     'webhooks'
 )
-class Aggregate(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Aggregate(PrimaryModel):
     """
     An aggregate exists at the root level of the IP address space hierarchy in NetBox. Aggregates are used to organize
     the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
@@ -276,9 +266,6 @@ class Aggregate(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['prefix', 'rir', 'tenant', 'date_added', 'description']
     clone_fields = [
@@ -362,7 +349,7 @@ class Aggregate(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'graphql',
     'relationships',
 )
-class Role(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Role(OrganizationalModel):
     """
     A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
     "Management."
@@ -382,8 +369,6 @@ class Role(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True,
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'weight', 'description']
 
@@ -415,7 +400,7 @@ class Role(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'statuses',
     'webhooks'
 )
-class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
+class Prefix(PrimaryModel, StatusModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length. Prefixes can optionally be assigned to Sites and
     VRFs. A Prefix must be assigned a status and may optionally be assigned a used-define Role. A Prefix can also be
@@ -471,7 +456,6 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel
         max_length=200,
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
 
     objects = PrefixQuerySet.as_manager()
 
@@ -679,7 +663,7 @@ class Prefix(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel
     'statuses',
     'webhooks'
 )
-class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
+class IPAddress(PrimaryModel, StatusModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -750,9 +734,6 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusMo
         max_length=200,
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = IPAddressManager()
 
     csv_headers = [
         'address', 'vrf', 'tenant', 'status', 'role', 'assigned_object_type', 'assigned_object_id', 'is_primary',
@@ -901,7 +882,7 @@ class IPAddress(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusMo
     'graphql',
     'relationships',
 )
-class VLANGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class VLANGroup(OrganizationalModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
@@ -922,8 +903,6 @@ class VLANGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'site', 'description']
 
@@ -971,7 +950,7 @@ class VLANGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'statuses',
     'webhooks'
 )
-class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
+class VLAN(PrimaryModel, StatusModel):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094). Each VLAN must be assigned
     to a Site, however VLAN IDs need not be unique within a Site. A VLAN may optionally be assigned to a VLANGroup,
@@ -1019,9 +998,6 @@ class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
         max_length=200,
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['site', 'group', 'vid', 'name', 'tenant', 'status', 'role', 'description']
     clone_fields = [
@@ -1092,7 +1068,7 @@ class VLAN(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     'relationships',
     'webhooks'
 )
-class Service(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Service(PrimaryModel):
     """
     A Service represents a layer-four service (e.g. HTTP or SSH) running on a Device or VirtualMachine. A Service may
     optionally be tied to one or more specific IPAddresses belonging to its parent.
@@ -1138,9 +1114,6 @@ class Service(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['device', 'virtual_machine', 'name', 'protocol', 'ports', 'description']
 

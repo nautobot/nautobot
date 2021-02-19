@@ -4,8 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import reverse
 
-from utilities.querysets import RestrictedQuerySet
 from utilities.utils import serialize_object
+from netbox.models import BaseModel
 from extras.choices import *
 
 
@@ -45,7 +45,7 @@ class ChangeLoggedModel(models.Model):
         )
 
 
-class ObjectChange(models.Model):
+class ObjectChange(BaseModel):
     """
     Record a change to an object and the user account associated with that change. A change record may optionally
     indicate an object related to the one being changed. For example, a change to an interface may also indicate the
@@ -106,8 +106,6 @@ class ObjectChange(models.Model):
     object_data = models.JSONField(
         editable=False
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = [
         'time', 'user', 'user_name', 'request_id', 'action', 'changed_object_type', 'changed_object_id',

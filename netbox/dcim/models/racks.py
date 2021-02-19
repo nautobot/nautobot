@@ -11,23 +11,21 @@ from django.db import models
 from django.db.models import Count, Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-from taggit.managers import TaggableManager
 
 from dcim.choices import *
 from dcim.constants import *
 from dcim.elevations import RackElevationSVG
 from extras.models import (
-    ChangeLoggedModel,
-    CustomFieldModel,
     ObjectChange,
-    RelationshipModel,
-    StatusModel,
-    TaggedItem,
+    StatusModel
 )
 from extras.utils import extras_features
+from netbox.models.generics import (
+    OrganizationalModel,
+    PrimaryModel
+)
 from utilities.choices import ColorChoices
 from utilities.fields import ColorField, NaturalOrderingField
-from utilities.querysets import RestrictedQuerySet
 from utilities.mptt import TreeManager
 from utilities.utils import array_to_string, serialize_object
 from .device_components import PowerOutlet, PowerPort
@@ -53,7 +51,7 @@ __all__ = (
     'graphql',
     'relationships',
 )
-class RackGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class RackGroup(MPTTModel, OrganizationalModel):
     """
     Racks can be grouped as subsets within a Site. The scope of a group will depend on how Sites are defined. For
     example, if a Site spans a corporate campus, a RackGroup might be defined to represent each building within that
@@ -135,7 +133,7 @@ class RackGroup(MPTTModel, ChangeLoggedModel, CustomFieldModel, RelationshipMode
     'graphql',
     'relationships',
 )
-class RackRole(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class RackRole(OrganizationalModel):
     """
     Racks can be organized by functional role, similar to Devices.
     """
@@ -154,8 +152,6 @@ class RackRole(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True,
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'color', 'description']
 
@@ -187,7 +183,7 @@ class RackRole(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'statuses',
     'webhooks'
 )
-class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
+class Rack(PrimaryModel, StatusModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Site and (optionally) a RackGroup.
@@ -292,9 +288,6 @@ class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     images = GenericRelation(
         to='extras.ImageAttachment'
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = [
         'site', 'group', 'name', 'facility_id', 'tenant', 'status', 'role', 'type', 'serial', 'asset_tag', 'width',
@@ -578,7 +571,7 @@ class Rack(ChangeLoggedModel, CustomFieldModel, RelationshipModel, StatusModel):
     'relationships',
     'webhooks'
 )
-class RackReservation(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class RackReservation(PrimaryModel):
     """
     One or more reserved units within a Rack.
     """
@@ -604,9 +597,6 @@ class RackReservation(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     description = models.CharField(
         max_length=200
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['site', 'rack_group', 'rack', 'units', 'tenant', 'user', 'description']
 

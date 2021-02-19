@@ -17,6 +17,11 @@ from extras.models import (
 )
 from extras.querysets import ConfigContextModelQuerySet
 from extras.utils import extras_features
+from netbox.models.generics import (
+    BaseModel,
+    OrganizationalModel,
+    PrimaryModel
+)
 from utilities.fields import NaturalOrderingField
 from utilities.ordering import naturalize_interface
 from utilities.query_functions import CollateAsChar
@@ -44,7 +49,7 @@ __all__ = (
     'graphql',
     'relationships',
 )
-class ClusterType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class ClusterType(OrganizationalModel):
     """
     A type of Cluster.
     """
@@ -60,8 +65,6 @@ class ClusterType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'description']
 
@@ -92,7 +95,7 @@ class ClusterType(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'graphql',
     'relationships',
 )
-class ClusterGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class ClusterGroup(OrganizationalModel):
     """
     An organizational group of Clusters.
     """
@@ -108,8 +111,6 @@ class ClusterGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         max_length=200,
         blank=True
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'slug', 'description']
 
@@ -143,7 +144,7 @@ class ClusterGroup(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'relationships',
     'webhooks',
 )
-class Cluster(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Cluster(PrimaryModel):
     """
     A cluster of VirtualMachines. Each Cluster may optionally be associated with one or more Devices.
     """
@@ -180,9 +181,6 @@ class Cluster(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     comments = models.TextField(
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = ['name', 'type', 'group', 'site', 'comments']
     clone_fields = [
@@ -236,7 +234,7 @@ class Cluster(ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     'statuses',
     'webhooks',
 )
-class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, RelationshipModel, StatusModel):
+class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     """
     A virtual machine which runs inside a Cluster.
     """
@@ -304,7 +302,6 @@ class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, Re
     comments = models.TextField(
         blank=True
     )
-    tags = TaggableManager(through=TaggedItem)
 
     objects = ConfigContextModelQuerySet.as_manager()
 
@@ -393,13 +390,15 @@ class VirtualMachine(ChangeLoggedModel, ConfigContextModel, CustomFieldModel, Re
 #
 
 @extras_features(
+    'custom_fields',
+    'custom_links',
     'custom_validators',
     'export_templates',
     'graphql',
     'relationships',
     'webhooks'
 )
-class VMInterface(BaseInterface):
+class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
     virtual_machine = models.ForeignKey(
         to='virtualization.VirtualMachine',
         on_delete=models.CASCADE,
@@ -442,8 +441,6 @@ class VMInterface(BaseInterface):
         through=TaggedItem,
         related_name='vminterface'
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     csv_headers = [
         'virtual_machine', 'name', 'enabled', 'mac_address', 'mtu', 'description', 'mode',
