@@ -23,9 +23,6 @@
             <li{% if active_tab == "api_tokens" %} class="active"{% endif %}>
                 <a href="{% url 'user:token_list' %}">API Tokens</a>
             </li>
-            <li{% if active_tab == "userkey" %} class="active"{% endif %}>
-                <a href="{% url 'user:userkey' %}">User Key</a>
-            </li>
         </ul>
     </div>
 	<div class="col-sm-9 col-md-8">
