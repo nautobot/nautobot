@@ -15,11 +15,9 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterGroup.objects.bulk_create([
-            ClusterGroup(name='Cluster Group 1', slug='cluster-group-1'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-group-2'),
-            ClusterGroup(name='Cluster Group 3', slug='cluster-group-3'),
-        ])
+        ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1')
+        ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2')
+        ClusterGroup.objects.create(name='Cluster Group 3', slug='cluster-group-3')
 
         cls.form_data = {
             'name': 'Cluster Group X',
@@ -41,11 +39,9 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterType.objects.bulk_create([
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2'),
-            ClusterType(name='Cluster Type 3', slug='cluster-type-3'),
-        ])
+        ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
+        ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2')
+        ClusterType.objects.create(name='Cluster Type 3', slug='cluster-type-3')
 
         cls.form_data = {
             'name': 'Cluster Type X',
@@ -68,28 +64,23 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
         clustergroups = (
-            ClusterGroup(name='Cluster Group 1', slug='cluster-group-1'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-group-2'),
+            ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1'),
+            ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2'),
         )
-        ClusterGroup.objects.bulk_create(clustergroups)
 
         clustertypes = (
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2'),
+            ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1'),
+            ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2'),
         )
-        ClusterType.objects.bulk_create(clustertypes)
 
-        Cluster.objects.bulk_create([
-            Cluster(name='Cluster 1', group=clustergroups[0], type=clustertypes[0], site=sites[0]),
-            Cluster(name='Cluster 2', group=clustergroups[0], type=clustertypes[0], site=sites[0]),
-            Cluster(name='Cluster 3', group=clustergroups[0], type=clustertypes[0], site=sites[0]),
-        ])
+        Cluster.objects.create(name='Cluster 1', group=clustergroups[0], type=clustertypes[0], site=sites[0])
+        Cluster.objects.create(name='Cluster 2', group=clustergroups[0], type=clustertypes[0], site=sites[0])
+        Cluster.objects.create(name='Cluster 3', group=clustergroups[0], type=clustertypes[0], site=sites[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -126,33 +117,28 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         deviceroles = (
-            DeviceRole(name='Device Role 1', slug='device-role-1'),
-            DeviceRole(name='Device Role 2', slug='device-role-2'),
+            DeviceRole.objects.create(name='Device Role 1', slug='device-role-1'),
+            DeviceRole.objects.create(name='Device Role 2', slug='device-role-2'),
         )
-        DeviceRole.objects.bulk_create(deviceroles)
 
         platforms = (
-            Platform(name='Platform 1', slug='platform-1'),
-            Platform(name='Platform 2', slug='platform-2'),
+            Platform.objects.create(name='Platform 1', slug='platform-1'),
+            Platform.objects.create(name='Platform 2', slug='platform-2'),
         )
-        Platform.objects.bulk_create(platforms)
 
         clustertype = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
 
         clusters = (
-            Cluster(name='Cluster 1', type=clustertype),
-            Cluster(name='Cluster 2', type=clustertype),
+            Cluster.objects.create(name='Cluster 1', type=clustertype),
+            Cluster.objects.create(name='Cluster 2', type=clustertype),
         )
-        Cluster.objects.bulk_create(clusters)
 
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_staged = statuses.get(slug='staged')
 
-        VirtualMachine.objects.bulk_create([
-            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0]),
-            VirtualMachine(name='Virtual Machine 2', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0]),
-            VirtualMachine(name='Virtual Machine 3', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0]),
-        ])
+        VirtualMachine.objects.create(name='Virtual Machine 1', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0])
+        VirtualMachine.objects.create(name='Virtual Machine 2', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0])
+        VirtualMachine.objects.create(name='Virtual Machine 3', cluster=clusters[0], role=deviceroles[0], platform=platforms[0], status=statuses[0])
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 
@@ -204,24 +190,20 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         clustertype = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
         cluster = Cluster.objects.create(name='Cluster 1', type=clustertype, site=site)
         virtualmachines = (
-            VirtualMachine(name='Virtual Machine 1', cluster=cluster, role=devicerole),
-            VirtualMachine(name='Virtual Machine 2', cluster=cluster, role=devicerole),
+            VirtualMachine.objects.create(name='Virtual Machine 1', cluster=cluster, role=devicerole),
+            VirtualMachine.objects.create(name='Virtual Machine 2', cluster=cluster, role=devicerole),
         )
-        VirtualMachine.objects.bulk_create(virtualmachines)
 
-        VMInterface.objects.bulk_create([
-            VMInterface(virtual_machine=virtualmachines[0], name='Interface 1'),
-            VMInterface(virtual_machine=virtualmachines[0], name='Interface 2'),
-            VMInterface(virtual_machine=virtualmachines[0], name='Interface 3'),
-        ])
+        VMInterface.objects.create(virtual_machine=virtualmachines[0], name='Interface 1')
+        VMInterface.objects.create(virtual_machine=virtualmachines[0], name='Interface 2')
+        VMInterface.objects.create(virtual_machine=virtualmachines[0], name='Interface 3')
 
         vlans = (
-            VLAN(vid=1, name='VLAN1', site=site),
-            VLAN(vid=101, name='VLAN101', site=site),
-            VLAN(vid=102, name='VLAN102', site=site),
-            VLAN(vid=103, name='VLAN103', site=site),
+            VLAN.objects.create(vid=1, name='VLAN1', site=site),
+            VLAN.objects.create(vid=101, name='VLAN101', site=site),
+            VLAN.objects.create(vid=102, name='VLAN102', site=site),
+            VLAN.objects.create(vid=103, name='VLAN103', site=site),
         )
-        VLAN.objects.bulk_create(vlans)
 
         tags = cls.create_tags('Alpha', 'Bravo', 'Charlie')
 

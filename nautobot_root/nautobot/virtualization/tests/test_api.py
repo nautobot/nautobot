@@ -42,12 +42,9 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cluster_types = (
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2'),
-            ClusterType(name='Cluster Type 3', slug='cluster-type-3'),
-        )
-        ClusterType.objects.bulk_create(cluster_types)
+        ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
+        ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2')
+        ClusterType.objects.create(name='Cluster Type 3', slug='cluster-type-3')
 
 
 class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
@@ -74,12 +71,9 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cluster_Groups = (
-            ClusterGroup(name='Cluster Group 1', slug='cluster-type-1'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-type-2'),
-            ClusterGroup(name='Cluster Group 3', slug='cluster-type-3'),
-        )
-        ClusterGroup.objects.bulk_create(cluster_Groups)
+        ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-type-1')
+        ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-type-2')
+        ClusterGroup.objects.create(name='Cluster Group 3', slug='cluster-type-3')
 
 
 class ClusterTest(APIViewTestCases.APIViewTestCase):
@@ -93,23 +87,18 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         cluster_types = (
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2'),
+            ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1'),
+            ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2'),
         )
-        ClusterType.objects.bulk_create(cluster_types)
 
         cluster_groups = (
-            ClusterGroup(name='Cluster Group 1', slug='cluster-group-1'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-group-2'),
+            ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1'),
+            ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2'),
         )
-        ClusterGroup.objects.bulk_create(cluster_groups)
 
-        clusters = (
-            Cluster(name='Cluster 1', type=cluster_types[0], group=cluster_groups[0]),
-            Cluster(name='Cluster 2', type=cluster_types[0], group=cluster_groups[0]),
-            Cluster(name='Cluster 3', type=cluster_types[0], group=cluster_groups[0]),
-        )
-        Cluster.objects.bulk_create(clusters)
+        Cluster.objects.create(name='Cluster 1', type=cluster_types[0], group=cluster_groups[0])
+        Cluster.objects.create(name='Cluster 2', type=cluster_types[0], group=cluster_groups[0])
+        Cluster.objects.create(name='Cluster 3', type=cluster_types[0], group=cluster_groups[0])
 
         cls.create_data = [
             {
@@ -143,18 +132,15 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         clustergroup = ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1')
 
         clusters = (
-            Cluster(name='Cluster 1', type=clustertype, group=clustergroup),
-            Cluster(name='Cluster 2', type=clustertype, group=clustergroup),
+            Cluster.objects.create(name='Cluster 1', type=clustertype, group=clustergroup),
+            Cluster.objects.create(name='Cluster 2', type=clustertype, group=clustergroup),
         )
-        Cluster.objects.bulk_create(clusters)
 
         statuses = Status.objects.get_for_model(VirtualMachine)
 
-        virtual_machines = (
-            VirtualMachine.objects.create(name='Virtual Machine 1', cluster=clusters[0], local_context_data={'A': 1}, status=statuses[0]),
-            VirtualMachine.objects.create(name='Virtual Machine 2', cluster=clusters[0], local_context_data={'B': 2}, status=statuses[0]),
-            VirtualMachine.objects.create(name='Virtual Machine 3', cluster=clusters[0], local_context_data={'C': 3}, status=statuses[0]),
-        )
+        VirtualMachine.objects.create(name='Virtual Machine 1', cluster=clusters[0], local_context_data={'A': 1}, status=statuses[0]),
+        VirtualMachine.objects.create(name='Virtual Machine 2', cluster=clusters[0], local_context_data={'B': 2}, status=statuses[0]),
+        VirtualMachine.objects.create(name='Virtual Machine 3', cluster=clusters[0], local_context_data={'C': 3}, status=statuses[0]),
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -233,19 +219,15 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         cluster = Cluster.objects.create(name='Test Cluster 1', type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name='Test VM 1')
 
-        interfaces = (
-            VMInterface(virtual_machine=virtualmachine, name='Interface 1'),
-            VMInterface(virtual_machine=virtualmachine, name='Interface 2'),
-            VMInterface(virtual_machine=virtualmachine, name='Interface 3'),
-        )
-        VMInterface.objects.bulk_create(interfaces)
+        VMInterface.objects.create(virtual_machine=virtualmachine, name='Interface 1')
+        VMInterface.objects.create(virtual_machine=virtualmachine, name='Interface 2')
+        VMInterface.objects.create(virtual_machine=virtualmachine, name='Interface 3')
 
         vlans = (
-            VLAN(name='VLAN 1', vid=1),
-            VLAN(name='VLAN 2', vid=2),
-            VLAN(name='VLAN 3', vid=3),
+            VLAN.objects.create(name='VLAN 1', vid=1),
+            VLAN.objects.create(name='VLAN 2', vid=2),
+            VLAN.objects.create(name='VLAN 3', vid=3),
         )
-        VLAN.objects.bulk_create(vlans)
 
         cls.create_data = [
             {

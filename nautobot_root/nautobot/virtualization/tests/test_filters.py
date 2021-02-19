@@ -16,12 +16,9 @@ class ClusterTypeTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cluster_types = (
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1', description='A'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2', description='B'),
-            ClusterType(name='Cluster Type 3', slug='cluster-type-3', description='C'),
-        )
-        ClusterType.objects.bulk_create(cluster_types)
+        ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1', description='A')
+        ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2', description='B')
+        ClusterType.objects.create(name='Cluster Type 3', slug='cluster-type-3', description='C')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -47,12 +44,9 @@ class ClusterGroupTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cluster_groups = (
-            ClusterGroup(name='Cluster Group 1', slug='cluster-group-1', description='A'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-group-2', description='B'),
-            ClusterGroup(name='Cluster Group 3', slug='cluster-group-3', description='C'),
-        )
-        ClusterGroup.objects.bulk_create(cluster_groups)
+        ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1', description='A')
+        ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2', description='B')
+        ClusterGroup.objects.create(name='Cluster Group 3', slug='cluster-group-3', description='C')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -79,56 +73,44 @@ class ClusterTestCase(TestCase):
     def setUpTestData(cls):
 
         cluster_types = (
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2'),
-            ClusterType(name='Cluster Type 3', slug='cluster-type-3'),
+            ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1'),
+            ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2'),
+            ClusterType.objects.create(name='Cluster Type 3', slug='cluster-type-3'),
         )
-        ClusterType.objects.bulk_create(cluster_types)
 
         cluster_groups = (
-            ClusterGroup(name='Cluster Group 1', slug='cluster-group-1'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-group-2'),
-            ClusterGroup(name='Cluster Group 3', slug='cluster-group-3'),
+            ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1'),
+            ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2'),
+            ClusterGroup.objects.create(name='Cluster Group 3', slug='cluster-group-3'),
         )
-        ClusterGroup.objects.bulk_create(cluster_groups)
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
-            Region(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 3', slug='test-region-3'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1', region=regions[0]),
-            Site(name='Test Site 2', slug='test-site-2', region=regions[1]),
-            Site(name='Test Site 3', slug='test-site-3', region=regions[2]),
+            Site.objects.create(name='Test Site 1', slug='test-site-1', region=regions[0]),
+            Site.objects.create(name='Test Site 2', slug='test-site-2', region=regions[1]),
+            Site.objects.create(name='Test Site 3', slug='test-site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
-        clusters = (
-            Cluster(name='Cluster 1', type=cluster_types[0], group=cluster_groups[0], site=sites[0], tenant=tenants[0]),
-            Cluster(name='Cluster 2', type=cluster_types[1], group=cluster_groups[1], site=sites[1], tenant=tenants[1]),
-            Cluster(name='Cluster 3', type=cluster_types[2], group=cluster_groups[2], site=sites[2], tenant=tenants[2]),
-        )
-        Cluster.objects.bulk_create(clusters)
+        Cluster.objects.create(name='Cluster 1', type=cluster_types[0], group=cluster_groups[0], site=sites[0], tenant=tenants[0])
+        Cluster.objects.create(name='Cluster 2', type=cluster_types[1], group=cluster_groups[1], site=sites[1], tenant=tenants[1])
+        Cluster.objects.create(name='Cluster 3', type=cluster_types[2], group=cluster_groups[2], site=sites[2], tenant=tenants[2])
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -189,94 +171,80 @@ class VirtualMachineTestCase(TestCase):
     def setUpTestData(cls):
 
         cluster_types = (
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2'),
-            ClusterType(name='Cluster Type 3', slug='cluster-type-3'),
+            ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1'),
+            ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2'),
+            ClusterType.objects.create(name='Cluster Type 3', slug='cluster-type-3'),
         )
-        ClusterType.objects.bulk_create(cluster_types)
 
         cluster_groups = (
-            ClusterGroup(name='Cluster Group 1', slug='cluster-group-1'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-group-2'),
-            ClusterGroup(name='Cluster Group 3', slug='cluster-group-3'),
+            ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1'),
+            ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2'),
+            ClusterGroup.objects.create(name='Cluster Group 3', slug='cluster-group-3'),
         )
-        ClusterGroup.objects.bulk_create(cluster_groups)
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
-            Region(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 3', slug='test-region-3'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1', region=regions[0]),
-            Site(name='Test Site 2', slug='test-site-2', region=regions[1]),
-            Site(name='Test Site 3', slug='test-site-3', region=regions[2]),
+            Site.objects.create(name='Test Site 1', slug='test-site-1', region=regions[0]),
+            Site.objects.create(name='Test Site 2', slug='test-site-2', region=regions[1]),
+            Site.objects.create(name='Test Site 3', slug='test-site-3', region=regions[2]),
         )
-        Site.objects.bulk_create(sites)
 
         clusters = (
-            Cluster(name='Cluster 1', type=cluster_types[0], group=cluster_groups[0], site=sites[0]),
-            Cluster(name='Cluster 2', type=cluster_types[1], group=cluster_groups[1], site=sites[1]),
-            Cluster(name='Cluster 3', type=cluster_types[2], group=cluster_groups[2], site=sites[2]),
+            Cluster.objects.create(name='Cluster 1', type=cluster_types[0], group=cluster_groups[0], site=sites[0]),
+            Cluster.objects.create(name='Cluster 2', type=cluster_types[1], group=cluster_groups[1], site=sites[1]),
+            Cluster.objects.create(name='Cluster 3', type=cluster_types[2], group=cluster_groups[2], site=sites[2]),
         )
-        Cluster.objects.bulk_create(clusters)
 
         platforms = (
-            Platform(name='Platform 1', slug='platform-1'),
-            Platform(name='Platform 2', slug='platform-2'),
-            Platform(name='Platform 3', slug='platform-3'),
+            Platform.objects.create(name='Platform 1', slug='platform-1'),
+            Platform.objects.create(name='Platform 2', slug='platform-2'),
+            Platform.objects.create(name='Platform 3', slug='platform-3'),
         )
-        Platform.objects.bulk_create(platforms)
 
         roles = (
-            DeviceRole(name='Device Role 1', slug='device-role-1'),
-            DeviceRole(name='Device Role 2', slug='device-role-2'),
-            DeviceRole(name='Device Role 3', slug='device-role-3'),
+            DeviceRole.objects.create(name='Device Role 1', slug='device-role-1'),
+            DeviceRole.objects.create(name='Device Role 2', slug='device-role-2'),
+            DeviceRole.objects.create(name='Device Role 3', slug='device-role-3'),
         )
-        DeviceRole.objects.bulk_create(roles)
 
         tenant_groups = (
-            TenantGroup(name='Tenant group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
-            Tenant(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
-            Tenant(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1', group=tenant_groups[0]),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2', group=tenant_groups[1]),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3', group=tenant_groups[2]),
         )
-        Tenant.objects.bulk_create(tenants)
 
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_map = {s.slug: s for s in statuses.all()}
 
         vms = (
-            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0], platform=platforms[0], role=roles[0], tenant=tenants[0], status=status_map['active'], vcpus=1, memory=1, disk=1, local_context_data={"foo": 123}),
-            VirtualMachine(name='Virtual Machine 2', cluster=clusters[1], platform=platforms[1], role=roles[1], tenant=tenants[1], status=status_map['staged'], vcpus=2, memory=2, disk=2),
-            VirtualMachine(name='Virtual Machine 3', cluster=clusters[2], platform=platforms[2], role=roles[2], tenant=tenants[2], status=status_map['offline'], vcpus=3, memory=3, disk=3),
+            VirtualMachine.objects.create(name='Virtual Machine 1', cluster=clusters[0], platform=platforms[0], role=roles[0], tenant=tenants[0], status=status_map['active'], vcpus=1, memory=1, disk=1, local_context_data={"foo": 123}),
+            VirtualMachine.objects.create(name='Virtual Machine 2', cluster=clusters[1], platform=platforms[1], role=roles[1], tenant=tenants[1], status=status_map['staged'], vcpus=2, memory=2, disk=2),
+            VirtualMachine.objects.create(name='Virtual Machine 3', cluster=clusters[2], platform=platforms[2], role=roles[2], tenant=tenants[2], status=status_map['offline'], vcpus=3, memory=3, disk=3),
         )
-        VirtualMachine.objects.bulk_create(vms)
 
         interfaces = (
-            VMInterface(virtual_machine=vms[0], name='Interface 1', mac_address='00-00-00-00-00-01'),
-            VMInterface(virtual_machine=vms[1], name='Interface 2', mac_address='00-00-00-00-00-02'),
-            VMInterface(virtual_machine=vms[2], name='Interface 3', mac_address='00-00-00-00-00-03'),
+            VMInterface.objects.create(virtual_machine=vms[0], name='Interface 1', mac_address='00-00-00-00-00-01'),
+            VMInterface.objects.create(virtual_machine=vms[1], name='Interface 2', mac_address='00-00-00-00-00-02'),
+            VMInterface.objects.create(virtual_machine=vms[2], name='Interface 3', mac_address='00-00-00-00-00-03'),
         )
-        VMInterface.objects.bulk_create(interfaces)
 
         # Assign primary IPs for filtering
         ipaddresses = (
-            IPAddress(address='192.0.2.1/24', assigned_object=interfaces[0]),
-            IPAddress(address='192.0.2.2/24', assigned_object=interfaces[1]),
+            IPAddress.objects.create(address='192.0.2.1/24', assigned_object=interfaces[0]),
+            IPAddress.objects.create(address='192.0.2.2/24', assigned_object=interfaces[1]),
         )
-        IPAddress.objects.bulk_create(ipaddresses)
+
         VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=ipaddresses[0])
         VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip4=ipaddresses[1])
 
@@ -393,32 +361,26 @@ class VMInterfaceTestCase(TestCase):
     def setUpTestData(cls):
 
         cluster_types = (
-            ClusterType(name='Cluster Type 1', slug='cluster-type-1'),
-            ClusterType(name='Cluster Type 2', slug='cluster-type-2'),
-            ClusterType(name='Cluster Type 3', slug='cluster-type-3'),
+            ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1'),
+            ClusterType.objects.create(name='Cluster Type 2', slug='cluster-type-2'),
+            ClusterType.objects.create(name='Cluster Type 3', slug='cluster-type-3'),
         )
-        ClusterType.objects.bulk_create(cluster_types)
 
         clusters = (
-            Cluster(name='Cluster 1', type=cluster_types[0]),
-            Cluster(name='Cluster 2', type=cluster_types[1]),
-            Cluster(name='Cluster 3', type=cluster_types[2]),
+            Cluster.objects.create(name='Cluster 1', type=cluster_types[0]),
+            Cluster.objects.create(name='Cluster 2', type=cluster_types[1]),
+            Cluster.objects.create(name='Cluster 3', type=cluster_types[2]),
         )
-        Cluster.objects.bulk_create(clusters)
 
         vms = (
-            VirtualMachine(name='Virtual Machine 1', cluster=clusters[0]),
-            VirtualMachine(name='Virtual Machine 2', cluster=clusters[1]),
-            VirtualMachine(name='Virtual Machine 3', cluster=clusters[2]),
+            VirtualMachine.objects.create(name='Virtual Machine 1', cluster=clusters[0]),
+            VirtualMachine.objects.create(name='Virtual Machine 2', cluster=clusters[1]),
+            VirtualMachine.objects.create(name='Virtual Machine 3', cluster=clusters[2]),
         )
-        VirtualMachine.objects.bulk_create(vms)
 
-        interfaces = (
-            VMInterface(virtual_machine=vms[0], name='Interface 1', enabled=True, mtu=100, mac_address='00-00-00-00-00-01'),
-            VMInterface(virtual_machine=vms[1], name='Interface 2', enabled=True, mtu=200, mac_address='00-00-00-00-00-02'),
-            VMInterface(virtual_machine=vms[2], name='Interface 3', enabled=False, mtu=300, mac_address='00-00-00-00-00-03'),
-        )
-        VMInterface.objects.bulk_create(interfaces)
+        VMInterface.objects.create(virtual_machine=vms[0], name='Interface 1', enabled=True, mtu=100, mac_address='00-00-00-00-00-01')
+        VMInterface.objects.create(virtual_machine=vms[1], name='Interface 2', enabled=True, mtu=200, mac_address='00-00-00-00-00-02')
+        VMInterface.objects.create(virtual_machine=vms[2], name='Interface 3', enabled=False, mtu=300, mac_address='00-00-00-00-00-03')
 
     def test_id(self):
         id_list = self.queryset.values_list('id', flat=True)[:2]
