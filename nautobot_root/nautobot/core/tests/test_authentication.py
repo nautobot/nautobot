@@ -128,11 +128,10 @@ class ExternalAuthenticationTestCase(TestCase):
 
         # Create required groups
         groups = (
-            Group(name='Group 1'),
-            Group(name='Group 2'),
-            Group(name='Group 3'),
+            Group.objects.create(name='Group 1'),
+            Group.objects.create(name='Group 2'),
+            Group.objects.create(name='Group 3'),
         )
-        Group.objects.bulk_create(groups)
 
         response = self.client.get(reverse('home'), follow=True, **headers)
         self.assertEqual(response.status_code, 200)
@@ -177,11 +176,10 @@ class ObjectPermissionAPIViewTestCase(TestCase):
     def setUpTestData(cls):
 
         cls.sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
-            Site(name='Site 3', slug='site-3'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 3', slug='site-3'),
         )
-        Site.objects.bulk_create(cls.sites)
 
         statuses = Status.objects.get_for_model(Prefix)
 
@@ -214,12 +212,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
 
         # Assign object permission
-        obj_perm = ObjectPermission(
+        obj_perm = ObjectPermission.objects.create(
             name='Test permission',
             constraints={'site__name': 'Site 1'},
             actions=['view']
         )
-        obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
 
@@ -242,12 +239,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
 
         # Assign object permission
-        obj_perm = ObjectPermission(
+        obj_perm = ObjectPermission.objects.create(
             name='Test permission',
             constraints={'site__name': 'Site 1'},
             actions=['view']
         )
-        obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
 
@@ -271,12 +267,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
 
         # Assign object permission
-        obj_perm = ObjectPermission(
+        obj_perm = ObjectPermission.objects.create(
             name='Test permission',
             constraints={'site__name': 'Site 1'},
             actions=['add']
         )
-        obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
 
@@ -301,12 +296,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
 
         # Assign object permission
-        obj_perm = ObjectPermission(
+        obj_perm = ObjectPermission.objects.create(
             name='Test permission',
             constraints={'site__name': 'Site 1'},
             actions=['change']
         )
-        obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
 
@@ -337,12 +331,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
 
         # Assign object permission
-        obj_perm = ObjectPermission(
+        obj_perm = ObjectPermission.objects.create(
             name='Test permission',
             constraints={'site__name': 'Site 1'},
             actions=['delete']
         )
-        obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
 

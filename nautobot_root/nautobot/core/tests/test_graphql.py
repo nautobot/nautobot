@@ -80,8 +80,7 @@ class GraphQLExtendSchemaType(TestCase):
 
         # Create custom fields for Site objects
         for data in self.datas:
-            cf = CustomField(type=data['field_type'], name=data['field_name'], required=False)
-            cf.save()
+            cf = CustomField.objects.create(type=data['field_type'], name=data['field_name'], required=False)
             cf.content_types.set([obj_type])
 
         self.schema = generate_schema_type(app_name="dcim", model=Site)
@@ -148,7 +147,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        self.m2m_1 = Relationship(
+        self.m2m_1 = Relationship.objects.create(
             name="Vlan to Rack",
             slug="vlan-rack",
             source_type=rack_ct,
@@ -157,27 +156,24 @@ class GraphQLExtendSchemaRelationship(TestCase):
             destination_label="My Racks",
             type="many-to-many"
         )
-        self.m2m_1.save()
 
-        self.m2m_2 = Relationship(
+        self.m2m_2 = Relationship.objects.create(
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=rack_ct,
             destination_type=vlan_ct,
             type="many-to-many"
         )
-        self.m2m_2.save()
 
-        self.o2m_1 = Relationship(
+        self.o2m_1 = Relationship.objects.create(
             name="generic site to vlan",
             slug="site-vlan",
             source_type=site_ct,
             destination_type=vlan_ct,
             type="one-to-many"
         )
-        self.o2m_1.save()
 
-        self.o2o_1 = Relationship(
+        self.o2o_1 = Relationship.objects.create(
             name="Primary Rack per Site",
             slug="primary-rack-site",
             source_type=rack_ct,
@@ -186,28 +182,24 @@ class GraphQLExtendSchemaRelationship(TestCase):
             destination_label="Primary Rack",
             type="one-to-one"
         )
-        self.o2o_1.save()
 
         self.sites = [
-            Site(name='Site A', slug='site-a'),
-            Site(name='Site B', slug='site-b'),
-            Site(name='Site C', slug='site-c'),
+            Site.objects.create(name='Site A', slug='site-a'),
+            Site.objects.create(name='Site B', slug='site-b'),
+            Site.objects.create(name='Site C', slug='site-c'),
         ]
-        Site.objects.bulk_create(self.sites)
 
         self.racks = [
-            Rack(name='Rack A', site=self.sites[0]),
-            Rack(name='Rack B', site=self.sites[1]),
-            Rack(name='Rack C', site=self.sites[2]),
+            Rack.objects.create(name='Rack A', site=self.sites[0]),
+            Rack.objects.create(name='Rack B', site=self.sites[1]),
+            Rack.objects.create(name='Rack C', site=self.sites[2]),
         ]
-        Rack.objects.bulk_create(self.racks)
 
         self.vlans = [
-            VLAN(name='VLAN A', vid=100, site=self.sites[0]),
-            VLAN(name='VLAN B', vid=100, site=self.sites[1]),
-            VLAN(name='VLAN C', vid=100, site=self.sites[2]),
+            VLAN.objects.create(name='VLAN A', vid=100, site=self.sites[0]),
+            VLAN.objects.create(name='VLAN B', vid=100, site=self.sites[1]),
+            VLAN.objects.create(name='VLAN C', vid=100, site=self.sites[2]),
         ]
-        VLAN.objects.bulk_create(self.vlans)
 
         self.schema = generate_schema_type(app_name="dcim", model=Site)
 
@@ -250,26 +242,23 @@ class GraphQLAPIPermissionTest(TestCase):
     def setUp(self):
         """Initialize the Database with some datas and multiple users associated with different permissions."""
         self.groups = (
-            Group(name='Group 1'),
-            Group(name='Group 2'),
+            Group.objects.create(name='Group 1'),
+            Group.objects.create(name='Group 2'),
         )
-        Group.objects.bulk_create(self.groups)
 
         self.users = (
-            User(username='User 1', is_active=True),
-            User(username='User 2', is_active=True),
-            User(username='Super User', is_active=True, is_superuser=True),
-            User(username='Nobody', is_active=True),
+            User.objects.create(username='User 1', is_active=True),
+            User.objects.create(username='User 2', is_active=True),
+            User.objects.create(username='Super User', is_active=True, is_superuser=True),
+            User.objects.create(username='Nobody', is_active=True),
         )
-        User.objects.bulk_create(self.users)
 
         self.tokens = (
-            Token(user=self.users[0], key="0123456789abcdef0123456789abcdef01234567"),
-            Token(user=self.users[1], key="abcd456789abcdef0123456789abcdef01234567"),
-            Token(user=self.users[2], key="efgh456789abcdef0123456789abcdef01234567"),
-            Token(user=self.users[3], key="ijkl456789abcdef0123456789abcdef01234567"),
+            Token.objects.create(user=self.users[0], key="0123456789abcdef0123456789abcdef01234567"),
+            Token.objects.create(user=self.users[1], key="abcd456789abcdef0123456789abcdef01234567"),
+            Token.objects.create(user=self.users[2], key="efgh456789abcdef0123456789abcdef01234567"),
+            Token.objects.create(user=self.users[3], key="ijkl456789abcdef0123456789abcdef01234567"),
         )
-        Token.objects.bulk_create(self.tokens)
 
         self.clients = [APIClient(), APIClient(), APIClient(), APIClient()]
         self.clients[0].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[0].key}")
@@ -293,35 +282,32 @@ class GraphQLAPIPermissionTest(TestCase):
         # Apply permissions only to User 1 & 2
         for i in range(2):
             # Rack permission
-            rack_obj_permission = ObjectPermission(
+            rack_obj_permission = ObjectPermission.objects.create(
                 name=f'Permission Rack {i+1}',
                 actions=['view', 'add', 'change', 'delete'],
                 constraints={'site__slug': f'test{i+1}'}
             )
-            rack_obj_permission.save()
             rack_obj_permission.object_types.add(rack_object_type)
             rack_obj_permission.groups.add(self.groups[i])
             rack_obj_permission.users.add(self.users[i])
 
-            site_obj_permission = ObjectPermission(
+            site_obj_permission = ObjectPermission.objects.create(
                 name=f'Permission Site {i+1}',
                 actions=['view', 'add', 'change', 'delete'],
                 constraints={'region__slug': f'region{i+1}'}
             )
-            site_obj_permission.save()
             site_obj_permission.object_types.add(site_object_type)
             site_obj_permission.groups.add(self.groups[i])
             site_obj_permission.users.add(self.users[i])
 
         self.rack_grp1 = (
-            Rack(name="Rack 1-1", site=self.sites[0]),
-            Rack(name="Rack 1-2", site=self.sites[0]),
+            Rack.objects.create(name="Rack 1-1", site=self.sites[0]),
+            Rack.objects.create(name="Rack 1-2", site=self.sites[0]),
         )
         self.rack_grp2 = (
-            Rack(name="Rack 2-1", site=self.sites[1]),
-            Rack(name="Rack 2-2", site=self.sites[1]),
+            Rack.objects.create(name="Rack 2-1", site=self.sites[1]),
+            Rack.objects.create(name="Rack 2-2", site=self.sites[1]),
         )
-        Rack.objects.bulk_create(self.rack_grp1 + self.rack_grp2)
 
         self.api_url = reverse("graphql-api")
 
@@ -500,7 +486,7 @@ class GraphQLQuery(APITestCase):
             site=self.site
         )
 
-        context1 = ConfigContext(
+        context1 = ConfigContext.objects.create(
             name="context 1",
             weight=101,
             data={
@@ -509,7 +495,6 @@ class GraphQLQuery(APITestCase):
                 "c": 777
             }
         )
-        context1.save()
         context1.regions.add(self.region)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
