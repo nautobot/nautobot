@@ -1,12 +1,12 @@
 ---
 version: "3"
 services:
-  netbox:
+  nautobot:
     build:
       context: ../
       dockerfile: development/Dockerfile
-    image: "grimlock/grimlock-py${PYTHON_VER}"
-    command: "python /opt/grimlock/netbox/manage.py runserver 0.0.0.0:8000 --insecure"
+    image: "nautobot/nautobot-py${PYTHON_VER}"
+    command: "python /opt/nautobot/nautobot_root/manage.py runserver 0.0.0.0:8000 --insecure"
     ports:
       - "8000:8000"
     depends_on:
@@ -15,29 +15,29 @@ services:
     env_file:
       - dev.env
     volumes:
-      - ./configuration.py:/opt/grimlock/netbox/netbox/configuration.py
-      - ../:/opt/grimlock
+      - ./configuration.py:/opt/nautobot/nautobot_root/nautobot/core/configuration.py
+      - ../:/opt/nautobot
     tty: true
   worker:
     build:
       context: ../
       dockerfile: development/Dockerfile
-    image: "grimlock/grimlock-py${PYTHON_VER}"
-    entrypoint: "python /opt/grimlock/netbox/manage.py rqworker"
+    image: "nautobot/nautobot-py${PYTHON_VER}"
+    entrypoint: "python /opt/nautobot/nautobot_root/manage.py rqworker"
     depends_on:
-      - netbox
+      - nautobot
     env_file:
       - ./dev.env
     volumes:
-      - ./configuration.py:/opt/grimlock/netbox/netbox/configuration.py
-      - ../:/opt/grimlock
+      - ./configuration.py:/opt/nautobot/nautobot_root/nautobot/core/configuration.py
+      - ../:/opt/nautobot
     tty: true
   postgres:
     image: postgres:10
     env_file:
       - dev.env
     volumes:
-      - pgdata_grimlock:/var/lib/postgresql/data
+      - pgdata_nautobot:/var/lib/postgresql/data
   redis:
     image: redis:5-alpine
     command:
@@ -47,4 +47,4 @@ services:
     env_file:
       - dev.env
 volumes:
-  pgdata_grimlock:
+  pgdata_nautobot:

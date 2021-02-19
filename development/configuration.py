@@ -1,11 +1,11 @@
-"""NetBox configuration file."""
+"""Nautobot configuration file."""
 import os
 import sys
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(" ")
 
 DATABASE = {
-    "NAME": os.environ.get("DB_NAME", "netbox"),
+    "NAME": os.environ.get("DB_NAME", "nautobot"),
     "USER": os.environ.get("DB_USER", ""),
     "PASSWORD": os.environ.get("DB_PASSWORD", ""),
     "HOST": os.environ.get("DB_HOST", "localhost"),
@@ -37,7 +37,7 @@ LOGGING = {
     },
     "loggers": {
         "django": {"handlers": ["normal_console"], "level": "INFO"},
-        "netbox": {"handlers": ["verbose_console" if DEBUG else "normal_console"], "level": LOG_LEVEL},
+        "nautobot": {"handlers": ["verbose_console" if DEBUG else "normal_console"], "level": LOG_LEVEL},
         "rq.worker": {"handlers": ["verbose_console" if DEBUG else "normal_console"], "level": LOG_LEVEL},
     },
 }

@@ -4,9 +4,9 @@ FROM python:${PYTHON_VER}
 ENV PYTHONUNBUFFERED 1
 
 # -------------------------------------------------------------------------------------
-# Install NetBox requirements
+# Install Nautobot requirements
 # -------------------------------------------------------------------------------------
-# During image build process, only NetBox's requirements are installed.
+# During image build process, only Nautobot's requirements are installed.
 #
 # Local source code is mounted as volume into container. This approach does not require
 # to rebuild a container when source code change occurs.
@@ -21,8 +21,8 @@ COPY requirements_dev.txt /tmp/
 RUN pip install -r /tmp/requirements_dev.txt
 
 # Used if someone wants to override the entrypoint and provision a super user
-COPY development/docker-entrypoint.sh /tmp/grimlock/docker-entrypoint.sh
+COPY development/docker-entrypoint.sh /tmp/nautobot/docker-entrypoint.sh
 
-WORKDIR /opt/grimlock
+WORKDIR /opt/nautobot
 
-ENTRYPOINT ["/tmp/grimlock/docker-entrypoint.sh"]
+ENTRYPOINT ["/tmp/nautobot/docker-entrypoint.sh"]

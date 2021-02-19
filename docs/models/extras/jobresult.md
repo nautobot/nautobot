@@ -1,6 +1,6 @@
 # Job Results
 
-NetBox provides a generic data model for storing and reporting the results of background tasks, such as the execution of custom jobs or the synchronization of data from a Git repository.
+Nautobot provides a generic data model for storing and reporting the results of background tasks, such as the execution of custom jobs or the synchronization of data from a Git repository.
 
 Records of this type store the following data:
 

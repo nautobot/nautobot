@@ -1,6 +1,6 @@
 ## Getting Help
 
-If you encounter any issues installing or using NetBox, try one of the
+If you encounter any issues installing or using Nautobot, try one of the
 following resources to get assistance. Please **do not** open a GitHub issue
 except to report bugs or request features.
 
@@ -14,29 +14,22 @@ categories for discussions:
 * **General** - General community discussion
 * **Ideas** - Ideas for new functionality that isn't yet ready for a formal
   feature request
-* **Q&A** - Request help with installing or using NetBox
-
-### Mailing List
-
-We also have a Google Groups [mailing list](https://groups.google.com/g/netbox-discuss)
-for general discussion, however we're encouraging people to use GitHub
-discussions where possible, as it's much easier for newcomers to review past
-discussions.
+* **Q&A** - Request help with installing or using Nautobot
 
 ### Slack
 
-For real-time chat, you can join the **#netbox** Slack channel on [NetworkToCode](https://slack.networktocode.com/).
+For real-time chat, you can join the **#nautobot** Slack channel on [NetworkToCode](https://slack.networktocode.com/).
 Unfortunately, the Slack channel does not provide long-term retention of chat
 history, so try to avoid it for any discussions would benefit from being
 preserved for future reference.
 
 ## Reporting Bugs
 
-* First, ensure that you're running the [latest stable version](https://github.com/netbox-community/netbox/releases)
-of NetBox. If you're running an older version, it's possible that the bug has
+* First, ensure that you're running the [latest stable version](https://github.com/nautobot/nautobot/releases)
+of Nautobot. If you're running an older version, it's possible that the bug has
 already been fixed.
 
-* Next, check the GitHub [issues list](https://github.com/netbox-community/netbox/issues)
+* Next, check the GitHub [issues list](https://github.com/nautobot/nautobot/issues)
 to see if the bug you've found has already been reported. If you think you may
 be experiencing a reported issue that hasn't already been resolved, please
 click "add a reaction" in the top right corner of the issue and add a thumbs
@@ -47,7 +40,7 @@ affected.
 * When submitting an issue, please be as descriptive as possible. Be sure to
 provide all information request in the issue template, including:
 
-    * The environment in which NetBox is running
+    * The environment in which Nautobot is running
     * The exact steps that can be taken to reproduce the issue
     * Expected and observed behavior
     * Any error messages generated
@@ -62,11 +55,11 @@ work is required to resolve them. It may take some time for someone to address
 your issue.
 
 * For more information on how bug reports are handled, please see our [issue
-intake policy](https://github.com/netbox-community/netbox/wiki/Issue-Intake-Policy).
+intake policy](https://github.com/nautobot/nautobot/wiki/Issue-Intake-Policy).
 
 ## Feature Requests
 
-* First, check the GitHub [issues list](https://github.com/netbox-community/netbox/issues)
+* First, check the GitHub [issues list](https://github.com/nautobot/nautobot/issues)
 to see if the feature you're requesting is already listed. (Be sure to search
 closed issues as well, since some feature requests have been rejected.) If the
 feature you'd like to see has already been requested and is open, click "add a
@@ -77,7 +70,7 @@ free to add a comment with any additional justification for the feature.
 deleted. Please use GitHub's reactions feature to indicate your support.)
 
 * Due to a large backlog of feature requests, we are not currently accepting
-any proposals which substantially extend NetBox's functionality beyond its
+any proposals which substantially extend Nautobot's functionality beyond its
 current feature set. This includes the introduction of any new views or models
 which have not already been proposed in an existing feature request.
 
@@ -95,7 +88,7 @@ information requested by the issue template, including:
 
     * A detailed description of the proposed functionality
     * A use case for the feature; who would use it and what value it would add
-      to NetBox
+      to Nautobot
     * A rough description of changes necessary to the database schema (if
       applicable)
     * Any third-party libraries or other resources which would be involved
@@ -105,16 +98,16 @@ title. The issue will be reviewed by a moderator after submission and the
 appropriate labels will be applied for categorization.
 
 * For more information on how feature requests are handled, please see our
-[issue intake policy](https://github.com/netbox-community/netbox/wiki/Issue-Intake-Policy).
+[issue intake policy](https://github.com/nautobot/nautobot/wiki/Issue-Intake-Policy).
 
 ## Submitting Pull Requests
 
-* If you're interested in contributing to NetBox, be sure to check out our
-[getting started](https://netbox.readthedocs.io/en/stable/development/getting-started/)
+* If you're interested in contributing to Nautobot, be sure to check out our
+[getting started](https://nautobot.readthedocs.io/en/stable/development/getting-started/)
 documentation for tips on setting up your development environment.
 
 * Be sure to open an issue **before** starting work on a pull request, and
-discuss your idea with the NetBox maintainers before beginning work. This will
+discuss your idea with the Nautobot maintainers before beginning work. This will
 help prevent wasting time on something that might we might not be able to
 implement. When suggesting a new feature, also make sure it won't conflict with
 any work that's already in progress.
@@ -152,7 +145,7 @@ reduce noise in the discussion.
 
 ## Issue Lifecycle
 
-New issues are handled according to our [issue intake policy](https://github.com/netbox-community/netbox/wiki/Issue-Intake-Policy).
+New issues are handled according to our [issue intake policy](https://github.com/nautobot/nautobot/wiki/Issue-Intake-Policy).
 Maintainers will assign label(s) and/or close new issues as the policy
 dictates. This helps ensure a productive development environment and avoid
 accumulating a large backlog of work.
@@ -179,7 +172,7 @@ overlooked.
   the understanding that all contributions are submitted under the Apache 2.0
   license and that your employer may not make claim to any contributions.
   Contributions include code work, issue management, and community support. All
-  development must be in accordance with our [development guidance](https://netbox.readthedocs.io/en/stable/development/).
+  development must be in accordance with our [development guidance](https://nautobot.readthedocs.io/en/stable/development/).
 
 * Maintainers are expected to attend (where feasible) our biweekly ~30-minute
   sync to review agenda items. This meeting provides opportunity to present and
@@ -188,8 +181,7 @@ overlooked.
 * Official channels for communication include:
 
     * GitHub issues, pull requests, and discussions
-    * The [netbox-discuss](https://groups.google.com/g/netbox-discuss) mailing list
-    * The **#netbox** channel on [NetworkToCode Slack](https://networktocode.slack.com/)
+    * The **#nautobot** channel on [NetworkToCode Slack](https://networktocode.slack.com/)
 
 * Maintainers with no substantial recorded activity in a 60-day period will be
   removed from the project.

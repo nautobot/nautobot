@@ -1,9 +1,9 @@
 # NAPALM
 
-NetBox supports integration with the [NAPALM automation](https://napalm-automation.net/) library. NAPALM allows NetBox to serve a proxy for operational data, fetching live data from network devices and returning it to a requester via its REST API. Note that NetBox does not store any NAPALM data locally.
+Nautobot supports integration with the [NAPALM automation](https://napalm-automation.net/) library. NAPALM allows Nautobot to serve a proxy for operational data, fetching live data from network devices and returning it to a requester via its REST API. Note that Nautobot does not store any NAPALM data locally.
 
 !!! note
-    To enable this integration, the NAPALM library must be installed. See [installation steps](../../installation/3-netbox/#napalm) for more information.
+    To enable this integration, the NAPALM library must be installed. See [installation steps](../../installation/3-nautobot/#napalm) for more information.
 
 Below is an example REST API request and response:
 
@@ -18,7 +18,7 @@ GET /api/dcim/devices/1/napalm/?method=get_environment
 ```
 
 !!! note
-    To make NAPALM requests via the NetBox REST API, a NetBox user must have assigned a permission granting the `napalm_read` action for the device object type.
+    To make NAPALM requests via the Nautobot REST API, a Nautobot user must have assigned a permission granting the `napalm_read` action for the device object type.
 
 ## Authentication
 
@@ -35,7 +35,7 @@ $ curl "http://localhost/api/dcim/devices/1/napalm/?method=get_environment" \
 
 ## Method Support
 
-The list of supported NAPALM methods depends on the [NAPALM driver](https://napalm.readthedocs.io/en/latest/support/index.html#general-support-matrix) configured for the platform of a device. Because there is no granular mechanism in place for limiting potentially disruptive requests, NetBox supports only read-only [get](https://napalm.readthedocs.io/en/latest/support/index.html#getters-support-matrix) methods.
+The list of supported NAPALM methods depends on the [NAPALM driver](https://napalm.readthedocs.io/en/latest/support/index.html#general-support-matrix) configured for the platform of a device. Because there is no granular mechanism in place for limiting potentially disruptive requests, Nautobot supports only read-only [get](https://napalm.readthedocs.io/en/latest/support/index.html#getters-support-matrix) methods.
 
 ## Multiple Methods
 
@@ -56,7 +56,7 @@ GET /api/dcim/devices/1/napalm/?method=get_ntp_servers&method=get_ntp_peers
 
 ## Optional Arguments
 
-The behavior of NAPALM drivers can be adjusted according to the [optional arguments](https://napalm.readthedocs.io/en/latest/support/index.html#optional-arguments). NetBox exposes those arguments using headers prefixed with `X-NAPALM-`. For example, the SSH port is changed to 2222 in this API call:
+The behavior of NAPALM drivers can be adjusted according to the [optional arguments](https://napalm.readthedocs.io/en/latest/support/index.html#optional-arguments). Nautobot exposes those arguments using headers prefixed with `X-NAPALM-`. For example, the SSH port is changed to 2222 in this API call:
 
 ```
 $ curl "http://localhost/api/dcim/devices/1/napalm/?method=get_environment" \

@@ -1,8 +1,8 @@
 # Object Permissions
 
-A permission in NetBox represents a relationship shared by several components:
+A permission in Nautobot represents a relationship shared by several components:
 
-* Object type(s) - One or more types of object in NetBox
+* Object type(s) - One or more types of object in Nautobot
 * User(s)/Group(s) - One or more users or groups of users
 * Action(s) - The action(s) that can be performed on an object
 * Constraints - An arbitrary filter used to limit the granted action(s) to a specific subset of objects
@@ -11,14 +11,14 @@ At a minimum, a permission assignment must specify one object type, one user or 
 
 ## Actions
 
-There are four core actions that can be permitted for each type of object within NetBox, roughly analogous to the CRUD convention (create, read, update, and delete):
+There are four core actions that can be permitted for each type of object within Nautobot, roughly analogous to the CRUD convention (create, read, update, and delete):
 
 * **View** - Retrieve an object from the database
 * **Add** - Create a new object
 * **Change** - Modify an existing object
 * **Delete** - Delete an existing object
 
-In addition to these, permissions can also grant custom actions that may be required by a specific model or plugin. For example, the `napalm_read` permission on the device model allows a user to execute NAPALM queries on a device via NetBox's REST API. These can be specified when granting a permission in the "additional actions" field.
+In addition to these, permissions can also grant custom actions that may be required by a specific model or plugin. For example, the `napalm_read` permission on the device model allows a user to execute NAPALM queries on a device via Nautobot's REST API. These can be specified when granting a permission in the "additional actions" field.
 
 !!! note
     Internally, all actions granted by a permission (both built-in and custom) are stored as strings in an array field named `actions`.

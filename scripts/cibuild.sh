@@ -27,8 +27,8 @@ fi
 #  - E501: line greater than 80 characters in length
 pycodestyle \
     --ignore=W504,E501 \
-    --exclude=netbox/scripts,netbox/reports,netbox/jobs,netbox/git \
-    contrib/ development/ netbox/ tasks.py
+    --exclude=nautobot_root/scripts,nautobot_root/reports,nautobot_root/jobs,nautobot_root/git \
+    contrib/ development/ nautobot_root/ tasks.py
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more PEP 8 errors detected, failing build."
@@ -36,10 +36,10 @@ if [[ $RC != 0 ]]; then
 fi
 
 # Point to the testing configuration file for use in CI
-ln -s configuration.testing.py netbox/netbox/configuration.py
+ln -s configuration.testing.py nautobot_root/nautobot/core/configuration.py
 
-# Run NetBox tests
-coverage run --source="netbox/" netbox/manage.py test netbox/
+# Run Nautobot tests
+coverage run --source="nautobot_root/" nautobot_root/manage.py test nautobot_root/
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."

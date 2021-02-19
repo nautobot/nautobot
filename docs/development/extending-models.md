@@ -71,7 +71,7 @@ If the model is already part of the GraphQL schema, the new field will be includ
 
 ## 11. Create/extend test cases
 
-Create or extend the relevant test cases to verify that the new field and any accompanying validation logic perform as expected. This is especially important for relational fields. NetBox incorporates various test suites, including:
+Create or extend the relevant test cases to verify that the new field and any accompanying validation logic perform as expected. This is especially important for relational fields. Nautobot incorporates various test suites, including:
 
 * API serializer/view tests
 * Filter tests
@@ -88,4 +88,4 @@ Each model has a dedicated page in the documentation, at `models/<app>/<model>.m
 Note that this documentation page will be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.
 
 !!! warning
-    Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks *between* NetBox documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.
+    Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks *between* Nautobot documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.

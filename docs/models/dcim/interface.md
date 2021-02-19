@@ -1,6 +1,6 @@
 ## Interfaces
 
-Interfaces in NetBox represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, and may optionally be assigned a MAC address, MTU, and IEEE 802.1Q mode (tagged or access). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
+Interfaces in Nautobot represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, and may optionally be assigned a MAC address, MTU, and IEEE 802.1Q mode (tagged or access). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
 
 Interfaces may be physical or virtual in nature, but only physical interfaces may be connected via cables. Cables can connect interfaces to pass-through ports, circuit terminations, or other interfaces.
 

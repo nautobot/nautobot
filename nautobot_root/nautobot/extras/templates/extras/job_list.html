@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load helpers %}
+
+{% block javascript %}
+    <script>
+        $("button.button-toggle").click(function() {
+            $(this).children("i").toggleClass("mdi-chevron-right mdi-chevron-down");
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+    <h1>{% block title %}Jobs{% endblock %}</h1>
+    <div class="row">
+        <div class="col-md-12">
+            {% if jobs %}
+                <table class="table table-hover table-headings reports">
+                    <tr>
+                        <th>Module / Job</th>
+                        <th>Description</th>
+                        <th class="text-right">Last Run</th>
+                        <th style="width: 40px"></th>
+                        <th style="width: 100px">Last Status</th>
+                        <th style="width: 180px">Last Results</th>
+                    </tr>
+                    {% for module, module_jobs in jobs %}
+                        <tr>
+                            <th colspan="6"><h3><a name="module.{{ module }}"></a>{{ module|bettertitle }}</h3></th>
+                        </tr>
+                        {% for job in module_jobs %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'extras:job' class_path=job.class_path %}"
+                                       id="{{ job.class_path }}">
+                                        <strong>{{ job }}</strong>
+                                    </a>
+                                </td>
+                                <td>{{ job.description | placeholder }}</td>
+                                <td class="text-right text-nowrap">
+                                    {% if job.result %}
+                                        <a href="{% url 'extras:job_jobresult' pk=job.result.pk %}">
+                                            {{ job.result.created }} by {{ job.result.user }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if job.result %}
+                                        <a class="btn btn-xs btn-default"
+                                           href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}"
+                                           title="See job history">
+                                            <i class="mdi mdi-history"></i>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% include 'extras/inc/job_label.html' with result=job.result %}
+                                </td>
+                                <td class="text-nowrap report-stats">
+                                    {% if job.result %}
+                                        <label class="label label-success">{{ job.result.data.total.success }}</label>
+                                        <label class="label label-info">{{ job.result.data.total.info }}</label>
+                                        <label class="label label-warning">{{ job.result.data.total.warning }}</label>
+                                        <label class="label label-danger">{{ job.result.data.total.failure }}</label>
+                                        {% comment %}
+                                            Every job.result.data has keys 'output', 'total', those don't count.
+                                            Only show the "more" button if there's more than one result grouping;
+                                            i.e. 'output' + 'total' + 'grouping1' + 'grouping2' (+ ...)
+                                        {% endcomment %}
+                                        {% if job.result.data and job.result.data|length > 3 %}
+                                            <button class="btn btn-xs btn-default button-toggle" type="button"
+                                                    data-toggle="collapse"
+                                                    data-target=".{{ job.class_path_js_escaped }}"
+                                                    aria-controls="{{ job.class_path }}"
+                                                    title="Show / hide detailed results">
+                                                Details <i class="mdi mdi-chevron-right"></i>
+                                            </button>
+                                        {% endif %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% for method, stats in job.result.data.items %}
+                                {% if method != "total" and method != "output" %}
+                                    <tr class="{{ job.class_path }} collapse">
+                                        <td colspan="5" class="method">
+                                            <a href="{% url 'extras:job_jobresult' pk=job.result.pk %}#{{method}}">
+                                                {{ method }}
+                                            </a>
+                                        </td>
+                                        <td class="text-nowrap report-stats">
+                                            <label class="label label-success">{{ stats.success }}</label>
+                                            <label class="label label-info">{{ stats.info }}</label>
+                                            <label class="label label-warning">{{ stats.warning }}</label>
+                                            <label class="label label-danger">{{ stats.failure }}</label>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="alert alert-info">
+                    <p><strong>No jobs found.</strong></p>
+                    <p>Jobs should be saved to <code>{{ settings.JOBS_ROOT }}</code>. (This path can be changed by setting <code>JOBS_ROOT</code> in Nautobot's configuration.)</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,7 +1,7 @@
 {
     "dockerComposeFile": ["../development/docker-compose.yml", "../development/docker-compose.debug.yml"],
-    "service": "netbox",
-	"workspaceFolder": "/opt/grimlock/",
+    "service": "nautobot",
+	"workspaceFolder": "/opt/nautobot/",
 	"extensions": [
 		"ms-python.vscode-pylance",
 		"streetsidesoftware.code-spell-checker",
@@ -13,7 +13,7 @@
 	],
 	"settings": {
 		"python.pythonPath": "/usr/local/bin/python",
-		"python.analysis.extraPaths": ["/opt/grimlock/netbox"],
+		"python.analysis.extraPaths": ["/opt/nautobot/nautobot_root"],
 		"python.linting.pylintEnabled": true,
 		"python.linting.enabled": true,
 		"pythonTestExplorer.testFramework": "pytest"

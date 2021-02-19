@@ -1,6 +1,6 @@
 # Remote User Authentication
 
-NetBox can be configured to support remote user authentication by inferring users from an HTTP header set by an authenticating reverse proxy (e.g. nginx or Apache). 
+Nautobot can be configured to support remote user authentication by inferring users from an HTTP header set by an authenticating reverse proxy (e.g. nginx or Apache).
 
 This document describes how to make use of an external authentication source (where the Web server sets the `REMOTE_USER` environment variable). This type of authentication solution is typically seen on intranet sites, with single sign-on solutions.
 
@@ -12,12 +12,12 @@ Enable the remote user authentication backend by adding the following to your `c
 
 !!! note
     It is critical that you include the `ObjectPermissionsBackend` provided by
-    NetBox after the `RemoteUserBackend` so that object-level permissions features can work properly.
+    Nautobot after the `RemoteUserBackend` so that object-level permissions features can work properly.
 
 ```python
 AUTHENTICATION_BACKENDS = [
-    'netbox.authentication.RemoteUserBackend',
-    'netbox.authentication.ObjectPermissionBackend',
+    'nautobot.authentication.RemoteUserBackend',
+    'nautobot.authentication.ObjectPermissionBackend',
 ]
 ```
 
@@ -64,11 +64,11 @@ The following example gives a user a reasonable amount of access to add devices 
 
 ```python
 {
-    'dcim.add_device': {"site__name__in":  ["HQ"]}, 
+    'dcim.add_device': {"site__name__in":  ["HQ"]},
     'dcim.view_device': {"site__name__in":  ["HQ"]},
     'dcim.view_devicerole': None,
     'dcim.view_devicetype': None,
-    'extras.view_status': None, 
+    'extras.view_status': None,
     'dcim.view_site': {"name__in":  ["HQ"]},
     'dcim.view_manufacturer': None,
     'dcim.view_region': None,
@@ -104,4 +104,4 @@ Set this to `False` to quickly disable this method of authentication. Local auth
 
 Default: `'HTTP_REMOTE_USER'`
 
-When remote user authentication is in use, this is the name of the HTTP header which informs NetBox of the currently authenticated user. For example, to use the request header `X-Remote-User` it needs to be set to `HTTP_X_REMOTE_USER`.
+When remote user authentication is in use, this is the name of the HTTP header which informs Nautobot of the currently authenticated user. For example, to use the request header `X-Remote-User` it needs to be set to `HTTP_X_REMOTE_USER`.

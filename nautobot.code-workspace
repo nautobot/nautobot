@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"python.linting.pylintEnabled": true,
+		"python.linting.enabled": true,
+		"pythonTestExplorer.testFramework": "pytest"
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Python: Nautobot",
+				"type": "python",
+				"request": "launch",
+				"program": "/opt/nautobot/nautobot_root/manage.py",
+				"console": "integratedTerminal",
+				"args": [
+					"runserver",
+					"0.0.0.0:8000"
+				],
+				"django": true
+			}
+		]
+	}
+}

@@ -14,11 +14,11 @@ Sometimes it is desirable to associate additional data with a group of devices o
 
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 
-Configuration contexts may be managed within NetBox via the UI and/or API; they may also be managed externally to NetBox in a Git repository if desired.
+Configuration contexts may be managed within Nautobot via the UI and/or API; they may also be managed externally to Nautobot in a Git repository if desired.
 
 ## Hierarchical Rendering
 
-Context data is arranged hierarchically, so that data with a higher weight can be entered to override lower-weight data. Multiple instances of data are automatically merged by NetBox to present a single dictionary for each object.
+Context data is arranged hierarchically, so that data with a higher weight can be entered to override lower-weight data. Multiple instances of data are automatically merged by Nautobot to present a single dictionary for each object.
 
 For example, suppose we want to specify a set of syslog and NTP servers for all devices within a region. We could create a config context instance with a weight of 1000 assigned to the region, with the following JSON data:
 

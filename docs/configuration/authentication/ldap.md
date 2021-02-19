@@ -23,14 +23,14 @@ sudo yum install -y openldap-devel
 Activate the Python virtual environment and install the `django-auth-ldap` package using pip:
 
 ```no-highlight
-source /opt/netbox/venv/bin/activate
+source /opt/nautobot/venv/bin/activate
 pip3 install django-auth-ldap
 ```
 
 Once installed, add the package to `local_requirements.txt` to ensure it is re-installed during future rebuilds of the virtual environment:
 
 ```no-highlight
-sudo echo django-auth-ldap >> /opt/netbox/local_requirements.txt
+sudo echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
 ```
 
 ## Configuration
@@ -39,12 +39,12 @@ Enable the LDAP authentication backend by adding the following to your `configur
 
 !!! note
     It is critical that you include the `ObjectPermissionsBackend` provided by
-    NetBox after the `LDAPBackend` so that object-level permissions features can work properly.
+    Nautobot after the `LDAPBackend` so that object-level permissions features can work properly.
 
 ```python
 AUTHENTICATION_BACKENDS = [
     'django_auth_ldap.backend.LDAPBackend',
-    'netbox.authentication.ObjectPermissionBackend',
+    'nautobot.authentication.ObjectPermissionBackend',
 ]
 ```
 
@@ -66,12 +66,12 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
     ldap.OPT_REFERRALS: 0
 }
 
-# Set the DN and password for the NetBox service account.
-AUTH_LDAP_BIND_DN = "CN=NETBOXSA, OU=Service Accounts,DC=example,DC=com"
+# Set the DN and password for the Nautobot service account.
+AUTH_LDAP_BIND_DN = "CN=NAUTOBOTSA, OU=Service Accounts,DC=example,DC=com"
 AUTH_LDAP_BIND_PASSWORD = "demo"
 
 # Include this setting if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
-# Note that this is a NetBox-specific setting which sets:
+# Note that this is a Nautobot-specific setting which sets:
 #     ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 LDAP_IGNORE_CERT_ERRORS = True
 ```
@@ -118,7 +118,7 @@ AUTH_LDAP_GROUP_SEARCH = LDAPSearch("dc=example,dc=com", ldap.SCOPE_SUBTREE,
 AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
 
 # Define a group required to login.
-AUTH_LDAP_REQUIRE_GROUP = "CN=NETBOX_USERS,DC=example,DC=com"
+AUTH_LDAP_REQUIRE_GROUP = "CN=NAUTOBOT_USERS,DC=example,DC=com"
 
 # Mirror LDAP group assignments.
 AUTH_LDAP_MIRROR_GROUPS = True
@@ -147,7 +147,7 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 ## Troubleshooting LDAP
 
-`systemctl restart netbox` restarts the Netbox service, and initiates any changes made to `ldap_config.py`. If there are syntax errors present, the NetBox process will not spawn an instance, and errors should be logged to `/var/log/messages`.
+`systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `ldap_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
 
 For troubleshooting LDAP user/group queries, add or merge the following [logging](/configuration/optional-settings.md#logging) configuration to `configuration.py`:
 
@@ -156,21 +156,21 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'netbox_auth_log': {
+        'nautobot_auth_log': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '/opt/netbox/logs/django-ldap-debug.log',
+            'filename': '/opt/nautobot/logs/django-ldap-debug.log',
             'maxBytes': 1024 * 500,
             'backupCount': 5,
         },
     },
     'loggers': {
         'django_auth_ldap': {
-            'handlers': ['netbox_auth_log'],
+            'handlers': ['nautobot_auth_log'],
             'level': 'DEBUG',
         },
     },
 }
 ```
 
-Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the netbox service and attempt to log into the site to trigger log entries to this file.
+Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the nautobot service and attempt to log into the site to trigger log entries to this file.

@@ -4,14 +4,14 @@
 
 ### Update Requirements
 
-Required Python packages are maintained in two files. `base_requirements.txt` contains a list of all the packages required by NetBox. Some of them may be pinned to a specific version of the package due to a known issue. For example:
+Required Python packages are maintained in two files. `base_requirements.txt` contains a list of all the packages required by Nautobot. Some of them may be pinned to a specific version of the package due to a known issue. For example:
 
 ```
 # https://github.com/encode/django-rest-framework/issues/6053
 djangorestframework==3.8.1
 ```
 
-The other file is `requirements.txt`, which lists each of the required packages pinned to its current stable version. When NetBox is installed, the Python environment is configured to match this file. This helps ensure that a new release of a dependency doesn't break NetBox.
+The other file is `requirements.txt`, which lists each of the required packages pinned to its current stable version. When Nautobot is installed, the Python environment is configured to match this file. This helps ensure that a new release of a dependency doesn't break Nautobot.
 
 Every minor version release should refresh `requirements.txt` so that it lists the most recent stable release of each package. To do this:
 
@@ -44,7 +44,7 @@ $ pip install -r docs/requirements.txt
 $ mkdocs serve
 ```
 
-Follow these instructions to perform a new installation of NetBox. This process must _not_ be automated: The goal of this step is to catch any errors or omissions in the documentation, and ensure that it is kept up-to-date for each release. Make any necessary changes to the documentation before proceeding with the release.
+Follow these instructions to perform a new installation of Nautobot. This process must _not_ be automated: The goal of this step is to catch any errors or omissions in the documentation, and ensure that it is kept up-to-date for each release. Make any necessary changes to the documentation before proceeding with the release.
 
 ### Close the Release Milestone
 
@@ -74,7 +74,7 @@ Once CI has completed on the PR, merge it.
 
 ### Create a New Release
 
-Draft a [new release](https://github.com/netbox-community/netbox/releases/new) with the following parameters.
+Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with the following parameters.
 
 * **Tag:** Current version (e.g. `v2.9.9`)
 * **Target:** `master`

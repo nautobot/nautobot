@@ -11,16 +11,16 @@ REST stands for [representational state transfer](https://en.wikipedia.org/wiki/
 
 Additionally, the `OPTIONS` verb can be used to inspect a particular REST API endpoint and return all supported actions and their available parameters.
 
-One of the primary benefits of a REST API is its human-friendliness. Because it utilizes HTTP and JSON, it's very easy to interact with NetBox data on the command line using common tools. For example, we can request an IP address from NetBox and output the JSON using `curl` and `jq`. The following command makes an HTTP `GET` request for information about a particular IP address, identified by its primary key, and uses `jq` to present the raw JSON data returned in a more human-friendly format. (Piping the output through `jq` isn't strictly required but makes it much easier to read.)
+One of the primary benefits of a REST API is its human-friendliness. Because it utilizes HTTP and JSON, it's very easy to interact with Nautobot data on the command line using common tools. For example, we can request an IP address from Nautobot and output the JSON using `curl` and `jq`. The following command makes an HTTP `GET` request for information about a particular IP address, identified by its primary key, and uses `jq` to present the raw JSON data returned in a more human-friendly format. (Piping the output through `jq` isn't strictly required but makes it much easier to read.)
 
 ```no-highlight
-curl -s http://netbox/api/ipam/ip-addresses/2954/ | jq '.'
+curl -s http://nautobot/api/ipam/ip-addresses/2954/ | jq '.'
 ```
 
 ```json
 {
   "id": 2954,
-  "url": "http://netbox/api/ipam/ip-addresses/2954/",
+  "url": "http://nautobot/api/ipam/ip-addresses/2954/",
   "family": {
     "value": 4,
     "label": "IPv4"
@@ -37,10 +37,10 @@ curl -s http://netbox/api/ipam/ip-addresses/2954/ | jq '.'
   "assigned_object_id": 114771,
   "assigned_object": {
     "id": 114771,
-    "url": "http://netbox/api/dcim/interfaces/114771/",
+    "url": "http://nautobot/api/dcim/interfaces/114771/",
     "device": {
       "id": 2230,
-      "url": "http://netbox/api/dcim/devices/2230/",
+      "url": "http://nautobot/api/dcim/devices/2230/",
       "name": "router1",
       "display_name": "router1"
     },
@@ -63,11 +63,11 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 
 ## Interactive Documentation
 
-Comprehensive, interactive documentation of all REST API endpoints is available on a running NetBox instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
+Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
 ## Endpoint Hierarchy
 
-NetBox's entire REST API is housed under the API root at `https://<hostname>/api/`. The URL structure is divided at the root level by application: circuits, DCIM, extras, IPAM, plugins, tenancy, users, and virtualization. Within each application exists a separate path for each model. For example, the provider and circuit objects are located under the "circuits" application:
+Nautobot's entire REST API is housed under the API root at `https://<hostname>/api/`. The URL structure is divided at the root level by application: circuits, DCIM, extras, IPAM, plugins, tenancy, users, and virtualization. Within each application exists a separate path for each model. For example, the provider and circuit objects are located under the "circuits" application:
 
 * `/api/circuits/providers/`
 * `/api/circuits/circuits/`
@@ -102,13 +102,13 @@ The REST API employs two types of serializers to represent model data: base seri
     "id": 1048,
     "site": {
         "id": 7,
-        "url": "http://netbox/api/dcim/sites/7/",
+        "url": "http://nautobot/api/dcim/sites/7/",
         "name": "Corporate HQ",
         "slug": "corporate-hq"
     },
     "group": {
         "id": 4,
-        "url": "http://netbox/api/ipam/vlan-groups/4/",
+        "url": "http://nautobot/api/ipam/vlan-groups/4/",
         "name": "Production",
         "slug": "production"
     },
@@ -121,7 +121,7 @@ The REST API employs two types of serializers to represent model data: base seri
     },
     "role": {
         "id": 9,
-        "url": "http://netbox/api/ipam/roles/9/",
+        "url": "http://nautobot/api/ipam/roles/9/",
         "name": "User Access",
         "slug": "user-access"
     },
@@ -135,7 +135,7 @@ The REST API employs two types of serializers to represent model data: base seri
 
 Related objects (e.g. `ForeignKey` fields) are represented using nested serializers. A nested serializer provides a minimal representation of an object, including only its direct URL and enough information to display the object to a user. When performing write API actions (`POST`, `PUT`, and `PATCH`), related objects may be specified by either numeric ID (primary key), or by a set of attributes sufficiently unique to return the desired object.
 
-For example, when creating a new device, its rack can be specified by NetBox ID (PK):
+For example, when creating a new device, its rack can be specified by Nautobot ID (PK):
 
 ```json
 {
@@ -164,19 +164,19 @@ Note that if the provided parameters do not return exactly one object, a validat
 
 ### Generic Relations
 
-Some objects within NetBox have attributes which can reference an object of multiple types, known as _generic relations_. For example, an IP address can be assigned to either a device interface _or_ a virtual machine interface. When making this assignment via the REST API, we must specify two attributes:
+Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, an IP address can be assigned to either a device interface _or_ a virtual machine interface. When making this assignment via the REST API, we must specify two attributes:
 
 * `assigned_object_type` - The content type of the assigned object, defined as `<app>.<model>`
 * `assigned_object_id` - The assigned object's unique numeric ID
 
-Together, these values identify a unique object in NetBox. The assigned object (if any) is represented by the `assigned_object` attribute on the IP address model.
+Together, these values identify a unique object in Nautobot. The assigned object (if any) is represented by the `assigned_object` attribute on the IP address model.
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \
-http://netbox/api/ipam/ip-addresses/ \
+http://nautobot/api/ipam/ip-addresses/ \
 --data '{
     "address": "192.0.2.1/24",
     "assigned_object_type": "dcim.interface",
@@ -187,15 +187,15 @@ http://netbox/api/ipam/ip-addresses/ \
 ```json
 {
     "id": 56296,
-    "url": "http://netbox/api/ipam/ip-addresses/56296/",
+    "url": "http://nautobot/api/ipam/ip-addresses/56296/",
     "assigned_object_type": "dcim.interface",
     "assigned_object_id": 69000,
     "assigned_object": {
         "id": 69000,
-        "url": "http://netbox/api/dcim/interfaces/69023/",
+        "url": "http://nautobot/api/dcim/interfaces/69023/",
         "device": {
             "id": 2174,
-            "url": "http://netbox/api/dcim/devices/2174/",
+            "url": "http://nautobot/api/dcim/devices/2174/",
             "name": "device105",
             "display_name": "device105"
         },
@@ -218,7 +218,7 @@ GET /api/ipam/prefixes/13980/
 
 {
     "id": 13980,
-    "url": "http://netbox/api/ipam/prefixes/13980/",
+    "url": "http://nautobot/api/ipam/prefixes/13980/",
     "family": {
         "value": 4,
         "label": "IPv4"
@@ -226,7 +226,7 @@ GET /api/ipam/prefixes/13980/
     "prefix": "192.0.2.0/24",
     "site": {
         "id": 3,
-        "url": "http://netbox/api/dcim/sites/17/",
+        "url": "http://nautobot/api/dcim/sites/17/",
         "name": "Site 23A",
         "slug": "site-23a"
     },
@@ -239,7 +239,7 @@ GET /api/ipam/prefixes/13980/
     },
     "role": {
         "id": 17,
-        "url": "http://netbox/api/ipam/roles/17/",
+        "url": "http://nautobot/api/ipam/roles/17/",
         "name": "Staging",
         "slug": "staging"
     },
@@ -259,7 +259,7 @@ GET /api/ipam/prefixes/13980/?brief=1
 
 {
     "id": 13980,
-    "url": "http://netbox/api/ipam/prefixes/13980/",
+    "url": "http://nautobot/api/ipam/prefixes/13980/",
     "family": 4,
     "prefix": "10.40.3.0/24"
 }
@@ -290,7 +290,7 @@ Vary: Accept
 
 {
     "count": 2861,
-    "next": "http://netbox/api/dcim/devices/?limit=50&offset=50",
+    "next": "http://nautobot/api/dcim/devices/?limit=50&offset=50",
     "previous": null,
     "results": [
         {
@@ -311,7 +311,7 @@ Vary: Accept
 The default page is determined by the [`PAGINATE_COUNT`](../../configuration/optional-settings/#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
 
 ```
-http://netbox/api/dcim/devices/?limit=100
+http://nautobot/api/dcim/devices/?limit=100
 ```
 
 The response will return devices 1 through 100. The URL provided in the `next` attribute of the response will return devices 101 through 200:
@@ -319,7 +319,7 @@ The response will return devices 1 through 100. The URL provided in the `next` a
 ```json
 {
     "count": 2861,
-    "next": "http://netbox/api/dcim/devices/?limit=100&offset=100",
+    "next": "http://nautobot/api/dcim/devices/?limit=100&offset=100",
     "previous": null,
     "results": [...]
 }
@@ -334,16 +334,16 @@ The maximum number of objects that can be returned is limited by the [`MAX_PAGE_
 
 ### Retrieving Multiple Objects
 
-To query NetBox for a list of objects, make a `GET` request to the model's _list_ endpoint. Objects are listed under the response object's `results` parameter.
+To query Nautobot for a list of objects, make a `GET` request to the model's _list_ endpoint. Objects are listed under the response object's `results` parameter.
 
 ```no-highlight
-curl -s -X GET http://netbox/api/ipam/ip-addresses/ | jq '.'
+curl -s -X GET http://nautobot/api/ipam/ip-addresses/ | jq '.'
 ```
 
 ```json
 {
   "count": 42031,
-  "next": "http://netbox/api/ipam/ip-addresses/?limit=50&offset=50",
+  "next": "http://nautobot/api/ipam/ip-addresses/?limit=50&offset=50",
   "previous": null,
   "results": [
     {
@@ -368,13 +368,13 @@ curl -s -X GET http://netbox/api/ipam/ip-addresses/ | jq '.'
 
 ### Retrieving a Single Object
 
-To query NetBox for a single object, make a `GET` request to the model's _detail_ endpoint specifying its unique numeric ID.
+To query Nautobot for a single object, make a `GET` request to the model's _detail_ endpoint specifying its unique numeric ID.
 
 !!! note
     Note that the trailing slash is required. Omitting this will return a 302 redirect.
 
 ```no-highlight
-curl -s -X GET http://netbox/api/ipam/ip-addresses/5618/ | jq '.'
+curl -s -X GET http://nautobot/api/ipam/ip-addresses/5618/ | jq '.'
 ```
 
 ```json
@@ -393,14 +393,14 @@ To create a new object, make a `POST` request to the model's _list_ endpoint wit
 curl -s -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
-http://netbox/api/ipam/prefixes/ \
+http://nautobot/api/ipam/prefixes/ \
 --data '{"prefix": "192.0.2.0/24", "site": 6}' | jq '.'
 ```
 
 ```json
 {
   "id": 18691,
-  "url": "http://netbox/api/ipam/prefixes/18691/",
+  "url": "http://nautobot/api/ipam/prefixes/18691/",
   "family": {
     "value": 4,
     "label": "IPv4"
@@ -408,7 +408,7 @@ http://netbox/api/ipam/prefixes/ \
   "prefix": "192.0.2.0/24",
   "site": {
     "id": 6,
-    "url": "http://netbox/api/dcim/sites/6/",
+    "url": "http://nautobot/api/dcim/sites/6/",
     "name": "US-East 4",
     "slug": "us-east-4"
   },
@@ -437,7 +437,7 @@ To create multiple instances of a model using a single request, make a `POST` re
 curl -X POST -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \
-http://netbox/api/dcim/sites/ \
+http://nautobot/api/dcim/sites/ \
 --data '[
 {"name": "Site 1", "slug": "site-1", "region": {"name": "United States"}},
 {"name": "Site 2", "slug": "site-2", "region": {"name": "United States"}},
@@ -449,19 +449,19 @@ http://netbox/api/dcim/sites/ \
 [
     {
         "id": 21,
-        "url": "http://netbox/api/dcim/sites/21/",
+        "url": "http://nautobot/api/dcim/sites/21/",
         "name": "Site 1",
         ...
     },
     {
         "id": 22,
-        "url": "http://netbox/api/dcim/sites/22/",
+        "url": "http://nautobot/api/dcim/sites/22/",
         "name": "Site 2",
         ...
     },
     {
         "id": 23,
-        "url": "http://netbox/api/dcim/sites/23/",
+        "url": "http://nautobot/api/dcim/sites/23/",
         "name": "Site 3",
         ...
     }
@@ -476,14 +476,14 @@ To modify an object which has already been created, make a `PATCH` request to th
 curl -s -X PATCH \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
-http://netbox/api/ipam/prefixes/18691/ \
+http://nautobot/api/ipam/prefixes/18691/ \
 --data '{"status": "reserved"}' | jq '.'
 ```
 
 ```json
 {
   "id": 18691,
-  "url": "http://netbox/api/ipam/prefixes/18691/",
+  "url": "http://nautobot/api/ipam/prefixes/18691/",
   "family": {
     "value": 4,
     "label": "IPv4"
@@ -491,7 +491,7 @@ http://netbox/api/ipam/prefixes/18691/ \
   "prefix": "192.0.2.0/24",
   "site": {
     "id": 6,
-    "url": "http://netbox/api/dcim/sites/6/",
+    "url": "http://nautobot/api/dcim/sites/6/",
     "name": "US-East 4",
     "slug": "us-east-4"
   },
@@ -513,7 +513,7 @@ http://netbox/api/ipam/prefixes/18691/ \
 ```
 
 !!! note "PUT versus PATCH"
-    The NetBox REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
+    The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
 
 ### Updating Multiple Objects
 
@@ -523,23 +523,23 @@ Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` req
 curl -s -X PATCH \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
-http://netbox/api/dcim/sites/ \
+http://nautobot/api/dcim/sites/ \
 --data '[{"id": 10, "status": "active"}, {"id": 11, "status": "active"}]'
 ```
 
 Note that there is no requirement for the attributes to be identical among objects. For instance, it's possible to update the status of one site along with the name of another in the same request.
 
 !!! note
-    The bulk update of objects is an all-or-none operation, meaning that if NetBox fails to successfully update any of the specified objects (e.g. due a validation error), the entire operation will be aborted and none of the objects will be updated.
+    The bulk update of objects is an all-or-none operation, meaning that if Nautobot fails to successfully update any of the specified objects (e.g. due a validation error), the entire operation will be aborted and none of the objects will be updated.
 
 ### Deleting an Object
 
-To delete an object from NetBox, make a `DELETE` request to the model's _detail_ endpoint specifying its unique numeric ID. The `Authorization` header must be included to specify an authorization token, however this type of request does not support passing any data in the body.
+To delete an object from Nautobot, make a `DELETE` request to the model's _detail_ endpoint specifying its unique numeric ID. The `Authorization` header must be included to specify an authorization token, however this type of request does not support passing any data in the body.
 
 ```no-highlight
 curl -s -X DELETE \
 -H "Authorization: Token $TOKEN" \
-http://netbox/api/ipam/prefixes/18691/
+http://nautobot/api/ipam/prefixes/18691/
 ```
 
 Note that `DELETE` requests do not return any data: If successful, the API will return a 204 (No Content) response.
@@ -549,15 +549,15 @@ Note that `DELETE` requests do not return any data: If successful, the API will 
 
 ### Deleting Multiple Objects
 
-NetBox supports the simultaneous deletion of multiple objects of the same type by issuing a `DELETE` request to the model's list endpoint with a list of dictionaries specifying the numeric ID of each object to be deleted. For example, to delete sites with IDs 10, 11, and 12, issue the following request:
+Nautobot supports the simultaneous deletion of multiple objects of the same type by issuing a `DELETE` request to the model's list endpoint with a list of dictionaries specifying the numeric ID of each object to be deleted. For example, to delete sites with IDs 10, 11, and 12, issue the following request:
 
 ```no-highlight
 curl -s -X DELETE \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
-http://netbox/api/dcim/sites/ \
+http://nautobot/api/dcim/sites/ \
 --data '[{"id": 10}, {"id": 11}, {"id": 12}]'
 ```
 
 !!! note
-    The bulk deletion of objects is an all-or-none operation, meaning that if NetBox fails to delete any of the specified objects (e.g. due a dependency by a related object), the entire operation will be aborted and none of the objects will be deleted.
+    The bulk deletion of objects is an all-or-none operation, meaning that if Nautobot fails to delete any of the specified objects (e.g. due a dependency by a related object), the entire operation will be aborted and none of the objects will be deleted.

@@ -1,4 +1,4 @@
-# The Python web framework on which NetBox is built
+# The Python web framework on which Nautobot is built
 # https://github.com/django/django
 Django
 

@@ -1,6 +1,6 @@
 # GraphQL
 
-NetBox supports a Read-Only GraphQL interface that can be used to query most information present in the database. The GraphQL interface is available at the endpoint `graphql/` for a human to explore and GraphQL can be queried as an API via the endpoint `api/graphql/`. Currently the support for GraphQL is limited to `query`, other operation type like `mutations` and `subscriptions` are not supported. Additionally, GraphQL variables are supported.
+Nautobot supports a Read-Only GraphQL interface that can be used to query most information present in the database. The GraphQL interface is available at the endpoint `graphql/` for a human to explore and GraphQL can be queried as an API via the endpoint `api/graphql/`. Currently the support for GraphQL is limited to `query`, other operation type like `mutations` and `subscriptions` are not supported. Additionally, GraphQL variables are supported.
 
 The GraphQL implementation is leveraging the `graphene-django` library and supports the [standard GraphQL language](https://graphql.org/learn/queries/).
 
@@ -52,12 +52,12 @@ It is possible to explore the Graph and create some queries in a human friendly 
 
 ## Querying the GraphQL interface over the rest API
 
-It is possible to query the GraphQL interface via the rest API as well, the endpoint is available at `api/graphql` and supports the same Token based authentication as all other NetBox APIs.
+It is possible to query the GraphQL interface via the rest API as well, the endpoint is available at `api/graphql` and supports the same Token based authentication as all other Nautobot APIs.
 
 A GraphQL Query must be encapsulated in a JSON payload with the `query` key and sent with a POST request. Optionally it is possible to provide a list of `variables` in the same payload as presented below.
 
 ```json
-{ 
+{
   "query": "query ($id: Int!) { device(id: $id) { name }}",
   "variables": { "id": 3}
 }

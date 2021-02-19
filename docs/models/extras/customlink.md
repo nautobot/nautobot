@@ -1,8 +1,8 @@
 # Custom Links
 
-Custom links allow users to display arbitrary hyperlinks to external content within NetBox object views. These are helpful for cross-referencing related records in systems outside of NetBox. For example, you might create a custom link on the device view which links to the current device in a network monitoring system.
+Custom links allow users to display arbitrary hyperlinks to external content within Nautobot object views. These are helpful for cross-referencing related records in systems outside of Nautobot. For example, you might create a custom link on the device view which links to the current device in a network monitoring system.
 
-Custom links can be created under the admin UI or web UI located in the navbar under Other > Miscellaneous > Custom Links. Each link is associated with a particular NetBox object type (site, device, prefix, etc.) and will be displayed on relevant views. Each link is assigned text and a URL, both of which support Jinja2 templating. The text and URL are rendered with the context variable `obj` representing the current object.
+Custom links can be created under the admin UI or web UI located in the navbar under Other > Miscellaneous > Custom Links. Each link is associated with a particular Nautobot object type (site, device, prefix, etc.) and will be displayed on relevant views. Each link is assigned text and a URL, both of which support Jinja2 templating. The text and URL are rendered with the context variable `obj` representing the current object.
 
 For example, you might define a link like this:
 
@@ -23,7 +23,7 @@ The following context data is available within the template when rendering a cus
 
 | Variable | Description |
 |----------|-------------|
-| `obj`      | The NetBox object being displayed |
+| `obj`      | The Nautobot object being displayed |
 | `debug`    | A boolean indicating whether debugging is enabled |
 | `request`  | The current WSGI request |
 | `user`     | The current user (if authenticated) |

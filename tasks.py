@@ -26,8 +26,8 @@ COMPOSE_COMMAND = f"docker-compose --project-directory \"{COMPOSE_DIR}\" -f \"{C
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
 
-GRIMLOCK_ROOT = "/opt/grimlock/"
-MANAGE_COMMAND = os.path.join(GRIMLOCK_ROOT, "netbox/manage.py")
+NAUTOBOT_ROOT = "/opt/nautobot/"
+MANAGE_COMMAND = os.path.join(NAUTOBOT_ROOT, "nautobot_root/manage.py")
 
 
 # ------------------------------------------------------------------------------
@@ -41,11 +41,10 @@ def build(context, python_ver=PYTHON_VER):
         context (obj): Used to run specific commands
         python_ver (str): Will use the Python version docker image to build from
     """
-    print("Building Grimlock .. ")
+    print("Building Nautobot .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} build"
-        f" --build-arg python_ver={python_ver}",
+        f"{COMPOSE_COMMAND} build" f" --build-arg python_ver={python_ver}",
         env={"PYTHON_VER": python_ver},
     )
 
@@ -55,13 +54,13 @@ def build(context, python_ver=PYTHON_VER):
 # ------------------------------------------------------------------------------
 @task
 def debug(context, python_ver=PYTHON_VER):
-    """Start NetBox and its dependencies in debug mode.
+    """Start Nautobot and its dependencies in debug mode.
 
     Args:
         context (obj): Used to run specific commands
         python_ver (str): Will use the Python version docker image to build from
     """
-    print("Starting NetBox in debug mode.. ")
+    print("Starting Nautobot in debug mode.. ")
 
     context.run(
         f"{COMPOSE_COMMAND} up",
@@ -71,13 +70,13 @@ def debug(context, python_ver=PYTHON_VER):
 
 @task
 def start(context, python_ver=PYTHON_VER):
-    """Start NetBox and its dependencies in detached mode.
+    """Start Nautobot and its dependencies in detached mode.
 
     Args:
         context (obj): Used to run specific commands
         python_ver (str): Will use the Python version docker image to build from
     """
-    print("Starting Netbox in detached mode .. ")
+    print("Starting Nautobot in detached mode .. ")
 
     context.run(
         f"{COMPOSE_COMMAND} up -d",
@@ -87,13 +86,13 @@ def start(context, python_ver=PYTHON_VER):
 
 @task
 def stop(context, python_ver=PYTHON_VER):
-    """Stop NetBox and its dependencies.
+    """Stop Nautobot and its dependencies.
 
     Args:
         context (obj): Used to run specific commands
         python_ver (str): Will use the Python version docker image to build from
     """
-    print("Stopping Netbox .. ")
+    print("Stopping Nautobot .. ")
 
     context.run(
         f"{COMPOSE_COMMAND} stop",
@@ -109,7 +108,7 @@ def destroy(context, python_ver=PYTHON_VER):
         context (obj): Used to run specific commands
         python_ver (str): Will use the Python version docker image to build from
     """
-    print("Destroying Netbox .. ")
+    print("Destroying Nautobot .. ")
 
     # Removes volumes associated with the COMPOSE_PROJECT_NAME
     context.run(
@@ -125,7 +124,7 @@ def vscode(context, python_ver=PYTHON_VER):
     Args:
         context (obj): Used to run specific commands
     """
-    context.run("code grimlock.code-workspace", env={"PYTHON_VER": python_ver})
+    context.run("code nautobot.code-workspace", env={"PYTHON_VER": python_ver})
 
 
 # ------------------------------------------------------------------------------
@@ -140,7 +139,7 @@ def nbshell(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} exec netbox python {MANAGE_COMMAND} nbshell",
+        f"{COMPOSE_COMMAND} exec nautobot python {MANAGE_COMMAND} nbshell",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -148,14 +147,14 @@ def nbshell(context, python_ver=PYTHON_VER):
 
 @task
 def cli(context, python_ver=PYTHON_VER):
-    """Launch a bash shell inside the running NetBox container.
+    """Launch a bash shell inside the running Nautobot container.
 
     Args:
         context (obj): Used to run specific commands
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} exec netbox bash",
+        f"{COMPOSE_COMMAND} exec nautobot bash",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -171,7 +170,7 @@ def createsuperuser(context, user="admin", python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} createsuperuser --username {user}",
+        f"{COMPOSE_COMMAND} run nautobot python {MANAGE_COMMAND} createsuperuser --username {user}",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -188,12 +187,12 @@ def makemigrations(context, name="", python_ver=PYTHON_VER):
     """
     if name:
         context.run(
-            f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations --name {name}",
+            f"{COMPOSE_COMMAND} run nautobot python {MANAGE_COMMAND} makemigrations --name {name}",
             env={"PYTHON_VER": python_ver},
         )
     else:
         context.run(
-            f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} makemigrations",
+            f"{COMPOSE_COMMAND} run nautobot python {MANAGE_COMMAND} makemigrations",
             env={"PYTHON_VER": python_ver},
         )
 
@@ -207,7 +206,7 @@ def migrate(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox python {MANAGE_COMMAND} migrate",
+        f"{COMPOSE_COMMAND} run nautobot python {MANAGE_COMMAND} migrate",
         env={"PYTHON_VER": python_ver},
     )
 
@@ -224,16 +223,17 @@ def pycodestyle(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox"
-        " pycodestyle --ignore=W504,E501 --exclude=netbox/scripts,netbox/reports,netbox/jobs,netbox/git"
-        " contrib/ development/ netbox/ tasks.py",
+        f"{COMPOSE_COMMAND} run nautobot"
+        " pycodestyle --ignore=W504,E501 "
+        " --exclude=nautobot_root/scripts,nautobot_root/reports,nautobot_root/jobs,nautobot_root/git"
+        ' contrib/ development/ nautobot_root/ tasks.py',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
 
 
 @task
-def coverage_run(context, dir="netbox/", python_ver=PYTHON_VER):
+def coverage_run(context, dir="nautobot_root/", python_ver=PYTHON_VER):
     """Run tests
 
     Args:
@@ -242,8 +242,8 @@ def coverage_run(context, dir="netbox/", python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox"
-        f" coverage run --source='netbox/' netbox/manage.py test {dir}",
+        f"{COMPOSE_COMMAND} run nautobot"
+        f" coverage run --source='nautobot_root/' nautobot_root/manage.py test {dir}",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -258,7 +258,7 @@ def coverage_report(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run netbox"
+        f"{COMPOSE_COMMAND} run nautobot"
         f" coverage report --skip-covered --omit *migrations*",
         env={"PYTHON_VER": python_ver},
         pty=True,

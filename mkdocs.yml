@@ -1,7 +1,7 @@
 dev_addr: '127.0.0.1:8001'
-site_name: NetBox Documentation
-site_url: https://netbox.readthedocs.io/
-repo_url: https://github.com/netbox-community/netbox
+site_name: Nautobot Documentation
+site_url: https://nautobot.readthedocs.io/
+repo_url: https://github.com/nautobot/nautobot
 python:
     install:
         - requirements: docs/requirements.txt
@@ -17,17 +17,17 @@ markdown_extensions:
 nav:
     - Introduction: 'index.md'
     - Installation:
-        - Installing NetBox: 'installation/index.md'
+        - Installing Nautobot: 'installation/index.md'
         - 1. PostgreSQL: 'installation/1-postgresql.md'
         - 2. Redis: 'installation/2-redis.md'
-        - 3. NetBox: 'installation/3-netbox.md'
+        - 3. Nautobot: 'installation/3-nautobot.md'
         - 4. Gunicorn: 'installation/4-gunicorn.md'
         - 5. HTTP Server: 'installation/5-http-server.md'
         - 6. External Authentication (Optional): 'installation/6-external-authentication.md'
-        - Upgrading NetBox: 'installation/upgrading.md'
+        - Upgrading Nautobot: 'installation/upgrading.md'
         - Migrating to systemd: 'installation/migrating-to-systemd.md'
     - Configuration:
-        - Configuring NetBox: 'configuration/index.md'
+        - Configuring Nautobot: 'configuration/index.md'
         - Required Settings: 'configuration/required-settings.md'
         - Optional Settings: 'configuration/optional-settings.md'
     - Core Functionality:
@@ -60,8 +60,8 @@ nav:
         - Developing Plugins: 'plugins/development.md'
     - Administration:
         - Permissions: 'administration/permissions.md'
-        - Replicating NetBox: 'administration/replicating-netbox.md'
-        - NetBox Shell: 'administration/netbox-shell.md'
+        - Replicating Nautobot: 'administration/replicating-nautobot.md'
+        - Nautobot Shell: 'administration/nautobot-shell.md'
     - REST API:
         - Overview: 'rest-api/overview.md'
         - Filtering: 'rest-api/filtering.md'

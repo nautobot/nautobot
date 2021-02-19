@@ -1,6 +1,6 @@
 # Git Repositories
 
-Some text-based content is more conveniently stored in a separate Git repository rather than internally in the NetBox database. Such a repository may currently include any or all of the following for NetBox to consume:
+Some text-based content is more conveniently stored in a separate Git repository rather than internally in the Nautobot database. Such a repository may currently include any or all of the following for Nautobot to consume:
 
 * Job source files and associated data files,
 * Configuration context data
@@ -9,15 +9,15 @@ Some text-based content is more conveniently stored in a separate Git repository
 
 ## Repository Configuration
 
-When defining a Git repository for NetBox to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for NetBox to be able to locate and access the specified repository. Additionally, if the repository is private on GitHub, you may specify a [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) that can be used to grant access to the repository.
+When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private on GitHub, you may specify a [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) that can be used to grant access to the repository.
 
-Whenever a Git repository record is created, updated, or deleted, NetBox automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under `GIT_ROOT`) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
+Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under `GIT_ROOT`) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
 ## Repository Structure
 
 ### Jobs
 
-Jobs defined in Python files located in a `/jobs/` directory at the root of a Git repository will automatically be discovered by NetBox and made available to be run as a job, just as they would be if manually installed to the `$JOBS_ROOT` directory. Note that there **must** be an `__init__.py` file in the `/jobs/` directory.
+Jobs defined in Python files located in a `/jobs/` directory at the root of a Git repository will automatically be discovered by Nautobot and made available to be run as a job, just as they would be if manually installed to the `$JOBS_ROOT` directory. Note that there **must** be an `__init__.py` file in the `/jobs/` directory.
 
 ### Configuration Contexts
 
@@ -106,6 +106,6 @@ Files in a `config_contexts/devices/` and/or `config_contexts/virtual_machines/`
 
 Export templates may be provided as files located in `/export_templates/<grouping>/<model>/<template_file>`; for example, a JSON export template for Device records might be `/export_templates/dcim/device/mytemplate.json`.
 
-* The name of a discovered export template will be presented in NetBox as `<repository name>: <filename>`.
+* The name of a discovered export template will be presented in Nautobot as `<repository name>: <filename>`.
 * The MIME type of a file rendered from a discovered export template will always be the default `text/plain`.
 * The file extension of a file rendered from a discovered export template will match that of the template itself (so, in the above example, the extension would be `.json`)

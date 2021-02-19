@@ -16,7 +16,7 @@ Some models have fields which are limited to specific choices, such as the `stat
 $ curl -s -X OPTIONS \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
-http://netbox/api/ipam/prefixes/ | jq ".actions.POST.status.choices"
+http://nautobot/api/ipam/prefixes/ | jq ".actions.POST.status.choices"
 [
   {
     "value": "container",

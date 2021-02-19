@@ -2,7 +2,7 @@
 
 Nautobot supports several different authentication mechanisms including OAuth (1 and 2), OpenID, SAML, and others.
 To accomplish this the [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/) python module is used.
-This module supports several authentication [backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html) 
+This module supports several authentication [backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html)
 by default including:
 
 * Google
@@ -118,7 +118,7 @@ The following example gives a user a reasonable amount of access to add devices 
     'dcim.view_device': {"site__name__in":  ["HQ"]},
     'dcim.view_devicerole': None,
     'dcim.view_devicetype': None,
-    'extras.view_status': None, 
+    'extras.view_status': None,
     'dcim.view_site': {"name__in":  ["HQ"]},
     'dcim.view_manufacturer': None,
     'dcim.view_region': None,
@@ -141,7 +141,7 @@ Please see [the object permissions page](../../administration/permissions.md) fo
 Default: `False`
 
 If set to `True`, local accounts created by the social auth module will have the Django superuser default set of privileges.  This means the user
-will be able to create, read, update, and delete all objects in NetBox but will not have access to the Django admin pages.
+will be able to create, read, update, and delete all objects in Nautobot but will not have access to the Django admin pages.
 
 ---
 
@@ -182,8 +182,8 @@ The default authentication server can be used for testing, however, it should no
 ### Google - OAuth2
 
 The following instructions guide you through the process of configuring Google for OAuth2 authentication.
-Please note there is further guidance provided by 
-[python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) 
+Please note there is further guidance provided by
+[python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2)
 as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1) themselves, for more
 information please utilize these additional resources.
 
@@ -194,7 +194,7 @@ information please utilize these additional resources.
 
     * *App name*: Acme Corp Nautobot
     * *User support email*: select an email
-    * *App logo*: The Nautobot logo can be found at `netbox/project-static/img/nautobot_logo.png`
+    * *App logo*: The Nautobot logo can be found at `nautobot_root/nautobot/project-static/img/nautobot_logo.png`
 
 5. Click *Save and Continue*
 6. No additional scopes are needed click *Save and Continue*

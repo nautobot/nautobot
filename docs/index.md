@@ -1,8 +1,8 @@
 ![Nautobot](nautobot_logo.svg "Nautobot logo")
 
-# What is NetBox?
+# What is Nautobot?
 
-NetBox is an open source web application designed to help manage and document computer networks. Initially conceived by the network engineering team at [DigitalOcean](https://www.digitalocean.com/), NetBox was developed specifically to address the needs of network and infrastructure engineers. It encompasses the following aspects of network management:
+Nautobot is an open source web application designed to help manage and document computer networks. Initially conceived as NetBox by the network engineering team at [DigitalOcean](https://www.digitalocean.com/), it was developed specifically to address the needs of network and infrastructure engineers. It encompasses the following aspects of network management:
 
 * **IP address management (IPAM)** - IP networks and addresses, VRFs, and VLANs
 * **Equipment racks** - Organized by group and site
@@ -11,9 +11,9 @@ NetBox is an open source web application designed to help manage and document co
 * **Virtualization** - Virtual machines and clusters
 * **Data circuits** - Long-haul communications circuits and providers
 
-## What NetBox Is Not
+## What Nautobot Is Not
 
-While NetBox strives to cover many areas of network management, the scope of its feature set is necessarily limited. This ensures that development focuses on core functionality and that scope creep is reasonably contained. To that end, it might help to provide some examples of functionality that NetBox **does not** provide:
+While Nautobot strives to cover many areas of network management, the scope of its feature set is necessarily limited. This ensures that development focuses on core functionality and that scope creep is reasonably contained. To that end, it might help to provide some examples of functionality that Nautobot **does not** provide:
 
 * Network monitoring
 * DNS server
@@ -21,11 +21,11 @@ While NetBox strives to cover many areas of network management, the scope of its
 * Configuration management
 * Facilities management
 
-That said, NetBox _can_ be used to great effect in populating external tools with the data they need to perform these functions.
+That said, Nautobot _can_ be used to great effect in populating external tools with the data they need to perform these functions.
 
 ## Design Philosophy
 
-NetBox was designed with the following tenets foremost in mind.
+Nautobot was designed with the following tenets foremost in mind.
 
 ### Replicate the Real World
 
@@ -33,7 +33,7 @@ Careful consideration has been given to the data model to ensure that it can acc
 
 ### Serve as a "Source of Truth"
 
-NetBox intends to represent the _desired_ state of a network versus its _operational_ state. As such, automated import of live network state is strongly discouraged. All data created in NetBox should first be vetted by a human to ensure its integrity. NetBox can then be used to populate monitoring and provisioning systems with a high degree of confidence.
+Nautobot intends to represent the _desired_ state of a network versus its _operational_ state. As such, automated import of live network state is strongly discouraged. All data created in Nautobot should first be vetted by a human to ensure its integrity. Nautobot can then be used to populate monitoring and provisioning systems with a high degree of confidence.
 
 ### Keep it Simple
 
@@ -41,7 +41,7 @@ When given a choice between a relatively simple [80% solution](https://en.wikipe
 
 ## Application Stack
 
-NetBox is built on the [Django](https://djangoproject.com/) Python framework and utilizes a [PostgreSQL](https://www.postgresql.org/) database. It runs as a WSGI service behind your choice of HTTP server.
+Nautobot is built on the [Django](https://djangoproject.com/) Python framework and utilizes a [PostgreSQL](https://www.postgresql.org/) database. It runs as a WSGI service behind your choice of HTTP server.
 
 | Function           | Component         |
 |--------------------|-------------------|
@@ -54,8 +54,8 @@ NetBox is built on the [Django](https://djangoproject.com/) Python framework and
 
 ## Supported Python Versions
 
-NetBox supports Python 3.6, 3.7, and 3.8 environments currently. (Support for Python 3.5 was removed in NetBox v2.8.)
+Nautobot supports Python 3.6, 3.7, and 3.8 environments currently.
 
 ## Getting Started
 
-See the [installation guide](installation/index.md) for help getting NetBox up and running quickly.
+See the [installation guide](installation/index.md) for help getting Nautobot up and running quickly.

@@ -16,6 +16,6 @@ install:
 before_script:
   - psql --version
   - psql -U postgres -c 'SELECT version();'
-  - psql -U postgres -c 'create database netbox;'
+  - psql -U postgres -c 'create database nautobot;'
 script:
   - ./scripts/cibuild.sh
