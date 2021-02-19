@@ -33,11 +33,11 @@ class WebhookTest(APITestCase):
         DUMMY_URL = "http://localhost/"
         DUMMY_SECRET = "LOOKATMEIMASECRETSTRING"
 
-        webhooks = Webhook.objects.bulk_create((
-            Webhook(name='Site Create Webhook', type_create=True, payload_url=DUMMY_URL, secret=DUMMY_SECRET, additional_headers='X-Foo: Bar'),
-            Webhook(name='Site Update Webhook', type_update=True, payload_url=DUMMY_URL, secret=DUMMY_SECRET),
-            Webhook(name='Site Delete Webhook', type_delete=True, payload_url=DUMMY_URL, secret=DUMMY_SECRET),
-        ))
+        webhooks = (
+            Webhook.objects.create(name='Site Create Webhook', type_create=True, payload_url=DUMMY_URL, secret=DUMMY_SECRET, additional_headers='X-Foo: Bar'),
+            Webhook.objects.create(name='Site Update Webhook', type_update=True, payload_url=DUMMY_URL, secret=DUMMY_SECRET),
+            Webhook.objects.create(name='Site Delete Webhook', type_delete=True, payload_url=DUMMY_URL, secret=DUMMY_SECRET),
+        )
         for webhook in webhooks:
             webhook.content_types.set([site_ct])
 

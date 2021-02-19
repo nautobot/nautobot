@@ -24,12 +24,9 @@ class ExportTemplateTestCase(TestCase):
 
         content_types = ContentType.objects.filter(model__in=['site', 'rack', 'device'])
 
-        export_templates = (
-            ExportTemplate(name='Export Template 1', content_type=content_types[0], template_code='TESTING'),
-            ExportTemplate(name='Export Template 2', content_type=content_types[1], template_code='TESTING'),
-            ExportTemplate(name='Export Template 3', content_type=content_types[2], template_code='TESTING'),
-        )
-        ExportTemplate.objects.bulk_create(export_templates)
+        ExportTemplate.objects.create(name='Export Template 1', content_type=content_types[0], template_code='TESTING')
+        ExportTemplate.objects.create(name='Export Template 2', content_type=content_types[1], template_code='TESTING')
+        ExportTemplate.objects.create(name='Export Template 3', content_type=content_types[2], template_code='TESTING')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -59,52 +56,47 @@ class ImageAttachmentTestCase(TestCase):
         rack_ct = ContentType.objects.get(app_label='dcim', model='rack')
 
         sites = (
-            Site(name='Site 1', slug='site-1'),
-            Site(name='Site 2', slug='site-2'),
+            Site.objects.create(name='Site 1', slug='site-1'),
+            Site.objects.create(name='Site 2', slug='site-2'),
         )
-        Site.objects.bulk_create(sites)
 
         racks = (
-            Rack(name='Rack 1', site=sites[0]),
-            Rack(name='Rack 2', site=sites[1]),
+            Rack.objects.create(name='Rack 1', site=sites[0]),
+            Rack.objects.create(name='Rack 2', site=sites[1]),
         )
-        Rack.objects.bulk_create(racks)
 
-        image_attachments = (
-            ImageAttachment(
-                content_type=site_ct,
-                object_id=sites[0].pk,
-                name='Image Attachment 1',
-                image='http://example.com/image1.png',
-                image_height=100,
-                image_width=100
-            ),
-            ImageAttachment(
-                content_type=site_ct,
-                object_id=sites[1].pk,
-                name='Image Attachment 2',
-                image='http://example.com/image2.png',
-                image_height=100,
-                image_width=100
-            ),
-            ImageAttachment(
-                content_type=rack_ct,
-                object_id=racks[0].pk,
-                name='Image Attachment 3',
-                image='http://example.com/image3.png',
-                image_height=100,
-                image_width=100
-            ),
-            ImageAttachment(
-                content_type=rack_ct,
-                object_id=racks[1].pk,
-                name='Image Attachment 4',
-                image='http://example.com/image4.png',
-                image_height=100,
-                image_width=100
-            )
+        ImageAttachment.objects.create(
+            content_type=site_ct,
+            object_id=sites[0].pk,
+            name='Image Attachment 1',
+            image='http://example.com/image1.png',
+            image_height=100,
+            image_width=100
+        ),
+        ImageAttachment.objects.create(
+            content_type=site_ct,
+            object_id=sites[1].pk,
+            name='Image Attachment 2',
+            image='http://example.com/image2.png',
+            image_height=100,
+            image_width=100
+        ),
+        ImageAttachment.objects.create(
+            content_type=rack_ct,
+            object_id=racks[0].pk,
+            name='Image Attachment 3',
+            image='http://example.com/image3.png',
+            image_height=100,
+            image_width=100
+        ),
+        ImageAttachment.objects.create(
+            content_type=rack_ct,
+            object_id=racks[1].pk,
+            name='Image Attachment 4',
+            image='http://example.com/image4.png',
+            image_height=100,
+            image_width=100
         )
-        ImageAttachment.objects.bulk_create(image_attachments)
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -134,64 +126,53 @@ class ConfigContextTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region(name='Test Region 1', slug='test-region-1'),
-            Region(name='Test Region 2', slug='test-region-2'),
-            Region(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name='Test Region 1', slug='test-region-1'),
+            Region.objects.create(name='Test Region 2', slug='test-region-2'),
+            Region.objects.create(name='Test Region 3', slug='test-region-3'),
         )
-        # Can't use bulk_create for models with MPTT fields
-        for r in regions:
-            r.save()
 
         sites = (
-            Site(name='Test Site 1', slug='test-site-1'),
-            Site(name='Test Site 2', slug='test-site-2'),
-            Site(name='Test Site 3', slug='test-site-3'),
+            Site.objects.create(name='Test Site 1', slug='test-site-1'),
+            Site.objects.create(name='Test Site 2', slug='test-site-2'),
+            Site.objects.create(name='Test Site 3', slug='test-site-3'),
         )
-        Site.objects.bulk_create(sites)
 
         device_roles = (
-            DeviceRole(name='Device Role 1', slug='device-role-1'),
-            DeviceRole(name='Device Role 2', slug='device-role-2'),
-            DeviceRole(name='Device Role 3', slug='device-role-3'),
+            DeviceRole.objects.create(name='Device Role 1', slug='device-role-1'),
+            DeviceRole.objects.create(name='Device Role 2', slug='device-role-2'),
+            DeviceRole.objects.create(name='Device Role 3', slug='device-role-3'),
         )
-        DeviceRole.objects.bulk_create(device_roles)
 
         platforms = (
-            Platform(name='Platform 1', slug='platform-1'),
-            Platform(name='Platform 2', slug='platform-2'),
-            Platform(name='Platform 3', slug='platform-3'),
+            Platform.objects.create(name='Platform 1', slug='platform-1'),
+            Platform.objects.create(name='Platform 2', slug='platform-2'),
+            Platform.objects.create(name='Platform 3', slug='platform-3'),
         )
-        Platform.objects.bulk_create(platforms)
 
         cluster_groups = (
-            ClusterGroup(name='Cluster Group 1', slug='cluster-group-1'),
-            ClusterGroup(name='Cluster Group 2', slug='cluster-group-2'),
-            ClusterGroup(name='Cluster Group 3', slug='cluster-group-3'),
+            ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1'),
+            ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2'),
+            ClusterGroup.objects.create(name='Cluster Group 3', slug='cluster-group-3'),
         )
-        ClusterGroup.objects.bulk_create(cluster_groups)
 
         cluster_type = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
         clusters = (
-            Cluster(name='Cluster 1', type=cluster_type),
-            Cluster(name='Cluster 2', type=cluster_type),
-            Cluster(name='Cluster 3', type=cluster_type),
+            Cluster.objects.create(name='Cluster 1', type=cluster_type),
+            Cluster.objects.create(name='Cluster 2', type=cluster_type),
+            Cluster.objects.create(name='Cluster 3', type=cluster_type),
         )
-        Cluster.objects.bulk_create(clusters)
 
         tenant_groups = (
-            TenantGroup(name='Tenant Group 1', slug='tenant-group-1'),
-            TenantGroup(name='Tenant Group 2', slug='tenant-group-2'),
-            TenantGroup(name='Tenant Group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name='Tenant Group 1', slug='tenant-group-1'),
+            TenantGroup.objects.create(name='Tenant Group 2', slug='tenant-group-2'),
+            TenantGroup.objects.create(name='Tenant Group 3', slug='tenant-group-3'),
         )
-        for tenantgroup in tenant_groups:
-            tenantgroup.save()
 
         tenants = (
-            Tenant(name='Tenant 1', slug='tenant-1'),
-            Tenant(name='Tenant 2', slug='tenant-2'),
-            Tenant(name='Tenant 3', slug='tenant-3'),
+            Tenant.objects.create(name='Tenant 1', slug='tenant-1'),
+            Tenant.objects.create(name='Tenant 2', slug='tenant-2'),
+            Tenant.objects.create(name='Tenant 3', slug='tenant-3'),
         )
-        Tenant.objects.bulk_create(tenants)
 
         for i in range(0, 3):
             is_active = bool(i % 2)
@@ -285,12 +266,9 @@ class TagTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        tags = (
-            Tag(name='Tag 1', slug='tag-1', color='ff0000'),
-            Tag(name='Tag 2', slug='tag-2', color='00ff00'),
-            Tag(name='Tag 3', slug='tag-3', color='0000ff'),
-        )
-        Tag.objects.bulk_create(tags)
+        Tag.objects.create(name='Tag 1', slug='tag-1', color='ff0000')
+        Tag.objects.create(name='Tag 2', slug='tag-2', color='00ff00')
+        Tag.objects.create(name='Tag 3', slug='tag-3', color='0000ff')
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
@@ -316,72 +294,68 @@ class ObjectChangeTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         users = (
-            User(username='user1'),
-            User(username='user2'),
-            User(username='user3'),
+            User.objects.create(username='user1'),
+            User.objects.create(username='user2'),
+            User.objects.create(username='user3'),
         )
-        User.objects.bulk_create(users)
 
         site = Site.objects.create(name='Test Site 1', slug='test-site-1')
         ipaddress = IPAddress.objects.create(address='192.0.2.1/24')
 
-        object_changes = (
-            ObjectChange(
-                user=users[0],
-                user_name=users[0].username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_CREATE,
-                changed_object=site,
-                object_repr=str(site),
-                object_data={'name': site.name, 'slug': site.slug}
-            ),
-            ObjectChange(
-                user=users[0],
-                user_name=users[0].username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_UPDATE,
-                changed_object=site,
-                object_repr=str(site),
-                object_data={'name': site.name, 'slug': site.slug}
-            ),
-            ObjectChange(
-                user=users[1],
-                user_name=users[1].username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_DELETE,
-                changed_object=site,
-                object_repr=str(site),
-                object_data={'name': site.name, 'slug': site.slug}
-            ),
-            ObjectChange(
-                user=users[1],
-                user_name=users[1].username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_CREATE,
-                changed_object=ipaddress,
-                object_repr=str(ipaddress),
-                object_data={'address': ipaddress.address, 'status': ipaddress.status}
-            ),
-            ObjectChange(
-                user=users[2],
-                user_name=users[2].username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_UPDATE,
-                changed_object=ipaddress,
-                object_repr=str(ipaddress),
-                object_data={'address': ipaddress.address, 'status': ipaddress.status}
-            ),
-            ObjectChange(
-                user=users[2],
-                user_name=users[2].username,
-                request_id=uuid.uuid4(),
-                action=ObjectChangeActionChoices.ACTION_DELETE,
-                changed_object=ipaddress,
-                object_repr=str(ipaddress),
-                object_data={'address': ipaddress.address, 'status': ipaddress.status}
-            ),
+        ObjectChange.objects.create(
+            user=users[0],
+            user_name=users[0].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            changed_object=site,
+            object_repr=str(site),
+            object_data={'name': site.name, 'slug': site.slug}
         )
-        ObjectChange.objects.bulk_create(object_changes)
+        ObjectChange.objects.create(
+            user=users[0],
+            user_name=users[0].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            changed_object=site,
+            object_repr=str(site),
+            object_data={'name': site.name, 'slug': site.slug}
+        )
+        ObjectChange.objects.create(
+            user=users[1],
+            user_name=users[1].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object=site,
+            object_repr=str(site),
+            object_data={'name': site.name, 'slug': site.slug}
+        )
+        ObjectChange.objects.create(
+            user=users[1],
+            user_name=users[1].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            changed_object=ipaddress,
+            object_repr=str(ipaddress),
+            object_data={'address': ipaddress.address, 'status': ipaddress.status}
+        )
+        ObjectChange.objects.create(
+            user=users[2],
+            user_name=users[2].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            changed_object=ipaddress,
+            object_repr=str(ipaddress),
+            object_data={'address': ipaddress.address, 'status': ipaddress.status}
+        )
+        ObjectChange.objects.create(
+            user=users[2],
+            user_name=users[2].username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object=ipaddress,
+            object_repr=str(ipaddress),
+            object_data={'address': ipaddress.address, 'status': ipaddress.status}
+        )
 
     def test_id(self):
         params = {'id': self.queryset.values_list('pk', flat=True)[:3]}
@@ -414,8 +388,7 @@ class CustomLinkTestCase(TestCase):
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Site)
 
-        customlinks = (
-            CustomLink(
+            CustomLink.objects.create(
                 content_type=obj_type,
                 name="customlink-1",
                 text="customlink text 1",
@@ -423,8 +396,8 @@ class CustomLinkTestCase(TestCase):
                 weight=100,
                 button_class="default",
                 new_window=False,
-            ),
-            CustomLink(
+            )
+            CustomLink.objects.create(
                 content_type=obj_type,
                 name="customlink-2",
                 text="customlink text 2",
@@ -432,8 +405,8 @@ class CustomLinkTestCase(TestCase):
                 weight=100,
                 button_class="default",
                 new_window=False,
-            ),
-            CustomLink(
+            )
+            CustomLink.objects.create(
                 content_type=obj_type,
                 name="customlink-3",
                 text="customlink text 3",
@@ -441,11 +414,7 @@ class CustomLinkTestCase(TestCase):
                 weight=100,
                 button_class="default",
                 new_window=False,
-            ),
-        )
-
-        for link in customlinks:
-            link.save()
+            )
 
     def test_name(self):
         params = {'name': ['customlink-1']}

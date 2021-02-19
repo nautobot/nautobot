@@ -16,11 +16,9 @@ class CustomFieldTest(TestCase):
 
     def setUp(self):
 
-        Site.objects.bulk_create([
-            Site(name='Site A', slug='site-a'),
-            Site(name='Site B', slug='site-b'),
-            Site(name='Site C', slug='site-c'),
-        ])
+        Site.objects.create(name='Site A', slug='site-a')
+        Site.objects.create(name='Site B', slug='site-b')
+        Site.objects.create(name='Site C', slug='site-c')
 
     def test_simple_fields(self):
         DATA = (
@@ -146,10 +144,9 @@ class CustomFieldAPITest(APITestCase):
 
         # Create some sites
         cls.sites = (
-            Site(name='Site 1', slug='site-1', status=statuses.get(slug='active')),
-            Site(name='Site 2', slug='site-2', status=statuses.get(slug='active')),
+            Site.objects.create(name='Site 1', slug='site-1', status=statuses.get(slug='active')),
+            Site.objects.create(name='Site 2', slug='site-2', status=statuses.get(slug='active')),
         )
-        Site.objects.bulk_create(cls.sites)
 
         # Assign custom field values for site 2
         cls.sites[1].custom_field_data = {
@@ -663,30 +660,28 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        Site.objects.bulk_create([
-            Site(name='Site 1', slug='site-1', custom_field_data={
-                'cf1': 100,
-                'cf2': True,
-                'cf3': 'foo',
-                'cf4': 'foo',
-                'cf5': '2016-06-26',
-                'cf6': 'http://foo.example.com/',
-                'cf7': 'http://foo.example.com/',
-                'cf8': 'Foo',
-            }),
-            Site(name='Site 2', slug='site-2', custom_field_data={
-                'cf1': 200,
-                'cf2': False,
-                'cf3': 'foobar',
-                'cf4': 'foobar',
-                'cf5': '2016-06-27',
-                'cf6': 'http://bar.example.com/',
-                'cf7': 'http://bar.example.com/',
-                'cf8': 'Bar',
-            }),
-            Site(name='Site 3', slug='site-3', custom_field_data={
-            }),
-        ])
+        Site.objects.create(name='Site 1', slug='site-1', custom_field_data={
+            'cf1': 100,
+            'cf2': True,
+            'cf3': 'foo',
+            'cf4': 'foo',
+            'cf5': '2016-06-26',
+            'cf6': 'http://foo.example.com/',
+            'cf7': 'http://foo.example.com/',
+            'cf8': 'Foo',
+        })
+        Site.objects.create(name='Site 2', slug='site-2', custom_field_data={
+            'cf1': 200,
+            'cf2': False,
+            'cf3': 'foobar',
+            'cf4': 'foobar',
+            'cf5': '2016-06-27',
+            'cf6': 'http://bar.example.com/',
+            'cf7': 'http://bar.example.com/',
+            'cf8': 'Bar',
+        })
+        Site.objects.create(name='Site 3', slug='site-3', custom_field_data={
+        })
 
     def test_filter_integer(self):
         self.assertEqual(self.filterset({'cf_cf1': 100}, self.queryset).qs.count(), 1)

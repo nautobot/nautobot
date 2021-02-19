@@ -59,25 +59,22 @@ class RelationshipBaseTest(TestCase):
         self.o2o_1.save()
 
         self.sites = [
-            Site(name='Site A', slug='site-a'),
-            Site(name='Site B', slug='site-b'),
-            Site(name='Site C', slug='site-c'),
+            Site.objects.create(name='Site A', slug='site-a'),
+            Site.objects.create(name='Site B', slug='site-b'),
+            Site.objects.create(name='Site C', slug='site-c'),
         ]
-        Site.objects.bulk_create(self.sites)
 
         self.racks = [
-            Rack(name='Rack A', site=self.sites[0]),
-            Rack(name='Rack B', site=self.sites[1]),
-            Rack(name='Rack C', site=self.sites[2]),
+            Rack.objects.create(name='Rack A', site=self.sites[0]),
+            Rack.objects.create(name='Rack B', site=self.sites[1]),
+            Rack.objects.create(name='Rack C', site=self.sites[2]),
         ]
-        Rack.objects.bulk_create(self.racks)
 
         self.vlans = [
-            VLAN(name='VLAN A', vid=100, site=self.sites[0]),
-            VLAN(name='VLAN B', vid=100, site=self.sites[1]),
-            VLAN(name='VLAN C', vid=100, site=self.sites[2]),
+            VLAN.objects.create(name='VLAN A', vid=100, site=self.sites[0]),
+            VLAN.objects.create(name='VLAN B', vid=100, site=self.sites[1]),
+            VLAN.objects.create(name='VLAN C', vid=100, site=self.sites[2]),
         ]
-        VLAN.objects.bulk_create(self.vlans)
 
 
 class RelationshipTest(RelationshipBaseTest):

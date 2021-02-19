@@ -77,20 +77,19 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         site_ct = ContentType.objects.get_for_model(Site)
 
         custom_fields = (
-            CustomField(
+            CustomField.objects.create(
                 name='cf1',
                 type='text'
             ),
-            CustomField(
+            CustomField.objects.create(
                 name='cf2',
                 type='integer'
             ),
-            CustomField(
+            CustomField.objects.create(
                 name='cf3',
                 type='boolean'
             ),
         )
-        CustomField.objects.bulk_create(custom_fields)
         for cf in custom_fields:
             cf.content_types.add(site_ct)
 
@@ -123,24 +122,21 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         ct = ContentType.objects.get_for_model(Device)
 
-        export_templates = (
-            ExportTemplate(
-                content_type=ct,
-                name='Export Template 1',
-                template_code='{% for obj in queryset %}{{ obj.name }}\n{% endfor %}'
-            ),
-            ExportTemplate(
-                content_type=ct,
-                name='Export Template 2',
-                template_code='{% for obj in queryset %}{{ obj.name }}\n{% endfor %}'
-            ),
-            ExportTemplate(
-                content_type=ct,
-                name='Export Template 3',
-                template_code='{% for obj in queryset %}{{ obj.name }}\n{% endfor %}'
-            ),
+        ExportTemplate.objects.create(
+            content_type=ct,
+            name='Export Template 1',
+            template_code='{% for obj in queryset %}{{ obj.name }}\n{% endfor %}'
         )
-        ExportTemplate.objects.bulk_create(export_templates)
+        ExportTemplate.objects.create(
+            content_type=ct,
+            name='Export Template 2',
+            template_code='{% for obj in queryset %}{{ obj.name }}\n{% endfor %}'
+        )
+        ExportTemplate.objects.create(
+            content_type=ct,
+            name='Export Template 3',
+            template_code='{% for obj in queryset %}{{ obj.name }}\n{% endfor %}'
+        )
 
 
 class TagTest(APIViewTestCases.APIViewTestCase):
@@ -167,12 +163,9 @@ class TagTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        tags = (
-            Tag(name='Tag 1', slug='tag-1'),
-            Tag(name='Tag 2', slug='tag-2'),
-            Tag(name='Tag 3', slug='tag-3'),
-        )
-        Tag.objects.bulk_create(tags)
+        Tag.objects.create(name='Tag 1', slug='tag-1')
+        Tag.objects.create(name='Tag 2', slug='tag-2')
+        Tag.objects.create(name='Tag 3', slug='tag-3')
 
 
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
@@ -225,33 +218,30 @@ class ImageAttachmentTest(
 
         site = Site.objects.create(name='Site 1', slug='site-1')
 
-        image_attachments = (
-            ImageAttachment(
-                content_type=ct,
-                object_id=site.pk,
-                name='Image Attachment 1',
-                image='http://example.com/image1.png',
-                image_height=100,
-                image_width=100
-            ),
-            ImageAttachment(
-                content_type=ct,
-                object_id=site.pk,
-                name='Image Attachment 2',
-                image='http://example.com/image2.png',
-                image_height=100,
-                image_width=100
-            ),
-            ImageAttachment(
-                content_type=ct,
-                object_id=site.pk,
-                name='Image Attachment 3',
-                image='http://example.com/image3.png',
-                image_height=100,
-                image_width=100
-            )
+        ImageAttachment.objects.create(
+            content_type=ct,
+            object_id=site.pk,
+            name='Image Attachment 1',
+            image='http://example.com/image1.png',
+            image_height=100,
+            image_width=100
         )
-        ImageAttachment.objects.bulk_create(image_attachments)
+        ImageAttachment.objects.create(
+            content_type=ct,
+            object_id=site.pk,
+            name='Image Attachment 2',
+            image='http://example.com/image2.png',
+            image_height=100,
+            image_width=100
+        )
+        ImageAttachment.objects.create(
+            content_type=ct,
+            object_id=site.pk,
+            name='Image Attachment 3',
+            image='http://example.com/image3.png',
+            image_height=100,
+            image_width=100
+        )
 
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
@@ -278,12 +268,9 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        config_contexts = (
-            ConfigContext(name='Config Context 1', weight=100, data={'foo': 123}),
-            ConfigContext(name='Config Context 2', weight=200, data={'bar': 456}),
-            ConfigContext(name='Config Context 3', weight=300, data={'baz': 789}),
-        )
-        ConfigContext.objects.bulk_create(config_contexts)
+        ConfigContext.objects.create(name='Config Context 1', weight=100, data={'foo': 123})
+        ConfigContext.objects.create(name='Config Context 2', weight=200, data={'bar': 456})
+        ConfigContext.objects.create(name='Config Context 3', weight=300, data={'baz': 789})
 
     def test_render_configcontext_for_object(self):
         """
@@ -599,35 +586,30 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Site)
 
-        customlinks = (
-            CustomLink(
+            CustomLink.objects.create(
                 content_type=obj_type,
                 name="api-test-1",
                 text="API customlink text 1",
                 target_url="http://api-test-1.com/test1",
                 weight=100,
                 new_window=False,
-            ),
-            CustomLink(
+            )
+            CustomLink.objects.create(
                 content_type=obj_type,
                 name="api-test-2",
                 text="API customlink text 2",
                 target_url="http://api-test-2.com/test2",
                 weight=100,
                 new_window=False,
-            ),
-            CustomLink(
+            )
+            CustomLink.objects.create(
                 content_type=obj_type,
                 name="api-test-3",
                 text="API customlink text 3",
                 target_url="http://api-test-3.com/test3",
                 weight=100,
                 new_window=False,
-            ),
-        )
-
-        for link in customlinks:
-            link.save()
+            )
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

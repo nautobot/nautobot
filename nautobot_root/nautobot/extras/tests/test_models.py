@@ -53,7 +53,7 @@ class ConfigContextTest(TestCase):
 
     def test_higher_weight_wins(self):
 
-        context1 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 1",
             weight=101,
             data={
@@ -62,7 +62,7 @@ class ConfigContextTest(TestCase):
                 "c": 777
             }
         )
-        context2 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 2",
             weight=100,
             data={
@@ -71,7 +71,6 @@ class ConfigContextTest(TestCase):
                 "c": 789
             }
         )
-        ConfigContext.objects.bulk_create([context1, context2])
 
         expected_data = {
             "a": 123,
@@ -82,7 +81,7 @@ class ConfigContextTest(TestCase):
 
     def test_name_ordering_after_weight(self):
 
-        context1 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 1",
             weight=100,
             data={
@@ -91,7 +90,7 @@ class ConfigContextTest(TestCase):
                 "c": 777
             }
         )
-        context2 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 2",
             weight=100,
             data={
@@ -100,7 +99,6 @@ class ConfigContextTest(TestCase):
                 "c": 789
             }
         )
-        ConfigContext.objects.bulk_create([context1, context2])
 
         expected_data = {
             "a": 123,
@@ -114,7 +112,7 @@ class ConfigContextTest(TestCase):
         This test incorperates features from all of the above tests cases to ensure
         the annotate_config_context_data() and get_for_object() queryset methods are the same.
         """
-        context1 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 1",
             weight=101,
             data={
@@ -123,7 +121,7 @@ class ConfigContextTest(TestCase):
                 "c": 777
             }
         )
-        context2 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 2",
             weight=100,
             data={
@@ -132,21 +130,20 @@ class ConfigContextTest(TestCase):
                 "c": 789
             }
         )
-        context3 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 3",
             weight=99,
             data={
                 "d": 1
             }
         )
-        context4 = ConfigContext(
+        ConfigContext.objects.create(
             name="context 4",
             weight=99,
             data={
                 "d": 2
             }
         )
-        ConfigContext.objects.bulk_create([context1, context2, context3, context4])
 
         annotated_queryset = Device.objects.filter(name=self.device.name).annotate_config_context_data()
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())

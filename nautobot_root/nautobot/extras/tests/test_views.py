@@ -19,11 +19,9 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Tag.objects.bulk_create((
-            Tag(name='Tag 1', slug='tag-1'),
-            Tag(name='Tag 2', slug='tag-2'),
-            Tag(name='Tag 3', slug='tag-3'),
-        ))
+        Tag.objects.create(name='Tag 1', slug='tag-1')
+        Tag.objects.create(name='Tag 2', slug='tag-2')
+        Tag.objects.create(name='Tag 3', slug='tag-3')
 
         cls.form_data = {
             'name': 'Tag X',
