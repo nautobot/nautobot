@@ -586,30 +586,30 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Site)
 
-            CustomLink.objects.create(
-                content_type=obj_type,
-                name="api-test-1",
-                text="API customlink text 1",
-                target_url="http://api-test-1.com/test1",
-                weight=100,
-                new_window=False,
-            )
-            CustomLink.objects.create(
-                content_type=obj_type,
-                name="api-test-2",
-                text="API customlink text 2",
-                target_url="http://api-test-2.com/test2",
-                weight=100,
-                new_window=False,
-            )
-            CustomLink.objects.create(
-                content_type=obj_type,
-                name="api-test-3",
-                text="API customlink text 3",
-                target_url="http://api-test-3.com/test3",
-                weight=100,
-                new_window=False,
-            )
+        CustomLink.objects.create(
+            content_type=obj_type,
+            name="api-test-1",
+            text="API customlink text 1",
+            target_url="http://api-test-1.com/test1",
+            weight=100,
+            new_window=False,
+        )
+        CustomLink.objects.create(
+            content_type=obj_type,
+            name="api-test-2",
+            text="API customlink text 2",
+            target_url="http://api-test-2.com/test2",
+            weight=100,
+            new_window=False,
+        )
+        CustomLink.objects.create(
+            content_type=obj_type,
+            name="api-test-3",
+            text="API customlink text 3",
+            target_url="http://api-test-3.com/test3",
+            weight=100,
+            new_window=False,
+        )
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
