@@ -182,7 +182,7 @@ feel free to add a comment with any additional justification for the feature.
 (However, note that comments with no substance other than a "+1" will be deleted. Please use GitHub's reactions feature to indicate your support.)
 
 * Before filing a new feature request, consider starting with a GitHub
-Discussion. Feedback you receive there will help validate and shape the proposed feature before filing a formal issue. If the feature request does get accepted into the _current_ or _near term_ backlog, it will get converted to a Discussion anyway.
+Discussion. Feedback you receive there will help validate and shape the proposed feature before filing a formal issue. If the feature request does not get accepted into the _current_ or _near term_ backlog, it will get converted to a Discussion anyway.
 
 * Good feature requests are very narrowly defined. Be sure to thoroughly
 describe the functionality and data model(s) being proposed. The more effort you put into writing a feature request, the better its chance is of being
