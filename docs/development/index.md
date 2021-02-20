@@ -231,7 +231,7 @@ these checks):
 
 ## Project Structure
 
-All development of the current Nautobot release occurs in the `develop` branch; releases are packaged from the `master` branch. The `master` branch should _always_ represent the current stable release in its entirety, such that installing Nautobot by either downloading a packaged release or cloning the `master` branch provides the same code base.
+All development of the current Nautobot release occurs in the `develop` branch; releases are packaged from the `main` branch. The `main` branch should _always_ represent the current stable release in its entirety, such that installing Nautobot by either downloading a packaged release or cloning the `main` branch provides the same code base.
 
 Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
 
