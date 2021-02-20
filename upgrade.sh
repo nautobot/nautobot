@@ -66,7 +66,7 @@ echo "Collecting static files ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Delete any stale content types
-COMMAND="python3utobot_root/manage.py remove_stale_contenttypes --no-input"
+COMMAND="python3 nautobot_root/manage.py remove_stale_contenttypes --no-input"
 echo "Removing stale content types ($COMMAND)..."
 eval $COMMAND || exit 1
 
