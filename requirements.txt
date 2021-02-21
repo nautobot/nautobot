@@ -16,6 +16,7 @@ drf-yasg[validation]==1.20.0
 gitpython==3.1.11
 graphene-django==2.15.0
 gunicorn==20.0.4
+importlib-metadata~=3.4.0; python_version < '3.8'
 Jinja2==2.11.2
 Markdown==3.3.3
 netaddr==0.8.0

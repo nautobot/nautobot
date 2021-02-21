@@ -8,7 +8,7 @@ User authentication will still fall back to built-in Django users in the event o
 
 ## Installation
 
-Enable the remote user authentication backend by adding the following to your `configuration.py`:
+Enable the remote user authentication backend by adding the following to your `nautobot_config.py`:
 
 !!! note
     It is critical that you include the `ObjectPermissionsBackend` provided by
@@ -25,7 +25,7 @@ AUTHENTICATION_BACKENDS = [
 
 The following configuration variables describe the default values and as long as `RemoteUserBackend` has been installed as described above, no changes are required.
 
-If you do require customizing any of these settings, they must be set in your `configuration.py`.
+If you do require customizing any of these settings, they must be set in your `nautobot_config.py`.
 
 ### REMOTE_AUTH_AUTO_CREATE_USER
 
@@ -57,8 +57,10 @@ A mapping of permissions to assign a new user account when created using SSO aut
 | `{'dcim.add_device': {}}` | Users can add devices, see note below |
 | `{'dcim.view_device': {"site__name__in":  ["HQ"]}}` | Users can view all devices in the HQ site |
 
-!!! note
-    Permissions can be complicated, be careful when restricting permissions to also add any required prerequisite permissions.  For example, when adding devices the device role, device type, site, and status fields are all required fields in order for the UI to function properly the user will also need view permissions for those fields as well or the corresponding field selections in the UI will be unavailable.
+!!! warning
+    Permissions can be complicated! Be careful when restricting permissions to also add any required prerequisite permissions.
+
+    For example, when adding Devices the Device Role, Device Type, Site, and Status fields are all required fields in order for the UI to function properly. Users will also need view permissions for those fields or the corresponding field selections in the UI will be unavailable and potentially prevent objects from being able to be created or edited.
 
 The following example gives a user a reasonable amount of access to add devices to a single site (HQ in this case):
 

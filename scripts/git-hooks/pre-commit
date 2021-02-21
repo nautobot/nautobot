@@ -31,7 +31,8 @@ if [ $? != 0 ]; then
 fi
 
 echo "Checking for missing migrations..."
-python nautobot_root/manage.py makemigrations --dry-run --check
+TEST_CONFIG=nautobot_root/nautobot/core/tests/nautobot_config.py
+scripts/test_runner.py --config=$TEST_CONFIG makemigrations --dry-run --check
 if [ $? != 0 ]; then
 	EXIT=1
 fi

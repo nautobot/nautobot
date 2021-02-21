@@ -11,10 +11,6 @@ The following sections detail how to set up a new instance of Nautobot:
 5. [HTTP server](5-http-server.md)
 6. [External authentication](6-external-authentication.md) (optional)
 
-The video below demonstrates the installation of NetBox v2.10.3 on Ubuntu 20.04 for your reference. Installation of Nautobot follows the same broad steps.
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/dFANGlxXEng" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
 ## Requirements
 
 | Dependency | Minimum Version |

@@ -3,17 +3,22 @@
 #  only. It is not intended for production use.                   #
 ###################################################################
 
+from nautobot.core.settings import *
+
 import os
 
 ALLOWED_HOSTS = ['*']
 
-DATABASE = {
-    'NAME': os.getenv('NAUTOBOT_DATABASE', 'nautobot'),
-    'USER': os.getenv('NAUTOBOT_USER', ''),
-    'PASSWORD': os.getenv('NAUTOBOT_PASSWORD', ''),
-    'HOST': 'localhost',
-    'PORT': '',
-    'CONN_MAX_AGE': 300,
+DATABASES = {
+    'default': {
+        'NAME': os.getenv('NAUTOBOT_DATABASE', 'nautobot'),
+        'USER': os.getenv('NAUTOBOT_USER', ''),
+        'PASSWORD': os.getenv('NAUTOBOT_PASSWORD', ''),
+        'HOST': 'localhost',
+        'PORT': '',
+        'CONN_MAX_AGE': 300,
+        'ENGINE': 'django.db.backends.postgresql',
+    }
 }
 
 PLUGINS = [

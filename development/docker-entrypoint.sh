@@ -42,7 +42,7 @@ if [ "$CREATE_SUPERUSER" == "true" ]; then
     exit 1
   fi
 
-  nautobot_root/manage.py shell --interface python << END
+  nautobot-server shell --interface python << END
 from django.contrib.auth.models import User
 from nautobot.users.models import Token
 u = User.objects.filter(username='${SUPERUSER_NAME}')

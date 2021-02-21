@@ -145,7 +145,7 @@ class PluginConfig(AppConfig):
             if setting not in user_config:
                 raise PluginImproperlyConfigured(
                     f"Plugin {plugin_name} requires '{setting}' to be present in "
-                    f"the PLUGINS_CONFIG['{plugin_name}'] section of configuration.py."
+                    f"the PLUGINS_CONFIG['{plugin_name}'] section of your settings."
                 )
 
         # Apply default configuration values

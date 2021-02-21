@@ -1,13 +1,15 @@
 # Single Sign On
 
 Nautobot supports several different authentication mechanisms including OAuth (1 and 2), OpenID, SAML, and others.
-To accomplish this the [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/) python module is used.
-This module supports several authentication [backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html)
+To accomplish this the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) python module is used.
+
+This module supports several [authentication backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html)
 by default including:
 
 * Google
 * Microsoft Azure Active Directory
 * Okta
+* [And many more...](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends)
 
 ## Installation
 
@@ -37,9 +39,9 @@ pip install "social-auth-core[saml]"
     You should only enable one social auth authentication backend.  Please see the
     [full documentation on supported backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends).
 
-## Update `configuration.py`
+## Configuration
 
-The following configuration changes are required and can be made with some simple additions to `configuration.py`.
+The following settings are required and can be made with some simple additions to your `nautobot_config.py`.
 
 ---
 
@@ -74,14 +76,13 @@ The Social Auth module name, see [the official backend documentation]((https://p
 
 Default: `sso`
 
-The [Django URL](https://docs.djangoproject.com/en/3.1/topics/http/urls/#url-namespaces) namespace to use for the social auth module.  The default is typically fine and should only be changed if absolutely necessary.
+The [Django URL](https://docs.djangoproject.com/en/3.1/topics/http/urls/#url-namespaces) namespace to use for the social auth module. The default is typically fine and should only be changed if absolutely necessary.
 
 ## User Permissions
 
-By default, once authenticated with the python social auth module, if the user has never logged in, the module
-will create a new user account in Nautobot for the user.  This user will not be a member of any group or
-have any permissions assigned.  If you would like to create users with a default set of permissions there are some
-additional variables to configure the permissions:
+By default, once authenticated, if the user has never logged in before a new user account will be created for the user.
+This new user will not be a member of any group or have any permissions assigned. If you would like to create users with
+a default set of permissions there are some additional variables to configure the permissions:
 
 ---
 
@@ -107,8 +108,10 @@ A mapping of permissions to assign a new user account when created using SSO aut
 | `{'dcim.add_device': {}}` | Users can add devices, see note below |
 | `{'dcim.view_device': {"site__name__in":  ["HQ"]}}` | Users can view all devices in the HQ site |
 
-!!! note
-    Permissions can be complicated, be careful when restricting permissions to also add any required prerequisite permissions.  For example, when adding devices the device role, device type, site, and status fields are all required fields in order for the UI to function properly the user will also need view permissions for those fields as well or the corresponding field selections in the UI will be unavailable.
+!!! warning
+    Permissions can be complicated! Be careful when restricting permissions to also add any required prerequisite permissions.
+
+    For example, when adding Devices the Device Role, Device Type, Site, and Status fields are all required fields in order for the UI to function properly. Users will also need view permissions for those fields or the corresponding field selections in the UI will be unavailable and potentially prevent objects from being able to be created or edited.
 
 The following example gives a user a reasonable amount of access to add devices to a single site (HQ in this case):
 
@@ -166,7 +169,7 @@ other backends please see the [full documentation on supported backends](https:/
     * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
     * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
 
-3. Once the application is configured in Okta, edit `configuration.py` as follows:
+3. Once the application is configured in Okta, edit your `nautobot_config.py` as follows:
 
 ```python
 SOCIAL_AUTH_ENABLED = True
@@ -207,7 +210,7 @@ information please utilize these additional resources.
     * *Authorized redirect URIs*: should be the Nautobot URL plus `/complete/google-oauth2/` for example `https://nautobot.example.com/complete/google-oauth2/`
 
 10. Click Create
-11. Edit configuration.py as follows:
+11. Edit your `nautobot_config.py` as follows:
 
 ```python
 SOCIAL_AUTH_ENABLED = True

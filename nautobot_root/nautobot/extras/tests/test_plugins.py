@@ -161,7 +161,7 @@ class PluginTest(TestCase):
         Check enforcement of minimum Nautobot version.
         """
         with self.assertRaises(PluginImproperlyConfigured):
-            dummy_config.validate({}, '0.9')
+            dummy_config.validate({}, '0.8')
 
     def test_max_version(self):
         """

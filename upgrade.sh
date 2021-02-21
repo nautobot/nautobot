@@ -51,32 +51,32 @@ else
 fi
 
 # Apply any database migrations
-COMMAND="python3 nautobot_root/manage.py migrate"
+COMMAND="nautobot-server migrate"
 echo "Applying database migrations ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Trace any missing cable paths (not typically needed)
-COMMAND="python3 nautobot_root/manage.py trace_paths --no-input"
+COMMAND="nautobot-server trace_paths --no-input"
 echo "Checking for missing cable paths ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Collect static files
-COMMAND="python3 nautobot_root/manage.py collectstatic --no-input"
+COMMAND="nautobot-server collectstatic --no-input"
 echo "Collecting static files ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Delete any stale content types
-COMMAND="python3 nautobot_root/manage.py remove_stale_contenttypes --no-input"
+COMMAND="nautobot-server remove_stale_contenttypes --no-input"
 echo "Removing stale content types ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Delete any expired user sessions
-COMMAND="python3 nautobot_root/manage.py clearsessions"
+COMMAND="nautobot-server clearsessions"
 echo "Removing expired user sessions ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Clear all cached data
-COMMAND="python3 nautobot_root/manage.py invalidate all"
+COMMAND="nautobot-server invalidate all"
 echo "Clearing cache data ($COMMAND)..."
 eval $COMMAND || exit 1
 

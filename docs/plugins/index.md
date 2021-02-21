@@ -14,7 +14,7 @@ The Nautobot plugin architecture allows for the following:
 * **Add navigation menu items.** Each plugin can register new links in the navigation menu. Each link may have a set of buttons for specific actions, similar to the built-in navigation items.
 * **Add new REST API endpoints.** Plugins can register URLs under the `/api/plugins/` root path to provide new REST API views.
 * **Add custom middleware.** Custom Django middleware can be registered by each plugin.
-* **Declare configuration parameters.** Each plugin can define required, optional, and default configuration parameters within its unique namespace. Plug configuration parameter are defined by the user under `PLUGINS_CONFIG` in `configuration.py`.
+* **Declare configuration parameters.** Each plugin can define required, optional, and default configuration parameters within its unique namespace. Plug configuration parameter are defined by the user under `PLUGINS_CONFIG` in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** A plugin can specify a minimum and/or maximum Nautobot version with which it is compatible.
 
 ## Limitations
@@ -44,7 +44,7 @@ Alternatively, you may wish to install the plugin manually by running `python se
 
 ### Enable the Plugin
 
-In `configuration.py`, add the plugin's name to the `PLUGINS` list:
+In your `nautobot_config.py`, add the plugin's name to the `PLUGINS` list:
 
 ```python
 PLUGINS = [
@@ -54,7 +54,7 @@ PLUGINS = [
 
 ### Configure Plugin
 
-If the plugin requires any configuration, define it in `configuration.py` under the `PLUGINS_CONFIG` parameter. The available configuration parameters should be detailed in the plugin's README file.
+If the plugin requires any configuration, define it in `nautobot_config.py` under the `PLUGINS_CONFIG` parameter. The available configuration parameters should be detailed in the plugin's README file.
 
 ```no-highlight
 PLUGINS_CONFIG = {

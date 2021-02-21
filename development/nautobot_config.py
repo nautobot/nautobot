@@ -4,17 +4,19 @@ import sys
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(" ")
 
-DATABASE = {
-    "NAME": os.environ.get("DB_NAME", "nautobot"),
-    "USER": os.environ.get("DB_USER", ""),
-    "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-    "HOST": os.environ.get("DB_HOST", "localhost"),
-    "PORT": os.environ.get("DB_PORT", ""),
-    "CONN_MAX_AGE": 300,
+DATABASES = {
+    'default': {
+        "NAME": os.environ.get("DB_NAME", "nautobot"),
+        "USER": os.environ.get("DB_USER", ""),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", ""),
+        "CONN_MAX_AGE": 300,
+        "ENGINE": "django.db.backends.postgresql",
+    }
 }
 
 DEBUG = True
-DEVELOPER = True
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 

@@ -155,8 +155,7 @@ class LDAPBackend:
         except (ModuleNotFoundError, ImportError) as e:
             if getattr(e, 'name') == 'ldap_config':
                 logging.error(
-                    "LDAP configuration file not found: Check that ldap_config.py has been created alongside "
-                    "configuration.py."
+                    "LDAP configuration file not found: Check that ldap_config.py has been created."
                 )
             ldap_config = None
 

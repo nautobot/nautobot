@@ -110,6 +110,8 @@ Default: `$INSTALL_ROOT/nautobot_root/jobs/`
 
 The file path to a directory where [jobs](../additional-features/jobs.md) can be located. By default, this is the `nautobot_root/jobs/` directory within the base Nautobot installation path.
 
+The value of this variable can also be customized by setting the environment variable `NAUTOBOT_JOBS_ROOT` to a directory path of your choosing.
+
 !!! note
     This directory **must** contain an `__init__.py` file.
 
@@ -126,14 +128,6 @@ interface.
 !!! warning
     Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users and impose a
     substantial performance penalty.
-
----
-
-## DEVELOPER
-
-Default: False
-
-This parameter serves as a safeguard to prevent some potentially dangerous behavior, such as generating new database schema migrations. Set this to `True` **only** if you are actively developing the Nautobot code base.
 
 ---
 
@@ -166,7 +160,7 @@ In order to send email, Nautobot needs an email server configured. The following
 Email is sent from Nautobot only for critical events or if configured for [logging](#logging). If you would like to test the email server configuration, Django provides a convenient [send_mail()](https://docs.djangoproject.com/en/stable/topics/email/#send-mail) fuction accessible within the Nautobot shell:
 
 ```no-highlight
-# python ./manage.py nbshell
+# nautobot-server nbshell
 >>> from django.core.mail import send_mail
 >>> send_mail(
   'Test Email Subject',
@@ -219,6 +213,8 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 Default: `$INSTALL_ROOT/nautobot_root/git`
 
 The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
+
+The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
 
 ---
 
@@ -469,33 +465,11 @@ This parameter defines the URL of the repository that will be checked periodical
 
 ---
 
-## REPORTS_ROOT
-
-Default: `$INSTALL_ROOT/nautobot_root/reports/`
-
-The file path to a location where [jobs](../additional-features/jobs.md) can be located. By default, this is the `nautobot_root/reports/` directory within the base Nautobot installation path.
-
-!!! warning
-    This setting is deprecated and will be removed in a future release. Use `JOBS_ROOT` instead.
-
----
-
 ## RQ_DEFAULT_TIMEOUT
 
 Default: `300`
 
 The maximum execution time of a background task (such as running a [job](../additional-features/jobs.md)), in seconds.
-
----
-
-## SCRIPTS_ROOT
-
-Default: `$INSTALL_ROOT/nautobot_root/scripts/`
-
-The file path to a directory where [jobs](../additional-features/jobs.md) can be located. By default, this is the `nautobot_root/scripts/` directory within the base Nautobot installation path.
-
-!!! warning
-    This setting is deprecated and will be removed in a future release. Use `JOBS_ROOT` instead.
 
 ---
 

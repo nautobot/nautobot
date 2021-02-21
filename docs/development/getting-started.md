@@ -2,7 +2,9 @@
 
 ## Forking the Repo
 
-Assuming you'll be working on your own fork, your first step will be to fork the [official git repository](https://github.com/nautobot/nautobot). (If you're a maintainer who's going to be working directly with the official repo, skip this step.) You can then clone your GitHub fork locally for development:
+Assuming you'll be working on your own fork, your first step will be to fork the [official git repository](https://github.com/nautobot/nautobot). You can then clone your GitHub fork locally for development:
+
+(If you're a maintainer who's going to be working directly with the official repo, you may skip this step.)
 
 ```no-highlight
 $ git clone https://github.com/youruseraccount/nautobot.git
@@ -37,7 +39,7 @@ $ ln -s ../../scripts/git-hooks/pre-commit
 
 ## Setting up a Development Environment
 
-Getting started with Nautobot development is pretty straightforward, and should feel very familiar to anyone with Django development experience. We can recommend either a [Docker Compose workflow](#docker-development-environment-workflow) (if you don't want to install dependencies such as PostgreSQL and Redis directly onto your system) or a [Python virtual environment workflow](#python-virtual-environment-workflow)
+Getting started with Nautobot development is pretty straightforward, and should feel very familiar to anyone with Django development experience. We can recommend either a [Docker Compose workflow](#docker-development-environment-workflow) (if you don't want to install dependencies such as PostgreSQL and Redis directly onto your system) or a [Python virtual environment workflow](#python-virtual-environment-workflow).
 
 ### Docker Development Environment Workflow
 
@@ -127,33 +129,47 @@ Notice that the console prompt changes to indicate the active environment. This 
 
 #### Installing Dependencies
 
-With the virtual environment activated, install the project's required Python packages using the `pip` module:
+With the virtual environment activated, install the Nautobot and its dependent packages using `pip install --editable .`:
 
 ```no-highlight
-(nautobot) $ python -m pip install -r requirements.txt
+(nautobot) $ python -m pip install --editable .
 Collecting Django==3.1 (from -r requirements.txt (line 1))
   Cache entry deserialization failed, entry ignored
   Using cached https://files.pythonhosted.org/packages/2b/5a/4bd5624546912082a1bd2709d0edc0685f5c7827a278d806a20cf6adea28/Django-3.1-py3-none-any.whl
 ...
 ```
 
+This command tells `pip` to install the local Nautobot package found in `.` (the current directory) and all of its dependencies in *editable* mode, meaning that you can directly edit files in the source tree and the changes will immediately be reflected in the installed package.
+
+This will also install the `nautobot-server` CLI command that you will utilize to interact with Nautobot.
+
 #### Configuring Nautobot
 
-Within the `nautobot_root/nautobot/core/` directory, copy `configuration.example.py` to `configuration.py` and update the following parameters:
+Initialize a new configuration using `nautobot-server init`:
 
-* `ALLOWED_HOSTS`: This can be set to `['*']` for development purposes
-* `DATABASE`: PostgreSQL database connection parameters
+```bash
+$ nautobot-server init
+Configuration file created at '/home/example/.nautobot/nautobot_config.py'
+```
+
+You may also specify alternate file locations. Please refer to [Configuring Nautobot](../../configuration) for how to do that.
+
+The newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
+
+* `ALLOWED_HOSTS`: This can be set to `['*']` for development purposes and must be set if `DEBUG=False`
+* `DATABASES`: PostgreSQL database connection parameters, if different from the defaults
 * `REDIS`: Redis configuration, if different from the defaults
-* `SECRET_KEY`: Set to a random string (use `generate_secret_key.py` in the parent directory to generate a suitable key)
-* `DEBUG`: Set to `True`
-* `DEVELOPER`: Set to `True` (this enables the creation of new database migrations)
+* `DEBUG`: Set to `True` to enable verbose exception logging and the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* `EXTRA_INSTALLLED_APPS`: Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
 #### Starting the Development Server
 
-Django provides a lightweight, auto-updating HTTP/WSGI server for development use. Nautobot extends this slightly to automatically import models and other utilities. Run the Nautobot development server with the `nbshell` management command:
+Django provides a lightweight, auto-updating HTTP/WSGI server for development use.
+
+Run the Nautobot development server with the `runserver` management command:
 
 ```no-highlight
-$ python nautobot_root/manage.py runserver
+$ nautobot-server runserver
 Performing system checks...
 
 System check identified no issues (0 silenced).
@@ -165,18 +181,32 @@ Quit the server with CONTROL-C.
 
 This ensures that your development environment is now complete and operational. Any changes you make to the code base will be automatically adapted by the development server.
 
+#### Starting the Interactive Shell
+
+Django provides an interactive Python shell that sets up the server environment and gives you direct access to the database models for debugging. Nautobot extends this slightly to automatically import models and other utilities.
+
+Run the Nautobot interactive shell with the `nbshell` management command:
+
+```bash
+$ nautobot-server nbshell
+### Nautobot interactive shell (jathy-mini.local)
+### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0b1
+### lsmodels() will show available models. Use help(<model>) for more info.
+>>>
+```
+
 ## Running Tests
 
 Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests are run using the `test` management command:
 
 ```no-highlight
-$ python nautobot_root/manage.py test nautobot_root
+$ nautobot-server test nautobot_root
 ```
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time. (Note that this argument will cause errors if you've modified any model fields since the previous test run.)
 
 ```no-highlight
-$ python nautobot_root/manage.py test nautobot_root --keepdb
+$ nautobot-server test nautobot_root --keepdb
 ```
 
 ## Submitting Pull Requests

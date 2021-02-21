@@ -35,11 +35,11 @@ if [[ $RC != 0 ]]; then
 	EXIT=$RC
 fi
 
-# Point to the testing configuration file for use in CI
-ln -s configuration.testing.py nautobot_root/nautobot/core/configuration.py
+# Point to the testing nautobot_config file for use in CI
+TEST_CONFIG=nautobot_root/nautobot/core/tests/nautobot_config.py
 
 # Run Nautobot tests
-coverage run --source="nautobot_root/" nautobot_root/manage.py test nautobot_root/
+coverage run --source="nautobot_root/" scripts/test_runner.py --config=$TEST_CONFIG test nautobot_root/
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."

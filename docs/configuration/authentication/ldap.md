@@ -35,7 +35,7 @@ sudo echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
 
 ## Configuration
 
-Enable the LDAP authentication backend by adding the following to your `configuration.py`:
+Enable the LDAP authentication backend by adding the following to your `nautobot_config.py`:
 
 !!! note
     It is critical that you include the `ObjectPermissionsBackend` provided by
@@ -50,7 +50,7 @@ AUTHENTICATION_BACKENDS = [
 
 ### General Server Configuration
 
-Define all of the parameters required below in your `configuration.py`. Complete documentation of all `django-auth-ldap` configuration options is included in the project's [official documentation](http://django-auth-ldap.readthedocs.io/).
+Define all of the parameters required below in your `nautobot_config.py`. Complete documentation of all `django-auth-ldap` configuration options is included in the project's [official documentation](http://django-auth-ldap.readthedocs.io/).
 
 !!! info
     When using Windows Server 2012 you may need to specify a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure, or `3268` for non-secure.
@@ -147,9 +147,9 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 ## Troubleshooting LDAP
 
-`systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `ldap_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
+`systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `nautobot_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
 
-For troubleshooting LDAP user/group queries, add or merge the following [logging](/configuration/optional-settings.md#logging) configuration to `configuration.py`:
+For troubleshooting LDAP user/group queries, add or merge the following [logging](/configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
 
 ```python
 LOGGING = {

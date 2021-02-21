@@ -167,9 +167,6 @@ Once you have defined the model(s) for your plugin, you'll need to create the da
 !!! note
     A plugin must be installed before it can be used with Django management commands. If you skipped this step above, run `python setup.py develop` from the plugin's root directory.
 
-!!! note
-    The `DEVELOPER` setting in `nautobot/core/configuration.py` must be set to `True` in order to run Django makemigrations command.
-
 ```no-highlight
 $ ./manage.py makemigrations nautobot_animal_sounds
 Migrations for 'nautobot_animal_sounds':
