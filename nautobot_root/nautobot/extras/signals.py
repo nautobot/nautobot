@@ -2,6 +2,7 @@ import os
 import random
 import shutil
 import uuid
+import logging
 from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
@@ -17,10 +18,27 @@ from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
+logger = logging.getLogger('nautobot.extras.signals')
+
 
 #
 # Change logging/webhooks
 #
+
+def _get_user_if_authenticated(request):
+    """Return the user object associated with the request if the user is defined.
+
+    If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
+    This is a workaround to fix a recurring issue where the user shouldn't be present in the request object randomly.
+    A similar issue was reported in NetBox https://github.com/netbox-community/netbox/issues/5142
+    """
+    if request.user.is_authenticated:
+        return request.user
+    else:
+        logger.warning(
+            f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}"
+        )
+
 
 def _handle_changed_object(request, sender, instance, **kwargs):
     """
@@ -40,7 +58,7 @@ def _handle_changed_object(request, sender, instance, **kwargs):
     # Record an ObjectChange if applicable
     if hasattr(instance, 'to_objectchange'):
         objectchange = instance.to_objectchange(action)
-        objectchange.user = request.user
+        objectchange.user = _get_user_if_authenticated(request)
         objectchange.request_id = request.id
         objectchange.save()
 
@@ -66,7 +84,7 @@ def _handle_deleted_object(request, sender, instance, **kwargs):
     # Record an ObjectChange if applicable
     if hasattr(instance, 'to_objectchange'):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = request.user
+        objectchange.user = _get_user_if_authenticated(request)
         objectchange.request_id = request.id
         objectchange.save()
 

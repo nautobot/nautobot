@@ -129,7 +129,11 @@ class ObjectChange(BaseModel):
 
         # Record the user's name and the object's representation as static strings
         if not self.user_name:
-            self.user_name = self.user.username
+            if self.user:
+                self.user_name = self.user.username
+            else:
+                self.user_name = "Undefined"
+
         if not self.object_repr:
             self.object_repr = str(self.changed_object)
 
