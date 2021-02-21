@@ -14,14 +14,15 @@ ENV PYTHONUNBUFFERED 1
 
 RUN pip install --upgrade pip
 
-COPY requirements.txt /tmp/
-RUN pip install -r /tmp/requirements.txt
-
-COPY requirements_dev.txt /tmp/
-RUN pip install -r /tmp/requirements_dev.txt
-
 # Used if someone wants to override the entrypoint and provision a super user
 COPY development/docker-entrypoint.sh /tmp/nautobot/docker-entrypoint.sh
+
+COPY . /tmp/src
+WORKDIR /tmp/src
+
+# Install Nautobot as an "editable" package so that `nautobot-server` becomes available and changes can be immediately reflected during development.
+RUN pip install --editable .
+RUN pip install -r requirements-dev.txt
 
 WORKDIR /opt/nautobot
 

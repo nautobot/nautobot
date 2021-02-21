@@ -6,7 +6,7 @@ services:
       context: ../
       dockerfile: development/Dockerfile
     image: "nautobot/nautobot-py${PYTHON_VER}"
-    command: "python /opt/nautobot/nautobot_root/manage.py runserver 0.0.0.0:8000 --insecure"
+    command: "nautobot-server runserver 0.0.0.0:8000 --insecure"
     ports:
       - "8000:8000"
     depends_on:
@@ -15,7 +15,7 @@ services:
     env_file:
       - dev.env
     volumes:
-      - ./configuration.py:/opt/nautobot/nautobot_root/nautobot/core/configuration.py
+      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
       - ../:/opt/nautobot
     tty: true
   worker:
@@ -23,13 +23,13 @@ services:
       context: ../
       dockerfile: development/Dockerfile
     image: "nautobot/nautobot-py${PYTHON_VER}"
-    entrypoint: "python /opt/nautobot/nautobot_root/manage.py rqworker"
+    entrypoint: "nautobot-server rqworker"
     depends_on:
       - nautobot
     env_file:
       - ./dev.env
     volumes:
-      - ./configuration.py:/opt/nautobot/nautobot_root/nautobot/core/configuration.py
+      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
       - ../:/opt/nautobot
     tty: true
   postgres:
