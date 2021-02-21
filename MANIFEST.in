@@ -1,6 +1,7 @@
 include CHANGELOG.md CONTRIBUTING.md LICENSE.txt NOTICE mkdocs.yml tasks.py upgrade.sh
 include *requirements*.txt
 graft docs
+graft nautobot_root
 global-exclude __pycache__
 global-exclude *.py[cod]
 global-exclude configuration.py

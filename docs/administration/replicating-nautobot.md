@@ -76,6 +76,5 @@ tar -xf nautobot_media.tar.gz
 If you are migrating your instance of Nautobot to a different machine, be sure to first invalidate the cache on the original instance by issuing the `invalidate all` management command (within the Python virtual environment):
 
 ```no-highlight
-# source /opt/nautobot/venv/bin/activate
-(venv) # python3 manage.py invalidate all
+(venv) # nautobot-server invalidate all
 ```

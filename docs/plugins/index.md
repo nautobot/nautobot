@@ -67,11 +67,13 @@ PLUGINS_CONFIG = {
 
 ### Run Database Migrations
 
+!!! warning
+    Assert that you have installed Nautobot in *editable* mode using `pip install -e .` so that changes you make to migrations will apply to the source tree!
+
 If the plugin introduces new database models, run the provided schema migrations:
 
 ```no-highlight
-(venv) $ cd /opt/nautobot/nautobot_root/
-(venv) $ python3 manage.py migrate
+(venv) $ nautobot-server migrate
 ```
 
 ### Collect Static Files
@@ -79,8 +81,7 @@ If the plugin introduces new database models, run the provided schema migrations
 Plugins may package static files to be served directly by the HTTP front end. Ensure that these are copied to the static root directory with the `collectstatic` management command:
 
 ```no-highlight
-(venv) $ cd /opt/nautobot/nautobot_root/
-(venv) $ python3 manage.py collectstatic
+(venv) $ nautobot-server collectstatic
 ```
 
 ### Restart WSGI Service

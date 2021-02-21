@@ -14,12 +14,9 @@ Plugins can do a lot, including:
 
 However, keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
-!!! warning
-    While very powerful, the Nautobot plugins API is necessarily limited in its scope. The plugins API is discussed here in its entirety: Any part of the Nautobot code base not documented here is _not_ part of the supported plugins API, and should not be employed by a plugin. Internal elements of Nautobot are subject to change at any time and without warning. Plugin authors are **strongly** encouraged to develop plugins using only the officially supported components discussed here and those provided by the underlying Django framework so as to avoid breaking changes in future releases.
-
 ## Initial Setup
 
-## Plugin Structure
+### Plugin Structure
 
 Although the specific structure of a plugin is largely left to the discretion of its authors, a Nautobot plugin that makes use of all available plugin features described in this document would look something like this:
 
@@ -168,7 +165,7 @@ Once you have defined the model(s) for your plugin, you'll need to create the da
     A plugin must be installed before it can be used with Django management commands. If you skipped this step above, run `python setup.py develop` from the plugin's root directory.
 
 ```no-highlight
-$ ./manage.py makemigrations nautobot_animal_sounds
+$ nautobot-server makemigrations nautobot_animal_sounds
 Migrations for 'nautobot_animal_sounds':
   /home/jstretch/animal_sounds/nautobot_animal_sounds/migrations/0001_initial.py
     - Create model Animal
@@ -177,7 +174,7 @@ Migrations for 'nautobot_animal_sounds':
 Next, we can apply the migration to the database with the `migrate` command:
 
 ```no-highlight
-$ ./manage.py migrate nautobot_animal_sounds
+$ nautobot-server migrate nautobot_animal_sounds
 Operations to perform:
   Apply all migrations: nautobot_animal_sounds
 Running migrations:

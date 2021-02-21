@@ -77,7 +77,7 @@ A request is considered successful if the response has a 2XX status code; otherw
 To assist with verifying that the content of outgoing webhooks is rendered correctly, Nautobot provides a simple HTTP listener that can be run locally to receive and display webhook requests. First, modify the target URL of the desired webhook to `http://localhost:9000/`. This will instruct Nautobot to send the request to the local server on TCP port 9000. Then, start the webhook receiver service from the Nautobot root directory:
 
 ```no-highlight
-$ python nautobot_root/manage.py webhook_receiver
+$ nautobot-server webhook_receiver
 Listening on port http://localhost:9000. Stop with CONTROL-C.
 ```
 

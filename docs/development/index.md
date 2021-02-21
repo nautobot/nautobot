@@ -225,7 +225,7 @@ resulting from multiple PRs being submitted simultaneously.)
 these checks):
 
     * Python syntax is valid
-    * All tests pass when run with `./manage.py test`
+    * All unit tests pass successfully
     * PEP 8 compliance is enforced, with the exception that lines may be
       greater than 80 characters in length
 

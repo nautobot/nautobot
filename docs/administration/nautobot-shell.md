@@ -3,13 +3,13 @@
 Nautobot includes a Python management shell within which objects can be directly queried, created, modified, and deleted. To enter the shell, run the following command:
 
 ```
-./manage.py nbshell
+nautobot-server nbshell
 ```
 
-This will launch a lightly customized version of [the built-in Django shell](https://docs.djangoproject.com/en/stable/ref/django-admin/#shell) with all relevant Nautobot models pre-loaded. (If desired, the stock Django shell is also available by executing `./manage.py shell`.)
+This will launch a lightly customized version of [the built-in Django shell](https://docs.djangoproject.com/en/stable/ref/django-admin/#shell) with all relevant Nautobot models pre-loaded. (If desired, the stock Django shell is also available by executing `nautobot-server shell`.)
 
 ```
-$ ./manage.py nbshell
+$ nautobot-server nbshell
 ### Nautobot interactive shell (localhost)
 ### Python 3.6.9 | Django 3.1 | Nautobot 1.0.0
 ### lsmodels() will show available models. Use help(<model>) for more info.

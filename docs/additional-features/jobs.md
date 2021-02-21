@@ -348,7 +348,7 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 Jobs that do not require user input can be run from the CLI by invoking the management command:
 
 ```no-highlight
-python3 manage.py runjob local/<module>/<JobName> [--commit]
+nautobot-server runjob local/<module>/<JobName> [--commit]
 ```
 
 where ``<module>`` is the name of the python file (minus the ``.py`` extension) and ``<JobName>`` is the Python class name within that module.

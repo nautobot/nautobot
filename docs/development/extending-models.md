@@ -6,9 +6,12 @@ Below is a list of tasks to consider when adding a new field to a core model.
 
 Django migrations are used to express changes to the database schema. In most cases, Django can generate these automatically, however very complex changes may require manual intervention. Always remember to specify a short but descriptive name when generating a new migration.
 
+!!! warning
+    Assert that you have installed Nautobot in *editable* mode using `pip install -e .` so that changes you make to migrations will apply to the source tree!
+
 ```
-./manage.py makemigrations <app> -n <name>
-./manage.py migrate
+nautobot-server makemigrations <app> -n <name>
+nautobot-server migrate
 ```
 
 Where possible, try to merge related changes into a single migration. For example, if three new fields are being added to different models within an app, these can be expressed in the same migration. You can merge a new migration with an existing one by combining their `operations` lists.

@@ -235,11 +235,11 @@ source /opt/nautobot/venv/bin/activate
 
 Once the virtual environment has been activated, you should notice the string `(venv)` prepended to your console prompt.
 
-Next, we'll create a superuser account using the `createsuperuser` Django management command (via `manage.py`). Specifying an email address for the user is not required, but be sure to use a very strong password.
+Next, we'll create a superuser account using the `createsuperuser` Django management command (via `nautobot-server`). Specifying an email address for the user is not required, but be sure to use a very strong password.
 
 ```no-highlight
 (venv) $ cd /opt/nautobot/nautobot_root
-(venv) $ python3 manage.py createsuperuser
+(venv) $ nautobot-server createsuperuser
 Username: admin
 Email address: admin@example.com
 Password:
@@ -257,8 +257,7 @@ In production environments, it is advised to use a process manager for running w
 If not using a process manager, you must use the `rqworker` Django management command to start the workers.
 
 ```no-highlight
-(venv) $ cd /opt/nautobot/nautobot_root/
-(venv) $ python3 manage.py rqworker
+(venv) $ nautobot-server rqworker
 ```
 
 ## Test the Application
@@ -266,7 +265,7 @@ If not using a process manager, you must use the `rqworker` Django management co
 At this point, we should be able to run Nautobot's development server for testing. We can check by starting a development instance:
 
 ```no-highlight
-(venv) $ python3 manage.py runserver 0.0.0.0:8000 --insecure
+(venv) $ nautobot-server runserver 0.0.0.0:8000 --insecure
 Performing system checks...
 
 System check identified no issues (0 silenced).
