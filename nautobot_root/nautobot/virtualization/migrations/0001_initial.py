@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                 ('tenant', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='virtual_machines', to='tenancy.tenant')),
             ],
             options={
-                'ordering': ('name', 'pk'),
+                'ordering': ('name',),
                 'unique_together': {('cluster', 'tenant', 'name')},
             },
         ),

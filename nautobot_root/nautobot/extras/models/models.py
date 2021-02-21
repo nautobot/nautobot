@@ -354,7 +354,7 @@ class ImageAttachment(BaseModel):
     )
 
     class Meta:
-        ordering = ('name', 'pk')  # name may be non-unique
+        ordering = ('name',)  # name may be non-unique
 
     def __str__(self):
         if self.name:

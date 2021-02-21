@@ -299,7 +299,7 @@ class Rack(PrimaryModel, StatusModel):
     ]
 
     class Meta:
-        ordering = ('site', 'group', '_name', 'pk')  # (site, group, name) may be non-unique
+        ordering = ('site', 'group', '_name')  # (site, group, name) may be non-unique
         unique_together = (
             # Name and facility_id must be unique *only* within a RackGroup
             ('group', 'name'),

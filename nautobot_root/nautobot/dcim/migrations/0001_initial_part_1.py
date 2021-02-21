@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
                 ('_abs_length', models.DecimalField(blank=True, decimal_places=4, max_digits=10, null=True)),
             ],
             options={
-                'ordering': ['pk'],
+                'ordering': ['termination_a_type', 'termination_a_id', 'termination_b_type', 'termination_b_id'],
             },
         ),
         migrations.CreateModel(
@@ -135,7 +135,7 @@ class Migration(migrations.Migration):
                 ('comments', models.TextField(blank=True)),
             ],
             options={
-                'ordering': ('_name', 'pk'),
+                'ordering': ('_name',),
             },
         ),
         migrations.CreateModel(
@@ -453,7 +453,7 @@ class Migration(migrations.Migration):
                 ('comments', models.TextField(blank=True)),
             ],
             options={
-                'ordering': ('site', 'group', '_name', 'pk'),
+                'ordering': ('site', 'group', '_name'),
             },
         ),
         migrations.CreateModel(
@@ -486,7 +486,7 @@ class Migration(migrations.Migration):
                 ('description', models.CharField(max_length=200)),
             ],
             options={
-                'ordering': ['created', 'pk'],
+                'ordering': ['created'],
             },
         ),
         migrations.CreateModel(

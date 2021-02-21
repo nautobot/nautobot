@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('description', models.CharField(blank=True, max_length=200)),
             ],
             options={
-                'ordering': ('prefix', 'pk'),
+                'ordering': ('prefix',),
             },
         ),
         migrations.CreateModel(
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'IP address',
                 'verbose_name_plural': 'IP addresses',
-                'ordering': ('address', 'pk'),
+                'ordering': ('address',),
             },
         ),
         migrations.CreateModel(
@@ -70,7 +70,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'verbose_name_plural': 'prefixes',
-                'ordering': (django.db.models.expressions.OrderBy(django.db.models.expressions.F('vrf'), nulls_first=True), 'prefix', 'pk'),
+                'ordering': (django.db.models.expressions.OrderBy(django.db.models.expressions.F('vrf__name'), nulls_first=True), 'prefix'),
             },
         ),
         migrations.CreateModel(
@@ -140,7 +140,7 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'VRF',
                 'verbose_name_plural': 'VRFs',
-                'ordering': ('name', 'rd', 'pk'),
+                'ordering': ('name', 'rd'),
             },
         ),
         migrations.CreateModel(
@@ -158,7 +158,7 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'VLAN group',
                 'verbose_name_plural': 'VLAN groups',
-                'ordering': ('site', 'name', 'pk'),
+                'ordering': ('site', 'name'),
             },
         ),
         migrations.CreateModel(
@@ -181,7 +181,7 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'VLAN',
                 'verbose_name_plural': 'VLANs',
-                'ordering': ('site', 'group', 'vid', 'pk'),
+                'ordering': ('site', 'group', 'vid'),
             },
         ),
         migrations.CreateModel(
@@ -200,7 +200,7 @@ class Migration(migrations.Migration):
                 ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
             ],
             options={
-                'ordering': ('protocol', 'ports', 'pk'),
+                'ordering': ('protocol', 'ports'),
             },
         ),
     ]
