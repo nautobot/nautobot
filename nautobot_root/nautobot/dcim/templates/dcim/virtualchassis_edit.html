@@ -89,7 +89,7 @@
         </div>
         <div class="row">
             <div class="col-md-8 col-md-offset-2 text-right">
-                {% if vc_form.instance.pk %}
+                {% if editing %}
                     <button type="submit" name="_update" class="btn btn-primary">Update</button>
                 {% else %}
                     <button type="submit" name="_create" class="btn btn-primary">Create</button>

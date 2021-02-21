@@ -119,6 +119,7 @@ class CustomField(BaseModel):
                   'matches the entire field.'
     )
     default = models.JSONField(
+        encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
         help_text='Default value for the field (must be a JSON value). Encapsulate '

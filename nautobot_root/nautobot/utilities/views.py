@@ -106,7 +106,10 @@ class GetReturnURLMixin:
             return query_param
 
         # Next, check if the object being modified (if any) has an absolute URL.
-        if obj is not None and obj.pk and hasattr(obj, 'get_absolute_url'):
+        # Note that the use of both `obj._state.adding` and `obj.pk` is correct here because this conditional
+        # handles all three of the create, update, and delete operations. When Django deletes an instance
+        # from the DB, it sets the instance's PK field to None, regardless of the use of a UUID.
+        if obj is not None and not obj._state.adding and obj.pk and hasattr(obj, 'get_absolute_url'):
             return obj.get_absolute_url()
 
         # Fall back to the default URL (if specified) for the view.

@@ -2,6 +2,7 @@ import logging
 from collections import OrderedDict
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError
 from django.db import models
 
@@ -196,6 +197,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         help_text='Hide this relationship on the source object.'
     )
     source_filter = models.JSONField(
+        encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
         help_text="Queryset filter matching the applicable source objects of the selected type"
@@ -224,6 +226,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         help_text='Hide this relationship on the destination object.'
     )
     destination_filter = models.JSONField(
+        encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
         help_text="Queryset filter matching the applicable destination objects of the selected type"
@@ -347,7 +350,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
                     )
 
         # If the model already exist, ensure that it's not possible to modify the source or destination type
-        if self.pk:
+        if not self._state.adding:
             nbr_existing_cras = RelationshipAssociation.objects.filter(relationship=self).count()
 
             if nbr_existing_cras and self.__class__.objects.get(pk=self.pk).type != self.type:
@@ -381,7 +384,7 @@ class RelationshipAssociation(BaseModel):
         on_delete=models.CASCADE,
         related_name='+'
     )
-    source_id = models.PositiveIntegerField()
+    source_id = models.UUIDField()
     source = GenericForeignKey(
         ct_field='source_type',
         fk_field='source_id'
@@ -392,7 +395,7 @@ class RelationshipAssociation(BaseModel):
         on_delete=models.CASCADE,
         related_name='+'
     )
-    destination_id = models.PositiveIntegerField()
+    destination_id = models.UUIDField()
     destination = GenericForeignKey(
         ct_field='destination_type',
         fk_field='destination_id'

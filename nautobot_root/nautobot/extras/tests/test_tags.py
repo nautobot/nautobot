@@ -16,7 +16,7 @@ class TaggedItemTest(APITestCase):
             'name': 'Test Site',
             'slug': 'test-site',
             'status': 'active',
-            'tags': [t.pk for t in tags]
+            'tags': [str(t.pk) for t in tags]
         }
         url = reverse('dcim-api:site-list')
         self.add_permissions('dcim.add_site')

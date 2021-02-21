@@ -268,7 +268,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             response = self.client.post(url, data, format='json', **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data['prefix'], prefixes_to_be_created[i])
-            self.assertEqual(response.data['vrf']['id'], vrf.pk)
+            self.assertEqual(response.data['vrf']['id'], str(vrf.pk))
             self.assertEqual(response.data['description'], data['description'])
 
         # Try to create one more prefix
@@ -346,7 +346,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             }
             response = self.client.post(url, data, format='json', **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(response.data['vrf']['id'], vrf.pk)
+            self.assertEqual(response.data['vrf']['id'], str(vrf.pk))
             self.assertEqual(response.data['description'], data['description'])
 
         # Try to create one more IP

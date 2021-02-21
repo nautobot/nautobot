@@ -279,7 +279,7 @@ class APIViewTestCases:
 
         def test_update_object(self):
             """
-            PATCH a single object identified by its numeric ID.
+            PATCH a single object identified by its ID.
             """
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
@@ -385,16 +385,13 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Target the three most recently created objects to avoid triggering recursive deletions
-            # (e.g. with MPTT objects)
-            id_list = self._get_queryset().order_by('-id').values_list('id', flat=True)[:3]
-            self.assertEqual(len(id_list), 3, "Insufficient number of objects to test bulk deletion")
+            id_list = self._get_queryset().values_list('id', flat=True)
             data = [{"id": id} for id in id_list]
 
             initial_count = self._get_queryset().count()
             response = self.client.delete(self._get_list_url(), data, format='json', **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self._get_queryset().count(), initial_count - 3)
+            self.assertEqual(self._get_queryset().count(), 0)
 
     class APIViewTestCase(
         GetObjectViewTestCase,

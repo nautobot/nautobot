@@ -58,11 +58,11 @@ class BulkUpdateModelMixin:
     PATCH /api/dcim/sites/
     [
         {
-            "id": 123,
+            "id": "1f554d07-d099-437d-8d48-7d6e35ec8fa3",
             "name": "New name"
         },
         {
-            "id": 456,
+            "id": "1f554d07-d099-437d-8d48-7d6e65ec8fa3",
             "status": "planned"
         }
     ]
@@ -88,7 +88,7 @@ class BulkUpdateModelMixin:
         with transaction.atomic():
             data_list = []
             for obj in objects:
-                data = update_data.get(obj.id)
+                data = update_data.get(str(obj.id))
                 serializer = self.get_serializer(obj, data=data, partial=partial)
                 serializer.is_valid(raise_exception=True)
                 self.perform_update(serializer)

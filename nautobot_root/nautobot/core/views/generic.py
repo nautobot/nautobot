@@ -254,6 +254,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             'obj_type': self.queryset.model._meta.verbose_name,
             'form': form,
             'return_url': self.get_return_url(request, obj),
+            'editing': not obj._state.adding,
         })
 
     def post(self, request, *args, **kwargs):
@@ -316,6 +317,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             'obj_type': self.queryset.model._meta.verbose_name,
             'form': form,
             'return_url': self.get_return_url(request, obj),
+            'editing': not obj._state.adding,
         })
 
 
@@ -994,7 +996,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             else:
                 pk_list = model.objects.values_list('pk', flat=True)
         else:
-            pk_list = [int(pk) for pk in request.POST.getlist('pk')]
+            pk_list = request.POST.getlist('pk')
 
         form_cls = self.get_form()
 
@@ -1182,7 +1184,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
         if request.POST.get('_all') and self.filterset is not None:
             pk_list = [obj.pk for obj in self.filterset(request.GET, self.parent_model.objects.only('pk')).qs]
         else:
-            pk_list = [int(pk) for pk in request.POST.getlist('pk')]
+            pk_list = request.POST.getlist('pk')
 
         selected_objects = self.parent_model.objects.filter(pk__in=pk_list)
         if not selected_objects:

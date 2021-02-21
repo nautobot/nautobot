@@ -200,7 +200,7 @@ class Cluster(PrimaryModel):
         super().clean()
 
         # If the Cluster is assigned to a Site, verify that all host Devices belong to that Site.
-        if self.pk and self.site:
+        if (not self._state.adding) and self.site:
             nonsite_devices = Device.objects.filter(cluster=self).exclude(site=self.site).count()
             if nonsite_devices:
                 raise ValidationError({
@@ -313,7 +313,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     ]
 
     class Meta:
-        ordering = ('name', 'pk')  # Name may be non-unique
+        ordering = ('name',)  # Name may be non-unique
         unique_together = [
             ['cluster', 'tenant', 'name']
         ]

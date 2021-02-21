@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.contenttypes.models import ContentType
 
 
@@ -7,7 +9,9 @@ def compile_path_node(ct_id, object_id):
 
 def decompile_path_node(repr):
     ct_id, object_id = repr.split(':')
-    return int(ct_id), int(object_id)
+    # The value is stored as a string, but the lookup later uses UUID objects as keys so we convert it now.
+    # Note that the content type ID is still an integer because we have no control over that model.
+    return int(ct_id), uuid.UUID(object_id, version=4)
 
 
 def object_to_path_node(obj):

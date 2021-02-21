@@ -1,5 +1,7 @@
+import uuid
+
 from django.core.exceptions import FieldError, MultipleObjectsReturned, ObjectDoesNotExist
-from django.db.models import ManyToManyField
+from django.db.models import AutoField, ManyToManyField
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -62,31 +64,42 @@ class WritableNestedSerializer(serializers.ModelSerializer):
             except FieldError as e:
                 raise ValidationError(e)
 
-        # Integer PK of related object
-        if isinstance(data, int):
-            pk = data
-        else:
+        queryset = self.Meta.model.objects
+        pk = None
+
+        if isinstance(self.Meta.model._meta.pk, AutoField):
+            # PK is an int for this model. This is usually the User model
             try:
-                # PK might have been mistakenly passed as a string
                 pk = int(data)
             except (TypeError, ValueError):
                 raise ValidationError(
-                    "Related objects must be referenced by numeric ID or by dictionary of attributes. Received an "
+                    "Related objects must be referenced by ID or by dictionary of attributes. Received an "
                     "unrecognized value: {}".format(data)
                 )
 
-        # Look up object by PK
-        queryset = self.Meta.model.objects
+        else:
+            # We assume a type of UUIDField for all other models
+
+            # PK of related object
+            try:
+                # Ensure the pk is a valid UUID
+                pk = uuid.UUID(str(data), version=4)
+            except (TypeError, ValueError):
+                raise ValidationError(
+                    "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                    "unrecognized value: {}".format(data)
+                )
+
         try:
-            return queryset.get(pk=int(data))
+            return queryset.get(pk=pk)
         except ObjectDoesNotExist:
             raise ValidationError(
-                "Related object not found using the provided numeric ID: {}".format(pk)
+                "Related object not found using the provided ID: {}".format(pk)
             )
 
 
 class BulkOperationSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+    id = serializers.CharField()  # This supports both UUIDs and numeric ID for the User model
 
 
 #

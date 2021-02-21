@@ -23,10 +23,10 @@ urlpatterns = [
     path('config-contexts/add/', views.ConfigContextEditView.as_view(), name='configcontext_add'),
     path('config-contexts/edit/', views.ConfigContextBulkEditView.as_view(), name='configcontext_bulk_edit'),
     path('config-contexts/delete/', views.ConfigContextBulkDeleteView.as_view(), name='configcontext_bulk_delete'),
-    path('config-contexts/<int:pk>/', views.ConfigContextView.as_view(), name='configcontext'),
-    path('config-contexts/<int:pk>/edit/', views.ConfigContextEditView.as_view(), name='configcontext_edit'),
-    path('config-contexts/<int:pk>/delete/', views.ConfigContextDeleteView.as_view(), name='configcontext_delete'),
-    path('config-contexts/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='configcontext_changelog', kwargs={'model': ConfigContext}),
+    path('config-contexts/<uuid:pk>/', views.ConfigContextView.as_view(), name='configcontext'),
+    path('config-contexts/<uuid:pk>/edit/', views.ConfigContextEditView.as_view(), name='configcontext_edit'),
+    path('config-contexts/<uuid:pk>/delete/', views.ConfigContextDeleteView.as_view(), name='configcontext_delete'),
+    path('config-contexts/<uuid:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='configcontext_changelog', kwargs={'model': ConfigContext}),
 
     # Git repositories
     path('git-repositories/', views.GitRepositoryListView.as_view(), name='gitrepository_list'),
@@ -42,50 +42,50 @@ urlpatterns = [
     path('git-repositories/<str:slug>/sync/', views.GitRepositorySyncView.as_view(), name='gitrepository_sync'),
 
     # Image attachments
-    path('image-attachments/<int:pk>/edit/', views.ImageAttachmentEditView.as_view(), name='imageattachment_edit'),
-    path('image-attachments/<int:pk>/delete/', views.ImageAttachmentDeleteView.as_view(), name='imageattachment_delete'),
+    path('image-attachments/<uuid:pk>/edit/', views.ImageAttachmentEditView.as_view(), name='imageattachment_edit'),
+    path('image-attachments/<uuid:pk>/delete/', views.ImageAttachmentDeleteView.as_view(), name='imageattachment_delete'),
 
     # Change logging
     path('changelog/', views.ObjectChangeListView.as_view(), name='objectchange_list'),
-    path('changelog/<int:pk>/', views.ObjectChangeView.as_view(), name='objectchange'),
+    path('changelog/<uuid:pk>/', views.ObjectChangeView.as_view(), name='objectchange'),
 
     # Jobs
     path('jobs/', views.JobListView.as_view(), name='job_list'),
-    path('jobs/results/<int:pk>/', views.JobJobResultView.as_view(), name='job_jobresult'),
+    path('jobs/results/<uuid:pk>/', views.JobJobResultView.as_view(), name='job_jobresult'),
     path('jobs/<path:class_path>/', views.JobView.as_view(), name='job'),
 
     # Generic job results
     path('job-results/', views.JobResultListView.as_view(), name='jobresult_list'),
-    path('job-results/<int:pk>/', views.JobResultView.as_view(), name='jobresult'),
+    path('job-results/<uuid:pk>/', views.JobResultView.as_view(), name='jobresult'),
     path('job-results/delete/', views.JobResultBulkDeleteView.as_view(), name='jobresult_bulk_delete'),
-    path('job-results/<int:pk>/delete/', views.JobResultDeleteView.as_view(), name='jobresult_delete'),
+    path('job-results/<uuid:pk>/delete/', views.JobResultDeleteView.as_view(), name='jobresult_delete'),
 
     # Export Templates
     path('export-templates/', views.ExportTemplateListView.as_view(), name='exporttemplate_list'),
     path('export-templates/add/', views.ExportTemplateEditView.as_view(), name='exporttemplate_add'),
     path('export-templates/delete/', views.ExportTemplateBulkDeleteView.as_view(), name='exporttemplate_bulk_delete'),
-    path('export-templates/<int:pk>/', views.ExportTemplateView.as_view(), name='exporttemplate'),
-    path('export-templates/<int:pk>/edit/', views.ExportTemplateEditView.as_view(), name='exporttemplate_edit'),
-    path('export-templates/<int:pk>/delete/', views.ExportTemplateDeleteView.as_view(), name='exporttemplate_delete'),
-    path('export-templates/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='exporttemplate_changelog', kwargs={'model': ExportTemplate}),
+    path('export-templates/<uuid:pk>/', views.ExportTemplateView.as_view(), name='exporttemplate'),
+    path('export-templates/<uuid:pk>/edit/', views.ExportTemplateEditView.as_view(), name='exporttemplate_edit'),
+    path('export-templates/<uuid:pk>/delete/', views.ExportTemplateDeleteView.as_view(), name='exporttemplate_delete'),
+    path('export-templates/<uuid:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='exporttemplate_changelog', kwargs={'model': ExportTemplate}),
 
     # Custom links
     path('custom-links/', views.CustomLinkListView.as_view(), name='customlink_list'),
     path('custom-links/add/', views.CustomLinkEditView.as_view(), name='customlink_add'),
     path('custom-links/delete/', views.CustomLinkBulkDeleteView.as_view(), name='customlink_bulk_delete'),
-    path('custom-links/<int:pk>/', views.CustomLinkView.as_view(), name='customlink'),
-    path('custom-links/<int:pk>/edit/', views.CustomLinkEditView.as_view(), name='customlink_edit'),
-    path('custom-links/<int:pk>/delete/', views.CustomLinkDeleteView.as_view(), name='customlink_delete'),
-    path('custom-links/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='customlink_changelog', kwargs={'model': CustomLink}),
+    path('custom-links/<uuid:pk>/', views.CustomLinkView.as_view(), name='customlink'),
+    path('custom-links/<uuid:pk>/edit/', views.CustomLinkEditView.as_view(), name='customlink_edit'),
+    path('custom-links/<uuid:pk>/delete/', views.CustomLinkDeleteView.as_view(), name='customlink_delete'),
+    path('custom-links/<uuid:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='customlink_changelog', kwargs={'model': CustomLink}),
 
     # Webhook
     path('webhooks/', views.WebhookListView.as_view(), name='webhook_list'),
     path('webhooks/add/', views.WebhookEditView.as_view(), name='webhook_add'),
     path('webhooks/delete/', views.WebhookBulkDeleteView.as_view(), name='webhook_bulk_delete'),
-    path('webhooks/<int:pk>/', views.WebhookView.as_view(), name='webhook'),
-    path('webhooks/<int:pk>/edit/', views.WebhookEditView.as_view(), name='webhook_edit'),
-    path('webhooks/<int:pk>/delete/', views.WebhookDeleteView.as_view(), name='webhook_delete'),
-    path('webhooks/<int:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='webhook_changelog', kwargs={'model': Webhook}),
+    path('webhooks/<uuid:pk>/', views.WebhookView.as_view(), name='webhook'),
+    path('webhooks/<uuid:pk>/edit/', views.WebhookEditView.as_view(), name='webhook_edit'),
+    path('webhooks/<uuid:pk>/delete/', views.WebhookDeleteView.as_view(), name='webhook_delete'),
+    path('webhooks/<uuid:pk>/changelog/', views.ObjectChangeLogView.as_view(), name='webhook_changelog', kwargs={'model': Webhook}),
 
     # Custom statuses
     path('statuses/', views.StatusListView.as_view(), name='status_list'),
@@ -101,8 +101,8 @@ urlpatterns = [
     # Custom relationships
     path('relationships/', views.RelationshipListView.as_view(), name='relationship_list'),
     path('relationships/add/', views.RelationshipEditView.as_view(), name='relationship_add'),
-    path('relationships/<int:pk>/edit/', views.RelationshipEditView.as_view(), name='relationship_edit'),
-    path('relationships/<int:pk>/delete/', views.RelationshipDeleteView.as_view(), name='relationship_delete'),
+    path('relationships/<uuid:pk>/edit/', views.RelationshipEditView.as_view(), name='relationship_edit'),
+    path('relationships/<uuid:pk>/delete/', views.RelationshipDeleteView.as_view(), name='relationship_delete'),
     path('relationships/associations/', views.RelationshipAssociationListView.as_view(), name='relationshipassociation_list'),
-    path('relationships/associations/<int:pk>/delete/', views.RelationshipAssociationDeleteView.as_view(), name='relationshipassociation_delete'),
+    path('relationships/associations/<uuid:pk>/delete/', views.RelationshipAssociationDeleteView.as_view(), name='relationshipassociation_delete'),
 ]

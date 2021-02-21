@@ -57,7 +57,7 @@ class Cable(PrimaryModel, StatusModel):
         on_delete=models.PROTECT,
         related_name='+'
     )
-    termination_a_id = models.PositiveIntegerField()
+    termination_a_id = models.UUIDField()
     termination_a = GenericForeignKey(
         ct_field='termination_a_type',
         fk_field='termination_a_id'
@@ -68,7 +68,7 @@ class Cable(PrimaryModel, StatusModel):
         on_delete=models.PROTECT,
         related_name='+'
     )
-    termination_b_id = models.PositiveIntegerField()
+    termination_b_id = models.UUIDField()
     termination_b = GenericForeignKey(
         ct_field='termination_b_type',
         fk_field='termination_b_id'
@@ -124,7 +124,7 @@ class Cable(PrimaryModel, StatusModel):
     ]
 
     class Meta:
-        ordering = ['pk']
+        ordering = ['termination_a_type', 'termination_a_id', 'termination_b_type', 'termination_b_id']
         unique_together = (
             ('termination_a_type', 'termination_a_id'),
             ('termination_b_type', 'termination_b_id'),
@@ -193,7 +193,7 @@ class Cable(PrimaryModel, StatusModel):
             })
 
         # If editing an existing Cable instance, check that neither termination has been modified.
-        if self.pk:
+        if not self._state.adding:
             err_msg = 'Cable termination points may not be modified. Delete and recreate the cable instead.'
             if (
                 self.termination_a_type_id != self._orig_termination_a_type_id or
@@ -346,7 +346,7 @@ class CablePath(BaseModel):
         on_delete=models.CASCADE,
         related_name='+'
     )
-    origin_id = models.PositiveIntegerField()
+    origin_id = models.UUIDField()
     origin = GenericForeignKey(
         ct_field='origin_type',
         fk_field='origin_id'
@@ -358,7 +358,7 @@ class CablePath(BaseModel):
         blank=True,
         null=True
     )
-    destination_id = models.PositiveIntegerField(
+    destination_id = models.UUIDField(
         blank=True,
         null=True
     )

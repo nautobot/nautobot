@@ -761,7 +761,7 @@ class IPAddressForm(BootstrapMixin, TenancyForm, ReturnURLForm, CustomFieldModel
         self.fields['vrf'].empty_label = 'Global'
 
         # Initialize primary_for_parent if IP address is already assigned
-        if self.instance.pk and self.instance.assigned_object:
+        if (not self.instance._state.adding) and self.instance.assigned_object:
             parent = self.instance.assigned_object.parent
             if (
                 self.instance.address.version == 4 and parent.primary_ip4_id == self.instance.pk or

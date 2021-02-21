@@ -4,6 +4,7 @@ import yaml
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, ProtectedError
@@ -274,7 +275,7 @@ class DeviceType(PrimaryModel):
         # If editing an existing DeviceType to have a larger u_height, first validate that *all* instances of it have
         # room to expand within their racks. This validation will impose a very high performance penalty when there are
         # many instances to check, but increasing the u_height of a DeviceType should be a very rare occurrence.
-        if self.pk and self.u_height > self._original_u_height:
+        if not self._state.adding and self.u_height > self._original_u_height:
             for d in Device.objects.filter(device_type=self, position__isnull=False):
                 face_required = None if self.is_full_depth else d.face
                 u_available = d.rack.get_available_units(
@@ -289,7 +290,7 @@ class DeviceType(PrimaryModel):
                     })
 
         # If modifying the height of an existing DeviceType to 0U, check for any instances assigned to a rack position.
-        elif self.pk and self._original_u_height > 0 and self.u_height == 0:
+        elif not self._state.adding and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(
                 device_type=self,
                 position__isnull=False
@@ -442,6 +443,7 @@ class Platform(OrganizationalModel):
         help_text='The name of the NAPALM driver to use when interacting with devices'
     )
     napalm_args = models.JSONField(
+        encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
         verbose_name='NAPALM arguments',
@@ -627,7 +629,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     ]
 
     class Meta:
-        ordering = ('_name', 'pk')  # Name may be null
+        ordering = ('_name',)  # Name may be null
         unique_together = (
             ('site', 'tenant', 'name'),  # See validate_unique below
             ('rack', 'position', 'face'),
@@ -705,7 +707,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
                 # Validate rack space
                 rack_face = self.face if not self.device_type.is_full_depth else None
-                exclude_list = [self.pk] if self.pk else []
+                exclude_list = [self.pk] if not self._state.adding else []
                 available_units = self.rack.get_available_units(
                     u_height=self.device_type.u_height, rack_face=rack_face, exclude=exclude_list
                 )
@@ -769,7 +771,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
     def save(self, *args, **kwargs):
 
-        is_new = not bool(self.pk)
+        is_new = self._state.adding
 
         super().save(*args, **kwargs)
 
@@ -946,7 +948,7 @@ class VirtualChassis(PrimaryModel):
 
         # Verify that the selected master device has been assigned to this VirtualChassis. (Skip when creating a new
         # VirtualChassis.)
-        if self.pk and self.master and self.master not in self.members.all():
+        if (not self._state.adding) and self.master and self.master not in self.members.all():
             raise ValidationError({
                 'master': f"The selected master ({self.master}) is not assigned to this virtual chassis."
             })

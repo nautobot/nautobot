@@ -325,7 +325,7 @@ class Rack(PrimaryModel, StatusModel):
         elif self.outer_width is None and self.outer_depth is None:
             self.outer_unit = ''
 
-        if self.pk:
+        if not self._state.adding:
             # Validate that Rack is tall enough to house the installed Devices
             top_device = Device.objects.filter(
                 rack=self
@@ -406,7 +406,7 @@ class Rack(PrimaryModel, StatusModel):
             }
 
         # Add devices to rack units list
-        if self.pk:
+        if not self._state.adding:
 
             # Retrieve all devices installed within the rack
             queryset = Device.objects.prefetch_related(
@@ -601,7 +601,7 @@ class RackReservation(PrimaryModel):
     csv_headers = ['site', 'rack_group', 'rack', 'units', 'tenant', 'user', 'description']
 
     class Meta:
-        ordering = ['created', 'pk']
+        ordering = ['created']
 
     def __str__(self):
         return "Reservation for rack {}".format(self.rack)

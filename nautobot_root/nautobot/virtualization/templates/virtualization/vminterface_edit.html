@@ -34,7 +34,7 @@
 {% endblock %}
 
 {% block buttons %}
-    {% if obj.pk %}
+    {% if editing %}
         <button type="submit" name="_update" class="btn btn-primary">Update</button>
         <button type="submit" formaction="?return_url={% url 'virtualization:vminterface_edit' pk=obj.pk %}" class="btn btn-primary">Update and Continue Editing</button>
     {% else %}

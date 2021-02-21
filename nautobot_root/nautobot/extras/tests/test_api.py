@@ -3,6 +3,7 @@ import os.path
 import uuid
 from unittest import skipIf
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.test import override_settings
@@ -368,6 +369,7 @@ class JobTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    @skipIf('nautobot.extras.tests.dummy_plugin' not in settings.PLUGINS, "dummy_plugin not in settings.PLUGINS")
     def test_list_jobs_with_permission(self):
         self.add_permissions('extras.view_job')
         url = reverse('extras-api:job-list')
@@ -491,7 +493,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         response = self.client.get('{}?created=2001-02-03'.format(url), **self.header)
 
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], self.rack2.pk)
+        self.assertEqual(response.data['results'][0]['id'], str(self.rack2.pk))
 
     def test_get_rack_created_gte(self):
         self.add_permissions('dcim.view_rack')
@@ -499,7 +501,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         response = self.client.get('{}?created__gte=2001-02-04'.format(url), **self.header)
 
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], self.rack1.pk)
+        self.assertEqual(response.data['results'][0]['id'], str(self.rack1.pk))
 
     def test_get_rack_created_lte(self):
         self.add_permissions('dcim.view_rack')
@@ -507,7 +509,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         response = self.client.get('{}?created__lte=2001-02-04'.format(url), **self.header)
 
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], self.rack2.pk)
+        self.assertEqual(response.data['results'][0]['id'], str(self.rack2.pk))
 
     def test_get_rack_last_updated(self):
         self.add_permissions('dcim.view_rack')
@@ -515,7 +517,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         response = self.client.get('{}?last_updated=2001-02-03%2001:02:03.000004'.format(url), **self.header)
 
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], self.rack2.pk)
+        self.assertEqual(response.data['results'][0]['id'], str(self.rack2.pk))
 
     def test_get_rack_last_updated_gte(self):
         self.add_permissions('dcim.view_rack')
@@ -523,7 +525,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         response = self.client.get('{}?last_updated__gte=2001-02-04%2001:02:03.000004'.format(url), **self.header)
 
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], self.rack1.pk)
+        self.assertEqual(response.data['results'][0]['id'], str(self.rack1.pk))
 
     def test_get_rack_last_updated_lte(self):
         self.add_permissions('dcim.view_rack')
@@ -531,7 +533,7 @@ class CreatedUpdatedFilterTest(APITestCase):
         response = self.client.get('{}?last_updated__lte=2001-02-04%2001:02:03.000004'.format(url), **self.header)
 
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], self.rack2.pk)
+        self.assertEqual(response.data['results'][0]['id'], str(self.rack2.pk))
 
 
 class ContentTypeTest(APITestCase):

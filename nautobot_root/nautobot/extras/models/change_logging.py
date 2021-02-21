@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
@@ -79,7 +80,7 @@ class ObjectChange(BaseModel):
         on_delete=models.PROTECT,
         related_name='+'
     )
-    changed_object_id = models.PositiveIntegerField()
+    changed_object_id = models.UUIDField()
     changed_object = GenericForeignKey(
         ct_field='changed_object_type',
         fk_field='changed_object_id'
@@ -91,7 +92,7 @@ class ObjectChange(BaseModel):
         blank=True,
         null=True
     )
-    related_object_id = models.PositiveIntegerField(
+    related_object_id = models.UUIDField(
         blank=True,
         null=True
     )
@@ -104,6 +105,7 @@ class ObjectChange(BaseModel):
         editable=False
     )
     object_data = models.JSONField(
+        encoder=DjangoJSONEncoder,
         editable=False
     )
 

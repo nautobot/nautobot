@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField
@@ -147,12 +149,25 @@ class TestCase(_TestCase):
         fields = [k for k in data.keys() if k not in exclude]
         model_dict = self.model_to_dict(instance, fields=fields, api=api)
 
-        # Omit any dictionary keys which are not instance attributes or have been excluded
-        relevant_data = {
-            k: v for k, v in data.items() if hasattr(instance, k) and k not in exclude
-        }
+        new_model_dict = {}
+        for k, v in model_dict.items():
+            if isinstance(v, list):
+                # Sort lists of values. This includes items like tags, or other M2M fields
+                new_model_dict[k] = sorted(v)
+            else:
+                new_model_dict[k] = v
 
-        self.assertDictEqual(model_dict, relevant_data)
+        # Omit any dictionary keys which are not instance attributes or have been excluded
+        relevant_data = {}
+        for k, v in data.items():
+            if hasattr(instance, k) and k not in exclude:
+                if isinstance(v, list):
+                    # Sort lists of values. This includes items like tags, or other M2M fields
+                    relevant_data[k] = sorted(v)
+                else:
+                    relevant_data[k] = v
+
+        self.assertEqual(new_model_dict, relevant_data)
 
     #
     # Convenience methods
@@ -334,7 +349,10 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
-            self.assertInstanceEqual(self._get_queryset().order_by('pk').last(), self.form_data)
+            if hasattr(self.model, 'last_updated'):
+                self.assertInstanceEqual(self._get_queryset().order_by('last_updated').last(), self.form_data)
+            else:
+                self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
         def test_create_object_with_constrained_permission(self):
@@ -343,7 +361,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name='Test permission',
-                constraints={'pk': 0},  # Dummy permission to deny all
+                constraints={'pk': str(uuid.uuid4())},  # Dummy permission to deny all
                 actions=['add']
             )
             obj_perm.save()
@@ -362,7 +380,7 @@ class ViewTestCases:
             self.assertEqual(initial_count, self._get_queryset().count())  # Check that no object was created
 
             # Update the ObjectPermission to allow creation
-            obj_perm.constraints = {'pk__gt': 0}
+            obj_perm.constraints = {'pk__isnull': False}
             obj_perm.save()
 
             # Try to create an object (permitted)
@@ -372,7 +390,10 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
-            self.assertInstanceEqual(self._get_queryset().order_by('pk').last(), self.form_data)
+            if hasattr(self.model, 'last_updated'):
+                self.assertInstanceEqual(self._get_queryset().order_by('last_updated').last(), self.form_data)
+            else:
+                self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
 
     class EditObjectViewTestCase(ModelViewTestCase):
         """
@@ -643,8 +664,14 @@ class ViewTestCases:
             response = self.client.post(**request)
             self.assertHttpStatus(response, 302)
             self.assertEqual(initial_count + self.bulk_create_count, self._get_queryset().count())
-            for instance in self._get_queryset().order_by('-pk')[:self.bulk_create_count]:
-                self.assertInstanceEqual(instance, self.bulk_create_data)
+            matching_count = 0
+            for instance in self._get_queryset().all():
+                try:
+                    self.assertInstanceEqual(instance, self.bulk_create_data)
+                    matching_count += 1
+                except AssertionError:
+                    pass
+            self.assertEqual(matching_count, self.bulk_create_count)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_create_multiple_objects_with_constrained_permission(self):
@@ -658,7 +685,7 @@ class ViewTestCases:
             obj_perm = ObjectPermission(
                 name='Test permission',
                 actions=['add'],
-                constraints={'pk': 0}  # Dummy constraint to deny all
+                constraints={'pk': uuid.uuid4()}  # Dummy constraint to deny all
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
@@ -669,14 +696,21 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update the ObjectPermission to allow creation
-            obj_perm.constraints = {'pk__gt': 0}  # Dummy constraint to allow all
+            obj_perm.constraints = {'pk__isnull': False}  # Dummy constraint to allow all
             obj_perm.save()
 
             response = self.client.post(**request)
             self.assertHttpStatus(response, 302)
             self.assertEqual(initial_count + self.bulk_create_count, self._get_queryset().count())
-            for instance in self._get_queryset().order_by('-pk')[:self.bulk_create_count]:
-                self.assertInstanceEqual(instance, self.bulk_create_data)
+
+            matching_count = 0
+            for instance in self._get_queryset().all():
+                try:
+                    self.assertInstanceEqual(instance, self.bulk_create_data)
+                    matching_count += 1
+                except AssertionError:
+                    pass
+            self.assertEqual(matching_count, self.bulk_create_count)
 
     class BulkImportObjectsViewTestCase(ModelViewTestCase):
         """
@@ -736,7 +770,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name='Test permission',
-                constraints={'pk': 0},  # Dummy permission to deny all
+                constraints={'pk': str(uuid.uuid4())},  # Dummy permission to deny all
                 actions=['add']
             )
             obj_perm.save()
@@ -748,7 +782,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update permission constraints
-            obj_perm.constraints = {'pk__gt': 0}  # Dummy permission to allow all
+            obj_perm.constraints = {'pk__isnull': False}  # Dummy permission to allow all
             obj_perm.save()
 
             # Import permitted objects
@@ -899,7 +933,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = ObjectPermission(
                 name='Test permission',
-                constraints={'pk': 0},  # Dummy permission to deny all
+                constraints={'pk': str(uuid.uuid4())},  # Dummy permission to deny all
                 actions=['delete']
             )
             obj_perm.save()
@@ -911,7 +945,7 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count)
 
             # Update permission constraints
-            obj_perm.constraints = {'pk__gt': 0}  # Dummy permission to allow all
+            obj_perm.constraints = {'pk__isnull': False}  # Dummy permission to allow all
             obj_perm.save()
 
             # Bulk delete permitted objects

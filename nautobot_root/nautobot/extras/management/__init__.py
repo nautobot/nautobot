@@ -1,3 +1,5 @@
+import sys
+
 from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
@@ -100,6 +102,12 @@ def create_custom_statuses(
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
     """
+    if 'test' in sys.argv:
+        # Do not print output during unit testing migrations
+        verbosity = 1
+
+    if verbosity >= 0:
+        print("\n", end="")
 
     # Prep the app and get the Status model dynamically
     try:
@@ -129,10 +137,16 @@ def create_custom_statuses(
         ("virtualization.VirtualMachine", vm_choices.VirtualMachineStatusChoices),
     ]
 
+    added_total = 0
+    linked_total = 0
+
     # Iterate choiceset kwargs to create status objects if they don't exist
     for model_path, choiceset in CHOICESET_MAP:
         content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
         choices = export_statuses_from_choiceset(choiceset)
+
+        if verbosity >= 2:
+            print(f"    Model {model_path}", flush=True)
 
         for choice_kwargs in choices:
             # The value of `color` may differ between other enums. We'll need to
@@ -153,11 +167,16 @@ def create_custom_statuses(
                     f'status for {model_path}: {err}'
                 )
 
-            if created and verbosity >= 2:
-                print(f"Adding status {obj.name}")
-
             # Make sure the content-type is associated.
             if content_type not in obj.content_types.all():
-                if verbosity >= 2:
-                    print(f"Linking {model_path} to status {obj.name}")
                 obj.content_types.add(content_type)
+
+            if created and verbosity >= 2:
+                print(f"      Adding and linking status {obj.name}", flush=True)
+                added_total += 1
+            elif not created and verbosity >= 2:
+                print(f"      Linking to existing status {obj.name}", flush=True)
+                linked_total += 1
+
+    if verbosity >= 2:
+        print(f"    Added {added_total}, linked {linked_total} status records")

@@ -4,6 +4,7 @@ import os
 from django.contrib.auth.models import Group, User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
@@ -11,6 +12,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
+from nautobot.core.models import BaseModel
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import flatten_dict
 
@@ -50,7 +52,7 @@ class AdminUser(User):
 # User preferences
 #
 
-class UserConfig(models.Model):
+class UserConfig(BaseModel):
     """
     This model stores arbitrary user-specific preferences in a JSON data structure.
     """
@@ -60,6 +62,7 @@ class UserConfig(models.Model):
         related_name='config'
     )
     data = models.JSONField(
+        encoder=DjangoJSONEncoder,
         default=dict
     )
 
@@ -175,7 +178,7 @@ def create_userconfig(instance, created, **kwargs):
 # REST API
 #
 
-class Token(models.Model):
+class Token(BaseModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
     It also supports setting an expiration time and toggling write ability.
@@ -233,7 +236,7 @@ class Token(models.Model):
 # Permissions
 #
 
-class ObjectPermission(models.Model):
+class ObjectPermission(BaseModel):
     """
     A mapping of view, add, change, and/or delete permission for users and/or groups to an arbitrary set of objects
     identified by ORM query parameters.
@@ -272,6 +275,7 @@ class ObjectPermission(models.Model):
         help_text="The list of actions granted by this permission"
     )
     constraints = models.JSONField(
+        encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
         help_text="Queryset filter matching the applicable objects of the selected type(s)"

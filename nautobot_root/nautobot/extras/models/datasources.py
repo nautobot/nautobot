@@ -2,6 +2,7 @@
 import os
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models, transaction
 from django.urls import reverse
@@ -67,7 +68,11 @@ class GitRepository(PrimaryModel):
 
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
     # the data types registered in registry['datasource_contents'].
-    provided_contents = models.JSONField(default=list, blank=True)
+    provided_contents = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        default=list,
+        blank=True
+    )
 
     csv_headers = ['name', 'slug', 'remote_url', 'branch', 'provided_contents']
     clone_fields = ['remote_url', 'provided_contents']

@@ -77,7 +77,7 @@ class WebhookTest(APITestCase):
         self.assertEqual(self.queue.count, 1)
         job = self.queue.jobs[0]
         self.assertEqual(job.args[0], Webhook.objects.get(type_update=True))
-        self.assertEqual(job.args[1]['id'], site.pk)
+        self.assertEqual(job.args[1]['id'], str(site.pk))
         self.assertEqual(job.args[2], 'site')
         self.assertEqual(job.args[3], ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -93,7 +93,7 @@ class WebhookTest(APITestCase):
         self.assertEqual(self.queue.count, 1)
         job = self.queue.jobs[0]
         self.assertEqual(job.args[0], Webhook.objects.get(type_delete=True))
-        self.assertEqual(job.args[1]['id'], site.pk)
+        self.assertEqual(job.args[1]['id'], str(site.pk))
         self.assertEqual(job.args[2], 'site')
         self.assertEqual(job.args[3], ObjectChangeActionChoices.ACTION_DELETE)
 

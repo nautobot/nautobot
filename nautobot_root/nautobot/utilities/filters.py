@@ -219,6 +219,9 @@ class BaseFilterSet(django_filters.FilterSet):
         models.URLField: {
             'filter_class': MultiValueCharFilter
         },
+        models.UUIDField: {
+            'filter_class': MultiValueCharFilter
+        },
         MACAddressField: {
             'filter_class': MultiValueMACAddressFilter
         },

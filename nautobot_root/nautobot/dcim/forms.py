@@ -1432,7 +1432,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         rear_port, position = self.cleaned_data['rear_port_set'][iteration].split(':')
 
         return {
-            'rear_port': int(rear_port),
+            'rear_port': rear_port,
             'rear_port_position': int(position),
         }
 
@@ -1841,7 +1841,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.instance.pk:
+        if not self.instance._state.adding:
 
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:
@@ -3087,7 +3087,7 @@ class FrontPortCreateForm(ComponentCreateForm):
         rear_port, position = self.cleaned_data['rear_port_set'][iteration].split(':')
 
         return {
-            'rear_port': int(rear_port),
+            'rear_port': rear_port,
             'rear_port_position': int(position),
         }
 
@@ -4106,7 +4106,7 @@ class VirtualChassisCreateForm(BootstrapMixin, CustomFieldModelForm, Relationshi
         instance = super().save(*args, **kwargs)
 
         # Assign VC members
-        if instance.pk:
+        if not instance._state.adding:
             initial_position = self.cleaned_data.get('initial_position') or 1
             for i, member in enumerate(self.cleaned_data['members'], start=initial_position):
                 member.virtual_chassis = instance

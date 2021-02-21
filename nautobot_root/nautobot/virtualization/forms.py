@@ -341,7 +341,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.instance.pk:
+        if not self.instance._state.adding:
 
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:

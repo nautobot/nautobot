@@ -289,7 +289,6 @@ INSTALLED_APPS = [
     'nautobot.dcim',
     'nautobot.ipam',
     'nautobot.extras',
-    'nautobot.secrets',
     'nautobot.tenancy',
     'nautobot.users',
     'nautobot.utilities',

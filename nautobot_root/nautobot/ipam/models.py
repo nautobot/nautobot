@@ -104,7 +104,7 @@ class VRF(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ('name', 'rd', 'pk')  # (name, rd) may be non-unique
+        ordering = ('name', 'rd')  # (name, rd) may be non-unique
         verbose_name = 'VRF'
         verbose_name_plural = 'VRFs'
 
@@ -273,7 +273,7 @@ class Aggregate(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ('prefix', 'pk')  # prefix may be non-unique
+        ordering = ('prefix',)  # prefix may be non-unique
 
     def __str__(self):
         return str(self.prefix)
@@ -299,7 +299,7 @@ class Aggregate(PrimaryModel):
             covering_aggregates = Aggregate.objects.filter(
                 prefix__net_contains_or_equals=str(self.prefix)
             )
-            if self.pk:
+            if not self._state.adding:
                 covering_aggregates = covering_aggregates.exclude(pk=self.pk)
             if covering_aggregates:
                 raise ValidationError({
@@ -310,7 +310,7 @@ class Aggregate(PrimaryModel):
 
             # Ensure that the aggregate being added does not cover an existing aggregate
             covered_aggregates = Aggregate.objects.filter(prefix__net_contained=str(self.prefix))
-            if self.pk:
+            if not self._state.adding:
                 covered_aggregates = covered_aggregates.exclude(pk=self.pk)
             if covered_aggregates:
                 raise ValidationError({
@@ -467,7 +467,7 @@ class Prefix(PrimaryModel, StatusModel):
     ]
 
     class Meta:
-        ordering = (F('vrf').asc(nulls_first=True), 'prefix', 'pk')  # (vrf, prefix) may be non-unique
+        ordering = (F('vrf__name').asc(nulls_first=True), 'prefix')  # (vrf, prefix) may be non-unique
         verbose_name_plural = 'prefixes'
 
     def __str__(self):
@@ -706,7 +706,7 @@ class IPAddress(PrimaryModel, StatusModel):
         blank=True,
         null=True
     )
-    assigned_object_id = models.PositiveIntegerField(
+    assigned_object_id = models.UUIDField(
         blank=True,
         null=True
     )
@@ -744,7 +744,7 @@ class IPAddress(PrimaryModel, StatusModel):
     ]
 
     class Meta:
-        ordering = ('address', 'pk')  # address may be non-unique
+        ordering = ('address',)  # address may be non-unique
         verbose_name = 'IP address'
         verbose_name_plural = 'IP addresses'
 
@@ -794,7 +794,7 @@ class IPAddress(PrimaryModel, StatusModel):
                     })
 
         # Check for primary IP assignment that doesn't match the assigned device/VM
-        if self.pk:
+        if not self._state.adding:
             device = Device.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
             if device:
                 if getattr(self.assigned_object, 'device', None) != device:
@@ -907,7 +907,7 @@ class VLANGroup(OrganizationalModel):
     csv_headers = ['name', 'slug', 'site', 'description']
 
     class Meta:
-        ordering = ('site', 'name', 'pk')  # (site, name) may be non-unique
+        ordering = ('site', 'name',)  # (site, name) may be non-unique
         unique_together = [
             ['site', 'name'],
             ['site', 'slug'],
@@ -1005,7 +1005,7 @@ class VLAN(PrimaryModel, StatusModel):
     ]
 
     class Meta:
-        ordering = ('site', 'group', 'vid', 'pk')  # (site, group, vid) may be non-unique
+        ordering = ('site', 'group', 'vid',)  # (site, group, vid) may be non-unique
         unique_together = [
             ['group', 'vid'],
             ['group', 'name'],
@@ -1118,7 +1118,7 @@ class Service(PrimaryModel):
     csv_headers = ['device', 'virtual_machine', 'name', 'protocol', 'ports', 'description']
 
     class Meta:
-        ordering = ('protocol', 'ports', 'pk')  # (protocol, port) may be non-unique
+        ordering = ('protocol', 'ports',)  # (protocol, port) may be non-unique
 
     def __str__(self):
         return f'{self.name} ({self.get_protocol_display()}/{self.port_list})'

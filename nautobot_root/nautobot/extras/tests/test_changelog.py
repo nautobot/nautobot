@@ -60,7 +60,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         oc_list = ObjectChange.objects.filter(
             changed_object_type=ContentType.objects.get_for_model(Site),
             changed_object_id=site.pk
-        ).order_by('pk')
+        ).order_by('time')
         self.assertEqual(oc_list[0].changed_object, site)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc_list[0].object_data['custom_fields']['my_field'], form_data['cf_my_field'])
@@ -191,7 +191,7 @@ class ChangeLogAPITest(APITestCase):
         oc_list = ObjectChange.objects.filter(
             changed_object_type=ContentType.objects.get_for_model(Site),
             changed_object_id=site.pk
-        ).order_by('pk')
+        ).order_by('time')
         self.assertEqual(oc_list[0].changed_object, site)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc_list[0].object_data['custom_fields'], data['custom_fields'])

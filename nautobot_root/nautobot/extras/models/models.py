@@ -6,6 +6,7 @@ from collections import OrderedDict
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError
 from django.db import models
 from django.http import HttpResponse
@@ -233,7 +234,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
         null=True,
         blank=True
     )
-    owner_object_id = models.PositiveIntegerField(
+    owner_object_id = models.UUIDField(
         default=None,
         null=True,
         blank=True
@@ -332,7 +333,7 @@ class ImageAttachment(BaseModel):
         to=ContentType,
         on_delete=models.CASCADE
     )
-    object_id = models.PositiveIntegerField()
+    object_id = models.UUIDField()
     parent = GenericForeignKey(
         ct_field='content_type',
         fk_field='object_id'
@@ -417,7 +418,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
         null=True,
         blank=True
     )
-    owner_object_id = models.PositiveIntegerField(
+    owner_object_id = models.UUIDField(
         default=None,
         null=True,
         blank=True
@@ -482,7 +483,9 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
         related_name='+',
         blank=True
     )
-    data = models.JSONField()
+    data = models.JSONField(
+        encoder=DjangoJSONEncoder
+    )
 
     objects = ConfigContextQuerySet.as_manager()
 
@@ -516,6 +519,7 @@ class ConfigContextModel(models.Model):
     ConfigContexts.
     """
     local_context_data = models.JSONField(
+        encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
     )
@@ -528,7 +532,7 @@ class ConfigContextModel(models.Model):
         null=True,
         blank=True
     )
-    local_context_data_owner_object_id = models.PositiveIntegerField(
+    local_context_data_owner_object_id = models.UUIDField(
         default=None,
         null=True,
         blank=True
@@ -627,6 +631,7 @@ class JobResult(BaseModel):
         default=JobResultStatusChoices.STATUS_PENDING
     )
     data = models.JSONField(
+        encoder=DjangoJSONEncoder,
         null=True,
         blank=True
     )

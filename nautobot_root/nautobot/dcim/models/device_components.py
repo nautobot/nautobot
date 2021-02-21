@@ -116,7 +116,7 @@ class CableTermination(models.Model):
         blank=True,
         null=True
     )
-    _cable_peer_id = models.PositiveIntegerField(
+    _cable_peer_id = models.UUIDField(
         blank=True,
         null=True
     )
@@ -494,7 +494,7 @@ class BaseInterface(RelationshipModel):
             self.untagged_vlan = None
 
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
-        if self.pk and self.mode != InterfaceModeChoices.MODE_TAGGED:
+        if not self._state.adding and self.mode != InterfaceModeChoices.MODE_TAGGED:
             self.tagged_vlans.clear()
 
         return super().save(*args, **kwargs)
@@ -612,7 +612,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             raise ValidationError({'lag': "Virtual interfaces cannot have a parent LAG interface."})
 
         # A LAG interface cannot be its own parent
-        if self.pk and self.lag_id == self.pk:
+        if not self._state.adding and self.lag_id == self.pk:
             raise ValidationError({'lag': "A LAG interface cannot be its own parent."})
 
         # Validate untagged VLAN

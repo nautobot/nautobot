@@ -59,12 +59,13 @@ class Tag(
         )
 
 
-class TaggedItem(GenericTaggedItemBase):
+class TaggedItem(BaseModel, GenericTaggedItemBase):
     tag = models.ForeignKey(
         to=Tag,
         related_name="%(app_label)s_%(class)s_items",
         on_delete=models.CASCADE
     )
+    object_id = models.UUIDField()
 
     class Meta:
         index_together = (
