@@ -5,16 +5,22 @@ services:
 addons:
   postgresql: "9.6"
 language: python
-python:
-  - "3.6"
-  - "3.7"
-  - "3.8"
+matrix:
+  include:
+    - python: "3.6"
+    - python: "3.7"
+    - python: "3.8"
+    - python: "3.9"
+  allow_failures:
+    - python: "3.9"
+before_install:
+  - pip install poetry
 install:
-  - pip install .
-  - pip install -r requirements-dev.txt
+  - poetry config virtualenvs.create false
+  - poetry install
 before_script:
   - psql --version
   - psql -U postgres -c 'SELECT version();'
   - psql -U postgres -c 'create database nautobot;'
 script:
-  - ./scripts/cibuild.sh
+  - poetry run ./scripts/cibuild.sh

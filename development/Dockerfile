@@ -14,15 +14,24 @@ ENV PYTHONUNBUFFERED 1
 
 RUN pip install --upgrade pip
 
+# Install Poetry manually from GitHub because otherwise it installs its own
+# dependencies globally which may conflict with ours.
+# https://python-poetry.org/docs/#osx-linux-bashonwindows-install-instructions
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+
+# Modify the PATH here because otherwise poetry fails 100% of the time. WAT??
+ENV PATH="${PATH}:/root/.poetry/bin"
+
+# Poetry shouldn't create a venv as we want global install
+RUN poetry config virtualenvs.create false
+
 # Used if someone wants to override the entrypoint and provision a super user
 COPY development/docker-entrypoint.sh /tmp/nautobot/docker-entrypoint.sh
 
 COPY . /tmp/src
 WORKDIR /tmp/src
 
-# Install Nautobot as an "editable" package so that `nautobot-server` becomes available and changes can be immediately reflected during development.
-RUN pip install --editable .
-RUN pip install -r requirements-dev.txt
+RUN poetry install
 
 WORKDIR /opt/nautobot
 
