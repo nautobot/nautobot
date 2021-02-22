@@ -387,6 +387,7 @@ class GitRepositoryTest(TransactionTestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
+            username="oauth2",
         )
         self.repo.save(trigger_resync=False)
 
@@ -412,6 +413,9 @@ class GitRepositoryTest(TransactionTestCase):
         self.repo._token = ""
         self.repo.save(trigger_resync=False)
         self.assertEqual(self.repo._token, "")
+
+    def test_verify_user(self):
+        self.assertEqual(self.repo.username, "oauth2")
 
     def test_save_relocate_directory(self):
         with tempfile.TemporaryDirectory() as tmpdirname:

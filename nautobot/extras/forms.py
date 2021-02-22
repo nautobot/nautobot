@@ -580,6 +580,12 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
     )
 
+    username = forms.CharField(
+        required=False,
+        label="Username",
+        help_text='Username for token authentication.'
+    )
+
     provided_contents = forms.MultipleChoiceField(
         required=False,
         label="Provides",
@@ -599,6 +605,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             'remote_url',
             'branch',
             '_token',
+            'username',
             'provided_contents',
             'tags',
         ]
@@ -627,6 +634,10 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+    )
+    username = forms.CharField(
+        required=False,
+        label="Username",
     )
 
     class Meta:

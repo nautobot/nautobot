@@ -9,7 +9,13 @@ Some text-based content is more conveniently stored in a separate Git repository
 
 ## Repository Configuration
 
-When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private on GitHub, you may specify a [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) that can be used to grant access to the repository.
+When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `token` and the token `username` that can be used to grant access to the repository.
+
+The token implementation can vary from Git provider to Git provider, the following providers have been confirmed to work. In theory, additional providers using the same pattern will work, but there is currently no specific support for all providers.
+
+* GitHub's [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) does not require a `username`. 
+* GitLab's [`token`](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) requires a `username`, conventions are to use "oauth2".  In addition, GitLab's [`deploy tokens`](https://docs.gitlab.com/ee/user/project/deploy_tokens/) are also supported.  
+* For Bitbucket, there are two options [`Personal Access Tokens`](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html) or [`oauth2`](https://developer.atlassian.com/cloud/bitbucket/oauth-2/) depending on product.
 
 Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under `GIT_ROOT`) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 

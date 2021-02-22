@@ -66,6 +66,12 @@ class GitRepository(PrimaryModel):
         )
     )
 
+    username = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+    )
+
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(

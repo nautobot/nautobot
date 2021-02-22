@@ -109,8 +109,13 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     # Inject token into source URL if necessary
     from_url = repository_record.remote_url
     token = repository_record._token
+    user = repository_record.username
     if token and token not in from_url:
-        from_url = re.sub('//', f'//{token}:x-oauth-basic@', from_url)
+        # Some git repositories require a user as well as a token.
+        if user:
+            from_url = re.sub('//', f'//{user}:{token}@', from_url)
+        else:
+            from_url = re.sub('//', f'//{token}@', from_url)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch

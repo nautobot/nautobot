@@ -176,6 +176,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
             'remote_url',
             'branch',
             'token',
+            'username',
             'current_head',
             'provided_contents',
             'created',
