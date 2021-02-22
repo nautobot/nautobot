@@ -11,7 +11,7 @@ User=nautobot
 Group=nautobot
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/venv/bin/python3 /opt/nautobot/nautobot_root/manage.py rqworker
+ExecStart=/opt/nautobot/venv/bin/python3 /opt/nautobot/manage.py rqworker
 
 Restart=on-failure
 RestartSec=30

@@ -16,7 +16,7 @@
 				"name": "Python: Nautobot",
 				"type": "python",
 				"request": "launch",
-				"program": "/opt/nautobot/nautobot_root/manage.py",
+				"program": "/opt/nautobot/manage.py",
 				"console": "integratedTerminal",
 				"args": [
 					"runserver",

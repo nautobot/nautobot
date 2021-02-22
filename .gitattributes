@@ -3,4 +3,4 @@
 *.min.* binary
 *.map binary
 *.pack.js binary
-nautobot_root/nautobot/project-static/materialdesignicons-5.4.55/preview.html binary
+nautobot/project-static/materialdesignicons-5.4.55/preview.html binary

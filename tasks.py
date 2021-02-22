@@ -224,15 +224,14 @@ def pycodestyle(context, python_ver=PYTHON_VER):
     context.run(
         f"{COMPOSE_COMMAND} run nautobot"
         " pycodestyle --ignore=W504,E501 "
-        " --exclude=nautobot_root/scripts,nautobot_root/reports,nautobot_root/jobs,nautobot_root/git"
-        ' contrib/ development/ nautobot_root/ tasks.py',
+        ' contrib/ development/ nautobot/ tasks.py',
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
 
 
 @task
-def coverage_run(context, dir="nautobot_root/", python_ver=PYTHON_VER):
+def coverage_run(context, dir="./", python_ver=PYTHON_VER):
     """Run tests
 
     Args:
@@ -242,7 +241,7 @@ def coverage_run(context, dir="nautobot_root/", python_ver=PYTHON_VER):
     """
     context.run(
         f"{COMPOSE_COMMAND} run nautobot"
-        f" coverage run --source='nautobot_root/' scripts/test_runner.py test {dir}",
+        f" coverage run scripts/test_runner.py test {dir}",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )

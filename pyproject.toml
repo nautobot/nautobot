@@ -20,7 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
 ]
 packages = [
-    {include = "nautobot", from = "nautobot_root" }
+    {include = "nautobot"}
 ]
 include = [
     "CHANGELOG.md",

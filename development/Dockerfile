@@ -28,8 +28,8 @@ RUN poetry config virtualenvs.create false
 # Used if someone wants to override the entrypoint and provision a super user
 COPY development/docker-entrypoint.sh /tmp/nautobot/docker-entrypoint.sh
 
-COPY . /tmp/src
-WORKDIR /tmp/src
+COPY . /opt/nautobot
+WORKDIR /opt/nautobot
 
 RUN poetry install
 

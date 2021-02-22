@@ -24,14 +24,14 @@ fi
 
 echo "Validating PEP8 compliance..."
 pycodestyle \
-    --ignore=W504,E501 --exclude=nautobot_root/scripts,nautobot_root/reports,nautobot_root/jobs,nautobot_root/git \
-    contrib/ development/ nautobot_root/ tasks.py
+    --ignore=W504,E501 \
+    contrib/ development/ nautobot/ tasks.py
 if [ $? != 0 ]; then
 	EXIT=1
 fi
 
 echo "Checking for missing migrations..."
-TEST_CONFIG=nautobot_root/nautobot/core/tests/nautobot_config.py
+TEST_CONFIG=nautobot/core/tests/nautobot_config.py
 scripts/test_runner.py --config=$TEST_CONFIG makemigrations --dry-run --check
 if [ $? != 0 ]; then
 	EXIT=1

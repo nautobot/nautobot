@@ -46,7 +46,7 @@ nav:
         - Context Data: 'models/extras/configcontext.md'
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'
-        - Export Templates: 'models/extras/export-templates.md'
+        - Export Templates: 'models/extras/exporttemplate.md'
         - Jobs: 'additional-features/jobs.md'
         - Git Repositories: 'models/extras/gitrepository.md'
         - NAPALM: 'additional-features/napalm.md'

@@ -27,8 +27,7 @@ fi
 #  - E501: line greater than 80 characters in length
 pycodestyle \
     --ignore=W504,E501 \
-    --exclude=nautobot_root/scripts,nautobot_root/reports,nautobot_root/jobs,nautobot_root/git \
-    contrib/ development/ nautobot_root/ tasks.py
+    contrib/ development/ nautobot/ tasks.py
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more PEP 8 errors detected, failing build."
@@ -36,10 +35,10 @@ if [[ $RC != 0 ]]; then
 fi
 
 # Point to the testing nautobot_config file for use in CI
-TEST_CONFIG=nautobot_root/nautobot/core/tests/nautobot_config.py
+TEST_CONFIG=nautobot/core/tests/nautobot_config.py
 
 # Run Nautobot tests
-coverage run --source="nautobot_root/" scripts/test_runner.py --config=$TEST_CONFIG test nautobot_root/
+coverage run scripts/test_runner.py --config=$TEST_CONFIG test ./
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."
