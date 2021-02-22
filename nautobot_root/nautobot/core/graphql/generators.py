@@ -111,9 +111,8 @@ def generate_list_search_parameters(schema_type):
         for key in list(schema_type._meta.filterset_class.get_filters().keys()):
             if key in exclude_filters:
                 continue
-
-            if key == "id" or key.startswith("id__") or key.endswith("_id"):
-                search_params[key] = graphene.Int()
+            if key == "id":
+                search_params[key] = graphene.ID()
             else:
                 search_params[key] = graphene.String()
 
@@ -188,7 +187,7 @@ def generate_attrs_for_schema_type(schema_type):
 
     # Define Attributes for single item and list with their search parameters
     search_params = generate_list_search_parameters(schema_type)
-    attrs[single_item_name] = graphene.Field(schema_type, id=graphene.Int())
+    attrs[single_item_name] = graphene.Field(schema_type, id=graphene.ID())
     attrs[list_name] = graphene.List(schema_type, **search_params)
 
     # Define Resolvers for both single item and list

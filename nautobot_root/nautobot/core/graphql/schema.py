@@ -68,12 +68,6 @@ def extend_schema_type(schema_type):
     model = schema_type._meta.model
 
     #
-    # ID, Force Id as an Integer, currently it's recognized as a String
-    #
-    if "id" in schema_type._meta.fields:
-        schema_type._meta.fields["id"] = graphene.Field.mounted(graphene.Int())
-
-    #
     # Queryset
     #
     setattr(schema_type, "get_queryset", generate_restricted_queryset())
