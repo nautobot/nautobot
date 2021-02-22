@@ -3,7 +3,7 @@
 
 <script type="text/javascript">
 {% if not result.completed %}
-var pending_result_id = {{ result.pk }};
+var pending_result_id = "{{ result.pk }}";
 {% else %}
 var pending_result_id = null;
 {% endif %}

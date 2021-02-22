@@ -33,7 +33,6 @@
                         <thead>
                             <tr>
                                 <th>Device</th>
-                                <th>ID</th>
                                 <th>Rack/Unit</th>
                                 <th>Serial</th>
                                 <th>Position</th>
@@ -51,7 +50,6 @@
                                         <td>
                                             <a href="{{ device.get_absolute_url }}">{{ device }}</a>
                                         </td>
-                                        <td>{{ device.pk }}</td>
                                         <td>
                                             {% if device.rack %}
                                                 {{ device.rack }} / {{ device.position }}
