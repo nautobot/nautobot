@@ -24,6 +24,7 @@ nav:
         - 4. Gunicorn: 'installation/4-gunicorn.md'
         - 5. HTTP Server: 'installation/5-http-server.md'
         - 6. External Authentication (Optional): 'installation/6-external-authentication.md'
+        - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
     - Configuration:
         - Configuring Nautobot: 'configuration/index.md'
@@ -57,6 +58,7 @@ nav:
     - Plugins:
         - Using Plugins: 'plugins/index.md'
         - Developing Plugins: 'plugins/development.md'
+        - Porting NetBox Plugins to Nautobot: 'plugins/porting-from-netbox.md'
     - Administration:
         - Permissions: 'administration/permissions.md'
         - Replicating Nautobot: 'administration/replicating-nautobot.md'
