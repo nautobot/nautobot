@@ -154,7 +154,7 @@
             {% endif %}
         {% endwith %}
         {% if perms.dcim.napalm_read_device %}
-            {% if object.status != 'active' %}
+            {% if object.status.slug != 'active' %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='Device must be in active status' %}
             {% elif not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}

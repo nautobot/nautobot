@@ -5,6 +5,7 @@ from nautobot.dcim.models import (
     ConsolePort, ConsoleServerPort, Device, DeviceBay, DeviceRole, FrontPort, Interface, InventoryItem, Platform,
     PowerOutlet, PowerPort, RearPort, VirtualChassis,
 )
+from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import COL_TENANT
 from nautobot.utilities.tables import (
@@ -272,7 +273,7 @@ class DeviceConsolePortTable(ConsolePortTable):
         )
         default_columns = ('pk', 'name', 'label', 'type', 'description', 'cable', 'connection', 'actions')
         row_attrs = {
-            'class': lambda record: record.cable.get_status_class() if record.cable else ''
+            'style': cable_status_color_css,
         }
 
 
@@ -306,7 +307,7 @@ class DeviceConsoleServerPortTable(ConsoleServerPortTable):
         )
         default_columns = ('pk', 'name', 'label', 'type', 'description', 'cable', 'connection', 'actions')
         row_attrs = {
-            'class': lambda record: record.cable.get_status_class() if record.cable else ''
+            'style': cable_status_color_css,
         }
 
 
@@ -347,7 +348,7 @@ class DevicePowerPortTable(PowerPortTable):
             'actions',
         )
         row_attrs = {
-            'class': lambda record: record.cable.get_status_class() if record.cable else ''
+            'style': cable_status_color_css
         }
 
 
@@ -389,7 +390,7 @@ class DevicePowerOutletTable(PowerOutletTable):
             'pk', 'name', 'label', 'type', 'power_port', 'feed_leg', 'description', 'cable', 'connection', 'actions',
         )
         row_attrs = {
-            'class': lambda record: record.cable.get_status_class() if record.cable else ''
+            'style': cable_status_color_css
         }
 
 
@@ -451,7 +452,7 @@ class DeviceInterfaceTable(InterfaceTable):
             'connection', 'actions',
         )
         row_attrs = {
-            'class': lambda record: record.cable.get_status_class() if record.cable else '',
+            'style': cable_status_color_css,
             'data-name': lambda record: record.name,
         }
 
@@ -499,7 +500,7 @@ class DeviceFrontPortTable(FrontPortTable):
             'actions',
         )
         row_attrs = {
-            'class': lambda record: record.cable.get_status_class() if record.cable else ''
+            'style': cable_status_color_css
         }
 
 
@@ -535,7 +536,7 @@ class DeviceRearPortTable(RearPortTable):
             'pk', 'name', 'label', 'type', 'positions', 'description', 'cable', 'cable_peer', 'actions',
         )
         row_attrs = {
-            'class': lambda record: record.cable.get_status_class() if record.cable else ''
+            'style': cable_status_color_css
         }
 
 

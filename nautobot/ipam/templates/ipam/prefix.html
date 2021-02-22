@@ -64,7 +64,7 @@
         <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
             <a href="{% url 'ipam:prefix_prefixes' pk=object.pk %}">Child Prefixes <span class="badge">{{ object.get_child_prefixes.count }}</span></a>
         </li>
-        {% if perms.ipam.view_ipaddress and object.status != 'container' %}
+        {% if perms.ipam.view_ipaddress and object.status.slug != 'container' %}
             <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
                 <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_child_ips.count }}</span></a>
             </li>

@@ -240,7 +240,7 @@
                                 <a href="{{ powerfeed.get_absolute_url }}">{{ powerfeed.name }}</a>
                             </td>
                             <td>
-                                <span class="label label-{{ powerfeed.get_status_class }}">{{ powerfeed.get_status_display }}</span>
+                                <span class="label" style="color: {{ powerfeed.status.color|fgcolor }}; background-color: #{{powerfeed.status.color}}">{{ powerfeed.get_status_display }}</span>
                             </td>
                             <td>
                                 <span class="label label-{{ powerfeed.get_type_class }}">{{ powerfeed.get_type_display }}</span>

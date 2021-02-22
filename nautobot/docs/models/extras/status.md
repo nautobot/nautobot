@@ -21,7 +21,7 @@ Any model that is intended to have a `status` field must inherit from `extras.mo
 
 The `StatusField` field type subclass of a `django.db.models.ForeignKey` with extra extensions to have it behave like field with choices. Because this pattern is replacing hard-coded `ChoiceSets` (such as `dcim.choices.DeviceStatusChoices`) with database objects, it is not possible to use the `choices=` argument on a foreign key.
 
-Because of this, `StatusField` implements a `.contribute_to_class()` method which will automatically bined `.get_status_display()` and `.get_status_class()` methods to any model that implements this field, so that these do not need to be manually defined on each model.
+Because of this, `StatusField` implements a `.contribute_to_class()` method which will automatically bind `.get_status_display()` and `.get_status_color()` methods to any model that implements this field, so that these do not need to be manually defined on each model.
 
 This model field also emits its own form field to eliminate the requirement for a form field to be explicitly added to model forms.
 

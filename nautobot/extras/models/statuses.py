@@ -121,7 +121,7 @@ class StatusField(models.ForeignKey):
         at during the instance preparation. This is also where any custom model
         methods are hooked in. So in short this method asserts that any time a
         `StatusField` is added to a model, that model also gets a
-        `.get_status_display()` and a `.get_status_class()` method without
+        `.get_status_display()` and a `.get_status_color()` method without
         having to define it on the model yourself.
         """
         super().contribute_to_class(cls, name, private_only=private_only)
@@ -146,7 +146,7 @@ class StatusField(models.ForeignKey):
                 partialmethod(_get_FIELD_display, field=self),
             )
 
-        def _get_FIELD_class(self, field):
+        def _get_FIELD_color(self, field):
             """
             Return `self.FOO.color` (where FOO is field name).
 
@@ -155,12 +155,12 @@ class StatusField(models.ForeignKey):
             field_method = getattr(self, field.name)
             return getattr(field_method, 'color')
 
-        # Install `.get_FOO_class()` onto the model using our own version.
-        if 'get_%s_class' % self.name not in cls.__dict__:
+        # Install `.get_FOO_color()` onto the model using our own version.
+        if 'get_%s_color' % self.name not in cls.__dict__:
             setattr(
                 cls,
-                'get_%s_class' % self.name,
-                partialmethod(_get_FIELD_class, field=self),
+                'get_%s_color' % self.name,
+                partialmethod(_get_FIELD_color, field=self),
             )
 
     def formfield(self, **kwargs):

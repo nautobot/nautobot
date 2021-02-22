@@ -1,5 +1,5 @@
 {% if perms.dcim.change_cable %}
-    {% if cable.status == 'connected' %}
+    {% if cable.status.slug == 'connected' %}
         <a href="#" class="btn btn-warning btn-xs cable-toggle connected" title="Mark planned" data="{{ cable.pk }}">
             <i class="mdi mdi-lan-disconnect" aria-hidden="true"></i>
         </a>
