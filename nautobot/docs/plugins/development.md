@@ -146,6 +146,8 @@ $ python setup.py develop
 
 If your plugin introduces a new type of object in Nautobot, you'll probably want to create a [Django model](https://docs.djangoproject.com/en/stable/topics/db/models/) for it. A model is essentially a Python representation of a database table, with attributes that represent individual columns. Model instances can be created, manipulated, and deleted using [queries](https://docs.djangoproject.com/en/stable/topics/db/queries/). Models must be defined within a file named `models.py`.
 
+It is highly recommended to have plugin models inherit from at least `nautobot.core.models.BaseModel` which provides base functionality and convenience methods common to all models.
+
 Below is an example `models.py` file containing a model with two character fields:
 
 ```python

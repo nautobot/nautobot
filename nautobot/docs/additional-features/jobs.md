@@ -259,6 +259,12 @@ Again, defining user variables is totally optional; you may create a job with ju
         self.commit = commit
     ```
 
+!!! warning
+    When writing Jobs that create and manipulate data it is recommended to make use of the `validated_save()` convenience method which exists on all core models. This method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../../development/best-practices.md).
+
+!!! warning
+    The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
+
 ### The `test_*()` Methods
 
 If your job class defines any number of methods whose names begin with `test_`, these will be automatically invoked after the `run()` method (if any) completes. These methods must take no arguments (other than `self`).
@@ -409,7 +415,7 @@ class NewBranch(Job):
             slug=slugify(data['site_name']),
             status=SiteStatusChoices.STATUS_PLANNED
         )
-        site.save()
+        site.validated_save()
         self.log_success(obj=site, message="Created new site")
 
         # Create access switches
@@ -422,7 +428,7 @@ class NewBranch(Job):
                 status=DeviceStatusChoices.STATUS_PLANNED,
                 device_role=switch_role
             )
-            switch.save()
+            switch.validated_save()
             self.log_success(obj=switch, message="Created new switch")
 
         # Generate a CSV table of new devices

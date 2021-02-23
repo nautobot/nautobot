@@ -148,31 +148,34 @@ To return the inverse of a filtered queryset, use `exclude()` instead of `filter
 
 ## Creating and Updating Objects
 
-New objects can be created by instantiating the desired model, defining values for all required attributes, and calling `save()` on the instance. For example, we can create a new VLAN by specifying its numeric ID, name, and assigned site:
+New objects can be created by instantiating the desired model, defining values for all required attributes, and calling `validated_save()` on the instance. For example, we can create a new VLAN by specifying its numeric ID, name, and assigned site:
 
 ```
 >>> lab1 = Site.objects.get(pk=7)
 >>> myvlan = VLAN(vid=123, name='MyNewVLAN', site=lab1)
->>> myvlan.save()
+>>> myvlan.validated_save()
 ```
 
-Alternatively, the above can be performed as a single operation. (Note, however, that `save()` does _not_ return the new instance for reuse.)
+Alternatively, the above can be performed as a single operation. (Note, however, that `validated_save()` does _not_ return the new instance for reuse.)
 
 ```
->>> VLAN(vid=123, name='MyNewVLAN', site=Site.objects.get(pk=7)).save()
+>>> VLAN(vid=123, name='MyNewVLAN', site=Site.objects.get(pk=7)).validated_save()
 ```
 
-To modify an existing object, we retrieve it, update the desired field(s), and call `save()` again.
+To modify an existing object, we retrieve it, update the desired field(s), and call `validated_save()` again.
 
 ```
 >>> vlan = VLAN.objects.get(pk=1280)
 >>> vlan.name
 'MyNewVLAN'
 >>> vlan.name = 'BetterName'
->>> vlan.save()
+>>> vlan.validated_save()
 >>> VLAN.objects.get(pk=1280).name
 'BetterName'
 ```
+
+!!! warning
+   It is recommended to make use of the `validated_save()` convenience method which exists on all core models. While the Django `save()` method still exists, the `validated_save()` method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../../development/best-practices.md).
 
 !!! warning
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
