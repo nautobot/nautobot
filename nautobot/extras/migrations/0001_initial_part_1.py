@@ -223,6 +223,7 @@ class Migration(migrations.Migration):
                 ('branch', models.CharField(default='main', max_length=64)),
                 ('current_head', models.CharField(blank=True, default='', max_length=48)),
                 ('_token', django_cryptography.fields.encrypt(models.CharField(blank=True, default='', max_length=200))),
+                ('username', models.CharField(blank=True, default='', max_length=64)),
                 ('provided_contents', models.JSONField(blank=True, default=list, encoder=django.core.serializers.json.DjangoJSONEncoder)),
                 ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
             ],
