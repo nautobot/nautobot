@@ -19,10 +19,6 @@ The following sections detail how to set up a new instance of Nautobot:
 | PostgreSQL | 9.6             |
 | Redis      | 4.0             |
 
-Below is a simplified overview of the Nautobot application stack for reference:
-
-![Nautobot UI as seen by a non-authenticated user](../media/installation/nautobot_application_stack.png)
-
 ## Upgrading
 
 If you are upgrading from an existing installation, please consult the [upgrading guide](upgrading.md).
