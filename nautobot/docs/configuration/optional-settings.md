@@ -1,5 +1,23 @@
 # Optional Configuration Settings
 
+## Extra Applications
+
+A need may arise to allow the user to register additional settings. These will automatically apply
+based on keynames prefixed with `EXTRA_` assuming the base key (the latter part of the setting name) is
+of type list or tuple.
+
+For example, to register additional `INSTALLED_APPS`, you would simply specify this in your custom
+(user) configuration::
+
+```python
+EXTRA_INSTALLED_APPS = [
+    'foo.bar',
+]
+```
+
+This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
+can specify additional apps with ease.
+
 ## ADMINS
 
 Nautobot will email details about critical errors to the administrators listed here. This should be a list of (name, email) tuples. For example:

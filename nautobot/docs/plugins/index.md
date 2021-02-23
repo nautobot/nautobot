@@ -31,13 +31,13 @@ Either by policy or by technical limitation, the interaction of plugins with Nau
 
 The instructions below detail the process for installing and enabling a Nautobot plugin.
 
-### Install Package
+### Install the Package
 
 Download and install the plugin package per its installation instructions. Plugins published via PyPI are typically installed using pip. Be sure to install the plugin within Nautobot's virtual environment.
 
 ```no-highlight
-$ source /opt/nautobot/venv/bin/activate
-(venv) $ pip install <package>
+$ poetry shell
+$ pip install <package>
 ```
 
 Alternatively, you may wish to install the plugin manually by running `python setup.py install`. If you are developing a plugin and want to install it only temporarily, run `python setup.py develop` instead.
@@ -52,7 +52,7 @@ PLUGINS = [
 ]
 ```
 
-### Configure Plugin
+### Configure the Plugin
 
 If the plugin requires any configuration, define it in `nautobot_config.py` under the `PLUGINS_CONFIG` parameter. The available configuration parameters should be detailed in the plugin's README file.
 
@@ -68,12 +68,12 @@ PLUGINS_CONFIG = {
 ### Run Database Migrations
 
 !!! warning
-    Assert that you have installed Nautobot in *editable* mode using `pip install -e .` so that changes you make to migrations will apply to the source tree!
+    Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
 
 If the plugin introduces new database models, run the provided schema migrations:
 
 ```no-highlight
-(venv) $ nautobot-server migrate
+$ nautobot-server migrate
 ```
 
 ### Collect Static Files
@@ -81,10 +81,10 @@ If the plugin introduces new database models, run the provided schema migrations
 Plugins may package static files to be served directly by the HTTP front end. Ensure that these are copied to the static root directory with the `collectstatic` management command:
 
 ```no-highlight
-(venv) $ nautobot-server collectstatic
+$ nautobot-server collectstatic
 ```
 
-### Restart WSGI Service
+### Restart the WSGI Service
 
 Restart the WSGI service to load the new plugin:
 

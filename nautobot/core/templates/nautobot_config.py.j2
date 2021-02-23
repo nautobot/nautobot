@@ -4,7 +4,9 @@
 #                       #
 #########################
 
-from nautobot.core.settings import *
+import os
+
+from nautobot.core.settings import *  # noqa
 
 # This is a list of valid fully-qualified domain names (FQDNs) for the Nautobot server. Nautobot will not permit write
 # access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
@@ -16,13 +18,13 @@ ALLOWED_HOSTS = []
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     'default': {
-        'NAME': 'nautobot',        # Database name
-        'USER': '',               # PostgreSQL username
-        'PASSWORD': '',           # PostgreSQL password
-        'HOST': 'localhost',      # Database server
-        'PORT': '',               # Database port (leave blank for default)
-        'CONN_MAX_AGE': 300,      # Max database connection age
-        'ENGINE': 'django.db.backends.postgresql',  # Database driver
+        'NAME': os.getenv('NAUTOBOT_DATABASE', ''),             # Database name
+        'USER': os.getenv('NAUTOBOT_USER', ''),                 # Database username
+        'PASSWORD': os.getenv('NAUTOBOT_PASSWORD', ''),         # Datbase password
+        'HOST': os.getenv('NAUTOBOT_DB_HOST', 'localhost'),     # Database server
+        'PORT': os.getenv('NAUTOBOT_DB_PORT', ''),              # Database port (leave blank for default)
+        'CONN_MAX_AGE': os.getenv('NAUTOBOT_DB_TIMEOUT', 300),  # Database timeout
+        'ENGINE': 'django.db.backends.postgresql',              # Database driver (Postres only supported!)
     }
 }
 
@@ -253,3 +255,7 @@ TIME_FORMAT = 'g:i a'
 SHORT_TIME_FORMAT = 'H:i:s'
 DATETIME_FORMAT = 'N j, Y g:i a'
 SHORT_DATETIME_FORMAT = 'Y-m-d H:i'
+
+# A list of strings designating all applications that are enabled in this Django installation. Each string should be a dotted Python path to an application configuration class (preferred), or a package containing an application.
+# http://nautobot.readthedocs.io/configuration/optional-settings/#extra-applications
+EXTRA_INSTALLED_APPS = []

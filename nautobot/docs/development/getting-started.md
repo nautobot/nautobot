@@ -103,47 +103,77 @@ There are a few things you'll need:
 - A PostgreSQL server, which can be installed locally [per the documentation](/installation/1-postgresql/)
 - A Redis server, which can also be [installed locally](/installation/2-redis/)
 - A supported version of Python
+- A recent version of [Poetry](https://python-poetry.org/docs/#installation)
+
+#### What is Poetry?
+
+Poetry is a tool for dependency management and packaging in Python. It allows you to declare the libraries your project depends on and it will manage (install/update) them for you. It will also manage virtual environments, and allow for publishing packages to the [Python Package Index](https://pypi.org).
+
+You may install Poetry by running:
+
+```bash
+$ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+```
+
+For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
 
 #### Creating a Python Virtual Environment
 
 A [virtual environment](https://docs.python.org/3/tutorial/venv.html) is like a container for a set of Python packages. They allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
 
-Create a virtual environment using the `venv` Python module:
+For Nautobot development, we have selected Poetry, which will transparently create a virtualenv for you, automatically install all dependencies required for Nautobot to operate, and will also install the `nautobot-server` CLI command that you will utilize to interact with Nautobot from here on out.
 
-```no-highlight
-$ mkdir ~/.venv
-$ python3 -m venv ~/.venv/nautobot
+Bootstrap your virtual environment using `poetry install`. 
+
+```bash
+$ poetry install
 ```
 
-This will create a directory named `.venv/nautobot/` in your home directory, which houses a virtual copy of the Python executable and its related libraries and tooling. When running Nautobot for development, it will be run using the Python binary at `~/.venv/nautobot/bin/python`.
+This will create automatically create a virtualenv in your home directory, which houses a virtual copy of the Python executable and its related libraries and tooling. When running Nautobot for development, it will be run using the Python binary at found within the virtualenv.
 
-!!! info
-    Keeping virtual environments in `~/.venv/` is a common convention but entirely optional: Virtual environments can be created wherever you please.
+Once created, you may activate the virtual environment using `poetry shell`:
 
-Once created, activate the virtual environment:
+```bash
+$ poetry shell
+Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8
 
-```no-highlight
-$ source ~/.venv/nautobot/bin/activate
-(nautobot) $
+$ . /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
+(nautobot-Ams_xyDt-py3.8) $
 ```
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
 
-#### Installing Dependencies
+Observe also that the `python` interpreter is bound within the virtualenv:
 
-With the virtual environment activated, install the Nautobot and its dependent packages using `pip install --editable .`:
-
-```no-highlight
-(nautobot) $ python -m pip install --editable .
-Collecting Django==3.1 (from -r requirements.txt (line 1))
-  Cache entry deserialization failed, entry ignored
-  Using cached https://files.pythonhosted.org/packages/2b/5a/4bd5624546912082a1bd2709d0edc0685f5c7827a278d806a20cf6adea28/Django-3.1-py3-none-any.whl
-...
+```bash
+(nautobot-Ams_xyDt-py3.8) $ which python
+/home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/python
 ```
 
-This command tells `pip` to install the local Nautobot package found in `.` (the current directory) and all of its dependencies in *editable* mode, meaning that you can directly edit files in the source tree and the changes will immediately be reflected in the installed package.
+To exit the virtual shell, use `exit`:
+```
+(nautobot-Ams_xyDt-py3.8) $ exit
+$
+```
 
-This will also install the `nautobot-server` CLI command that you will utilize to interact with Nautobot.
+#### Working with Poetry
+
+Poetry automatically installs your dependencies. However, if you need to install any additional dependencies this can be done with `pip`. For example, if you really like using `ipython` for development:
+
+```no-highlight
+(nautobot-Ams_xyDt-py3.8) $ python -m pip install ipython
+Collecting ipython
+  Using cached ipython-7.20.0-py3-none-any.whl (784 kB)
+  ...
+```
+
+It may not always be convenient to enter into the virtual shell just to run programs. You may also execute a given command ad hoc within the project's virtual shell by using `poetry run`:
+
+```
+$ poetry run nautobot-server
+```
+
+Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.
 
 #### Configuring Nautobot
 
@@ -191,7 +221,7 @@ Run the Nautobot interactive shell with the `nbshell` management command:
 
 ```bash
 $ nautobot-server nbshell
-### Nautobot interactive shell (jathy-mini.local)
+### Nautobot interactive shell (localhost)
 ### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0b1
 ### lsmodels() will show available models. Use help(<model>) for more info.
 >>>

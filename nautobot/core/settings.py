@@ -1,10 +1,7 @@
 import os
 import platform
-import warnings
 
 from django.contrib.messages import constants as messages
-from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.core.validators import URLValidator
 
 from nautobot import __version__
 
@@ -247,9 +244,9 @@ DATABASES = {
         'NAME': os.getenv('NAUTOBOT_DATABASE', 'nautobot'),
         'USER': os.getenv('NAUTOBOT_USER', ''),
         'PASSWORD': os.getenv('NAUTOBOT_PASSWORD', ''),
-        'HOST': 'localhost',
-        'PORT': '',
-        'CONN_MAX_AGE': 300,
+        'HOST': os.getenv('NAUTOBOT_DB_HOST', 'localhost'),
+        'PORT': os.getenv('NAUTOBOT_DB_PORT', ''),
+        'CONN_MAX_AGE': os.getenv('NAUTOBOT_DB_TIMEOUT', 300),
         'ENGINE': 'django.db.backends.postgresql',
     }
 }
