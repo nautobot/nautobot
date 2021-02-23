@@ -204,3 +204,17 @@ To delete multiple objects at once, call `delete()` on a filtered queryset. It's
 
 !!! warning
     Deletions are immediate and irreversible. Always consider the impact of deleting objects carefully before calling `delete()` on an instance or queryset.
+
+## Change Logging and Webhooks
+
+Note that Nautobot's change logging and webhook processing features operate under the context of an HTTP request. As such, these functions do not work automatically when using the ORM directly, either through the `nbshell` or otherwise. A special context manager is provided to allow these features to operate under an emulated HTTP request context. This context manager must be explicitly invoked for change log entries and webhooks to be created when interacting with objects through the ORM. Here is an example using the `web_request_context` context manager within the nbshell:
+
+```python
+>>> from nautobot.extras.context_managers import web_request_context
+>>> user = User.objects.get(username="admin")
+>>> with web_request_context(user):
+...     lax = Site(name="LAX")
+...     lax.validated_save()
+```
+
+A `User` object must be provided. A `WSGIRequest` may optionally be passed and one will automatically be created if not provided.
