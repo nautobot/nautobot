@@ -12,13 +12,13 @@ Begin by installing all system packages required by Nautobot and its dependencie
 ### Ubuntu
 
 ```no-highlight
-$ sudo apt install -y python3 python3-pip python3-venv python3-dev build-essential libxml2-dev libxslt1-dev libffi-dev libpq-dev libssl-dev zlib1g-dev
+$ sudo apt install -y python3 python3-pip python3-venv python3-dev git build-essential libxml2-dev libxslt1-dev libffi-dev libpq-dev libssl-dev zlib1g-dev
 ```
 
 ### CentOS
 
 ```no-highlight
-$ sudo yum install -y gcc python36 python36-devel python3-pip libxml2-devel libxslt-devel libffi-devel openssl-devel redhat-rpm-config
+$ sudo yum install -y gcc python36 python36-devel python3-pip git libxml2-devel libxslt-devel libffi-devel openssl-devel redhat-rpm-config
 ```
 
 Before continuing with either platform, update pip (Python's package management tool) to its latest release:

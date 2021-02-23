@@ -7,6 +7,9 @@ Some text-based content is more conveniently stored in a separate Git repository
 * Export templates
 * Additional data types as registered by any installed plugins
 
+!!! note
+    Nautobot's Git integration depends on the availability of the `git` program. If `git` is not installed, Nautobot will be unable to pull data from Git repositories.
+
 ## Repository Configuration
 
 When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `token` and the token `username` that can be used to grant access to the repository.
