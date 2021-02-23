@@ -154,6 +154,7 @@ def run_app(**kwargs):
     parser = management.CommandParser(
         description=kwargs.pop('description'),
         formatter_class=VerboseHelpFormatter,
+        add_help=False,
     )
     parser.add_argument(
         "-c",

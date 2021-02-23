@@ -12,113 +12,52 @@ Begin by installing all system packages required by Nautobot and its dependencie
 ### Ubuntu
 
 ```no-highlight
-sudo apt install -y python3 python3-pip python3-venv python3-dev build-essential libxml2-dev libxslt1-dev libffi-dev libpq-dev libssl-dev zlib1g-dev
+$ sudo apt install -y python3 python3-pip python3-venv python3-dev build-essential libxml2-dev libxslt1-dev libffi-dev libpq-dev libssl-dev zlib1g-dev
 ```
 
 ### CentOS
 
 ```no-highlight
-sudo yum install -y gcc python36 python36-devel python3-pip libxml2-devel libxslt-devel libffi-devel openssl-devel redhat-rpm-config
+$ sudo yum install -y gcc python36 python36-devel python3-pip libxml2-devel libxslt-devel libffi-devel openssl-devel redhat-rpm-config
 ```
 
 Before continuing with either platform, update pip (Python's package management tool) to its latest release:
 
 ```no-highlight
-sudo pip3 install --upgrade pip
+$ sudo pip3 install --upgrade pip
 ```
 
-## Download Nautobot
-
-This documentation provides two options for installing Nautobot: from a downloadable archive, or from the git repository. Installing from a package (option A below) requires manually fetching and extracting the archive for every future update, whereas installation via git (option B) allows for seamless upgrades by re-pulling the `main` branch.
+## Install Nautobot
 
 FIXME(glenn) FIXME(jathan) Add information here for installing from Pip and configuring `BASE_STORAGE_DIR` to `/opt/nautobot/`.
 
-### Option A: Download a Release Archive
+The quickest and easiest way to install Nautobot is using `pip`. We recommend that you install Nautobot into a Python virtualenv (more docs on this later). 
 
-Download the [latest stable release](https://github.com/nautobot/nautobot/releases) from GitHub as a tarball or ZIP archive and extract it to your desired path. In this example, we'll use `/opt/nautobot` as the Nautobot root.
+At this time, this is the only supported method. New instructions will be added in the near future.
 
-```no-highlight
-$ sudo wget https://github.com/nautobot/nautobot/archive/vX.Y.Z.tar.gz
-$ sudo tar -xzf vX.Y.Z.tar.gz -C /opt
-$ sudo ln -s /opt/nautobot-X.Y.Z/ /opt/nautobot
-$ ls -l /opt | grep nautobot
-lrwxrwxrwx  1 root root         13 Jul 20 13:44 nautobot -> nautobot-2.9.0/
-drwxr-xr-x  2 root root       4096 Jul 20 13:44 nautobot-2.9.0
+```bash
+$ python3 -m venv nautobot 
+$ source nautobot/bin/activate
+(nautobot) $ pip3 install nautobot
 ```
 
-!!! note
-    It is recommended to install Nautobot in a directory named for its version number. For example, Nautobot v1.0.0 would be installed into `/opt/nautobot-1.0.0`, and a symlink from `/opt/nautobot/` would point to this location. This allows for future releases to be installed in parallel without interrupting the current installation. When changing to the new release, only the symlink needs to be updated.
+### Verify your installation
 
-### Option B: Clone the Git Repository
-
-Create the base directory for the Nautobot installation. For this guide, we'll use `/opt/nautobot`.
-
-```no-highlight
-sudo mkdir -p /opt/nautobot/ && cd /opt/nautobot/
-```
-
-If `git` is not already installed, install it:
-
-#### Ubuntu
-
-```no-highlight
-sudo apt install -y git
-```
-
-#### CentOS
-
-```no-highlight
-sudo yum install -y git
-```
-
-Next, clone the **main** branch of the Nautobot GitHub repository into the current directory. (This branch always holds the current stable release.)
-
-```no-highlight
-$ sudo git clone -b main https://github.com/nautobot/nautobot.git .
-Cloning into '.'...
-remote: Counting objects: 1994, done.
-remote: Compressing objects: 100% (150/150), done.
-remote: Total 1994 (delta 80), reused 0 (delta 0), pack-reused 1842
-Receiving objects: 100% (1994/1994), 472.36 KiB | 0 bytes/s, done.
-Resolving deltas: 100% (1495/1495), done.
-Checking connectivity... done.
-```
-
-!!! note
-    Installation via git also allows you to easily try out development versions of Nautobot. The `develop` branch contains all work underway for the next minor release, and the `feature` branch tracks progress on the next major release.
-
-## Create the Nautobot System User
-
-Create a system user account named `nautobot`. We'll configure the WSGI and HTTP services to run under this account. We'll also assign this user ownership of the media directory. This ensures that Nautobot will be able to save uploaded files.
-
-#### Ubuntu
-
-```
-sudo adduser --system --group nautobot
-sudo chown --recursive nautobot /opt/nautobot/nautobot_root/media/
-```
-
-#### CentOS
-
-```
-sudo groupadd --system nautobot
-sudo adduser --system -g nautobot nautobot
-sudo chown --recursive nautobot /opt/nautobot/nautobot_root/media/
-```
+You should now have a fancy `nautobot-server` command in your environment. This will be your gateway to all things Nautobot!
 
 ## Configuration
 
-Move into the Nautobot configuration directory and make a copy of `configuration.example.py` named `configuration.py`. This file will hold all of your local configuration parameters.
+Initialize a new configuration by running `nautobot-server init`. You may specify an alternate location and detailed instructions for this are covered in [Nautobot Configuration](../configuration).
 
-```no-highlight
-cd /opt/nautobot/nautobot_root/nautobot/core/
-sudo cp configuration.example.py configuration.py
+```bashj
+$ nautobot-server init
+Configuration file created at '/home/example/.nautobot/nautobot_config.py'
 ```
 
-Open `configuration.py` with your preferred editor to begin configuring Nautobot. Nautobot offers [many configuration parameters](/configuration/), but only the following four are required for new installations:
+Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment. Nautobot offers [many configuration parameters](/configuration/), but only the following four are required for new installations:
 
 * `ALLOWED_HOSTS`
-* `DATABASE`
+* `DATABASES`
 * `REDIS`
 * `SECRET_KEY`
 
@@ -136,18 +75,24 @@ If you are not yet sure what the domain name and/or IP address of the Nautobot i
 ALLOWED_HOSTS = ['*']
 ```
 
-### DATABASE
+### DATABASES
 
-This parameter holds the database configuration details. You must define the username and password used when you configured PostgreSQL. If the service is running on a remote host, update the `HOST` and `PORT` parameters accordingly. See the [configuration documentation](/configuration/required-settings/#database) for more detail on individual parameters.
+This parameter holds the database configuration details. You must define the username and password used when you configured PostgreSQL. If the service is running on a remote host, update the `HOST` and `PORT` parameters accordingly. See the [configuration documentation](/configuration/required-settings/#databases) for more detail on individual parameters.
+
+!!! warning
+    Nautobot only supports PostgreSQL as a database backend. Do not modify the `ENGINE` setting or you
+    will be unable to connect to the database.
 
 ```python
-DATABASE = {
-    'NAME': 'nautobot',               # Database name
-    'USER': 'nautobot',               # PostgreSQL username
-    'PASSWORD': 'J5brHrAXFLQSif0K', # PostgreSQL password
-    'HOST': 'localhost',            # Database server
-    'PORT': '',                     # Database port (leave blank for default)
-    'CONN_MAX_AGE': 300,            # Max database connection age (seconds)
+DATABASES = {
+    'default':
+        'NAME': 'nautobot',                         # Database name
+        'USER': 'nautobot',                         # PostgreSQL username
+        'PASSWORD': 'best_password',                # PostgreSQL password
+        'HOST': 'localhost',                        # Database server
+        'PORT': '',                                 # Database port (leave blank for default)
+        'CONN_MAX_AGE': 300,                        # Max database connection age (seconds)
+        'ENGINE': 'django.db.backends.postgresql',  # Database driver (Do not change this!)
 }
 ```
 
@@ -180,10 +125,13 @@ REDIS = {
 
 This parameter must be assigned a randomly-generated key employed as a salt for hashing and related cryptographic functions. (Note, however, that it is _never_ directly used in the encryption of secret data.) This key must be unique to this installation and is recommended to be at least 50 characters long. It should not be shared outside the local system.
 
-A simple Python script named `generate_secret_key.py` is provided in the parent directory to assist in generating a suitable key:
+A `SECRET_KEY` is automatically generated when you create a new `nautobot_config.py` file using `nautobot-server init`.
+
+If you would like to generate a new key you may use the `nautobot-server generate_secret_key` management command:
 
 ```no-highlight
-python3 ../generate_secret_key.py
+$ nautobot-server generate_secret_key.py
++$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
 !!! warning
@@ -193,7 +141,13 @@ When you have finished modifying the configuration, remember to save the file.
 
 ## Optional Requirements
 
-All Python packages required by Nautobot are listed in `requirements.txt` and will be installed automatically. Nautobot also supports some optional packages. If desired, these packages must be listed in `local_requirements.txt` within the Nautobot root directory.
+!!! danger
+    `FIXME(jathan)` This section needs to be revised because there is no
+    "Nautobot root directory" when installing via `pip`.
+
+All Python packages required by Nautobot will be installed automatically when using `pip install nautobot`. 
+
+Nautobot also supports the ability to install optional Python packages. If desired, these packages must be listed in `local_requirements.txt` within the Nautobot root directory.
 
 ### NAPALM
 

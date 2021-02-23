@@ -1,8 +1,6 @@
 Nautobot
 Copyright 2021 Network to Code, LLC
 
-This product includes software copyrighted and licensed under Apache License 2.0 by DigitalOcean, LLC.
+Nautobot is based in part upon NetBox. NetBox is copyrighted and licensed under Apache License 2.0 by DigitalOcean, LLC.
 
-The Initial Developers of some parts of this product, which are copied from, derived from, or inspired by NetBox, are Jeremy Stretch and the NetBox open source community (https://github.com/netbox-community) and licensed under Apache 2.0.
-
-The Initial Developer of some parts of this product, which are copied from, derived from, or inspired by Logan, is David Cramer (https://github.com/dcramer) and licensed under Apache 2.0.
+Some parts of Nautobot are based upon Logan and licensed under Apache License 2.0 by David Cramer.

@@ -35,8 +35,8 @@ echo "Installing Python system packages ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Install required Python packages
-COMMAND="pip3 install -r requirements.txt"
-echo "Installing core dependencies ($COMMAND)..."
+COMMAND="pip3 install nautobot"
+echo "Installing Nautobot ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Install optional packages (if any)

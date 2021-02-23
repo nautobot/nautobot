@@ -23,9 +23,9 @@ ALLOWED_HOSTS = ['*']
 
 ---
 
-## DATABASE
+## DATABASES
 
-Nautobot requires access to a PostgreSQL 9.6 or later database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASE` dictionary:
+Nautobot requires access to a PostgreSQL 9.6 or later database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
 
 * `NAME` - Database name
 * `USER` - PostgreSQL username
@@ -34,16 +34,23 @@ Nautobot requires access to a PostgreSQL 9.6 or later database service to store 
 * `PORT` - TCP port of the PostgreSQL service; leave blank for default port (TCP/5432)
 * `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
 
+!!! warning
+    Nautobot only supports PostgreSQL as a database backend. Do not modify the `ENGINE` setting or you
+    will be unable to connect to the database.
+
 Example:
 
 ```python
-DATABASE = {
-    'NAME': 'nautobot',               # Database name
-    'USER': 'nautobot',               # PostgreSQL username
-    'PASSWORD': 'J5brHrAXFLQSif0K', # PostgreSQL password
-    'HOST': 'localhost',            # Database server
-    'PORT': '',                     # Database port (leave blank for default)
-    'CONN_MAX_AGE': 300,            # Max database connection age
+DATABASES = {
+    'default': {
+        'NAME': 'nautobot',                         # Database name
+        'USER': 'nautobot',                         # PostgreSQL username
+        'PASSWORD': 'awesome_password',             # PostgreSQL password
+        'HOST': 'localhost',                        # Database server
+        'PORT': '',                                 # Database port (leave blank for default)
+        'CONN_MAX_AGE': 300,                        # Max database connection age
+        'ENGINE': 'django.db.backends.postgresql',  # Database driver (Do not change this!)
+    }
 }
 ```
 
@@ -52,88 +59,162 @@ DATABASE = {
 
 ---
 
-## REDIS
+## Redis Settings
 
-[Redis](https://redis.io/) is an in-memory data store similar to memcached. It is required to support Nautobot's caching
-functionality (as well as other planned features). The connection settings are broken down into two sections for
-task queuing and caching, allowing the user to connect to different Redis instances/databases per feature.
-
-Redis is configured using a configuration setting similar to `DATABASE` and these settings are the same for both of the `tasks` and `caching` subsections:
-
-* `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
-* `PORT` - TCP port of the Redis service; leave blank for default port (6379)
-* `PASSWORD` - Redis password (if set)
-* `DATABASE` - Numeric database ID
-* `SSL` - Use SSL connection to Redis
-
-An example configuration is provided below:
-
-```python
-REDIS = {
-    'tasks': {
-        'HOST': 'redis.example.com',
-        'PORT': 1234,
-        'PASSWORD': 'foobar',
-        'DATABASE': 0,
-        'SSL': False,
-    },
-    'caching': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'PASSWORD': '',
-        'DATABASE': 1,
-        'SSL': False,
-    }
-}
-```
-
-!!! note
-    If you are upgrading from a NetBox release older than v2.7.0, please note that the Redis connection configuration
-    settings have changed. Manual modification to bring the `REDIS` section inline with the above specification is
-    necessary.
+[Redis](https://redis.io/) is an in-memory data store similar to memcached. It is required to support Nautobot's
+caching, task queueing, and webhook features. The connection settings are explained here, allowing Nautobot to connect
+to different Redis instances/databases per feature.
 
 !!! warning
-    It is highly recommended to keep the task and cache databases separate. Using the same database number on the
+    It is highly recommended to keep the Redis databases for caching and tasks separate. Using the same database number on the
     same Redis instance for both may result in queued background tasks being lost during cache flushing events.
 
-### Using Redis Sentinel
+    For this reason, the default settings utilize database `1` for caching and database `0` for tasks.
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, there is minimal
-configuration necessary to convert Nautobot to recognize it. It requires the removal of the `HOST` and `PORT` keys from
-above and the addition of three new keys.
+The default settings should be suitable for most deployments and should only require customization for more advanced
+configurations.
 
-* `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
-of the Redis server and port for each sentinel instance to connect to
-* `SENTINEL_SERVICE`: Name of the master / service to connect to
-* `SENTINEL_TIMEOUT`: Connection timeout, in seconds
+### Caching
+
+Nautobot supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops).
+
+Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL. 
+
+For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
+
+#### CACHEOPS_REDIS
+
+Default: `"redis://localhost:6379/1"`
+
+If you wish to use SSL, you may set the URL scheme to `rediss://`, for example:
+
+```python
+CACHEOPS_REDIS = "rediss://localhost:6379/1"
+```
+
+This setting may also be a dictionary style, but that is not covered here. Please see the official guide on [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
+
+#### CACHEOPS_SENTINEL
+
+Default: `undefined`
+
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the
+[`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).
+
+!!! warning
+    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will
+    result in an error if both are set.
 
 Example:
 
 ```python
-REDIS = {
-    'tasks': {
-        'SENTINELS': [('mysentinel.redis.example.com', 6379)],
-        'SENTINEL_SERVICE': 'nautobot',
-        'SENTINEL_TIMEOUT': 10,
-        'PASSWORD': '',
-        'DATABASE': 0,
-        'SSL': False,
+# Set CACHEOPS_REDIS to an empty value
+CACHEOPS_REDIS = False
+
+# If you want to use Sentinel, specify this variable
+CACHEOPS_SENTINEL = {
+    "locations": [("localhost", 26379)], # Sentinel locations, required
+    "service_name": "nautobot",          # Sentinel service name, required
+    "socket_timeout": 10,                # Connection timeout in seconds, optional
+    "db": 0                              # Redis database, default: 0
+    # ...                                # Everything else is passed to `Sentinel()`
+}
+```
+
+For more details on how to configure Cacheops to use Redis Sentinel see the official guide on [Cacheops
+setup](https://github.com/Suor/django-cacheops#setup).
+
+---
+
+### Task Queuing
+
+Task queues are configured by defining the `RQ_QUEUES` setting. Tasks settings utilize the `default` settings, where
+webhooks utilize the `check_releases` settings. By default, these are identical. It is up to you to modify them for your
+environment.
+
+#### RQ_QUEUES
+
+Default: 
+
+```python
+RQ_QUEUES = {
+    "default": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
     },
-    'caching': {
-        'SENTINELS': [
-            ('mysentinel.redis.example.com', 6379),
-            ('othersentinel.redis.example.com', 6379)
+    "check_releases": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
+    }
+}
+```
+
+- `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
+- `PORT` - TCP port of the Redis service; leave blank for default port (6379)
+- `PASSWORD` - Redis password (if set)
+* `DB` - Numeric database ID
+- `SSL` - Use SSL connection to Redis
+
+#### Using Redis Sentinel
+
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must modify the
+connection settings. It requires the removal of the `HOST`, `PORT`, and `DEFAULT_TIMEOUT` keys from above and the
+addition of three new keys.
+
+* `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
+of the Redis server and port for each sentinel instance to connect to
+* `MASTER_NAME`: Name of the master / service to connect to
+* `SOCKET_TIMEOUT`: Timeout in seconds for a connection to timeout
+* `CONNECTION_KWARGS`: Connection timeout, in seconds
+
+Example:
+
+```python
+RQ_QUEUES = {
+    "default": {
+        "SENTINELS": [
+            ("mysentinel.redis.example.com", 6379)
+            ("othersentinel.redis.example.com", 6379)
         ],
-        'SENTINEL_SERVICE': 'nautobot',
-        'PASSWORD': '',
-        'DATABASE': 1,
-        'SSL': False,
+        "MASTER_NAME": "nautobot",
+        "DB": 0,
+        "PASSWORD": "",
+        "SOCKET_TIMEOUT": None,
+        "CONNECTION_KWARGS": {
+            "socket_connect_timeout": 10,
+        },
+        "SSL": False,
+    },
+    "check_releases": {
+        "SENTINELS": [
+            ("mysentinel.redis.example.com", 6379)
+            ("othersentinel.redis.example.com", 6379)
+        ],
+        "MASTER_NAME": "nautobot",
+        "DB": 0,
+        "PASSWORD": "",
+        "SOCKET_TIMEOUT": None,
+        "CONNECTION_KWARGS": {
+            "socket_connect_timeout": 10,
+        },
+        "SSL": False,
     }
 }
 ```
 
 !!! note
     It is permissible to use Sentinel for only one database and not the other.
+
+For more details on configuring RQ, please see the documentation for [Django RQ
+installation](https://github.com/rq/django-rq#installation).
 
 ---
 
@@ -143,4 +224,8 @@ This is a secret, random string used to assist in the creation new cryptographic
 
 Please note that this key is **not** used directly for hashing user passwords or for the encrypted storage of secret data in Nautobot.
 
-`SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols. The script located at `$INSTALL_ROOT/nautobot/generate_secret_key.py` may be used to generate a suitable key.
+`SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols. 
+
+A unique `SECRET_KEY` is generated for you automatically when you use `nautobot init` to create a new configuration. You may run `nautobot-server generate_secret_key` to generate a new key at any time.
+
+For more details see [Nautobot Configuration](..).

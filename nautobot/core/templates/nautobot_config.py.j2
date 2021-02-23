@@ -28,31 +28,43 @@ DATABASES = {
     }
 }
 
-# Redis database settings. Redis is used for caching and for queuing background tasks such as webhook events. A separate
-# configuration exists for each. Full connection details are required in both sections, and it is strongly recommended
-# to use two separate database IDs.
-REDIS = {
-    'tasks': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        # Comment out `HOST` and `PORT` lines and uncomment the following if using Redis Sentinel
-        # 'SENTINELS': [('mysentinel.redis.example.com', 6379)],
-        # 'SENTINEL_SERVICE': 'nautobot',
-        'PASSWORD': '',
-        'DATABASE': 0,
-        'SSL': False,
+# Nautobot uses RQ for task scheduling. These are the following defaults.
+# For detailed configuration see: https://github.com/rq/django-rq#installation
+RQ_QUEUES = {
+    "default": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
     },
-    'caching': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        # Comment out `HOST` and `PORT` lines and uncomment the following if using Redis Sentinel
-        # 'SENTINELS': [('mysentinel.redis.example.com', 6379)],
-        # 'SENTINEL_SERVICE': 'nautobot',
-        'PASSWORD': '',
-        'DATABASE': 1,
-        'SSL': False,
+    # "with-sentinel": {
+    #     "SENTINELS": [
+    #         ("mysentinel.redis.example.com", 6379)
+    #         ("othersentinel.redis.example.com", 6379)
+    #     ],
+    #     "MASTER_NAME": 'nautobot",
+    #     "DB": 0,
+    #     "PASSWORD": "",
+    #     "SOCKET_TIMEOUT": None,
+    #     'CONNECTION_KWARGS': {
+    #         'socket_connect_timeout': 10,
+    #     },
+    # },
+    "check_releases": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
     }
 }
+
+# Nautobot uses Cacheops for database query caching. These are the following defaults.
+# For detailed configuration see: https://github.com/Suor/django-cacheops#setup
+CACHEOPS_REDIS = 'redis://localhost:6379/1'
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
 # For optimal security, SECRET_KEY should be at least 50 characters in length and contain a mix of letters, numbers, and
@@ -91,19 +103,27 @@ BANNER_LOGIN = ''
 BASE_PATH = ''
 
 # Cache timeout in seconds. Set to 0 to dissable caching. Defaults to 900 (15 minutes)
-CACHE_TIMEOUT = 900
+CACHEOPS_DEFAULTS = {
+    'timeout': 900
+}
 
 # Maximum number of days to retain logged changes. Set to 0 to retain changes indefinitely. (Default: 90)
 CHANGELOG_RETENTION = 90
 
-# API Cross-Origin Resource Sharing (CORS) settings. If CORS_ORIGIN_ALLOW_ALL is set to True, all origins will be
-# allowed. Otherwise, define a list of allowed origins using either CORS_ORIGIN_WHITELIST or
-# CORS_ORIGIN_REGEX_WHITELIST. For more information, see https://github.com/ottoyiu/django-cors-headers
-CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = [
+# If True, all origins will be allowed. Other settings restricting allowed origins will be ignored.
+# Defaults to False. Setting this to True can be dangerous, as it allows any website to make
+# cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with
+# CORS_ALLOWED_ORIGINS or CORS_ALLOWED_ORIGIN_REGEXES.
+CORS_ALLOW_ALL_ORIGINS = False
+
+# A list of origins that are authorized to make cross-site HTTP requests. Defaults to [].
+CORS_ALLOWED_ORIGINS = [
     # 'https://hostname.example.com',
 ]
-CORS_ORIGIN_REGEX_WHITELIST = [
+
+# A list of strings representing regexes that match Origins that are authorized to make cross-site
+# HTTP requests. Defaults to [].
+CORS_ALLOWED_ORIGIN_REGEXES = [
     # r'^(https?://)?(\w+\.)?example\.com$',
 ]
 
@@ -116,20 +136,9 @@ CORS_ORIGIN_REGEX_WHITELIST = [
 # on a production system.
 DEBUG = False
 
-# Email settings
-EMAIL = {
-    'SERVER': 'localhost',
-    'PORT': 25,
-    'USERNAME': '',
-    'PASSWORD': '',
-    'USE_SSL': False,
-    'USE_TLS': False,
-    'TIMEOUT': 10,  # seconds
-    'FROM_EMAIL': '',
-}
-
-# Enforcement of unique IP space can be toggled on a per-VRF basis. To enforce unique IP space within the global table
-# (all prefixes and IP addresses not assigned to a VRF), set ENFORCE_GLOBAL_UNIQUE to True.
+# Enforcement of unique IP space can be toggled on a per-VRF basis. To enforce unique IP space
+# within the global table (all prefixes and IP addresses not assigned to a VRF), set
+# ENFORCE_GLOBAL_UNIQUE to True.
 ENFORCE_GLOBAL_UNIQUE = False
 
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
@@ -153,10 +162,6 @@ INTERNAL_IPS = ('127.0.0.1', '::1')
 # Enable custom logging. Please see the Django documentation for detailed guidance on configuring custom logs:
 #   https://docs.djangoproject.com/en/stable/topics/logging/
 LOGGING = {}
-
-# The length of time (in seconds) for which a user will remain logged into the web UI before being prompted to
-# re-authenticate. (Default: 1209600 [14 days])
-LOGIN_TIMEOUT = None
 
 # Setting this to True will display a "maintenance mode" banner at the top of every page.
 MAINTENANCE_MODE = False
@@ -235,6 +240,11 @@ RELEASE_CHECK_URL = None
 
 # Maximum execution time for background tasks, in seconds.
 RQ_DEFAULT_TIMEOUT = 300
+
+# The length of time (in seconds) for which a user will remain logged into the web UI before being prompted to
+# re-authenticate. (Default: 1209600 [14 days])
+SESSION_COOKIE_AGE = 1209600  # 2 weeks, in seconds
+
 
 # By default, Nautobot will store session data in the database. Alternatively, a file path can be specified here to use
 # local file storage instead. (This can be useful for enabling authentication on a standby instance with read-only

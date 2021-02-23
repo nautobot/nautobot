@@ -78,11 +78,19 @@ The filesystem path to use to store Nautobot files (jobs, uploaded images, Git r
 
 ---
 
-## CACHE_TIMEOUT
+## CACHEOPS_DEFAULTS
 
-Default: 900
+Default: `{'timeout': 900}` (15 minutes, in seconds)
 
-The number of seconds that cache entries will be retained before expiring.
+Various defaults for caching, the most important of which being the cache timeout. The `timeout` is the number of seconds that cache entries will be retained before expiring.
+
+---
+
+## CACHEOPS_REDIS
+
+Default: `'redis://localhost:6379/1'`
+
+The Redis connection string to use for caching.
 
 ---
 
@@ -98,27 +106,58 @@ changes in the database indefinitely.
 
 ---
 
-## CORS_ORIGIN_ALLOW_ALL
+## CORS_ALLOW_ALL_ORIGINS
 
-Default: False
+Default: `False`
 
-If True, cross-origin resource sharing (CORS) requests will be accepted from all origins. If False, a whitelist will be used (see below).
+If `True`, all origins will be allowed. Other settings restricting allowed origins will be ignored.
+
+Setting this to `True` can be dangerous, as it allows any website to make cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) or [`CORS_ALLOWED_ORIGIN_REGEXES`](#cors_allowed_origin_regexes).
+
+Previously this setting was called `CORS_ORIGIN_ALLOW_ALL`, which still works as an alias, with the new name taking precedence.
 
 ---
 
-## CORS_ORIGIN_WHITELIST
+## CORS_ALLOWED_ORIGINS
 
-## CORS_ORIGIN_REGEX_WHITELIST
+Default: `[]`
 
-These settings specify a list of origins that are authorized to make cross-site API requests. Use
-`CORS_ORIGIN_WHITELIST` to define a list of exact hostnames, or `CORS_ORIGIN_REGEX_WHITELIST` to define a set of regular
-expressions. (These settings have no effect if `CORS_ORIGIN_ALLOW_ALL` is True.) For example:
+A list of origins that are authorized to make cross-site HTTP requests.
+
+An Origin is defined by [the CORS RFC Section 3.2](https://tools.ietf.org/html/rfc6454#section-3.2) as a URI `scheme + hostname + port`, or one of the special values `'null'` or `'file://'`. Default ports (HTTPS = 443, HTTP = 80) are optional here.
+
+The special value `null` is sent by the browser in ["privacy-sensitive contexts"](https://tools.ietf.org/html/rfc6454#section-6), such as when the client is running from a `file://` domain. The special value `file://` is sent accidentally by some versions of Chrome on Android as per this bug.
+
+Example:
 
 ```python
-CORS_ORIGIN_WHITELIST = [
-    'https://example.com',
+CORS_ALLOWED_ORIGINS = [
+    "https://example.com",
+    "https://sub.example.com",
+    "http://localhost:8080",
+    "http://127.0.0.1:9000"
 ]
 ```
+
+Previously this setting was called `CORS_ORIGIN_WHITELIST`, which still works as an alias, with the new name taking precedence.
+
+---
+
+## CORS_ALLOWED_ORIGIN_REGEXES
+
+Default: `[]`
+
+A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests. Useful when [`CORS_ALLOWED_ORIGINS`](#cores_allowed_origins) is impractical, such as when you have a large number of subdomains.
+
+Example:
+
+```python
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://\w+\.example\.com$",
+]
+```
+
+Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still works as an alias, with the new name taking precedence.
 
 ---
 
@@ -127,8 +166,7 @@ CORS_ORIGIN_WHITELIST = [
 Default: False
 
 This setting enables debugging. Debugging should be enabled only during development or troubleshooting. Note that only
-clients which access Nautobot from a recognized [internal IP address](#internal_ips) will see debugging tools in the user
-interface.
+clients which access Nautobot from a recognized [internal IP address](#internal_ips) will see debugging tools in the user interface.
 
 !!! warning
     Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users and impose a
@@ -141,40 +179,6 @@ interface.
 Default: `$INSTALL_ROOT/docs/`
 
 The filesystem path to Nautobot's documentation. This is used when presenting context-sensitive documentation in the web UI. By default, this will be the `docs/` directory within the root Nautobot installation path. (Set this to `None` to disable the embedded documentation.)
-
----
-
-## EMAIL
-
-In order to send email, Nautobot needs an email server configured. The following items can be defined within the `EMAIL` configuration parameter:
-
-* `SERVER` - Hostname or IP address of the email server (use `localhost` if running locally)
-* `PORT` - TCP port to use for the connection (default: `25`)
-* `USERNAME` - Username with which to authenticate
-* `PASSSWORD` - Password with which to authenticate
-* `USE_SSL` - Use SSL when connecting to the server (default: `False`)
-* `USE_TLS` - Use TLS when connecting to the server (default: `False`)
-* `SSL_CERTFILE` - Path to the PEM-formatted SSL certificate file (optional)
-* `SSL_KEYFILE` - Path to the PEM-formatted SSL private key file (optional)
-* `TIMEOUT` - Amount of time to wait for a connection, in seconds (default: `10`)
-* `FROM_EMAIL` - Sender address for emails sent by Nautobot
-
-!!! note
-    The `USE_SSL` and `USE_TLS` parameters are mutually exclusive.
-
-Email is sent from Nautobot only for critical events or if configured for [logging](#logging). If you would like to test the email server configuration, Django provides a convenient [send_mail()](https://docs.djangoproject.com/en/stable/topics/email/#send-mail) fuction accessible within the Nautobot shell:
-
-```no-highlight
-# nautobot-server nbshell
->>> from django.core.mail import send_mail
->>> send_mail(
-  'Test Email Subject',
-  'Test Email Body',
-  'noreply-nautobot@example.com',
-  ['users@example.com'],
-  fail_silently=False
-)
-```
 
 ---
 
@@ -321,14 +325,6 @@ LOGGING = {
 * `nautobot.plugins.*` - Plugin loading and activity
 * `nautobot.views.*` - Views which handle business logic for the web UI
 * `rq.worker` - Background task handling
-
----
-
-## LOGIN_TIMEOUT
-
-Default: 1209600 seconds (14 days)
-
-The lifetime (in seconds) of the authentication cookie issued to a Nautobot user upon login.
 
 ---
 
@@ -498,12 +494,45 @@ Default: `300`
 The maximum execution time of a background task (such as running a [job](../additional-features/jobs.md)), in seconds.
 
 ---
+## SESSION_COOKIE_AGE
+
+Default: `1209600` (2 weeks, in seconds)
+
+The age of session cookies, in seconds.
+
+---
+
+## SESSION_ENGINE
+
+Default: `'django.contrib.sessions.backends.db'`
+
+Controls where Nautobot stores session data.
+
+To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
+
+See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.
+
+---
 
 ## SESSION_FILE_PATH
 
-Default: None
+Default: `None`
 
 HTTP session data is used to track authenticated users when they access Nautobot. By default, Nautobot stores session data in its PostgreSQL database. However, this inhibits authentication to a standby instance of Nautobot without write access to the database. Alternatively, a local file path may be specified here and Nautobot will store session data as files instead of using the database. Note that the Nautobot system user must have read and write permissions to this path.
+
+When the default value (`None`) is used, Nautobot will use the standard temporary directory for the system.
+
+If you set this value, you must also enable file-based sessions as explained above using [`SESSION_ENGINE`](#session_engine).
+
+---
+
+## SOCIAL_AUTH_ENABLED
+
+Default: `False`
+
+Enables the social authentication backend to facilifate single-sign on (SSO) for common services like SAML, OAuth2, etc. This setting is required to be enabled to use the SSO for authentication.
+
+See the guide on [Single Sign On Authentication](../authentication/sso) for more details.
 
 ---
 

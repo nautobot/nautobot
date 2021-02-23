@@ -41,14 +41,13 @@ if BASE_PATH:
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 BASE_STORAGE_DIR = os.environ.get('NAUTOBOT_BASE_STORAGE_DIR', os.path.expanduser('~/.nautobot'))
 
-CACHE_TIMEOUT = 900
 CHANGELOG_RETENTION = 90
 DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), 'docs')
 HIDE_RESTRICTED_UI = False
 
-# This is a dict wrapper for the various default Django `EMAIL_*` settings
-EMAIL = {}
-
+# By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
+# table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
+# ENFORCE_GLOBAL_UNIQUE to True.
 ENFORCE_GLOBAL_UNIQUE = False
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
@@ -63,9 +62,8 @@ EXEMPT_VIEW_PERMISSIONS = []
 GIT_ROOT = os.environ.get('NAUTOBOT_GIT_ROOT', os.path.join(BASE_STORAGE_DIR, 'git').rstrip('/'))
 HTTP_PROXIES = None
 JOBS_ROOT = os.environ.get('NAUTOBOT_JOBS_ROOT', os.path.join(BASE_STORAGE_DIR, 'jobs').rstrip('/'))
-LOGIN_TIMEOUT = None  # FIXME(jathan): Custom alias for SESSION_COOKIE_AGE
 MAINTENANCE_MODE = False
-MAX_PAGE_SIZE = 1000  # FIXME(jathan): This duplicates DRF built-in for settings.REST_FRAMEWORK['PAGE_SIZE']
+MAX_PAGE_SIZE = 1000
 
 # Metrics
 METRICS_ENABLED = False
@@ -403,13 +401,24 @@ CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 #
 # From django-cors-headers
 #
-CORS_ORIGIN_ALLOW_ALL = False  # FIXME(jathan): Renamed to CORS_ALLOW_ALL_ORIGINS in django-cors-headers==3.5.0
-CORS_ORIGIN_REGEX_WHITELIST = []  # FIXME(jathan): Renamed to CORS_ALLOWED_ORIGIN_REGEXES in django-cors-headers==3.5.0
-CORS_ORIGIN_WHITELIST = []  # FIXME(jathan): Renamed to CORS_ALLOWED_ORIGINS in django-cors-headers==3.5.0
+
+# If True, all origins will be allowed. Other settings restricting allowed origins will be ignored.
+# Defaults to False. Setting this to True can be dangerous, as it allows any website to make
+# cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with
+# CORS_ALLOWED_ORIGINS or CORS_ALLOWED_ORIGIN_REGEXES.
+CORS_ALLOW_ALL_ORIGINS = False
+
+# A list of strings representing regexes that match Origins that are authorized to make cross-site
+# HTTP requests. Defaults to [].
+CORS_ALLOWED_ORIGIN_REGEXES = []
+
+# A list of origins that are authorized to make cross-site HTTP requests. Defaults to [].
+CORS_ALLOWED_ORIGINS = []
 
 #
 # GraphQL
 #
+
 GRAPHENE = {
     'SCHEMA': 'nautobot.core.graphql.schema_init.schema',
     'DJANGO_CHOICE_FIELD_ENUM_V3_NAMING': True,  # any field with a name of type will break in Graphene otherwise.
@@ -421,6 +430,7 @@ GRAPHQL_RELATIONSHIP_PREFIX = "rel"
 #
 # Caching
 #
+
 CACHEOPS = {
     'auth.user': {'ops': 'get', 'timeout': 60 * 15},
     'auth.*': {'ops': ('fetch', 'get')},
@@ -438,3 +448,30 @@ CACHEOPS = {
     'virtualization.*': {'ops': 'all'},
 }
 CACHEOPS_DEGRADE_ON_FAILURE = True
+CACHEOPS_REDIS = 'redis://localhost:6379/1'
+CACHEOPS_DEFAULTS = {
+    'timeout': 900
+}
+
+#
+# Django RQ (Webhooks backend)
+#
+
+RQ_QUEUES = {
+    "default": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
+    },
+    "check_releases": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
+    }
+}
