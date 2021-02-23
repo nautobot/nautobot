@@ -30,6 +30,14 @@ BASE_DIR = os.path.dirname(__file__)
 # File path of template used to generate config emitted by `init`
 CONFIG_TEMPLATE = os.path.join(BASE_DIR, "templates/nautobot_config.py.j2")
 
+DESCRIPTION = """
+Nautobot server management utility.
+
+Type '%(prog)s help' to display a list of included sub-commands.
+
+Type '%(prog)s init' to generate a new configuration.
+"""
+
 
 def main():
     """
@@ -46,6 +54,7 @@ def main():
     """
     run_app(
         project='nautobot',
+        description=DESCRIPTION,
         default_config_path=DEFAULT_CONFIG_PATH,
         default_settings=DEFAULT_SETTINGS,
         settings_initializer=generate_settings,

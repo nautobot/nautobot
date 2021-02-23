@@ -6,22 +6,16 @@ logan.runner
 :license: Apache License 2.0, see NOTICE for more details.
 """
 
-from __future__ import absolute_import, print_function
-
-from django.core import management
-import optparse
+import argparse
 import os
 import re
 import sys
 
+from django.core import management
+
+from nautobot import __version__
 from . import importer
 from .settings import create_default_settings
-
-
-try:
-    raw_input
-except NameError:  # PYthon 3
-    raw_input = input
 
 
 __configured = False
@@ -32,7 +26,7 @@ def sanitize_name(project):
     return re.sub('[^A-Z0-9a-z_-]', '-', project)
 
 
-def parse_args(args):
+def parse_command_args(args):
     """
     This parses the arguments and returns a tuple containing:
 
@@ -141,38 +135,96 @@ def configure_app(config_path=None, project=None, default_config_path=None,
         })
 
 
+class VerboseHelpFormatter(
+    argparse.ArgumentDefaultsHelpFormatter,
+    argparse.RawDescriptionHelpFormatter
+):
+    """Argparse Formatter that includes newlines and shows argument defaults."""
+
+
 def run_app(**kwargs):
     sys_args = sys.argv
 
     # The established command for running this program
     runner_name = os.path.basename(sys_args[0])
 
-    args, command, command_args = parse_args(sys_args[1:])
-
-    if not command:
-        print("usage: %s [--config=/path/to/settings.py] [command] [options]" % runner_name)
-        sys.exit(1)
-
     default_config_path = kwargs.get('default_config_path')
 
-    parser = optparse.OptionParser()
+    # Primary parser
+    parser = management.CommandParser(
+        description=kwargs.pop('description'),
+        formatter_class=VerboseHelpFormatter,
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        metavar="CONFIG",
+        help="Path to the configuration file",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=__version__,
+    )
 
-    # The ``init`` command is reserved for initializing configuration
+    # This block of code here is done in this way because of the built in Django
+    # management command parsing not playing well unless you have a Django
+    # config with SECRET_KEY defined.
+
+    # Parse out `--config` here first capturing any unparsed args for passing to
+    # Django parser.
+    args, unparsed_args = parser.parse_known_args()
+
+    # Now add the sub-parser for "init" command
+    subparsers = parser.add_subparsers(help=False, dest="command", metavar='')
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Initialize a new configuration",
+    )
+    init_parser.add_argument(
+        "config_path",
+        default=default_config_path,
+        nargs="?",
+        help="Path to output generated configuration file",
+    )
+
+    # Try to use our parser first, to process custom arguments
+    try:
+        args = parser.parse_args()
+        command = args.command
+        command_args = sys.argv[1:]
+
+    # Fallback to passing through to Django management commands
+    # except RuntimeError as err:
+    except management.CommandError as err:
+        if 'invalid choice' not in str(err):
+            raise
+
+        # Rewrite sys_args to have the unparsed args (if any)
+        sys_args = sys_args[:1] + unparsed_args
+        _, command, command_args = parse_command_args(sys_args[1:])
+
+    # If we don't get a command of some sort, print help and exit dirty
+    if not command:
+        parser.print_help()
+        parser.exit(1)
+
+    # The `init` command is reserved for initializing configuration
     if command == 'init':
-        (options, opt_args) = parser.parse_args()
-
         settings_initializer = kwargs.get('settings_initializer')
 
-        config_path = os.path.expanduser(' '.join(opt_args[1:]) or default_config_path)
+        config_path = os.path.expanduser(args.config_path)
 
+        # Check if the config already exists; confirm w/ user
         if os.path.exists(config_path):
             resp = None
-            while resp not in ('Y', 'n'):
-                resp = raw_input('File already exists at %r, overwrite? [nY] ' % config_path)
-                if resp == 'n':
+            while resp not in ('y', 'n', ''):
+                resp = input('File already exists at %r, overwrite? [yN] ' % config_path).lower()
+                if resp != 'y':
                     print("Aborted!")
                     return
 
+        # Create the config
         try:
             create_default_settings(config_path, settings_initializer)
         except OSError as e:
@@ -182,16 +234,24 @@ def run_app(**kwargs):
 
         return
 
-    parser.add_option('--config', metavar='CONFIG')
+    # Fetch config path from `--config` if provided, otheriwse we want it to
+    # default to None so that the underlying machinery in `configure_app` will
+    # process default path or environment variable.
+    config_path = args.config
 
-    (options, logan_args) = parser.parse_args(args)
+    # Overlay our config w/ defautls
+    try:
+        configure_app(config_path=config_path, **kwargs)
+    except ValueError as err:
+        parser.exit(
+            status=2,
+            message=str(err) + '\n'
+        )
 
-    config_path = options.config
-
-    configure_app(config_path=config_path, **kwargs)
-
+    # Call Django management command
     management.execute_from_command_line([runner_name, command] + command_args)
 
+    # Exit cleanly
     sys.exit(0)
 
 

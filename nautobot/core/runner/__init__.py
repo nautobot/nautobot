@@ -6,4 +6,4 @@ logan
 :license: Apache License 2.0, see NOTICE for more details.
 """
 
-from .runner import run_app
+from .runner import configure_app, run_app
