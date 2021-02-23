@@ -1,7 +1,12 @@
 from django.http import QueryDict
 from django.test import TestCase
 
-from nautobot.utilities.utils import get_filterset_for_model, deepmerge, dict_to_filter_params, normalize_querydict
+from nautobot.utilities.utils import (
+    get_filterset_for_model,
+    deepmerge, dict_to_filter_params,
+    normalize_querydict,
+    is_truthy
+)
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 
@@ -137,3 +142,24 @@ class GetFiltersetModelTest(TestCase):
     def test_get_filterset_for_model(self):
         self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
         self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)
+
+
+class IsTruthyTest(TestCase):
+
+    def test_is_truthy(self):
+        self.assertTrue(is_truthy("true"))
+        self.assertTrue(is_truthy("True"))
+        self.assertTrue(is_truthy(True))
+        self.assertTrue(is_truthy("yes"))
+        self.assertTrue(is_truthy("on"))
+        self.assertTrue(is_truthy("y"))
+        self.assertTrue(is_truthy("1"))
+        self.assertTrue(is_truthy(1))
+
+        self.assertFalse(is_truthy("false"))
+        self.assertFalse(is_truthy("False"))
+        self.assertFalse(is_truthy(False))
+        self.assertFalse(is_truthy("no"))
+        self.assertFalse(is_truthy("n"))
+        self.assertFalse(is_truthy(0))
+        self.assertFalse(is_truthy("0"))

@@ -4,6 +4,7 @@ import inspect
 from importlib import import_module
 from collections import OrderedDict
 from itertools import count, groupby
+from distutils.util import strtobool
 
 from django.core.serializers import serialize
 from django.db.models import Count, OuterRef, Subquery, Model
@@ -388,3 +389,18 @@ def get_filterset_for_model(model):
         pass
 
     return None
+
+
+def is_truthy(arg):
+    """Convert "truthy" strings into Booleans.
+
+    Examples:
+        >>> is_truthy('yes')
+        True
+    Args:
+        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
+        f, false, off and 0. Raises ValueError if val is anything else.
+    """
+    if isinstance(arg, bool):
+        return arg
+    return bool(strtobool(str(arg)))
