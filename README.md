@@ -1,14 +1,9 @@
-![Nautobot](docs/nautobot_logo.svg "Nautobot logo")
+![Nautobot](nautobot/docs/nautobot_logo.svg "Nautobot logo")
 
-Nautobot is an IP address management (IPAM) and data center infrastructure
-management (DCIM) tool. Initially conceived by the network engineering team at
-[DigitalOcean](https://www.digitalocean.com/), Nautobot was developed specifically
-to address the needs of network and infrastructure engineers. It is intended to
-function as a domain-specific source of truth for network operations.
+Nautobot is source of truth and automation platform for networks.
 
 Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/)
-Python framework with a [PostgreSQL](https://www.postgresql.org/) database. For a
-complete list of requirements, see `requirements.txt`. The code is available [on GitHub](https://github.com/nautobot/nautobot).
+Python framework with a [PostgreSQL](https://www.postgresql.org/) database. 
 
 The complete documentation for Nautobot can be found at [Read the Docs](https://nautobot.readthedocs.io/en/stable/).
 
@@ -24,22 +19,20 @@ or join us in the **#nautobot** Slack channel on [NetworkToCode](https://network
 
 ### Screenshots
 
-![Screenshot of main page](docs/media/screenshot1.png "Main page")
+![Screenshot of main page](nautobot/docs/media/screenshot1.png "Main page")
 
 ---
 
-![Screenshot of rack elevation](docs/media/screenshot2.png "Rack elevation")
+![Screenshot of rack elevation](nautobot/docs/media/screenshot2.png "Rack elevation")
 
 ---
 
-![Screenshot of prefix hierarchy](docs/media/screenshot3.png "Prefix hierarchy")
+![Screenshot of prefix hierarchy](nautobot/docs/media/screenshot3.png "Prefix hierarchy")
 
 ## Installation
 
 Please see [the documentation](https://nautobot.readthedocs.io/en/stable/) for
-instructions on installing Nautobot. To upgrade Nautobot, please download the
-[latest release](https://github.com/nautobot/nautobot/releases) and
-run `upgrade.sh`.
+instructions on installing Nautobot.
 
 ## Providing Feedback
 

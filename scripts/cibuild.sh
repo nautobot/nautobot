@@ -38,7 +38,7 @@ fi
 TEST_CONFIG=nautobot/core/tests/nautobot_config.py
 
 # Run Nautobot tests
-coverage run scripts/test_runner.py --config=$TEST_CONFIG test ./
+coverage run scripts/test_runner.py --config=$TEST_CONFIG test nautobot/
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."
@@ -46,7 +46,7 @@ if [[ $RC != 0 ]]; then
 fi
 
 # Show code coverage report
-coverage report --skip-covered --omit *migrations*
+coverage report --skip-covered --include "nautobot/*" --omit "*migrations*"
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) failed to generate code coverage report."
