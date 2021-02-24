@@ -76,14 +76,25 @@ For example, a VLAN is mapped to a Site by default.  After a VLAN is created tod
 
 All of the individual Django apps in NetBox (`dcim`, `extras`, `ipam`, etc.) have been moved into a common `nautobot` Python package namespace. The `netbox` application namespace has been moved to `nautobot.core`. This will require updates when porting NetBox custom scripts and reports to Nautobot jobs, as well as when porting NetBox plugins to Nautobot.
 
+#### Packaging Changes
+
+Nautobot is now packaged using [Poetry](https://python-poetry.org/) and builds as an installable Python package. `setup.py` and `requirements.txt` have been replaced with `pyproject.toml`. Releases of Nautobot are now published to [PyPI](https://pypi.org/), the Python Package Index, and therefore can now be installed using `pip install nautobot`.
+
+#### Installation and Startup
+
+Because Nautobot may be installed using `pip`, we have replaced `manage.py` with a dedicated `nautobot-server` CLI command used to adminster the server. It works exactly as `manage.py` does, but does not require you to be within the project root directory.
+
 #### Configuration and Settings
 
-TODO FIXME
+Nautobot has done away with the requirement to duplicate or modify files anywhere in the source code. The `configuration.py` file has been replaced with a `nautobot_config.py` file that may be read from anywhere on your system. It is also much easier to add custom settings or overload nearly any default setting.
 
-- installed apps
-- nautobot_config.py
-- nautobot-server init
-- ???
+To facilitate this, many automatically generated settings have been removed, and replaced with their underlying static configurations. We feel this affords a greater amount of flexibility in deployment patterns, with a tradeoff of slightly more initial configuration.
+
+To make things a little easier, you may generate a new configuration with sane defaults using the `nautobot-server init` command! The configuration file defaults to `~/.nautbot/nautobot_config.py` but using the `nautobot-server --config` argument, you may name or place the file anywhere you choose.
+
+You may also defined a `NAUTOBOT_CONFIG` variable to tell Nautobot where to find the file so that you don't need to always pass the `--config` argument.
+
+For details see [Configuring Nautobot](../../configuration).
 
 #### Consolidating Custom Scripts and Reports into Jobs
 
@@ -101,14 +112,6 @@ Historically, a user viewing the home page and navigation menu would see a list 
 
 As an [option](../configuration/optional-settings.md#hide_restricted_ui), administrators can now choose to instead hide un-permitted items altogether from the home page and the navigation menu, providing a simpler interface for limited-access users. The prior behavior remains as the default.
 
-#### Installation and Bringup
-
-TODO FIXME
-
-- pip install
-- nautobot-server
-- ???
-
 #### Navigation Menu Changes
 
 The "Other" menu has been renamed to "Extensibility" and many new items have been added to this menu.
@@ -118,10 +121,6 @@ The "Other" menu has been renamed to "Extensibility" and many new items have bee
 #### New Name and Logo
 
 NetBox has been changed to Nautobot throughout the code, UI, and documentation, and Nautobot has a new logo.
-
-#### Packaging Changes
-
-Nautobot is now packaged using [Poetry](https://python-poetry.org/) and builds as an installable Python package. `setup.py` and `requirements.txt` have been replaced with `pyproject.toml`. Releases of Nautobot are now published to [PyPI](https://pypi.org/), the Python Package Index, and therefore can now be installed using `pip install nautobot`.
 
 #### User-Defined Custom Links
 
