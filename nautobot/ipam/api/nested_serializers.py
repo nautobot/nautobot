@@ -4,6 +4,7 @@ from nautobot.core.api import WritableNestedSerializer
 from nautobot.ipam import models
 
 __all__ = [
+    "IPFieldSerializer",
     "NestedAggregateSerializer",
     "NestedIPAddressSerializer",
     "NestedPrefixSerializer",
@@ -15,6 +16,12 @@ __all__ = [
     "NestedVLANSerializer",
     "NestedVRFSerializer",
 ]
+
+
+class IPFieldSerializer(serializers.CharField):
+
+    def to_representation(self, value):
+        return str(value)
 
 
 #
@@ -107,6 +114,8 @@ class NestedVLANSerializer(WritableNestedSerializer):
 class NestedPrefixSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = serializers.IntegerField(read_only=True)
+    # prefix = IPFieldSerializer()
+    prefix = serializers.CharField(read_only=True)
 
     class Meta:
         model = models.Prefix

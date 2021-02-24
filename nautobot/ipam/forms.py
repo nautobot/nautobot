@@ -26,6 +26,7 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
     NumericArrayField,
+    PrefixFieldMixin,
     ReturnURLForm,
     SlugField,
     StaticSelect2,
@@ -36,6 +37,7 @@ from nautobot.utilities.forms import (
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import *
 from .constants import *
+from .formfields import IPNetworkFormField
 from .models import (
     Aggregate,
     IPAddress,
@@ -334,7 +336,8 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+    prefix = IPNetworkFormField()
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -391,7 +394,8 @@ class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         self.fields["vrf"].empty_label = "Global"
 
 
-class PrefixCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class PrefixCSVForm(PrefixFieldMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    prefix = IPNetworkFormField()
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",

@@ -18,7 +18,7 @@ from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import *
 from .constants import *
-from .fields import IPNetworkField, IPAddressField
+from .fields import IPNetworkField, IPAddressField, VarbinaryIPField
 from .managers import IPAddressManager
 from .querysets import PrefixQuerySet
 from .validators import DNSValidator
@@ -320,7 +320,7 @@ class Aggregate(PrimaryModel):
         Returns:
             UtilizationData: Aggregate utilization (numerator=size of child prefixes, denominator=prefix size)
         """
-        queryset = Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
+        queryset = Prefix.objects.net_contained_or_equal(self.prefix)
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
         return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
@@ -382,7 +382,18 @@ class Prefix(PrimaryModel, StatusModel):
     assigned to a VLAN where appropriate.
     """
 
-    prefix = IPNetworkField(help_text="IPv4 or IPv6 network with mask")
+    network = VarbinaryIPField(
+        null=False, db_index=True, max_length=16,
+        help_text='IPv4 or IPv6 network address',
+    )
+    broadcast = VarbinaryIPField(
+        null=False, db_index=True, max_length=16,
+        help_text='IPv4 or IPv6 broadcast address'
+    )
+    prefix_length = models.IntegerField(
+        null=False, db_index=True,
+        help_text='Length of the Network prefix, in bits.'
+    )
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -455,13 +466,29 @@ class Prefix(PrimaryModel, StatusModel):
 
     class Meta:
         ordering = (
-            F("vrf__name").asc(nulls_first=True),
-            "prefix",
+            F('vrf').asc(nulls_first=True),
+            'network',
+            'prefix_length',
+            'pk',
         )  # (vrf, prefix) may be non-unique
         verbose_name_plural = "prefixes"
 
+    def __init__(self, *args, **kwargs):
+        prefix = kwargs.pop('prefix', None)
+        super(Prefix, self).__init__(*args, **kwargs)
+        self._deconstruct_prefix(prefix)
+
     def __str__(self):
         return str(self.prefix)
+
+    def _deconstruct_prefix(self, prefix):
+        if prefix:
+            if isinstance(prefix, str):
+                prefix = netaddr.IPNetwork(prefix)
+            self.network = bytes(prefix.network)
+            self.broadcast = bytes(prefix.broadcast)
+            self.prefix_length = prefix.prefixlen
+
 
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
@@ -529,23 +556,28 @@ class Prefix(PrimaryModel, StatusModel):
         )
 
     @property
+    def cidr_str(self):
+        if self.network and self.prefix_length:
+            ip = netaddr.IPAddress(int.from_bytes(self.network, 'big'))
+            return u'%s/%s' % (ip, self.prefix_length)
+
+    @property
+    def prefix(self):
+        if self.cidr_str:
+            return netaddr.IPNetwork(self.cidr_str)
+
+    @prefix.setter
+    def prefix(self, prefix):
+        self._deconstruct_prefix(prefix)
+
+    @property
     def family(self):
         if self.prefix:
             return self.prefix.version
         return None
 
-    def _set_prefix_length(self, value):
-        """
-        Expose the IPNetwork object's prefixlen attribute on the parent model so that it can be manipulated directly,
-        e.g. for bulk editing.
-        """
-        if self.prefix is not None:
-            self.prefix.prefixlen = value
-
-    prefix_length = property(fset=_set_prefix_length)
-
     def get_duplicates(self):
-        return Prefix.objects.filter(vrf=self.vrf, prefix=str(self.prefix)).exclude(pk=self.pk)
+        return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
 
     def get_child_prefixes(self):
         """
@@ -553,9 +585,9 @@ class Prefix(PrimaryModel, StatusModel):
         Prefixes belonging to any VRF.
         """
         if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
-            return Prefix.objects.filter(prefix__net_contained=str(self.prefix))
+            return Prefix.objects.net_contained(self.prefix)
         else:
-            return Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
+            return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
 
     def get_child_ips(self):
         """
@@ -632,7 +664,7 @@ class Prefix(PrimaryModel, StatusModel):
             UtilizationData (namedtuple): (numerator, denominator)
         """
         if self.status == Prefix.STATUS_CONTAINER:
-            queryset = Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
+            queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 

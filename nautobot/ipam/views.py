@@ -206,7 +206,8 @@ class RIRBulkDeleteView(generic.BulkDeleteView):
 class AggregateListView(generic.ObjectListView):
     queryset = Aggregate.objects.annotate(
         child_count=RawSQL(
-            "SELECT COUNT(*) FROM ipam_prefix WHERE ipam_prefix.prefix <<= ipam_aggregate.prefix",
+            # "SELECT COUNT(*) FROM ipam_prefix WHERE ipam_prefix.prefix <<= ipam_aggregate.prefix",
+            "SELECT COUNT(*) FROM ipam_prefix",
             (),
         )
     )
@@ -239,9 +240,9 @@ class AggregateView(generic.ObjectView):
         # Find all child prefixes contained by this aggregate
         child_prefixes = (
             Prefix.objects.restrict(request.user, "view")
-            .filter(prefix__net_contained_or_equal=str(instance.prefix))
+            .net_contained_or_equal(instance.prefix)
             .prefetch_related("site", "role")
-            .order_by("prefix")
+            .order_by("network")
             .annotate_tree()
         )
 
@@ -418,9 +419,10 @@ class PrefixView(generic.ObjectView):
 
         # Parent prefixes table
         parent_prefixes = (
-            Prefix.objects.restrict(request.user, "view")
+            Prefix.objects
+            .restrict(request.user, "view")
+            .net_contains(instance.prefix)
             .filter(Q(vrf=instance.vrf) | Q(vrf__isnull=True))
-            .filter(prefix__net_contains=str(instance.prefix))
             .prefetch_related("role", "site", "status")
             .annotate_tree()
         )
@@ -430,7 +432,8 @@ class PrefixView(generic.ObjectView):
         # Duplicate prefixes table
         duplicate_prefixes = (
             Prefix.objects.restrict(request.user, "view")
-            .filter(vrf=instance.vrf, prefix=str(instance.prefix))
+            .net_equals(instance.prefix)
+            .filter(vrf=instance.vrf)
             .exclude(pk=instance.pk)
             .prefetch_related("role", "site", "status")
         )
@@ -584,7 +587,8 @@ class IPAddressView(generic.ObjectView):
         # Parent prefixes table
         parent_prefixes = (
             Prefix.objects.restrict(request.user, "view")
-            .filter(vrf=instance.vrf, prefix__net_contains=str(instance.address.ip))
+            .net_contains(instance.address)
+            .filter(vrf=instance.vrf)
             .prefetch_related("site", "status", "role")
         )
         parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
