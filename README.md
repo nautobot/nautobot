@@ -32,7 +32,7 @@ or join us in the **#nautobot** Slack channel on [Network to Code](https://netwo
 
 ## Installation
 
-Please see [the documentation](https://nautobot.readthedocs.io/en/stable/) for
+Please see [the documentation](https://nautobot.readthedocs.io/en/latest/) for
 instructions on installing Nautobot.
 
 ## Providing Feedback
