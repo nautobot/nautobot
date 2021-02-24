@@ -6,7 +6,7 @@
 
 import os
 
-from nautobot.core.settings import *  # noqa
+from nautobot.core.settings import *  # noqa F401,F403
 
 # This is a list of valid fully-qualified domain names (FQDNs) for the Nautobot server. Nautobot will not permit write
 # access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
@@ -17,28 +17,21 @@ ALLOWED_HOSTS = []
 # PostgreSQL database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
-    'default': {
-        'NAME': os.getenv('NAUTOBOT_DATABASE', ''),             # Database name
-        'USER': os.getenv('NAUTOBOT_USER', ''),                 # Database username
-        'PASSWORD': os.getenv('NAUTOBOT_PASSWORD', ''),         # Datbase password
-        'HOST': os.getenv('NAUTOBOT_DB_HOST', 'localhost'),     # Database server
-        'PORT': os.getenv('NAUTOBOT_DB_PORT', ''),              # Database port (leave blank for default)
-        'CONN_MAX_AGE': os.getenv('NAUTOBOT_DB_TIMEOUT', 300),  # Database timeout
-        'ENGINE': 'django.db.backends.postgresql',              # Database driver (Postres only supported!)
+    "default": {
+        "NAME": os.getenv("NAUTOBOT_DATABASE", ""),  # Database name
+        "USER": os.getenv("NAUTOBOT_USER", ""),  # Database username
+        "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),  # Datbase password
+        "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),  # Database server
+        "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
+        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),  # Database timeout
+        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postres only supported!)
     }
 }
 
 # Nautobot uses RQ for task scheduling. These are the following defaults.
 # For detailed configuration see: https://github.com/rq/django-rq#installation
 RQ_QUEUES = {
-    "default": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    },
+    "default": {"HOST": "localhost", "PORT": 6379, "DB": 0, "PASSWORD": "", "SSL": False, "DEFAULT_TIMEOUT": 300},
     # "with-sentinel": {
     #     "SENTINELS": [
     #         ("mysentinel.redis.example.com", 6379)
@@ -58,19 +51,19 @@ RQ_QUEUES = {
         "DB": 0,
         "PASSWORD": "",
         "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    }
+        "DEFAULT_TIMEOUT": 300,
+    },
 }
 
 # Nautobot uses Cacheops for database query caching. These are the following defaults.
 # For detailed configuration see: https://github.com/Suor/django-cacheops#setup
-CACHEOPS_REDIS = 'redis://localhost:6379/1'
+CACHEOPS_REDIS = "redis://localhost:6379/1"
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
 # For optimal security, SECRET_KEY should be at least 50 characters in length and contain a mix of letters, numbers, and
 # symbols. Nautobot will not run without this defined. For more information, see
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-SECRET_KEY
-SECRET_KEY = '{{ secret_key }}'
+SECRET_KEY = "{{ secret_key }}"
 
 
 #########################
@@ -87,25 +80,36 @@ ADMINS = [
 
 # URL schemes that are allowed within links in Nautobot
 ALLOWED_URL_SCHEMES = (
-    'file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp',
+    "file",
+    "ftp",
+    "ftps",
+    "http",
+    "https",
+    "irc",
+    "mailto",
+    "sftp",
+    "ssh",
+    "tel",
+    "telnet",
+    "tftp",
+    "vnc",
+    "xmpp",
 )
 
 # Optionally display a persistent banner at the top and/or bottom of every page. HTML is allowed. To display the same
 # content in both banners, define BANNER_TOP and set BANNER_BOTTOM = BANNER_TOP.
-BANNER_TOP = ''
-BANNER_BOTTOM = ''
+BANNER_TOP = ""
+BANNER_BOTTOM = ""
 
 # Text to include on the login page above the login form. HTML is allowed.
-BANNER_LOGIN = ''
+BANNER_LOGIN = ""
 
 # Base URL path if accessing Nautobot within a directory. For example, if installed at https://example.com/nautobot/, set:
 # BASE_PATH = 'nautobot/'
-BASE_PATH = ''
+BASE_PATH = ""
 
 # Cache timeout in seconds. Set to 0 to dissable caching. Defaults to 900 (15 minutes)
-CACHEOPS_DEFAULTS = {
-    'timeout': 900
-}
+CACHEOPS_DEFAULTS = {"timeout": 900}
 
 # Maximum number of days to retain logged changes. Set to 0 to retain changes indefinitely. (Default: 90)
 CHANGELOG_RETENTION = 90
@@ -157,7 +161,7 @@ EXEMPT_VIEW_PERMISSIONS = [
 
 # IP addresses recognized as internal to the system. The debugging toolbar will be available only to clients accessing
 # Nautobot from an internal IP.
-INTERNAL_IPS = ('127.0.0.1', '::1')
+INTERNAL_IPS = ("127.0.0.1", "::1")
 
 # Enable custom logging. Please see the Django documentation for detailed guidance on configuring custom logs:
 #   https://docs.djangoproject.com/en/stable/topics/logging/
@@ -189,8 +193,8 @@ MAX_PAGE_SIZE = 1000
 METRICS_ENABLED = False
 
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
-NAPALM_USERNAME = ''
-NAPALM_PASSWORD = ''
+NAPALM_USERNAME = ""
+NAPALM_PASSWORD = ""
 
 # NAPALM timeout (in seconds). (Default: 30)
 NAPALM_TIMEOUT = 30
@@ -224,8 +228,8 @@ RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
 # Remote authentication support
 REMOTE_AUTH_ENABLED = False
-REMOTE_AUTH_BACKEND = 'nautobot.core.authentication.RemoteUserBackend'
-REMOTE_AUTH_HEADER = 'HTTP_REMOTE_USER'
+REMOTE_AUTH_BACKEND = "nautobot.core.authentication.RemoteUserBackend"
+REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 REMOTE_AUTH_AUTO_CREATE_USER = True
 REMOTE_AUTH_DEFAULT_GROUPS = []
 REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
@@ -255,16 +259,16 @@ SESSION_FILE_PATH = None
 SOCIAL_AUTH_ENABLED = False
 
 # Time zone (default: UTC)
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 # Date/time formatting. See the following link for supported formats:
 # https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date
-DATE_FORMAT = 'N j, Y'
-SHORT_DATE_FORMAT = 'Y-m-d'
-TIME_FORMAT = 'g:i a'
-SHORT_TIME_FORMAT = 'H:i:s'
-DATETIME_FORMAT = 'N j, Y g:i a'
-SHORT_DATETIME_FORMAT = 'Y-m-d H:i'
+DATE_FORMAT = "N j, Y"
+SHORT_DATE_FORMAT = "Y-m-d"
+TIME_FORMAT = "g:i a"
+SHORT_TIME_FORMAT = "H:i:s"
+DATETIME_FORMAT = "N j, Y g:i a"
+SHORT_DATETIME_FORMAT = "Y-m-d H:i"
 
 # A list of strings designating all applications that are enabled in this Django installation. Each string should be a dotted Python path to an application configuration class (preferred), or a package containing an application.
 # http://nautobot.readthedocs.io/configuration/optional-settings/#extra-applications
