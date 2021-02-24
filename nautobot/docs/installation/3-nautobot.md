@@ -18,7 +18,7 @@ $ sudo apt install -y git python3 python3-pip python3-venv python3-dev
 ### CentOS
 
 ```no-highlight
-$ sudo yum install -y gcc git python36 python36-devel python3-pip libxml2-devel libxslt-devel libffi-devel openssl-devel redhat-rpm-config
+$ sudo yum install -y git python36 python36-devel python3-pip
 ```
 
 Before continuing with either platform, update [`pip`](https://pip.pypa.io/), Python's package installer, to its latest release:
@@ -95,24 +95,15 @@ files.
 
 #### Ubuntu
 
-```
+```no-highlight
 $ sudo adduser --system --group nautobot
-$ sudo chown --recursive nautobot /opt/nautobot/nautobot/media/
 ```
 
 #### CentOS
 
-```
+```no-highlight
 $ sudo groupadd --system nautobot
 $ sudo adduser --system -g nautobot nautobot
-```
-
-For CentOS, you'll also need to create the static file directories:
-
-```
-$ cd /opt/nautobot/
-$ sudo mkdir -p git jobs media/image-attachments media/devicetype-images
-$ sudo chown --recursive nautobot git jobs media
 ```
 
 ## Install Nautobot
