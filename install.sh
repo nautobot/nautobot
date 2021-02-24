@@ -36,7 +36,7 @@ eval $COMMAND || exit 1
 
 # Install required Python packages
 COMMAND="pip3 install nautobot"
-echo "Installing Nautobot ($COMMAND)..."
+echo "Installing Nautobot dependencies ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Install optional packages (if any)

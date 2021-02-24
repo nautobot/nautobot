@@ -1,20 +1,46 @@
 # Gunicorn
 
-Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server. This documentation shows how to install and configure [gunicorn](http://gunicorn.org/) (which is automatically installed with Nautobot) for this role, however other WSGI servers are available and should work similarly well. [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) is a popular alternative.
+!!! warning
+    As of Nautobot v1.0.0b1 these instructions are in a pre-release state and will be evolving rapidly!
+
+Like most Django applications, Nautobot runs as a [WSGI
+application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server. This documentation shows
+how to install and configure [gunicorn](http://gunicorn.org/) (which is automatically installed with Nautobot) for this
+role, however other WSGI servers are available and should work similarly well.
+[uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) is a popular alternative.
 
 ## Configuration
 
-Nautobot ships with a default configuration file for gunicorn. To use it, copy `/opt/nautobot/contrib/gunicorn.py` to `/opt/nautobot/gunicorn.py`. (We make a copy of this file rather than pointing to it directly to ensure that any local changes to it do not get overwritten by a future upgrade.)
+Copy and paste the following into `/opt/nautobot/gunicorn.py`:
 
-```no-highlight
-sudo cp /opt/nautobot/contrib/gunicorn.py /opt/nautobot/gunicorn.py
+```python
+# The IP address (typically localhost) and port that the Netbox WSGI process should listen on
+bind = '127.0.0.1:8001'
+
+# Number of gunicorn workers to spawn. This should typically be 2n+1, where
+# n is the number of CPU cores present.
+workers = 5
+
+# Number of threads per worker process
+threads = 3
+
+# Timeout (in seconds) for a request to complete
+timeout = 120
+
+# The maximum number of requests a worker can handle before being respawned
+max_requests = 5000
+max_requests_jitter = 500
 ```
 
-While the provided configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP address and/or port number, or to make performance-related adjustments. See [the Gunicorn documentation](https://docs.gunicorn.org/en/stable/configure.html) for the available configuration parameters.
+This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
+address and/or port number, or to make performance-related adjustments. See [the Gunicorn
+documentation](https://docs.gunicorn.org/en/stable/configure.html) for the available configuration parameters.
 
 ## systemd Setup
 
-We'll use systemd to control both gunicorn and Nautobot's background worker process. First, copy `contrib/nautobot.service` and `contrib/nautobot-rq.service` to the `/etc/systemd/system/` directory and reload the systemd dameon:
+We'll use systemd to control both gunicorn and Nautobot's background worker process. First, copy
+`contrib/nautobot.service` and `contrib/nautobot-rq.service` to the `/etc/systemd/system/` directory and reload the
+systemd dameon:
 
 ```no-highlight
 sudo cp -v /opt/nautobot/contrib/*.service /etc/systemd/system/
@@ -47,6 +73,7 @@ You can use the command `systemctl status nautobot` to verify that the WSGI serv
 ```
 
 !!! note
-    If the Nautobot service fails to start, issue the command `journalctl -eu nautobot` to check for log messages that may indicate the problem.
+    If the Nautobot service fails to start, issue the command `journalctl -eu nautobot` to check for log messages that
+    may indicate the problem.
 
 Once you've verified that the WSGI workers are up and running, move on to HTTP server setup.

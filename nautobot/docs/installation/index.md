@@ -1,6 +1,13 @@
 # Installation
 
-The installation instructions provided here have been tested to work on Ubuntu 20.04 and CentOS 8.2. The particular commands needed to install dependencies on other distributions may vary significantly. Unfortunately, this is outside the control of the Nautobot maintainers. Please consult your distribution's documentation for assistance with any errors.
+!!! warning
+    As of Nautobot v1.0.0b1 these instructions are still in a pre-release state. Only Ubuntu instructions are supported
+    at this time.
+
+The installation instructions provided here have been tested to work on Ubuntu 20.04 and CentOS 8.2. The particular
+commands needed to install dependencies on other distributions may vary significantly. Unfortunately, this is outside
+the control of the Nautobot maintainers. Please consult your distribution's documentation for assistance with any
+errors.
 
 The following sections detail how to set up a new instance of Nautobot:
 

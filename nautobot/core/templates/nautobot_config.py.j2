@@ -6,7 +6,7 @@
 
 import os
 
-from nautobot.core.settings import *  # noqa
+from nautobot.core.settings import *  # noqa F401,F403
 
 # This is a list of valid fully-qualified domain names (FQDNs) for the Nautobot server. Nautobot will not permit write
 # access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.

@@ -228,4 +228,12 @@ Please note that this key is **not** used directly for hashing user passwords or
 
 A unique `SECRET_KEY` is generated for you automatically when you use `nautobot init` to create a new configuration. You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
+```no-highlight
+$ nautobot-server generate_secret_key.py
++$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
+```
+
+!!! warning
+    In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
+
 For more details see [Nautobot Configuration](..).
