@@ -4,6 +4,7 @@ Nautobot is a Network Source of Truth and Network Automation Platform.
 
 > Nautobot was initially developed as a fork of NetBox (v2.10.4).  NetBox was originally developed by Jeremy Stretch at DigitalOcean and the NetBox Community.
 
+Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/)
 Python framework with a [PostgreSQL](https://www.postgresql.org/) database. 
 
 The complete documentation for Nautobot can be found at [Read the Docs](https://nautobot.readthedocs.io/en/stable/).
