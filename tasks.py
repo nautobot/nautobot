@@ -43,7 +43,7 @@ def build(context, python_ver=PYTHON_VER):
     print("Building Nautobot .. ")
 
     context.run(
-        f"{COMPOSE_COMMAND} build" f" --build-arg python_ver={python_ver}",
+        f"{COMPOSE_COMMAND} build --build-arg PYTHON_VER={python_ver}",
         env={"PYTHON_VER": python_ver},
     )
 
