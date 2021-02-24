@@ -1,7 +1,7 @@
 """Nautobot configuration file."""
+from distutils.util import strtobool
 import os
 import sys
-from distutils.util import strtobool
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(" ")
 
