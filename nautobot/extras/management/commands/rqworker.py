@@ -7,6 +7,7 @@ class Command(_Command):
     Subclass django_rq's built-in rqworker to listen on all configured queues if none are specified (instead
     of only the 'default' queue).
     """
+
     def handle(self, *args, **options):
 
         # If no queues have been specified on the command line, listen on all configured queues.

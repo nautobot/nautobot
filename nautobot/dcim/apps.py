@@ -7,4 +7,4 @@ class DCIMConfig(AppConfig):
 
     def ready(self):
 
-        import nautobot.dcim.signals
+        import nautobot.dcim.signals  # noqa: F401

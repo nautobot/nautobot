@@ -6,6 +6,7 @@ class Registry(dict):
     Central registry for registration of functionality. Once a store (key) is defined, it cannot be overwritten or
     deleted (although its value may be manipulated).
     """
+
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)
@@ -24,7 +25,7 @@ class Registry(dict):
 registry = Registry()
 
 
-DatasourceContent = namedtuple('DatasourceContent', ['name', 'content_identifier', 'icon', 'callback'])
+DatasourceContent = namedtuple("DatasourceContent", ["name", "content_identifier", "icon", "callback"])
 """
 name (str): Human-readable name for this content type, such as "config contexts"
 content_identifier (str): Brief unique identifier of this content type; by convention a string such as "extras.configcontext"
@@ -36,7 +37,7 @@ callback (callable): Callback function to invoke whenever a given datasource is 
 """
 
 
-registry['datasource_contents'] = defaultdict(list)
+registry["datasource_contents"] = defaultdict(list)
 
 
 def register_datasource_contents(datasource_contents_list):
@@ -48,4 +49,4 @@ def register_datasource_contents(datasource_contents_list):
             raise TypeError(f"{model_name} must be a string")
         if not isinstance(content, DatasourceContent):
             raise TypeError(f"{content} must be an instance of extras.datasources.DatasourceContent")
-        registry['datasource_contents'][model_name].append(content)
+        registry["datasource_contents"][model_name].append(content)

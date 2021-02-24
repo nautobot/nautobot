@@ -9,9 +9,9 @@ from .registry import (
 )
 
 __all__ = (
-    'enqueue_pull_git_repository_and_refresh_data',
-    'ensure_git_repository',
-    'get_datasource_content_choices',
-    'get_datasource_contents',
-    'refresh_datasource_content',
+    "enqueue_pull_git_repository_and_refresh_data",
+    "ensure_git_repository",
+    "get_datasource_content_choices",
+    "get_datasource_contents",
+    "refresh_datasource_content",
 )

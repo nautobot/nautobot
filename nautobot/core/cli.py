@@ -53,7 +53,7 @@ def main():
     - Overlay special/conditional settings (see `_configure_settings`)
     """
     run_app(
-        project='nautobot',
+        project="nautobot",
         description=DESCRIPTION,
         default_config_path=DEFAULT_CONFIG_PATH,
         default_settings=DEFAULT_SETTINGS,
@@ -99,11 +99,11 @@ def _configure_settings(config):
         }
     """
 
-    settings = config['settings']
+    settings = config["settings"]
 
     # Include the config path to the settings to align with builtin
     # `settings.SETTINGS_MODULE`. Useful for debugging correct config path.
-    settings.SETTINGS_PATH = config['config_path']
+    settings.SETTINGS_PATH = config["config_path"]
 
     #
     # Storage directories
@@ -129,8 +129,8 @@ def _configure_settings(config):
 
     # If metrics are enabled and postgres is the backend, set the driver to the
     # one provided by django-prometheous.
-    if settings.METRICS_ENABLED and 'postgres' in settings.DATABASES['default']['ENGINE']:
-        settings.DATABASES['default']['ENGINE'] = 'django_prometheus.db.backends.postgresql'
+    if settings.METRICS_ENABLED and "postgres" in settings.DATABASES["default"]["ENGINE"]:
+        settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
 
     #
     # Pagination
@@ -147,10 +147,9 @@ def _configure_settings(config):
     # FIXME(jathan): This is just here as an interim validation check, to be
     # replaced in a future update when all other validations hard-coded here in
     # settings are moved to use the Django system check framework.
-    if 'nautobot.core.authentication.ObjectPermissionBackend' not in settings.AUTHENTICATION_BACKENDS:
+    if "nautobot.core.authentication.ObjectPermissionBackend" not in settings.AUTHENTICATION_BACKENDS:
         raise ImproperlyConfigured(
-            "nautobot.core.authentication.ObjectPermissionBackend must be defined in "
-            "'AUTHENTICATION_BACKENDS'"
+            "nautobot.core.authentication.ObjectPermissionBackend must be defined in " "'AUTHENTICATION_BACKENDS'"
         )
 
     #
@@ -163,8 +162,7 @@ def _configure_settings(config):
             URLValidator(settings.RELEASE_CHECK_URL)
         except ValidationError:
             raise ImproperlyConfigured(
-                "RELEASE_CHECK_URL must be a valid API URL. Example: "
-                "https://api.github.com/repos/nautobot/nautobot"
+                "RELEASE_CHECK_URL must be a valid API URL. Example: " "https://api.github.com/repos/nautobot/nautobot"
             )
 
     # FIXME(jathan): Why is this enforced here? This would be better enforced in the core.
@@ -180,15 +178,15 @@ def _configure_settings(config):
         settings.DEFAULT_FILE_STORAGE = settings.STORAGE_BACKEND
 
         # django-storages
-        if settings.STORAGE_BACKEND.startswith('storages.'):
+        if settings.STORAGE_BACKEND.startswith("storages."):
 
             try:
                 import storages.utils
             except ModuleNotFoundError as e:
-                if getattr(e, 'name') == 'storages':
+                if getattr(e, "name") == "storages":
                     raise ImproperlyConfigured(
-                        f"STORAGE_BACKEND is set to {STORAGE_BACKEND} but django-storages is not present. It can be "
-                        f"installed by running 'pip install django-storages'."
+                        f"STORAGE_BACKEND is set to {settings.STORAGE_BACKEND} but django-storages is not present. It "
+                        f"can be installed by running 'pip install django-storages'."
                     )
                 raise e
 
@@ -197,6 +195,7 @@ def _configure_settings(config):
                 if name in settings.STORAGE_CONFIG:
                     return settings.STORAGE_CONFIG[name]
                 return globals().get(name, default)
+
             storages.utils.setting = _setting
 
     if settings.STORAGE_CONFIG and settings.STORAGE_BACKEND is None:
@@ -214,7 +213,7 @@ def _configure_settings(config):
         settings.INSTALLED_APPS.append("social_django")
         settings.AUTHENTICATION_BACKENDS.insert(0, settings.SOCIAL_AUTH_MODULE)
         backend_name = get_sso_backend_name(settings.SOCIAL_AUTH_MODULE)
-        settings.LOGIN_URL = '/{}login/{}/'.format(settings.BASE_PATH, backend_name)
+        settings.LOGIN_URL = "/{}login/{}/".format(settings.BASE_PATH, backend_name)
 
     #
     # Plugins
@@ -228,5 +227,5 @@ def _configure_settings(config):
         settings.PLUGINS_CONFIG,
         settings.VERSION,
         settings.MIDDLEWARE,
-        settings.CACHEOPS
+        settings.CACHEOPS,
     )

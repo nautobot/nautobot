@@ -38,15 +38,17 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
         last_ip_in_prefix = netaddr.IPAddress(prefix.last)
 
     if not ipaddress_list:
-        return [(
-            int(last_ip_in_prefix - first_ip_in_prefix + 1),
-            '{}/{}'.format(first_ip_in_prefix, prefix.prefixlen)
-        )]
+        return [
+            (
+                int(last_ip_in_prefix - first_ip_in_prefix + 1),
+                "{}/{}".format(first_ip_in_prefix, prefix.prefixlen),
+            )
+        ]
 
     # Account for any available IPs before the first real IP
     if ipaddress_list[0].address.ip > first_ip_in_prefix:
         skipped_count = int(ipaddress_list[0].address.ip - first_ip_in_prefix)
-        first_skipped = '{}/{}'.format(first_ip_in_prefix, prefix.prefixlen)
+        first_skipped = "{}/{}".format(first_ip_in_prefix, prefix.prefixlen)
         output.append((skipped_count, first_skipped))
 
     # Iterate through existing IPs and annotate free ranges
@@ -54,7 +56,7 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
         if prev_ip:
             diff = int(ip.address.ip - prev_ip.address.ip)
             if diff > 1:
-                first_skipped = '{}/{}'.format(prev_ip.address.ip + 1, prefix.prefixlen)
+                first_skipped = "{}/{}".format(prev_ip.address.ip + 1, prefix.prefixlen)
                 output.append((diff - 1, first_skipped))
         output.append(ip)
         prev_ip = ip
@@ -62,7 +64,7 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
     # Include any remaining available IPs
     if prev_ip.address.ip < last_ip_in_prefix:
         skipped_count = int(last_ip_in_prefix - prev_ip.address.ip)
-        first_skipped = '{}/{}'.format(prev_ip.address.ip + 1, prefix.prefixlen)
+        first_skipped = "{}/{}".format(prev_ip.address.ip + 1, prefix.prefixlen)
         output.append((skipped_count, first_skipped))
 
     return output
@@ -73,21 +75,21 @@ def add_available_vlans(vlan_group, vlans):
     Create fake records for all gaps between used VLANs
     """
     if not vlans:
-        return [{'vid': VLAN_VID_MIN, 'available': VLAN_VID_MAX - VLAN_VID_MIN + 1}]
+        return [{"vid": VLAN_VID_MIN, "available": VLAN_VID_MAX - VLAN_VID_MIN + 1}]
 
     prev_vid = VLAN_VID_MAX
     new_vlans = []
     for vlan in vlans:
         if vlan.vid - prev_vid > 1:
-            new_vlans.append({'vid': prev_vid + 1, 'available': vlan.vid - prev_vid - 1})
+            new_vlans.append({"vid": prev_vid + 1, "available": vlan.vid - prev_vid - 1})
         prev_vid = vlan.vid
 
     if vlans[0].vid > VLAN_VID_MIN:
-        new_vlans.append({'vid': VLAN_VID_MIN, 'available': vlans[0].vid - VLAN_VID_MIN})
+        new_vlans.append({"vid": VLAN_VID_MIN, "available": vlans[0].vid - VLAN_VID_MIN})
     if prev_vid < VLAN_VID_MAX:
-        new_vlans.append({'vid': prev_vid + 1, 'available': VLAN_VID_MAX - prev_vid})
+        new_vlans.append({"vid": prev_vid + 1, "available": VLAN_VID_MAX - prev_vid})
 
     vlans = list(vlans) + new_vlans
-    vlans.sort(key=lambda v: v.vid if type(v) == VLAN else v['vid'])
+    vlans.sort(key=lambda v: v.vid if type(v) == VLAN else v["vid"])
 
     return vlans

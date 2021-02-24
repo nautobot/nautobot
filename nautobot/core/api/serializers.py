@@ -1,6 +1,10 @@
 import uuid
 
-from django.core.exceptions import FieldError, MultipleObjectsReturned, ObjectDoesNotExist
+from django.core.exceptions import (
+    FieldError,
+    MultipleObjectsReturned,
+    ObjectDoesNotExist,
+)
 from django.db.models import AutoField, ManyToManyField
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -13,12 +17,13 @@ class ValidatedModelSerializer(serializers.ModelSerializer):
     Extends the built-in ModelSerializer to enforce calling full_clean() on a copy of the associated instance during
     validation. (DRF does not do this by default; see https://github.com/encode/django-rest-framework/issues/3144)
     """
+
     def validate(self, data):
 
         # Remove custom fields data and tags (if any) prior to model validation
         attrs = data.copy()
-        attrs.pop('custom_fields', None)
-        attrs.pop('tags', None)
+        attrs.pop("custom_fields", None)
+        attrs.pop("tags", None)
 
         # Skip ManyToManyFields
         for field in self.Meta.model._meta.get_fields():
@@ -54,13 +59,9 @@ class WritableNestedSerializer(serializers.ModelSerializer):
             try:
                 return queryset.get(**params)
             except ObjectDoesNotExist:
-                raise ValidationError(
-                    "Related object not found using the provided attributes: {}".format(params)
-                )
+                raise ValidationError("Related object not found using the provided attributes: {}".format(params))
             except MultipleObjectsReturned:
-                raise ValidationError(
-                    "Multiple objects match the provided attributes: {}".format(params)
-                )
+                raise ValidationError("Multiple objects match the provided attributes: {}".format(params))
             except FieldError as e:
                 raise ValidationError(e)
 
@@ -93,9 +94,7 @@ class WritableNestedSerializer(serializers.ModelSerializer):
         try:
             return queryset.get(pk=pk)
         except ObjectDoesNotExist:
-            raise ValidationError(
-                "Related object not found using the provided ID: {}".format(pk)
-            )
+            raise ValidationError("Related object not found using the provided ID: {}".format(pk))
 
 
 class BulkOperationSerializer(serializers.Serializer):
@@ -105,6 +104,7 @@ class BulkOperationSerializer(serializers.Serializer):
 #
 # GraphQL, used by the openapi doc, not by the view
 #
+
 
 class GraphQLAPISerializer(serializers.Serializer):
     query = serializers.CharField(required=True, help_text="GraphQL query")

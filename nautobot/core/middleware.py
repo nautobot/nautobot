@@ -1,11 +1,9 @@
 import uuid
-from urllib import parse
 
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
 from django.db import ProgrammingError
 from django.http import Http404
-from django.urls import reverse
 
 from nautobot.core.views import server_error
 from nautobot.extras.context_managers import change_logging
@@ -16,6 +14,7 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
     """
     Custom implementation of Django's RemoteUserMiddleware which allows for a user-configurable HTTP header name.
     """
+
     force_logout_if_no_header = False
 
     @property
@@ -45,6 +44,7 @@ class ObjectChangeMiddleware(object):
     have been created. Conversely, deletions are acted upon immediately, so that the serialized representation of the
     object is recorded before it (and any related objects) are actually deleted from the database.
     """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -64,13 +64,14 @@ class APIVersionMiddleware(object):
     """
     If the request is for an API endpoint, include the API version as a response header.
     """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         response = self.get_response(request)
         if is_api_request(request):
-            response['API-Version'] = settings.REST_FRAMEWORK_VERSION
+            response["API-Version"] = settings.REST_FRAMEWORK_VERSION
         return response
 
 
@@ -79,6 +80,7 @@ class ExceptionHandlingMiddleware(object):
     Intercept certain exceptions which are likely indicative of installation issues and provide helpful instructions
     to the user.
     """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -102,11 +104,11 @@ class ExceptionHandlingMiddleware(object):
         # Determine the type of exception. If it's a common issue, return a custom error page with instructions.
         custom_template = None
         if isinstance(exception, ProgrammingError):
-            custom_template = 'exceptions/programming_error.html'
+            custom_template = "exceptions/programming_error.html"
         elif isinstance(exception, ImportError):
-            custom_template = 'exceptions/import_error.html'
+            custom_template = "exceptions/import_error.html"
         elif isinstance(exception, PermissionError):
-            custom_template = 'exceptions/permission_error.html'
+            custom_template = "exceptions/permission_error.html"
 
         # Return a custom error message, or fall back to Django's default 500 error handling
         if custom_template:

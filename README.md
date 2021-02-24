@@ -14,7 +14,7 @@ or join us in the **#nautobot** Slack channel on [NetworkToCode](https://network
 
 |             | status |
 |-------------|------------|
-| **master** | ![Build status](https://github.com/nautobot/nautobot/workflows/CI/badge.svg?branch=master) |
+| **main** | ![Build status](https://github.com/nautobot/nautobot/workflows/CI/badge.svg?branch=main) |
 | **develop** | ![Build status](https://github.com/nautobot/nautobot/workflows/CI/badge.svg?branch=develop) |
 
 ### Screenshots

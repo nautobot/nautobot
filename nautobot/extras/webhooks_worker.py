@@ -8,26 +8,26 @@ from jinja2.exceptions import TemplateError
 from .choices import ObjectChangeActionChoices
 from .webhooks import generate_signature
 
-logger = logging.getLogger('nautobot.webhooks_worker')
+logger = logging.getLogger("nautobot.webhooks_worker")
 
 
-@job('default')
+@job("default")
 def process_webhook(webhook, data, model_name, event, timestamp, username, request_id):
     """
     Make a POST request to the defined Webhook
     """
     context = {
-        'event': dict(ObjectChangeActionChoices)[event].lower(),
-        'timestamp': timestamp,
-        'model': model_name,
-        'username': username,
-        'request_id': request_id,
-        'data': data
+        "event": dict(ObjectChangeActionChoices)[event].lower(),
+        "timestamp": timestamp,
+        "model": model_name,
+        "username": username,
+        "request_id": request_id,
+        "data": data,
     }
 
     # Build the headers for the HTTP request
     headers = {
-        'Content-Type': webhook.http_content_type,
+        "Content-Type": webhook.http_content_type,
     }
     try:
         headers.update(webhook.render_headers(context))
@@ -44,15 +44,13 @@ def process_webhook(webhook, data, model_name, event, timestamp, username, reque
 
     # Prepare the HTTP request
     params = {
-        'method': webhook.http_method,
-        'url': webhook.payload_url,
-        'headers': headers,
-        'data': body.encode('utf8'),
+        "method": webhook.http_method,
+        "url": webhook.payload_url,
+        "headers": headers,
+        "data": body.encode("utf8"),
     }
     logger.info(
-        "Sending {} request to {} ({} {})".format(
-            params['method'], params['url'], context['model'], context['event']
-        )
+        "Sending {} request to {} ({} {})".format(params["method"], params["url"], context["model"], context["event"])
     )
     logger.debug(params)
     try:
@@ -62,8 +60,8 @@ def process_webhook(webhook, data, model_name, event, timestamp, username, reque
         raise e
 
     # If a secret key is defined, sign the request with a hash of the key and its content
-    if webhook.secret != '':
-        prepared_request.headers['X-Hook-Signature'] = generate_signature(prepared_request.body, webhook.secret)
+    if webhook.secret != "":
+        prepared_request.headers["X-Hook-Signature"] = generate_signature(prepared_request.body, webhook.secret)
 
     # Send the request
     with requests.Session() as session:
@@ -74,7 +72,7 @@ def process_webhook(webhook, data, model_name, event, timestamp, username, reque
 
     if 200 <= response.status_code <= 299:
         logger.info("Request succeeded; response status {}".format(response.status_code))
-        return 'Status {} returned, webhook successfully processed.'.format(response.status_code)
+        return "Status {} returned, webhook successfully processed.".format(response.status_code)
     else:
         logger.warning("Request failed; response status {}: {}".format(response.status_code, response.content))
         raise requests.exceptions.RequestException(

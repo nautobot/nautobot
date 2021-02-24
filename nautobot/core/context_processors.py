@@ -8,6 +8,6 @@ def settings_and_registry(request):
     Expose Django settings and Nautobot registry stores in the template context. Example: {{ settings.DEBUG }}
     """
     return {
-        'settings': django_settings,
-        'registry': registry,
+        "settings": django_settings,
+        "registry": registry,
     }

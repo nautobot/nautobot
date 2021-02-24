@@ -15,33 +15,26 @@ from nautobot.utilities.fields import ColorField
 # Tags
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_validators',
-    'relationships',
+    "custom_fields",
+    "custom_validators",
+    "relationships",
 )
-class Tag(
-    TagBase,
-    BaseModel,
-    ChangeLoggedModel,
-    CustomFieldModel,
-    RelationshipModel
-):
-    color = ColorField(
-        default=ColorChoices.COLOR_GREY
-    )
+class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+    color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
         blank=True,
     )
 
-    csv_headers = ['name', 'slug', 'color', 'description']
+    csv_headers = ["name", "slug", "color", "description"]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def get_absolute_url(self):
-        return reverse('extras:tag', args=[self.slug])
+        return reverse("extras:tag", args=[self.slug])
 
     def slugify(self, tag, i=None):
         # Allow Unicode in Tag slugs (avoids empty slugs for Tags with all-Unicode names)
@@ -51,23 +44,12 @@ class Tag(
         return slug
 
     def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.color,
-            self.description
-        )
+        return (self.name, self.slug, self.color, self.description)
 
 
 class TaggedItem(BaseModel, GenericTaggedItemBase):
-    tag = models.ForeignKey(
-        to=Tag,
-        related_name="%(app_label)s_%(class)s_items",
-        on_delete=models.CASCADE
-    )
+    tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
     object_id = models.UUIDField()
 
     class Meta:
-        index_together = (
-            ("content_type", "object_id")
-        )
+        index_together = ("content_type", "object_id")

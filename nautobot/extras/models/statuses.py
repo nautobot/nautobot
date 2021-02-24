@@ -29,39 +29,27 @@ class StatusQuerySet(RestrictedQuerySet):
 
 
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'webhooks'
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
-class Status(
-    BaseModel,
-    ChangeLoggedModel,
-    CustomFieldModel,
-    RelationshipModel
-):
+class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(
         to=ContentType,
-        related_name='statuses',
-        verbose_name='Content type(s)',
-        limit_choices_to=FeatureQuery('statuses'),
-        help_text='The content type(s) to which this status applies.'
+        related_name="statuses",
+        verbose_name="Content type(s)",
+        limit_choices_to=FeatureQuery("statuses"),
+        help_text="The content type(s) to which this status applies.",
     )
-    name = models.CharField(
-        max_length=50,
-        unique=True
-    )
-    color = ColorField(
-        default=ColorChoices.COLOR_GREY
-    )
-    slug = models.SlugField(
-        max_length=50, unique=True
-    )
+    name = models.CharField(max_length=50, unique=True)
+    color = ColorField(default=ColorChoices.COLOR_GREY)
+    slug = models.SlugField(max_length=50, unique=True)
     description = models.CharField(
         max_length=200,
         blank=True,
@@ -69,23 +57,21 @@ class Status(
 
     objects = StatusQuerySet.as_manager()
 
-    csv_headers = ['name', 'slug', 'color', 'content_types', 'description']
-    clone_fields = ['color', 'content_types']
+    csv_headers = ["name", "slug", "color", "content_types", "description"]
+    clone_fields = ["color", "content_types"]
 
     class Meta:
-        ordering = ['name']
-        verbose_name_plural = 'statuses'
+        ordering = ["name"]
+        verbose_name_plural = "statuses"
 
     def __str__(self):
         return self.name.capitalize()
 
     def get_absolute_url(self):
-        return reverse('extras:status', args=[self.slug])
+        return reverse("extras:status", args=[self.slug])
 
     def to_csv(self):
-        labels = ','.join(
-            f'{ct.app_label}.{ct.model}' for ct in self.content_types.all()
-        )
+        labels = ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
         return (
             self.name,
             self.slug,
@@ -105,12 +91,12 @@ class StatusField(models.ForeignKey):
     """
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('to', Status)
-        kwargs.setdefault('null', True)
+        kwargs.setdefault("to", Status)
+        kwargs.setdefault("null", True)
         super().__init__(**kwargs)
 
     def get_limit_choices_to(self):
-        return {'content_types': ContentType.objects.get_for_model(self.model)}
+        return {"content_types": ContentType.objects.get_for_model(self.model)}
 
     def contribute_to_class(self, cls, name, private_only=False):
         """
@@ -139,10 +125,10 @@ class StatusField(models.ForeignKey):
             return force_str(choices_dict.get(make_hashable(value), value), strings_only=True)
 
         # Install `.get_FOO_display()` onto the model using our own version.
-        if 'get_%s_display' % self.name not in cls.__dict__:
+        if "get_%s_display" % self.name not in cls.__dict__:
             setattr(
                 cls,
-                'get_%s_display' % self.name,
+                "get_%s_display" % self.name,
                 partialmethod(_get_FIELD_display, field=self),
             )
 
@@ -153,24 +139,24 @@ class StatusField(models.ForeignKey):
             I am added to the model via `StatusField.contribute_to_class()`.
             """
             field_method = getattr(self, field.name)
-            return getattr(field_method, 'color')
+            return getattr(field_method, "color")
 
         # Install `.get_FOO_color()` onto the model using our own version.
-        if 'get_%s_color' % self.name not in cls.__dict__:
+        if "get_%s_color" % self.name not in cls.__dict__:
             setattr(
                 cls,
-                'get_%s_color' % self.name,
+                "get_%s_color" % self.name,
                 partialmethod(_get_FIELD_color, field=self),
             )
 
     def formfield(self, **kwargs):
         """Return a prepped formfield for use in model forms."""
         defaults = {
-            'form_class': DynamicModelChoiceField,
-            'display_field': 'name',
-            'queryset': Status.objects.all(),
+            "form_class": DynamicModelChoiceField,
+            "display_field": "name",
+            "queryset": Status.objects.all(),
             # label_lower e.g. "dcim.device"
-            'query_params': {'content_types': self.model._meta.label_lower},
+            "query_params": {"content_types": self.model._meta.label_lower},
         }
         defaults.update(**kwargs)
         return super().formfield(**defaults)
@@ -183,7 +169,7 @@ class StatusModel(models.Model):
 
     status = StatusField(
         on_delete=models.PROTECT,
-        related_name='%(app_label)s_%(class)s_related',  # e.g. dcim_device_related
+        related_name="%(app_label)s_%(class)s_related",  # e.g. dcim_device_related
     )
 
     class Meta:

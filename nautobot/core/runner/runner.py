@@ -22,8 +22,8 @@ __configured = False
 
 
 def sanitize_name(project):
-    project = project.replace(' ', '-')
-    return re.sub('[^A-Z0-9a-z_-]', '-', project)
+    project = project.replace(" ", "-")
+    return re.sub("[^A-Z0-9a-z_-]", "-", project)
 
 
 def parse_command_args(args):
@@ -38,7 +38,7 @@ def parse_command_args(args):
     """
     index = None
     for arg_i, arg in enumerate(args):
-        if not arg.startswith('-'):
+        if not arg.startswith("-"):
             index = arg_i
             break
 
@@ -46,7 +46,7 @@ def parse_command_args(args):
     if index is None:
         return (args, None, [])
 
-    return (args[:index], args[index], args[(index + 1):])
+    return (args[:index], args[index], args[(index + 1) :])
 
 
 def is_configured():
@@ -54,10 +54,19 @@ def is_configured():
     return __configured
 
 
-def configure_app(config_path=None, project=None, default_config_path=None,
-                  default_settings=None, settings_initializer=None,
-                  settings_envvar=None, initializer=None, allow_extras=True,
-                  config_module_name=None, runner_name=None, on_configure=None):
+def configure_app(
+    config_path=None,
+    project=None,
+    default_config_path=None,
+    default_settings=None,
+    settings_initializer=None,
+    settings_envvar=None,
+    initializer=None,
+    allow_extras=True,
+    config_module_name=None,
+    runner_name=None,
+    on_configure=None,
+):
     """
     :param project: should represent the canonical name for the project, generally
         the same name it assigned in distutils.
@@ -73,13 +82,13 @@ def configure_app(config_path=None, project=None, default_config_path=None,
     project_filename = sanitize_name(project)
 
     if default_config_path is None:
-        default_config_path = '~/%s/%s.conf.py' % (project_filename, project_filename)
+        default_config_path = "~/%s/%s.conf.py" % (project_filename, project_filename)
 
     if settings_envvar is None:
-        settings_envvar = project_filename.upper() + '_CONF'
+        settings_envvar = project_filename.upper() + "_CONF"
 
     if config_module_name is None:
-        config_module_name = project_filename + '_config'
+        config_module_name = project_filename + "_config"
 
     # normalize path
     if settings_envvar in os.environ:
@@ -94,51 +103,60 @@ def configure_app(config_path=None, project=None, default_config_path=None,
 
     if not os.path.exists(config_path):
         if runner_name:
-            raise ValueError("Configuration file does not exist. Use '%s init' to initialize the file." % (runner_name,))
+            raise ValueError(
+                "Configuration file does not exist. Use '%s init' to initialize the file." % (runner_name,)
+            )
         raise ValueError("Configuration file does not exist at %r" % (config_path,))
 
-    os.environ['DJANGO_SETTINGS_MODULE'] = config_module_name
+    os.environ["DJANGO_SETTINGS_MODULE"] = config_module_name
 
     def settings_callback(settings):
         if initializer is None:
             return
 
         try:
-            initializer({
-                'project': project,
-                'config_path': config_path,
-                'settings': settings,
-            })
+            initializer(
+                {
+                    "project": project,
+                    "config_path": config_path,
+                    "settings": settings,
+                }
+            )
         except Exception:
             # XXX: Django doesn't like various errors in this path
             import sys
             import traceback
+
             traceback.print_exc()
             sys.exit(1)
 
     importer.install(
-        config_module_name, config_path, default_settings,
-        allow_extras=allow_extras, callback=settings_callback)
+        config_module_name,
+        config_path,
+        default_settings,
+        allow_extras=allow_extras,
+        callback=settings_callback,
+    )
 
     __configured = True
 
     # HACK(dcramer): we need to force access of django.conf.settings to
     # ensure we don't hit any import-driven recursive behavior
     from django.conf import settings
-    hasattr(settings, 'INSTALLED_APPS')
+
+    hasattr(settings, "INSTALLED_APPS")
 
     if on_configure:
-        on_configure({
-            'project': project,
-            'config_path': config_path,
-            'settings': settings,
-        })
+        on_configure(
+            {
+                "project": project,
+                "config_path": config_path,
+                "settings": settings,
+            }
+        )
 
 
-class VerboseHelpFormatter(
-    argparse.ArgumentDefaultsHelpFormatter,
-    argparse.RawDescriptionHelpFormatter
-):
+class VerboseHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
     """Argparse Formatter that includes newlines and shows argument defaults."""
 
 
@@ -148,11 +166,11 @@ def run_app(**kwargs):
     # The established command for running this program
     runner_name = os.path.basename(sys_args[0])
 
-    default_config_path = kwargs.get('default_config_path')
+    default_config_path = kwargs.get("default_config_path")
 
     # Primary parser
     parser = management.CommandParser(
-        description=kwargs.pop('description'),
+        description=kwargs.pop("description"),
         formatter_class=VerboseHelpFormatter,
         add_help=False,
     )
@@ -177,7 +195,7 @@ def run_app(**kwargs):
     args, unparsed_args = parser.parse_known_args()
 
     # Now add the sub-parser for "init" command
-    subparsers = parser.add_subparsers(help=False, dest="command", metavar='')
+    subparsers = parser.add_subparsers(help=False, dest="command", metavar="")
     init_parser = subparsers.add_parser(
         "init",
         help="Initialize a new configuration",
@@ -198,7 +216,7 @@ def run_app(**kwargs):
     # Fallback to passing through to Django management commands
     # except RuntimeError as err:
     except management.CommandError as err:
-        if 'invalid choice' not in str(err):
+        if "invalid choice" not in str(err):
             raise
 
         # Rewrite sys_args to have the unparsed args (if any)
@@ -211,17 +229,17 @@ def run_app(**kwargs):
         parser.exit(1)
 
     # The `init` command is reserved for initializing configuration
-    if command == 'init':
-        settings_initializer = kwargs.get('settings_initializer')
+    if command == "init":
+        settings_initializer = kwargs.get("settings_initializer")
 
         config_path = os.path.expanduser(args.config_path)
 
         # Check if the config already exists; confirm w/ user
         if os.path.exists(config_path):
             resp = None
-            while resp not in ('y', 'n', ''):
-                resp = input('File already exists at %r, overwrite? [yN] ' % config_path).lower()
-                if resp != 'y':
+            while resp not in ("y", "n", ""):
+                resp = input("File already exists at %r, overwrite? [yN] " % config_path).lower()
+                if resp != "y":
                     print("Aborted!")
                     return
 
@@ -229,7 +247,7 @@ def run_app(**kwargs):
         try:
             create_default_settings(config_path, settings_initializer)
         except OSError as e:
-            raise e.__class__('Unable to write default settings file to %r' % config_path)
+            raise e.__class__("Unable to write default settings file to %r" % config_path)
 
         print("Configuration file created at %r" % config_path)
 
@@ -244,10 +262,7 @@ def run_app(**kwargs):
     try:
         configure_app(config_path=config_path, **kwargs)
     except ValueError as err:
-        parser.exit(
-            status=2,
-            message=str(err) + '\n'
-        )
+        parser.exit(status=2, message=str(err) + "\n")
 
     # Call Django management command
     management.execute_from_command_line([runner_name, command] + command_args)
@@ -256,5 +271,5 @@ def run_app(**kwargs):
     sys.exit(0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_app()

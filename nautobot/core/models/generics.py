@@ -41,6 +41,7 @@ class PrimaryModel(
     IP Address, Site, VLAN, Virtual Machine, etc. Primary models usually represent
     tangible or logical resources on the network, or within the organization.
     """
+
     tags = TaggableManager(through=TaggedItem)
 
     class Meta:

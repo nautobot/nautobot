@@ -18,11 +18,11 @@ from nautobot.utilities.utils import flatten_dict
 
 
 __all__ = (
-    'AdminGroup',
-    'AdminUser',
-    'ObjectPermission',
-    'Token',
-    'UserConfig',
+    "AdminGroup",
+    "AdminUser",
+    "ObjectPermission",
+    "Token",
+    "UserConfig",
 )
 
 
@@ -30,12 +30,14 @@ __all__ = (
 # Proxy models for admin
 #
 
+
 class AdminGroup(Group):
     """
     Proxy contrib.auth.models.Group for the admin UI
     """
+
     class Meta:
-        verbose_name = 'Group'
+        verbose_name = "Group"
         proxy = True
 
 
@@ -43,8 +45,9 @@ class AdminUser(User):
     """
     Proxy contrib.auth.models.User for the admin UI
     """
+
     class Meta:
-        verbose_name = 'User'
+        verbose_name = "User"
         proxy = True
 
 
@@ -52,23 +55,18 @@ class AdminUser(User):
 # User preferences
 #
 
+
 class UserConfig(BaseModel):
     """
     This model stores arbitrary user-specific preferences in a JSON data structure.
     """
-    user = models.OneToOneField(
-        to=User,
-        on_delete=models.CASCADE,
-        related_name='config'
-    )
-    data = models.JSONField(
-        encoder=DjangoJSONEncoder,
-        default=dict
-    )
+
+    user = models.OneToOneField(to=User, on_delete=models.CASCADE, related_name="config")
+    data = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
 
     class Meta:
-        ordering = ['user']
-        verbose_name = verbose_name_plural = 'User Preferences'
+        ordering = ["user"]
+        verbose_name = verbose_name_plural = "User Preferences"
 
     def get(self, path, default=None):
         """
@@ -80,7 +78,7 @@ class UserConfig(BaseModel):
         :param default: Default value to return for a nonexistent key (default: None).
         """
         d = self.data
-        keys = path.split('.')
+        keys = path.split(".")
 
         # Iterate down the hierarchy, returning the default value if any invalid key is encountered
         for key in keys:
@@ -113,7 +111,7 @@ class UserConfig(BaseModel):
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
         d = self.data
-        keys = path.split('.')
+        keys = path.split(".")
 
         # Iterate through the hierarchy to find the key we're setting. Raise TypeError if we encounter any
         # interim leaf nodes (keys which do not contain dictionaries).
@@ -121,7 +119,7 @@ class UserConfig(BaseModel):
             if key in d and type(d[key]) is dict:
                 d = d[key]
             elif key in d:
-                err_path = '.'.join(path.split('.')[:i + 1])
+                err_path = ".".join(path.split(".")[: i + 1])
                 raise TypeError(f"Key '{err_path}' is a leaf node; cannot assign new keys")
             else:
                 d = d.setdefault(key, {})
@@ -149,7 +147,7 @@ class UserConfig(BaseModel):
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
         d = self.data
-        keys = path.split('.')
+        keys = path.split(".")
 
         for key in keys[:-1]:
             if key not in d:
@@ -178,36 +176,19 @@ def create_userconfig(instance, created, **kwargs):
 # REST API
 #
 
+
 class Token(BaseModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
     It also supports setting an expiration time and toggling write ability.
     """
-    user = models.ForeignKey(
-        to=User,
-        on_delete=models.CASCADE,
-        related_name='tokens'
-    )
-    created = models.DateTimeField(
-        auto_now_add=True
-    )
-    expires = models.DateTimeField(
-        blank=True,
-        null=True
-    )
-    key = models.CharField(
-        max_length=40,
-        unique=True,
-        validators=[MinLengthValidator(40)]
-    )
-    write_enabled = models.BooleanField(
-        default=True,
-        help_text='Permit create/update/delete operations using this key'
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
+
+    user = models.ForeignKey(to=User, on_delete=models.CASCADE, related_name="tokens")
+    created = models.DateTimeField(auto_now_add=True)
+    expires = models.DateTimeField(blank=True, null=True)
+    key = models.CharField(max_length=40, unique=True, validators=[MinLengthValidator(40)])
+    write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")
+    description = models.CharField(max_length=200, blank=True)
 
     class Meta:
         pass
@@ -236,55 +217,51 @@ class Token(BaseModel):
 # Permissions
 #
 
+
 class ObjectPermission(BaseModel):
     """
     A mapping of view, add, change, and/or delete permission for users and/or groups to an arbitrary set of objects
     identified by ORM query parameters.
     """
-    name = models.CharField(
-        max_length=100
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
-    enabled = models.BooleanField(
-        default=True
-    )
+
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=200, blank=True)
+    enabled = models.BooleanField(default=True)
     object_types = models.ManyToManyField(
         to=ContentType,
         limit_choices_to=Q(
-            ~Q(app_label__in=['admin', 'auth', 'contenttypes', 'sessions', 'taggit', 'users']) |
-            Q(app_label='auth', model__in=['group', 'user']) |
-            Q(app_label='users', model__in=['objectpermission', 'token'])
+            ~Q(
+                app_label__in=[
+                    "admin",
+                    "auth",
+                    "contenttypes",
+                    "sessions",
+                    "taggit",
+                    "users",
+                ]
+            )
+            | Q(app_label="auth", model__in=["group", "user"])
+            | Q(app_label="users", model__in=["objectpermission", "token"])
         ),
-        related_name='object_permissions'
+        related_name="object_permissions",
     )
-    groups = models.ManyToManyField(
-        to=Group,
-        blank=True,
-        related_name='object_permissions'
-    )
-    users = models.ManyToManyField(
-        to=User,
-        blank=True,
-        related_name='object_permissions'
-    )
+    groups = models.ManyToManyField(to=Group, blank=True, related_name="object_permissions")
+    users = models.ManyToManyField(to=User, blank=True, related_name="object_permissions")
     actions = ArrayField(
         base_field=models.CharField(max_length=30),
-        help_text="The list of actions granted by this permission"
+        help_text="The list of actions granted by this permission",
     )
     constraints = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Queryset filter matching the applicable objects of the selected type(s)"
+        help_text="Queryset filter matching the applicable objects of the selected type(s)",
     )
 
     objects = RestrictedQuerySet.as_manager()
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
         verbose_name = "permission"
 
     def __str__(self):

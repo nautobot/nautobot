@@ -1,6 +1,12 @@
 import django_tables2 as tables
 
-from nautobot.utilities.tables import BaseTable, ButtonsColumn, LinkedCountColumn, TagColumn, ToggleColumn
+from nautobot.utilities.tables import (
+    BaseTable,
+    ButtonsColumn,
+    LinkedCountColumn,
+    TagColumn,
+    ToggleColumn,
+)
 from .models import Tenant, TenantGroup
 
 MPTT_LINK = """
@@ -23,38 +29,34 @@ COL_TENANT = """
 # Tenant groups
 #
 
+
 class TenantGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(
-        template_code=MPTT_LINK,
-        orderable=False,
-        attrs={'td': {'class': 'text-nowrap'}}
-    )
+    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     tenant_count = LinkedCountColumn(
-        viewname='tenancy:tenant_list',
-        url_params={'group': 'slug'},
-        verbose_name='Tenants'
+        viewname="tenancy:tenant_list",
+        url_params={"group": "slug"},
+        verbose_name="Tenants",
     )
-    actions = ButtonsColumn(TenantGroup, pk_field='slug')
+    actions = ButtonsColumn(TenantGroup, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = TenantGroup
-        fields = ('pk', 'name', 'tenant_count', 'description', 'slug', 'actions')
-        default_columns = ('pk', 'name', 'tenant_count', 'description', 'actions')
+        fields = ("pk", "name", "tenant_count", "description", "slug", "actions")
+        default_columns = ("pk", "name", "tenant_count", "description", "actions")
 
 
 #
 # Tenants
 #
 
+
 class TenantTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    tags = TagColumn(
-        url_name='tenancy:tenant_list'
-    )
+    tags = TagColumn(url_name="tenancy:tenant_list")
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ('pk', 'name', 'slug', 'group', 'description', 'tags')
-        default_columns = ('pk', 'name', 'group', 'description')
+        fields = ("pk", "name", "slug", "group", "description", "tags")
+        default_columns = ("pk", "name", "group", "description")

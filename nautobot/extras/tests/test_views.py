@@ -3,13 +3,21 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.dcim.models import ConsolePort, Device, Site
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import *
-from nautobot.extras.models import ConfigContext, CustomLink, ExportTemplate, GitRepository, ObjectChange, Status, Tag, Webhook
+from nautobot.extras.models import (
+    ConfigContext,
+    CustomLink,
+    ExportTemplate,
+    GitRepository,
+    ObjectChange,
+    Status,
+    Tag,
+    Webhook,
+)
 from nautobot.utilities.testing import ViewTestCases, TestCase
 
 
@@ -19,15 +27,15 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Tag.objects.create(name='Tag 1', slug='tag-1')
-        Tag.objects.create(name='Tag 2', slug='tag-2')
-        Tag.objects.create(name='Tag 3', slug='tag-3')
+        Tag.objects.create(name="Tag 1", slug="tag-1")
+        Tag.objects.create(name="Tag 2", slug="tag-2")
+        Tag.objects.create(name="Tag 3", slug="tag-3")
 
         cls.form_data = {
-            'name': 'Tag X',
-            'slug': 'tag-x',
-            'color': 'c0c0c0',
-            'comments': 'Some comments',
+            "name": "Tag X",
+            "slug": "tag-x",
+            "color": "c0c0c0",
+            "comments": "Some comments",
         }
 
         cls.csv_data = (
@@ -38,7 +46,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            'color': '00ff00',
+            "color": "00ff00",
         }
 
 
@@ -50,60 +58,55 @@ class ConfigContextTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = ConfigContext
 
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name='Site 1', slug='site-1')
+        site = Site.objects.create(name="Site 1", slug="site-1")
 
         # Create three ConfigContexts
         for i in range(1, 4):
-            configcontext = ConfigContext(
-                name='Config Context {}'.format(i),
-                data={'foo': i}
-            )
+            configcontext = ConfigContext(name="Config Context {}".format(i), data={"foo": i})
             configcontext.save()
             configcontext.sites.add(site)
 
         cls.form_data = {
-            'name': 'Config Context X',
-            'weight': 200,
-            'description': 'A new config context',
-            'is_active': True,
-            'regions': [],
-            'sites': [site.pk],
-            'roles': [],
-            'platforms': [],
-            'tenant_groups': [],
-            'tenants': [],
-            'tags': [],
-            'data': '{"foo": 123}',
+            "name": "Config Context X",
+            "weight": 200,
+            "description": "A new config context",
+            "is_active": True,
+            "regions": [],
+            "sites": [site.pk],
+            "roles": [],
+            "platforms": [],
+            "tenant_groups": [],
+            "tenants": [],
+            "tags": [],
+            "data": '{"foo": 123}',
         }
 
         cls.bulk_edit_data = {
-            'weight': 300,
-            'is_active': False,
-            'description': 'New description',
+            "weight": 300,
+            "is_active": False,
+            "description": "New description",
         }
 
 
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
-    user_permissions = (
-        'extras.view_objectchange',
-    )
+    user_permissions = ("extras.view_objectchange",)
 
     @classmethod
     def setUpTestData(cls):
 
-        site = Site(name='Site 1', slug='site-1')
+        site = Site(name="Site 1", slug="site-1")
         site.save()
 
         # Create three ObjectChanges
-        user = User.objects.create_user(username='testuser2')
+        user = User.objects.create_user(username="testuser2")
         for i in range(1, 4):
             oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
@@ -112,12 +115,12 @@ class ObjectChangeTestCase(TestCase):
 
     def test_objectchange_list(self):
 
-        url = reverse('extras:objectchange_list')
+        url = reverse("extras:objectchange_list")
         params = {
             "user": User.objects.first().pk,
         }
 
-        response = self.client.get('{}?{}'.format(url, urllib.parse.urlencode(params)))
+        response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
@@ -128,24 +131,24 @@ class ObjectChangeTestCase(TestCase):
 
 
 class CustomLinkTest(TestCase):
-    user_permissions = ['dcim.view_site']
+    user_permissions = ["dcim.view_site"]
 
     def test_view_object_with_custom_link(self):
         customlink = CustomLink(
             content_type=ContentType.objects.get_for_model(Site),
-            name='Test',
-            text='FOO {{ obj.name }} BAR',
-            target_url='http://example.com/?site={{ obj.slug }}',
-            new_window=False
+            name="Test",
+            text="FOO {{ obj.name }} BAR",
+            target_url="http://example.com/?site={{ obj.slug }}",
+            new_window=False,
         )
         customlink.save()
 
-        site = Site(name='Test Site', slug='test-site')
+        site = Site(name="Test Site", slug="test-site")
         site.save()
 
         response = self.client.get(site.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f'FOO {site.name} BAR', str(response.content))
+        self.assertIn(f"FOO {site.name} BAR", str(response.content))
 
 
 class GitRepositoryTestCase(
@@ -163,20 +166,24 @@ class GitRepositoryTestCase(
 
         # Create three GitRepository records
         repos = (
-            GitRepository(name='Repo 1', slug='repo-1', remote_url='https://example.com/repo1.git'),
-            GitRepository(name='Repo 2', slug='repo-2', remote_url='https://example.com/repo2.git'),
-            GitRepository(name='Repo 3', slug='repo-3', remote_url='https://example.com/repo3.git'),
+            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
+            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
         )
         for repo in repos:
             repo.save(trigger_resync=False)
 
         cls.form_data = {
-            'name': 'A new Git repository',
-            'slug': 'a-new-git-repository',
-            'remote_url': 'http://example.com/a_new_git_repository.git',
-            'branch': 'develop',
-            '_token': '1234567890abcdef1234567890abcdef',
-            'provided_contents': ['extras.configcontext', 'extras.job', 'extras.exporttemplate'],
+            "name": "A new Git repository",
+            "slug": "a-new-git-repository",
+            "remote_url": "http://example.com/a_new_git_repository.git",
+            "branch": "develop",
+            "_token": "1234567890abcdef1234567890abcdef",
+            "provided_contents": [
+                "extras.configcontext",
+                "extras.job",
+                "extras.exporttemplate",
+            ],
         }
 
 
@@ -194,31 +201,29 @@ class StatusTestCase(
     def setUpTestData(cls):
 
         # Status objects to test.
-        statuses = (
-            Status.objects.create(name='Status 1', slug='status-1'),
-            Status.objects.create(name='Status 2', slug='status-2'),
-            Status.objects.create(name='Status 3', slug='status-3'),
-        )
+        Status.objects.create(name="Status 1", slug="status-1")
+        Status.objects.create(name="Status 2", slug="status-2")
+        Status.objects.create(name="Status 3", slug="status-3")
 
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
-            'name': 'new_status',
-            'slug': 'new-status',
-            'description': 'I am a new status object.',
-            'color': 'ffcc00',
-            'content_types': [content_type.pk],
+            "name": "new_status",
+            "slug": "new-status",
+            "description": "I am a new status object.",
+            "color": "ffcc00",
+            "content_types": [content_type.pk],
         }
 
         cls.csv_data = (
-            'name,slug,color,content_types'
+            "name,slug,color,content_types"
             'test_status1,test-status1,ffffff,"dcim.device"'
             'test_status2,test-status2,ffffff,"dcim.device,dcim.rack"'
             'test_status3,test-status3,ffffff,"dcim.device,dcim.site"'
         )
 
         cls.bulk_edit_data = {
-            'color': '000000',
+            "color": "000000",
         }
 
 
@@ -258,9 +263,9 @@ class ExportTemplateTestCase(
             template.save()
 
         cls.form_data = {
-            'name': 'template-4',
-            'content_type': obj_type.pk,
-            'template_code': 'template-4 test4'
+            "name": "template-4",
+            "content_type": obj_type.pk,
+            "template_code": "template-4 test4",
         }
 
 
@@ -312,13 +317,13 @@ class CustomLinkTestCase(
             link.save()
 
         cls.form_data = {
-            'content_type': obj_type.pk,
-            'name': 'customlink-4',
-            'text': 'customlink text 4',
-            'target_url': 'http://customlink4.com',
-            'weight': 100,
+            "content_type": obj_type.pk,
+            "name": "customlink-4",
+            "text": "customlink text 4",
+            "target_url": "http://customlink4.com",
+            "weight": 100,
             "button_class": "default",
-            'new_window': False,
+            "new_window": False,
         }
 
 
@@ -365,11 +370,11 @@ class WebhookTestCase(
             webhook.content_types.set([obj_type])
 
         cls.form_data = {
-            'name': 'webhook-4',
-            'content_types': [obj_type.pk],
-            'enabled': True,
-            'type_create': True,
-            'payload_url': 'http://test-url.com/test-4',
-            'http_method': 'POST',
-            'http_content_type': 'application/json',
+            "name": "webhook-4",
+            "content_types": [obj_type.pk],
+            "enabled": True,
+            "type_create": True,
+            "payload_url": "http://test-url.com/test-4",
+            "http_method": "POST",
+            "http_content_type": "application/json",
         }

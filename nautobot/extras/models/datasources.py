@@ -9,21 +9,17 @@ from django.urls import reverse
 
 from django_cryptography.fields import encrypt
 
-from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.models import ConfigContext, ExportTemplate
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import PrimaryModel
 
 
 @extras_features(
-    'config_context_owners',
-    'custom_fields',
-    'export_template_owners',
-    'job_results',
-    'relationships',
-    'webhooks',
+    "config_context_owners",
+    "custom_fields",
+    "export_template_owners",
+    "job_results",
+    "relationships",
+    "webhooks",
 )
 class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""
@@ -42,18 +38,18 @@ class GitRepository(PrimaryModel):
     remote_url = models.URLField(
         max_length=255,
         # For the moment we don't support ssh:// and git:// URLs
-        help_text='Only HTTP and HTTPS URLs are presently supported',
-        validators=[URLValidator(schemes=['http', 'https'])],
+        help_text="Only HTTP and HTTPS URLs are presently supported",
+        validators=[URLValidator(schemes=["http", "https"])],
     )
     branch = models.CharField(
         max_length=64,
-        default='main',
+        default="main",
     )
 
     current_head = models.CharField(
-        help_text='Commit hash of the most recent fetch from the selected branch. Used for syncing between workers.',
+        help_text="Commit hash of the most recent fetch from the selected branch. Used for syncing between workers.",
         max_length=48,
-        default='',
+        default="",
         blank=True,
     )
 
@@ -62,35 +58,31 @@ class GitRepository(PrimaryModel):
         models.CharField(
             max_length=200,
             blank=True,
-            default='',
+            default="",
         )
     )
 
     username = models.CharField(
         max_length=64,
         blank=True,
-        default='',
+        default="",
     )
 
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
     # the data types registered in registry['datasource_contents'].
-    provided_contents = models.JSONField(
-        encoder=DjangoJSONEncoder,
-        default=list,
-        blank=True
-    )
+    provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
-    csv_headers = ['name', 'slug', 'remote_url', 'branch', 'provided_contents']
-    clone_fields = ['remote_url', 'provided_contents']
+    csv_headers = ["name", "slug", "remote_url", "branch", "provided_contents"]
+    clone_fields = ["remote_url", "provided_contents"]
 
     class Meta:
-        ordering = ['name']
-        verbose_name = 'Git repository'
-        verbose_name_plural = 'Git repositories'
+        ordering = ["name"]
+        verbose_name = "Git repository"
+        verbose_name_plural = "Git repositories"
 
     def __init__(self, *args, **kwargs):
         # If instantiated from the REST API, the originating Request will be passed as a kwarg:
-        self.request = kwargs.pop('request', None)
+        self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
 
         # Store the initial repo slug and token so we can check for changes on save().
@@ -101,7 +93,7 @@ class GitRepository(PrimaryModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('extras:gitrepository', kwargs={'slug': self.slug})
+        return reverse("extras:gitrepository", kwargs={"slug": self.slug})
 
     def to_csv(self):
         return (
@@ -139,11 +131,17 @@ class GitRepository(PrimaryModel):
                 # For now we just rename the one that we have locally and rely on other methods
                 # (notably get_jobs()) to clean up other clones as they're encountered.
                 if os.path.exists(os.path.join(settings.GIT_ROOT, self.__initial_slug)):
-                    os.rename(os.path.join(settings.GIT_ROOT, self.__initial_slug), self.filesystem_path)
+                    os.rename(
+                        os.path.join(settings.GIT_ROOT, self.__initial_slug),
+                        self.filesystem_path,
+                    )
 
             if trigger_resync:
                 assert self.request is not None, "No HTTP request associated with this update!"
-                from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
+                from nautobot.extras.datasources import (
+                    enqueue_pull_git_repository_and_refresh_data,
+                )
+
                 enqueue_pull_git_repository_and_refresh_data(self, self.request)
 
             # Update cached values

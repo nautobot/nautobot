@@ -5,6 +5,7 @@ class TestPass(Job):
     """
     Job with pass result.
     """
+
     description = "Validate job import"
 
     def test_pass(self):

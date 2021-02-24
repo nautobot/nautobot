@@ -2,9 +2,9 @@ from django.db import models
 
 
 EXEMPT_ATTRS = [
-    'choices',
-    'help_text',
-    'verbose_name',
+    "choices",
+    "help_text",
+    "verbose_name",
 ]
 
 _deconstruct = models.Field.deconstruct
@@ -22,7 +22,7 @@ def custom_deconstruct(field):
 
     # A hack to accommodate TimeZoneField, which employs a custom deconstructor to check whether the default choices
     # have changed
-    if hasattr(field, 'CHOICES'):
-        kwargs['choices'] = field.CHOICES
+    if hasattr(field, "CHOICES"):
+        kwargs["choices"] = field.CHOICES
 
     return name, path, args, kwargs

@@ -1,22 +1,26 @@
 """Git data source functionality."""
+
+from collections import defaultdict
 import logging
 import os
 import re
-
-from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
-
 from django_rq import job
-
 import yaml
 
 from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
-from nautobot.extras.models import ConfigContext, ExportTemplate, GitRepository, JobResult, Tag
+from nautobot.extras.models import (
+    ConfigContext,
+    ExportTemplate,
+    GitRepository,
+    JobResult,
+    Tag,
+)
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.git import GitRepo
@@ -25,7 +29,8 @@ from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
 
-logger = logging.getLogger(f"nautobot.datasources.git")
+
+logger = logging.getLogger("nautobot.datasources.git")
 
 
 def enqueue_pull_git_repository_and_refresh_data(repository, request):
@@ -43,7 +48,7 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
     )
 
 
-@job('default')
+@job("default")
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
@@ -51,13 +56,18 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
     repository_record = GitRepository.objects.get(pk=repository_pk)
     if not repository_record:
         job_result.log(
-            f"No GitRepository {repository_pk} found!", level_choice=LogLevelChoices.LOG_FAILURE, logger=logger
+            f"No GitRepository {repository_pk} found!",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            logger=logger,
         )
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.save()
         return
 
-    job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
+    job_result.log(
+        f'Creating/refreshing local copy of Git repository "{repository_record.name}"...',
+        logger=logger,
+    )
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
 
@@ -71,11 +81,12 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
             logger=logger,
         )
 
-        refresh_datasource_content('extras.gitrepository', repository_record, request, job_result, delete=False)
+        refresh_datasource_content("extras.gitrepository", repository_record, request, job_result, delete=False)
 
     except Exception as exc:
         job_result.log(
-            f"Error while refreshing {repository_record.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE
+            f"Error while refreshing {repository_record.name}: {exc}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
         )
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
@@ -113,9 +124,9 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
         if user:
-            from_url = re.sub('//', f'//{user}:{token}@', from_url)
+            from_url = re.sub("//", f"//{user}:{token}@", from_url)
         else:
-            from_url = re.sub('//', f'//{token}@', from_url)
+            from_url = re.sub("//", f"//{token}@", from_url)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch
@@ -138,10 +149,15 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
         raise
 
     if job_result:
-        job_result.log("Repository successfully refreshed", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
+        job_result.log(
+            "Repository successfully refreshed",
+            level_choice=LogLevelChoices.LOG_SUCCESS,
+            logger=logger,
+        )
         job_result.save()
     elif logger:
         logger.info("Repository successfully refreshed")
+
 
 #
 # Config context handling
@@ -170,9 +186,13 @@ def update_git_config_contexts(repository_record, job_result):
     for file_name in os.listdir(config_context_path):
         if not os.path.isfile(os.path.join(config_context_path, file_name)):
             continue
-        job_result.log(f"Loading config context from `{file_name}`", grouping="config contexts", logger=logger)
+        job_result.log(
+            f"Loading config context from `{file_name}`",
+            grouping="config contexts",
+            logger=logger,
+        )
         try:
-            with open(os.path.join(config_context_path, file_name), 'r') as fd:
+            with open(os.path.join(config_context_path, file_name), "r") as fd:
                 # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
                 try:
                     context_data = yaml.safe_load(fd)
@@ -194,13 +214,24 @@ def update_git_config_contexts(repository_record, job_result):
 
         except Exception as exc:
             job_result.log(
-                str(exc), level_choice=LogLevelChoices.LOG_FAILURE, grouping="config contexts", logger=logger,
+                str(exc),
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="config contexts",
+                logger=logger,
             )
             job_result.save()
 
     # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
     for filter_type in (
-        'regions', 'sites', 'roles', 'platforms', 'cluster_groups', 'clusters', 'tenant_groups', 'tenants', 'tags',
+        "regions",
+        "sites",
+        "roles",
+        "platforms",
+        "cluster_groups",
+        "clusters",
+        "tenant_groups",
+        "tenants",
+        "tags",
     ):
         dir_path = os.path.join(config_context_path, filter_type)
         if not os.path.isdir(dir_path):
@@ -214,12 +245,12 @@ def update_git_config_contexts(repository_record, job_result):
                 logger=logger,
             )
             try:
-                with open(os.path.join(dir_path, file_name), 'r') as fd:
+                with open(os.path.join(dir_path, file_name), "r") as fd:
                     # Data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
                     try:
                         context_data = yaml.safe_load(fd)
                     except Exception as exc:
-                        raise RuntimeError("Error in loading config context data from `{file_name}`: {exc}")
+                        raise RuntimeError(f"Error in loading config context data from `{file_name}`: {exc}")
 
                 # Unlike the above case, these files always contain just a single config context record
 
@@ -230,12 +261,15 @@ def update_git_config_contexts(repository_record, job_result):
                 managed_config_contexts.add(context_name)
             except Exception as exc:
                 job_result.log(
-                    str(exc), level_choice=LogLevelChoices.LOG_FAILURE, grouping="config contexts", logger=logger,
+                    str(exc),
+                    level_choice=LogLevelChoices.LOG_FAILURE,
+                    grouping="config contexts",
+                    logger=logger,
                 )
                 job_result.save()
 
     # Finally, handle device- and virtual-machine-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
-    for local_type in ('devices', 'virtual_machines'):
+    for local_type in ("devices", "virtual_machines"):
         dir_path = os.path.join(config_context_path, local_type)
         if not os.path.isdir(dir_path):
             continue
@@ -243,28 +277,41 @@ def update_git_config_contexts(repository_record, job_result):
         for file_name in os.listdir(dir_path):
             device_name = os.path.splitext(file_name)[0]
             job_result.log(
-                f'Loading local config context for `{device_name}` from `{local_type}/{file_name}`',
-                grouping='local config contexts',
+                f"Loading local config context for `{device_name}` from `{local_type}/{file_name}`",
+                grouping="local config contexts",
                 logger=logger,
             )
             try:
-                with open(os.path.join(dir_path, file_name), 'r') as fd:
+                with open(os.path.join(dir_path, file_name), "r") as fd:
                     try:
                         context_data = yaml.safe_load(fd)
                     except Exception as exc:
                         raise RuntimeError(f"Error in loading local config context from `{file_name}`: {exc}")
 
-                import_local_config_context(local_type, device_name, context_data, repository_record, job_result, logger)
+                import_local_config_context(
+                    local_type,
+                    device_name,
+                    context_data,
+                    repository_record,
+                    job_result,
+                    logger,
+                )
                 managed_local_config_contexts[local_type].add(device_name)
             except Exception as exc:
                 job_result.log(
-                    str(exc), level_choice=LogLevelChoices.LOG_FAILURE, grouping='local config contexts', logger=logger,
+                    str(exc),
+                    level_choice=LogLevelChoices.LOG_FAILURE,
+                    grouping="local config contexts",
+                    logger=logger,
                 )
                 job_result.save()
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_contexts(
-        repository_record, job_result, preserve=managed_config_contexts, preserve_local=managed_local_config_contexts,
+        repository_record,
+        job_result,
+        preserve=managed_config_contexts,
+        preserve_local=managed_local_config_contexts,
     )
 
 
@@ -285,23 +332,23 @@ def import_config_context(context_data, repository_record, job_result, logger):
     # TODO: check context_data against a schema of some sort?
 
     # Set defaults for optional fields
-    context_metadata = context_data.setdefault('_metadata', {})
-    context_metadata.setdefault('weight', 1000)
-    context_metadata.setdefault('description', '')
-    context_metadata.setdefault('is_active', True)
+    context_metadata = context_data.setdefault("_metadata", {})
+    context_metadata.setdefault("weight", 1000)
+    context_metadata.setdefault("description", "")
+    context_metadata.setdefault("is_active", True)
 
     # Translate relationship queries/filters to lists of related objects
     relations = {}
     for key, model_class in [
-        ('regions', Region),
-        ('sites', Site),
-        ('roles', DeviceRole),
-        ('platforms', Platform),
-        ('cluster_groups', ClusterGroup),
-        ('clusters', Cluster),
-        ('tenant_groups', TenantGroup),
-        ('tenants', Tenant),
-        ('tags', Tag),
+        ("regions", Region),
+        ("sites", Site),
+        ("roles", DeviceRole),
+        ("platforms", Platform),
+        ("cluster_groups", ClusterGroup),
+        ("clusters", Cluster),
+        ("tenant_groups", TenantGroup),
+        ("tenants", Tenant),
+        ("tags", Tag),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):
@@ -330,19 +377,19 @@ def import_config_context(context_data, repository_record, job_result, logger):
         save_needed = False
         try:
             context_record = ConfigContext.objects.get(
-                name=context_metadata.get('name'),
+                name=context_metadata.get("name"),
                 owner_content_type=git_repository_content_type,
                 owner_object_id=repository_record.pk,
             )
         except ConfigContext.DoesNotExist:
             context_record = ConfigContext(
-                name=context_metadata.get('name'),
+                name=context_metadata.get("name"),
                 owner_content_type=git_repository_content_type,
                 owner_object_id=repository_record.pk,
             )
             created = True
 
-        for field in ('weight', 'description', 'is_active'):
+        for field in ("weight", "description", "is_active"):
             new_value = context_metadata[field]
             if getattr(context_record, field) != new_value:
                 setattr(context_record, field, new_value)
@@ -379,7 +426,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
             obj=context_record,
             level_choice=LogLevelChoices.LOG_SUCCESS,
             grouping="config contexts",
-            logger=logger
+            logger=logger,
         )
     elif modified:
         job_result.log(
@@ -387,7 +434,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
             obj=context_record,
             level_choice=LogLevelChoices.LOG_SUCCESS,
             grouping="config contexts",
-            logger=logger
+            logger=logger,
         )
     else:
         job_result.log(
@@ -395,7 +442,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
             obj=context_record,
             level_choice=LogLevelChoices.LOG_INFO,
             grouping="config contexts",
-            logger=logger
+            logger=logger,
         )
 
     return context_record.name if context_record else None
@@ -469,7 +516,8 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
 
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
     for context_record in ConfigContext.objects.filter(
-        owner_content_type=git_repository_content_type, owner_object_id=repository_record.pk
+        owner_content_type=git_repository_content_type,
+        owner_object_id=repository_record.pk,
     ):
         if context_record.name not in preserve:
             context_record.delete()
@@ -486,7 +534,7 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
     ):
         for record in model.objects.filter(
             local_context_data_owner_content_type=git_repository_content_type,
-            local_context_data_owner_object_id=repository_record.pk
+            local_context_data_owner_object_id=repository_record.pk,
         ):
             if record.name not in preserve_local[grouping]:
                 record.local_context_data = None
@@ -494,12 +542,13 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
                 record.clean()
                 record.save()
                 job_result.log(
-                    f"Deleted local config context",
+                    "Deleted local config context",
                     obj=record,
                     level_choice=LogLevelChoices.LOG_WARNING,
                     grouping="local config contexts",
                     logger=logger,
                 )
+
 
 #
 # Job handling
@@ -509,6 +558,7 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     # No-op as jobs are not currently stored in the DB but are instead refreshed on-request.
+
 
 #
 # Export template handling
@@ -549,7 +599,7 @@ def update_git_export_templates(repository_record, job_result):
         managed_export_templates.setdefault(f"{app_label}.{modelname}", set()).add(file_name)
         template_record = None
         try:
-            with open(file_path, 'r') as fd:
+            with open(file_path, "r") as fd:
                 template_content = fd.read()
 
             # FIXME: Normally ObjectChange records are automatically generated every time we save an object,
@@ -580,8 +630,8 @@ def update_git_export_templates(repository_record, job_result):
                 template_record.template_code = template_content
                 modified = True
 
-            if template_record.mime_type != 'text/plain':
-                template_record.mime_type = 'text/plain'
+            if template_record.mime_type != "text/plain":
+                template_record.mime_type = "text/plain"
                 modified = True
 
             if template_record.file_extension != file_name.rsplit(os.extsep, 1)[-1]:
@@ -597,7 +647,7 @@ def update_git_export_templates(repository_record, job_result):
                     obj=template_record,
                     level_choice=LogLevelChoices.LOG_SUCCESS,
                     grouping="export templates",
-                    logger=logger
+                    logger=logger,
                 )
             elif modified:
                 job_result.log(
@@ -605,7 +655,7 @@ def update_git_export_templates(repository_record, job_result):
                     obj=template_record,
                     level_choice=LogLevelChoices.LOG_SUCCESS,
                     grouping="export templates",
-                    logger=logger
+                    logger=logger,
                 )
             else:
                 job_result.log(
@@ -637,7 +687,8 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
         preserve = {}
 
     for template_record in ExportTemplate.objects.filter(
-        owner_content_type=git_repository_content_type, owner_object_id=repository_record.pk
+        owner_content_type=git_repository_content_type,
+        owner_object_id=repository_record.pk,
     ):
         key = f"{template_record.content_type.app_label}.{template_record.content_type.name}"
         if template_record.name not in preserve.get(key, ()):
@@ -654,29 +705,29 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
 register_datasource_contents(
     [
         (
-            'extras.gitrepository',
+            "extras.gitrepository",
             DatasourceContent(
-                name='config contexts',
-                content_identifier='extras.configcontext',
-                icon='mdi-code-json',
+                name="config contexts",
+                content_identifier="extras.configcontext",
+                icon="mdi-code-json",
                 callback=refresh_git_config_contexts,
             ),
         ),
         (
-            'extras.gitrepository',
+            "extras.gitrepository",
             DatasourceContent(
-                name='jobs',
-                content_identifier='extras.job',
-                icon='mdi-script-text',
+                name="jobs",
+                content_identifier="extras.job",
+                icon="mdi-script-text",
                 callback=refresh_git_jobs,
             ),
         ),
         (
-            'extras.gitrepository',
+            "extras.gitrepository",
             DatasourceContent(
-                name='export templates',
-                content_identifier='extras.exporttemplate',
-                icon='mdi-database-export',
+                name="export templates",
+                content_identifier="extras.exporttemplate",
+                icon="mdi-database-export",
                 callback=refresh_git_export_templates,
             ),
         ),

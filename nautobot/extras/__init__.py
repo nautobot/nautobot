@@ -1,1 +1,1 @@
-default_app_config = 'nautobot.extras.apps.ExtrasConfig'
+default_app_config = "nautobot.extras.apps.ExtrasConfig"

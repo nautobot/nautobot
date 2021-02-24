@@ -10,10 +10,12 @@ from nautobot.extras.models import CustomField
 # Custom fields
 #
 
+
 class CustomFieldDefaultValues:
     """
     Return a dictionary of all CustomFields assigned to the parent model and their default values.
     """
+
     requires_context = True
 
     def __call__(self, serializer_field):
@@ -35,20 +37,17 @@ class CustomFieldDefaultValues:
 
 
 class CustomFieldsDataField(Field):
-
     def _get_custom_fields(self):
         """
         Cache CustomFields assigned to this model to avoid redundant database queries
         """
-        if not hasattr(self, '_custom_fields'):
+        if not hasattr(self, "_custom_fields"):
             content_type = ContentType.objects.get_for_model(self.parent.Meta.model)
             self._custom_fields = CustomField.objects.filter(content_types=content_type)
         return self._custom_fields
 
     def to_representation(self, obj):
-        return {
-            cf.name: obj.get(cf.name) for cf in self._get_custom_fields()
-        }
+        return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
         # If updating an existing instance, start with existing custom_field_data
@@ -62,9 +61,10 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
     """
     Extends ModelSerializer to render any CustomFields and their values associated with an object.
     """
+
     custom_fields = CustomFieldsDataField(
-        source='custom_field_data',
-        default=CreateOnlyDefault(CustomFieldDefaultValues())
+        source="custom_field_data",
+        default=CreateOnlyDefault(CustomFieldDefaultValues()),
     )
 
     def __init__(self, *args, **kwargs):

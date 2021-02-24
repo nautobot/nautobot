@@ -1,1 +1,1 @@
-default_app_config = 'nautobot.virtualization.apps.VirtualizationConfig'
+default_app_config = "nautobot.virtualization.apps.VirtualizationConfig"

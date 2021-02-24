@@ -13,6 +13,6 @@ def convert_field_to_string(field, registry=None):
 
 
 @convert_django_field.register(BinaryField)
-def convert_field_to_string(field, registry=None):
+def convert_field_to_string(field, registry=None):  # noqa: F811
     """Convert BinaryField to String."""
     return graphene.String()

@@ -2,23 +2,29 @@ import logging
 from collections import defaultdict
 
 from django.conf import settings
-from django.contrib.auth.backends import BaseBackend, ModelBackend, RemoteUserBackend as _RemoteUserBackend
+from django.contrib.auth.backends import (
+    BaseBackend,
+    ModelBackend,
+    RemoteUserBackend as _RemoteUserBackend,
+)
 from django.contrib.auth.models import Group
-from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
 
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import permission_is_exempt, resolve_permission, resolve_permission_ct
+from nautobot.utilities.permissions import (
+    permission_is_exempt,
+    resolve_permission,
+    resolve_permission_ct,
+)
 
-logger = logging.getLogger('nautobot.authentication')
+logger = logging.getLogger("nautobot.authentication")
 
 
 class ObjectPermissionBackend(ModelBackend):
-
     def get_all_permissions(self, user_obj, obj=None):
         if not user_obj.is_active or user_obj.is_anonymous:
             return dict()
-        if not hasattr(user_obj, '_object_perm_cache'):
+        if not hasattr(user_obj, "_object_perm_cache"):
             user_obj._object_perm_cache = self.get_object_permissions(user_obj)
         return user_obj._object_perm_cache
 
@@ -28,9 +34,8 @@ class ObjectPermissionBackend(ModelBackend):
         """
         # Retrieve all assigned and enabled ObjectPermissions
         object_permissions = ObjectPermission.objects.filter(
-            Q(users=user_obj) | Q(groups__user=user_obj),
-            enabled=True
-        ).prefetch_related('object_types')
+            Q(users=user_obj) | Q(groups__user=user_obj), enabled=True
+        ).prefetch_related("object_types")
 
         # Create a dictionary mapping permissions to their constraints
         perms = defaultdict(list)
@@ -68,7 +73,7 @@ class ObjectPermissionBackend(ModelBackend):
 
         # Sanity check: Ensure that the requested permission applies to the specified object
         model = obj._meta.model
-        if model._meta.label_lower != '.'.join((app_label, model_name)):
+        if model._meta.label_lower != ".".join((app_label, model_name)):
             raise ValueError(f"Invalid permission {perm} for model {model}")
 
         # Compile a query filter that matches all instances of the specified model
@@ -92,12 +97,13 @@ class RemoteUserBackend(_RemoteUserBackend):
     """
     Custom implementation of Django's RemoteUserBackend which provides configuration hooks for basic customization.
     """
+
     @property
     def create_unknown_user(self):
         return settings.REMOTE_AUTH_AUTO_CREATE_USER
 
     def configure_user(self, request, user):
-        logger = logging.getLogger('nautobot.authentication.RemoteUserBackend')
+        logger = logging.getLogger("nautobot.authentication.RemoteUserBackend")  # noqa: F841
 
         # Assign default groups to the user
         assign_groups_to_user(user, settings.REMOTE_AUTH_DEFAULT_GROUPS)
@@ -134,17 +140,19 @@ class LDAPBackend:
     installed and configured, otherwise it will return a dummy backend to allow
     authentication to proceed using other configured backends.
     """
+
     is_usable = False
 
     def __new__(cls, *args, **kwargs):
         try:
-            from django_auth_ldap.backend import LDAPBackend as LDAPBackend_, LDAPSettings
+            from django_auth_ldap.backend import (
+                LDAPBackend as LDAPBackend_,
+                LDAPSettings,
+            )
             import ldap
         except ModuleNotFoundError as e:
-            if getattr(e, 'name') == 'django_auth_ldap':
-                logging.error(
-                    "LDAP authentication has been configured, but django-auth-ldap is not installed."
-                )
+            if getattr(e, "name") == "django_auth_ldap":
+                logging.error("LDAP authentication has been configured, but django-auth-ldap is not installed.")
 
         # Try to import `ldap_config.py`
         # FIXME(jathan): Have this read from `django.conf.settings` instead vs.
@@ -153,20 +161,16 @@ class LDAPBackend:
         try:
             from nautobot.core import ldap_config
         except (ModuleNotFoundError, ImportError) as e:
-            if getattr(e, 'name') == 'ldap_config':
-                logging.error(
-                    "LDAP configuration file not found: Check that ldap_config.py has been created."
-                )
+            if getattr(e, "name") == "ldap_config":
+                logging.error("LDAP configuration file not found: Check that ldap_config.py has been created.")
             ldap_config = None
 
         # Once we've asserted that imports/settings work, set this backend as
         # usable.
         try:
-            getattr(ldap_config, 'AUTH_LDAP_SERVER_URI')
+            getattr(ldap_config, "AUTH_LDAP_SERVER_URI")
         except AttributeError:
-            logging.error(
-                "Required parameter AUTH_LDAP_SERVER_URI is missing from ldap_config.py."
-            )
+            logging.error("Required parameter AUTH_LDAP_SERVER_URI is missing from ldap_config.py.")
         else:
             cls.is_usable = True
 
@@ -186,7 +190,7 @@ class LDAPBackend:
         obj.settings = settings
 
         # Optionally disable strict certificate checking
-        if getattr(ldap_config, 'LDAP_IGNORE_CERT_ERRORS', False):
+        if getattr(ldap_config, "LDAP_IGNORE_CERT_ERRORS", False):
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
         return obj

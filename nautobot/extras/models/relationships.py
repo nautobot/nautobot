@@ -11,7 +11,10 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.core.models import BaseModel
 from nautobot.utilities.utils import get_filterset_for_model
-from nautobot.utilities.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.utilities.forms import (
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+)
 from nautobot.utilities.querysets import RestrictedQuerySet
 
 
@@ -55,7 +58,7 @@ class RelationshipModel(models.Model):
 
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
-            RelationshipSideChoices.SIDE_DESTINATION: OrderedDict()
+            RelationshipSideChoices.SIDE_DESTINATION: OrderedDict(),
         }
         for side, relationships in sides.items():
             for relationship in relationships:
@@ -78,9 +81,7 @@ class RelationshipModel(models.Model):
                 query_params[f"{side}_id"] = self.pk
                 query_params[f"{side}_type"] = content_type
 
-                resp[side][relationship] = RelationshipAssociation.objects.filter(
-                    **query_params
-                )
+                resp[side][relationship] = RelationshipAssociation.objects.filter(**query_params)
 
         return resp
 
@@ -114,7 +115,7 @@ class RelationshipModel(models.Model):
 
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
-            RelationshipSideChoices.SIDE_DESTINATION: OrderedDict()
+            RelationshipSideChoices.SIDE_DESTINATION: OrderedDict(),
         }
         for side, relationships in relationships_by_side.items():
             for relationship, queryset in relationships.items():
@@ -150,28 +151,21 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         Return all Relationships assigned to the given model.
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.get_queryset().filter(source_type=content_type), self.get_queryset().filter(destination_type=content_type)
+        return (
+            self.get_queryset().filter(source_type=content_type),
+            self.get_queryset().filter(destination_type=content_type),
+        )
 
 
 class Relationship(BaseModel, ChangeLoggedModel):
 
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-        help_text='Internal relationship name'
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
+    name = models.CharField(max_length=100, unique=True, help_text="Internal relationship name")
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True)
     type = models.CharField(
         max_length=50,
         choices=RelationshipTypeChoices,
-        default=RelationshipTypeChoices.TYPE_MANY_TO_MANY
+        default=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
     )
 
     #
@@ -180,27 +174,27 @@ class Relationship(BaseModel, ChangeLoggedModel):
     source_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        related_name='source_relationships',
-        verbose_name='Source Object',
-        limit_choices_to=FeatureQuery('relationships'),
-        help_text='The source object to which this relationship applies.'
+        related_name="source_relationships",
+        verbose_name="Source Object",
+        limit_choices_to=FeatureQuery("relationships"),
+        help_text="The source object to which this relationship applies.",
     )
     source_label = models.CharField(
         max_length=50,
         blank=True,
-        verbose_name='Source Label',
-        help_text='Name of the relationship as displayed on the source object.'
+        verbose_name="Source Label",
+        help_text="Name of the relationship as displayed on the source object.",
     )
     source_hidden = models.BooleanField(
         default=False,
-        verbose_name='Hide for source object',
-        help_text='Hide this relationship on the source object.'
+        verbose_name="Hide for source object",
+        help_text="Hide this relationship on the source object.",
     )
     source_filter = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Queryset filter matching the applicable source objects of the selected type"
+        help_text="Queryset filter matching the applicable source objects of the selected type",
     )
 
     #
@@ -209,36 +203,36 @@ class Relationship(BaseModel, ChangeLoggedModel):
     destination_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        related_name='destination_relationships',
-        verbose_name='Destination Object',
-        limit_choices_to=FeatureQuery('relationships'),
-        help_text='The destination object to which this relationship applies.'
+        related_name="destination_relationships",
+        verbose_name="Destination Object",
+        limit_choices_to=FeatureQuery("relationships"),
+        help_text="The destination object to which this relationship applies.",
     )
     destination_label = models.CharField(
         max_length=50,
         blank=True,
-        verbose_name='Destination Label',
-        help_text='Name of the relationship as displayed on the source object.'
+        verbose_name="Destination Label",
+        help_text="Name of the relationship as displayed on the source object.",
     )
     destination_hidden = models.BooleanField(
         default=False,
-        verbose_name='Hide for destination object',
-        help_text='Hide this relationship on the destination object.'
+        verbose_name="Hide for destination object",
+        help_text="Hide this relationship on the destination object.",
     )
     destination_filter = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Queryset filter matching the applicable destination objects of the selected type"
+        help_text="Queryset filter matching the applicable destination objects of the selected type",
     )
 
     objects = RelationshipManager()
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
-        return self.name.replace('_', ' ').capitalize()
+        return self.name.replace("_", " ").capitalize()
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.
@@ -254,7 +248,10 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
         if side == RelationshipSideChoices.SIDE_SOURCE:
             destination_model = self.destination_type.model_class()
-            if self.type in (RelationshipTypeChoices.TYPE_MANY_TO_MANY, RelationshipTypeChoices.TYPE_ONE_TO_MANY):
+            if self.type in (
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+            ):
                 return destination_model._meta.verbose_name_plural
             else:
                 return destination_model._meta.verbose_name
@@ -332,22 +329,16 @@ class Relationship(BaseModel, ChangeLoggedModel):
             side_model = getattr(self, f"{side}_type").model_class()
             model_name = side_model._meta.label
             if not isinstance(filter, dict):
-                raise ValidationError(
-                    f"Filter for {model_name} must be a dictionary"
-                )
+                raise ValidationError(f"Filter for {model_name} must be a dictionary")
 
             filterset = get_filterset_for_model(side_model)
             if not filterset:
-                raise ValidationError(
-                    f"Filter are not supported for {model_name} object (Unable to find a FilterSet)"
-                )
+                raise ValidationError(f"Filter are not supported for {model_name} object (Unable to find a FilterSet)")
 
             filterset_params = set(filterset.get_filters().keys())
             for key in filter.keys():
                 if key not in filterset_params:
-                    raise ValidationError(
-                        f"'{key}' is not a valid filter parameter for {model_name} object"
-                    )
+                    raise ValidationError(f"'{key}' is not a valid filter parameter for {model_name} object")
 
         # If the model already exist, ensure that it's not possible to modify the source or destination type
         if not self._state.adding:
@@ -373,39 +364,27 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
 
 class RelationshipAssociation(BaseModel):
-    relationship = models.ForeignKey(
-        to='extras.Relationship',
-        on_delete=models.CASCADE,
-        related_name='associations'
-    )
+    relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
 
-    source_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        related_name='+'
-    )
+    source_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
     source_id = models.UUIDField()
-    source = GenericForeignKey(
-        ct_field='source_type',
-        fk_field='source_id'
-    )
+    source = GenericForeignKey(ct_field="source_type", fk_field="source_id")
 
-    destination_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        related_name='+'
-    )
+    destination_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
     destination_id = models.UUIDField()
-    destination = GenericForeignKey(
-        ct_field='destination_type',
-        fk_field='destination_id'
-    )
+    destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
 
     class Meta:
-        unique_together = ('relationship', 'source_type', 'source_id', 'destination_type', 'destination_id')
+        unique_together = (
+            "relationship",
+            "source_type",
+            "source_id",
+            "destination_type",
+            "destination_id",
+        )
 
     def __str__(self):
-        return '{} -> {} - {}'.format(self.source, self.destination, self.relationship)
+        return "{} -> {} - {}".format(self.source, self.destination, self.relationship)
 
     def get_peer(self, obj):
 
@@ -418,10 +397,14 @@ class RelationshipAssociation(BaseModel):
     def clean(self):
 
         if self.source_type != self.relationship.source_type:
-            raise ValidationError({'source_type': f'source_type has a different value than defined in {self.relationship}'})
+            raise ValidationError(
+                {"source_type": f"source_type has a different value than defined in {self.relationship}"}
+            )
 
         if self.destination_type != self.relationship.destination_type:
-            raise ValidationError({'destination_type': f'destination_type has a different value than defined in {self.relationship}'})
+            raise ValidationError(
+                {"destination_type": f"destination_type has a different value than defined in {self.relationship}"}
+            )
 
         # Check if a similar relationship already exist
         if self.relationship.type != RelationshipTypeChoices.TYPE_MANY_TO_MANY:
@@ -429,21 +412,27 @@ class RelationshipAssociation(BaseModel):
             count_dest = RelationshipAssociation.objects.filter(
                 relationship=self.relationship,
                 destination_type=self.destination_type,
-                destination_id=self.destination_id
+                destination_id=self.destination_id,
             ).count()
 
             if count_dest != 0:
-                raise ValidationError({
-                    'destination': f'Unable to create more than one {self.relationship} association to {self.destination} (destination)'
-                })
+                raise ValidationError(
+                    {
+                        "destination": f"Unable to create more than one {self.relationship} association to {self.destination} (destination)"
+                    }
+                )
 
             if self.relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_ONE:
 
                 count_src = RelationshipAssociation.objects.filter(
                     relationship=self.relationship,
                     source_type=self.source_type,
-                    source_id=self.source_id
+                    source_id=self.source_id,
                 ).count()
 
                 if count_src != 0:
-                    raise ValidationError({'source': f'Unable to create more than one {self.relationship} association to {self.source} (source)'})
+                    raise ValidationError(
+                        {
+                            "source": f"Unable to create more than one {self.relationship} association to {self.source} (source)"
+                        }
+                    )

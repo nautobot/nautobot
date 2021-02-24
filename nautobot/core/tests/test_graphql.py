@@ -1,27 +1,33 @@
 import types
-import json
+
 from django.test import TestCase
 from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import Group, User
 from django.urls import reverse
-
+from graphene_django import DjangoObjectType
 from rest_framework import status
 from rest_framework.test import APIClient
-from graphene_django import DjangoObjectType
 
 from nautobot.utilities.testing import APITestCase
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.dcim.models import Device, Site, Region, Rack, Manufacturer, DeviceType, DeviceRole
+from nautobot.dcim.models import (
+    Device,
+    Site,
+    Region,
+    Rack,
+    Manufacturer,
+    DeviceType,
+    DeviceRole,
+)
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.ipam.models import VLAN
 from nautobot.extras.models import (
+    ChangeLoggedModel,
     CustomField,
     ConfigContext,
     Relationship,
-    RelationshipAssociation,
-    ChangeLoggedModel
 )
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
@@ -31,12 +37,14 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_config_context,
     extend_schema_type_relationships,
 )
-from nautobot.core.graphql.generators import generate_list_search_parameters, generate_schema_type
+from nautobot.core.graphql.generators import (
+    generate_list_search_parameters,
+    generate_schema_type,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices
 
 
 class GraphQLUtilsTestCase(TestCase):
-
     def test_str_to_var_name(self):
 
         self.assertEqual(str_to_var_name("IP Addresses"), "ip_addresses")
@@ -45,7 +53,6 @@ class GraphQLUtilsTestCase(TestCase):
 
 
 class GraphQLGenerateSchemaTypeTestCase(TestCase):
-
     def test_model_w_filterset(self):
 
         schema = generate_schema_type(app_name="dcim", model=Device)
@@ -62,25 +69,39 @@ class GraphQLGenerateSchemaTypeTestCase(TestCase):
 
 
 class GraphQLExtendSchemaType(TestCase):
-
     def setUp(self):
 
         self.datas = (
-            {'field_name': 'my_text', 'field_type': CustomFieldTypeChoices.TYPE_TEXT},
-            {'field_name': 'my new field', 'field_type': CustomFieldTypeChoices.TYPE_TEXT},
-            {'field_name': 'my_int1', 'field_type': CustomFieldTypeChoices.TYPE_INTEGER},
-            {'field_name': 'my_int2', 'field_type': CustomFieldTypeChoices.TYPE_INTEGER},
-            {'field_name': 'my_bool_t', 'field_type': CustomFieldTypeChoices.TYPE_BOOLEAN},
-            {'field_name': 'my_bool_f', 'field_type': CustomFieldTypeChoices.TYPE_BOOLEAN},
-            {'field_name': 'my_date', 'field_type': CustomFieldTypeChoices.TYPE_DATE},
-            {'field_name': 'my_url', 'field_type': CustomFieldTypeChoices.TYPE_URL},
+            {"field_name": "my_text", "field_type": CustomFieldTypeChoices.TYPE_TEXT},
+            {
+                "field_name": "my new field",
+                "field_type": CustomFieldTypeChoices.TYPE_TEXT,
+            },
+            {
+                "field_name": "my_int1",
+                "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
+            },
+            {
+                "field_name": "my_int2",
+                "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
+            },
+            {
+                "field_name": "my_bool_t",
+                "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+            },
+            {
+                "field_name": "my_bool_f",
+                "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+            },
+            {"field_name": "my_date", "field_type": CustomFieldTypeChoices.TYPE_DATE},
+            {"field_name": "my_url", "field_type": CustomFieldTypeChoices.TYPE_URL},
         )
 
         obj_type = ContentType.objects.get_for_model(Site)
 
         # Create custom fields for Site objects
         for data in self.datas:
-            cf = CustomField.objects.create(type=data['field_type'], name=data['field_name'], required=False)
+            cf = CustomField.objects.create(type=data["field_type"], name=data["field_name"], required=False)
             cf.content_types.set([obj_type])
 
         self.schema = generate_schema_type(app_name="dcim", model=Site)
@@ -100,7 +121,7 @@ class GraphQLExtendSchemaType(TestCase):
         schema = extend_schema_type_custom_field(self.schema, Site)
 
         for data in self.datas:
-            field_name = str_to_var_name(data['field_name'])
+            field_name = str_to_var_name(data["field_name"])
             self.assertIn(field_name, schema._meta.fields.keys())
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX=None)
@@ -109,7 +130,7 @@ class GraphQLExtendSchemaType(TestCase):
         schema = extend_schema_type_custom_field(self.schema, Site)
 
         for data in self.datas:
-            field_name = str_to_var_name(data['field_name'])
+            field_name = str_to_var_name(data["field_name"])
             self.assertIn(field_name, schema._meta.fields.keys())
 
     def test_extend_tags_enabled(self):
@@ -140,7 +161,6 @@ class GraphQLExtendSchemaType(TestCase):
 
 
 class GraphQLExtendSchemaRelationship(TestCase):
-
     def setUp(self):
 
         site_ct = ContentType.objects.get_for_model(Site)
@@ -154,7 +174,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
             source_label="My Vlans",
             destination_type=vlan_ct,
             destination_label="My Racks",
-            type="many-to-many"
+            type="many-to-many",
         )
 
         self.m2m_2 = Relationship.objects.create(
@@ -162,7 +182,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
             slug="vlan-rack-2",
             source_type=rack_ct,
             destination_type=vlan_ct,
-            type="many-to-many"
+            type="many-to-many",
         )
 
         self.o2m_1 = Relationship.objects.create(
@@ -170,7 +190,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
             slug="site-vlan",
             source_type=site_ct,
             destination_type=vlan_ct,
-            type="one-to-many"
+            type="one-to-many",
         )
 
         self.o2o_1 = Relationship.objects.create(
@@ -180,25 +200,25 @@ class GraphQLExtendSchemaRelationship(TestCase):
             source_hidden=True,
             destination_type=site_ct,
             destination_label="Primary Rack",
-            type="one-to-one"
+            type="one-to-one",
         )
 
         self.sites = [
-            Site.objects.create(name='Site A', slug='site-a'),
-            Site.objects.create(name='Site B', slug='site-b'),
-            Site.objects.create(name='Site C', slug='site-c'),
+            Site.objects.create(name="Site A", slug="site-a"),
+            Site.objects.create(name="Site B", slug="site-b"),
+            Site.objects.create(name="Site C", slug="site-c"),
         ]
 
         self.racks = [
-            Rack.objects.create(name='Rack A', site=self.sites[0]),
-            Rack.objects.create(name='Rack B', site=self.sites[1]),
-            Rack.objects.create(name='Rack C', site=self.sites[2]),
+            Rack.objects.create(name="Rack A", site=self.sites[0]),
+            Rack.objects.create(name="Rack B", site=self.sites[1]),
+            Rack.objects.create(name="Rack C", site=self.sites[2]),
         ]
 
         self.vlans = [
-            VLAN.objects.create(name='VLAN A', vid=100, site=self.sites[0]),
-            VLAN.objects.create(name='VLAN B', vid=100, site=self.sites[1]),
-            VLAN.objects.create(name='VLAN C', vid=100, site=self.sites[2]),
+            VLAN.objects.create(name="VLAN A", vid=100, site=self.sites[0]),
+            VLAN.objects.create(name="VLAN B", vid=100, site=self.sites[1]),
+            VLAN.objects.create(name="VLAN C", vid=100, site=self.sites[2]),
         ]
 
         self.schema = generate_schema_type(app_name="dcim", model=Site)
@@ -219,7 +239,6 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
 
 class GraphQLSearchParameters(TestCase):
-
     def setUp(self):
 
         self.schema = generate_schema_type(app_name="dcim", model=Site)
@@ -238,19 +257,18 @@ class GraphQLSearchParameters(TestCase):
 
 
 class GraphQLAPIPermissionTest(TestCase):
-
     def setUp(self):
         """Initialize the Database with some datas and multiple users associated with different permissions."""
         self.groups = (
-            Group.objects.create(name='Group 1'),
-            Group.objects.create(name='Group 2'),
+            Group.objects.create(name="Group 1"),
+            Group.objects.create(name="Group 2"),
         )
 
         self.users = (
-            User.objects.create(username='User 1', is_active=True),
-            User.objects.create(username='User 2', is_active=True),
-            User.objects.create(username='Super User', is_active=True, is_superuser=True),
-            User.objects.create(username='Nobody', is_active=True),
+            User.objects.create(username="User 1", is_active=True),
+            User.objects.create(username="User 2", is_active=True),
+            User.objects.create(username="Super User", is_active=True, is_superuser=True),
+            User.objects.create(username="Nobody", is_active=True),
         )
 
         self.tokens = (
@@ -272,29 +290,29 @@ class GraphQLAPIPermissionTest(TestCase):
         )
 
         self.sites = (
-            Site.objects.create(name='Site 1', slug='test1', region=self.regions[0]),
-            Site.objects.create(name='Site 2', slug='test2', region=self.regions[1]),
+            Site.objects.create(name="Site 1", slug="test1", region=self.regions[0]),
+            Site.objects.create(name="Site 2", slug="test2", region=self.regions[1]),
         )
 
-        site_object_type = ContentType.objects.get(app_label='dcim', model='site')
-        rack_object_type = ContentType.objects.get(app_label='dcim', model='rack')
+        site_object_type = ContentType.objects.get(app_label="dcim", model="site")
+        rack_object_type = ContentType.objects.get(app_label="dcim", model="rack")
 
         # Apply permissions only to User 1 & 2
         for i in range(2):
             # Rack permission
             rack_obj_permission = ObjectPermission.objects.create(
-                name=f'Permission Rack {i+1}',
-                actions=['view', 'add', 'change', 'delete'],
-                constraints={'site__slug': f'test{i+1}'}
+                name=f"Permission Rack {i+1}",
+                actions=["view", "add", "change", "delete"],
+                constraints={"site__slug": f"test{i+1}"},
             )
             rack_obj_permission.object_types.add(rack_object_type)
             rack_obj_permission.groups.add(self.groups[i])
             rack_obj_permission.users.add(self.users[i])
 
             site_obj_permission = ObjectPermission.objects.create(
-                name=f'Permission Site {i+1}',
-                actions=['view', 'add', 'change', 'delete'],
-                constraints={'region__slug': f'region{i+1}'}
+                name=f"Permission Site {i+1}",
+                actions=["view", "add", "change", "delete"],
+                constraints={"region__slug": f"region{i+1}"},
             )
             site_obj_permission.object_types.add(site_object_type)
             site_obj_permission.groups.add(self.groups[i])
@@ -378,7 +396,7 @@ class GraphQLAPIPermissionTest(TestCase):
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, [])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_api_token_no_group_exempt(self):
         """Validate User with no permission users are able to query based on the exempt permissions."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
@@ -396,7 +414,7 @@ class GraphQLAPIPermissionTest(TestCase):
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, [])
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_api_no_token_exempt(self):
         """Validate unauthenticated users are able to query based on the exempt permissions."""
         client = APIClient()
@@ -409,7 +427,7 @@ class GraphQLAPIPermissionTest(TestCase):
     def test_graphql_api_wrong_token(self):
         """Validate a wrong token return 403."""
         client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION=f"Token zzzzzzzzzzabcdef0123456789abcdef01234567")
+        client.credentials(HTTP_AUTHORIZATION="Token zzzzzzzzzzabcdef0123456789abcdef01234567")
         response = client.post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -423,20 +441,14 @@ class GraphQLAPIPermissionTest(TestCase):
 
     def test_graphql_query_variables(self):
         """Validate graphql variables are working as expected."""
-        payload = {
-            "query": self.get_racks_var_query,
-            "variables": {"site": "test1"}
-        }
+        payload = {"query": self.get_racks_var_query, "variables": {"site": "test1"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2"])
 
-        payload = {
-            "query": self.get_racks_var_query,
-            "variables": {"site": "test2"}
-        }
+        payload = {"query": self.get_racks_var_query, "variables": {"site": "test2"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -457,7 +469,11 @@ class GraphQLAPIPermissionTest(TestCase):
         """Validate application/graphql query is working properly."""
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[2].key}")
-        response = client.post(self.api_url, data=self.get_sites_racks_query, content_type="application/graphql")
+        response = client.post(
+            self.api_url,
+            data=self.get_sites_racks_query,
+            content_type="application/graphql",
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["sites"], list)
         site_names = [item["name"] for item in response.data["data"]["sites"]]
@@ -465,7 +481,6 @@ class GraphQLAPIPermissionTest(TestCase):
 
 
 class GraphQLQuery(APITestCase):
-
     def setUp(self):
         """Initialize the Database with some datas."""
         super().setUp()
@@ -473,31 +488,25 @@ class GraphQLQuery(APITestCase):
         self.api_url = reverse("graphql-api")
 
         # Populate Data
-        manufacturer = Manufacturer.objects.create(name='Manufacturer 1', slug='manufacturer-1')
-        self.devicetype = DeviceType.objects.create(manufacturer=manufacturer, model='Device Type 1', slug='device-type-1')
-        self.devicerole = DeviceRole.objects.create(name='Device Role 1', slug='device-role-1')
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        self.devicetype = DeviceType.objects.create(
+            manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
+        )
+        self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         self.region = Region.objects.create(name="Region")
-        self.site = Site.objects.create(name='Site-1', slug='site-1', region=self.region)
+        self.site = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
 
         self.device = Device.objects.create(
-            name='Device 1',
+            name="Device 1",
             device_type=self.devicetype,
             device_role=self.devicerole,
-            site=self.site
+            site=self.site,
         )
 
-        context1 = ConfigContext.objects.create(
-            name="context 1",
-            weight=101,
-            data={
-                "a": 123,
-                "b": 456,
-                "c": 777
-            }
-        )
+        context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
         context1.regions.add(self.region)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=['*'])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context(self):
 
         get_device_config_context = """
@@ -509,13 +518,13 @@ class GraphQLQuery(APITestCase):
         }
         """
 
-        expected_data = {
-            "a": 123,
-            "b": 456,
-            "c": 777
-        }
+        expected_data = {"a": 123, "b": 456, "c": 777}
 
-        response = self.client.post(self.api_url, data=get_device_config_context, content_type="application/graphql")
+        response = self.client.post(
+            self.api_url,
+            data=get_device_config_context,
+            content_type="application/graphql",
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["devices"], list)
         device_names = [item["name"] for item in response.data["data"]["devices"]]

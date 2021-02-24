@@ -6,4 +6,4 @@ class CircuitsConfig(AppConfig):
     verbose_name = "Circuits"
 
     def ready(self):
-        import nautobot.circuits.signals
+        import nautobot.circuits.signals  # noqa: F401

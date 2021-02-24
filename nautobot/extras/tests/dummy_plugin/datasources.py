@@ -8,11 +8,11 @@ def refresh_git_text_files(repository, job_result, delete=False):
 
 datasource_contents = [
     (
-        'extras.gitrepository',
+        "extras.gitrepository",
         DatasourceContent(
-            name='text files',
-            content_identifier='dummy_plugin.textfile',
-            icon='mdi-note-text',
+            name="text files",
+            content_identifier="dummy_plugin.textfile",
+            icon="mdi-note-text",
             callback=refresh_git_text_files,
         ),
     ),

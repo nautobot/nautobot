@@ -14,26 +14,28 @@ from nautobot.utilities.choices import ButtonColorChoices
 
 # Initialize plugin registry stores
 # registry['datasource_content'] is a non-plugin-exclusive registry and is initialized in extras.registry
-registry['plugin_custom_validators'] = collections.defaultdict(list)
-registry['plugin_graphql_types'] = []
-registry['plugin_jobs'] = []
-registry['plugin_menu_items'] = {}
-registry['plugin_template_extensions'] = collections.defaultdict(list)
+registry["plugin_custom_validators"] = collections.defaultdict(list)
+registry["plugin_graphql_types"] = []
+registry["plugin_jobs"] = []
+registry["plugin_menu_items"] = {}
+registry["plugin_template_extensions"] = collections.defaultdict(list)
 
 
 #
 # Plugin AppConfig class
 #
 
+
 class PluginConfig(AppConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
+
     # Plugin metadata
-    author = ''
-    author_email = ''
-    description = ''
-    version = ''
+    author = ""
+    author_email = ""
+    description = ""
+    version = ""
 
     # Root URL path under /plugins. If not set, the plugin's label will be used.
     base_url = None
@@ -57,17 +59,17 @@ class PluginConfig(AppConfig):
 
     # Cacheops configuration. Cache all operations by default.
     caching_config = {
-        '*': {'ops': 'all'},
+        "*": {"ops": "all"},
     }
 
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
-    custom_validators = 'custom_validators.custom_validators'
-    datasource_contents = 'datasources.datasource_contents'
-    graphql_types = 'graphql.types.graphql_types'
-    jobs = 'jobs.jobs'
-    menu_items = 'navigation.menu_items'
-    template_extensions = 'template_content.template_extensions'
+    custom_validators = "custom_validators.custom_validators"
+    datasource_contents = "datasources.datasource_contents"
+    graphql_types = "graphql.types.graphql_types"
+    jobs = "jobs.jobs"
+    menu_items = "navigation.menu_items"
+    template_extensions = "template_content.template_extensions"
 
     def ready(self):
 
@@ -126,19 +128,17 @@ class PluginConfig(AppConfig):
         # TODO(jathan): This is fine for now, but as we expand the functionality
         # of plugins, we'll need to consider something like pydantic or attrs.
         setting_validations = {
-            'caching_config': dict,
-            'default_settings': dict,
-            'installed_apps': list,
-            'middleware': list,
-            'required_settings': list,
+            "caching_config": dict,
+            "default_settings": dict,
+            "installed_apps": list,
+            "middleware": list,
+            "required_settings": list,
         }
 
         # Validate user settings
         for setting_name, setting_type in setting_validations.items():
             if not isinstance(getattr(cls, setting_name), setting_type):
-                raise PluginImproperlyConfigured(
-                    f"Plugin {plugin_name} {setting_name} must be a {setting_type}"
-                )
+                raise PluginImproperlyConfigured(f"Plugin {plugin_name} {setting_name} must be a {setting_type}")
 
         # Validate the required_settings
         for setting in cls.required_settings:
@@ -158,6 +158,7 @@ class PluginConfig(AppConfig):
 # Template content injection
 #
 
+
 class PluginTemplateExtension:
     """
     This class is used to register plugin content to be injected into core Nautobot templates. It contains methods
@@ -171,6 +172,7 @@ class PluginTemplateExtension:
     * settings - Global Nautobot settings
     * config - Plugin-specific configuration parameters
     """
+
     model = None
 
     def __init__(self, context):
@@ -231,7 +233,7 @@ def register_template_extensions(class_list):
         if template_extension.model is None:
             raise TypeError(f"PluginTemplateExtension class {template_extension} does not define a valid model!")
 
-        registry['plugin_template_extensions'][template_extension.model].append(template_extension)
+        registry["plugin_template_extensions"][template_extension.model].append(template_extension)
 
 
 def register_graphql_types(class_list):
@@ -249,7 +251,7 @@ def register_graphql_types(class_list):
         if item._meta.model is None:
             raise TypeError(f"DjangoObjectType class {item} does not define a valid model!")
 
-        registry['plugin_graphql_types'].append(item)
+        registry["plugin_graphql_types"].append(item)
 
 
 def register_jobs(class_list):
@@ -264,12 +266,13 @@ def register_jobs(class_list):
         if not issubclass(job, Job):
             raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
 
-        registry['plugin_jobs'].append(job)
+        registry["plugin_jobs"].append(job)
 
 
 #
 # Navigation menu links
 #
+
 
 class PluginMenuItem:
     """
@@ -279,6 +282,7 @@ class PluginMenuItem:
     Links are specified as Django reverse URL strings.
     Buttons are each specified as a list of PluginMenuButton instances.
     """
+
     permissions = []
     buttons = []
 
@@ -300,6 +304,7 @@ class PluginMenuButton:
     This class represents a button within a PluginMenuItem. Note that button colors should come from
     ButtonColorChoices.
     """
+
     color = ButtonColorChoices.DEFAULT
     permissions = []
 
@@ -329,12 +334,13 @@ def register_menu_items(section_name, class_list):
             if not isinstance(button, PluginMenuButton):
                 raise TypeError(f"{button} must be an instance of extras.plugins.PluginMenuButton")
 
-    registry['plugin_menu_items'][section_name] = class_list
+    registry["plugin_menu_items"][section_name] = class_list
 
 
 #
 # Model Validators
 #
+
 
 class PluginCustomValidator:
     """
@@ -346,12 +352,11 @@ class PluginCustomValidator:
     The `model` attribute on the class defines the model to which this validator is registered. It
     should be set as a string in the form '<app_label>.<model_name>'.
     """
+
     model = None
 
     def __init__(self, obj):
-        self.context = {
-            "object": obj
-        }
+        self.context = {"object": obj}
 
     def validation_error(self, message):
         """
@@ -383,4 +388,4 @@ def register_custom_validators(class_list):
         if custom_validator.model is None:
             raise TypeError(f"PluginCustomValidator class {custom_validator} does not define a valid model!")
 
-        registry['plugin_custom_validators'][custom_validator.model].append(custom_validator)
+        registry["plugin_custom_validators"][custom_validator.model].append(custom_validator)

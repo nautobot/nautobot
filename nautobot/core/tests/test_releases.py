@@ -16,11 +16,12 @@ def successful_github_response(url, *_args, **_kwargs):
     r = Response()
     r.url = url
     r.status_code = 200
-    r.reason = 'OK'
+    r.reason = "OK"
     r.headers = {
-        'Content-Type': 'application/json; charset=utf-8',
+        "Content-Type": "application/json; charset=utf-8",
     }
-    r.raw = BytesIO(b'''[
+    r.raw = BytesIO(
+        b"""[
         {
             "html_url": "https://github.com/nautobot/nautobot/releases/tag/v2.7.8",
             "tag_name": "v2.7.8",
@@ -37,7 +38,8 @@ def successful_github_response(url, *_args, **_kwargs):
             "prerelease": false
         }
     ]
-    ''')
+    """
+    )
     return r
 
 
@@ -45,23 +47,28 @@ def unsuccessful_github_response(url, *_args, **_kwargs):
     r = Response()
     r.url = url
     r.status_code = 404
-    r.reason = 'Not Found'
+    r.reason = "Not Found"
     r.headers = {
-        'Content-Type': 'application/json; charset=utf-8',
+        "Content-Type": "application/json; charset=utf-8",
     }
-    r.raw = BytesIO(b'''{
+    r.raw = BytesIO(
+        b"""{
         "message": "Not Found",
         "documentation_url": "https://developer.github.com/v3/repos/releases/#list-releases-for-a-repository"
     }
-    ''')
+    """
+    )
     return r
 
 
-@override_settings(RELEASE_CHECK_URL='https://localhost/unittest/releases', RELEASE_CHECK_TIMEOUT=160876)
+@override_settings(
+    RELEASE_CHECK_URL="https://localhost/unittest/releases",
+    RELEASE_CHECK_TIMEOUT=160876,
+)
 class GetReleasesTestCase(SimpleTestCase):
-    @patch.object(requests, 'get')
-    @patch.object(RedisCache, 'set')
-    @patch.object(RedisCache, 'get')
+    @patch.object(requests, "get")
+    @patch.object(RedisCache, "set")
+    @patch.object(RedisCache, "get")
     def test_pre_releases(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
         dummy_cache_get.side_effect = CacheMiss()
         dummy_request_get.side_effect = successful_github_response
@@ -69,29 +76,37 @@ class GetReleasesTestCase(SimpleTestCase):
         releases = get_releases(pre_releases=True)
 
         # Check result
-        self.assertListEqual(releases, [
-            (Version('2.7.8'), 'https://github.com/nautobot/nautobot/releases/tag/v2.7.8'),
-            (Version('2.6b1'), 'https://github.com/nautobot/nautobot/releases/tag/v2.6-beta1'),
-            (Version('2.5.9'), 'https://github.com/nautobot/nautobot/releases/tag/v2.5.9')
-        ])
+        self.assertListEqual(
+            releases,
+            [
+                (
+                    Version("2.7.8"),
+                    "https://github.com/nautobot/nautobot/releases/tag/v2.7.8",
+                ),
+                (
+                    Version("2.6b1"),
+                    "https://github.com/nautobot/nautobot/releases/tag/v2.6-beta1",
+                ),
+                (
+                    Version("2.5.9"),
+                    "https://github.com/nautobot/nautobot/releases/tag/v2.5.9",
+                ),
+            ],
+        )
 
         # Check if correct request is made
         dummy_request_get.assert_called_once_with(
-            'https://localhost/unittest/releases',
-            headers={'Accept': 'application/vnd.github.v3+json'},
-            proxies=settings.HTTP_PROXIES
+            "https://localhost/unittest/releases",
+            headers={"Accept": "application/vnd.github.v3+json"},
+            proxies=settings.HTTP_PROXIES,
         )
 
         # Check if result is put in cache
-        dummy_cache_set.assert_called_once_with(
-            'latest_release',
-            max(releases),
-            160876
-        )
+        dummy_cache_set.assert_called_once_with("latest_release", max(releases), 160876)
 
-    @patch.object(requests, 'get')
-    @patch.object(RedisCache, 'set')
-    @patch.object(RedisCache, 'get')
+    @patch.object(requests, "get")
+    @patch.object(RedisCache, "set")
+    @patch.object(RedisCache, "get")
     def test_no_pre_releases(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
         dummy_cache_get.side_effect = CacheMiss()
         dummy_request_get.side_effect = successful_github_response
@@ -99,28 +114,33 @@ class GetReleasesTestCase(SimpleTestCase):
         releases = get_releases(pre_releases=False)
 
         # Check result
-        self.assertListEqual(releases, [
-            (Version('2.7.8'), 'https://github.com/nautobot/nautobot/releases/tag/v2.7.8'),
-            (Version('2.5.9'), 'https://github.com/nautobot/nautobot/releases/tag/v2.5.9')
-        ])
+        self.assertListEqual(
+            releases,
+            [
+                (
+                    Version("2.7.8"),
+                    "https://github.com/nautobot/nautobot/releases/tag/v2.7.8",
+                ),
+                (
+                    Version("2.5.9"),
+                    "https://github.com/nautobot/nautobot/releases/tag/v2.5.9",
+                ),
+            ],
+        )
 
         # Check if correct request is made
         dummy_request_get.assert_called_once_with(
-            'https://localhost/unittest/releases',
-            headers={'Accept': 'application/vnd.github.v3+json'},
-            proxies=settings.HTTP_PROXIES
+            "https://localhost/unittest/releases",
+            headers={"Accept": "application/vnd.github.v3+json"},
+            proxies=settings.HTTP_PROXIES,
         )
 
         # Check if result is put in cache
-        dummy_cache_set.assert_called_once_with(
-            'latest_release',
-            max(releases),
-            160876
-        )
+        dummy_cache_set.assert_called_once_with("latest_release", max(releases), 160876)
 
-    @patch.object(requests, 'get')
-    @patch.object(RedisCache, 'set')
-    @patch.object(RedisCache, 'get')
+    @patch.object(requests, "get")
+    @patch.object(RedisCache, "set")
+    @patch.object(RedisCache, "get")
     def test_failed_request(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
         dummy_cache_get.side_effect = CacheMiss()
         dummy_request_get.side_effect = unsuccessful_github_response
@@ -131,31 +151,27 @@ class GetReleasesTestCase(SimpleTestCase):
         # Check log entry
         self.assertEqual(len(cm.output), 1)
         log_output = cm.output[0]
-        last_log_line = log_output.split('\n')[-1]
-        self.assertRegex(last_log_line, '404 .* Not Found')
+        last_log_line = log_output.split("\n")[-1]
+        self.assertRegex(last_log_line, "404 .* Not Found")
 
         # Check result
         self.assertListEqual(releases, [])
 
         # Check if correct request is made
         dummy_request_get.assert_called_once_with(
-            'https://localhost/unittest/releases',
-            headers={'Accept': 'application/vnd.github.v3+json'},
-            proxies=settings.HTTP_PROXIES
+            "https://localhost/unittest/releases",
+            headers={"Accept": "application/vnd.github.v3+json"},
+            proxies=settings.HTTP_PROXIES,
         )
 
         # Check if failure is put in cache
-        dummy_cache_set.assert_called_once_with(
-            'latest_release_no_retry',
-            'https://localhost/unittest/releases',
-            900
-        )
+        dummy_cache_set.assert_called_once_with("latest_release_no_retry", "https://localhost/unittest/releases", 900)
 
-    @patch.object(requests, 'get')
-    @patch.object(RedisCache, 'set')
-    @patch.object(RedisCache, 'get')
+    @patch.object(requests, "get")
+    @patch.object(RedisCache, "set")
+    @patch.object(RedisCache, "get")
     def test_blocked_retry(self, dummy_cache_get: Mock, dummy_cache_set: Mock, dummy_request_get: Mock):
-        dummy_cache_get.return_value = 'https://localhost/unittest/releases'
+        dummy_cache_get.return_value = "https://localhost/unittest/releases"
         dummy_request_get.side_effect = successful_github_response
 
         releases = get_releases()

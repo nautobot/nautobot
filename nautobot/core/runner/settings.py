@@ -16,9 +16,11 @@ except NameError:
 try:
     execfile
 except NameError:  # Python3
+
     def execfile(afile, globalz=None, localz=None):
         with open(afile, "r") as fh:
             exec(fh.read(), globalz, localz)
+
 
 import errno
 import imp
@@ -26,22 +28,22 @@ import os
 import sys
 from django.conf import settings as django_settings
 
-__all__ = ('create_default_settings', 'load_settings')
+__all__ = ("create_default_settings", "load_settings")
 
-TUPLE_SETTINGS = ('INSTALLED_APPS', 'TEMPLATE_DIRS')
+TUPLE_SETTINGS = ("INSTALLED_APPS", "TEMPLATE_DIRS")
 
 
 def create_default_settings(filepath, settings_initializer):
     if settings_initializer is not None:
         output = settings_initializer()
     else:
-        output = ''
+        output = ""
 
     dirname = os.path.dirname(filepath)
     if dirname and not os.path.exists(dirname):
         os.makedirs(dirname)
 
-    with open(filepath, 'w') as fp:
+    with open(filepath, "w") as fp:
         fp.write(output)
 
 
@@ -52,17 +54,18 @@ def create_module(name, install=True):
     return mod
 
 
-def load_settings(mod_or_filename, silent=False, allow_extras=True,
-                  settings=django_settings):
+def load_settings(
+    mod_or_filename, silent=False, allow_extras=True, settings=django_settings
+):
     if isinstance(mod_or_filename, basestring):
-        conf = create_module('temp_config', install=False)
+        conf = create_module("temp_config", install=False)
         conf.__file__ = mod_or_filename
         try:
             execfile(mod_or_filename, conf.__dict__)
         except IOError as e:
             if silent and e.errno in (errno.ENOENT, errno.EISDIR):
                 return settings
-            e.strerror = 'Unable to load configuration file (%s)' % e.strerror
+            e.strerror = "Unable to load configuration file (%s)" % e.strerror
             raise
     else:
         conf = mod_or_filename
@@ -88,8 +91,8 @@ def add_settings(mod, allow_extras=True, settings=django_settings):
             # Any setting that starts with EXTRA_ and matches a setting that is a list or tuple
             # will automatically append the values to the current setting.
             # It might make sense to make this less magical
-            if setting.startswith('EXTRA_'):
-                base_setting = setting.split('EXTRA_', 1)[-1]
+            if setting.startswith("EXTRA_"):
+                base_setting = setting.split("EXTRA_", 1)[-1]
                 if isinstance(getattr(settings, base_setting), (list, tuple)):
                     extras[base_setting] = setting_value
                     continue

@@ -68,7 +68,7 @@ Update the `VERSION` constant in `settings.py` to the new release version and an
 
 ### Submit a Pull Request
 
-Submit a pull request title **"Release vX.Y.Z"** to merge the `develop` branch into `master`. Copy the documented release notes into the pull request's body.
+Submit a pull request title **"Release vX.Y.Z"** to merge the `develop` branch into `main`. Copy the documented release notes into the pull request's body.
 
 Once CI has completed on the PR, merge it.
 
@@ -76,9 +76,9 @@ Once CI has completed on the PR, merge it.
 
 Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with the following parameters.
 
-* **Tag:** Current version (e.g. `v2.9.9`)
-* **Target:** `master`
-* **Title:** Version and date (e.g. `v2.9.9 - 2020-11-09`)
+* **Tag:** Current version (e.g. `v1.0.0`)
+* **Target:** `main`
+* **Title:** Version and date (e.g. `v1.0.0 - 2021-06-01`)
 
 Copy the description from the pull request to the release.
 

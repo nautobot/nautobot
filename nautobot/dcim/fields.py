@@ -17,15 +17,15 @@ class ASNField(models.BigIntegerField):
 
     def formfield(self, **kwargs):
         defaults = {
-            'min_value': BGP_ASN_MIN,
-            'max_value': BGP_ASN_MAX,
+            "min_value": BGP_ASN_MIN,
+            "max_value": BGP_ASN_MAX,
         }
         defaults.update(**kwargs)
         return super().formfield(**defaults)
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
-    word_fmt = '%.2X'
+    word_fmt = "%.2X"
 
 
 class MACAddressField(models.Field):
@@ -42,11 +42,11 @@ class MACAddressField(models.Field):
             return value
         try:
             return EUI(value, version=48, dialect=mac_unix_expanded_uppercase)
-        except AddrFormatError as e:
+        except AddrFormatError:
             raise ValidationError("Invalid MAC address format: {}".format(value))
 
     def db_type(self, connection):
-        return 'macaddr'
+        return "macaddr"
 
     def get_prep_value(self, value):
         if not value:
@@ -58,7 +58,7 @@ class MACAddressCharField(models.CharField):
     description = "MAC Address Varchar field"
 
     def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 18
+        kwargs["max_length"] = 18
         super().__init__(*args, **kwargs)
 
     def deconstruct(self):
@@ -84,7 +84,7 @@ class MACAddressCharField(models.CharField):
             value = value.strip()
         try:
             return EUI(value, version=48, dialect=mac_unix_expanded_uppercase)
-        except AddrFormatError as e:
+        except AddrFormatError:
             raise ValidationError("Invalid MAC address format: {}".format(value))
 
     def get_prep_value(self, value):
@@ -97,8 +97,9 @@ class PathField(ArrayField):
     """
     An ArrayField which holds a set of objects, each identified by a (type, ID) tuple.
     """
+
     def __init__(self, **kwargs):
-        kwargs['base_field'] = models.CharField(max_length=40)
+        kwargs["base_field"] = models.CharField(max_length=40)
         super().__init__(**kwargs)
 
 

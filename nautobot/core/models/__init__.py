@@ -22,12 +22,8 @@ class BaseModel(models.Model):
     database for the first time. An alternate pattern of checking `self._state.adding`
     can be used for the same purpose in most cases.
     """
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        unique=True,
-        editable=False
-    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
     objects = RestrictedQuerySet.as_manager()
 

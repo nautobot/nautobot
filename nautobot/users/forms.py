@@ -1,17 +1,19 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm as DjangoPasswordChangeForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordChangeForm as DjangoPasswordChangeForm,
+)
 
 from nautobot.utilities.forms import BootstrapMixin, DateTimePicker
 from .models import Token
 
 
 class LoginForm(BootstrapMixin, AuthenticationForm):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['username'].widget.attrs['placeholder'] = ''
-        self.fields['password'].widget.attrs['placeholder'] = ''
+        self.fields["username"].widget.attrs["placeholder"] = ""
+        self.fields["password"].widget.attrs["placeholder"] = ""
 
 
 class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
@@ -21,14 +23,17 @@ class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
 class TokenForm(BootstrapMixin, forms.ModelForm):
     key = forms.CharField(
         required=False,
-        help_text="If no key is provided, one will be generated automatically."
+        help_text="If no key is provided, one will be generated automatically.",
     )
 
     class Meta:
         model = Token
         fields = [
-            'key', 'write_enabled', 'expires', 'description',
+            "key",
+            "write_enabled",
+            "expires",
+            "description",
         ]
         widgets = {
-            'expires': DateTimePicker(),
+            "expires": DateTimePicker(),
         }

@@ -16,7 +16,7 @@ Nautobot v1.0.0 and later requires the following:
 
 ## Install the Latest Release
 
-As with the initial installation, you can upgrade Nautobot by either downloading the latest release package or by cloning the `master` branch of the git repository.
+As with the initial installation, you can upgrade Nautobot by either downloading the latest release package or by cloning the `main` branch of the git repository.
 
 ### Option A: Download a Release
 
@@ -63,12 +63,12 @@ sudo cp /opt/nautobot-X.Y.Z/gunicorn.py /opt/nautobot/
 
 ### Option B: Clone the Git Repository
 
-This guide assumes that Nautobot is installed at `/opt/nautobot`. Pull down the most recent iteration of the master branch:
+This guide assumes that Nautobot is installed at `/opt/nautobot`. Pull down the most recent iteration of the `main` branch:
 
 ```no-highlight
 cd /opt/nautobot
-sudo git checkout master
-sudo git pull origin master
+sudo git checkout main
+sudo git pull origin main
 ```
 
 ## Run the Upgrade Script

@@ -29,28 +29,35 @@ from .models import GitRepository
 from .registry import registry
 
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
-from nautobot.ipam.validators import MaxPrefixLengthValidator, MinPrefixLengthValidator, prefix_validator
+from nautobot.ipam.validators import (
+    MaxPrefixLengthValidator,
+    MinPrefixLengthValidator,
+    prefix_validator,
+)
 from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.utilities.forms import (
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+)
 
 
 __all__ = [
-    'Job',
-    'BooleanVar',
-    'ChoiceVar',
-    'FileVar',
-    'IntegerVar',
-    'IPAddressVar',
-    'IPAddressWithMaskVar',
-    'IPNetworkVar',
-    'MultiChoiceVar',
-    'MultiObjectVar',
-    'ObjectVar',
-    'StringVar',
-    'TextVar',
+    "Job",
+    "BooleanVar",
+    "ChoiceVar",
+    "FileVar",
+    "IntegerVar",
+    "IPAddressVar",
+    "IPAddressWithMaskVar",
+    "IPNetworkVar",
+    "MultiChoiceVar",
+    "MultiObjectVar",
+    "ObjectVar",
+    "StringVar",
+    "TextVar",
 ]
 
-logger = logging.getLogger('nautobot.jobs')
+logger = logging.getLogger("nautobot.jobs")
 
 
 class BaseJob:
@@ -74,17 +81,20 @@ class BaseJob:
         - description (str)
         - commit_default (bool)
         """
+
         pass
 
     @staticmethod
     def _results_struct():
-        return OrderedDict([
-            ('success', 0),
-            ('info', 0),
-            ('warning', 0),
-            ('failure', 0),
-            ('log', []),
-        ])
+        return OrderedDict(
+            [
+                ("success", 0),
+                ("info", 0),
+                ("warning", 0),
+                ("failure", 0),
+                ("log", []),
+            ]
+        )
 
     def __init__(self):
         self.logger = logging.getLogger(f"nautobot.jobs.{self.__class__.__name__}")
@@ -101,7 +111,7 @@ class BaseJob:
         self.test_methods = []
 
         for method_name in dir(self):
-            if method_name.startswith('test_') and callable(getattr(self, method_name)):
+            if method_name.startswith("test_") and callable(getattr(self, method_name)):
                 self.test_methods.append(method_name)
 
     def __str__(self):
@@ -122,17 +132,22 @@ class BaseJob:
         git.my-repository/myjob/MyJob
         """
         # TODO: it'd be nice if this were derived more automatically instead of needing this logic
-        if cls in registry['plugin_jobs']:
-            source_grouping = 'plugins'
+        if cls in registry["plugin_jobs"]:
+            source_grouping = "plugins"
         elif cls.file_path.startswith(settings.JOBS_ROOT):
             source_grouping = "local"
         elif cls.file_path.startswith(settings.GIT_ROOT):
             # $GIT_ROOT/<repo_slug>/jobs/job.py -> <repo_slug>
-            source_grouping = ".".join(["git", os.path.basename(os.path.dirname(os.path.dirname(cls.file_path)))])
+            source_grouping = ".".join(
+                [
+                    "git",
+                    os.path.basename(os.path.dirname(os.path.dirname(cls.file_path))),
+                ]
+            )
         else:
             raise RuntimeError(
-                f"Unknown/unexpected job file_path {cls.file_path}, should be one of " +
-                ", ".join([settings.JOBS_ROOT, settings.GIT_ROOT])
+                f"Unknown/unexpected job file_path {cls.file_path}, should be one of "
+                + ", ".join([settings.JOBS_ROOT, settings.GIT_ROOT])
             )
 
         return "/".join([source_grouping, cls.__module__, cls.__name__])
@@ -142,22 +157,22 @@ class BaseJob:
         """
         Dotted class_path, suitable for use in things like Python logger names.
         """
-        return cls.class_path.replace('/', '.')
+        return cls.class_path.replace("/", ".")
 
     @classproperty
     def class_path_js_escaped(cls):
         """
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
-        return cls.class_path.replace('/', r'\/').replace('.', r'\.')
+        return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
     def name(cls):
-        return getattr(cls.Meta, 'name', cls.__name__)
+        return getattr(cls.Meta, "name", cls.__name__)
 
     @classproperty
     def description(cls):
-        return getattr(cls.Meta, 'description', '')
+        return getattr(cls.Meta, "description", "")
 
     @classmethod
     def _get_vars(cls):
@@ -182,9 +197,9 @@ class BaseJob:
             value.data[method_name] = self._results_struct()
         # Only initialize results for run and post_run if they're actually implemented
         if self.run.__func__ != BaseJob.run:
-            value.data['run'] = self._results_struct()
+            value.data["run"] = self._results_struct()
         if self.post_run.__func__ != BaseJob.post_run:
-            value.data['post_run'] = self._results_struct()
+            value.data["post_run"] = self._results_struct()
 
         self._job_result = value
 
@@ -242,15 +257,13 @@ class BaseJob:
         """
         Return a Django form suitable for populating the context data required to run this Job.
         """
-        fields = {
-            name: var.as_field() for name, var in self._get_vars().items()
-        }
-        FormClass = type('JobForm', (JobForm,), fields)
+        fields = {name: var.as_field() for name, var in self._get_vars().items()}
+        FormClass = type("JobForm", (JobForm,), fields)
 
         form = FormClass(data, files, initial=initial)
 
         # Set initial "commit" checkbox state based on the Meta parameter
-        form.fields['_commit'].initial = getattr(self.Meta, 'commit_default', True)
+        form.fields["_commit"].initial = getattr(self.Meta, "commit_default", True)
 
         return form
 
@@ -273,7 +286,11 @@ class BaseJob:
         Log a message. Do not call this method directly; use one of the log_* wrappers below.
         """
         self.job_result.log(
-            message, obj=obj, level_choice=level_choice, grouping=self.active_test, logger=self.logger,
+            message,
+            obj=obj,
+            level_choice=level_choice,
+            grouping=self.active_test,
+            logger=self.logger,
         )
 
     def log(self, message):
@@ -320,7 +337,7 @@ class BaseJob:
         Return data from a YAML file
         """
         file_path = os.path.join(os.path.dirname(self.file_path), filename)
-        with open(file_path, 'r') as datafile:
+        with open(file_path, "r") as datafile:
             data = yaml.safe_load(datafile)
 
         return data
@@ -330,7 +347,7 @@ class BaseJob:
         Return data from a JSON file
         """
         file_path = os.path.join(os.path.dirname(self.file_path), filename)
-        with open(file_path, 'r') as datafile:
+        with open(file_path, "r") as datafile:
             data = json.load(datafile)
 
         return data
@@ -346,26 +363,28 @@ class Job(BaseJob):
 # Script variables
 #
 
+
 class ScriptVariable:
     """
     Base model for script variables
     """
+
     form_field = forms.CharField
 
-    def __init__(self, label='', description='', default=None, required=True, widget=None):
+    def __init__(self, label="", description="", default=None, required=True, widget=None):
 
         # Initialize field attributes
-        if not hasattr(self, 'field_attrs'):
+        if not hasattr(self, "field_attrs"):
             self.field_attrs = {}
         if label:
-            self.field_attrs['label'] = label
+            self.field_attrs["label"] = label
         if description:
-            self.field_attrs['help_text'] = description
+            self.field_attrs["help_text"] = description
         if default:
-            self.field_attrs['initial'] = default
+            self.field_attrs["initial"] = default
         if widget:
-            self.field_attrs['widget'] = widget
-        self.field_attrs['required'] = required
+            self.field_attrs["widget"] = widget
+        self.field_attrs["required"] = required
 
     def as_field(self):
         """
@@ -373,10 +392,10 @@ class ScriptVariable:
         """
         form_field = self.form_field(**self.field_attrs)
         if not isinstance(form_field.widget, forms.CheckboxInput):
-            if form_field.widget.attrs and 'class' in form_field.widget.attrs.keys():
-                form_field.widget.attrs['class'] += ' form-control'
+            if form_field.widget.attrs and "class" in form_field.widget.attrs.keys():
+                form_field.widget.attrs["class"] += " form-control"
             else:
-                form_field.widget.attrs['class'] = 'form-control'
+                form_field.widget.attrs["class"] = "form-control"
 
         return form_field
 
@@ -385,22 +404,23 @@ class StringVar(ScriptVariable):
     """
     Character string representation. Can enforce minimum/maximum length and/or regex validation.
     """
+
     def __init__(self, min_length=None, max_length=None, regex=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Optional minimum/maximum lengths
         if min_length:
-            self.field_attrs['min_length'] = min_length
+            self.field_attrs["min_length"] = min_length
         if max_length:
-            self.field_attrs['max_length'] = max_length
+            self.field_attrs["max_length"] = max_length
 
         # Optional regular expression validation
         if regex:
-            self.field_attrs['validators'] = [
+            self.field_attrs["validators"] = [
                 RegexValidator(
                     regex=regex,
-                    message='Invalid value. Must match regex: {}'.format(regex),
-                    code='invalid'
+                    message="Invalid value. Must match regex: {}".format(regex),
+                    code="invalid",
                 )
             ]
 
@@ -409,18 +429,20 @@ class TextVar(ScriptVariable):
     """
     Free-form text data. Renders as a <textarea>.
     """
+
     form_field = forms.CharField
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.field_attrs['widget'] = forms.Textarea
+        self.field_attrs["widget"] = forms.Textarea
 
 
 class IntegerVar(ScriptVariable):
     """
     Integer representation. Can enforce minimum/maximum values.
     """
+
     form_field = forms.IntegerField
 
     def __init__(self, min_value=None, max_value=None, *args, **kwargs):
@@ -428,22 +450,23 @@ class IntegerVar(ScriptVariable):
 
         # Optional minimum/maximum values
         if min_value:
-            self.field_attrs['min_value'] = min_value
+            self.field_attrs["min_value"] = min_value
         if max_value:
-            self.field_attrs['max_value'] = max_value
+            self.field_attrs["max_value"] = max_value
 
 
 class BooleanVar(ScriptVariable):
     """
     Boolean representation (true/false). Renders as a checkbox.
     """
+
     form_field = forms.BooleanField
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Boolean fields cannot be required
-        self.field_attrs['required'] = False
+        self.field_attrs["required"] = False
 
 
 class ChoiceVar(ScriptVariable):
@@ -458,19 +481,21 @@ class ChoiceVar(ScriptVariable):
             )
         )
     """
+
     form_field = forms.ChoiceField
 
     def __init__(self, choices, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Set field choices
-        self.field_attrs['choices'] = choices
+        self.field_attrs["choices"] = choices
 
 
 class MultiChoiceVar(ChoiceVar):
     """
     Like ChoiceVar, but allows for the selection of multiple choices.
     """
+
     form_field = forms.MultipleChoiceField
 
 
@@ -483,34 +508,46 @@ class ObjectVar(ScriptVariable):
     :param query_params: A dictionary of additional query parameters to attach when making REST API requests (optional)
     :param null_option: The label to use as a "null" selection option (optional)
     """
+
     form_field = DynamicModelChoiceField
 
-    def __init__(self, model=None, queryset=None, display_field='name', query_params=None, null_option=None, *args,
-                 **kwargs):
+    def __init__(
+        self,
+        model=None,
+        queryset=None,
+        display_field="name",
+        query_params=None,
+        null_option=None,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
 
         # Set the form field's queryset. Support backward compatibility for the "queryset" argument for now.
         if model is not None:
-            self.field_attrs['queryset'] = model.objects.all()
+            self.field_attrs["queryset"] = model.objects.all()
         elif queryset is not None:
             warnings.warn(
                 f'{self}: Specifying a queryset for ObjectVar is no longer supported. Please use "model" instead.'
             )
-            self.field_attrs['queryset'] = queryset
+            self.field_attrs["queryset"] = queryset
         else:
-            raise TypeError('ObjectVar must specify a model')
+            raise TypeError("ObjectVar must specify a model")
 
-        self.field_attrs.update({
-            'display_field': display_field,
-            'query_params': query_params,
-            'null_option': null_option,
-        })
+        self.field_attrs.update(
+            {
+                "display_field": display_field,
+                "query_params": query_params,
+                "null_option": null_option,
+            }
+        )
 
 
 class MultiObjectVar(ObjectVar):
     """
     Like ObjectVar, but can represent one or more objects.
     """
+
     form_field = DynamicModelMultipleChoiceField
 
 
@@ -518,6 +555,7 @@ class FileVar(ScriptVariable):
     """
     An uploaded file.
     """
+
     form_field = forms.FileField
 
 
@@ -525,6 +563,7 @@ class IPAddressVar(ScriptVariable):
     """
     An IPv4 or IPv6 address without a mask.
     """
+
     form_field = IPAddressFormField
 
 
@@ -532,6 +571,7 @@ class IPAddressWithMaskVar(ScriptVariable):
     """
     An IPv4 or IPv6 address with a mask.
     """
+
     form_field = IPNetworkFormField
 
 
@@ -539,21 +579,18 @@ class IPNetworkVar(ScriptVariable):
     """
     An IPv4 or IPv6 prefix.
     """
+
     form_field = IPNetworkFormField
 
     def __init__(self, min_prefix_length=None, max_prefix_length=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Set prefix validator and optional minimum/maximum prefix lengths
-        self.field_attrs['validators'] = [prefix_validator]
+        self.field_attrs["validators"] = [prefix_validator]
         if min_prefix_length is not None:
-            self.field_attrs['validators'].append(
-                MinPrefixLengthValidator(min_prefix_length)
-            )
+            self.field_attrs["validators"].append(MinPrefixLengthValidator(min_prefix_length))
         if max_prefix_length is not None:
-            self.field_attrs['validators'].append(
-                MaxPrefixLengthValidator(max_prefix_length)
-            )
+            self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
 def is_job(obj):
@@ -633,12 +670,10 @@ def get_jobs():
                 jobs.setdefault(grouping, {})[module_name] = module_jobs
 
     # Add jobs from plugins (which were already imported at startup)
-    for cls in registry['plugin_jobs']:
+    for cls in registry["plugin_jobs"]:
         module = inspect.getmodule(cls)
         human_readable_name = module.name if hasattr(module, "name") else module.__name__
-        jobs.setdefault("plugins", {}).setdefault(
-            module.__name__, {"name": human_readable_name, "jobs": OrderedDict()}
-        )
+        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": human_readable_name, "jobs": OrderedDict()})
         jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
 
     return jobs
@@ -655,7 +690,7 @@ def _get_job_source_paths():
     paths = {}
     # Locally installed jobs
     if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
-        paths.setdefault('local', []).append(settings.JOBS_ROOT)
+        paths.setdefault("local", []).append(settings.JOBS_ROOT)
 
     # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
@@ -668,18 +703,20 @@ def _get_job_source_paths():
                 # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
                 # they are not required to share a common filesystem; therefore, we may need to refresh our local clone
                 # of the Git repository to ensure that it is in sync with the latest repository clone from any instance.
-                ensure_git_repository(repository_record, head=repository_record.current_head, logger=logger)
+                ensure_git_repository(
+                    repository_record,
+                    head=repository_record.current_head,
+                    logger=logger,
+                )
             except Exception as exc:
                 logger.error(f"Error during local clone of Git repository {repository_record}: {exc}")
                 continue
 
-            jobs_path = os.path.join(repository_record.filesystem_path, 'jobs')
+            jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
             if os.path.isdir(jobs_path):
                 paths[f"git.{repository_record.slug}"] = [jobs_path]
             else:
-                logger.warning(
-                    f"Git repository {repository_record} is configured to provide jobs, but none are found!"
-                )
+                logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
 
         # TODO: when a Git repo is deleted or its slug is changed, we update the local filesystem
         # (see extras/signals.py, extras/models/datasources.py), but as noted above, there may be multiple filesystems
@@ -692,9 +729,7 @@ def _get_job_source_paths():
                     f"Found non-directory {git_slug} in {settings.GIT_ROOT}. Only Git repositories should exist here."
                 )
             elif not os.path.isdir(os.path.join(git_path, ".git")):
-                logger.warning(
-                    f"Directory {git_slug} in {settings.GIT_ROOT} does not appear to be a Git repository."
-                )
+                logger.warning(f"Directory {git_slug} in {settings.GIT_ROOT} does not appear to be a Git repository.")
             elif not GitRepository.objects.filter(slug=git_slug):
                 logger.warning(f"Deleting unmanaged (leftover?) repository at {git_path}")
                 shutil.rmtree(git_path)
@@ -729,7 +764,7 @@ def get_job(class_path):
     Returns None if not found.
     """
     try:
-        grouping_name, module_name, class_name = class_path.split('/', 2)
+        grouping_name, module_name, class_name = class_path.split("/", 2)
     except ValueError:
         logger.error(f'Invalid class_path value "{class_path}"')
         return None
@@ -738,7 +773,7 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
-@job('default')
+@job("default")
 def run_job(data, request, job_result, commit=True, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
@@ -814,9 +849,7 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
 
         except Exception as exc:
             stacktrace = traceback.format_exc()
-            job.log_failure(
-                message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```"
-            )
+            job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
             job.log_info(message="Database changes have been reverted due to error.")
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
@@ -824,7 +857,7 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
             job_result.save()
 
         # Perform any post-run tasks
-        job.active_test = 'post_run'
+        job.active_test = "post_run"
         output = job.post_run()
         if output:
             job.results["output"] += "\n" + str(output)

@@ -11,12 +11,14 @@ from nautobot.utilities.utils import render_jinja2
 register = template.Library()
 
 LINK_BUTTON = '<a href="{}"{} class="btn btn-sm btn-{}">{}</a>\n'
-GROUP_BUTTON = '<div class="btn-group">\n' \
-               '<button type="button" class="btn btn-sm btn-{} dropdown-toggle" data-toggle="dropdown">\n' \
-               '{} <span class="caret"></span>\n' \
-               '</button>\n' \
-               '<ul class="dropdown-menu pull-right">\n' \
-               '{}</ul></div>\n'
+GROUP_BUTTON = (
+    '<div class="btn-group">\n'
+    '<button type="button" class="btn btn-sm btn-{} dropdown-toggle" data-toggle="dropdown">\n'
+    '{} <span class="caret"></span>\n'
+    "</button>\n"
+    '<ul class="dropdown-menu pull-right">\n'
+    "{}</ul></div>\n"
+)
 GROUP_LINK = '<li><a href="{}"{}>{}</a></li>\n'
 
 
@@ -28,17 +30,17 @@ def custom_links(context, obj):
     content_type = ContentType.objects.get_for_model(obj)
     custom_links = CustomLink.objects.filter(content_type=content_type)
     if not custom_links:
-        return ''
+        return ""
 
     # Pass select context data when rendering the CustomLink
     link_context = {
-        'obj': obj,
-        'debug': context.get('debug', False),  # django.template.context_processors.debug
-        'request': context['request'],  # django.template.context_processors.request
-        'user': context['user'],  # django.contrib.auth.context_processors.auth
-        'perms': context['perms'],  # django.contrib.auth.context_processors.auth
+        "obj": obj,
+        "debug": context.get("debug", False),  # django.template.context_processors.debug
+        "request": context["request"],  # django.template.context_processors.request
+        "user": context["user"],  # django.contrib.auth.context_processors.auth
+        "perms": context["perms"],  # django.contrib.auth.context_processors.auth
     }
-    template_code = ''
+    template_code = ""
     group_names = OrderedDict()
 
     for cl in custom_links:
@@ -55,13 +57,13 @@ def custom_links(context, obj):
                 text_rendered = render_jinja2(cl.text, link_context)
                 if text_rendered:
                     link_rendered = render_jinja2(cl.target_url, link_context)
-                    link_target = ' target="_blank"' if cl.new_window else ''
-                    template_code += LINK_BUTTON.format(
-                        link_rendered, link_target, cl.button_class, text_rendered
-                    )
+                    link_target = ' target="_blank"' if cl.new_window else ""
+                    template_code += LINK_BUTTON.format(link_rendered, link_target, cl.button_class, text_rendered)
             except Exception as e:
-                template_code += '<a class="btn btn-sm btn-default" disabled="disabled" title="{}">' \
-                                 '<i class="mdi mdi-alert"></i> {}</a>\n'.format(e, cl.name)
+                template_code += (
+                    '<a class="btn btn-sm btn-default" disabled="disabled" title="{}">'
+                    '<i class="mdi mdi-alert"></i> {}</a>\n'.format(e, cl.name)
+                )
 
     # Add grouped links to template
     for group, links in group_names.items():
@@ -72,11 +74,9 @@ def custom_links(context, obj):
             try:
                 text_rendered = render_jinja2(cl.text, link_context)
                 if text_rendered:
-                    link_target = ' target="_blank"' if cl.new_window else ''
+                    link_target = ' target="_blank"' if cl.new_window else ""
                     link_rendered = render_jinja2(cl.target_url, link_context)
-                    links_rendered.append(
-                        GROUP_LINK.format(link_rendered, link_target, text_rendered)
-                    )
+                    links_rendered.append(GROUP_LINK.format(link_rendered, link_target, text_rendered))
             except Exception as e:
                 links_rendered.append(
                     '<li><a disabled="disabled" title="{}"><span class="text-muted">'
@@ -84,8 +84,6 @@ def custom_links(context, obj):
                 )
 
         if links_rendered:
-            template_code += GROUP_BUTTON.format(
-                links[0].button_class, group, ''.join(links_rendered)
-            )
+            template_code += GROUP_BUTTON.format(links[0].button_class, group, "".join(links_rendered))
 
     return mark_safe(template_code)

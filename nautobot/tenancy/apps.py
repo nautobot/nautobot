@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class TenancyConfig(AppConfig):
-    name = 'nautobot.tenancy'
+    name = "nautobot.tenancy"

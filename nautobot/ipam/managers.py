@@ -5,7 +5,6 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class IPAddressManager(Manager.from_queryset(RestrictedQuerySet)):
-
     def get_queryset(self):
         """
         By default, PostgreSQL will order INETs with shorter (larger) prefix lengths ahead of those with longer
@@ -14,4 +13,4 @@ class IPAddressManager(Manager.from_queryset(RestrictedQuerySet)):
         then re-cast this value to INET() so that records will be ordered properly. We are essentially re-casting each
         IP address as a /32 or /128.
         """
-        return super().get_queryset().order_by(Inet(Host('address')))
+        return super().get_queryset().order_by(Inet(Host("address")))

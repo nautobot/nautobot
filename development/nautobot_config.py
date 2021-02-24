@@ -5,7 +5,7 @@ import sys
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(" ")
 
 DATABASES = {
-    'default': {
+    "default": {
         "NAME": os.environ.get("DB_NAME", "nautobot"),
         "USER": os.environ.get("DB_USER", ""),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
@@ -34,13 +34,27 @@ LOGGING = {
         },
     },
     "handlers": {
-        "normal_console": {"level": "INFO", "class": "rq.utils.ColorizingStreamHandler", "formatter": "normal"},
-        "verbose_console": {"level": "DEBUG", "class": "rq.utils.ColorizingStreamHandler", "formatter": "verbose"},
+        "normal_console": {
+            "level": "INFO",
+            "class": "rq.utils.ColorizingStreamHandler",
+            "formatter": "normal",
+        },
+        "verbose_console": {
+            "level": "DEBUG",
+            "class": "rq.utils.ColorizingStreamHandler",
+            "formatter": "verbose",
+        },
     },
     "loggers": {
         "django": {"handlers": ["normal_console"], "level": "INFO"},
-        "nautobot": {"handlers": ["verbose_console" if DEBUG else "normal_console"], "level": LOG_LEVEL},
-        "rq.worker": {"handlers": ["verbose_console" if DEBUG else "normal_console"], "level": LOG_LEVEL},
+        "nautobot": {
+            "handlers": ["verbose_console" if DEBUG else "normal_console"],
+            "level": LOG_LEVEL,
+        },
+        "rq.worker": {
+            "handlers": ["verbose_console" if DEBUG else "normal_console"],
+            "level": LOG_LEVEL,
+        },
     },
 }
 

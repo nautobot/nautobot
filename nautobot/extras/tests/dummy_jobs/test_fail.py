@@ -5,6 +5,7 @@ class TestFail(Job):
     """
     Job with fail result.
     """
+
     description = "Validate job import"
 
     def test_fail(self):

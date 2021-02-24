@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
-from nautobot.core.api import ContentTypeField
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
@@ -50,8 +49,8 @@ from .utils import FeatureQuery
 # Custom fields
 #
 
-class CustomFieldModelForm(forms.ModelForm):
 
+class CustomFieldModelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
 
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
@@ -67,7 +66,7 @@ class CustomFieldModelForm(forms.ModelForm):
         """
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = 'cf_{}'.format(cf.name)
+            field_name = "cf_{}".format(cf.name)
             if not self.instance._state.adding:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
                 self.fields[field_name].initial = self.instance.custom_field_data.get(cf.name)
@@ -87,12 +86,11 @@ class CustomFieldModelForm(forms.ModelForm):
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
-
     def _append_customfield_fields(self):
 
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = 'cf_{}'.format(cf.name)
+            field_name = "cf_{}".format(cf.name)
             self.fields[field_name] = cf.to_form_field(for_csv_import=True)
 
             # Annotate the field in the list of CustomField form fields
@@ -100,7 +98,6 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
 
 
 class CustomFieldBulkEditForm(BulkEditForm):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -132,11 +129,10 @@ class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
     @staticmethod
     def _get_field_name(name):
         # Return a prefixed version of the name
-        return 'cf_{}'.format(name)
+        return "cf_{}".format(name)
 
 
 class CustomFieldFilterForm(forms.Form):
-
     def __init__(self, *args, **kwargs):
 
         self.obj_type = ContentType.objects.get_for_model(self.model)
@@ -148,13 +144,14 @@ class CustomFieldFilterForm(forms.Form):
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
         for cf in custom_fields:
-            field_name = 'cf_{}'.format(cf.name)
+            field_name = "cf_{}".format(cf.name)
             self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
 
 
 #
 # Relationship
 #
+
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
@@ -163,8 +160,18 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Relationship
         fields = [
-            'name', 'slug', 'description', 'type', 'source_type', 'source_label', 'source_hidden', 'source_filter',
-            'destination_type', 'destination_label', 'destination_hidden', 'destination_filter',
+            "name",
+            "slug",
+            "description",
+            "type",
+            "source_type",
+            "source_label",
+            "source_hidden",
+            "source_filter",
+            "destination_type",
+            "destination_label",
+            "destination_hidden",
+            "destination_filter",
         ]
 
     def save(self, commit=True):
@@ -178,35 +185,30 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
 class RelationshipFilterForm(BootstrapMixin, forms.Form):
     model = Relationship
 
-    type = forms.MultipleChoiceField(
-        choices=RelationshipTypeChoices,
-        required=False,
-        widget=StaticSelect2Multiple()
-    )
+    type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
     source_type = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field='display_name',
-        label='Source Type',
+        display_field="display_name",
+        label="Source Type",
         widget=APISelectMultiple(
-            api_url='/api/extras/content-types/',
-        )
+            api_url="/api/extras/content-types/",
+        ),
     )
 
     destination_type = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field='display_name',
-        label='Destination Type',
+        display_field="display_name",
+        label="Destination Type",
         widget=APISelectMultiple(
-            api_url='/api/extras/content-types/',
-        )
+            api_url="/api/extras/content-types/",
+        ),
     )
 
 
 class RelationshipModelForm(forms.ModelForm):
-
     def __init__(self, *args, **kwargs):
 
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
@@ -252,13 +254,13 @@ class RelationshipModelForm(forms.ModelForm):
             filters = {
                 "relationship": self.fields[field_name].model,
                 f"{side}_type": self.obj_type,
-                f"{side}_id": self.instance.pk
+                f"{side}_id": self.instance.pk,
             }
             existing_cras = RelationshipAssociation.objects.filter(**filters)
 
             # Extract the list of ids of the target peers
             target_peer_ids = []
-            if hasattr(self.cleaned_data[field_name], '__iter__'):
+            if hasattr(self.cleaned_data[field_name], "__iter__"):
                 target_peer_ids = [item.pk for item in self.cleaned_data[field_name]]
             elif self.cleaned_data[field_name]:
                 target_peer_ids = [self.cleaned_data[field_name].pk]
@@ -304,28 +306,28 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
 
     relationship = DynamicModelMultipleChoiceField(
         queryset=Relationship.objects.all(),
-        to_field_name='slug',
+        to_field_name="slug",
         required=False,
     )
 
     source_type = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field='display_name',
-        label='Source Type',
+        display_field="display_name",
+        label="Source Type",
         widget=APISelectMultiple(
-            api_url='/api/extras/content-types/',
-        )
+            api_url="/api/extras/content-types/",
+        ),
     )
 
     destination_type = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field='display_name',
-        label='Destination Type',
+        display_field="display_name",
+        label="Destination Type",
         widget=APISelectMultiple(
-            api_url='/api/extras/content-types/',
-        )
+            api_url="/api/extras/content-types/",
+        ),
     )
 
 
@@ -333,14 +335,13 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
 # Tags
 #
 
+
 class TagForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     slug = SlugField()
 
     class Meta:
         model = Tag
-        fields = [
-            'name', 'slug', 'color', 'description'
-        ]
+        fields = ["name", "slug", "color", "description"]
 
 
 class TagCSVForm(CustomFieldModelCSVForm):
@@ -350,200 +351,117 @@ class TagCSVForm(CustomFieldModelCSVForm):
         model = Tag
         fields = Tag.csv_headers
         help_texts = {
-            'color': mark_safe('RGB color in hexadecimal (e.g. <code>00ff00</code>)'),
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
         }
 
 
 class AddRemoveTagsForm(forms.Form):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Add add/remove tags fields
-        self.fields['add_tags'] = DynamicModelMultipleChoiceField(
-            queryset=Tag.objects.all(),
-            required=False
-        )
-        self.fields['remove_tags'] = DynamicModelMultipleChoiceField(
-            queryset=Tag.objects.all(),
-            required=False
-        )
+        self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
 
 class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Tag
-    q = forms.CharField(
-        required=False,
-        label='Search'
-    )
+    q = forms.CharField(required=False, label="Search")
 
 
 class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(
-        queryset=Tag.objects.all(),
-        widget=forms.MultipleHiddenInput
-    )
-    color = forms.CharField(
-        max_length=6,
-        required=False,
-        widget=ColorSelect()
-    )
-    description = forms.CharField(
-        max_length=200,
-        required=False
-    )
+    pk = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), widget=forms.MultipleHiddenInput)
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+    description = forms.CharField(max_length=200, required=False)
 
     class Meta:
-        nullable_fields = ['description']
+        nullable_fields = ["description"]
 
 
 #
 # Config contexts
 #
 
+
 class ConfigContextForm(BootstrapMixin, forms.ModelForm):
-    regions = DynamicModelMultipleChoiceField(
-        queryset=Region.objects.all(),
-        required=False
-    )
-    sites = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        required=False
-    )
-    roles = DynamicModelMultipleChoiceField(
-        queryset=DeviceRole.objects.all(),
-        required=False
-    )
-    platforms = DynamicModelMultipleChoiceField(
-        queryset=Platform.objects.all(),
-        required=False
-    )
-    cluster_groups = DynamicModelMultipleChoiceField(
-        queryset=ClusterGroup.objects.all(),
-        required=False
-    )
-    clusters = DynamicModelMultipleChoiceField(
-        queryset=Cluster.objects.all(),
-        required=False
-    )
-    tenant_groups = DynamicModelMultipleChoiceField(
-        queryset=TenantGroup.objects.all(),
-        required=False
-    )
-    tenants = DynamicModelMultipleChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False
-    )
-    tags = DynamicModelMultipleChoiceField(
-        queryset=Tag.objects.all(),
-        required=False
-    )
-    data = JSONField(
-        label=''
-    )
+    regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
+    sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
+    roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
+    platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
+    cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
+    tenant_groups = DynamicModelMultipleChoiceField(queryset=TenantGroup.objects.all(), required=False)
+    tenants = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False)
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+    data = JSONField(label="")
 
     class Meta:
         model = ConfigContext
         fields = (
-            'name', 'weight', 'description', 'is_active', 'regions', 'sites', 'roles', 'platforms', 'cluster_groups',
-            'clusters', 'tenant_groups', 'tenants', 'tags', 'data',
+            "name",
+            "weight",
+            "description",
+            "is_active",
+            "regions",
+            "sites",
+            "roles",
+            "platforms",
+            "cluster_groups",
+            "clusters",
+            "tenant_groups",
+            "tenants",
+            "tags",
+            "data",
         )
 
 
 class ConfigContextBulkEditForm(BootstrapMixin, BulkEditForm):
-    pk = forms.ModelMultipleChoiceField(
-        queryset=ConfigContext.objects.all(),
-        widget=forms.MultipleHiddenInput
-    )
-    weight = forms.IntegerField(
-        required=False,
-        min_value=0
-    )
-    is_active = forms.NullBooleanField(
-        required=False,
-        widget=BulkEditNullBooleanSelect()
-    )
-    description = forms.CharField(
-        required=False,
-        max_length=100
-    )
+    pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
+    weight = forms.IntegerField(required=False, min_value=0)
+    is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
+    description = forms.CharField(required=False, max_length=100)
 
     class Meta:
         nullable_fields = [
-            'description',
+            "description",
         ]
 
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
-    q = forms.CharField(
-        required=False,
-        label='Search'
-    )
+    q = forms.CharField(required=False, label="Search")
     # FIXME(glenn) filtering by owner_content_type
-    region = DynamicModelMultipleChoiceField(
-        queryset=Region.objects.all(),
-        to_field_name='slug',
-        required=False
-    )
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name='slug',
-        required=False
-    )
-    role = DynamicModelMultipleChoiceField(
-        queryset=DeviceRole.objects.all(),
-        to_field_name='slug',
-        required=False
-    )
-    platform = DynamicModelMultipleChoiceField(
-        queryset=Platform.objects.all(),
-        to_field_name='slug',
-        required=False
-    )
+    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
+    site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
+    role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
+    platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
-        queryset=ClusterGroup.objects.all(),
-        to_field_name='slug',
-        required=False
+        queryset=ClusterGroup.objects.all(), to_field_name="slug", required=False
     )
-    cluster_id = DynamicModelMultipleChoiceField(
-        queryset=Cluster.objects.all(),
-        required=False,
-        label='Cluster'
-    )
+    cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     tenant_group = DynamicModelMultipleChoiceField(
-        queryset=TenantGroup.objects.all(),
-        to_field_name='slug',
-        required=False
+        queryset=TenantGroup.objects.all(), to_field_name="slug", required=False
     )
-    tenant = DynamicModelMultipleChoiceField(
-        queryset=Tenant.objects.all(),
-        to_field_name='slug',
-        required=False
-    )
-    tag = DynamicModelMultipleChoiceField(
-        queryset=Tag.objects.all(),
-        to_field_name='slug',
-        required=False
-    )
+    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
+    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
 
 
 #
 # Filter form for local config context data
 #
 
+
 class LocalConfigContextFilterForm(forms.Form):
     local_context_data = forms.NullBooleanField(
         required=False,
-        label='Has local config context data',
-        widget=StaticSelect2(
-            choices=BOOLEAN_WITH_BLANK_CHOICES
-        )
+        label="Has local config context data",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
 
 
 #
 # Git repositories and other data sources
 #
+
 
 def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
@@ -571,7 +489,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
     remote_url = forms.URLField(
         required=True,
         label="Remote URL",
-        help_text='Only http:// and https:// URLs are presently supported',
+        help_text="Only http:// and https:// URLs are presently supported",
     )
 
     _token = forms.CharField(
@@ -580,11 +498,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
     )
 
-    username = forms.CharField(
-        required=False,
-        label="Username",
-        help_text='Username for token authentication.'
-    )
+    username = forms.CharField(required=False, label="Username", help_text="Username for token authentication.")
 
     provided_contents = forms.MultipleChoiceField(
         required=False,
@@ -592,27 +506,23 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         choices=get_git_datasource_content_choices,
     )
 
-    tags = DynamicModelMultipleChoiceField(
-        queryset=Tag.objects.all(),
-        required=False
-    )
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = GitRepository
         fields = [
-            'name',
-            'slug',
-            'remote_url',
-            'branch',
-            '_token',
-            'username',
-            'provided_contents',
-            'tags',
+            "name",
+            "slug",
+            "remote_url",
+            "branch",
+            "_token",
+            "username",
+            "provided_contents",
+            "tags",
         ]
 
 
 class GitRepositoryCSVForm(CSVModelForm):
-
     class Meta:
         model = GitRepository
         fields = GitRepository.csv_headers
@@ -648,12 +558,13 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
 # Image attachments
 #
 
-class ImageAttachmentForm(BootstrapMixin, forms.ModelForm):
 
+class ImageAttachmentForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = ImageAttachment
         fields = [
-            'name', 'image',
+            "name",
+            "image",
         ]
 
 
@@ -661,44 +572,34 @@ class ImageAttachmentForm(BootstrapMixin, forms.ModelForm):
 # Change logging
 #
 
+
 class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     model = ObjectChange
-    q = forms.CharField(
-        required=False,
-        label='Search'
-    )
-    time_after = forms.DateTimeField(
-        label='After',
-        required=False,
-        widget=DateTimePicker()
-    )
-    time_before = forms.DateTimeField(
-        label='Before',
-        required=False,
-        widget=DateTimePicker()
-    )
+    q = forms.CharField(required=False, label="Search")
+    time_after = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
+    time_before = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
     action = forms.ChoiceField(
         choices=add_blank_choice(ObjectChangeActionChoices),
         required=False,
-        widget=StaticSelect2()
+        widget=StaticSelect2(),
     )
     user_id = DynamicModelMultipleChoiceField(
         queryset=User.objects.all(),
         required=False,
-        display_field='username',
-        label='User',
+        display_field="username",
+        label="User",
         widget=APISelectMultiple(
-            api_url='/api/users/users/',
-        )
+            api_url="/api/users/users/",
+        ),
     )
     changed_object_type_id = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field='display_name',
-        label='Object Type',
+        display_field="display_name",
+        label="Object Type",
         widget=APISelectMultiple(
-            api_url='/api/extras/content-types/',
-        )
+            api_url="/api/extras/content-types/",
+        ),
     )
 
 
@@ -706,20 +607,21 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 # Jobs
 #
 
+
 class JobForm(BootstrapMixin, forms.Form):
     _commit = forms.BooleanField(
         required=False,
         initial=True,
         label="Commit changes",
-        help_text="Commit changes to the database (uncheck for a dry-run)"
+        help_text="Commit changes to the database (uncheck for a dry-run)",
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Move _commit to the end of the form
-        commit = self.fields.pop('_commit')
-        self.fields['_commit'] = commit
+        commit = self.fields.pop("_commit")
+        self.fields["_commit"] = commit
 
     @property
     def requires_input(self):
@@ -731,17 +633,17 @@ class JobForm(BootstrapMixin, forms.Form):
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
     model = JobResult
-    q = forms.CharField(required=False, label='Search')
+    q = forms.CharField(required=False, label="Search")
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(
         queryset=User.objects.all(),
         required=False,
-        display_field='username',
-        label='User',
+        display_field="username",
+        label="User",
         widget=APISelectMultiple(
-            api_url='/api/users/users/',
-        )
+            api_url="/api/users/users/",
+        ),
     )
     status = forms.ChoiceField(
         choices=add_blank_choice(JobResultStatusChoices),
@@ -752,11 +654,11 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
 
 class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
     content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('export_templates').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
         required=False,
-        label='Content Types',
+        label="Content Types",
     )
 
     class Meta:
@@ -773,138 +675,106 @@ class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
 
 class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
     model = ExportTemplate
-    q = forms.CharField(
-        required=False,
-        label='Search'
-    )
+    q = forms.CharField(required=False, label="Search")
     content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('export_templates').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
+            "app_label", "model"
+        ),
         required=False,
-        label='Content Types',
+        label="Content Types",
     )
 
 
 class CustomLinkForm(BootstrapMixin, forms.ModelForm):
     content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('custom_links').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
         required=False,
-        label='Content Types',
+        label="Content Types",
     )
 
     class Meta:
         model = CustomLink
         fields = (
-            'content_type',
-            'name',
-            'text',
-            'target_url',
-            'weight',
-            'group_name',
-            'button_class',
-            'new_window',
+            "content_type",
+            "name",
+            "text",
+            "target_url",
+            "weight",
+            "group_name",
+            "button_class",
+            "new_window",
         )
 
 
 class CustomLinkFilterForm(BootstrapMixin, forms.Form):
     model = CustomLink
-    q = forms.CharField(
-        required=False,
-        label='Search'
-    )
+    q = forms.CharField(required=False, label="Search")
     content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('custom_links').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
         required=False,
-        label='Content Types',
+        label="Content Types",
     )
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):
     content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('webhooks').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
         required=False,
-        label='Content Types',
+        label="Content Types",
     )
 
     class Meta:
         model = Webhook
         fields = (
-            'name',
-            'content_types',
-            'enabled',
-            'type_create',
-            'type_update',
-            'type_delete',
-            'payload_url',
-            'http_method',
-            'http_content_type',
-            'additional_headers',
-            'body_template',
-            'secret',
-            'ssl_verification',
-            'ca_file_path',
+            "name",
+            "content_types",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "payload_url",
+            "http_method",
+            "http_content_type",
+            "additional_headers",
+            "body_template",
+            "secret",
+            "ssl_verification",
+            "ca_file_path",
         )
 
 
 class WebhookFilterForm(BootstrapMixin, forms.Form):
     model = Webhook
-    q = forms.CharField(
-        required=False,
-        label='Search'
-    )
+    q = forms.CharField(required=False, label="Search")
     content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('webhooks').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
         required=False,
-        label='Content Types',
+        label="Content Types",
     )
-    type_create = forms.NullBooleanField(
-        required=False,
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
-    )
-    type_update = forms.NullBooleanField(
-        required=False,
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
-    )
-    type_delete = forms.NullBooleanField(
-        required=False,
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
-    )
-    enabled = forms.NullBooleanField(
-        required=False,
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
-    )
+    type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
 #
 # Statuses
 #
 
+
 class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
     content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('statuses').get_query()
-        ).order_by('app_label', 'model'),
-        label='Content type(s)',
+        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
+        label="Content type(s)",
     )
 
     class Meta:
         model = Status
-        widgets = {
-            'color': ColorSelect()
-        }
-        fields = ['name', 'slug', 'description', 'content_types', 'color']
+        widgets = {"color": ColorSelect()}
+        fields = ["name", "slug", "description", "content_types", "color"]
 
 
 class StatusCSVForm(CustomFieldModelCSVForm):
@@ -912,22 +782,20 @@ class StatusCSVForm(CustomFieldModelCSVForm):
 
     slug = SlugField()
     content_types = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('statuses').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
         help_text=mark_safe(
-            'The object types to which this status applies. Multiple values '
-            'must be comma-separated and wrapped in double quotes. (e.g. '
+            "The object types to which this status applies. Multiple values "
+            "must be comma-separated and wrapped in double quotes. (e.g. "
             '<code>"dcim.device,dcim.rack"</code>)'
         ),
-        label='Content type(s)',
+        label="Content type(s)",
     )
 
     class Meta:
         model = Status
         fields = Status.csv_headers
         help_texts = {
-            'color': mark_safe('RGB color in hexadecimal (e.g. <code>00ff00</code>)'),
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
         }
 
 
@@ -935,43 +803,25 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
     """Filtering/search form for `Status` objects."""
 
     model = Status
-    q = forms.CharField(
-        required=False,
-        label='Search'
-    )
+    q = forms.CharField(required=False, label="Search")
     # "CSV" field is being used here because it is using the slug-form input for
     # content-types, which improves UX.
     content_types = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('statuses').get_query()
-        ).order_by('app_label', 'model'),
+        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
         required=False,
-        label='Content type(s)',
+        label="Content type(s)",
     )
-    color = forms.CharField(
-        max_length=6,
-        required=False,
-        widget=ColorSelect()
-    )
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
 
 class StatusBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
     """Bulk edit/delete form for `Status` objects."""
 
-    pk = forms.ModelMultipleChoiceField(
-        queryset=Status.objects.all(),
-        widget=forms.MultipleHiddenInput
-    )
-    color = forms.CharField(
-        max_length=6,
-        required=False,
-        widget=ColorSelect()
-    )
+    pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
     content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(
-            FeatureQuery('statuses').get_query()
-        ).order_by('app_label', 'model'),
-        label='Content type(s)',
+        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
+        label="Content type(s)",
         required=False,
     )
 
@@ -984,11 +834,11 @@ class StatusBulkEditFormMixin(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['status'] = DynamicModelChoiceField(
+        self.fields["status"] = DynamicModelChoiceField(
             required=False,
             queryset=Status.objects.all(),
-            query_params={'content_types': self.model._meta.label_lower},
-            display_field='name',
+            query_params={"content_types": self.model._meta.label_lower},
+            display_field="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -1000,12 +850,12 @@ class StatusFilterFormMixin(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['status'] = DynamicModelMultipleChoiceField(
+        self.fields["status"] = DynamicModelMultipleChoiceField(
             required=False,
             queryset=Status.objects.all(),
-            query_params={'content_types': self.model._meta.label_lower},
-            display_field='name',
-            to_field_name='slug',
+            query_params={"content_types": self.model._meta.label_lower},
+            display_field="name",
+            to_field_name="slug",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -1015,6 +865,6 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
     status = CSVModelChoiceField(
         queryset=Status.objects.all(),
-        to_field_name='slug',
-        help_text='Operational status'
+        to_field_name="slug",
+        help_text="Operational status",
     )

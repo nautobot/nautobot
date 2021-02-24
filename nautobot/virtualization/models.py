@@ -7,35 +7,28 @@ from taggit.managers import TaggableManager
 
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
-    ChangeLoggedModel,
     ConfigContextModel,
     CustomFieldModel,
     ObjectChange,
-    RelationshipModel,
     StatusModel,
     TaggedItem,
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import (
-    BaseModel,
-    OrganizationalModel,
-    PrimaryModel
-)
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import serialize_object
 from .choices import *
 
 
 __all__ = (
-    'Cluster',
-    'ClusterGroup',
-    'ClusterType',
-    'VirtualMachine',
-    'VMInterface',
+    "Cluster",
+    "ClusterGroup",
+    "ClusterType",
+    "VirtualMachine",
+    "VMInterface",
 )
 
 
@@ -43,39 +36,32 @@ __all__ = (
 # Cluster types
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_validators',
-    'graphql',
-    'relationships',
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
 )
 class ClusterType(OrganizationalModel):
     """
     A type of Cluster.
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
 
-    csv_headers = ['name', 'slug', 'description']
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+
+    csv_headers = ["name", "slug", "description"]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('virtualization:clustertype', args=[self.slug])
+        return reverse("virtualization:clustertype", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -89,39 +75,32 @@ class ClusterType(OrganizationalModel):
 # Cluster groups
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_validators',
-    'graphql',
-    'relationships',
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
 )
 class ClusterGroup(OrganizationalModel):
     """
     An organizational group of Clusters.
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
 
-    csv_headers = ['name', 'slug', 'description']
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+
+    csv_headers = ["name", "slug", "description"]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('virtualization:clustergroup', args=[self.slug])
+        return reverse("virtualization:clustergroup", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -135,66 +114,62 @@ class ClusterGroup(OrganizationalModel):
 # Clusters
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'webhooks',
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class Cluster(PrimaryModel):
     """
     A cluster of VirtualMachines. Each Cluster may optionally be associated with one or more Devices.
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    type = models.ForeignKey(
-        to=ClusterType,
-        on_delete=models.PROTECT,
-        related_name='clusters'
-    )
+
+    name = models.CharField(max_length=100, unique=True)
+    type = models.ForeignKey(to=ClusterType, on_delete=models.PROTECT, related_name="clusters")
     group = models.ForeignKey(
         to=ClusterGroup,
         on_delete=models.PROTECT,
-        related_name='clusters',
+        related_name="clusters",
         blank=True,
-        null=True
+        null=True,
     )
     tenant = models.ForeignKey(
-        to='tenancy.Tenant',
+        to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name='clusters',
+        related_name="clusters",
         blank=True,
-        null=True
+        null=True,
     )
     site = models.ForeignKey(
-        to='dcim.Site',
+        to="dcim.Site",
         on_delete=models.PROTECT,
-        related_name='clusters',
+        related_name="clusters",
         blank=True,
-        null=True
+        null=True,
     )
-    comments = models.TextField(
-        blank=True
-    )
+    comments = models.TextField(blank=True)
 
-    csv_headers = ['name', 'type', 'group', 'site', 'comments']
+    csv_headers = ["name", "type", "group", "site", "comments"]
     clone_fields = [
-        'type', 'group', 'tenant', 'site',
+        "type",
+        "group",
+        "tenant",
+        "site",
     ]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('virtualization:cluster', args=[self.pk])
+        return reverse("virtualization:cluster", args=[self.pk])
 
     def clean(self):
         super().clean()
@@ -203,11 +178,13 @@ class Cluster(PrimaryModel):
         if (not self._state.adding) and self.site:
             nonsite_devices = Device.objects.filter(cluster=self).exclude(site=self.site).count()
             if nonsite_devices:
-                raise ValidationError({
-                    'site': "{} devices are assigned as hosts for this cluster but are not in site {}".format(
-                        nonsite_devices, self.site
-                    )
-                })
+                raise ValidationError(
+                    {
+                        "site": "{} devices are assigned as hosts for this cluster but are not in site {}".format(
+                            nonsite_devices, self.site
+                        )
+                    }
+                )
 
     def to_csv(self):
         return (
@@ -224,105 +201,105 @@ class Cluster(PrimaryModel):
 # Virtual machines
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'statuses',
-    'webhooks',
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "statuses",
+    "webhooks",
 )
 class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     """
     A virtual machine which runs inside a Cluster.
     """
+
     cluster = models.ForeignKey(
-        to='virtualization.Cluster',
+        to="virtualization.Cluster",
         on_delete=models.PROTECT,
-        related_name='virtual_machines'
+        related_name="virtual_machines",
     )
     tenant = models.ForeignKey(
-        to='tenancy.Tenant',
+        to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name='virtual_machines',
+        related_name="virtual_machines",
         blank=True,
-        null=True
+        null=True,
     )
     platform = models.ForeignKey(
-        to='dcim.Platform',
+        to="dcim.Platform",
         on_delete=models.SET_NULL,
-        related_name='virtual_machines',
+        related_name="virtual_machines",
         blank=True,
-        null=True
+        null=True,
     )
-    name = models.CharField(
-        max_length=64
-    )
+    name = models.CharField(max_length=64)
     role = models.ForeignKey(
-        to='dcim.DeviceRole',
+        to="dcim.DeviceRole",
         on_delete=models.PROTECT,
-        related_name='virtual_machines',
-        limit_choices_to={'vm_role': True},
+        related_name="virtual_machines",
+        limit_choices_to={"vm_role": True},
         blank=True,
-        null=True
+        null=True,
     )
     primary_ip4 = models.OneToOneField(
-        to='ipam.IPAddress',
+        to="ipam.IPAddress",
         on_delete=models.SET_NULL,
-        related_name='+',
+        related_name="+",
         blank=True,
         null=True,
-        verbose_name='Primary IPv4'
+        verbose_name="Primary IPv4",
     )
     primary_ip6 = models.OneToOneField(
-        to='ipam.IPAddress',
+        to="ipam.IPAddress",
         on_delete=models.SET_NULL,
-        related_name='+',
+        related_name="+",
         blank=True,
         null=True,
-        verbose_name='Primary IPv6'
+        verbose_name="Primary IPv6",
     )
-    vcpus = models.PositiveSmallIntegerField(
-        blank=True,
-        null=True,
-        verbose_name='vCPUs'
-    )
-    memory = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        verbose_name='Memory (MB)'
-    )
-    disk = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        verbose_name='Disk (GB)'
-    )
-    comments = models.TextField(
-        blank=True
-    )
+    vcpus = models.PositiveSmallIntegerField(blank=True, null=True, verbose_name="vCPUs")
+    memory = models.PositiveIntegerField(blank=True, null=True, verbose_name="Memory (MB)")
+    disk = models.PositiveIntegerField(blank=True, null=True, verbose_name="Disk (GB)")
+    comments = models.TextField(blank=True)
 
     objects = ConfigContextModelQuerySet.as_manager()
 
     csv_headers = [
-        'name', 'status', 'role', 'cluster', 'tenant', 'platform', 'vcpus', 'memory', 'disk', 'comments',
+        "name",
+        "status",
+        "role",
+        "cluster",
+        "tenant",
+        "platform",
+        "vcpus",
+        "memory",
+        "disk",
+        "comments",
     ]
     clone_fields = [
-        'cluster', 'tenant', 'platform', 'status', 'role', 'vcpus', 'memory', 'disk',
+        "cluster",
+        "tenant",
+        "platform",
+        "status",
+        "role",
+        "vcpus",
+        "memory",
+        "disk",
     ]
 
     class Meta:
-        ordering = ('name',)  # Name may be non-unique
-        unique_together = [
-            ['cluster', 'tenant', 'name']
-        ]
+        ordering = ("name",)  # Name may be non-unique
+        unique_together = [["cluster", "tenant", "name"]]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('virtualization:virtualmachine', args=[self.pk])
+        return reverse("virtualization:virtualmachine", args=[self.pk])
 
     def validate_unique(self, exclude=None):
 
@@ -330,11 +307,9 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
         if self.tenant is None and VirtualMachine.objects.exclude(pk=self.pk).filter(
-                name=self.name, cluster=self.cluster, tenant__isnull=True
+            name=self.name, cluster=self.cluster, tenant__isnull=True
         ):
-            raise ValidationError({
-                'name': 'A virtual machine with this name already exists in the assigned cluster.'
-            })
+            raise ValidationError({"name": "A virtual machine with this name already exists in the assigned cluster."})
 
         super().validate_unique(exclude)
 
@@ -343,7 +318,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
 
         # Validate primary IP addresses
         interfaces = self.interfaces.all()
-        for field in ['primary_ip4', 'primary_ip6']:
+        for field in ["primary_ip4", "primary_ip6"]:
             ip = getattr(self, field)
             if ip is not None:
                 if ip.assigned_object in interfaces:
@@ -351,9 +326,11 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
                 elif ip.nat_inside is not None and ip.nat_inside.assigned_object in interfaces:
                     pass
                 else:
-                    raise ValidationError({
-                        field: f"The specified IP address ({ip}) is not assigned to this VM.",
-                    })
+                    raise ValidationError(
+                        {
+                            field: f"The specified IP address ({ip}) is not assigned to this VM.",
+                        }
+                    )
 
     def to_csv(self):
         return (
@@ -389,73 +366,72 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
 # Interfaces
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'webhooks'
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
     virtual_machine = models.ForeignKey(
-        to='virtualization.VirtualMachine',
+        to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,
-        related_name='interfaces'
+        related_name="interfaces",
     )
-    name = models.CharField(
-        max_length=64
-    )
+    name = models.CharField(max_length=64)
     _name = NaturalOrderingField(
-        target_field='name',
+        target_field="name",
         naturalize_function=naturalize_interface,
         max_length=100,
-        blank=True
+        blank=True,
     )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
+    description = models.CharField(max_length=200, blank=True)
     untagged_vlan = models.ForeignKey(
-        to='ipam.VLAN',
+        to="ipam.VLAN",
         on_delete=models.SET_NULL,
-        related_name='vminterfaces_as_untagged',
+        related_name="vminterfaces_as_untagged",
         null=True,
         blank=True,
-        verbose_name='Untagged VLAN'
+        verbose_name="Untagged VLAN",
     )
     tagged_vlans = models.ManyToManyField(
-        to='ipam.VLAN',
-        related_name='vminterfaces_as_tagged',
+        to="ipam.VLAN",
+        related_name="vminterfaces_as_tagged",
         blank=True,
-        verbose_name='Tagged VLANs'
+        verbose_name="Tagged VLANs",
     )
     ip_addresses = GenericRelation(
-        to='ipam.IPAddress',
-        content_type_field='assigned_object_type',
-        object_id_field='assigned_object_id',
-        related_query_name='vminterface'
+        to="ipam.IPAddress",
+        content_type_field="assigned_object_type",
+        object_id_field="assigned_object_id",
+        related_query_name="vminterface",
     )
-    tags = TaggableManager(
-        through=TaggedItem,
-        related_name='vminterface'
-    )
+    tags = TaggableManager(through=TaggedItem, related_name="vminterface")
 
     csv_headers = [
-        'virtual_machine', 'name', 'enabled', 'mac_address', 'mtu', 'description', 'mode',
+        "virtual_machine",
+        "name",
+        "enabled",
+        "mac_address",
+        "mtu",
+        "description",
+        "mode",
     ]
 
     class Meta:
-        verbose_name = 'interface'
-        ordering = ('virtual_machine', CollateAsChar('_name'))
-        unique_together = ('virtual_machine', 'name')
+        verbose_name = "interface"
+        ordering = ("virtual_machine", CollateAsChar("_name"))
+        unique_together = ("virtual_machine", "name")
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('virtualization:vminterface', kwargs={'pk': self.pk})
+        return reverse("virtualization:vminterface", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -472,11 +448,16 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         super().clean()
 
         # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site not in [self.virtual_machine.site, None]:
-            raise ValidationError({
-                'untagged_vlan': f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the "
-                                 f"interface's parent virtual machine, or it must be global"
-            })
+        if self.untagged_vlan and self.untagged_vlan.site not in [
+            self.virtual_machine.site,
+            None,
+        ]:
+            raise ValidationError(
+                {
+                    "untagged_vlan": f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the "
+                    f"interface's parent virtual machine, or it must be global"
+                }
+            )
 
     def to_objectchange(self, action):
         # Annotate the parent VirtualMachine
@@ -485,7 +466,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             object_repr=str(self),
             action=action,
             related_object=self.virtual_machine,
-            object_data=serialize_object(self)
+            object_data=serialize_object(self),
         )
 
     @property

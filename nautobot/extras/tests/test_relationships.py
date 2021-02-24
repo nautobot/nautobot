@@ -6,11 +6,13 @@ from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import *
 from nautobot.extras.models import Relationship, RelationshipAssociation
 from nautobot.utilities.testing import TestCase
-from nautobot.utilities.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.utilities.forms import (
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+)
 
 
 class RelationshipBaseTest(TestCase):
-
     def setUp(self):
 
         self.site_ct = ContentType.objects.get_for_model(Site)
@@ -25,7 +27,7 @@ class RelationshipBaseTest(TestCase):
             source_filter={"site": "mysite"},
             destination_type=self.vlan_ct,
             destination_label="My Racks",
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
         self.m2m_1.save()
 
@@ -34,7 +36,7 @@ class RelationshipBaseTest(TestCase):
             slug="vlan-rack-2",
             source_type=self.rack_ct,
             destination_type=self.vlan_ct,
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
         self.m2m_2.save()
 
@@ -43,7 +45,7 @@ class RelationshipBaseTest(TestCase):
             slug="site-vlan",
             source_type=self.site_ct,
             destination_type=self.vlan_ct,
-            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
         )
         self.o2m_1.save()
 
@@ -54,31 +56,30 @@ class RelationshipBaseTest(TestCase):
             source_hidden=True,
             destination_type=self.site_ct,
             destination_label="Primary Rack",
-            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
         )
         self.o2o_1.save()
 
         self.sites = [
-            Site.objects.create(name='Site A', slug='site-a'),
-            Site.objects.create(name='Site B', slug='site-b'),
-            Site.objects.create(name='Site C', slug='site-c'),
+            Site.objects.create(name="Site A", slug="site-a"),
+            Site.objects.create(name="Site B", slug="site-b"),
+            Site.objects.create(name="Site C", slug="site-c"),
         ]
 
         self.racks = [
-            Rack.objects.create(name='Rack A', site=self.sites[0]),
-            Rack.objects.create(name='Rack B', site=self.sites[1]),
-            Rack.objects.create(name='Rack C', site=self.sites[2]),
+            Rack.objects.create(name="Rack A", site=self.sites[0]),
+            Rack.objects.create(name="Rack B", site=self.sites[1]),
+            Rack.objects.create(name="Rack C", site=self.sites[2]),
         ]
 
         self.vlans = [
-            VLAN.objects.create(name='VLAN A', vid=100, site=self.sites[0]),
-            VLAN.objects.create(name='VLAN B', vid=100, site=self.sites[1]),
-            VLAN.objects.create(name='VLAN C', vid=100, site=self.sites[2]),
+            VLAN.objects.create(name="VLAN A", vid=100, site=self.sites[0]),
+            VLAN.objects.create(name="VLAN B", vid=100, site=self.sites[1]),
+            VLAN.objects.create(name="VLAN C", vid=100, site=self.sites[2]),
         ]
 
 
 class RelationshipTest(RelationshipBaseTest):
-
     def test_clean_filter_not_dict(self):
         m2m = Relationship(
             name="Another Vlan to Rack",
@@ -86,7 +87,7 @@ class RelationshipTest(RelationshipBaseTest):
             source_type=self.site_ct,
             source_filter=["a list not a dict"],
             destination_type=self.rack_ct,
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         with self.assertRaises(ValidationError):
@@ -99,7 +100,7 @@ class RelationshipTest(RelationshipBaseTest):
             source_type=self.site_ct,
             source_filter={"notvalid": "not a region"},
             destination_type=self.rack_ct,
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         with self.assertRaises(ValidationError):
@@ -111,7 +112,7 @@ class RelationshipTest(RelationshipBaseTest):
             slug="vlan-rack-2",
             source_type=self.rack_ct,
             destination_type=self.rack_ct,
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         with self.assertRaises(ValidationError):
@@ -125,7 +126,7 @@ class RelationshipTest(RelationshipBaseTest):
             source_filter={"region": "myregion"},
             destination_type=self.rack_ct,
             destination_filter={"site": "mysite"},
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         m2m.clean()
@@ -184,7 +185,6 @@ class RelationshipTest(RelationshipBaseTest):
 
 
 class RelationshipAssociationTest(RelationshipBaseTest):
-
     def test_clean_wrong_type(self):
         # Create with the wrong source Type
         with self.assertRaises(ValidationError):

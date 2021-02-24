@@ -1,4 +1,5 @@
 import logging
+
 try:
     from importlib import metadata
 except ImportError:
@@ -35,7 +36,7 @@ def setup():
     from nautobot.core.runner import configure_app
 
     configure_app(
-        project='nautobot',
+        project="nautobot",
         default_config_path=cli.DEFAULT_CONFIG_PATH,
         default_settings=cli.DEFAULT_SETTINGS,
         settings_initializer=cli.generate_settings,

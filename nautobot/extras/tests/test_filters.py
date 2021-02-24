@@ -8,7 +8,16 @@ from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Sit
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import *
 from nautobot.extras.filters import *
-from nautobot.extras.models import ConfigContext, CustomLink, ExportTemplate, ImageAttachment, ObjectChange, Tag, Status, Webhook
+from nautobot.extras.models import (
+    ConfigContext,
+    CustomLink,
+    ExportTemplate,
+    ImageAttachment,
+    ObjectChange,
+    Tag,
+    Status,
+    Webhook,
+)
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
@@ -22,26 +31,38 @@ class ExportTemplateTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        content_types = ContentType.objects.filter(model__in=['site', 'rack', 'device'])
+        content_types = ContentType.objects.filter(model__in=["site", "rack", "device"])
 
-        ExportTemplate.objects.create(name='Export Template 1', content_type=content_types[0], template_code='TESTING')
-        ExportTemplate.objects.create(name='Export Template 2', content_type=content_types[1], template_code='TESTING')
-        ExportTemplate.objects.create(name='Export Template 3', content_type=content_types[2], template_code='TESTING')
+        ExportTemplate.objects.create(
+            name="Export Template 1",
+            content_type=content_types[0],
+            template_code="TESTING",
+        )
+        ExportTemplate.objects.create(
+            name="Export Template 2",
+            content_type=content_types[1],
+            template_code="TESTING",
+        )
+        ExportTemplate.objects.create(
+            name="Export Template 3",
+            content_type=content_types[2],
+            template_code="TESTING",
+        )
 
     def test_id(self):
-        params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {'name': ['Export Template 1', 'Export Template 2']}
+        params = {"name": ["Export Template 1", "Export Template 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type(self):
-        params = {'content_type': ContentType.objects.get(model='site').pk}
+        params = {"content_type": ContentType.objects.get(model="site").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_search(self):
-        params = {'q': "export"}
+        params = {"q": "export"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
@@ -52,68 +73,68 @@ class ImageAttachmentTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site_ct = ContentType.objects.get(app_label='dcim', model='site')
-        rack_ct = ContentType.objects.get(app_label='dcim', model='rack')
+        site_ct = ContentType.objects.get(app_label="dcim", model="site")
+        rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
         sites = (
-            Site.objects.create(name='Site 1', slug='site-1'),
-            Site.objects.create(name='Site 2', slug='site-2'),
+            Site.objects.create(name="Site 1", slug="site-1"),
+            Site.objects.create(name="Site 2", slug="site-2"),
         )
 
         racks = (
-            Rack.objects.create(name='Rack 1', site=sites[0]),
-            Rack.objects.create(name='Rack 2', site=sites[1]),
+            Rack.objects.create(name="Rack 1", site=sites[0]),
+            Rack.objects.create(name="Rack 2", site=sites[1]),
         )
 
         ImageAttachment.objects.create(
             content_type=site_ct,
             object_id=sites[0].pk,
-            name='Image Attachment 1',
-            image='http://example.com/image1.png',
+            name="Image Attachment 1",
+            image="http://example.com/image1.png",
             image_height=100,
-            image_width=100
+            image_width=100,
         ),
         ImageAttachment.objects.create(
             content_type=site_ct,
             object_id=sites[1].pk,
-            name='Image Attachment 2',
-            image='http://example.com/image2.png',
+            name="Image Attachment 2",
+            image="http://example.com/image2.png",
             image_height=100,
-            image_width=100
+            image_width=100,
         ),
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[0].pk,
-            name='Image Attachment 3',
-            image='http://example.com/image3.png',
+            name="Image Attachment 3",
+            image="http://example.com/image3.png",
             image_height=100,
-            image_width=100
+            image_width=100,
         ),
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[1].pk,
-            name='Image Attachment 4',
-            image='http://example.com/image4.png',
+            name="Image Attachment 4",
+            image="http://example.com/image4.png",
             image_height=100,
-            image_width=100
+            image_width=100,
         )
 
     def test_id(self):
-        params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {'name': ['Image Attachment 1', 'Image Attachment 2']}
+        params = {"name": ["Image Attachment 1", "Image Attachment 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type(self):
-        params = {'content_type': 'dcim.site'}
+        params = {"content_type": "dcim.site"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type_id_and_object_id(self):
         params = {
-            'content_type_id': ContentType.objects.get(app_label='dcim', model='site').pk,
-            'object_id': [Site.objects.first().pk],
+            "content_type_id": ContentType.objects.get(app_label="dcim", model="site").pk,
+            "object_id": [Site.objects.first().pk],
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
@@ -126,60 +147,60 @@ class ConfigContextTestCase(TestCase):
     def setUpTestData(cls):
 
         regions = (
-            Region.objects.create(name='Test Region 1', slug='test-region-1'),
-            Region.objects.create(name='Test Region 2', slug='test-region-2'),
-            Region.objects.create(name='Test Region 3', slug='test-region-3'),
+            Region.objects.create(name="Test Region 1", slug="test-region-1"),
+            Region.objects.create(name="Test Region 2", slug="test-region-2"),
+            Region.objects.create(name="Test Region 3", slug="test-region-3"),
         )
 
         sites = (
-            Site.objects.create(name='Test Site 1', slug='test-site-1'),
-            Site.objects.create(name='Test Site 2', slug='test-site-2'),
-            Site.objects.create(name='Test Site 3', slug='test-site-3'),
+            Site.objects.create(name="Test Site 1", slug="test-site-1"),
+            Site.objects.create(name="Test Site 2", slug="test-site-2"),
+            Site.objects.create(name="Test Site 3", slug="test-site-3"),
         )
 
         device_roles = (
-            DeviceRole.objects.create(name='Device Role 1', slug='device-role-1'),
-            DeviceRole.objects.create(name='Device Role 2', slug='device-role-2'),
-            DeviceRole.objects.create(name='Device Role 3', slug='device-role-3'),
+            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
+            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
+            DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
         )
 
         platforms = (
-            Platform.objects.create(name='Platform 1', slug='platform-1'),
-            Platform.objects.create(name='Platform 2', slug='platform-2'),
-            Platform.objects.create(name='Platform 3', slug='platform-3'),
+            Platform.objects.create(name="Platform 1", slug="platform-1"),
+            Platform.objects.create(name="Platform 2", slug="platform-2"),
+            Platform.objects.create(name="Platform 3", slug="platform-3"),
         )
 
         cluster_groups = (
-            ClusterGroup.objects.create(name='Cluster Group 1', slug='cluster-group-1'),
-            ClusterGroup.objects.create(name='Cluster Group 2', slug='cluster-group-2'),
-            ClusterGroup.objects.create(name='Cluster Group 3', slug='cluster-group-3'),
+            ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
+            ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
+            ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
         )
 
-        cluster_type = ClusterType.objects.create(name='Cluster Type 1', slug='cluster-type-1')
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         clusters = (
-            Cluster.objects.create(name='Cluster 1', type=cluster_type),
-            Cluster.objects.create(name='Cluster 2', type=cluster_type),
-            Cluster.objects.create(name='Cluster 3', type=cluster_type),
+            Cluster.objects.create(name="Cluster 1", type=cluster_type),
+            Cluster.objects.create(name="Cluster 2", type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", type=cluster_type),
         )
 
         tenant_groups = (
-            TenantGroup.objects.create(name='Tenant Group 1', slug='tenant-group-1'),
-            TenantGroup.objects.create(name='Tenant Group 2', slug='tenant-group-2'),
-            TenantGroup.objects.create(name='Tenant Group 3', slug='tenant-group-3'),
+            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
+            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
+            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
         )
 
         tenants = (
-            Tenant.objects.create(name='Tenant 1', slug='tenant-1'),
-            Tenant.objects.create(name='Tenant 2', slug='tenant-2'),
-            Tenant.objects.create(name='Tenant 3', slug='tenant-3'),
+            Tenant.objects.create(name="Tenant 1", slug="tenant-1"),
+            Tenant.objects.create(name="Tenant 2", slug="tenant-2"),
+            Tenant.objects.create(name="Tenant 3", slug="tenant-3"),
         )
 
         for i in range(0, 3):
             is_active = bool(i % 2)
             c = ConfigContext.objects.create(
-                name='Config Context {}'.format(i + 1),
+                name="Config Context {}".format(i + 1),
                 is_active=is_active,
-                data='{"foo": 123}'
+                data='{"foo": 123}',
             )
             c.regions.set([regions[i]])
             c.sites.set([sites[i]])
@@ -191,71 +212,71 @@ class ConfigContextTestCase(TestCase):
             c.tenants.set([tenants[i]])
 
     def test_id(self):
-        params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {'name': ['Config Context 1', 'Config Context 2']}
+        params = {"name": ["Config Context 1", "Config Context 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_is_active(self):
-        params = {'is_active': True}
+        params = {"is_active": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {'is_active': False}
+        params = {"is_active": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
         regions = Region.objects.all()[:2]
-        params = {'region_id': [regions[0].pk, regions[1].pk]}
+        params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {'region': [regions[0].slug, regions[1].slug]}
+        params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
         sites = Site.objects.all()[:2]
-        params = {'site_id': [sites[0].pk, sites[1].pk]}
+        params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {'site': [sites[0].slug, sites[1].slug]}
+        params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_role(self):
         device_roles = DeviceRole.objects.all()[:2]
-        params = {'role_id': [device_roles[0].pk, device_roles[1].pk]}
+        params = {"role_id": [device_roles[0].pk, device_roles[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {'role': [device_roles[0].slug, device_roles[1].slug]}
+        params = {"role": [device_roles[0].slug, device_roles[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_platform(self):
         platforms = Platform.objects.all()[:2]
-        params = {'platform_id': [platforms[0].pk, platforms[1].pk]}
+        params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {'platform': [platforms[0].slug, platforms[1].slug]}
+        params = {"platform": [platforms[0].slug, platforms[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_cluster_group(self):
         cluster_groups = ClusterGroup.objects.all()[:2]
-        params = {'cluster_group_id': [cluster_groups[0].pk, cluster_groups[1].pk]}
+        params = {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {'cluster_group': [cluster_groups[0].slug, cluster_groups[1].slug]}
+        params = {"cluster_group": [cluster_groups[0].slug, cluster_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_cluster(self):
         clusters = Cluster.objects.all()[:2]
-        params = {'cluster_id': [clusters[0].pk, clusters[1].pk]}
+        params = {"cluster_id": [clusters[0].pk, clusters[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant_group(self):
         tenant_groups = TenantGroup.objects.all()[:2]
-        params = {'tenant_group_id': [tenant_groups[0].pk, tenant_groups[1].pk]}
+        params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {'tenant_group': [tenant_groups[0].slug, tenant_groups[1].slug]}
+        params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant_(self):
         tenants = Tenant.objects.all()[:2]
-        params = {'tenant_id': [tenants[0].pk, tenants[1].pk]}
+        params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {'tenant': [tenants[0].slug, tenants[1].slug]}
+        params = {"tenant": [tenants[0].slug, tenants[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -266,24 +287,24 @@ class TagTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Tag.objects.create(name='Tag 1', slug='tag-1', color='ff0000')
-        Tag.objects.create(name='Tag 2', slug='tag-2', color='00ff00')
-        Tag.objects.create(name='Tag 3', slug='tag-3', color='0000ff')
+        Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000")
+        Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00")
+        Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff")
 
     def test_id(self):
-        params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {'name': ['Tag 1', 'Tag 2']}
+        params = {"name": ["Tag 1", "Tag 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_slug(self):
-        params = {'slug': ['tag-1', 'tag-2']}
+        params = {"slug": ["tag-1", "tag-2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_color(self):
-        params = {'color': ['ff0000', '00ff00']}
+        params = {"color": ["ff0000", "00ff00"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -294,13 +315,13 @@ class ObjectChangeTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         users = (
-            User.objects.create(username='user1'),
-            User.objects.create(username='user2'),
-            User.objects.create(username='user3'),
+            User.objects.create(username="user1"),
+            User.objects.create(username="user2"),
+            User.objects.create(username="user3"),
         )
 
-        site = Site.objects.create(name='Test Site 1', slug='test-site-1')
-        ipaddress = IPAddress.objects.create(address='192.0.2.1/24')
+        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        ipaddress = IPAddress.objects.create(address="192.0.2.1/24")
 
         ObjectChange.objects.create(
             user=users[0],
@@ -309,7 +330,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=site,
             object_repr=str(site),
-            object_data={'name': site.name, 'slug': site.slug}
+            object_data={"name": site.name, "slug": site.slug},
         )
         ObjectChange.objects.create(
             user=users[0],
@@ -318,7 +339,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=site,
             object_repr=str(site),
-            object_data={'name': site.name, 'slug': site.slug}
+            object_data={"name": site.name, "slug": site.slug},
         )
         ObjectChange.objects.create(
             user=users[1],
@@ -327,7 +348,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=site,
             object_repr=str(site),
-            object_data={'name': site.name, 'slug': site.slug}
+            object_data={"name": site.name, "slug": site.slug},
         )
         ObjectChange.objects.create(
             user=users[1],
@@ -336,7 +357,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={'address': ipaddress.address, 'status': ipaddress.status}
+            object_data={"address": ipaddress.address, "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -345,7 +366,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={'address': ipaddress.address, 'status': ipaddress.status}
+            object_data={"address": ipaddress.address, "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -354,29 +375,29 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={'address': ipaddress.address, 'status': ipaddress.status}
+            object_data={"address": ipaddress.address, "status": ipaddress.status},
         )
 
     def test_id(self):
-        params = {'id': self.queryset.values_list('pk', flat=True)[:3]}
+        params = {"id": self.queryset.values_list("pk", flat=True)[:3]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_user(self):
-        params = {'user_id': User.objects.filter(username__in=['user1', 'user2']).values_list('pk', flat=True)}
+        params = {"user_id": User.objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-        params = {'user': ['user1', 'user2']}
+        params = {"user": ["user1", "user2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_user_name(self):
-        params = {'user_name': ['user1', 'user2']}
+        params = {"user_name": ["user1", "user2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_changed_object_type(self):
-        params = {'changed_object_type': 'dcim.site'}
+        params = {"changed_object_type": "dcim.site"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_changed_object_type_id(self):
-        params = {'changed_object_type_id': ContentType.objects.get(app_label='dcim', model='site').pk}
+        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="site").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
@@ -417,19 +438,19 @@ class CustomLinkTestCase(TestCase):
         )
 
     def test_name(self):
-        params = {'name': ['customlink-1']}
+        params = {"name": ["customlink-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_target_url(self):
-        params = {'target_url': ['http://customlink1.com']}
+        params = {"target_url": ["http://customlink1.com"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_weight(self):
-        params = {'weight': [100]}
+        params = {"weight": [100]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):
-        params = {'q': "customlink"}
+        params = {"q": "customlink"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
@@ -468,27 +489,27 @@ class WebhookTestCase(TestCase):
             webhook.content_types.set([obj_type])
 
     def test_name(self):
-        params = {'name': ['webhook-1']}
+        params = {"name": ["webhook-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_create(self):
-        params = {'type_create': True}
+        params = {"type_create": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_update(self):
-        params = {'type_update': True}
+        params = {"type_update": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_delete(self):
-        params = {'type_delete': True}
+        params = {"type_delete": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_enabled(self):
-        params = {'enabled': True}
+        params = {"enabled": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):
-        params = {'q': "webhook"}
+        params = {"q": "webhook"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
@@ -510,29 +531,26 @@ class StatusTestCase(TestCase):
         """
 
     def test_id(self):
-        params = {'id': self.queryset.values_list('pk', flat=True)[:2]}
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
-        params = {'name': ['Active', 'Offline']}
+        params = {"name": ["Active", "Offline"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_slug(self):
-        params = {'slug': ['active', 'offline']}
+        params = {"slug": ["active", "offline"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):
         ct = ContentType.objects.get_for_model(Device)
         status_count = self.queryset.filter(content_types=ct).count()
-        params = {'content_types': ['dcim.device']}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            status_count
-        )
+        params = {"content_types": ["dcim.device"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), status_count)
 
     def test_color(self):
         """Test the color search field."""
-        params = {'color': [ColorChoices.COLOR_GREY]}
+        params = {"color": [ColorChoices.COLOR_GREY]}
         # This current expected count may change as more `Status` objects are
         # imported by way of `extras.management.create_custom_statuses`. If as
         # these objects are imported, and this test fails, this number will need
@@ -541,5 +559,5 @@ class StatusTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
 
     def test_search(self):
-        params = {'q': 'active'}
+        params = {"q": "active"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)

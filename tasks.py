@@ -21,7 +21,7 @@ PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
 COMPOSE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.yml")
 COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.override.yml")
-COMPOSE_COMMAND = f"docker-compose --project-directory \"{COMPOSE_DIR}\" -f \"{COMPOSE_FILE}\""
+COMPOSE_COMMAND = f'docker-compose --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
 
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
@@ -224,7 +224,7 @@ def pycodestyle(context, python_ver=PYTHON_VER):
     context.run(
         f"{COMPOSE_COMMAND} run nautobot"
         " pycodestyle --ignore=W504,E501 "
-        ' contrib/ development/ nautobot/ tasks.py',
+        " contrib/ development/ nautobot/ tasks.py",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -240,8 +240,7 @@ def coverage_run(context, dir="./", python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run nautobot"
-        f" coverage run scripts/test_runner.py test {dir}",
+        f"{COMPOSE_COMMAND} run nautobot" f" coverage run scripts/test_runner.py test {dir}",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
@@ -256,8 +255,7 @@ def coverage_report(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run nautobot"
-        f" coverage report --skip-covered --omit *migrations*",
+        f"{COMPOSE_COMMAND} run nautobot" f" coverage report --skip-covered --omit *migrations*",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )

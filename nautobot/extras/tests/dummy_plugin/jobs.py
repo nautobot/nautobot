@@ -9,4 +9,4 @@ class DummyJob(Job):
         name = "Dummy job, does nothing"
 
 
-jobs = (DummyJob, )
+jobs = (DummyJob,)

@@ -11,29 +11,33 @@ from . import views
 # Initialize URL base, API, and admin URL patterns for plugins
 plugin_patterns = []
 plugin_api_patterns = [
-    path('', views.PluginsAPIRootView.as_view(), name='api-root'),
-    path('installed-plugins/', views.InstalledPluginsAPIView.as_view(), name='plugins-list')
+    path("", views.PluginsAPIRootView.as_view(), name="api-root"),
+    path(
+        "installed-plugins/",
+        views.InstalledPluginsAPIView.as_view(),
+        name="plugins-list",
+    ),
 ]
 plugin_admin_patterns = [
-    path('installed-plugins/', staff_member_required(views.InstalledPluginsAdminView.as_view()), name='plugins_list')
+    path(
+        "installed-plugins/",
+        staff_member_required(views.InstalledPluginsAdminView.as_view()),
+        name="plugins_list",
+    )
 ]
 
 # Register base/API URL patterns for each plugin
 for plugin_path in settings.PLUGINS:
-    plugin_name = plugin_path.split('.')[-1]
+    plugin_name = plugin_path.split(".")[-1]
     app = apps.get_app_config(plugin_name)
-    base_url = getattr(app, 'base_url') or app.label
+    base_url = getattr(app, "base_url") or app.label
 
     # Check if the plugin specifies any base URLs
     urlpatterns = import_object(f"{plugin_path}.urls.urlpatterns")
     if urlpatterns is not None:
-        plugin_patterns.append(
-            path(f"{base_url}/", include((urlpatterns, app.label)))
-        )
+        plugin_patterns.append(path(f"{base_url}/", include((urlpatterns, app.label))))
 
     # Check if the plugin specifies any API URLs
     urlpatterns = import_object(f"{plugin_path}.api.urls.urlpatterns")
     if urlpatterns is not None:
-        plugin_api_patterns.append(
-            path(f"{base_url}/", include((urlpatterns, f"{app.label}-api")))
-        )
+        plugin_api_patterns.append(path(f"{base_url}/", include((urlpatterns, f"{app.label}-api"))))

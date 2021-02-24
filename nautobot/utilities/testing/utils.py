@@ -13,14 +13,14 @@ def post_data(data):
 
     for key, value in data.items():
         if value is None:
-            ret[key] = ''
+            ret[key] = ""
         elif type(value) in (list, tuple):
-            if value and hasattr(value[0], 'pk'):
+            if value and hasattr(value[0], "pk"):
                 # Value is a list of instances
                 ret[key] = [v.pk for v in value]
             else:
                 ret[key] = value
-        elif hasattr(value, 'pk'):
+        elif hasattr(value, "pk"):
             # Value is an instance
             ret[key] = value.pk
         else:
@@ -29,7 +29,7 @@ def post_data(data):
     return ret
 
 
-def create_test_user(username='testuser', permissions=None):
+def create_test_user(username="testuser", permissions=None):
     """
     Create a User with the given permissions.
     """
@@ -37,7 +37,7 @@ def create_test_user(username='testuser', permissions=None):
     if permissions is None:
         permissions = ()
     for perm_name in permissions:
-        app, codename = perm_name.split('.')
+        app, codename = perm_name.split(".")
         perm = Permission.objects.get(content_type__app_label=app, codename=codename)
         user.user_permissions.add(perm)
 
@@ -48,7 +48,7 @@ def extract_form_failures(content):
     """
     Given raw HTML content from an HTTP response, return a list of form errors.
     """
-    FORM_ERROR_REGEX = r'<!-- FORM-ERROR (.*) -->'
+    FORM_ERROR_REGEX = r"<!-- FORM-ERROR (.*) -->"
     return re.findall(FORM_ERROR_REGEX, str(content))
 
 

@@ -3,94 +3,77 @@ from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import (
-    ObjectChange,
-    RelationshipModel,
-    StatusModel
-)
+from nautobot.extras.models import ObjectChange, RelationshipModel, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import (
-    BaseModel,
-    OrganizationalModel,
-    PrimaryModel
-)
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import serialize_object
 from .choices import *
 from .querysets import CircuitQuerySet
 
 
 __all__ = (
-    'Circuit',
-    'CircuitTermination',
-    'CircuitType',
-    'Provider',
+    "Circuit",
+    "CircuitTermination",
+    "CircuitType",
+    "Provider",
 )
 
 
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'webhooks'
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class Provider(PrimaryModel):
     """
     Each Circuit belongs to a Provider. This is usually a telecommunications company or similar organization. This model
     stores information pertinent to the user's relationship with the Provider.
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
     asn = ASNField(
         blank=True,
         null=True,
-        verbose_name='ASN',
-        help_text='32-bit autonomous system number'
+        verbose_name="ASN",
+        help_text="32-bit autonomous system number",
     )
-    account = models.CharField(
-        max_length=30,
-        blank=True,
-        verbose_name='Account number'
-    )
-    portal_url = models.URLField(
-        blank=True,
-        verbose_name='Portal URL'
-    )
-    noc_contact = models.TextField(
-        blank=True,
-        verbose_name='NOC contact'
-    )
-    admin_contact = models.TextField(
-        blank=True,
-        verbose_name='Admin contact'
-    )
-    comments = models.TextField(
-        blank=True
-    )
+    account = models.CharField(max_length=30, blank=True, verbose_name="Account number")
+    portal_url = models.URLField(blank=True, verbose_name="Portal URL")
+    noc_contact = models.TextField(blank=True, verbose_name="NOC contact")
+    admin_contact = models.TextField(blank=True, verbose_name="Admin contact")
+    comments = models.TextField(blank=True)
 
     csv_headers = [
-        'name', 'slug', 'asn', 'account', 'portal_url', 'noc_contact', 'admin_contact', 'comments',
+        "name",
+        "slug",
+        "asn",
+        "account",
+        "portal_url",
+        "noc_contact",
+        "admin_contact",
+        "comments",
     ]
     clone_fields = [
-        'asn', 'account', 'portal_url', 'noc_contact', 'admin_contact',
+        "asn",
+        "account",
+        "portal_url",
+        "noc_contact",
+        "admin_contact",
     ]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('circuits:provider', args=[self.slug])
+        return reverse("circuits:provider", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -106,39 +89,34 @@ class Provider(PrimaryModel):
 
 
 @extras_features(
-    'custom_fields',
-    'custom_validators',
-    'graphql',
-    'relationships',
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
 )
 class CircuitType(OrganizationalModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
     "Long Haul," "Metro," or "Out-of-Band".
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
     description = models.CharField(
         max_length=200,
         blank=True,
     )
 
-    csv_headers = ['name', 'slug', 'description']
+    csv_headers = ["name", "slug", "description"]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('circuits:circuittype', args=[self.slug])
+        return reverse("circuits:circuittype", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -149,14 +127,14 @@ class CircuitType(OrganizationalModel):
 
 
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'statuses',
-    'webhooks'
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "statuses",
+    "webhooks",
 )
 class Circuit(PrimaryModel, StatusModel):
     """
@@ -164,62 +142,54 @@ class Circuit(PrimaryModel, StatusModel):
     circuits. Each circuit is also assigned a CircuitType and a Site.  Circuit port speed and commit rate are measured
     in Kbps.
     """
-    cid = models.CharField(
-        max_length=100,
-        verbose_name='Circuit ID'
-    )
-    provider = models.ForeignKey(
-        to='circuits.Provider',
-        on_delete=models.PROTECT,
-        related_name='circuits'
-    )
-    type = models.ForeignKey(
-        to='CircuitType',
-        on_delete=models.PROTECT,
-        related_name='circuits'
-    )
+
+    cid = models.CharField(max_length=100, verbose_name="Circuit ID")
+    provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="circuits")
+    type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
     tenant = models.ForeignKey(
-        to='tenancy.Tenant',
+        to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name='circuits',
-        blank=True,
-        null=True
-    )
-    install_date = models.DateField(
+        related_name="circuits",
         blank=True,
         null=True,
-        verbose_name='Date installed'
     )
-    commit_rate = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        verbose_name='Commit rate (Kbps)')
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
-    comments = models.TextField(
-        blank=True
-    )
+    install_date = models.DateField(blank=True, null=True, verbose_name="Date installed")
+    commit_rate = models.PositiveIntegerField(blank=True, null=True, verbose_name="Commit rate (Kbps)")
+    description = models.CharField(max_length=200, blank=True)
+    comments = models.TextField(blank=True)
 
     objects = CircuitQuerySet.as_manager()
 
     csv_headers = [
-        'cid', 'provider', 'type', 'status', 'tenant', 'install_date', 'commit_rate', 'description', 'comments',
+        "cid",
+        "provider",
+        "type",
+        "status",
+        "tenant",
+        "install_date",
+        "commit_rate",
+        "description",
+        "comments",
     ]
     clone_fields = [
-        'provider', 'type', 'status', 'tenant', 'install_date', 'commit_rate', 'description',
+        "provider",
+        "type",
+        "status",
+        "tenant",
+        "install_date",
+        "commit_rate",
+        "description",
     ]
 
     class Meta:
-        ordering = ['provider', 'cid']
-        unique_together = ['provider', 'cid']
+        ordering = ["provider", "cid"]
+        unique_together = ["provider", "cid"]
 
     def __str__(self):
         return self.cid
 
     def get_absolute_url(self):
-        return reverse('circuits:circuit', args=[self.pk])
+        return reverse("circuits:circuit", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -242,71 +212,39 @@ class Circuit(PrimaryModel, StatusModel):
 
     @property
     def termination_a(self):
-        return self._get_termination('A')
+        return self._get_termination("A")
 
     @property
     def termination_z(self):
-        return self._get_termination('Z')
+        return self._get_termination("Z")
 
 
 @extras_features(
-    'custom_validators',
-    'graphql',
-    'relationships',
+    "custom_validators",
+    "graphql",
+    "relationships",
 )
-class CircuitTermination(
-    BaseModel,
-    PathEndpoint,
-    CableTermination,
-    RelationshipModel
-):
-    circuit = models.ForeignKey(
-        to='circuits.Circuit',
-        on_delete=models.CASCADE,
-        related_name='terminations'
-    )
-    term_side = models.CharField(
-        max_length=1,
-        choices=CircuitTerminationSideChoices,
-        verbose_name='Termination'
-    )
-    site = models.ForeignKey(
-        to='dcim.Site',
-        on_delete=models.PROTECT,
-        related_name='circuit_terminations'
-    )
-    port_speed = models.PositiveIntegerField(
-        verbose_name='Port speed (Kbps)',
-        blank=True,
-        null=True
-    )
+class CircuitTermination(BaseModel, PathEndpoint, CableTermination, RelationshipModel):
+    circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
+    term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="circuit_terminations")
+    port_speed = models.PositiveIntegerField(verbose_name="Port speed (Kbps)", blank=True, null=True)
     upstream_speed = models.PositiveIntegerField(
         blank=True,
         null=True,
-        verbose_name='Upstream speed (Kbps)',
-        help_text='Upstream speed, if different from port speed'
+        verbose_name="Upstream speed (Kbps)",
+        help_text="Upstream speed, if different from port speed",
     )
-    xconnect_id = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name='Cross-connect ID'
-    )
-    pp_info = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name='Patch panel/port(s)'
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
+    xconnect_id = models.CharField(max_length=50, blank=True, verbose_name="Cross-connect ID")
+    pp_info = models.CharField(max_length=100, blank=True, verbose_name="Patch panel/port(s)")
+    description = models.CharField(max_length=200, blank=True)
 
     class Meta:
-        ordering = ['circuit', 'term_side']
-        unique_together = ['circuit', 'term_side']
+        ordering = ["circuit", "term_side"]
+        unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return 'Side {}'.format(self.get_term_side_display())
+        return "Side {}".format(self.get_term_side_display())
 
     def to_objectchange(self, action):
         # Annotate the parent Circuit
@@ -321,7 +259,7 @@ class CircuitTermination(
             object_repr=str(self),
             action=action,
             related_object=related_object,
-            object_data=serialize_object(self)
+            object_data=serialize_object(self),
         )
 
     @property
@@ -329,11 +267,8 @@ class CircuitTermination(
         return self.circuit
 
     def get_peer_termination(self):
-        peer_side = 'Z' if self.term_side == 'A' else 'A'
+        peer_side = "Z" if self.term_side == "A" else "A"
         try:
-            return CircuitTermination.objects.prefetch_related('site').get(
-                circuit=self.circuit,
-                term_side=peer_side
-            )
+            return CircuitTermination.objects.prefetch_related("site").get(circuit=self.circuit, term_side=peer_side)
         except CircuitTermination.DoesNotExist:
             return None

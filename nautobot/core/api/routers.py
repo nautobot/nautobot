@@ -4,16 +4,17 @@ from rest_framework.routers import DefaultRouter
 
 
 class OrderedDefaultRouter(DefaultRouter):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Extend the list view mappings to support the DELETE operation
-        self.routes[0].mapping.update({
-            'put': 'bulk_update',
-            'patch': 'bulk_partial_update',
-            'delete': 'bulk_destroy',
-        })
+        self.routes[0].mapping.update(
+            {
+                "put": "bulk_update",
+                "patch": "bulk_partial_update",
+                "delete": "bulk_destroy",
+            }
+        )
 
     def get_api_root_view(self, api_urls=None):
         """

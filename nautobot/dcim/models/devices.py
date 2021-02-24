@@ -13,28 +13,22 @@ from django.utils.safestring import mark_safe
 
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
-from nautobot.extras.models import (
-    ConfigContextModel,
-    StatusModel
-)
+from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import (
-    OrganizationalModel,
-    PrimaryModel
-)
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.fields import ColorField, NaturalOrderingField
 from .device_components import *
 
 
 __all__ = (
-    'Device',
-    'DeviceRole',
-    'DeviceType',
-    'Manufacturer',
-    'Platform',
-    'VirtualChassis',
+    "Device",
+    "DeviceRole",
+    "DeviceType",
+    "Manufacturer",
+    "Platform",
+    "VirtualChassis",
 )
 
 
@@ -42,58 +36,47 @@ __all__ = (
 # Device Types
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'webhooks'
+    "custom_fields",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class Manufacturer(OrganizationalModel):
     """
     A Manufacturer represents a company which produces hardware devices; for example, Juniper or Dell.
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
 
-    csv_headers = ['name', 'slug', 'description']
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+
+    csv_headers = ["name", "slug", "description"]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('dcim:manufacturer', args=[self.slug])
+        return reverse("dcim:manufacturer", args=[self.slug])
 
     def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.description
-        )
+        return (self.name, self.slug, self.description)
 
 
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'webhooks'
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class DeviceType(PrimaryModel):
     """
@@ -110,60 +93,41 @@ class DeviceType(PrimaryModel):
     When a new Device of this type is created, the appropriate console, power, and interface objects (as defined by the
     DeviceType) are automatically created as well.
     """
-    manufacturer = models.ForeignKey(
-        to='dcim.Manufacturer',
-        on_delete=models.PROTECT,
-        related_name='device_types'
-    )
-    model = models.CharField(
-        max_length=100
-    )
-    slug = models.SlugField(
-        max_length=100
-    )
-    part_number = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text='Discrete part number (optional)'
-    )
-    u_height = models.PositiveSmallIntegerField(
-        default=1,
-        verbose_name='Height (U)'
-    )
+
+    manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
+    model = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100)
+    part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
+    u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     is_full_depth = models.BooleanField(
         default=True,
-        verbose_name='Is full depth',
-        help_text='Device consumes both front and rear rack faces'
+        verbose_name="Is full depth",
+        help_text="Device consumes both front and rear rack faces",
     )
     subdevice_role = models.CharField(
         max_length=50,
         choices=SubdeviceRoleChoices,
         blank=True,
-        verbose_name='Parent/child status',
-        help_text='Parent devices house child devices in device bays. Leave blank '
-                  'if this device type is neither a parent nor a child.'
+        verbose_name="Parent/child status",
+        help_text="Parent devices house child devices in device bays. Leave blank "
+        "if this device type is neither a parent nor a child.",
     )
-    front_image = models.ImageField(
-        upload_to='devicetype-images',
-        blank=True
-    )
-    rear_image = models.ImageField(
-        upload_to='devicetype-images',
-        blank=True
-    )
-    comments = models.TextField(
-        blank=True
-    )
+    front_image = models.ImageField(upload_to="devicetype-images", blank=True)
+    rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
+    comments = models.TextField(blank=True)
 
     clone_fields = [
-        'manufacturer', 'u_height', 'is_full_depth', 'subdevice_role',
+        "manufacturer",
+        "u_height",
+        "is_full_depth",
+        "subdevice_role",
     ]
 
     class Meta:
-        ordering = ['manufacturer', 'model']
+        ordering = ["manufacturer", "model"]
         unique_together = [
-            ['manufacturer', 'model'],
-            ['manufacturer', 'slug'],
+            ["manufacturer", "model"],
+            ["manufacturer", "slug"],
         ]
 
     def __str__(self):
@@ -180,89 +144,91 @@ class DeviceType(PrimaryModel):
         self._original_rear_image = self.rear_image
 
     def get_absolute_url(self):
-        return reverse('dcim:devicetype', args=[self.pk])
+        return reverse("dcim:devicetype", args=[self.pk])
 
     def to_yaml(self):
-        data = OrderedDict((
-            ('manufacturer', self.manufacturer.name),
-            ('model', self.model),
-            ('slug', self.slug),
-            ('part_number', self.part_number),
-            ('u_height', self.u_height),
-            ('is_full_depth', self.is_full_depth),
-            ('subdevice_role', self.subdevice_role),
-            ('comments', self.comments),
-        ))
+        data = OrderedDict(
+            (
+                ("manufacturer", self.manufacturer.name),
+                ("model", self.model),
+                ("slug", self.slug),
+                ("part_number", self.part_number),
+                ("u_height", self.u_height),
+                ("is_full_depth", self.is_full_depth),
+                ("subdevice_role", self.subdevice_role),
+                ("comments", self.comments),
+            )
+        )
 
         # Component templates
         if self.consoleporttemplates.exists():
-            data['console-ports'] = [
+            data["console-ports"] = [
                 {
-                    'name': c.name,
-                    'type': c.type,
+                    "name": c.name,
+                    "type": c.type,
                 }
                 for c in self.consoleporttemplates.all()
             ]
         if self.consoleserverporttemplates.exists():
-            data['console-server-ports'] = [
+            data["console-server-ports"] = [
                 {
-                    'name': c.name,
-                    'type': c.type,
+                    "name": c.name,
+                    "type": c.type,
                 }
                 for c in self.consoleserverporttemplates.all()
             ]
         if self.powerporttemplates.exists():
-            data['power-ports'] = [
+            data["power-ports"] = [
                 {
-                    'name': c.name,
-                    'type': c.type,
-                    'maximum_draw': c.maximum_draw,
-                    'allocated_draw': c.allocated_draw,
+                    "name": c.name,
+                    "type": c.type,
+                    "maximum_draw": c.maximum_draw,
+                    "allocated_draw": c.allocated_draw,
                 }
                 for c in self.powerporttemplates.all()
             ]
         if self.poweroutlettemplates.exists():
-            data['power-outlets'] = [
+            data["power-outlets"] = [
                 {
-                    'name': c.name,
-                    'type': c.type,
-                    'power_port': c.power_port.name if c.power_port else None,
-                    'feed_leg': c.feed_leg,
+                    "name": c.name,
+                    "type": c.type,
+                    "power_port": c.power_port.name if c.power_port else None,
+                    "feed_leg": c.feed_leg,
                 }
                 for c in self.poweroutlettemplates.all()
             ]
         if self.interfacetemplates.exists():
-            data['interfaces'] = [
+            data["interfaces"] = [
                 {
-                    'name': c.name,
-                    'type': c.type,
-                    'mgmt_only': c.mgmt_only,
+                    "name": c.name,
+                    "type": c.type,
+                    "mgmt_only": c.mgmt_only,
                 }
                 for c in self.interfacetemplates.all()
             ]
         if self.frontporttemplates.exists():
-            data['front-ports'] = [
+            data["front-ports"] = [
                 {
-                    'name': c.name,
-                    'type': c.type,
-                    'rear_port': c.rear_port.name,
-                    'rear_port_position': c.rear_port_position,
+                    "name": c.name,
+                    "type": c.type,
+                    "rear_port": c.rear_port.name,
+                    "rear_port_position": c.rear_port_position,
                 }
                 for c in self.frontporttemplates.all()
             ]
         if self.rearporttemplates.exists():
-            data['rear-ports'] = [
+            data["rear-ports"] = [
                 {
-                    'name': c.name,
-                    'type': c.type,
-                    'positions': c.positions,
+                    "name": c.name,
+                    "type": c.type,
+                    "positions": c.positions,
                 }
                 for c in self.rearporttemplates.all()
             ]
         if self.devicebaytemplates.exists():
-            data['device-bays'] = [
+            data["device-bays"] = [
                 {
-                    'name': c.name,
+                    "name": c.name,
                 }
                 for c in self.devicebaytemplates.all()
             ]
@@ -279,43 +245,40 @@ class DeviceType(PrimaryModel):
             for d in Device.objects.filter(device_type=self, position__isnull=False):
                 face_required = None if self.is_full_depth else d.face
                 u_available = d.rack.get_available_units(
-                    u_height=self.u_height,
-                    rack_face=face_required,
-                    exclude=[d.pk]
+                    u_height=self.u_height, rack_face=face_required, exclude=[d.pk]
                 )
                 if d.position not in u_available:
-                    raise ValidationError({
-                        'u_height': "Device {} in rack {} does not have sufficient space to accommodate a height of "
-                                    "{}U".format(d, d.rack, self.u_height)
-                    })
+                    raise ValidationError(
+                        {
+                            "u_height": "Device {} in rack {} does not have sufficient space to accommodate a height of "
+                            "{}U".format(d, d.rack, self.u_height)
+                        }
+                    )
 
         # If modifying the height of an existing DeviceType to 0U, check for any instances assigned to a rack position.
         elif not self._state.adding and self._original_u_height > 0 and self.u_height == 0:
-            racked_instance_count = Device.objects.filter(
-                device_type=self,
-                position__isnull=False
-            ).count()
+            racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
                 url = f"{reverse('dcim:device_list')}?manufactuer_id={self.manufacturer_id}&device_type_id={self.pk}"
-                raise ValidationError({
-                    'u_height': mark_safe(
-                        f'Unable to set 0U height: Found <a href="{url}">{racked_instance_count} instances</a> already '
-                        f'mounted within racks.'
-                    )
-                })
+                raise ValidationError(
+                    {
+                        "u_height": mark_safe(
+                            f'Unable to set 0U height: Found <a href="{url}">{racked_instance_count} instances</a> already '
+                            f"mounted within racks."
+                        )
+                    }
+                )
 
-        if (
-                self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT
-        ) and self.devicebaytemplates.count():
-            raise ValidationError({
-                'subdevice_role': "Must delete all device bay templates associated with this device before "
-                                  "declassifying it as a parent device."
-            })
+        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.devicebaytemplates.count():
+            raise ValidationError(
+                {
+                    "subdevice_role": "Must delete all device bay templates associated with this device before "
+                    "declassifying it as a parent device."
+                }
+            )
 
         if self.u_height and self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD:
-            raise ValidationError({
-                'u_height': "Child device types must be 0U."
-            })
+            raise ValidationError({"u_height": "Child device types must be 0U."})
 
     def save(self, *args, **kwargs):
         ret = super().save(*args, **kwargs)
@@ -339,7 +302,7 @@ class DeviceType(PrimaryModel):
 
     @property
     def display_name(self):
-        return f'{self.manufacturer.name} {self.model}'
+        return f"{self.manufacturer.name} {self.model}"
 
     @property
     def is_parent_device(self):
@@ -354,46 +317,35 @@ class DeviceType(PrimaryModel):
 # Devices
 #
 
-@extras_features(
-    'custom_fields',
-    'custom_validators',
-    'relationships',
-    'graphql'
-)
+
+@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
 class DeviceRole(OrganizationalModel):
     """
     Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
     color to be used when displaying rack elevations. The vm_role field determines whether the role is applicable to
     virtual machines as well.
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
-    color = ColorField(
-        default=ColorChoices.COLOR_GREY
-    )
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    color = ColorField(default=ColorChoices.COLOR_GREY)
     vm_role = models.BooleanField(
         default=True,
-        verbose_name='VM Role',
-        help_text='Virtual machines may be assigned to this role'
+        verbose_name="VM Role",
+        help_text="Virtual machines may be assigned to this role",
     )
     description = models.CharField(
         max_length=200,
         blank=True,
     )
 
-    csv_headers = ['name', 'slug', 'color', 'vm_role', 'description']
+    csv_headers = ["name", "slug", "color", "vm_role", "description"]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def get_absolute_url(self):
-        return reverse('dcim:devicerole', args=[self.slug])
+        return reverse("dcim:devicerole", args=[self.slug])
 
     def __str__(self):
         return self.name
@@ -408,62 +360,56 @@ class DeviceRole(OrganizationalModel):
         )
 
 
-@extras_features(
-    'custom_fields',
-    'custom_validators',
-    'relationships',
-    'graphql'
-)
+@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
     Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information by
     specifying a NAPALM driver.
     """
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True
-    )
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
     manufacturer = models.ForeignKey(
-        to='dcim.Manufacturer',
+        to="dcim.Manufacturer",
         on_delete=models.PROTECT,
-        related_name='platforms',
+        related_name="platforms",
         blank=True,
         null=True,
-        help_text='Optionally limit this platform to devices of a certain manufacturer'
+        help_text="Optionally limit this platform to devices of a certain manufacturer",
     )
     napalm_driver = models.CharField(
         max_length=50,
         blank=True,
-        verbose_name='NAPALM driver',
-        help_text='The name of the NAPALM driver to use when interacting with devices'
+        verbose_name="NAPALM driver",
+        help_text="The name of the NAPALM driver to use when interacting with devices",
     )
     napalm_args = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        verbose_name='NAPALM arguments',
-        help_text='Additional arguments to pass when initiating the NAPALM driver (JSON format)'
+        verbose_name="NAPALM arguments",
+        help_text="Additional arguments to pass when initiating the NAPALM driver (JSON format)",
     )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
+    description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ['name', 'slug', 'manufacturer', 'napalm_driver', 'napalm_args', 'description']
+    csv_headers = [
+        "name",
+        "slug",
+        "manufacturer",
+        "napalm_driver",
+        "napalm_args",
+        "description",
+    ]
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('dcim:platform', args=[self.slug])
+        return reverse("dcim:platform", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -477,14 +423,14 @@ class Platform(OrganizationalModel):
 
 
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'statuses',
-    'webhooks'
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "statuses",
+    "webhooks",
 )
 class Device(PrimaryModel, ConfigContextModel, StatusModel):
     """
@@ -498,164 +444,137 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     by the component templates assigned to its DeviceType. Components can also be added, modified, or deleted after the
     creation of a Device.
     """
-    device_type = models.ForeignKey(
-        to='dcim.DeviceType',
-        on_delete=models.PROTECT,
-        related_name='instances'
-    )
-    device_role = models.ForeignKey(
-        to='dcim.DeviceRole',
-        on_delete=models.PROTECT,
-        related_name='devices'
-    )
+
+    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="instances")
+    device_role = models.ForeignKey(to="dcim.DeviceRole", on_delete=models.PROTECT, related_name="devices")
     tenant = models.ForeignKey(
-        to='tenancy.Tenant',
+        to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name='devices',
+        related_name="devices",
         blank=True,
-        null=True
+        null=True,
     )
     platform = models.ForeignKey(
-        to='dcim.Platform',
+        to="dcim.Platform",
         on_delete=models.SET_NULL,
-        related_name='devices',
+        related_name="devices",
         blank=True,
-        null=True
+        null=True,
     )
-    name = models.CharField(
-        max_length=64,
-        blank=True,
-        null=True
-    )
-    _name = NaturalOrderingField(
-        target_field='name',
-        max_length=100,
-        blank=True,
-        null=True
-    )
-    serial = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name='Serial number'
-    )
+    name = models.CharField(max_length=64, blank=True, null=True)
+    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True)
+    serial = models.CharField(max_length=50, blank=True, verbose_name="Serial number")
     asset_tag = models.CharField(
         max_length=50,
         blank=True,
         null=True,
         unique=True,
-        verbose_name='Asset tag',
-        help_text='A unique tag used to identify this device'
+        verbose_name="Asset tag",
+        help_text="A unique tag used to identify this device",
     )
-    site = models.ForeignKey(
-        to='dcim.Site',
-        on_delete=models.PROTECT,
-        related_name='devices'
-    )
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
     rack = models.ForeignKey(
-        to='dcim.Rack',
+        to="dcim.Rack",
         on_delete=models.PROTECT,
-        related_name='devices',
+        related_name="devices",
         blank=True,
-        null=True
+        null=True,
     )
     position = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
-        verbose_name='Position (U)',
-        help_text='The lowest-numbered unit occupied by the device'
+        verbose_name="Position (U)",
+        help_text="The lowest-numbered unit occupied by the device",
     )
-    face = models.CharField(
-        max_length=50,
-        blank=True,
-        choices=DeviceFaceChoices,
-        verbose_name='Rack face'
-    )
+    face = models.CharField(max_length=50, blank=True, choices=DeviceFaceChoices, verbose_name="Rack face")
     primary_ip4 = models.OneToOneField(
-        to='ipam.IPAddress',
+        to="ipam.IPAddress",
         on_delete=models.SET_NULL,
-        related_name='primary_ip4_for',
+        related_name="primary_ip4_for",
         blank=True,
         null=True,
-        verbose_name='Primary IPv4'
+        verbose_name="Primary IPv4",
     )
     primary_ip6 = models.OneToOneField(
-        to='ipam.IPAddress',
+        to="ipam.IPAddress",
         on_delete=models.SET_NULL,
-        related_name='primary_ip6_for',
+        related_name="primary_ip6_for",
         blank=True,
         null=True,
-        verbose_name='Primary IPv6'
+        verbose_name="Primary IPv6",
     )
     cluster = models.ForeignKey(
-        to='virtualization.Cluster',
+        to="virtualization.Cluster",
         on_delete=models.SET_NULL,
-        related_name='devices',
+        related_name="devices",
         blank=True,
-        null=True
+        null=True,
     )
     virtual_chassis = models.ForeignKey(
-        to='VirtualChassis',
+        to="VirtualChassis",
         on_delete=models.SET_NULL,
-        related_name='members',
-        blank=True,
-        null=True
-    )
-    vc_position = models.PositiveSmallIntegerField(
+        related_name="members",
         blank=True,
         null=True,
-        validators=[MaxValueValidator(255)]
     )
-    vc_priority = models.PositiveSmallIntegerField(
-        blank=True,
-        null=True,
-        validators=[MaxValueValidator(255)]
-    )
-    comments = models.TextField(
-        blank=True
-    )
-    images = GenericRelation(
-        to='extras.ImageAttachment'
-    )
+    vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
+    vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
+    comments = models.TextField(blank=True)
+    images = GenericRelation(to="extras.ImageAttachment")
 
     objects = ConfigContextModelQuerySet.as_manager()
 
     csv_headers = [
-        'name', 'device_role', 'tenant', 'manufacturer', 'device_type', 'platform', 'serial', 'asset_tag', 'status',
-        'site', 'rack_group', 'rack_name', 'position', 'face', 'comments',
+        "name",
+        "device_role",
+        "tenant",
+        "manufacturer",
+        "device_type",
+        "platform",
+        "serial",
+        "asset_tag",
+        "status",
+        "site",
+        "rack_group",
+        "rack_name",
+        "position",
+        "face",
+        "comments",
     ]
     clone_fields = [
-        'device_type', 'device_role', 'tenant', 'platform', 'site', 'rack', 'status', 'cluster',
+        "device_type",
+        "device_role",
+        "tenant",
+        "platform",
+        "site",
+        "rack",
+        "status",
+        "cluster",
     ]
 
     class Meta:
-        ordering = ('_name',)  # Name may be null
+        ordering = ("_name",)  # Name may be null
         unique_together = (
-            ('site', 'tenant', 'name'),  # See validate_unique below
-            ('rack', 'position', 'face'),
-            ('virtual_chassis', 'vc_position'),
+            ("site", "tenant", "name"),  # See validate_unique below
+            ("rack", "position", "face"),
+            ("virtual_chassis", "vc_position"),
         )
 
     def __str__(self):
         return self.display_name or super().__str__()
 
     def get_absolute_url(self):
-        return reverse('dcim:device', args=[self.pk])
+        return reverse("dcim:device", args=[self.pk])
 
     def validate_unique(self, exclude=None):
 
         # Check for a duplicate name on a device assigned to the same Site and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
-        if self.name and hasattr(self, 'site') and self.tenant is None:
-            if Device.objects.exclude(pk=self.pk).filter(
-                    name=self.name,
-                    site=self.site,
-                    tenant__isnull=True
-            ):
-                raise ValidationError({
-                    'name': 'A device with this name already exists.'
-                })
+        if self.name and hasattr(self, "site") and self.tenant is None:
+            if Device.objects.exclude(pk=self.pk).filter(name=self.name, site=self.site, tenant__isnull=True):
+                raise ValidationError({"name": "A device with this name already exists."})
 
         super().validate_unique(exclude)
 
@@ -664,58 +583,74 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
         # Validate site/rack combination
         if self.rack and self.site != self.rack.site:
-            raise ValidationError({
-                'rack': f"Rack {self.rack} does not belong to site {self.site}.",
-            })
+            raise ValidationError(
+                {
+                    "rack": f"Rack {self.rack} does not belong to site {self.site}.",
+                }
+            )
 
         if self.rack is None:
             if self.face:
-                raise ValidationError({
-                    'face': "Cannot select a rack face without assigning a rack.",
-                })
+                raise ValidationError(
+                    {
+                        "face": "Cannot select a rack face without assigning a rack.",
+                    }
+                )
             if self.position:
-                raise ValidationError({
-                    'position': "Cannot select a rack position without assigning a rack.",
-                })
+                raise ValidationError(
+                    {
+                        "position": "Cannot select a rack position without assigning a rack.",
+                    }
+                )
 
         # Validate position/face combination
         if self.position and not self.face:
-            raise ValidationError({
-                'face': "Must specify rack face when defining rack position.",
-            })
+            raise ValidationError(
+                {
+                    "face": "Must specify rack face when defining rack position.",
+                }
+            )
 
         # Prevent 0U devices from being assigned to a specific position
         if self.position and self.device_type.u_height == 0:
-            raise ValidationError({
-                'position': f"A U0 device type ({self.device_type}) cannot be assigned to a rack position."
-            })
+            raise ValidationError(
+                {"position": f"A U0 device type ({self.device_type}) cannot be assigned to a rack position."}
+            )
 
         if self.rack:
 
             try:
                 # Child devices cannot be assigned to a rack face/unit
                 if self.device_type.is_child_device and self.face:
-                    raise ValidationError({
-                        'face': "Child device types cannot be assigned to a rack face. This is an attribute of the "
-                                "parent device."
-                    })
+                    raise ValidationError(
+                        {
+                            "face": "Child device types cannot be assigned to a rack face. This is an attribute of the "
+                            "parent device."
+                        }
+                    )
                 if self.device_type.is_child_device and self.position:
-                    raise ValidationError({
-                        'position': "Child device types cannot be assigned to a rack position. This is an attribute of "
-                                    "the parent device."
-                    })
+                    raise ValidationError(
+                        {
+                            "position": "Child device types cannot be assigned to a rack position. This is an attribute of "
+                            "the parent device."
+                        }
+                    )
 
                 # Validate rack space
                 rack_face = self.face if not self.device_type.is_full_depth else None
                 exclude_list = [self.pk] if not self._state.adding else []
                 available_units = self.rack.get_available_units(
-                    u_height=self.device_type.u_height, rack_face=rack_face, exclude=exclude_list
+                    u_height=self.device_type.u_height,
+                    rack_face=rack_face,
+                    exclude=exclude_list,
                 )
                 if self.position and self.position not in available_units:
-                    raise ValidationError({
-                        'position': f"U{self.position} is already occupied or does not have sufficient space to "
-                                    f"accommodate this device type: {self.device_type} ({self.device_type.u_height}U)"
-                    })
+                    raise ValidationError(
+                        {
+                            "position": f"U{self.position} is already occupied or does not have sufficient space to "
+                            f"accommodate this device type: {self.device_type} ({self.device_type.u_height}U)"
+                        }
+                    )
 
             except DeviceType.DoesNotExist:
                 pass
@@ -724,50 +659,52 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         vc_interfaces = self.vc_interfaces.all()
         if self.primary_ip4:
             if self.primary_ip4.family != 4:
-                raise ValidationError({
-                    'primary_ip4': f"{self.primary_ip4} is not an IPv4 address."
-                })
+                raise ValidationError({"primary_ip4": f"{self.primary_ip4} is not an IPv4 address."})
             if self.primary_ip4.assigned_object in vc_interfaces:
                 pass
-            elif self.primary_ip4.nat_inside is not None and self.primary_ip4.nat_inside.assigned_object in vc_interfaces:
+            elif (
+                self.primary_ip4.nat_inside is not None and self.primary_ip4.nat_inside.assigned_object in vc_interfaces
+            ):
                 pass
             else:
-                raise ValidationError({
-                    'primary_ip4': f"The specified IP address ({self.primary_ip4}) is not assigned to this device."
-                })
+                raise ValidationError(
+                    {"primary_ip4": f"The specified IP address ({self.primary_ip4}) is not assigned to this device."}
+                )
         if self.primary_ip6:
             if self.primary_ip6.family != 6:
-                raise ValidationError({
-                    'primary_ip6': f"{self.primary_ip6} is not an IPv6 address."
-                })
+                raise ValidationError({"primary_ip6": f"{self.primary_ip6} is not an IPv6 address."})
             if self.primary_ip6.assigned_object in vc_interfaces:
                 pass
-            elif self.primary_ip6.nat_inside is not None and self.primary_ip6.nat_inside.assigned_object in vc_interfaces:
+            elif (
+                self.primary_ip6.nat_inside is not None and self.primary_ip6.nat_inside.assigned_object in vc_interfaces
+            ):
                 pass
             else:
-                raise ValidationError({
-                    'primary_ip6': f"The specified IP address ({self.primary_ip6}) is not assigned to this device."
-                })
+                raise ValidationError(
+                    {"primary_ip6": f"The specified IP address ({self.primary_ip6}) is not assigned to this device."}
+                )
 
         # Validate manufacturer/platform
-        if hasattr(self, 'device_type') and self.platform:
+        if hasattr(self, "device_type") and self.platform:
             if self.platform.manufacturer and self.platform.manufacturer != self.device_type.manufacturer:
-                raise ValidationError({
-                    'platform': "The assigned platform is limited to {} device types, but this device's type belongs "
-                                "to {}.".format(self.platform.manufacturer, self.device_type.manufacturer)
-                })
+                raise ValidationError(
+                    {
+                        "platform": "The assigned platform is limited to {} device types, but this device's type belongs "
+                        "to {}.".format(self.platform.manufacturer, self.device_type.manufacturer)
+                    }
+                )
 
         # A Device can only be assigned to a Cluster in the same Site (or no Site)
         if self.cluster and self.cluster.site is not None and self.cluster.site != self.site:
-            raise ValidationError({
-                'cluster': "The assigned cluster belongs to a different site ({})".format(self.cluster.site)
-            })
+            raise ValidationError(
+                {"cluster": "The assigned cluster belongs to a different site ({})".format(self.cluster.site)}
+            )
 
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
-            raise ValidationError({
-                'vc_position': "A device assigned to a virtual chassis must have its position defined."
-            })
+            raise ValidationError(
+                {"vc_position": "A device assigned to a virtual chassis must have its position defined."}
+            )
 
     def save(self, *args, **kwargs):
 
@@ -777,30 +714,16 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
         # If this is a new Device, instantiate all of the related components per the DeviceType definition
         if is_new:
-            ConsolePort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.consoleporttemplates.all()]
-            )
+            ConsolePort.objects.bulk_create([x.instantiate(self) for x in self.device_type.consoleporttemplates.all()])
             ConsoleServerPort.objects.bulk_create(
                 [x.instantiate(self) for x in self.device_type.consoleserverporttemplates.all()]
             )
-            PowerPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.powerporttemplates.all()]
-            )
-            PowerOutlet.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.poweroutlettemplates.all()]
-            )
-            Interface.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.interfacetemplates.all()]
-            )
-            RearPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.rearporttemplates.all()]
-            )
-            FrontPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.frontporttemplates.all()]
-            )
-            DeviceBay.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.devicebaytemplates.all()]
-            )
+            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.powerporttemplates.all()])
+            PowerOutlet.objects.bulk_create([x.instantiate(self) for x in self.device_type.poweroutlettemplates.all()])
+            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interfacetemplates.all()])
+            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rearporttemplates.all()])
+            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.frontporttemplates.all()])
+            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.devicebaytemplates.all()])
 
         # Update Site and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
@@ -811,7 +734,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
     def to_csv(self):
         return (
-            self.name or '',
+            self.name or "",
             self.device_role.name,
             self.tenant.name if self.tenant else None,
             self.device_type.manufacturer.name,
@@ -833,11 +756,11 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         if self.name:
             return self.name
         elif self.virtual_chassis:
-            return f'{self.virtual_chassis.name}:{self.vc_position} ({self.pk})'
+            return f"{self.virtual_chassis.name}:{self.vc_position} ({self.pk})"
         elif self.device_type:
-            return f'{self.device_type.manufacturer} {self.device_type.model} ({self.pk})'
+            return f"{self.device_type.manufacturer} {self.device_type.model} ({self.pk})"
         else:
-            return ''  # Device has not yet been created
+            return ""  # Device has not yet been created
 
     @property
     def identifier(self):
@@ -846,7 +769,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         """
         if self.name is not None:
             return self.name
-        return '{{{}}}'.format(self.pk)
+        return "{{{}}}".format(self.pk)
 
     @property
     def primary_ip(self):
@@ -881,13 +804,20 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         Return a QuerySet or PK list matching all Cables connected to a component of this Device.
         """
         from .cables import Cable
+
         cable_pks = []
         for component_model in [
-            ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, FrontPort, RearPort
+            ConsolePort,
+            ConsoleServerPort,
+            PowerPort,
+            PowerOutlet,
+            Interface,
+            FrontPort,
+            RearPort,
         ]:
-            cable_pks += component_model.objects.filter(
-                device=self, cable__isnull=False
-            ).values_list('cable', flat=True)
+            cable_pks += component_model.objects.filter(device=self, cable__isnull=False).values_list(
+                "cable", flat=True
+            )
         if pk_list:
             return cable_pks
         return Cable.objects.filter(pk__in=cable_pks)
@@ -903,45 +833,42 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 # Virtual chassis
 #
 
+
 @extras_features(
-    'custom_fields',
-    'custom_links',
-    'custom_validators',
-    'export_templates',
-    'graphql',
-    'relationships',
-    'webhooks'
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class VirtualChassis(PrimaryModel):
     """
     A collection of Devices which operate with a shared control plane (e.g. a switch stack).
     """
-    master = models.OneToOneField(
-        to='Device',
-        on_delete=models.PROTECT,
-        related_name='vc_master_for',
-        blank=True,
-        null=True
-    )
-    name = models.CharField(
-        max_length=64
-    )
-    domain = models.CharField(
-        max_length=30,
-        blank=True
-    )
 
-    csv_headers = ['name', 'domain', 'master']
+    master = models.OneToOneField(
+        to="Device",
+        on_delete=models.PROTECT,
+        related_name="vc_master_for",
+        blank=True,
+        null=True,
+    )
+    name = models.CharField(max_length=64)
+    domain = models.CharField(max_length=30, blank=True)
+
+    csv_headers = ["name", "domain", "master"]
 
     class Meta:
-        ordering = ['name']
-        verbose_name_plural = 'virtual chassis'
+        ordering = ["name"]
+        verbose_name_plural = "virtual chassis"
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('dcim:virtualchassis', kwargs={'pk': self.pk})
+        return reverse("dcim:virtualchassis", kwargs={"pk": self.pk})
 
     def clean(self):
         super().clean()
@@ -949,23 +876,20 @@ class VirtualChassis(PrimaryModel):
         # Verify that the selected master device has been assigned to this VirtualChassis. (Skip when creating a new
         # VirtualChassis.)
         if (not self._state.adding) and self.master and self.master not in self.members.all():
-            raise ValidationError({
-                'master': f"The selected master ({self.master}) is not assigned to this virtual chassis."
-            })
+            raise ValidationError(
+                {"master": f"The selected master ({self.master}) is not assigned to this virtual chassis."}
+            )
 
     def delete(self, *args, **kwargs):
 
         # Check for LAG interfaces split across member chassis
-        interfaces = Interface.objects.filter(
-            device__in=self.members.all(),
-            lag__isnull=False
-        ).exclude(
-            lag__device=F('device')
+        interfaces = Interface.objects.filter(device__in=self.members.all(), lag__isnull=False).exclude(
+            lag__device=F("device")
         )
         if interfaces:
             raise ProtectedError(
                 f"Unable to delete virtual chassis {self}. There are member interfaces which form a cross-chassis LAG",
-                interfaces
+                interfaces,
             )
 
         return super().delete(*args, **kwargs)

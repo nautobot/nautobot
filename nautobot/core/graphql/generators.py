@@ -1,6 +1,6 @@
 """Library of generators for GraphQL."""
+
 import logging
-from importlib import import_module
 
 import graphene
 from graphene_django import DjangoObjectType
@@ -10,12 +10,13 @@ from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.utilities.utils import get_filterset_for_model
 
-logger = logging.getLogger('nautobot.graphql.generators')
+logger = logging.getLogger("nautobot.graphql.generators")
 RESOLVER_PREFIX = "resolve_"
 
 
 def generate_restricted_queryset():
     """Generate a function to return a restricted queryset compatible with the internal permissions system."""
+
     def get_queryset(queryset, info):
         return queryset.restrict(info.context.user, "view")
 
@@ -29,6 +30,7 @@ def generate_custom_field_resolver(name, resolver_name):
         name (str): name of the custom field to resolve
         resolver_name (str): name of the resolver as declare in DjangoObjectType
     """
+
     def resolve_custom_field(self, info, **kwargs):
         return self.cf.get(name, None)
 
@@ -46,14 +48,13 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         site (site): side of the relationship to use for the resolver
         peer_model (Model): Django Model of the peer of this relationship
     """
+
     def resolve_relationship(self, info, **kwargs):
         """Return a queryset or an object depending on the type of the relationship."""
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
         query_params[f"{side}_id"] = self.pk
-        queryset_ids = RelationshipAssociation.objects.filter(
-            **query_params
-        ).values_list(f"{peer_side}_id", flat=True)
+        queryset_ids = RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True)
 
         if relationship.has_many(peer_side):
             return peer_model.objects.filter(id__in=queryset_ids)
@@ -162,7 +163,9 @@ def generate_list_resolver(schema_type, resolver_name):
     def list_resolver(self, info, **kwargs):
         if schema_type._meta.filterset_class:
             fsargs = {key: [value] for key, value in kwargs.items()}
-            return schema_type._meta.filterset_class(fsargs, model.objects.restrict(info.context.user, "view").all()).qs.all()
+            return schema_type._meta.filterset_class(
+                fsargs, model.objects.restrict(info.context.user, "view").all()
+            ).qs.all()
 
         return model.objects.restrict(info.context.user, "view").all()
 

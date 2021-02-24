@@ -16,11 +16,14 @@ except NameError:
 try:
     execfile
 except NameError:  # Python3
+
     def execfile(afile, globalz=None, localz=None):
         with open(afile, "r") as fh:
             exec(fh.read(), globalz, localz)
 
+
 import sys
+
 try:
     from django.utils.importlib import import_module  # django<=1.9
 except ImportError:
@@ -61,9 +64,7 @@ class LoganImporter(object):
         # TODO(dcramer): is there a better way to handle validation so it
         # is lazy and actually happens in LoganLoader?
         try:
-            execfile(self.config_path, {
-                '__file__': self.config_path
-            })
+            execfile(self.config_path, {"__file__": self.config_path})
         except Exception as e:
             exc_info = sys.exc_info()
             raise ConfigurationError(unicode(e), exc_info[2])

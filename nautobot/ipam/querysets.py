@@ -4,7 +4,6 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class PrefixQuerySet(RestrictedQuerySet):
-
     def annotate_tree(self):
         """
         Annotate the number of parent and child prefixes for each Prefix. Raw SQL is needed for these subqueries
@@ -17,13 +16,13 @@ class PrefixQuerySet(RestrictedQuerySet):
         FAKE_UUID = uuid.uuid4()
         return self.extra(
             select={
-                'parents': 'SELECT COUNT(U0."prefix") AS "c" '
-                           'FROM "ipam_prefix" U0 '
-                           'WHERE (U0."prefix" >> "ipam_prefix"."prefix" '
-                           f'AND COALESCE(U0."vrf_id", \'{FAKE_UUID}\') = COALESCE("ipam_prefix"."vrf_id", \'{FAKE_UUID}\'))',
-                'children': 'SELECT COUNT(U1."prefix") AS "c" '
-                            'FROM "ipam_prefix" U1 '
-                            'WHERE (U1."prefix" << "ipam_prefix"."prefix" '
-                            f'AND COALESCE(U1."vrf_id", \'{FAKE_UUID}\') = COALESCE("ipam_prefix"."vrf_id", \'{FAKE_UUID}\'))',
+                "parents": 'SELECT COUNT(U0."prefix") AS "c" '
+                'FROM "ipam_prefix" U0 '
+                'WHERE (U0."prefix" >> "ipam_prefix"."prefix" '
+                f'AND COALESCE(U0."vrf_id", \'{FAKE_UUID}\') = COALESCE("ipam_prefix"."vrf_id", \'{FAKE_UUID}\'))',
+                "children": 'SELECT COUNT(U1."prefix") AS "c" '
+                'FROM "ipam_prefix" U1 '
+                'WHERE (U1."prefix" << "ipam_prefix"."prefix" '
+                f'AND COALESCE(U1."vrf_id", \'{FAKE_UUID}\') = COALESCE("ipam_prefix"."vrf_id", \'{FAKE_UUID}\'))',
             }
         )

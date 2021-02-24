@@ -13,25 +13,28 @@ class MultipleChoiceJSONField(serializers.MultipleChoiceField):
 
 class StatusSerializerField(serializers.SlugRelatedField):
     """Serializer field for `Status` object fields."""
+
     show_choices = True
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('slug_field', 'slug')
+        kwargs.setdefault("slug_field", "slug")
         super().__init__(**kwargs)
 
     def to_representation(self, obj):
         """Make this field compatible w/ the existing API for `ChoiceField`."""
-        if obj == '':
+        if obj == "":
             return None
 
-        return OrderedDict([
-            ('value', obj.slug),
-            ('label', str(obj)),
-        ])
+        return OrderedDict(
+            [
+                ("value", obj.slug),
+                ("label", str(obj)),
+            ]
+        )
 
     def to_internal_value(self, data):
         """Always lower-case the custom choice value."""
-        if hasattr(data, 'lower'):
+        if hasattr(data, "lower"):
             data = data.lower()
         return super().to_internal_value(data)
 
@@ -52,10 +55,4 @@ class StatusSerializerField(serializers.SlugRelatedField):
         if cutoff is not None:
             queryset = queryset[:cutoff]
 
-        return OrderedDict([
-            (
-                item.slug,
-                self.display_value(item)
-            )
-            for item in queryset
-        ])
+        return OrderedDict([(item.slug, self.display_value(item)) for item in queryset])

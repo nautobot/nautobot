@@ -23,17 +23,17 @@ def change_logging(request):
     handle_deleted_object = curry(_handle_deleted_object, request)
 
     # Connect our receivers to the post_save and post_delete signals.
-    post_save.connect(handle_changed_object, dispatch_uid='handle_changed_object')
-    m2m_changed.connect(handle_changed_object, dispatch_uid='handle_changed_object')
-    pre_delete.connect(handle_deleted_object, dispatch_uid='handle_deleted_object')
+    post_save.connect(handle_changed_object, dispatch_uid="handle_changed_object")
+    m2m_changed.connect(handle_changed_object, dispatch_uid="handle_changed_object")
+    pre_delete.connect(handle_deleted_object, dispatch_uid="handle_deleted_object")
 
     yield
 
     # Disconnect change logging signals. This is necessary to avoid recording any errant
     # changes during test cleanup.
-    post_save.disconnect(handle_changed_object, dispatch_uid='handle_changed_object')
-    m2m_changed.disconnect(handle_changed_object, dispatch_uid='handle_changed_object')
-    pre_delete.disconnect(handle_deleted_object, dispatch_uid='handle_deleted_object')
+    post_save.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
+    m2m_changed.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
+    pre_delete.disconnect(handle_deleted_object, dispatch_uid="handle_deleted_object")
 
 
 @contextmanager

@@ -6,7 +6,16 @@ from django.db.models.signals import post_save, post_delete, pre_delete
 from django.db import transaction
 from django.dispatch import receiver
 
-from .models import Cable, CablePath, Device, PathEndpoint, PowerPanel, Rack, RackGroup, VirtualChassis
+from .models import (
+    Cable,
+    CablePath,
+    Device,
+    PathEndpoint,
+    PowerPanel,
+    Rack,
+    RackGroup,
+    VirtualChassis,
+)
 
 
 def create_cablepath(node):
@@ -38,6 +47,7 @@ def rebuild_paths(obj):
 #
 # Site/rack/device assignment
 #
+
 
 @receiver(post_save, sender=RackGroup)
 def handle_rackgroup_site_change(instance, created, **kwargs):
@@ -71,6 +81,7 @@ def handle_rack_site_change(instance, created, **kwargs):
 #
 # Virtual chassis
 #
+
 
 @receiver(post_save, sender=VirtualChassis)
 def assign_virtualchassis_master(instance, created, **kwargs):
@@ -106,7 +117,7 @@ def update_connected_endpoints(instance, created, raw=False, **kwargs):
     """
     When a Cable is saved, check for and update its two connected endpoints
     """
-    logger = logging.getLogger('nautobot.dcim.cable')
+    logger = logging.getLogger("nautobot.dcim.cable")
     if raw:
         logger.debug(f"Skipping endpoint updates for imported cable {instance}")
         return
@@ -145,7 +156,7 @@ def nullify_connected_endpoints(instance, **kwargs):
     """
     When a Cable is deleted, check for and update its two connected endpoints
     """
-    logger = logging.getLogger('nautobot.dcim.cable')
+    logger = logging.getLogger("nautobot.dcim.cable")
 
     # Disassociate the Cable from its termination points
     if instance.termination_a is not None:
@@ -168,7 +179,7 @@ def nullify_connected_endpoints(instance, **kwargs):
                 destination_type=ContentType.objects.get_for_model(cp.destination) if cp.destination else None,
                 destination_id=cp.destination.pk if cp.destination else None,
                 is_active=cp.is_active,
-                is_split=cp.is_split
+                is_split=cp.is_split,
             )
         else:
             cablepath.delete()

@@ -7,3 +7,8 @@ logan
 """
 
 from .runner import configure_app, run_app
+
+__all__ = (
+    "configure_app",
+    "run_app",
+)

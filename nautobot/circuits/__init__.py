@@ -1,1 +1,1 @@
-default_app_config = 'nautobot.circuits.apps.CircuitsConfig'
+default_app_config = "nautobot.circuits.apps.CircuitsConfig"

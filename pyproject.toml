@@ -63,6 +63,7 @@ svgwrite = "~1.4.1"
 pycodestyle = "~2.6.0"
 coverage = "~5.4"
 invoke = "~1.5.0"
+black = "^20.8b1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -70,3 +71,26 @@ nautobot-server = "nautobot.core.cli:main"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ['py36']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | settings.py     # This is where you define files that should not be stylized by black
+                     # the root of the project
+)
+'''

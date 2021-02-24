@@ -17,20 +17,20 @@ from .jobs import (
 )
 
 __all__ = [
-    'BaseScript',
-    'BooleanVar',
-    'ChoiceVar',
-    'FileVar',
-    'IntegerVar',
-    'IPAddressVar',
-    'IPAddressWithMaskVar',
-    'IPNetworkVar',
-    'MultiChoiceVar',
-    'MultiObjectVar',
-    'ObjectVar',
-    'Script',
-    'StringVar',
-    'TextVar',
+    "BaseScript",
+    "BooleanVar",
+    "ChoiceVar",
+    "FileVar",
+    "IntegerVar",
+    "IPAddressVar",
+    "IPAddressWithMaskVar",
+    "IPNetworkVar",
+    "MultiChoiceVar",
+    "MultiObjectVar",
+    "ObjectVar",
+    "Script",
+    "StringVar",
+    "TextVar",
 ]
 
 #
@@ -66,4 +66,5 @@ class Script(BaseScript, Job):
     """
     Classes which inherit this model will appear in the list of available scripts.
     """
+
     pass

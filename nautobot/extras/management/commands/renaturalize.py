@@ -9,8 +9,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'args', metavar='app_label.ModelName', nargs='*',
-            help='One or more specific models (each prefixed with its app_label) to renaturalize',
+            "args",
+            metavar="app_label.ModelName",
+            nargs="*",
+            help="One or more specific models (each prefixed with its app_label) to renaturalize",
         )
 
     def _get_models(self, names):
@@ -24,7 +26,7 @@ class Command(BaseCommand):
             # Collect all NaturalOrderingFields present on the specified models
             for name in names:
                 try:
-                    app_label, model_name = name.split('.')
+                    app_label, model_name = name.split(".")
                 except ValueError:
                     raise CommandError(
                         "Invalid format: {}. Models must be specified in the form app_label.ModelName.".format(name)
@@ -37,28 +39,20 @@ class Command(BaseCommand):
                     model = app_config.get_model(model_name)
                 except LookupError:
                     raise CommandError("Unknown model: {}.{}".format(app_label, model_name))
-                fields = [
-                    field for field in model._meta.concrete_fields if type(field) is NaturalOrderingField
-                ]
+                fields = [field for field in model._meta.concrete_fields if type(field) is NaturalOrderingField]
                 if not fields:
                     raise CommandError(
                         "Invalid model: {}.{} does not employ natural ordering".format(app_label, model_name)
                     )
-                models.append(
-                    (model, fields)
-                )
+                models.append((model, fields))
 
         else:
             # Find *all* models with NaturalOrderingFields
             for app_config in apps.get_app_configs():
                 for model in app_config.models.values():
-                    fields = [
-                        field for field in model._meta.concrete_fields if type(field) is NaturalOrderingField
-                    ]
+                    fields = [field for field in model._meta.concrete_fields if type(field) is NaturalOrderingField]
                     if fields:
-                        models.append(
-                            (model, fields)
-                        )
+                        models.append((model, fields))
 
         return models
 
@@ -66,7 +60,7 @@ class Command(BaseCommand):
 
         models = self._get_models(args)
 
-        if options['verbosity']:
+        if options["verbosity"]:
             self.stdout.write("Renaturalizing {} models.".format(len(models)))
 
         for model, fields in models:
@@ -76,10 +70,10 @@ class Command(BaseCommand):
                 count = 0
 
                 # Print the model and field name
-                if options['verbosity']:
+                if options["verbosity"]:
                     self.stdout.write(
                         "{}.{} ({})... ".format(model._meta.label, field.target_field, field.name),
-                        ending='\n' if options['verbosity'] >= 2 else ''
+                        ending="\n" if options["verbosity"] >= 2 else "",
                     )
                     self.stdout.flush()
 
@@ -88,24 +82,28 @@ class Command(BaseCommand):
                 for value in queryset:
                     naturalized_value = naturalize(value, max_length=field.max_length)
 
-                    if options['verbosity'] >= 2:
-                        self.stdout.write("  {} -> {}".format(value, naturalized_value), ending='')
+                    if options["verbosity"] >= 2:
+                        self.stdout.write("  {} -> {}".format(value, naturalized_value), ending="")
                         self.stdout.flush()
 
                     # Update each unique field value in bulk
                     changed = model.objects.filter(name=value).update(**{field.name: naturalized_value})
 
-                    if options['verbosity'] >= 2:
+                    if options["verbosity"] >= 2:
                         self.stdout.write(" ({})".format(changed))
                     count += changed
 
                 # Print the total count of alterations for the field
-                if options['verbosity'] >= 2:
-                    self.stdout.write(self.style.SUCCESS("{} {} updated ({} unique values)".format(
-                        count, model._meta.verbose_name_plural, queryset.count()
-                    )))
-                elif options['verbosity']:
+                if options["verbosity"] >= 2:
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            "{} {} updated ({} unique values)".format(
+                                count, model._meta.verbose_name_plural, queryset.count()
+                            )
+                        )
+                    )
+                elif options["verbosity"]:
                     self.stdout.write(self.style.SUCCESS(str(count)))
 
-        if options['verbosity']:
+        if options["verbosity"]:
             self.stdout.write(self.style.SUCCESS("Done."))

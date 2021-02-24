@@ -2,7 +2,7 @@ from nautobot.extras.plugins import PluginTemplateExtension
 
 
 class SiteContent(PluginTemplateExtension):
-    model = 'dcim.site'
+    model = "dcim.site"
 
     def left_page(self):
         return "SITE CONTENT - LEFT PAGE"

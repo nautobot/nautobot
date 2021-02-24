@@ -5,9 +5,9 @@ from nautobot.utilities.ordering import naturalize
 from .forms import ColorSelect
 
 ColorValidator = RegexValidator(
-    regex='^[0-9a-f]{6}$',
-    message='Enter a valid hexadecimal RGB color code.',
-    code='invalid'
+    regex="^[0-9a-f]{6}$",
+    message="Enter a valid hexadecimal RGB color code.",
+    code="invalid",
 )
 
 
@@ -19,7 +19,7 @@ class NullableCharField(models.CharField):
     def to_python(self, value):
         if isinstance(value, models.CharField):
             return value
-        return value or ''
+        return value or ""
 
     def get_prep_value(self, value):
         return value or None
@@ -30,11 +30,11 @@ class ColorField(models.CharField):
     description = "A hexadecimal RGB color code"
 
     def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 6
+        kwargs["max_length"] = 6
         super().__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
-        kwargs['widget'] = ColorSelect
+        kwargs["widget"] = ColorSelect
         return super().formfield(**kwargs)
 
 
@@ -45,6 +45,7 @@ class NaturalOrderingField(models.CharField):
     :param target_field: Name of the field of the parent model to be naturalized
     :param naturalize_function: The function used to generate a naturalized value (optional)
     """
+
     description = "Stores a representation of its target field suitable for natural ordering"
 
     def __init__(self, target_field, naturalize_function=naturalize, *args, **kwargs):
@@ -64,10 +65,10 @@ class NaturalOrderingField(models.CharField):
 
     def deconstruct(self):
         kwargs = super().deconstruct()[3]  # Pass kwargs from CharField
-        kwargs['naturalize_function'] = self.naturalize_function
+        kwargs["naturalize_function"] = self.naturalize_function
         return (
             self.name,
-            'utilities.fields.NaturalOrderingField',
+            "utilities.fields.NaturalOrderingField",
             [self.target_field],
             kwargs,
         )

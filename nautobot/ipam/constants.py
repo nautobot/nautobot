@@ -4,7 +4,7 @@ from .choices import IPAddressRoleChoices
 
 # BGP ASN bounds
 BGP_ASN_MIN = 1
-BGP_ASN_MAX = 2**32 - 1
+BGP_ASN_MAX = 2 ** 32 - 1
 
 
 #
@@ -33,8 +33,7 @@ PREFIX_LENGTH_MAX = 127  # IPv6
 #
 
 IPADDRESS_ASSIGNMENT_MODELS = Q(
-    Q(app_label='dcim', model='interface') |
-    Q(app_label='virtualization', model='vminterface')
+    Q(app_label="dcim", model="interface") | Q(app_label="virtualization", model="vminterface")
 )
 
 IPADDRESS_MASK_LENGTH_MIN = 1

@@ -7,6 +7,7 @@ from nautobot.dcim.graphql.types import CableTerminationMixin
 
 class CircuitTerminationType(DjangoObjectType, CableTerminationMixin):
     """Graphql Type Object for CircuitTermination model."""
+
     class Meta:
         model = CircuitTermination
         filterset_class = CircuitTerminationFilterSet

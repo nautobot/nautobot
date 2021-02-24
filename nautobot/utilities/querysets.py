@@ -4,8 +4,7 @@ from nautobot.utilities.permissions import permission_is_exempt
 
 
 class RestrictedQuerySet(QuerySet):
-
-    def restrict(self, user, action='view'):
+    def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
         permission.
@@ -16,7 +15,7 @@ class RestrictedQuerySet(QuerySet):
         # Resolve the full name of the required permission
         app_label = self.model._meta.app_label
         model_name = self.model._meta.model_name
-        permission_required = f'{app_label}.{action}_{model_name}'
+        permission_required = f"{app_label}.{action}_{model_name}"
 
         # Bypass restriction for superusers and exempt views
         if user.is_superuser or permission_is_exempt(permission_required):

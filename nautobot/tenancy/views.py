@@ -1,4 +1,3 @@
-from django.shortcuts import get_object_or_404, render
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
@@ -15,13 +14,10 @@ from .models import Tenant, TenantGroup
 # Tenant groups
 #
 
+
 class TenantGroupListView(generic.ObjectListView):
     queryset = TenantGroup.objects.add_related_count(
-        TenantGroup.objects.all(),
-        Tenant,
-        'group',
-        'tenant_count',
-        cumulative=True
+        TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
     )
     table = tables.TenantGroupTable
 
@@ -32,21 +28,21 @@ class TenantGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Tenants
-        tenants = Tenant.objects.restrict(request.user, 'view').filter(
+        tenants = Tenant.objects.restrict(request.user, "view").filter(
             group__in=instance.get_descendants(include_self=True)
         )
 
         tenant_table = tables.TenantTable(tenants)
-        tenant_table.columns.hide('group')
+        tenant_table.columns.hide("group")
 
         paginate = {
-            'paginator_class': EnhancedPaginator,
-            'per_page': get_paginate_count(request)
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
         }
         RequestConfig(request, paginate).configure(tenant_table)
 
         return {
-            'tenant_table': tenant_table,
+            "tenant_table": tenant_table,
         }
 
 
@@ -67,11 +63,7 @@ class TenantGroupBulkImportView(generic.BulkImportView):
 
 class TenantGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = TenantGroup.objects.add_related_count(
-        TenantGroup.objects.all(),
-        Tenant,
-        'group',
-        'tenant_count',
-        cumulative=True
+        TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
     )
     table = tables.TenantGroupTable
 
@@ -79,6 +71,7 @@ class TenantGroupBulkDeleteView(generic.BulkDeleteView):
 #
 #  Tenants
 #
+
 
 class TenantListView(generic.ObjectListView):
     queryset = Tenant.objects.all()
@@ -88,32 +81,36 @@ class TenantListView(generic.ObjectListView):
 
 
 class TenantView(generic.ObjectView):
-    queryset = Tenant.objects.prefetch_related('group')
+    queryset = Tenant.objects.prefetch_related("group")
 
     def get_extra_context(self, request, instance):
         stats = {
-            'site_count': Site.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'rack_count': Rack.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'rackreservation_count': RackReservation.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'device_count': Device.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'vrf_count': VRF.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'prefix_count': Prefix.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'ipaddress_count': IPAddress.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'vlan_count': VLAN.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'circuit_count': Circuit.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'virtualmachine_count': VirtualMachine.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
-            'cluster_count': Cluster.objects.restrict(request.user, 'view').filter(tenant=instance).count(),
+            "site_count": Site.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "rack_count": Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "rackreservation_count": RackReservation.objects.restrict(request.user, "view")
+            .filter(tenant=instance)
+            .count(),
+            "device_count": Device.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "vrf_count": VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "prefix_count": Prefix.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "circuit_count": Circuit.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view")
+            .filter(tenant=instance)
+            .count(),
+            "cluster_count": Cluster.objects.restrict(request.user, "view").filter(tenant=instance).count(),
         }
 
         return {
-            'stats': stats,
+            "stats": stats,
         }
 
 
 class TenantEditView(generic.ObjectEditView):
     queryset = Tenant.objects.all()
     model_form = forms.TenantForm
-    template_name = 'tenancy/tenant_edit.html'
+    template_name = "tenancy/tenant_edit.html"
 
 
 class TenantDeleteView(generic.ObjectDeleteView):
@@ -127,13 +124,13 @@ class TenantBulkImportView(generic.BulkImportView):
 
 
 class TenantBulkEditView(generic.BulkEditView):
-    queryset = Tenant.objects.prefetch_related('group')
+    queryset = Tenant.objects.prefetch_related("group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable
     form = forms.TenantBulkEditForm
 
 
 class TenantBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tenant.objects.prefetch_related('group')
+    queryset = Tenant.objects.prefetch_related("group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable

@@ -7,11 +7,7 @@ from netaddr import IPAddress, IPNetwork
 from nautobot.dcim.models import DeviceRole
 from nautobot.extras.scripts import *
 
-CHOICES = (
-    ('ff0000', 'Red'),
-    ('00ff00', 'Green'),
-    ('0000ff', 'Blue')
-)
+CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))
 
 
 THIS_DIRECTORY = os.path.dirname(__file__)
@@ -19,266 +15,233 @@ THIS_DIRECTORY = os.path.dirname(__file__)
 
 @override_settings(JOBS_ROOT=THIS_DIRECTORY)
 class ScriptVariablesTest(TestCase):
-
     def test_stringvar(self):
-
         class TestScript(Script):
 
-            var1 = StringVar(
-                min_length=3,
-                max_length=3,
-                regex=r'[a-z]+'
-            )
+            var1 = StringVar(min_length=3, max_length=3, regex=r"[a-z]+")
 
         # Validate min_length enforcement
-        data = {'var1': 'xx'}
+        data = {"var1": "xx"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate max_length enforcement
-        data = {'var1': 'xxxx'}
+        data = {"var1": "xxxx"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate regex enforcement
-        data = {'var1': 'ABC'}
+        data = {"var1": "ABC"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate valid data
-        data = {'var1': 'abc'}
+        data = {"var1": "abc"}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], data['var1'])
+        self.assertEqual(form.cleaned_data["var1"], data["var1"])
 
     def test_textvar(self):
-
         class TestScript(Script):
 
             var1 = TextVar()
 
         # Validate valid data
-        data = {'var1': 'This is a test string'}
+        data = {"var1": "This is a test string"}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], data['var1'])
+        self.assertEqual(form.cleaned_data["var1"], data["var1"])
 
     def test_integervar(self):
-
         class TestScript(Script):
 
-            var1 = IntegerVar(
-                min_value=5,
-                max_value=10
-            )
+            var1 = IntegerVar(min_value=5, max_value=10)
 
         # Validate min_value enforcement
-        data = {'var1': 4}
+        data = {"var1": 4}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate max_value enforcement
-        data = {'var1': 11}
+        data = {"var1": 11}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate valid data
-        data = {'var1': 7}
+        data = {"var1": 7}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], data['var1'])
+        self.assertEqual(form.cleaned_data["var1"], data["var1"])
 
     def test_booleanvar(self):
-
         class TestScript(Script):
 
             var1 = BooleanVar()
 
         # Validate True
-        data = {'var1': True}
+        data = {"var1": True}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], True)
+        self.assertEqual(form.cleaned_data["var1"], True)
 
         # Validate False
-        data = {'var1': False}
+        data = {"var1": False}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], False)
+        self.assertEqual(form.cleaned_data["var1"], False)
 
     def test_choicevar(self):
-
         class TestScript(Script):
 
-            var1 = ChoiceVar(
-                choices=CHOICES
-            )
+            var1 = ChoiceVar(choices=CHOICES)
 
         # Validate valid choice
-        data = {'var1': 'ff0000'}
+        data = {"var1": "ff0000"}
         form = TestScript().as_form(data)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], 'ff0000')
+        self.assertEqual(form.cleaned_data["var1"], "ff0000")
 
         # Validate invalid choice
-        data = {'var1': 'taupe'}
+        data = {"var1": "taupe"}
         form = TestScript().as_form(data)
         self.assertFalse(form.is_valid())
 
     def test_multichoicevar(self):
-
         class TestScript(Script):
 
-            var1 = MultiChoiceVar(
-                choices=CHOICES
-            )
+            var1 = MultiChoiceVar(choices=CHOICES)
 
         # Validate single choice
-        data = {'var1': ['ff0000']}
+        data = {"var1": ["ff0000"]}
         form = TestScript().as_form(data)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], ['ff0000'])
+        self.assertEqual(form.cleaned_data["var1"], ["ff0000"])
 
         # Validate multiple choices
-        data = {'var1': ('ff0000', '00ff00')}
+        data = {"var1": ("ff0000", "00ff00")}
         form = TestScript().as_form(data)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], ['ff0000', '00ff00'])
+        self.assertEqual(form.cleaned_data["var1"], ["ff0000", "00ff00"])
 
         # Validate invalid choice
-        data = {'var1': 'taupe'}
+        data = {"var1": "taupe"}
         form = TestScript().as_form(data)
         self.assertFalse(form.is_valid())
 
     def test_objectvar(self):
-
         class TestScript(Script):
             var1 = ObjectVar(model=DeviceRole)
 
         # Populate some objects
         for i in range(1, 6):
-            DeviceRole(
-                name='Device Role {}'.format(i),
-                slug='device-role-{}'.format(i)
-            ).save()
+            DeviceRole(name="Device Role {}".format(i), slug="device-role-{}".format(i)).save()
 
         # Validate valid data
-        data = {'var1': DeviceRole.objects.first().pk}
+        data = {"var1": DeviceRole.objects.first().pk}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'].pk, data['var1'])
+        self.assertEqual(form.cleaned_data["var1"].pk, data["var1"])
 
     def test_multiobjectvar(self):
-
         class TestScript(Script):
             var1 = MultiObjectVar(model=DeviceRole)
 
         # Populate some objects
         for i in range(1, 6):
-            DeviceRole(
-                name='Device Role {}'.format(i),
-                slug='device-role-{}'.format(i)
-            ).save()
+            DeviceRole(name="Device Role {}".format(i), slug="device-role-{}".format(i)).save()
 
         # Validate valid data
-        data = {'var1': [role.pk for role in DeviceRole.objects.all()[:3]]}
+        data = {"var1": [role.pk for role in DeviceRole.objects.all()[:3]]}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'][0].pk, data['var1'][0])
-        self.assertEqual(form.cleaned_data['var1'][1].pk, data['var1'][1])
-        self.assertEqual(form.cleaned_data['var1'][2].pk, data['var1'][2])
+        self.assertEqual(form.cleaned_data["var1"][0].pk, data["var1"][0])
+        self.assertEqual(form.cleaned_data["var1"][1].pk, data["var1"][1])
+        self.assertEqual(form.cleaned_data["var1"][2].pk, data["var1"][2])
 
     def test_filevar(self):
-
         class TestScript(Script):
 
             var1 = FileVar()
 
         # Dummy file
-        testfile = SimpleUploadedFile(
-            name='test_file.txt',
-            content=b'This is a dummy file for testing'
-        )
+        testfile = SimpleUploadedFile(name="test_file.txt", content=b"This is a dummy file for testing")
 
         # Validate valid data
-        file_data = {'var1': testfile}
+        file_data = {"var1": testfile}
         form = TestScript().as_form(None, file_data)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], testfile)
+        self.assertEqual(form.cleaned_data["var1"], testfile)
 
     def test_ipaddressvar(self):
-
         class TestScript(Script):
 
             var1 = IPAddressVar()
 
         # Validate IP network enforcement
-        data = {'var1': '1.2.3'}
+        data = {"var1": "1.2.3"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate IP mask exclusion
-        data = {'var1': '192.0.2.0/24'}
+        data = {"var1": "192.0.2.0/24"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate valid data
-        data = {'var1': '192.0.2.1'}
+        data = {"var1": "192.0.2.1"}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], IPAddress(data['var1']))
+        self.assertEqual(form.cleaned_data["var1"], IPAddress(data["var1"]))
 
     def test_ipaddresswithmaskvar(self):
-
         class TestScript(Script):
 
             var1 = IPAddressWithMaskVar()
 
         # Validate IP network enforcement
-        data = {'var1': '1.2.3'}
+        data = {"var1": "1.2.3"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate IP mask requirement
-        data = {'var1': '192.0.2.0'}
+        data = {"var1": "192.0.2.0"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate valid data
-        data = {'var1': '192.0.2.0/24'}
+        data = {"var1": "192.0.2.0/24"}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], IPNetwork(data['var1']))
+        self.assertEqual(form.cleaned_data["var1"], IPNetwork(data["var1"]))
 
     def test_ipnetworkvar(self):
-
         class TestScript(Script):
 
             var1 = IPNetworkVar()
 
         # Validate IP network enforcement
-        data = {'var1': '1.2.3'}
+        data = {"var1": "1.2.3"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate host IP check
-        data = {'var1': '192.0.2.1/24'}
+        data = {"var1": "192.0.2.1/24"}
         form = TestScript().as_form(data, None)
         self.assertFalse(form.is_valid())
-        self.assertIn('var1', form.errors)
+        self.assertIn("var1", form.errors)
 
         # Validate valid data
-        data = {'var1': '192.0.2.0/24'}
+        data = {"var1": "192.0.2.0/24"}
         form = TestScript().as_form(data, None)
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data['var1'], IPNetwork(data['var1']))
+        self.assertEqual(form.cleaned_data["var1"], IPNetwork(data["var1"]))

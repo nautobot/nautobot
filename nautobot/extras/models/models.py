@@ -27,94 +27,86 @@ from nautobot.utilities.utils import deepmerge, render_jinja2
 #
 # Webhooks
 #
-@extras_features('graphql')
+@extras_features("graphql")
 class Webhook(BaseModel, ChangeLoggedModel):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.
     Each Webhook can be limited to firing only on certain actions or certain object types.
     """
+
     content_types = models.ManyToManyField(
         to=ContentType,
-        related_name='webhooks',
-        verbose_name='Object types',
-        limit_choices_to=FeatureQuery('webhooks'),
-        help_text="The object(s) to which this Webhook applies."
+        related_name="webhooks",
+        verbose_name="Object types",
+        limit_choices_to=FeatureQuery("webhooks"),
+        help_text="The object(s) to which this Webhook applies.",
     )
-    name = models.CharField(
-        max_length=150,
-        unique=True
-    )
-    type_create = models.BooleanField(
-        default=False,
-        help_text="Call this webhook when a matching object is created."
-    )
-    type_update = models.BooleanField(
-        default=False,
-        help_text="Call this webhook when a matching object is updated."
-    )
-    type_delete = models.BooleanField(
-        default=False,
-        help_text="Call this webhook when a matching object is deleted."
-    )
+    name = models.CharField(max_length=150, unique=True)
+    type_create = models.BooleanField(default=False, help_text="Call this webhook when a matching object is created.")
+    type_update = models.BooleanField(default=False, help_text="Call this webhook when a matching object is updated.")
+    type_delete = models.BooleanField(default=False, help_text="Call this webhook when a matching object is deleted.")
     payload_url = models.CharField(
         max_length=500,
-        verbose_name='URL',
-        help_text="A POST will be sent to this URL when the webhook is called."
+        verbose_name="URL",
+        help_text="A POST will be sent to this URL when the webhook is called.",
     )
-    enabled = models.BooleanField(
-        default=True
-    )
+    enabled = models.BooleanField(default=True)
     http_method = models.CharField(
         max_length=30,
         choices=WebhookHttpMethodChoices,
         default=WebhookHttpMethodChoices.METHOD_POST,
-        verbose_name='HTTP method'
+        verbose_name="HTTP method",
     )
     http_content_type = models.CharField(
         max_length=100,
         default=HTTP_CONTENT_TYPE_JSON,
-        verbose_name='HTTP content type',
-        help_text='The complete list of official content types is available '
-                  '<a href="https://www.iana.org/assignments/media-types/media-types.xhtml">here</a>.'
+        verbose_name="HTTP content type",
+        help_text="The complete list of official content types is available "
+        '<a href="https://www.iana.org/assignments/media-types/media-types.xhtml">here</a>.',
     )
     additional_headers = models.TextField(
         blank=True,
         help_text="User-supplied HTTP headers to be sent with the request in addition to the HTTP content type. "
-                  "Headers should be defined in the format <code>Name: Value</code>. Jinja2 template processing is "
-                  "support with the same context as the request body (below)."
+        "Headers should be defined in the format <code>Name: Value</code>. Jinja2 template processing is "
+        "support with the same context as the request body (below).",
     )
     body_template = models.TextField(
         blank=True,
-        help_text='Jinja2 template for a custom request body. If blank, a JSON object representing the change will be '
-                  'included. Available context data includes: <code>event</code>, <code>model</code>, '
-                  '<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.'
+        help_text="Jinja2 template for a custom request body. If blank, a JSON object representing the change will be "
+        "included. Available context data includes: <code>event</code>, <code>model</code>, "
+        "<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.",
     )
     secret = models.CharField(
         max_length=255,
         blank=True,
         help_text="When provided, the request will include a 'X-Hook-Signature' "
-                  "header containing a HMAC hex digest of the payload body using "
-                  "the secret as the key. The secret is not transmitted in "
-                  "the request."
+        "header containing a HMAC hex digest of the payload body using "
+        "the secret as the key. The secret is not transmitted in "
+        "the request.",
     )
     ssl_verification = models.BooleanField(
         default=True,
-        verbose_name='SSL verification',
-        help_text="Enable SSL certificate verification. Disable with caution!"
+        verbose_name="SSL verification",
+        help_text="Enable SSL certificate verification. Disable with caution!",
     )
     ca_file_path = models.CharField(
         max_length=4096,
         null=True,
         blank=True,
-        verbose_name='CA File Path',
-        help_text='The specific CA certificate file to use for SSL verification. '
-                  'Leave blank to use the system defaults.'
+        verbose_name="CA File Path",
+        help_text="The specific CA certificate file to use for SSL verification. "
+        "Leave blank to use the system defaults.",
     )
 
     class Meta:
-        ordering = ('name',)
-        unique_together = ('payload_url', 'type_create', 'type_update', 'type_delete',)
+        ordering = ("name",)
+        unique_together = (
+            "payload_url",
+            "type_create",
+            "type_update",
+            "type_delete",
+        )
 
     def __str__(self):
         return self.name
@@ -124,15 +116,13 @@ class Webhook(BaseModel, ChangeLoggedModel):
 
         # At least one action type must be selected
         if not self.type_create and not self.type_delete and not self.type_update:
-            raise ValidationError(
-                "You must select at least one type: create, update, and/or delete."
-            )
+            raise ValidationError("You must select at least one type: create, update, and/or delete.")
 
         # CA file path requires SSL verification enabled
         if not self.ssl_verification and self.ca_file_path:
-            raise ValidationError({
-                'ca_file_path': 'Do not specify a CA certificate file if SSL verification is disabled.'
-            })
+            raise ValidationError(
+                {"ca_file_path": "Do not specify a CA certificate file if SSL verification is disabled."}
+            )
 
     def render_headers(self, context):
         """
@@ -143,7 +133,7 @@ class Webhook(BaseModel, ChangeLoggedModel):
         ret = {}
         data = render_jinja2(self.additional_headers, context)
         for line in data.splitlines():
-            header, value = line.split(':')
+            header, value = line.split(":")
             ret[header.strip()] = value.strip()
         return ret
 
@@ -157,141 +147,120 @@ class Webhook(BaseModel, ChangeLoggedModel):
             return json.dumps(context, cls=JSONEncoder)
 
     def get_absolute_url(self):
-        return reverse('extras:webhook', kwargs={'pk': self.pk})
+        return reverse("extras:webhook", kwargs={"pk": self.pk})
 
 
 #
 # Custom links
 #
-@extras_features('graphql')
+@extras_features("graphql")
 class CustomLink(BaseModel, ChangeLoggedModel):
     """
     A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
     code to be rendered with an object as context.
     """
+
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery('custom_links')
+        limit_choices_to=FeatureQuery("custom_links"),
     )
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-    text = models.CharField(
-        max_length=500,
-        help_text="Jinja2 template code for link text"
-    )
+    name = models.CharField(max_length=100, unique=True)
+    text = models.CharField(max_length=500, help_text="Jinja2 template code for link text")
     target_url = models.CharField(
         max_length=500,
-        verbose_name='URL',
-        help_text="Jinja2 template code for link URL"
+        verbose_name="URL",
+        help_text="Jinja2 template code for link URL",
     )
-    weight = models.PositiveSmallIntegerField(
-        default=100
-    )
+    weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Links with the same group will appear as a dropdown menu"
+        help_text="Links with the same group will appear as a dropdown menu",
     )
     button_class = models.CharField(
         max_length=30,
         choices=CustomLinkButtonClassChoices,
         default=CustomLinkButtonClassChoices.CLASS_DEFAULT,
-        help_text="The class of the first link in a group will be used for the dropdown button"
+        help_text="The class of the first link in a group will be used for the dropdown button",
     )
-    new_window = models.BooleanField(
-        help_text="Force link to open in a new window"
-    )
+    new_window = models.BooleanField(help_text="Force link to open in a new window")
 
     class Meta:
-        ordering = ['group_name', 'weight', 'name']
+        ordering = ["group_name", "weight", "name"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('extras:customlink', kwargs={'pk': self.pk})
+        return reverse("extras:customlink", kwargs={"pk": self.pk})
 
 
 #
 # Export templates
 #
 
+
 @extras_features(
-    'graphql',
-    'relationships',
+    "graphql",
+    "relationships",
 )
 class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
-        related_name='export_template_owners',
+        related_name="export_template_owners",
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery('export_template_owners'),
+        limit_choices_to=FeatureQuery("export_template_owners"),
         default=None,
         null=True,
-        blank=True
+        blank=True,
     )
-    owner_object_id = models.UUIDField(
-        default=None,
-        null=True,
-        blank=True
-    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
-        ct_field='owner_content_type',
-        fk_field='owner_object_id',
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
     )
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery('export_templates')
+        limit_choices_to=FeatureQuery("export_templates"),
     )
-    name = models.CharField(
-        max_length=100
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=200, blank=True)
     template_code = models.TextField(
-        help_text='The list of objects being exported is passed as a context variable named <code>queryset</code>.'
+        help_text="The list of objects being exported is passed as a context variable named <code>queryset</code>."
     )
     mime_type = models.CharField(
         max_length=50,
         blank=True,
-        verbose_name='MIME type',
-        help_text='Defaults to <code>text/plain</code>'
+        verbose_name="MIME type",
+        help_text="Defaults to <code>text/plain</code>",
     )
     file_extension = models.CharField(
         max_length=15,
         blank=True,
-        help_text='Extension to append to the rendered filename'
+        help_text="Extension to append to the rendered filename",
     )
 
     class Meta:
-        ordering = ['content_type', 'name']
-        unique_together = [
-            ['content_type', 'name', 'owner_content_type', 'owner_object_id']
-        ]
+        ordering = ["content_type", "name"]
+        unique_together = [["content_type", "name", "owner_content_type", "owner_object_id"]]
 
     def __str__(self):
         if self.owner:
             return f"[{self.owner}] {self.content_type}: {self.name}"
-        return '{}: {}'.format(self.content_type, self.name)
+        return "{}: {}".format(self.content_type, self.name)
 
     def render(self, queryset):
         """
         Render the contents of the template.
         """
-        context = {
-            'queryset': queryset
-        }
+        context = {"queryset": queryset}
         output = render_jinja2(self.template_code, context)
 
         # Replace CRLF-style line terminators
-        output = output.replace('\r\n', '\n')
+        output = output.replace("\r\n", "\n")
 
         return output
 
@@ -300,24 +269,24 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
         Render the template to an HTTP response, delivered as a named file attachment
         """
         output = self.render(queryset)
-        mime_type = 'text/plain' if not self.mime_type else self.mime_type
+        mime_type = "text/plain" if not self.mime_type else self.mime_type
 
         # Build the response
         response = HttpResponse(output, content_type=mime_type)
-        filename = 'nautobot_{}{}'.format(
+        filename = "nautobot_{}{}".format(
             queryset.model._meta.verbose_name_plural,
-            '.{}'.format(self.file_extension) if self.file_extension else ''
+            ".{}".format(self.file_extension) if self.file_extension else "",
         )
-        response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+        response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
 
         return response
 
     def get_absolute_url(self):
-        return reverse('extras:exporttemplate', kwargs={'pk': self.pk})
+        return reverse("extras:exporttemplate", kwargs={"pk": self.pk})
 
     def clean(self):
         super().clean()
-        if self.file_extension.startswith('.'):
+        if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
 
 
@@ -325,42 +294,29 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
 # Image attachments
 #
 
+
 class ImageAttachment(BaseModel):
     """
     An uploaded image which is associated with an object.
     """
-    content_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE
-    )
+
+    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
     object_id = models.UUIDField()
-    parent = GenericForeignKey(
-        ct_field='content_type',
-        fk_field='object_id'
-    )
-    image = models.ImageField(
-        upload_to=image_upload,
-        height_field='image_height',
-        width_field='image_width'
-    )
+    parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
+    image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
     image_height = models.PositiveSmallIntegerField()
     image_width = models.PositiveSmallIntegerField()
-    name = models.CharField(
-        max_length=50,
-        blank=True
-    )
-    created = models.DateTimeField(
-        auto_now_add=True
-    )
+    name = models.CharField(max_length=50, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ('name',)  # name may be non-unique
+        ordering = ("name",)  # name may be non-unique
 
     def __str__(self):
         if self.name:
             return self.name
-        filename = self.image.name.rsplit('/', 1)[-1]
-        return filename.split('_', 2)[2]
+        filename = self.image.name.rsplit("/", 1)[-1]
+        return filename.split("_", 2)[2]
 
     def delete(self, *args, **kwargs):
 
@@ -385,6 +341,7 @@ class ImageAttachment(BaseModel):
 
         try:
             from botocore.exceptions import ClientError
+
             expected_exceptions.append(ClientError)
         except ImportError:
             pass
@@ -398,13 +355,14 @@ class ImageAttachment(BaseModel):
 #
 # Config contexts
 #
-@extras_features('graphql')
+@extras_features("graphql")
 class ConfigContext(BaseModel, ChangeLoggedModel):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
     will be available to a Device in site A assigned to tenant B. Data is stored in JSON format.
     """
+
     name = models.CharField(
         max_length=100,
     )
@@ -413,87 +371,38 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
     owner_content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery('config_context_owners'),
+        limit_choices_to=FeatureQuery("config_context_owners"),
         default=None,
         null=True,
-        blank=True
+        blank=True,
     )
-    owner_object_id = models.UUIDField(
-        default=None,
-        null=True,
-        blank=True
-    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
-        ct_field='owner_content_type',
-        fk_field='owner_object_id',
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
     )
 
-    weight = models.PositiveSmallIntegerField(
-        default=1000
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True
-    )
+    weight = models.PositiveSmallIntegerField(default=1000)
+    description = models.CharField(max_length=200, blank=True)
     is_active = models.BooleanField(
         default=True,
     )
-    regions = models.ManyToManyField(
-        to='dcim.Region',
-        related_name='+',
-        blank=True
-    )
-    sites = models.ManyToManyField(
-        to='dcim.Site',
-        related_name='+',
-        blank=True
-    )
-    roles = models.ManyToManyField(
-        to='dcim.DeviceRole',
-        related_name='+',
-        blank=True
-    )
-    platforms = models.ManyToManyField(
-        to='dcim.Platform',
-        related_name='+',
-        blank=True
-    )
-    cluster_groups = models.ManyToManyField(
-        to='virtualization.ClusterGroup',
-        related_name='+',
-        blank=True
-    )
-    clusters = models.ManyToManyField(
-        to='virtualization.Cluster',
-        related_name='+',
-        blank=True
-    )
-    tenant_groups = models.ManyToManyField(
-        to='tenancy.TenantGroup',
-        related_name='+',
-        blank=True
-    )
-    tenants = models.ManyToManyField(
-        to='tenancy.Tenant',
-        related_name='+',
-        blank=True
-    )
-    tags = models.ManyToManyField(
-        to='extras.Tag',
-        related_name='+',
-        blank=True
-    )
-    data = models.JSONField(
-        encoder=DjangoJSONEncoder
-    )
+    regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
+    sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
+    roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
+    platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
+    cluster_groups = models.ManyToManyField(to="virtualization.ClusterGroup", related_name="+", blank=True)
+    clusters = models.ManyToManyField(to="virtualization.Cluster", related_name="+", blank=True)
+    tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
+    tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
+    tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
+    data = models.JSONField(encoder=DjangoJSONEncoder)
 
     objects = ConfigContextQuerySet.as_manager()
 
     class Meta:
-        ordering = ['weight', 'name']
-        unique_together = [
-            ['name', 'owner_content_type', 'owner_object_id']
-        ]
+        ordering = ["weight", "name"]
+        unique_together = [["name", "owner_content_type", "owner_object_id"]]
 
     def __str__(self):
         if self.owner:
@@ -501,16 +410,14 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('extras:configcontext', kwargs={'pk': self.pk})
+        return reverse("extras:configcontext", kwargs={"pk": self.pk})
 
     def clean(self):
         super().clean()
 
         # Verify that JSON data is provided as an object
         if type(self.data) is not dict:
-            raise ValidationError(
-                {'data': 'JSON data must be in object form. Example: {"foo": 123}'}
-            )
+            raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
 
 class ConfigContextModel(models.Model):
@@ -518,6 +425,7 @@ class ConfigContextModel(models.Model):
     A model which includes local configuration context data. This local data will override any inherited data from
     ConfigContexts.
     """
+
     local_context_data = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
@@ -527,19 +435,15 @@ class ConfigContextModel(models.Model):
     local_context_data_owner_content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery('config_context_owners'),
+        limit_choices_to=FeatureQuery("config_context_owners"),
         default=None,
         null=True,
-        blank=True
+        blank=True,
     )
-    local_context_data_owner_object_id = models.UUIDField(
-        default=None,
-        null=True,
-        blank=True
-    )
+    local_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     local_context_data_owner = GenericForeignKey(
-        ct_field='local_context_data_owner_content_type',
-        fk_field='local_context_data_owner_object_id',
+        ct_field="local_context_data_owner_content_type",
+        fk_field="local_context_data_owner_object_id",
     )
 
     class Meta:
@@ -553,7 +457,7 @@ class ConfigContextModel(models.Model):
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
 
-        if not hasattr(self, 'config_context_data'):
+        if not hasattr(self, "config_context_data"):
             # The annotation is not available, so we fall back to manually querying for the config context objects
             config_context_data = ConfigContext.objects.get_for_object(self, aggregate_data=True)
         else:
@@ -574,20 +478,20 @@ class ConfigContextModel(models.Model):
 
         # Verify that JSON data is provided as an object
         if self.local_context_data and type(self.local_context_data) is not dict:
-            raise ValidationError(
-                {'local_context_data': 'JSON data must be in object form. Example: {"foo": 123}'}
-            )
+            raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
 
 #
 # Jobs
 #
 
-@extras_features('job_results')
+
+@extras_features("job_results")
 class Job(models.Model):
     """
     Dummy model used to generate permissions for jobs. Does not exist in the database.
     """
+
     class Meta:
         managed = False
 
@@ -595,46 +499,30 @@ class Job(models.Model):
 #
 # Job results
 #
-@extras_features('graphql')
+@extras_features("graphql")
 class JobResult(BaseModel):
     """
     This model stores the results from running a user-defined report.
     """
-    name = models.CharField(
-        max_length=255
-    )
+
+    name = models.CharField(max_length=255)
     obj_type = models.ForeignKey(
         to=ContentType,
-        related_name='job_results',
-        verbose_name='Object types',
-        limit_choices_to=FeatureQuery('job_results'),
+        related_name="job_results",
+        verbose_name="Object types",
+        limit_choices_to=FeatureQuery("job_results"),
         help_text="The object type to which this job result applies",
         on_delete=models.CASCADE,
     )
-    created = models.DateTimeField(
-        auto_now_add=True
-    )
-    completed = models.DateTimeField(
-        null=True,
-        blank=True
-    )
-    user = models.ForeignKey(
-        to=User,
-        on_delete=models.SET_NULL,
-        related_name='+',
-        blank=True,
-        null=True
-    )
+    created = models.DateTimeField(auto_now_add=True)
+    completed = models.DateTimeField(null=True, blank=True)
+    user = models.ForeignKey(to=User, on_delete=models.SET_NULL, related_name="+", blank=True, null=True)
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
-        default=JobResultStatusChoices.STATUS_PENDING
+        default=JobResultStatusChoices.STATUS_PENDING,
     )
-    data = models.JSONField(
-        encoder=DjangoJSONEncoder,
-        null=True,
-        blank=True
-    )
+    data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
     """
     Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
 
@@ -673,12 +561,10 @@ class JobResult(BaseModel):
     }
     """
 
-    job_id = models.UUIDField(
-        unique=True
-    )
+    job_id = models.UUIDField(unique=True)
 
     class Meta:
-        ordering = ['-created']
+        ordering = ["-created"]
 
     def __str__(self):
         return str(self.job_id)
@@ -694,7 +580,7 @@ class JobResult(BaseModel):
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
     def get_absolute_url(self):
-        return reverse('extras:jobresult', kwargs={'pk': self.pk})
+        return reverse("extras:jobresult", kwargs={"pk": self.pk})
 
     def set_status(self, status):
         """
@@ -717,12 +603,7 @@ class JobResult(BaseModel):
         args: additional args passed to the callable
         kwargs: additional kargs passed to the callable
         """
-        job_result = cls.objects.create(
-            name=name,
-            obj_type=obj_type,
-            user=user,
-            job_id=uuid.uuid4()
-        )
+        job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4())
 
         func.delay(*args, job_id=str(job_result.job_id), job_result=job_result, **kwargs)
 
@@ -730,15 +611,24 @@ class JobResult(BaseModel):
 
     @staticmethod
     def _data_grouping_struct():
-        return OrderedDict([
-            ('success', 0),
-            ('info', 0),
-            ('warning', 0),
-            ('failure', 0),
-            ('log', []),
-        ])
+        return OrderedDict(
+            [
+                ("success", 0),
+                ("info", 0),
+                ("warning", 0),
+                ("failure", 0),
+                ("log", []),
+            ]
+        )
 
-    def log(self, message, obj=None, level_choice=LogLevelChoices.LOG_DEFAULT, grouping="main", logger=None):
+    def log(
+        self,
+        message,
+        obj=None,
+        level_choice=LogLevelChoices.LOG_DEFAULT,
+        grouping="main",
+        logger=None,
+    ):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
 
@@ -762,13 +652,15 @@ class JobResult(BaseModel):
         log = data[grouping]["log"]
 
         # Record the log message
-        log.append([
-            timezone.now().isoformat(),
-            level_choice,
-            str(obj) if obj else None,
-            obj.get_absolute_url() if hasattr(obj, 'get_absolute_url') else None,
-            str(message),
-        ])
+        log.append(
+            [
+                timezone.now().isoformat(),
+                level_choice,
+                str(obj) if obj else None,
+                obj.get_absolute_url() if hasattr(obj, "get_absolute_url") else None,
+                str(message),
+            ]
+        )
 
         # Default log messages have no status and do not get counted
         if level_choice != LogLevelChoices.LOG_DEFAULT:

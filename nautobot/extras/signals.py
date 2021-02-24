@@ -18,14 +18,15 @@ from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
-logger = logging.getLogger('nautobot.extras.signals')
+logger = logging.getLogger("nautobot.extras.signals")
 
 
 #
 # Change logging/webhooks
 #
 
-def _get_user_if_authenticated(request):
+
+def _get_user_if_authenticated(request, objectchange):
     """Return the user object associated with the request if the user is defined.
 
     If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
@@ -35,9 +36,7 @@ def _get_user_if_authenticated(request):
     if request.user.is_authenticated:
         return request.user
     else:
-        logger.warning(
-            f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}"
-        )
+        logger.warning(f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}")
 
 
 def _handle_changed_object(request, sender, instance, **kwargs):
@@ -45,20 +44,20 @@ def _handle_changed_object(request, sender, instance, **kwargs):
     Fires when an object is created or updated.
     """
     # Queue the object for processing once the request completes
-    if kwargs.get('created'):
+    if kwargs.get("created"):
         action = ObjectChangeActionChoices.ACTION_CREATE
-    elif 'created' in kwargs:
+    elif "created" in kwargs:
         action = ObjectChangeActionChoices.ACTION_UPDATE
-    elif kwargs.get('action') in ['post_add', 'post_remove'] and kwargs['pk_set']:
+    elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
     # Record an ObjectChange if applicable
-    if hasattr(instance, 'to_objectchange'):
+    if hasattr(instance, "to_objectchange"):
         objectchange = instance.to_objectchange(action)
-        objectchange.user = _get_user_if_authenticated(request)
+        objectchange.user = _get_user_if_authenticated(request, objectchange)
         objectchange.request_id = request.id
         objectchange.save()
 
@@ -82,9 +81,9 @@ def _handle_deleted_object(request, sender, instance, **kwargs):
     Fires when an object is deleted.
     """
     # Record an ObjectChange if applicable
-    if hasattr(instance, 'to_objectchange'):
+    if hasattr(instance, "to_objectchange"):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(request)
+        objectchange.user = _get_user_if_authenticated(request, objectchange)
         objectchange.request_id = request.id
         objectchange.save()
 
@@ -99,11 +98,12 @@ def _handle_deleted_object(request, sender, instance, **kwargs):
 # Custom fields
 #
 
+
 def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     Handle the cleanup of old custom field data when a CustomField is removed from one or more ContentTypes.
     """
-    if action == 'post_remove':
+    if action == "post_remove":
         instance.remove_stale_data(ContentType.objects.filter(pk__in=pk_set))
 
 
@@ -122,9 +122,9 @@ pre_delete.connect(handle_cf_deleted, sender=CustomField)
 # Caching
 #
 
-cacheops_cache_hit = Counter('cacheops_cache_hit', 'Number of cache hits')
-cacheops_cache_miss = Counter('cacheops_cache_miss', 'Number of cache misses')
-cacheops_cache_invalidated = Counter('cacheops_cache_invalidated', 'Number of cache invalidations')
+cacheops_cache_hit = Counter("cacheops_cache_hit", "Number of cache hits")
+cacheops_cache_miss = Counter("cacheops_cache_miss", "Number of cache misses")
+cacheops_cache_invalidated = Counter("cacheops_cache_invalidated", "Number of cache invalidations")
 
 
 def cache_read_collector(sender, func, hit, **kwargs):
@@ -146,6 +146,7 @@ cache_invalidated.connect(cache_invalidated_collector)
 # Datasources
 #
 
+
 @receiver(pre_delete, sender=GitRepository)
 def git_repository_pre_delete(instance, **kwargs):
     """
@@ -165,7 +166,7 @@ def git_repository_pre_delete(instance, **kwargs):
         status=JobResultStatusChoices.STATUS_RUNNING,
     )
 
-    refresh_datasource_content('extras.gitrepository', instance, None, job_result, delete=True)
+    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
     if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)

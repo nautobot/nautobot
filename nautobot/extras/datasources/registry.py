@@ -6,12 +6,14 @@ from nautobot.extras.registry import registry
 
 def get_datasource_contents(model_name):
     """Get the list of DatasourceContent entries registered for a given model name."""
-    return sorted(registry['datasource_contents'].get(model_name, []))
+    return sorted(registry["datasource_contents"].get(model_name, []))
 
 
 def get_datasource_content_choices(model_name):
     """Get a list (suitable for use with forms.ChoiceField, etc.) of valid datasource content choices."""
-    return sorted([(entry.content_identifier, entry.name) for entry in registry['datasource_contents'].get(model_name, [])])
+    return sorted(
+        [(entry.content_identifier, entry.name) for entry in registry["datasource_contents"].get(model_name, [])]
+    )
 
 
 def refresh_datasource_content(model_name, record, request, job_result, delete=False):
@@ -28,7 +30,10 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
         job_result (JobResult): Passed through to the callback functions to use with logging their actions.
         delete (bool): True if the record is being deleted; False if it is being created/updated.
     """
-    job_result.log(f"Refreshing data provided by {record}...", level_choice=LogLevelChoices.LOG_INFO)
+    job_result.log(
+        f"Refreshing data provided by {record}...",
+        level_choice=LogLevelChoices.LOG_INFO,
+    )
     job_result.save()
     if request:
         with change_logging(request):
@@ -37,10 +42,16 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
                 try:
                     entry.callback(record, job_result, delete=delete)
                 except Exception as exc:
-                    job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE)
+                    job_result.log(
+                        f"Error while refreshing {entry.name}: {exc}",
+                        level_choice=LogLevelChoices.LOG_FAILURE,
+                    )
                     job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
                 job_result.save()
-            job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
+            job_result.log(
+                f"Data refresh from {record} complete!",
+                level_choice=LogLevelChoices.LOG_INFO,
+            )
             job_result.save()
     else:
         for entry in get_datasource_contents(model_name):
@@ -48,8 +59,14 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
             try:
                 entry.callback(record, job_result, delete=delete)
             except Exception as exc:
-                job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE)
+                job_result.log(
+                    f"Error while refreshing {entry.name}: {exc}",
+                    level_choice=LogLevelChoices.LOG_FAILURE,
+                )
                 job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
             job_result.save()
-        job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
+        job_result.log(
+            f"Data refresh from {record} complete!",
+            level_choice=LogLevelChoices.LOG_INFO,
+        )
         job_result.save()

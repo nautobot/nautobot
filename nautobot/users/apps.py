@@ -6,4 +6,4 @@ class UsersConfig(AppConfig):
     verbose_name = "Users"
 
     def ready(self):
-        import nautobot.users.signals
+        import nautobot.users.signals  # noqa: F401

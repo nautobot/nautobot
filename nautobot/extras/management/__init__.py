@@ -11,10 +11,10 @@ from nautobot.utilities.choices import ColorChoices
 COLOR_MAP = {
     "success": ColorChoices.COLOR_GREEN,  # active (green)
     "warning": ColorChoices.COLOR_AMBER,  # offline, decommissioning (amber)
-    "info": ColorChoices.COLOR_CYAN,      # planned (cyan)
-    "primary": ColorChoices.COLOR_BLUE,   # staged (blue)
-    "danger": ColorChoices.COLOR_RED,     # failed (red)
-    "default": ColorChoices.COLOR_GREY,   # inventory (grey)
+    "info": ColorChoices.COLOR_CYAN,  # planned (cyan)
+    "primary": ColorChoices.COLOR_BLUE,  # staged (blue)
+    "danger": ColorChoices.COLOR_RED,  # failed (red)
+    "default": ColorChoices.COLOR_GREY,  # inventory (grey)
 }
 
 # Map of slug -> description used when importing status choices in
@@ -46,6 +46,7 @@ DESCRIPTION_MAP = {
 # Statuses
 #
 
+
 def populate_status_choices(apps, schema_editor, **kwargs):
     """
     Populate `Status` model choices.
@@ -55,7 +56,7 @@ def populate_status_choices(apps, schema_editor, **kwargs):
     When it is ran again post-migrate will be a noop.
     """
 
-    app_config = apps.get_app_config('extras')
+    app_config = apps.get_app_config("extras")
     create_custom_statuses(app_config, **kwargs)
 
 
@@ -102,7 +103,7 @@ def create_custom_statuses(
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
     """
-    if 'test' in sys.argv:
+    if "test" in sys.argv:
         # Do not print output during unit testing migrations
         verbosity = 1
 
@@ -157,14 +158,13 @@ def create_custom_statuses(
             # This will likely be a duplicate key violation due to a Status
             # already existing (e.g. "active") albeit with a different `color`.
             # Pop the color and try again.
-            except IntegrityError as err:
-                choice_kwargs.pop('color')
+            except IntegrityError:
+                choice_kwargs.pop("color")
                 obj, created = Status.objects.get_or_create(**choice_kwargs)
             # If this subsequent .get_or_create fails, fail immediately.
             except Exception as err:
                 raise SystemExit(
-                    f'Unexpected error while running data migration to populate'
-                    f'status for {model_path}: {err}'
+                    f"Unexpected error while running data migration to populate" f"status for {model_path}: {err}"
                 )
 
             # Make sure the content-type is associated.

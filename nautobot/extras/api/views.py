@@ -5,12 +5,12 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 from rq import Worker
 
-from nautobot.core.api.authentication import IsAuthenticated
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import ModelViewSet
 from nautobot.extras import filters
@@ -41,8 +41,9 @@ class ExtrasRootView(APIRootView):
     """
     Extras API root view
     """
+
     def get_view_name(self):
-        return 'Extras'
+        return "Extras"
 
 
 class ConfigContextQuerySetMixin:
@@ -51,6 +52,7 @@ class ConfigContextQuerySetMixin:
     Provides a get_queryset() method which deals with adding the config context
     data annotation or not.
     """
+
     def get_queryset(self):
         """
         Build the proper queryset based on the request context
@@ -61,8 +63,8 @@ class ConfigContextQuerySetMixin:
         Else, return the queryset annotated with config context data
         """
         queryset = super().get_queryset()
-        request = self.get_serializer_context()['request']
-        if self.brief or 'config_context' in request.query_params.get('exclude', []):
+        request = self.get_serializer_context()["request"]
+        if self.brief or "config_context" in request.query_params.get("exclude", []):
             return queryset
         return queryset.annotate_config_context_data()
 
@@ -70,6 +72,7 @@ class ConfigContextQuerySetMixin:
 #
 # Custom fields
 #
+
 
 class CustomFieldViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
@@ -90,15 +93,18 @@ class CustomFieldModelViewSet(ModelViewSet):
         custom_fields = content_type.custom_fields.all()
 
         context = super().get_serializer_context()
-        context.update({
-            'custom_fields': custom_fields,
-        })
+        context.update(
+            {
+                "custom_fields": custom_fields,
+            }
+        )
         return context
 
 
 #
 # Export templates
 #
+
 
 class ExportTemplateViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
@@ -111,10 +117,9 @@ class ExportTemplateViewSet(ModelViewSet):
 # Tags
 #
 
+
 class TagViewSet(CustomFieldModelViewSet):
-    queryset = Tag.objects.annotate(
-        tagged_items=count_related(TaggedItem, 'tag')
-    )
+    queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
     serializer_class = serializers.TagSerializer
     filterset_class = filters.TagFilterSet
 
@@ -123,10 +128,12 @@ class TagViewSet(CustomFieldModelViewSet):
 # Git repositories
 #
 
+
 class GitRepositoryViewSet(CustomFieldModelViewSet):
     """
     Manage the use of Git repositories as external data sources.
     """
+
     queryset = GitRepository.objects.all()
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
@@ -135,6 +142,7 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
 #
 # Image attachments
 #
+
 
 class ImageAttachmentViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
@@ -147,9 +155,15 @@ class ImageAttachmentViewSet(ModelViewSet):
 # Config contexts
 #
 
+
 class ConfigContextViewSet(ModelViewSet):
     queryset = ConfigContext.objects.prefetch_related(
-        'regions', 'sites', 'roles', 'platforms', 'tenant_groups', 'tenants',
+        "regions",
+        "sites",
+        "roles",
+        "platforms",
+        "tenant_groups",
+        "tenants",
     )
     serializer_class = serializers.ConfigContextSerializer
     filterset_class = filters.ConfigContextFilterSet
@@ -159,10 +173,11 @@ class ConfigContextViewSet(ModelViewSet):
 # Jobs
 #
 
+
 class JobViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
     lookup_field = "class_path"
-    lookup_value_regex = '[^/]+/[^/]+/[^/]+'  # e.g. "git.repo_name/module_name/JobName"
+    lookup_value_regex = "[^/]+/[^/]+/[^/]+"  # e.g. "git.repo_name/module_name/JobName"
 
     def _get_job_class(self, class_path):
         job_class = get_job(class_path)
@@ -172,35 +187,37 @@ class JobViewSet(ViewSet):
         return job_class
 
     def list(self, request):
-        if not request.user.has_perm('extras.view_job'):
+        if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
-        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
         results = {
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=job_content_type,
                 status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
-            ).defer('data').order_by('created')
+            )
+            .defer("data")
+            .order_by("created")
         }
 
         jobs = get_jobs()
         jobs_list = []
         for grouping, modules in jobs.items():
             for module_name, entry in modules.items():
-                for job_class in entry['jobs'].values():
+                for job_class in entry["jobs"].values():
                     job = job_class()
                     job.result = results.get(job.class_path, None)
                     jobs_list.append(job)
 
-        serializer = serializers.JobSerializer(jobs_list, many=True, context={'request': request})
+        serializer = serializers.JobSerializer(jobs_list, many=True, context={"request": request})
 
         return Response(serializer.data)
 
     def retrieve(self, request, class_path):
-        if not request.user.has_perm('extras.view_job'):
+        if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
         job_class = self._get_job_class(class_path)
-        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job = job_class()
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
@@ -208,18 +225,18 @@ class JobViewSet(ViewSet):
             status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
         ).first()
 
-        serializer = serializers.JobDetailSerializer(job, context={'request': request})
+        serializer = serializers.JobDetailSerializer(job, context={"request": request})
 
         return Response(serializer.data)
 
-    @swagger_auto_schema(method='post', request_body=serializers.JobInputSerializer)
-    @action(detail=True, methods=['post'])
+    @swagger_auto_schema(method="post", request_body=serializers.JobInputSerializer)
+    @action(detail=True, methods=["post"])
     def run(self, request, class_path):
-        if not request.user.has_perm('extras.run_job'):
+        if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("This user does not have permission to run jobs.")
 
         # Check that at least one RQ worker is running
-        if not Worker.count(get_connection('default')):
+        if not Worker.count(get_connection("default")):
             raise RQWorkerNotRunningException()
 
         job_class = self._get_job_class(class_path)
@@ -229,12 +246,12 @@ class JobViewSet(ViewSet):
         if not input_serializer.is_valid():
             return Response(input_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        data = input_serializer.data['data']
-        commit = input_serializer.data['commit']
+        data = input_serializer.data["data"]
+        commit = input_serializer.data["commit"]
         if commit is None:
             commit = getattr(job_class.Meta, "commit_default", True)
 
-        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
         job_result = JobResult.enqueue_job(
             run_job,
@@ -247,7 +264,7 @@ class JobViewSet(ViewSet):
         )
         job.result = job_result
 
-        serializer = serializers.JobDetailSerializer(job, context={'request': request})
+        serializer = serializers.JobDetailSerializer(job, context={"request": request})
 
         return Response(serializer.data)
 
@@ -256,12 +273,14 @@ class JobViewSet(ViewSet):
 # Change logging
 #
 
+
 class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
     Retrieve a list of recent changes.
     """
+
     metadata_class = ContentTypeMetadata
-    queryset = ObjectChange.objects.prefetch_related('user')
+    queryset = ObjectChange.objects.prefetch_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
 
@@ -270,11 +289,13 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 # Job Results
 #
 
+
 class JobResultViewSet(ModelViewSet):
     """
     Retrieve a list of job results
     """
-    queryset = JobResult.objects.prefetch_related('user')
+
+    queryset = JobResult.objects.prefetch_related("user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -283,11 +304,13 @@ class JobResultViewSet(ModelViewSet):
 # ContentTypes
 #
 
+
 class ContentTypeViewSet(ReadOnlyModelViewSet):
     """
     Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
     """
-    queryset = ContentType.objects.order_by('app_label', 'model')
+
+    queryset = ContentType.objects.order_by("app_label", "model")
     serializer_class = serializers.ContentTypeSerializer
     filterset_class = filters.ContentTypeFilterSet
 
@@ -296,10 +319,12 @@ class ContentTypeViewSet(ReadOnlyModelViewSet):
 # Custom Links
 #
 
+
 class CustomLinkViewSet(ModelViewSet):
     """
     Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
     """
+
     queryset = CustomLink.objects.all()
     serializer_class = serializers.CustomLinkSerializer
     filterset_class = filters.CustomLinkFilterSet
@@ -309,10 +334,12 @@ class CustomLinkViewSet(ModelViewSet):
 # Webhooks
 #
 
+
 class WebhooksViewSet(ModelViewSet):
     """
     Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
     """
+
     queryset = Webhook.objects.all()
     serializer_class = serializers.WebhookSerializer
     filterset_class = filters.WebhookFilterSet
@@ -322,10 +349,12 @@ class WebhooksViewSet(ModelViewSet):
 # Statuses
 #
 
+
 class StatusViewSet(CustomFieldModelViewSet):
     """
     View and manage custom status choices for objects with a `status` field.
     """
+
     queryset = Status.objects.all()
     serializer_class = serializers.StatusSerializer
     filterset_class = filters.StatusFilterSet
@@ -335,12 +364,14 @@ class StatusViewSetMixin(ModelViewSet):
     """
     Mixin to set `metadata_class` to implement `status` field in model viewset metadata.
     """
+
     metadata_class = StatusFieldMetadata
 
 
 #
 #  Relationships
 #
+
 
 class RelationshipViewSet(ModelViewSet):
     queryset = Relationship.objects.all()

@@ -1,1 +1,1 @@
-default_app_config = 'nautobot.users.apps.UsersConfig'
+default_app_config = "nautobot.users.apps.UsersConfig"

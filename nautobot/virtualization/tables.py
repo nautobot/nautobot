@@ -4,18 +4,23 @@ from nautobot.dcim.tables.devices import BaseInterfaceTable
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import COL_TENANT
 from nautobot.utilities.tables import (
-    BaseTable, ButtonsColumn, ChoiceFieldColumn, ColoredLabelColumn, LinkedCountColumn, TagColumn, ToggleColumn,
+    BaseTable,
+    ButtonsColumn,
+    ColoredLabelColumn,
+    LinkedCountColumn,
+    TagColumn,
+    ToggleColumn,
 )
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (
-    'ClusterTable',
-    'ClusterGroupTable',
-    'ClusterTypeTable',
-    'VirtualMachineDetailTable',
-    'VirtualMachineTable',
-    'VirtualMachineVMInterfaceTable',
-    'VMInterfaceTable',
+    "ClusterTable",
+    "ClusterGroupTable",
+    "ClusterTypeTable",
+    "VirtualMachineDetailTable",
+    "VirtualMachineTable",
+    "VirtualMachineVMInterfaceTable",
+    "VMInterfaceTable",
 )
 
 VMINTERFACE_BUTTONS = """
@@ -31,122 +36,147 @@ VMINTERFACE_BUTTONS = """
 # Cluster types
 #
 
+
 class ClusterTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    cluster_count = tables.Column(
-        verbose_name='Clusters'
-    )
-    actions = ButtonsColumn(ClusterType, pk_field='slug')
+    cluster_count = tables.Column(verbose_name="Clusters")
+    actions = ButtonsColumn(ClusterType, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = ClusterType
-        fields = ('pk', 'name', 'slug', 'cluster_count', 'description', 'actions')
-        default_columns = ('pk', 'name', 'cluster_count', 'description', 'actions')
+        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 
 #
 # Cluster groups
 #
 
+
 class ClusterGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    cluster_count = tables.Column(
-        verbose_name='Clusters'
-    )
-    actions = ButtonsColumn(ClusterGroup, pk_field='slug')
+    cluster_count = tables.Column(verbose_name="Clusters")
+    actions = ButtonsColumn(ClusterGroup, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = ClusterGroup
-        fields = ('pk', 'name', 'slug', 'cluster_count', 'description', 'actions')
-        default_columns = ('pk', 'name', 'cluster_count', 'description', 'actions')
+        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 
 #
 # Clusters
 #
 
+
 class ClusterTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    tenant = tables.Column(
-        linkify=True
-    )
-    site = tables.Column(
-        linkify=True
-    )
-    type = tables.Column(
-        linkify=True
-    )
-    group = tables.Column(
-        linkify=True
-    )
+    tenant = tables.Column(linkify=True)
+    site = tables.Column(linkify=True)
+    type = tables.Column(linkify=True)
+    group = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
-        viewname='dcim:device_list',
-        url_params={'cluster_id': 'pk'},
-        verbose_name='Devices'
+        viewname="dcim:device_list",
+        url_params={"cluster_id": "pk"},
+        verbose_name="Devices",
     )
     vm_count = LinkedCountColumn(
-        viewname='virtualization:virtualmachine_list',
-        url_params={'cluster_id': 'pk'},
-        verbose_name='VMs'
+        viewname="virtualization:virtualmachine_list",
+        url_params={"cluster_id": "pk"},
+        verbose_name="VMs",
     )
-    tags = TagColumn(
-        url_name='virtualization:cluster_list'
-    )
+    tags = TagColumn(url_name="virtualization:cluster_list")
 
     class Meta(BaseTable.Meta):
         model = Cluster
-        fields = ('pk', 'name', 'type', 'group', 'tenant', 'site', 'device_count', 'vm_count', 'tags')
-        default_columns = ('pk', 'name', 'type', 'group', 'tenant', 'site', 'device_count', 'vm_count')
+        fields = (
+            "pk",
+            "name",
+            "type",
+            "group",
+            "tenant",
+            "site",
+            "device_count",
+            "vm_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "type",
+            "group",
+            "tenant",
+            "site",
+            "device_count",
+            "vm_count",
+        )
 
 
 #
 # Virtual machines
 #
 
+
 class VirtualMachineTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    cluster = tables.Column(
-        linkify=True
-    )
+    cluster = tables.Column(linkify=True)
     role = ColoredLabelColumn()
-    tenant = tables.TemplateColumn(
-        template_code=COL_TENANT
-    )
-
-    class Meta(BaseTable.Meta):
-        model = VirtualMachine
-        fields = ('pk', 'name', 'status', 'cluster', 'role', 'tenant', 'vcpus', 'memory', 'disk')
-
-
-class VirtualMachineDetailTable(VirtualMachineTable):
-    primary_ip4 = tables.Column(
-        linkify=True,
-        verbose_name='IPv4 Address'
-    )
-    primary_ip6 = tables.Column(
-        linkify=True,
-        verbose_name='IPv6 Address'
-    )
-    primary_ip = tables.Column(
-        linkify=True,
-        verbose_name='IP Address'
-    )
-    tags = TagColumn(
-        url_name='virtualization:virtualmachine_list'
-    )
+    tenant = tables.TemplateColumn(template_code=COL_TENANT)
 
     class Meta(BaseTable.Meta):
         model = VirtualMachine
         fields = (
-            'pk', 'name', 'status', 'cluster', 'role', 'tenant', 'platform', 'vcpus', 'memory', 'disk', 'primary_ip4',
-            'primary_ip6', 'primary_ip', 'tags',
+            "pk",
+            "name",
+            "status",
+            "cluster",
+            "role",
+            "tenant",
+            "vcpus",
+            "memory",
+            "disk",
+        )
+
+
+class VirtualMachineDetailTable(VirtualMachineTable):
+    primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
+    primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
+    primary_ip = tables.Column(linkify=True, verbose_name="IP Address")
+    tags = TagColumn(url_name="virtualization:virtualmachine_list")
+
+    class Meta(BaseTable.Meta):
+        model = VirtualMachine
+        fields = (
+            "pk",
+            "name",
+            "status",
+            "cluster",
+            "role",
+            "tenant",
+            "platform",
+            "vcpus",
+            "memory",
+            "disk",
+            "primary_ip4",
+            "primary_ip6",
+            "primary_ip",
+            "tags",
         )
         default_columns = (
-            'pk', 'name', 'status', 'cluster', 'role', 'tenant', 'vcpus', 'memory', 'disk', 'primary_ip',
+            "pk",
+            "name",
+            "status",
+            "cluster",
+            "role",
+            "tenant",
+            "vcpus",
+            "memory",
+            "disk",
+            "primary_ip",
         )
 
 
@@ -154,41 +184,66 @@ class VirtualMachineDetailTable(VirtualMachineTable):
 # VM components
 #
 
+
 class VMInterfaceTable(BaseInterfaceTable):
     pk = ToggleColumn()
     virtual_machine = tables.LinkColumn()
-    name = tables.Column(
-        linkify=True
-    )
-    tags = TagColumn(
-        url_name='virtualization:vminterface_list'
-    )
+    name = tables.Column(linkify=True)
+    tags = TagColumn(url_name="virtualization:vminterface_list")
 
     class Meta(BaseTable.Meta):
         model = VMInterface
         fields = (
-            'pk', 'virtual_machine', 'name', 'enabled', 'mac_address', 'mtu', 'mode', 'description', 'tags',
-            'ip_addresses', 'untagged_vlan', 'tagged_vlans',
+            "pk",
+            "virtual_machine",
+            "name",
+            "enabled",
+            "mac_address",
+            "mtu",
+            "mode",
+            "description",
+            "tags",
+            "ip_addresses",
+            "untagged_vlan",
+            "tagged_vlans",
         )
-        default_columns = ('pk', 'virtual_machine', 'name', 'enabled', 'description')
+        default_columns = ("pk", "virtual_machine", "name", "enabled", "description")
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):
     actions = ButtonsColumn(
         model=VMInterface,
-        buttons=('edit', 'delete'),
-        prepend_template=VMINTERFACE_BUTTONS
+        buttons=("edit", "delete"),
+        prepend_template=VMINTERFACE_BUTTONS,
     )
 
     class Meta(BaseTable.Meta):
         model = VMInterface
         fields = (
-            'pk', 'name', 'enabled', 'mac_address', 'mtu', 'mode', 'description', 'tags', 'ip_addresses',
-            'untagged_vlan', 'tagged_vlans', 'actions',
+            "pk",
+            "name",
+            "enabled",
+            "mac_address",
+            "mtu",
+            "mode",
+            "description",
+            "tags",
+            "ip_addresses",
+            "untagged_vlan",
+            "tagged_vlans",
+            "actions",
         )
         default_columns = (
-            'pk', 'name', 'enabled', 'mac_address', 'mtu', 'mode', 'description', 'ip_addresses', 'actions',
+            "pk",
+            "name",
+            "enabled",
+            "mac_address",
+            "mtu",
+            "mode",
+            "description",
+            "ip_addresses",
+            "actions",
         )
         row_attrs = {
-            'data-name': lambda record: record.name,
+            "data-name": lambda record: record.name,
         }

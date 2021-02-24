@@ -8,11 +8,11 @@ import sys
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 
-from .exceptions import PluginError, PluginNotFound, PluginImproperlyConfigured
+from .exceptions import PluginNotFound, PluginImproperlyConfigured
 
 
 # Logging object
-logger = logging.getLogger('nautobot.plugins')
+logger = logging.getLogger("nautobot.plugins")
 
 
 def import_object(module_and_object):
@@ -21,8 +21,8 @@ def import_object(module_and_object):
 
     Returns the imported object, or None if it doesn't exist.
     """
-    target_module_name, object_name = module_and_object.rsplit('.', 1)
-    module_hierarchy = target_module_name.split('.')
+    target_module_name, object_name = module_and_object.rsplit(".", 1)
+    module_hierarchy = target_module_name.split(".")
 
     # Iterate through the module hierarchy, checking for the existence of each successive submodule.
     # We have to do this rather than jumping directly to calling find_spec(target_module_name)
@@ -62,7 +62,7 @@ def load_plugin(plugin_name, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE
     try:
         plugin = importlib.import_module(plugin_name)
     except ModuleNotFoundError as err:
-        if getattr(err, 'name') == plugin_name:
+        if getattr(err, "name") == plugin_name:
             raise PluginNotFound(
                 f"Unable to import plugin {plugin_name}: Module not found. Check that the plugin module has been "
                 f"installed within the correct Python environment."
@@ -96,9 +96,7 @@ def load_plugin(plugin_name, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE
     MIDDLEWARE.extend(plugin_config.middleware)
 
     # Update caching configg
-    CACHEOPS.update({
-        f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()
-    })
+    CACHEOPS.update({f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()})
 
 
 def get_sso_backend_name(social_auth_module):
@@ -110,8 +108,6 @@ def get_sso_backend_name(social_auth_module):
     try:
         backend_class = import_string(social_auth_module)
     except ImportError:
-        raise ImproperlyConfigured(
-            f"Unable to import Social Auth Module {social_auth_module}."
-        )
+        raise ImproperlyConfigured(f"Unable to import Social Auth Module {social_auth_module}.")
     backend_name = backend_class.name
     return backend_name

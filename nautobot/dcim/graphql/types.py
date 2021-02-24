@@ -13,7 +13,7 @@ from nautobot.dcim.filters import (
     ConsoleServerPortFilterSet,
 )
 from nautobot.ipam.graphql.types import IPAddressType
-from nautobot.extras.graphql.types import TagType
+from nautobot.extras.graphql.types import TagType  # noqa: F401
 
 
 @convert_django_field.register(MACAddressField)
@@ -50,6 +50,7 @@ class CableTerminationMixin:
 
 class SiteType(DjangoObjectType):
     """Graphql Type Object for Site model."""
+
     class Meta:
         model = Site
         filterset_class = SiteFilterSet
@@ -58,6 +59,7 @@ class SiteType(DjangoObjectType):
 
 class DeviceType(DjangoObjectType):
     """Graphql Type Object for Device model."""
+
     class Meta:
         model = Device
         filterset_class = DeviceFilterSet
@@ -66,6 +68,7 @@ class DeviceType(DjangoObjectType):
 
 class RackType(DjangoObjectType):
     """Graphql Type Object for Rack model."""
+
     class Meta:
         model = Rack
         filterset_class = RackFilterSet
@@ -74,6 +77,7 @@ class RackType(DjangoObjectType):
 
 class InterfaceType(DjangoObjectType, CableTerminationMixin):
     """Graphql Type Object for Interface model."""
+
     class Meta:
         model = Interface
         filterset_class = InterfaceFilterSet
@@ -87,6 +91,7 @@ class InterfaceType(DjangoObjectType, CableTerminationMixin):
 
 class ConsoleServerPortType(DjangoObjectType, CableTerminationMixin):
     """Graphql Type Object for ConsoleServerPort model."""
+
     class Meta:
         model = ConsoleServerPort
         filterset_class = ConsoleServerPortFilterSet
@@ -94,6 +99,7 @@ class ConsoleServerPortType(DjangoObjectType, CableTerminationMixin):
 
 class CableType(DjangoObjectType):
     """Graphql Type Object for Cable model."""
+
     class Meta:
         model = Cable
         filterset_class = CableFilterSet

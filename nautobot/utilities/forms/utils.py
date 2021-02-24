@@ -7,13 +7,13 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 from .constants import *
 
 __all__ = (
-    'add_blank_choice',
-    'expand_alphanumeric_pattern',
-    'expand_ipaddress_pattern',
-    'form_from_model',
-    'parse_alphanumeric_range',
-    'parse_numeric_range',
-    'restrict_form_fields',
+    "add_blank_choice",
+    "expand_alphanumeric_pattern",
+    "expand_ipaddress_pattern",
+    "form_from_model",
+    "parse_alphanumeric_range",
+    "parse_numeric_range",
+    "restrict_form_fields",
 )
 
 
@@ -25,9 +25,9 @@ def parse_numeric_range(string, base=10):
       '2,8-b,d,f' => [2, 8, 9, a, b, d, f]
     """
     values = list()
-    for dash_range in string.split(','):
+    for dash_range in string.split(","):
         try:
-            begin, end = dash_range.split('-')
+            begin, end = dash_range.split("-")
         except ValueError:
             begin, end = dash_range, dash_range
         begin, end = int(begin.strip(), base=base), int(end.strip(), base=base) + 1
@@ -42,9 +42,9 @@ def parse_alphanumeric_range(string):
     '0-3,a-d' => [0, 1, 2, 3, a, b, c, d]
     """
     values = []
-    for dash_range in string.split(','):
+    for dash_range in string.split(","):
         try:
-            begin, end = dash_range.split('-')
+            begin, end = dash_range.split("-")
             vals = begin + end
             # Break out of loop if there's an invalid pattern to return an error
             if (not (vals.isdigit() or vals.isalpha())) or (vals.isalpha() and not (vals.isupper() or vals.islower())):
@@ -101,16 +101,16 @@ def expand_ipaddress_pattern(string, family):
     for i in parsed_range:
         if re.search(regex, remnant):
             for string in expand_ipaddress_pattern(remnant, family):
-                yield ''.join([lead, format(i, 'x' if family == 6 else 'd'), string])
+                yield "".join([lead, format(i, "x" if family == 6 else "d"), string])
         else:
-            yield ''.join([lead, format(i, 'x' if family == 6 else 'd'), remnant])
+            yield "".join([lead, format(i, "x" if family == 6 else "d"), remnant])
 
 
 def add_blank_choice(choices):
     """
     Add a blank choice to the beginning of a choices list.
     """
-    return ((None, '---------'),) + tuple(choices)
+    return ((None, "---------"),) + tuple(choices)
 
 
 def form_from_model(model, fields):
@@ -123,14 +123,14 @@ def form_from_model(model, fields):
     for field in form_fields.values():
         field.required = False
 
-    return type('FormFromModel', (forms.Form,), form_fields)
+    return type("FormFromModel", (forms.Form,), form_fields)
 
 
-def restrict_form_fields(form, user, action='view'):
+def restrict_form_fields(form, user, action="view"):
     """
     Restrict all form fields which reference a RestrictedQuerySet. This ensures that users see only permitted objects
     as available choices.
     """
     for field in form.fields.values():
-        if hasattr(field, 'queryset') and issubclass(field.queryset.__class__, RestrictedQuerySet):
+        if hasattr(field, "queryset") and issubclass(field.queryset.__class__, RestrictedQuerySet):
             field.queryset = field.queryset.restrict(user, action)

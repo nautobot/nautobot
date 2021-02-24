@@ -6,7 +6,10 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from nautobot.core.authentication import assign_groups_to_user, assign_permissions_to_user
+from nautobot.core.authentication import (
+    assign_groups_to_user,
+    assign_permissions_to_user,
+)
 from nautobot.users.models import AdminUser
 
 logger = logging.getLogger("nautobot.users.signals")

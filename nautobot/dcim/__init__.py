@@ -1,1 +1,1 @@
-default_app_config = 'nautobot.dcim.apps.DCIMConfig'
+default_app_config = "nautobot.dcim.apps.DCIMConfig"

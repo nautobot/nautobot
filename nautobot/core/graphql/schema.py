@@ -17,14 +17,21 @@ from nautobot.core.graphql.generators import (
     generate_restricted_queryset,
     generate_attrs_for_schema_type,
 )
-from nautobot.dcim.graphql.types import SiteType, DeviceType, InterfaceType, RackType, CableType, ConsoleServerPortType
+from nautobot.dcim.graphql.types import (
+    SiteType,
+    DeviceType,
+    InterfaceType,
+    RackType,
+    CableType,
+    ConsoleServerPortType,
+)
 from nautobot.extras.registry import registry
 from nautobot.extras.models import CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType
 from nautobot.ipam.graphql.types import IPAddressType
 
-logger = logging.getLogger('nautobot.graphql.schema')
+logger = logging.getLogger("nautobot.graphql.schema")
 
 registry["graphql_types"] = OrderedDict()
 registry["graphql_types"]["dcim.site"] = SiteType
@@ -123,7 +130,11 @@ def extend_schema_type_custom_field(schema_type, model):
             )
             continue
 
-        setattr(schema_type, resolver_name, generate_custom_field_resolver(field.name, resolver_name))
+        setattr(
+            schema_type,
+            resolver_name,
+            generate_custom_field_resolver(field.name, resolver_name),
+        )
 
         if field.type in CUSTOM_FIELD_MAPPING:
             schema_type._meta.fields[field_name] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
@@ -187,7 +198,7 @@ def extend_schema_type_relationships(schema_type, model):
     ct = ContentType.objects.get_for_model(model)
     relationships_by_side = {
         "source": Relationship.objects.filter(source_type=ct),
-        "destination": Relationship.objects.filter(destination_type=ct)
+        "destination": Relationship.objects.filter(destination_type=ct),
     }
 
     prefix = ""
@@ -231,9 +242,7 @@ def extend_schema_type_relationships(schema_type, model):
             setattr(
                 schema_type,
                 resolver_name,
-                generate_relationship_resolver(
-                    rel_name, resolver_name, relationship, side, peer_model
-                )
+                generate_relationship_resolver(rel_name, resolver_name, relationship, side, peer_model),
             )
 
     return schema_type

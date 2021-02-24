@@ -5,7 +5,7 @@ from collections import OrderedDict
 from django import __version__ as DJANGO_VERSION
 from django.apps import apps
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_yasg.openapi import Schema, TYPE_OBJECT, TYPE_ARRAY
 from drf_yasg.utils import swagger_auto_schema
@@ -29,25 +29,25 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.authentication import IsAuthenticated
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
 from . import serializers
 
 HTTP_ACTIONS = {
-    'GET': 'view',
-    'OPTIONS': None,
-    'HEAD': 'view',
-    'POST': 'add',
-    'PUT': 'change',
-    'PATCH': 'change',
-    'DELETE': 'delete',
+    "GET": "view",
+    "OPTIONS": None,
+    "HEAD": "view",
+    "POST": "add",
+    "PUT": "change",
+    "PATCH": "change",
+    "DELETE": "delete",
 }
 
 
 #
 # Mixins
 #
+
 
 class BulkUpdateModelMixin:
     """
@@ -67,18 +67,15 @@ class BulkUpdateModelMixin:
         }
     ]
     """
+
     def bulk_update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop("partial", False)
         serializer = BulkOperationSerializer(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
-        qs = self.get_queryset().filter(
-            pk__in=[o['id'] for o in serializer.data]
-        )
+        qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
         # Map update data by object ID
-        update_data = {
-            obj.pop('id'): obj for obj in request.data
-        }
+        update_data = {obj.pop("id"): obj for obj in request.data}
 
         data = self.perform_bulk_update(qs, update_data, partial=partial)
 
@@ -97,7 +94,7 @@ class BulkUpdateModelMixin:
             return data_list
 
     def bulk_partial_update(self, request, *args, **kwargs):
-        kwargs['partial'] = True
+        kwargs["partial"] = True
         return self.bulk_update(request, *args, **kwargs)
 
 
@@ -112,12 +109,11 @@ class BulkDestroyModelMixin:
         {"id": 456}
     ]
     """
+
     def bulk_destroy(self, request, *args, **kwargs):
         serializer = BulkOperationSerializer(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
-        qs = self.get_queryset().filter(
-            pk__in=[o['id'] for o in serializer.data]
-        )
+        qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
         self.perform_bulk_destroy(qs)
 
@@ -133,29 +129,31 @@ class BulkDestroyModelMixin:
 # Viewsets
 #
 
+
 class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
     """
+
     brief = False
     brief_prefetch_fields = []
 
     def get_serializer(self, *args, **kwargs):
 
         # If a list of objects has been provided, initialize the serializer with many=True
-        if isinstance(kwargs.get('data', {}), list):
-            kwargs['many'] = True
+        if isinstance(kwargs.get("data", {}), list):
+            kwargs["many"] = True
 
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_class(self):
-        logger = logging.getLogger('nautobot.core.api.views.ModelViewSet')
+        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
 
         # If using 'brief' mode, find and return the nested serializer for this model, if one exists
         if self.brief:
             logger.debug("Request is for 'brief' format; initializing nested serializer")
             try:
-                serializer = get_serializer_for_model(self.queryset.model, prefix='Nested')
+                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
                 logger.debug(f"Using serializer {serializer}")
                 return serializer
             except SerializerNotFound:
@@ -174,7 +172,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
 
     def initialize_request(self, request, *args, **kwargs):
         # Check if brief=True has been passed
-        if request.method == 'GET' and request.GET.get('brief'):
+        if request.method == "GET" and request.GET.get("brief"):
             self.brief = True
 
         return super().initialize_request(request, *args, **kwargs)
@@ -191,21 +189,16 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
             self.queryset = self.queryset.restrict(request.user, action)
 
     def dispatch(self, request, *args, **kwargs):
-        logger = logging.getLogger('nautobot.core.api.views.ModelViewSet')
+        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
 
         try:
             return super().dispatch(request, *args, **kwargs)
         except ProtectedError as e:
             protected_objects = list(e.protected_objects)
-            msg = f'Unable to delete object. {len(protected_objects)} dependent objects were found: '
-            msg += ', '.join([f'{obj} ({obj.pk})' for obj in protected_objects])
+            msg = f"Unable to delete object. {len(protected_objects)} dependent objects were found: "
+            msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
             logger.warning(msg)
-            return self.finalize_response(
-                request,
-                Response({'detail': msg}, status=409),
-                *args,
-                **kwargs
-            )
+            return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
     def _validate_objects(self, instance):
         """
@@ -223,7 +216,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
 
     def perform_create(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger('nautobot.core.api.views.ModelViewSet')
+        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
         logger.info(f"Creating new {model._meta.verbose_name}")
 
         # Enforce object-level permissions on save()
@@ -236,7 +229,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
 
     def perform_update(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger('nautobot.core.api.views.ModelViewSet')
+        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
         logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
 
         # Enforce object-level permissions on save()
@@ -249,7 +242,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
 
     def perform_destroy(self, instance):
         model = self.queryset.model
-        logger = logging.getLogger('nautobot.core.api.views.ModelViewSet')
+        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
         logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
         return super().perform_destroy(instance)
@@ -259,10 +252,12 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
 # Views
 #
 
+
 class APIRootView(APIView):
     """
     This is the root of Nautobot's REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
     """
+
     _ignore_model_permissions = True
     exclude_from_schema = True
     swagger_schema = None
@@ -272,24 +267,57 @@ class APIRootView(APIView):
 
     def get(self, request, format=None):
 
-        return Response(OrderedDict((
-            ('circuits', reverse('circuits-api:api-root', request=request, format=format)),
-            ('dcim', reverse('dcim-api:api-root', request=request, format=format)),
-            ('extras', reverse('extras-api:api-root', request=request, format=format)),
-            ('graphql', reverse('graphql-api', request=request, format=format)),
-            ('ipam', reverse('ipam-api:api-root', request=request, format=format)),
-            ('plugins', reverse('plugins-api:api-root', request=request, format=format)),
-            ('status', reverse('api-status', request=request, format=format)),
-            ('tenancy', reverse('tenancy-api:api-root', request=request, format=format)),
-            ('users', reverse('users-api:api-root', request=request, format=format)),
-            ('virtualization', reverse('virtualization-api:api-root', request=request, format=format)),
-        )))
+        return Response(
+            OrderedDict(
+                (
+                    (
+                        "circuits",
+                        reverse("circuits-api:api-root", request=request, format=format),
+                    ),
+                    (
+                        "dcim",
+                        reverse("dcim-api:api-root", request=request, format=format),
+                    ),
+                    (
+                        "extras",
+                        reverse("extras-api:api-root", request=request, format=format),
+                    ),
+                    ("graphql", reverse("graphql-api", request=request, format=format)),
+                    (
+                        "ipam",
+                        reverse("ipam-api:api-root", request=request, format=format),
+                    ),
+                    (
+                        "plugins",
+                        reverse("plugins-api:api-root", request=request, format=format),
+                    ),
+                    ("status", reverse("api-status", request=request, format=format)),
+                    (
+                        "tenancy",
+                        reverse("tenancy-api:api-root", request=request, format=format),
+                    ),
+                    (
+                        "users",
+                        reverse("users-api:api-root", request=request, format=format),
+                    ),
+                    (
+                        "virtualization",
+                        reverse(
+                            "virtualization-api:api-root",
+                            request=request,
+                            format=format,
+                        ),
+                    ),
+                )
+            )
+        )
 
 
 class StatusView(APIView):
     """
     A lightweight read-only endpoint for conveying Nautobot's current operational status.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -297,34 +325,37 @@ class StatusView(APIView):
         installed_apps = {}
         for app_config in apps.get_app_configs():
             app = app_config.module
-            version = getattr(app, 'VERSION', getattr(app, '__version__', None))
+            version = getattr(app, "VERSION", getattr(app, "__version__", None))
             if version:
                 if type(version) is tuple:
-                    version = '.'.join(str(n) for n in version)
+                    version = ".".join(str(n) for n in version)
                 installed_apps[app_config.name] = version
         installed_apps = {k: v for k, v in sorted(installed_apps.items())}
 
         # Gather installed plugins
         plugins = {}
         for plugin_name in settings.PLUGINS:
-            plugin_name = plugin_name.rsplit('.', 1)[-1]
+            plugin_name = plugin_name.rsplit(".", 1)[-1]
             plugin_config = apps.get_app_config(plugin_name)
-            plugins[plugin_name] = getattr(plugin_config, 'version', None)
+            plugins[plugin_name] = getattr(plugin_config, "version", None)
         plugins = {k: v for k, v in sorted(plugins.items())}
 
-        return Response({
-            'django-version': DJANGO_VERSION,
-            'installed-apps': installed_apps,
-            'nautobot-version': settings.VERSION,
-            'plugins': plugins,
-            'python-version': platform.python_version(),
-            'rq-workers-running': Worker.count(get_connection('default')),
-        })
+        return Response(
+            {
+                "django-version": DJANGO_VERSION,
+                "installed-apps": installed_apps,
+                "nautobot-version": settings.VERSION,
+                "plugins": plugins,
+                "python-version": platform.python_version(),
+                "rq-workers-running": Worker.count(get_connection("default")),
+            }
+        )
 
 
 #
 # GraphQL
 #
+
 
 class GraphQLDRFAPIView(APIView):
     """
@@ -340,14 +371,7 @@ class GraphQLDRFAPIView(APIView):
     middleware = None
     root_value = None
 
-    def __init__(
-        self,
-        schema=None,
-        executor=None,
-        middleware=None,
-        root_value=None,
-        backend=None
-    ):
+    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None):
         if not schema:
             schema = graphene_settings.SCHEMA
 
@@ -369,9 +393,7 @@ class GraphQLDRFAPIView(APIView):
         self.root_value = root_value
         self.backend = backend
 
-        assert isinstance(
-            self.graphql_schema, GraphQLSchema
-        ), "A Schema is required to be provided to GraphQLAPIView."
+        assert isinstance(self.graphql_schema, GraphQLSchema), "A Schema is required to be provided to GraphQLAPIView."
 
     def get_root_value(self, request):
         return self.root_value
@@ -387,28 +409,14 @@ class GraphQLDRFAPIView(APIView):
 
     @swagger_auto_schema(
         request_body=serializers.GraphQLAPISerializer,
-        operation_description='Query the database using a GraphQL query',
+        operation_description="Query the database using a GraphQL query",
         responses={
-            200: Schema(
-                type=TYPE_OBJECT,
-                properties={
-                    "data": Schema(
-                        type=TYPE_OBJECT
-                    )
-                }
-            ),
+            200: Schema(type=TYPE_OBJECT, properties={"data": Schema(type=TYPE_OBJECT)}),
             400: Schema(
                 type=TYPE_OBJECT,
-                properties={
-                    "errors": Schema(
-                        type=TYPE_ARRAY,
-                        items={
-                            "type": TYPE_OBJECT
-                        }
-                    )
-                }
-            )
-        }
+                properties={"errors": Schema(type=TYPE_ARRAY, items={"type": TYPE_OBJECT})},
+            ),
+        },
     )
     def post(self, request, *args, **kwargs):
         try:
@@ -416,12 +424,14 @@ class GraphQLDRFAPIView(APIView):
             result, status_code = self.get_response(request, data)
 
             return Response(
-                result, status=status_code,
+                result,
+                status=status_code,
             )
 
         except HttpError as e:
             return Response(
-                {"errors": [GraphQLView.format_error(e)]}, status=status.HTTP_400_BAD_REQUEST,
+                {"errors": [GraphQLView.format_error(e)]},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
     def get_response(self, request, data):
@@ -436,18 +446,14 @@ class GraphQLDRFAPIView(APIView):
         """
         query, variables, operation_name, id = GraphQLView.get_graphql_params(request, data)
 
-        execution_result = self.execute_graphql_request(
-            request, data, query, variables, operation_name
-        )
+        execution_result = self.execute_graphql_request(request, data, query, variables, operation_name)
 
         status_code = 200
         if execution_result:
             response = {}
 
             if execution_result.errors:
-                response["errors"] = [
-                    GraphQLView.format_error(e) for e in execution_result.errors
-                ]
+                response["errors"] = [GraphQLView.format_error(e) for e in execution_result.errors]
 
             if execution_result.invalid:
                 status_code = 400
@@ -483,9 +489,7 @@ class GraphQLDRFAPIView(APIView):
 
         return {}
 
-    def execute_graphql_request(
-        self, request, data, query, variables, operation_name
-    ):
+    def execute_graphql_request(self, request, data, query, variables, operation_name):
         """Execute a GraphQL request and return the result
 
         Args:
@@ -499,9 +503,7 @@ class GraphQLDRFAPIView(APIView):
             ExecutionResult: Execution result object from GraphQL with response or error message.
         """
         if not query:
-            raise HttpError(
-                HttpResponseBadRequest("Must provide query string.")
-            )
+            raise HttpError(HttpResponseBadRequest("Must provide query string."))
 
         try:
             backend = self.get_backend(request)

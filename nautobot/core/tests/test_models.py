@@ -5,7 +5,6 @@ from nautobot.utilities.testing import TestCase
 
 
 class BaseModelTest(TestCase):
-
     class FakeBaseModel(BaseModel):
         def clean(self):
             raise ValidationError("validation error")

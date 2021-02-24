@@ -12,7 +12,11 @@ from rq import Worker
 
 from nautobot.core.views import generic
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import copy_safe_request, count_related, shallow_compare_dict
+from nautobot.utilities.utils import (
+    copy_safe_request,
+    count_related,
+    shallow_compare_dict,
+)
 from nautobot.utilities.views import ContentTypePermissionRequiredMixin
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
@@ -29,20 +33,22 @@ from .models import (
     Status,
     Tag,
     TaggedItem,
-    Webhook
+    Webhook,
 )
 from .jobs import get_job, get_jobs, run_job
-from .datasources import get_datasource_contents, enqueue_pull_git_repository_and_refresh_data
+from .datasources import (
+    get_datasource_contents,
+    enqueue_pull_git_repository_and_refresh_data,
+)
 
 
 #
 # Tags
 #
 
+
 class TagListView(generic.ObjectListView):
-    queryset = Tag.objects.annotate(
-        items=count_related(TaggedItem, 'tag')
-    )
+    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     filterset = filters.TagFilterSet
     filterset_form = forms.TagFilterForm
     table = tables.TagTable
@@ -52,30 +58,26 @@ class TagView(generic.ObjectView):
     queryset = Tag.objects.all()
 
     def get_extra_context(self, request, instance):
-        tagged_items = TaggedItem.objects.filter(
-            tag=instance
-        ).prefetch_related(
-            'content_type', 'content_object'
-        )
+        tagged_items = TaggedItem.objects.filter(tag=instance).prefetch_related("content_type", "content_object")
 
         # Generate a table of all items tagged with this Tag
         items_table = tables.TaggedItemTable(tagged_items)
         paginate = {
-            'paginator_class': EnhancedPaginator,
-            'per_page': get_paginate_count(request)
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
         }
         RequestConfig(request, paginate).configure(items_table)
 
         return {
-            'items_count': tagged_items.count(),
-            'items_table': items_table,
+            "items_count": tagged_items.count(),
+            "items_table": items_table,
         }
 
 
 class TagEditView(generic.ObjectEditView):
     queryset = Tag.objects.all()
     model_form = forms.TagForm
-    template_name = 'extras/tag_edit.html'
+    template_name = "extras/tag_edit.html"
 
 
 class TagDeleteView(generic.ObjectDeleteView):
@@ -89,17 +91,13 @@ class TagBulkImportView(generic.BulkImportView):
 
 
 class TagBulkEditView(generic.BulkEditView):
-    queryset = Tag.objects.annotate(
-        items=count_related(TaggedItem, 'tag')
-    )
+    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
     form = forms.TagBulkEditForm
 
 
 class TagBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tag.objects.annotate(
-        items=count_related(TaggedItem, 'tag')
-    )
+    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
 
 
@@ -110,12 +108,13 @@ class TagBulkDeleteView(generic.BulkDeleteView):
 # TODO: disallow (or at least warn) user from manually editing config contexts that
 # have an associated owner, such as a Git repository
 
+
 class ConfigContextListView(generic.ObjectListView):
     queryset = ConfigContext.objects.all()
     filterset = filters.ConfigContextFilterSet
     filterset_form = forms.ConfigContextFilterForm
     table = tables.ConfigContextTable
-    action_buttons = ('add',)
+    action_buttons = ("add",)
 
 
 class ConfigContextView(generic.ObjectView):
@@ -123,24 +122,24 @@ class ConfigContextView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
-        if request.GET.get('format') in ['json', 'yaml']:
-            format = request.GET.get('format')
+        if request.GET.get("format") in ["json", "yaml"]:
+            format = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.config.set('extras.configcontext.format', format, commit=True)
+                request.user.config.set("extras.configcontext.format", format, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.config.get('extras.configcontext.format', 'json')
+            format = request.user.config.get("extras.configcontext.format", "json")
         else:
-            format = 'json'
+            format = "json"
 
         return {
-            'format': format,
+            "format": format,
         }
 
 
 class ConfigContextEditView(generic.ObjectEditView):
     queryset = ConfigContext.objects.all()
     model_form = forms.ConfigContextForm
-    template_name = 'extras/configcontext_edit.html'
+    template_name = "extras/configcontext_edit.html"
 
 
 class ConfigContextBulkEditView(generic.BulkEditView):
@@ -161,27 +160,27 @@ class ConfigContextBulkDeleteView(generic.BulkDeleteView):
 
 class ObjectConfigContextView(generic.ObjectView):
     base_template = None
-    template_name = 'extras/object_configcontext.html'
+    template_name = "extras/object_configcontext.html"
 
     def get_extra_context(self, request, instance):
-        source_contexts = ConfigContext.objects.restrict(request.user, 'view').get_for_object(instance)
+        source_contexts = ConfigContext.objects.restrict(request.user, "view").get_for_object(instance)
 
         # Determine user's preferred output format
-        if request.GET.get('format') in ['json', 'yaml']:
-            format = request.GET.get('format')
+        if request.GET.get("format") in ["json", "yaml"]:
+            format = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.config.set('extras.configcontext.format', format, commit=True)
+                request.user.config.set("extras.configcontext.format", format, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.config.get('extras.configcontext.format', 'json')
+            format = request.user.config.get("extras.configcontext.format", "json")
         else:
-            format = 'json'
+            format = "json"
 
         return {
-            'rendered_context': instance.get_config_context(),
-            'source_contexts': source_contexts,
-            'format': format,
-            'base_template': self.base_template,
-            'active_tab': 'config-context',
+            "rendered_context": instance.get_config_context(),
+            "source_contexts": source_contexts,
+            "format": format,
+            "base_template": self.base_template,
+            "active_tab": "config-context",
         }
 
 
@@ -189,42 +188,40 @@ class ObjectConfigContextView(generic.ObjectView):
 # Change logging
 #
 
+
 class ObjectChangeListView(generic.ObjectListView):
     queryset = ObjectChange.objects.all()
     filterset = filters.ObjectChangeFilterSet
     filterset_form = forms.ObjectChangeFilterForm
     table = tables.ObjectChangeTable
-    template_name = 'extras/objectchange_list.html'
-    action_buttons = ('export',)
+    template_name = "extras/objectchange_list.html"
+    action_buttons = ("export",)
 
 
 class ObjectChangeView(generic.ObjectView):
     queryset = ObjectChange.objects.all()
 
     def get_extra_context(self, request, instance):
-        related_changes = ObjectChange.objects.restrict(request.user, 'view').filter(
-            request_id=instance.request_id
-        ).exclude(
-            pk=instance.pk
+        related_changes = (
+            ObjectChange.objects.restrict(request.user, "view")
+            .filter(request_id=instance.request_id)
+            .exclude(pk=instance.pk)
         )
-        related_changes_table = tables.ObjectChangeTable(
-            data=related_changes[:50],
-            orderable=False
-        )
+        related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
 
-        objectchanges = ObjectChange.objects.restrict(request.user, 'view').filter(
+        objectchanges = ObjectChange.objects.restrict(request.user, "view").filter(
             changed_object_type=instance.changed_object_type,
             changed_object_id=instance.changed_object_id,
         )
 
-        next_change = objectchanges.filter(time__gt=instance.time).order_by('time').first()
-        prev_change = objectchanges.filter(time__lt=instance.time).order_by('-time').first()
+        next_change = objectchanges.filter(time__gt=instance.time).order_by("time").first()
+        prev_change = objectchanges.filter(time__lt=instance.time).order_by("-time").first()
 
         if prev_change:
             diff_added = shallow_compare_dict(
                 prev_change.object_data,
                 instance.object_data,
-                exclude=['last_updated'],
+                exclude=["last_updated"],
             )
             diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
         else:
@@ -232,12 +229,12 @@ class ObjectChangeView(generic.ObjectView):
             diff_added = diff_removed = instance.object_data
 
         return {
-            'diff_added': diff_added,
-            'diff_removed': diff_removed,
-            'next_change': next_change,
-            'prev_change': prev_change,
-            'related_changes_table': related_changes_table,
-            'related_changes_count': related_changes.count()
+            "diff_added": diff_added,
+            "diff_removed": diff_removed,
+            "next_change": next_change,
+            "prev_change": prev_change,
+            "related_changes_table": related_changes_table,
+            "related_changes_count": related_changes.count(),
         }
 
 
@@ -247,33 +244,33 @@ class ObjectChangeLogView(View):
 
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
+
     base_template = None
 
     def get(self, request, model, **kwargs):
 
         # Handle QuerySet restriction of parent object if needed
-        if hasattr(model.objects, 'restrict'):
-            obj = get_object_or_404(model.objects.restrict(request.user, 'view'), **kwargs)
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
         else:
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all changes for this object (and its related objects)
         content_type = ContentType.objects.get_for_model(model)
-        objectchanges = ObjectChange.objects.restrict(request.user, 'view').prefetch_related(
-            'user', 'changed_object_type'
-        ).filter(
-            Q(changed_object_type=content_type, changed_object_id=obj.pk) |
-            Q(related_object_type=content_type, related_object_id=obj.pk)
+        objectchanges = (
+            ObjectChange.objects.restrict(request.user, "view")
+            .prefetch_related("user", "changed_object_type")
+            .filter(
+                Q(changed_object_type=content_type, changed_object_id=obj.pk)
+                | Q(related_object_type=content_type, related_object_id=obj.pk)
+            )
         )
-        objectchanges_table = tables.ObjectChangeTable(
-            data=objectchanges,
-            orderable=False
-        )
+        objectchanges_table = tables.ObjectChangeTable(data=objectchanges, orderable=False)
 
         # Apply the request context
         paginate = {
-            'paginator_class': EnhancedPaginator,
-            'per_page': get_paginate_count(request)
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
         }
         RequestConfig(request, paginate).configure(objectchanges_table)
 
@@ -285,40 +282,47 @@ class ObjectChangeLogView(View):
             try:
                 template.loader.get_template(self.base_template)
             except template.TemplateDoesNotExist:
-                self.base_template = 'base.html'
+                self.base_template = "base.html"
 
-        return render(request, 'extras/object_changelog.html', {
-            'object': obj,
-            'table': objectchanges_table,
-            'base_template': self.base_template,
-            'active_tab': 'changelog',
-        })
+        return render(
+            request,
+            "extras/object_changelog.html",
+            {
+                "object": obj,
+                "table": objectchanges_table,
+                "base_template": self.base_template,
+                "active_tab": "changelog",
+            },
+        )
 
 
 #
 # Git repositories
 #
 
+
 class GitRepositoryListView(generic.ObjectListView):
     queryset = GitRepository.objects.all()
     # filterset = filters.GitRepositoryFilterSet
     # filterset_form = forms.GitRepositoryFilterForm
     table = tables.GitRepositoryTable
-    template_name = 'extras/gitrepository_list.html'
+    template_name = "extras/gitrepository_list.html"
 
     def extra_context(self):
-        git_repository_content_type = ContentType.objects.get(app_label='extras', model='gitrepository')
+        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
         # Get the newest results for each repository name
         results = {
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=git_repository_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-            ).order_by('completed').defer('data')
+                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+            )
+            .order_by("completed")
+            .defer("data")
         }
         return {
-            'job_results': results,
-            'datasource_contents': get_datasource_contents('extras.gitrepository'),
+            "job_results": results,
+            "datasource_contents": get_datasource_contents("extras.gitrepository"),
         }
 
 
@@ -327,7 +331,7 @@ class GitRepositoryView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         return {
-            'datasource_contents': get_datasource_contents('extras.gitrepository'),
+            "datasource_contents": get_datasource_contents("extras.gitrepository"),
         }
 
 
@@ -342,7 +346,7 @@ class GitRepositoryEditView(generic.ObjectEditView):
 
     def get_return_url(self, request, obj):
         if request.method == "POST":
-            return reverse('extras:gitrepository_result', kwargs={'slug': obj.slug})
+            return reverse("extras:gitrepository_result", kwargs={"slug": obj.slug})
         return super().get_return_url(request, obj)
 
 
@@ -369,7 +373,7 @@ class GitRepositoryBulkEditView(generic.BulkEditView):
 
     def extra_context(self):
         return {
-            'datasource_contents': get_datasource_contents('extras.gitrepository'),
+            "datasource_contents": get_datasource_contents("extras.gitrepository"),
         }
 
 
@@ -379,49 +383,55 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
 
     def extra_context(self):
         return {
-            'datasource_contents': get_datasource_contents('extras.gitrepository'),
+            "datasource_contents": get_datasource_contents("extras.gitrepository"),
         }
 
 
 class GitRepositorySyncView(View):
     def post(self, request, slug):
-        if not request.user.has_perm('extras.change_gitrepository'):
+        if not request.user.has_perm("extras.change_gitrepository"):
             return HttpResponseForbidden()
 
         repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
         # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection('default')):
+        if not Worker.count(get_connection("default")):
             messages.error(request, "Unable to sync Git repository: RQ worker process not running.")
 
         else:
             enqueue_pull_git_repository_and_refresh_data(repository, request)
 
-        return redirect('extras:gitrepository_result', slug=slug)
+        return redirect("extras:gitrepository_result", slug=slug)
 
 
 class GitRepositoryResultView(ContentTypePermissionRequiredMixin, View):
-
     def get_required_permission(self):
-        return 'extras.view_gitrepository'
+        return "extras.view_gitrepository"
 
     def get(self, request, slug):
-        git_repository_content_type = ContentType.objects.get(app_label='extras', model='gitrepository')
+        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
         git_repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
-        job_result = JobResult.objects.filter(
-            obj_type=git_repository_content_type, name=git_repository.name
-        ).order_by('-created').first()
-        return render(request, 'extras/gitrepository_result.html', {
-            'base_template': 'extras/gitrepository.html',
-            'object': git_repository,
-            'result': job_result,
-            'active_tab': 'result',
-        })
+        job_result = (
+            JobResult.objects.filter(obj_type=git_repository_content_type, name=git_repository.name)
+            .order_by("-created")
+            .first()
+        )
+        return render(
+            request,
+            "extras/gitrepository_result.html",
+            {
+                "base_template": "extras/gitrepository.html",
+                "object": git_repository,
+                "result": job_result,
+                "active_tab": "result",
+            },
+        )
 
 
 #
 # Image attachments
 #
+
 
 class ImageAttachmentEditView(generic.ObjectEditView):
     queryset = ImageAttachment.objects.all()
@@ -430,8 +440,8 @@ class ImageAttachmentEditView(generic.ObjectEditView):
     def alter_obj(self, imageattachment, request, args, kwargs):
         if not imageattachment.pk:
             # Assign the parent object based on URL kwargs
-            model = kwargs.get('model')
-            imageattachment.parent = get_object_or_404(model, pk=kwargs['object_id'])
+            model = kwargs.get("model")
+            imageattachment.parent = get_object_or_404(model, pk=kwargs["object_id"])
         return imageattachment
 
     def get_return_url(self, request, imageattachment):
@@ -449,23 +459,27 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 # Jobs
 #
 
+
 class JobListView(ContentTypePermissionRequiredMixin, View):
     """
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
     """
+
     def get_required_permission(self):
-        return 'extras.view_job'
+        return "extras.view_job"
 
     def get(self, request):
         jobs_dict = get_jobs()
-        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
         # Get the newest results for each job name
         results = {
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=job_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES
-            ).order_by('completed').defer('data')
+                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+            )
+            .order_by("completed")
+            .defer("data")
         }
 
         # get_jobs() gives us a nested dict {grouping: {module: {"name": name, "jobs": [job, job, job]}}}
@@ -475,7 +489,7 @@ class JobListView(ContentTypePermissionRequiredMixin, View):
         for grouping, modules in jobs_dict.items():
             for module, entry in modules.items():
                 module_jobs = modules_dict.get(entry["name"], [])
-                for job_class in entry['jobs'].values():
+                for job_class in entry["jobs"].values():
                     job = job_class()
                     job.result = results.get(job.class_path, None)
                     module_jobs.append(job)
@@ -483,10 +497,14 @@ class JobListView(ContentTypePermissionRequiredMixin, View):
                     # TODO: should we sort module_jobs by job name? Currently they're in source code order
                     modules_dict[entry["name"]] = module_jobs
 
-        return render(request, 'extras/job_list.html', {
-            # Order the jobs listing by case-insensitive sorting of the module human-readable name
-            'jobs': sorted(modules_dict.items(), key=lambda kvpair: kvpair[0].lower()),
-        })
+        return render(
+            request,
+            "extras/job_list.html",
+            {
+                # Order the jobs listing by case-insensitive sorting of the module human-readable name
+                "jobs": sorted(modules_dict.items(), key=lambda kvpair: kvpair[0].lower()),
+            },
+        )
 
 
 class JobView(ContentTypePermissionRequiredMixin, View):
@@ -495,7 +513,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
     """
 
     def get_required_permission(self):
-        return 'extras.view_job'
+        return "extras.view_job"
 
     def get(self, request, class_path):
         job_class = get_job(class_path)
@@ -506,15 +524,19 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
         form = job.as_form(initial=request.GET)
 
-        return render(request, 'extras/job.html', {
-            'grouping': grouping,
-            'module': module,
-            'job': job,
-            'form': form,
-        })
+        return render(
+            request,
+            "extras/job.html",
+            {
+                "grouping": grouping,
+                "module": module,
+                "job": job,
+                "form": form,
+            },
+        )
 
     def post(self, request, class_path):
-        if not request.user.has_perm('extras.run_job'):
+        if not request.user.has_perm("extras.run_job"):
             return HttpResponseForbidden()
 
         job_class = get_job(class_path)
@@ -525,14 +547,14 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         form = job.as_form(request.POST, request.FILES)
 
         # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection('default')):
+        if not Worker.count(get_connection("default")):
             messages.error(request, "Unable to run job: RQ worker process not running.")
 
         elif form.is_valid():
             # Run the job. A new JobResult is created.
-            commit = form.cleaned_data.pop('_commit')
+            commit = form.cleaned_data.pop("_commit")
 
-            job_content_type = ContentType.objects.get(app_label='extras', model='job')
+            job_content_type = ContentType.objects.get(app_label="extras", model="job")
             job_result = JobResult.enqueue_job(
                 run_job,
                 job.class_path,
@@ -543,14 +565,18 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 commit=commit,
             )
 
-            return redirect('extras:job_jobresult', pk=job_result.pk)
+            return redirect("extras:job_jobresult", pk=job_result.pk)
 
-        return render(request, 'extras/job.html', {
-            'grouping': grouping,
-            'module': module,
-            'job': job,
-            'form': form,
-        })
+        return render(
+            request,
+            "extras/job.html",
+            {
+                "grouping": grouping,
+                "module": module,
+                "job": job,
+                "form": form,
+            },
+        )
 
 
 class JobJobResultView(ContentTypePermissionRequiredMixin, View):
@@ -559,29 +585,35 @@ class JobJobResultView(ContentTypePermissionRequiredMixin, View):
     """
 
     def get_required_permission(self):
-        return 'extras.view_jobresult'
+        return "extras.view_jobresult"
 
     def get(self, request, pk):
-        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = get_object_or_404(JobResult.objects.all(), pk=pk, obj_type=job_content_type)
 
         job_class = get_job(job_result.name)
         job = job_class() if job_class else None
 
-        return render(request, 'extras/job_jobresult.html', {
-            'job': job,
-            'result': job_result,
-        })
+        return render(
+            request,
+            "extras/job_jobresult.html",
+            {
+                "job": job,
+                "result": job_result,
+            },
+        )
 
 
 #
 # JobResult
 #
 
+
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
+
     queryset = JobResult.objects.all()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
@@ -604,14 +636,14 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
     """
 
     def get_required_permission(self):
-        return 'extras.view_jobresult'
+        return "extras.view_jobresult"
 
     def get(self, request, pk):
         job_result = get_object_or_404(JobResult.objects.all(), pk=pk)
 
         associated_record = None
         job = None
-        job_content_type = ContentType.objects.get(app_label='extras', model='job')
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
         if job_result.obj_type == job_content_type:
             job_class = get_job(job_result.name)
             if job_class is not None:
@@ -623,11 +655,15 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
             except model_class.DoesNotExist:
                 pass
 
-        return render(request, 'extras/jobresult.html', {
-            'associated_record': associated_record,
-            'job': job,
-            'result': job_result,
-        })
+        return render(
+            request,
+            "extras/jobresult.html",
+            {
+                "associated_record": associated_record,
+                "job": job,
+                "result": job_result,
+            },
+        )
 
 
 class ExportTemplateListView(generic.ObjectListView):
@@ -635,7 +671,7 @@ class ExportTemplateListView(generic.ObjectListView):
     table = tables.ExportTemplateTable
     filterset = filters.ExportTemplateFilterSet
     filterset_form = forms.ExportTemplateFilterForm
-    action_buttons = ('add',)
+    action_buttons = ("add",)
 
 
 class ExportTemplateView(generic.ObjectView):
@@ -661,7 +697,7 @@ class CustomLinkListView(generic.ObjectListView):
     table = tables.CustomLinkTable
     filterset = filters.CustomLinkFilterSet
     filterset_form = forms.CustomLinkFilterForm
-    action_buttons = ('add',)
+    action_buttons = ("add",)
 
 
 class CustomLinkView(generic.ObjectView):
@@ -687,16 +723,14 @@ class WebhookListView(generic.ObjectListView):
     table = tables.WebhookTable
     filterset = filters.WebhookFilterSet
     filterset_form = forms.WebhookFilterForm
-    action_buttons = ('add',)
+    action_buttons = ("add",)
 
 
 class WebhookView(generic.ObjectView):
     queryset = Webhook.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {
-            'content_types': instance.content_types.order_by('app_label', 'model')
-        }
+        return {"content_types": instance.content_types.order_by("app_label", "model")}
 
 
 class WebhookEditView(generic.ObjectEditView):
@@ -717,8 +751,10 @@ class WebhookBulkDeleteView(generic.BulkDeleteView):
 # Custom statuses
 #
 
+
 class StatusListView(generic.ObjectListView):
     """List `Status` objects."""
+
     queryset = Status.objects.all()
     filterset = filters.StatusFilterSet
     filterset_form = forms.StatusFilterForm
@@ -727,12 +763,14 @@ class StatusListView(generic.ObjectListView):
 
 class StatusEditView(generic.ObjectEditView):
     """Edit a single `Status` object."""
+
     queryset = Status.objects.all()
     model_form = forms.StatusForm
 
 
 class StatusBulkEditView(generic.BulkEditView):
     """Edit multiple `Status` objects."""
+
     queryset = Status.objects.all()
     table = tables.StatusTable
     form = forms.StatusBulkEditForm
@@ -740,17 +778,20 @@ class StatusBulkEditView(generic.BulkEditView):
 
 class StatusBulkDeleteView(generic.BulkDeleteView):
     """Delete multiple `Status` objects."""
+
     queryset = Status.objects.all()
     table = tables.StatusTable
 
 
 class StatusDeleteView(generic.ObjectDeleteView):
     """Delete a single `Status` object."""
+
     queryset = Status.objects.all()
 
 
 class StatusBulkImportView(generic.BulkImportView):
     """Bulk CSV import of multiple `Status` objects."""
+
     queryset = Status.objects.all()
     model_form = forms.StatusCSVForm
     table = tables.StatusTable
@@ -758,25 +799,25 @@ class StatusBulkImportView(generic.BulkImportView):
 
 class StatusView(generic.ObjectView):
     """Detail view for a single `Status` object."""
+
     queryset = Status.objects.all()
 
     def get_extra_context(self, request, instance):
         """Return ordered content types."""
-        return {
-            "content_types": instance.content_types.order_by("app_label", "model")
-        }
+        return {"content_types": instance.content_types.order_by("app_label", "model")}
 
 
 #
 # Relationship
 #
 
+
 class RelationshipListView(generic.ObjectListView):
     queryset = Relationship.objects.all()
     filterset = filters.RelationshipFilterSet
     filterset_form = forms.RelationshipFilterForm
     table = tables.RelationshipTable
-    action_buttons = ("add")
+    action_buttons = "add"
 
 
 class RelationshipEditView(generic.ObjectEditView):

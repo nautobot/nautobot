@@ -10,6 +10,7 @@ from nautobot.extras.filters import StatusFilterSet, TagFilterSet
 
 class TagType(DjangoObjectType):
     """Graphql Type Object for Tag model."""
+
     class Meta:
         model = Tag
         filterset_class = TagFilterSet
@@ -23,6 +24,7 @@ def convert_field_to_list_tags(field, registry=None):
 
 class StatusType(DjangoObjectType):
     """Graphql Type object for `Status` model."""
+
     class Meta:
         model = Status
         filterset_class = StatusFilterSet

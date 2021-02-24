@@ -11,6 +11,7 @@ from .permissions import resolve_permission
 # View Mixins
 #
 
+
 class ContentTypePermissionRequiredMixin(AccessMixin):
     """
     Similar to Django's built-in PermissionRequiredMixin, but extended to check model-level permission assignments.
@@ -20,6 +21,7 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
     additional_permissions: An optional iterable of statically declared permissions to evaluate in addition to those
                             derived from the object type
     """
+
     additional_permissions = list()
 
     def get_required_permission(self):
@@ -54,6 +56,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
     additional_permissions: An optional iterable of statically declared permissions to evaluate in addition to those
                             derived from the object type
     """
+
     additional_permissions = list()
 
     def get_required_permission(self):
@@ -79,10 +82,10 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
     def dispatch(self, request, *args, **kwargs):
 
-        if not hasattr(self, 'queryset'):
+        if not hasattr(self, "queryset"):
             raise ImproperlyConfigured(
-                '{} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define '
-                'a base queryset'.format(self.__class__.__name__)
+                "{} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define "
+                "a base queryset".format(self.__class__.__name__)
             )
 
         if not self.has_permission():
@@ -95,13 +98,14 @@ class GetReturnURLMixin:
     """
     Provides logic for determining where a user should be redirected after processing a form.
     """
+
     default_return_url = None
 
     def get_return_url(self, request, obj=None):
 
         # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
         # considered safe.
-        query_param = request.GET.get('return_url') or request.POST.get('return_url')
+        query_param = request.GET.get("return_url") or request.POST.get("return_url")
         if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
             return query_param
 
@@ -109,7 +113,7 @@ class GetReturnURLMixin:
         # Note that the use of both `obj._state.adding` and `obj.pk` is correct here because this conditional
         # handles all three of the create, update, and delete operations. When Django deletes an instance
         # from the DB, it sets the instance's PK field to None, regardless of the use of a UUID.
-        if obj is not None and not obj._state.adding and obj.pk and hasattr(obj, 'get_absolute_url'):
+        if obj is not None and not obj._state.adding and obj.pk and hasattr(obj, "get_absolute_url"):
             return obj.get_absolute_url()
 
         # Fall back to the default URL (if specified) for the view.
@@ -117,12 +121,12 @@ class GetReturnURLMixin:
             return reverse(self.default_return_url)
 
         # Attempt to dynamically resolve the list view for the object
-        if hasattr(self, 'queryset'):
+        if hasattr(self, "queryset"):
             model_opts = self.queryset.model._meta
             try:
-                return reverse(f'{model_opts.app_label}:{model_opts.model_name}_list')
+                return reverse(f"{model_opts.app_label}:{model_opts.model_name}_list")
             except NoReverseMatch:
                 pass
 
         # If all else fails, return home. Ideally this should never happen.
-        return reverse('home')
+        return reverse("home")

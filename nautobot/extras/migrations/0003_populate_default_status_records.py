@@ -8,7 +8,7 @@ import nautobot.extras.management
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0002_initial_part_2'),
+        ("extras", "0002_initial_part_2"),
     ]
 
     operations = [

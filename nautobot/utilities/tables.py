@@ -15,9 +15,10 @@ class BaseTable(tables.Table):
 
     :param user: Personalize table display for the given user (optional). Has no effect if AnonymousUser is passed.
     """
+
     class Meta:
         attrs = {
-            'class': 'table table-hover table-headings',
+            "class": "table table-hover table-headings",
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -25,10 +26,10 @@ class BaseTable(tables.Table):
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
-            self.empty_text = 'No {} found'.format(self._meta.model._meta.verbose_name_plural)
+            self.empty_text = "No {} found".format(self._meta.model._meta.verbose_name_plural)
 
         # Hide non-default columns
-        default_columns = getattr(self.Meta, 'default_columns', list())
+        default_columns = getattr(self.Meta, "default_columns", list())
         if default_columns:
             for column in self.columns:
                 if column.name not in default_columns:
@@ -38,8 +39,8 @@ class BaseTable(tables.Table):
         if user is not None and not isinstance(user, AnonymousUser):
             columns = user.config.get(f"tables.{self.__class__.__name__}.columns")
             if columns:
-                pk = self.base_columns.pop('pk', None)
-                actions = self.base_columns.pop('actions', None)
+                pk = self.base_columns.pop("pk", None)
+                actions = self.base_columns.pop("actions", None)
 
                 for name, column in self.base_columns.items():
                     if name in columns:
@@ -50,18 +51,18 @@ class BaseTable(tables.Table):
 
                 # Always include PK and actions column, if defined on the table
                 if pk:
-                    self.base_columns['pk'] = pk
-                    self.sequence.insert(0, 'pk')
+                    self.base_columns["pk"] = pk
+                    self.sequence.insert(0, "pk")
                 if actions:
-                    self.base_columns['actions'] = actions
-                    self.sequence.append('actions')
+                    self.base_columns["actions"] = actions
+                    self.sequence.append("actions")
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
-                    model = getattr(self.Meta, 'model')
+                    model = getattr(self.Meta, "model")
                     accessor = column.accessor
                     prefetch_path = []
                     for field_name in accessor.split(accessor.SEPARATOR):
@@ -78,16 +79,18 @@ class BaseTable(tables.Table):
                             prefetch_path.append(field_name)
                             break
                     if prefetch_path:
-                        prefetch_fields.append('__'.join(prefetch_path))
+                        prefetch_fields.append("__".join(prefetch_path))
             self.data.data = self.data.data.prefetch_related(None).prefetch_related(*prefetch_fields)
 
     @property
     def configurable_columns(self):
         selected_columns = [
-            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ['pk', 'actions']
+            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ["pk", "actions"]
         ]
         available_columns = [
-            (name, column.verbose_name) for name, column in self.columns.items() if name not in self.sequence and name not in ['pk', 'actions']
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if name not in self.sequence and name not in ["pk", "actions"]
         ]
         return selected_columns + available_columns
 
@@ -100,19 +103,17 @@ class BaseTable(tables.Table):
 # Table columns
 #
 
+
 class ToggleColumn(tables.CheckBoxColumn):
     """
     Extend CheckBoxColumn to add a "toggle all" checkbox in the column header.
     """
+
     def __init__(self, *args, **kwargs):
-        default = kwargs.pop('default', '')
-        visible = kwargs.pop('visible', False)
-        if 'attrs' not in kwargs:
-            kwargs['attrs'] = {
-                'td': {
-                    'class': 'min-width'
-                }
-            }
+        default = kwargs.pop("default", "")
+        visible = kwargs.pop("visible", False)
+        if "attrs" not in kwargs:
+            kwargs["attrs"] = {"td": {"class": "min-width"}}
         super().__init__(*args, default=default, visible=visible, **kwargs)
 
     @property
@@ -125,6 +126,7 @@ class BooleanColumn(tables.Column):
     Custom implementation of BooleanColumn to render a nicely-formatted checkmark or X icon instead of a Unicode
     character.
     """
+
     def render(self, value):
         if value:
             rendered = '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
@@ -143,8 +145,9 @@ class ButtonsColumn(tables.TemplateColumn):
     :param prepend_content: Additional template content to render in the column (optional)
     :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
     """
-    buttons = ('changelog', 'edit', 'delete')
-    attrs = {'td': {'class': 'text-right text-nowrap noprint'}}
+
+    buttons = ("changelog", "edit", "delete")
+    attrs = {"td": {"class": "text-right text-nowrap noprint"}}
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}
@@ -164,29 +167,39 @@ class ButtonsColumn(tables.TemplateColumn):
     {{% endif %}}
     """
 
-    def __init__(self, model, *args, pk_field='pk', buttons=None, prepend_template=None, return_url_extra='',
-                 **kwargs):
+    def __init__(
+        self,
+        model,
+        *args,
+        pk_field="pk",
+        buttons=None,
+        prepend_template=None,
+        return_url_extra="",
+        **kwargs,
+    ):
         if prepend_template:
-            prepend_template = prepend_template.replace('{', '{{')
-            prepend_template = prepend_template.replace('}', '}}')
+            prepend_template = prepend_template.replace("{", "{{")
+            prepend_template = prepend_template.replace("}", "}}")
             self.template_code = prepend_template + self.template_code
 
         template_code = self.template_code.format(
             app_label=model._meta.app_label,
             model_name=model._meta.model_name,
             pk_field=pk_field,
-            buttons=buttons
+            buttons=buttons,
         )
 
         super().__init__(template_code=template_code, *args, **kwargs)
 
-        self.extra_context.update({
-            'buttons': buttons or self.buttons,
-            'return_url_extra': return_url_extra,
-        })
+        self.extra_context.update(
+            {
+                "buttons": buttons or self.buttons,
+                "return_url_extra": return_url_extra,
+            }
+        )
 
     def header(self):
-        return ''
+        return ""
 
 
 class ChoiceFieldColumn(tables.Column):
@@ -194,14 +207,13 @@ class ChoiceFieldColumn(tables.Column):
     Render a ChoiceField value inside a <span> indicating a particular CSS class. This is useful for displaying colored
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
     """
+
     def render(self, record, bound_column, value):
         if value:
             name = bound_column.name
-            css_class = getattr(record, f'get_{name}_class')()
-            label = getattr(record, f'get_{name}_display')()
-            return mark_safe(
-                f'<span class="label label-{css_class}">{label}</span>'
-            )
+            css_class = getattr(record, f"get_{name}_class")()
+            label = getattr(record, f"get_{name}_display")()
+            return mark_safe(f'<span class="label label-{css_class}">{label}</span>')
         return self.default
 
 
@@ -209,16 +221,16 @@ class ColorColumn(tables.Column):
     """
     Display a color (#RRGGBB).
     """
+
     def render(self, value):
-        return mark_safe(
-            f'<span class="label color-block" style="background-color: #{value}">&nbsp;</span>'
-        )
+        return mark_safe(f'<span class="label color-block" style="background-color: #{value}">&nbsp;</span>')
 
 
 class ColoredLabelColumn(tables.TemplateColumn):
     """
     Render a colored label (e.g. for DeviceRoles).
     """
+
     template_code = """
     {% load helpers %}
     {% if value %}<label class="label" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</label>{% else %}&mdash;{% endif %}
@@ -236,6 +248,7 @@ class LinkedCountColumn(tables.Column):
     :param view_kwargs: Additional kwargs to pass for URL resolution (optional)
     :param url_params: A dict of query parameters to append to the URL (e.g. ?foo=bar) (optional)
     """
+
     def __init__(self, viewname, *args, view_kwargs=None, url_params=None, default=0, **kwargs):
         self.viewname = viewname
         self.view_kwargs = view_kwargs or {}
@@ -246,7 +259,7 @@ class LinkedCountColumn(tables.Column):
         if value:
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:
-                url += '?' + '&'.join([f'{k}={getattr(record, v)}' for k, v in self.url_params.items()])
+                url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
             return mark_safe(f'<a href="{url}">{value}</a>')
         return value
 
@@ -255,6 +268,7 @@ class TagColumn(tables.TemplateColumn):
     """
     Display a list of tags assigned to the object.
     """
+
     template_code = """
     {% for tag in value.all %}
         {% include 'utilities/templatetags/tag.html' %}
@@ -264,10 +278,7 @@ class TagColumn(tables.TemplateColumn):
     """
 
     def __init__(self, url_name=None):
-        super().__init__(
-            template_code=self.template_code,
-            extra_context={'url_name': url_name}
-        )
+        super().__init__(template_code=self.template_code, extra_context={"url_name": url_name})
 
 
 class ContentTypesColumn(tables.ManyToManyColumn):
@@ -291,7 +302,7 @@ class ContentTypesColumn(tables.ManyToManyColumn):
     def filter(self, qs):
         """Overload filter to optionally sort items."""
         if self.sort_items:
-            qs = qs.order_by('app_label', 'model')
+            qs = qs.order_by("app_label", "model")
         return qs.all()
 
     def render(self, value):
