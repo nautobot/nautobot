@@ -20,7 +20,7 @@ from .choices import *
 from .constants import *
 from .fields import IPNetworkField, IPAddressField, VarbinaryIPField
 from .managers import IPAddressManager
-from .querysets import PrefixQuerySet
+from .querysets import PrefixQuerySet, AggregateQuerySet
 from .validators import DNSValidator
 
 
@@ -218,7 +218,18 @@ class Aggregate(PrimaryModel):
     the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
     """
 
-    prefix = IPNetworkField()
+    network = VarbinaryIPField(
+        null=False, db_index=True, max_length=16,
+        help_text='IPv4 or IPv6 network address',
+    )
+    broadcast = VarbinaryIPField(
+        null=False, db_index=True, max_length=16,
+        help_text='IPv4 or IPv6 broadcast address'
+    )
+    prefix_length = models.IntegerField(
+        null=False, db_index=True,
+        help_text='Length of the Network prefix, in bits.'
+    )
     rir = models.ForeignKey(
         to="ipam.RIR",
         on_delete=models.PROTECT,
@@ -235,6 +246,8 @@ class Aggregate(PrimaryModel):
     date_added = models.DateField(blank=True, null=True)
     description = models.CharField(max_length=200, blank=True)
 
+    objects = AggregateQuerySet.as_manager()
+
     csv_headers = ["prefix", "rir", "tenant", "date_added", "description"]
     clone_fields = [
         "rir",
@@ -244,10 +257,23 @@ class Aggregate(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ("prefix",)  # prefix may be non-unique
+        ordering = ('network', 'broadcast', 'pk')  # prefix may be non-unique
+
+    def __init__(self, *args, **kwargs):
+        prefix = kwargs.pop('prefix', None)
+        super(Aggregate, self).__init__(*args, **kwargs)
+        self._deconstruct_prefix(prefix)
 
     def __str__(self):
         return str(self.prefix)
+
+    def _deconstruct_prefix(self, prefix):
+        if prefix:
+            if isinstance(prefix, str):
+                prefix = netaddr.IPNetwork(prefix)
+            self.network = bytes(prefix.network)
+            self.broadcast = bytes(prefix.broadcast)
+            self.prefix_length = prefix.prefixlen
 
     def get_absolute_url(self):
         return reverse("ipam:aggregate", args=[self.pk])
@@ -265,7 +291,7 @@ class Aggregate(PrimaryModel):
                 raise ValidationError({"prefix": "Cannot create aggregate with /0 mask."})
 
             # Ensure that the aggregate being added is not covered by an existing aggregate
-            covering_aggregates = Aggregate.objects.filter(prefix__net_contains_or_equals=str(self.prefix))
+            covering_aggregates = Aggregate.objects.net_contains_or_equal(self.prefix)
             if self.present_in_database:
                 covering_aggregates = covering_aggregates.exclude(pk=self.pk)
             if covering_aggregates:
@@ -278,7 +304,7 @@ class Aggregate(PrimaryModel):
                 )
 
             # Ensure that the aggregate being added does not cover an existing aggregate
-            covered_aggregates = Aggregate.objects.filter(prefix__net_contained=str(self.prefix))
+            covered_aggregates = Aggregate.objects.net_contained(self.prefix)
             if self.present_in_database:
                 covered_aggregates = covered_aggregates.exclude(pk=self.pk)
             if covered_aggregates:
@@ -298,6 +324,21 @@ class Aggregate(PrimaryModel):
             self.date_added,
             self.description,
         )
+
+    @property
+    def cidr_str(self):
+        if self.network and self.prefix_length:
+            ip = netaddr.IPAddress(int.from_bytes(self.network, 'big'))
+            return u'%s/%s' % (ip, self.prefix_length)
+
+    @property
+    def prefix(self):
+        if self.cidr_str:
+            return netaddr.IPNetwork(self.cidr_str)
+
+    @prefix.setter
+    def prefix(self, prefix):
+        self._deconstruct_prefix(prefix)
 
     @property
     def family(self):

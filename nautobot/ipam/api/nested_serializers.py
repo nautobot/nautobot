@@ -68,6 +68,7 @@ class NestedRIRSerializer(WritableNestedSerializer):
 class NestedAggregateSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
     family = serializers.IntegerField(read_only=True)
+    prefix = IPFieldSerializer()
 
     class Meta:
         model = models.Aggregate

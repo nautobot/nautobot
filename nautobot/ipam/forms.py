@@ -237,7 +237,8 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class AggregateForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldModelForm, RelationshipModelForm):
+    prefix = IPNetworkFormField()
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -261,7 +262,8 @@ class AggregateForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relations
         }
 
 
-class AggregateCSVForm(CustomFieldModelCSVForm):
+class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
+    prefix = IPNetworkFormField()
     rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),

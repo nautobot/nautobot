@@ -138,6 +138,7 @@ class RIRSerializer(CustomFieldModelSerializer):
 class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+    prefix = IPFieldSerializer()
     rir = NestedRIRSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
 

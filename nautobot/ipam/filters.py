@@ -146,7 +146,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(field_name="prefix", lookup_expr="family")
+    family = django_filters.NumberFilter(method='filter_ip_family', label='Family',)
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -172,8 +172,12 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             return queryset
         qs_filter = Q(description__icontains=value)
         try:
-            prefix = str(netaddr.IPNetwork(value.strip()).cidr)
-            qs_filter |= Q(prefix__net_contains_or_equals=prefix)
+            query = netaddr.IPNetwork(value.strip())
+            qs_filter |= Q(
+                prefix_length__lte=query.prefixlen,
+                network__lte=bytes(query.network),
+                broadcast__gte=bytes(query.broadcast)
+            )
         except (AddrFormatError, ValueError):
             pass
         return queryset.filter(qs_filter)
@@ -182,10 +186,22 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         if not value.strip():
             return queryset
         try:
-            query = str(netaddr.IPNetwork(value).cidr)
-            return queryset.filter(prefix=query)
+            return queryset.net_equals(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
+
+    def filter_ip_family(self, queryset, name, value):
+        if value == 4:
+            length = IPV4_BYTE_LENGTH
+        elif value == 6:
+            length = IPV6_BYTE_LENGTH
+        else:
+            raise ValueError('invalid IP family {}'.format(value))
+        return queryset.annotate(
+            network_len=Length(F('network'))
+        ).filter(
+            network_len=length,
+        )
 
 
 class RoleFilterSet(

@@ -45,6 +45,10 @@ class NetworkQuerySet(QuerySet):
         )
 
 
+class AggregateQuerySet(NetworkQuerySet, RestrictedQuerySet):
+    pass
+
+
 class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
     def annotate_tree(self):
         """

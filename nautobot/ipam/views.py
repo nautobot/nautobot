@@ -206,9 +206,10 @@ class RIRBulkDeleteView(generic.BulkDeleteView):
 class AggregateListView(generic.ObjectListView):
     queryset = Aggregate.objects.annotate(
         child_count=RawSQL(
-            # "SELECT COUNT(*) FROM ipam_prefix WHERE ipam_prefix.prefix <<= ipam_aggregate.prefix",
-            "SELECT COUNT(*) FROM ipam_prefix",
-            (),
+            'SELECT COUNT(*) FROM ipam_prefix '
+            'WHERE ipam_prefix.prefix_length >= ipam_aggregate.prefix_length '
+            'AND ipam_prefix.network >= ipam_aggregate.network '
+            'AND ipam_prefix.broadcast <= ipam_aggregate.broadcast', ()
         )
     )
     filterset = filters.AggregateFilterSet
@@ -411,8 +412,11 @@ class PrefixView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         try:
-            aggregate = Aggregate.objects.restrict(request.user, "view").get(
-                prefix__net_contains_or_equals=str(instance.prefix)
+            aggregate = (
+                Aggregate.objects
+                .restrict(request.user, "view")
+                .net_contains_or_equal(instance.prefix)
+                .first()
             )
         except Aggregate.DoesNotExist:
             aggregate = None
