@@ -1,6 +1,7 @@
 # PostgreSQL Database Installation
 
-This section entails the installation and configuration of a local PostgreSQL database. If you already have a PostgreSQL database service in place, skip to [the next section](2-redis.md).
+This section entails the installation and configuration of a local PostgreSQL database. If you already have a PostgreSQL
+database service in place, skip to [the next section](2-redis.md).
 
 !!! warning
     Nautobot requires PostgreSQL 9.6 or higher. Please note that MySQL and other relational databases are **not** currently supported.
@@ -12,8 +13,8 @@ This section entails the installation and configuration of a local PostgreSQL da
 Install the PostgreSQL server and client development libraries using `apt`.
 
 ```no-highlight
-sudo apt update
-sudo apt install -y postgresql libpq-dev
+$ sudo apt update
+$ sudo apt install -y postgresql libpq-dev
 ```
 
 #### CentOS
@@ -21,11 +22,13 @@ sudo apt install -y postgresql libpq-dev
 PostgreSQL 9.6 and later are available natively on CentOS 8.2. If using an earlier CentOS release, you may need to [install it from an RPM](https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/).
 
 ```no-highlight
-sudo yum install -y postgresql-server libpq-devel
-sudo postgresql-setup --initdb
+$ sudo yum install -y postgresql-server libpq-devel
+$ sudo postgresql-setup --initdb
 ```
 
-CentOS configures ident host-based authentication for PostgreSQL by default. Because Nautobot will need to authenticate using a username and password, modify `/var/lib/pgsql/data/pg_hba.conf` to support MD5 authentication by changing `ident` to `md5` for the lines below:
+CentOS configures ident host-based authentication for PostgreSQL by default. Because Nautobot will need to authenticate
+using a username and password, modify `/var/lib/pgsql/data/pg_hba.conf` to support MD5 authentication by changing
+`ident` to `md5` for the lines below:
 
 ```no-highlight
 host    all             all             127.0.0.1/32            md5
@@ -35,13 +38,14 @@ host    all             all             ::1/128                 md5
 Then, start the service and enable it to run at boot:
 
 ```no-highlight
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+$ sudo systemctl start postgresql
+$ sudo systemctl enable postgresql
 ```
 
 ## Database Creation
 
-At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
+At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
+is done with the following commands.
 
 !!! danger
     **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
@@ -53,7 +57,7 @@ Type "help" for help.
 
 postgres=# CREATE DATABASE nautobot;
 CREATE DATABASE
-postgres=# CREATE USER nautobot WITH PASSWORD 'J5brHrAXFLQSif0K';
+postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
 CREATE ROLE
 postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
 GRANT
