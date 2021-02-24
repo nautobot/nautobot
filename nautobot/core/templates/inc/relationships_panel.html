@@ -1,0 +1,31 @@
+{% with relationships=object.get_relationships_data %}
+    {% if relationships.source or relationships.destination %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Relationships</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% for side, relationships in relationships.items %}
+                    {% for relationship, value in relationships.items %}
+                        <tr>
+                            <td><span title="{{ relationship.slug }}">{{ value.label }}</span></td>
+                        {% if not value.has_many and value.value %}
+                            <td>
+                                <a href="{{ value.url }}">{{ value.value }}</a>
+                            </td>
+                        {% elif value.has_many and value.queryset.count %}
+                            <td>
+                                <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.slug}}&{{side}}_id={{object.id}}">{{ value.queryset.count }}</a>
+                            </td>
+                        {% else %}
+                            <td>
+                                <span class="text-muted">&mdash;</span>
+                            </td>
+                        {% endif %}
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            </table>
+        </div>
+    {% endif %}
+{% endwith %}

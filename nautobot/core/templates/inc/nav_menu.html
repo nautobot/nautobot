@@ -1,0 +1,842 @@
+{% load static %}
+{% load helpers %}
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <img src="{% static 'img/nautobot_logo.svg' %}" height="30" />
+            </a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            {% if request.user.is_authenticated %}
+            <ul class="nav navbar-nav">
+
+            {% if perms.dcim.view_site or perms.dcim.view_site or perms.dcim.view_region or perms.dcim.view_rack or perms.dcim.view_rackgroup or perms.dcim.view_rackrole or perms.dcim.view_rackreservation or perms.dcim.view_rack or perms.tenancy.view_tenant or perms.tenancy.view_tenantgroup or perms.extras.view_tag or not settings.HIDE_RESTRICTED_UI %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Organization <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+
+                {% if perms.dcim.view_site or perms.dcim.view_region or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="dropdown-header">Sites</li>
+
+                    {% if perms.dcim.view_site or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_site %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_site %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:site_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:site_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:site_list' %}">Sites</a>
+                        </li>
+                    {% endif %}
+
+                    {% if perms.dcim.view_region or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_region %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_region %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:region_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:region_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:region_list' %}">Regions</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.dcim.view_rack or perms.dcim.view_rackgroup or perms.dcim.view_rackrole or perms.dcim.view_rackreservation or perms.dcim.view_rack or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Racks</li>
+
+                    {% if perms.dcim.view_rack or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_rack %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_rack %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:rack_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:rack_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:rack_list' %}">Racks</a>
+                        </li>
+                    {% endif %}
+
+                    {% if perms.dcim.view_rackgroup or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_rackgroup %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_rackgroup %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:rackgroup_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:rackgroup_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:rackgroup_list' %}">Rack Groups</a>
+                        </li>
+                    {% endif %}
+
+                    {% if perms.dcim.view_rackrole or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_rackrole %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_rackrole %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:rackrole_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:rackrole_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:rackrole_list' %}">Rack Roles</a>
+                        </li>
+                    {% endif %}
+
+                    {% if perms.dcim.view_rackreservation or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_rackreservation %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_rackreservation %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:rackreservation_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:rackreservation_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:rackreservation_list' %}">Reservations</a>
+                        </li>
+                    {% endif %}
+
+                    {% if perms.dcim.view_rack or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_rack %} class="disabled"{% endif %}>
+                            <a href="{% url 'dcim:rack_elevation_list' %}">Elevations</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.tenancy.view_tenant or perms.tenancy.view_tenantgroup or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Tenancy</li>
+
+                    {% if perms.tenancy.view_tenant or not settings.HIDE_RESTRICTED_UI %}
+
+                        <li{% if not perms.tenancy.view_tenant %} class="disabled"{% endif %}>
+                            {% if perms.tenancy.add_tenant %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'tenancy:tenant_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'tenancy:tenant_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'tenancy:tenant_list' %}">Tenants</a>
+                        </li>
+                    {% endif %}
+
+                    {% if perms.tenancy.view_tenantgroup or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.tenancy.view_tenantgroup %} class="disabled"{% endif %}>
+                            {% if perms.tenancy.add_tenantgroup %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'tenancy:tenantgroup_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'tenancy:tenantgroup_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'tenancy:tenantgroup_list' %}">Tenant Groups</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.extras.view_tag or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Tags</li>
+                        <li{% if not perms.extras.view_tag %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_tag %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:tag_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'extras:tag_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:tag_list' %}">Tags</a>
+                        </li>
+                {% endif %}
+
+                {% if perms.extras.view_status or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Statuses</li>
+                        <li{% if not perms.extras.view_status %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_status %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:status_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'extras:status_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:status_list' %}">Statuses</a>
+                        </li>
+                {% endif %}
+
+                    </ul>
+                </li>
+            {% endif %}
+
+            {% if perms.dcim.view_device or perms.dcim.view_devicerole or perms.dcim.view_platform or perms.dcim.view_virtualchassis or perms.dcim.view_devicetype or perms.dcim.view_manufacturerand or perms.dcim.view_cable or perms.dcim.view_interface or perms.dcim.view_frontport or perms.dcim.view_rearport or perms.dcim.view_consoleport or perms.dcim.view_consoleserverport or perms.dcim.view_powerport or perms.dcim.view_poweroutlet or perms.dcim.view_devicebay or perms.dcim.view_inventoryitem or not settings.HIDE_RESTRICTED_UI %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Devices <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+
+                {% if perms.dcim.view_device or perms.dcim.view_devicerole or perms.dcim.view_platform or perms.dcim.view_virtualchassis or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="dropdown-header">Devices</li>
+                    {% if perms.dcim.view_rack or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_device %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_device %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:device_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:device_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:device_list' %}">Devices</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_devicerole or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_devicerole %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_devicerole %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:devicerole_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:devicerole_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:devicerole_list' %}">Device Roles</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_platform or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_platform %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_platform %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:platform_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:platform_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:platform_list' %}">Platforms</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_virtualchassis or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_virtualchassis %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_virtualchassis %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:virtualchassis_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:virtualchassis_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:virtualchassis_list' %}">Virtual Chassis</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.dcim.view_devicetype or perms.dcim.view_manufacturerand or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Device Types</li>
+
+                    {% if perms.dcim.view_devicetype or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_devicetype %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_devicetype %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:devicetype_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:devicetype_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:devicetype_list' %}">Device Types</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_manufacturer or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_manufacturer %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_manufacturer %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:manufacturer_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:manufacturer_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:manufacturer_list' %}">Manufacturers</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+
+                {% if perms.dcim.view_cable or perms.dcim.consoleserverport or perms.dcim.poweroutlet or perms.dcim.view_interface or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Connections</li>
+
+                    {% if perms.dcim.view_cable or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_cable %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_cable %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:cable_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:cable_list' %}">Cables</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_consoleserverport or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_consoleport or not perms.dcim.view_consoleserverport %} class="disabled"{% endif %}>
+                            <a href="{% url 'dcim:console_connections_list' %}">Console Connections</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_poweroutlet or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_powerport or not perms.dcim.view_poweroutlet %} class="disabled"{% endif %}>
+                            <a href="{% url 'dcim:power_connections_list' %}">Power Connections</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_interface or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_interface %} class="disabled"{% endif %}>
+                            <a href="{% url 'dcim:interface_connections_list' %}">Interface Connections</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.dcim.view_interface or perms.dcim.view_frontport or perms.dcim.view_rearport or perms.dcim.view_consoleport or perms.dcim.view_consoleserverport or perms.dcim.view_powerport or perms.dcim.view_poweroutlet or perms.dcim.view_devicebay or perms.dcim.view_inventoryitem or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Device Components</li>
+
+                    {% if perms.dcim.view_interface or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_interface %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_interface %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:interface_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:interface_list' %}">Interfaces</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_frontport or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_frontport %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_frontport %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:frontport_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:frontport_list' %}">Front Ports</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_rearport or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_rearport %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_rearport %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:rearport_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:rearport_list' %}">Rear Ports</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_consoleport or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_consoleport %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_consoleport %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:consoleport_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:consoleport_list' %}">Console Ports</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_consoleserverport or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_consoleserverport %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_consoleserverport %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:consoleserverport_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:consoleserverport_list' %}">Console Server Ports</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_powerport or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_powerport %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_powerport %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:powerport_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:powerport_list' %}">Power Ports</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_poweroutlet or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_poweroutlet %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_poweroutlet %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:poweroutlet_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:poweroutlet_list' %}">Power Outlets</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_devicebay or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_devicebay %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_devicebay %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:devicebay_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:devicebay_list' %}">Device Bays</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_inventoryitem or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_inventoryitem %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_inventoryitem %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:inventoryitem_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:inventoryitem_list' %}">Inventory Items</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                    </ul>
+                </li>
+            {% endif %}
+
+            {% if perms.ipam.view_ipaddress or perms.ipam.view_prefix or perms.ipam.view_role or perms.ipam.view_aggregate or perms.ipam.view_rir or perms.ipam.view_vrf or perms.ipam.view_routetarget or perms.ipam.view_vlan or perms.ipam.view_vlangroup or perms.ipam.view_service or not settings.HIDE_RESTRICTED_UI %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">IPAM <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                {% if perms.ipam.view_ipaddress or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="dropdown-header">IP Addresses</li>
+
+                    {% if perms.ipam.view_ipaddress or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_ipaddress %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_ipaddress %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:ipaddress_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:ipaddress_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:ipaddress_list' %}">IP Addresses</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.ipam.view_prefix or perms.ipam.view_role or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Prefixes</li>
+                    {% if perms.ipam.view_prefix or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_prefix %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_prefix %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:prefix_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:prefix_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:prefix_list' %}">Prefixes</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.ipam.view_role or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_role %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_role %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:role_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:role_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:role_list' %}">Prefix/VLAN Roles</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.ipam.view_aggregate or perms.ipam.view_rir or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Aggregates</li>
+
+                    {% if perms.ipam.view_aggregate or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_aggregate %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_aggregate %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:aggregate_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:aggregate_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:aggregate_list' %}">Aggregates</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.ipam.view_rir or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_rir %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_rir %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:rir_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:rir_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:rir_list' %}">RIRs</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.ipam.view_vrf or perms.ipam.view_routetarget or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">VRFs</li>
+
+                    {% if perms.ipam.view_vrf or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_vrf %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_vrf %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:vrf_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:vrf_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:vrf_list' %}">VRFs</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.ipam.view_routetarget or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_routetarget %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_routetarget %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:routetarget_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:routetarget_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:routetarget_list' %}">Route Targets</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.ipam.view_vlan or perms.ipam.view_vlangroup or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">VLANs</li>
+
+                    {% if perms.ipam.view_vlan or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_vlan %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_vlan %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:vlan_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:vlan_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:vlan_list' %}">VLANs</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.ipam.view_vlangroup or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_vlangroup %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_vlangroup %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:vlangroup_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'ipam:vlangroup_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:vlangroup_list' %}">VLAN Groups</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.ipam.view_service or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Services</li>
+
+                    {% if perms.ipam.view_service or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.ipam.view_service %} class="disabled"{% endif %}>
+                            {% if perms.ipam.add_service %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'ipam:service_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'ipam:service_list' %}">Services</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                    </ul>
+                </li>
+            {% endif %}
+
+            {% if perms.virtualization.view_virtualmachine or perms.virtualization.view_vminterface or perms.virtualization.view_cluster or perms.virtualization.view_clustertype or perms.virtualization.view_clustergroup or not settings.HIDE_RESTRICTED_UI %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Virtualization <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                {% if perms.virtualization.view_virtualmachine or perms.virtualization.view_vminterface or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="dropdown-header">Virtual Machines</li>
+
+                    {% if perms.virtualization.view_virtualmachine or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.virtualization.view_virtualmachine %} class="disabled"{% endif %}>
+                            {% if perms.virtualization.add_virtualmachine %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'virtualization:virtualmachine_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'virtualization:virtualmachine_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'virtualization:virtualmachine_list' %}">Virtual Machines</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.virtualization.view_vminterface or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.virtualization.view_vminterface%} class="disabled"{% endif %}>
+                            {% if perms.virtualization.add_vminterface %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'virtualization:vminterface_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'virtualization:vminterface_list' %}">Interfaces</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.virtualization.view_cluster or perms.virtualization.view_clustertype or perms.virtualization.view_clustergroup or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Clusters</li>
+
+                    {% if perms.virtualization.view_cluster or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.virtualization.view_cluster %} class="disabled"{% endif %}>
+                            {% if perms.virtualization.add_cluster %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'virtualization:cluster_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'virtualization:cluster_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'virtualization:cluster_list' %}">Clusters</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.virtualization.view_clustertype or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.virtualization.view_clustertype %} class="disabled"{% endif %}>
+                            {% if perms.virtualization.add_clustertype %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'virtualization:clustertype_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'virtualization:clustertype_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'virtualization:clustertype_list' %}">Cluster Types</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.virtualization.view_clustergroup or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.virtualization.view_clustergroup %} class="disabled"{% endif %}>
+                            {% if perms.virtualization.add_clustergroup %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'virtualization:clustergroup_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'virtualization:clustergroup_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'virtualization:clustergroup_list' %}">Cluster Groups</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                    </ul>
+                </li>
+            {% endif %}
+
+            {% if perms.circuits.view_circuit or perms.circuits.view_circuittype or perms.circuits.view_provider or not settings.HIDE_RESTRICTED_UI %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Circuits <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+
+                {% if perms.circuits.view_circuit or perms.circuits.view_circuittype or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="dropdown-header">Circuits</li>
+                    {% if perms.circuits.view_circuit or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.circuits.view_circuit %} class="disabled"{% endif %}>
+                            {% if perms.circuits.add_circuit %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'circuits:circuit_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'circuits:circuit_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'circuits:circuit_list' %}">Circuits</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.circuits.view_circuittype or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.circuits.view_circuittype %} class="disabled"{% endif %}>
+                            {% if perms.circuits.add_circuittype %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'circuits:circuittype_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'circuits:circuittype_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'circuits:circuittype_list' %}">Circuit Types</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.circuits.view_provider or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Providers</li>
+
+                    {% if perms.circuits.view_provider or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.circuits.view_provider %} class="disabled"{% endif %}>
+                            {% if perms.circuits.add_provider %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'circuits:provider_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'circuits:provider_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'circuits:provider_list' %}">Providers</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                    </ul>
+                </li>
+            {% endif %}
+
+            {% if perms.dcim.view_powerfeed or perms.dcim.view_powerpanel or not settings.HIDE_RESTRICTED_UI %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Power <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                {% if perms.dcim.view_powerfeed or perms.dcim.view_powerpanel or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="dropdown-header">Power</li>
+
+                    {% if perms.dcim.view_powerfeed or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_powerfeed %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_powerfeed %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:powerfeed_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:powerfeed_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:powerfeed_list' %}">Power Feeds</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.dcim.view_powerpanel or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.dcim.view_powerpanel %} class="disabled"{% endif %}>
+                            {% if perms.dcim.add_powerpanel %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'dcim:powerpanel_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'dcim:powerpanel_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'dcim:powerpanel_list' %}">Power Panels</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                    </ul>
+                </li>
+            {% endif %}
+
+            {% if perms.extras.view_objectchange or perms.extras.view_jobresult or perms.extras.view_gitrepository or perms.extras.view_relationship or perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extensibility <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                {% if perms.extras.view_objectchange or perms.extras.view_jobresult or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="dropdown-header">Logging</li>
+                    {% if perms.extras.view_objectchange or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_objectchange %} class="disabled"{% endif %}>
+                            <a href="{% url 'extras:objectchange_list' %}">Change Log</a>
+                        </li>
+                    {% endif %}
+
+                    {% if perms.extras.view_jobresult or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_jobresult %} class="disabled"{% endif %}>
+                            <a href="{% url 'extras:jobresult_list' %}">Job Results</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.extras.view_gitrepository or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Data Sources</li>
+                        <li{% if not perms.extras.view_gitrepository %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_gitrepository %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:gitrepository_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                    <a href="{% url 'extras:gitrepository_import' %}" class="btn btn-xs btn-info" title="Import"><i class="mdi mdi-database-import-outline"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a>
+                        </li>
+                {% endif %}
+
+                {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Data Management</li>
+                    {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_relationship %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_relationship %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:relationship_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:relationship_list' %}">Relationships</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Automation</li>
+                    {% if perms.extras.view_configcontext or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_configcontext %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_configcontext %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:configcontext_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:configcontext_list' %}">Config Contexts</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.extras.view_exporttemplate or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_exporttemplate %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_exporttemplate %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:exporttemplate_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:exporttemplate_list' %}">Export Templates</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.extras.view_job or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_job %} class="disabled"{% endif %}>
+                            <a href="{% url 'extras:job_list' %}">Jobs</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.extras.view_webhook or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_webhook %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_webhook %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:webhook_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:webhook_list' %}">Webhooks</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                {% if perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+                        <li class="divider"></li>
+                        <li class="dropdown-header">Miscellaneous</li>
+
+                    {% if perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_customlink %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_customlink %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:customlink_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:customlink_list' %}">Custom Links</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                    </ul>
+                </li>
+            {% endif %}
+
+                {% if registry.plugin_menu_items %}
+                    {% include 'inc/plugin_menu_items.html' %}
+                {% endif %}
+            </ul>
+            {% endif %}
+            <ul class="nav navbar-nav navbar-right">
+                {% if request.user.is_authenticated %}
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" title="{{ request.user }}" role="button" aria-haspopup="true" aria-expanded="false">
+                            <i class="mdi mdi-account"></i>
+                            <span id="navbar_user">{{ request.user|truncatechars:"30" }}</span>
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i> Profile</a></li>
+                            {% if request.user.is_staff %}
+                                <li><a href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i> Admin</a></li>
+                            {% endif %}
+                            <li class="divider"></li>
+                            <li><a href="{% url 'logout' %}"><i class="mdi mdi-logout"></i> Log out</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    {% if request.path == settings.LOGIN_URL %}
+                        <li><a href="{{ request.get_full_path }}"><i class="mdi mdi-login"></i> Log in</a></li>
+                    {% else %}
+                        <li><a href="{{ settings.LOGIN_URL }}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
+                    {% endif %}
+                {% endif %}
+            </ul>
+            <form action="{% url 'search' %}" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Search">
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="mdi mdi-magnify"></i>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+</nav>

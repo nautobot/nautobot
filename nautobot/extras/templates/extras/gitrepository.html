@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load plugins %}
+
+{% block header %}
+    <div class="row">
+        <div class="col">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a></li>
+                <li>{{ object }}</li>
+            </ol>
+        </div>
+    </div>
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.extras.add_gitrepository %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_gitrepository %}
+            <form class="form-inline" style="display: inline-block"
+                  method="post" action="{% url 'extras:gitrepository_sync' slug=object.slug %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    <i class="mdi mdi-source-branch-sync" aria-hidden="true"></i> Sync
+                </button>
+            </form>
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_gitrepository %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Git Repository</a>
+        </li>
+        <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
+            <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:gitrepository_changelog' slug=object.slug %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Repository Details</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Remote URL</td>
+                        <td>{{ object.remote_url }}</td>
+                    </tr>
+                    <tr>
+                        <td>Branch</td>
+                        <td>
+                            <code>{{ object.branch }}</code>
+                            {% if object.current_head %}
+                                (checked out locally at commit <code>{{ object.current_head }}</code>)
+                            {% else %}
+                                (not locally checked out yet)
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Token</td>
+                        <td>{{ object.token_rendered }}</td>
+                    </tr>
+                </table>
+            </div>
+            {% include 'inc/custom_fields_panel.html' %}
+            {% include 'inc/relationships_panel.html' %}
+            {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='extras:gitrepository_list' %}
+        </div>
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Provided Data Types</strong>
+                </div>
+                <table class="table table-hover panel-body">
+                    {% for entry in datasource_contents %}
+                        <tr>
+                            <td>
+                                <span style="display: inline-block" class="label label-info">
+                                    <i class="mdi {{ entry.icon }}"></i>
+                                </span>
+                                {{ entry.name|title }}</td>
+                            <td>
+                                {% if entry.content_identifier in object.provided_contents %}
+                                    <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                                {% else %}
+                                    <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

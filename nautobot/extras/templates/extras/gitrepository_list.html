@@ -1,0 +1,14 @@
+{% extends 'generic/object_list.html' %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    $("button.sync-repository").click(function() {
+        event.preventDefault();
+        var form = $("<form>").attr("action", $(this).data("url")).attr("method", "POST");
+        form.append('{% csrf_token %}');
+        $(document.body).append(form);
+        form.submit();
+    });
+</script>
+{% endblock javascript %}

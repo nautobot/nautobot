@@ -1,0 +1,18 @@
+{% extends base_template %}
+{% load helpers %}
+{% load log_levels %}
+{% load static %}
+
+{% block title %}{{ block.super }} - Synchronization Status{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% include 'extras/inc/jobresult.html' with result=result %}
+        </div>
+    </div>
+{% endblock content %}
+
+{% block javascript %}
+    {% include 'extras/inc/jobresult_js.html' with result=result %}
+{% endblock %}

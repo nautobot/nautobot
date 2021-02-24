@@ -1,0 +1,52 @@
+from collections import defaultdict, namedtuple
+
+
+class Registry(dict):
+    """
+    Central registry for registration of functionality. Once a store (key) is defined, it cannot be overwritten or
+    deleted (although its value may be manipulated).
+    """
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            raise KeyError("Invalid store: {}".format(key))
+
+    def __setitem__(self, key, value):
+        if key in self:
+            raise KeyError("Store already set: {}".format(key))
+        super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        raise TypeError("Cannot delete stores from registry")
+
+
+registry = Registry()
+
+
+DatasourceContent = namedtuple("DatasourceContent", ["name", "content_identifier", "icon", "callback"])
+"""
+name (str): Human-readable name for this content type, such as "config contexts"
+content_identifier (str): Brief unique identifier of this content type; by convention a string such as "extras.configcontext"
+icon (str): Material Design Icons icon name, such as "mdi-code-json" or "mdi-script-text"
+callback (callable): Callback function to invoke whenever a given datasource is created, updated, or deleted.
+    This callback should take three arguments (record, job_result, delete) where "record" is the GitRepository, etc.
+    that is being refreshed, "job_result" is an extras.JobResult record for logging purposes, and
+    "delete" is a boolean flag to distinguish between the "create/update" and "delete" cases.
+"""
+
+
+registry["datasource_contents"] = defaultdict(list)
+
+
+def register_datasource_contents(datasource_contents_list):
+    """
+    Register a list of (model_name, DatasourceContent) entries.
+    """
+    for model_name, content in datasource_contents_list:
+        if not isinstance(model_name, str):
+            raise TypeError(f"{model_name} must be a string")
+        if not isinstance(content, DatasourceContent):
+            raise TypeError(f"{content} must be an instance of extras.datasources.DatasourceContent")
+        registry["datasource_contents"][model_name].append(content)

@@ -1,0 +1,88 @@
+{% load helpers %}
+{% load log_levels %}
+{% load static %}
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Summary of Results:</strong>
+        <span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span>
+        {% if result %}
+            started at <strong>{{ result.created }}</strong> by <strong>{{ result.user }}</strong>
+            {% if result.completed %}
+                and ran for <strong>{{ result.duration }}</strong>
+            {% else %}
+                <img id="pending-result-loader" src="{% static 'img/ajax-loader.gif' %}">
+            {% endif %}
+        {% endif %}
+    </div>
+    <table class="table table-hover panel-body">
+        {% if result.completed %}
+            {% for grouping, data in result.data.items %}
+                {% if grouping != "total" and grouping != "output" %}
+                    <tr>
+                        <td><code><a href="#{{ grouping }}">{{ grouping }}</a></code></td>
+                        <td class="text-right report-stats">
+                            <label class="label label-success">{{ data.success }}</label>
+                            <label class="label label-info">{{ data.info }}</label>
+                            <label class="label label-warning">{{ data.warning }}</label>
+                            <label class="label label-danger">{{ data.failure }}</label>
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </table>
+</div>
+{% if result.completed %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Logs</strong>
+        </div>
+        <table class="table table-hover panel-body report">
+            <thead>
+                <tr class="table-headings">
+                    <th>Time</th>
+                    <th>Level</th>
+                    <th>Object</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grouping, data in result.data.items %}
+                    {% if grouping != "total" and grouping != "output" %}
+                        <tr>
+                            <th colspan="3" style="font-family: monospace">
+                                <a name="{{ grouping }}"></a>{{ grouping }}
+                            </th>
+                            <td class="text-right report-stats">
+                                <label class="label label-success">{{ data.success }}</label>
+                                <label class="label label-info">{{ data.info }}</label>
+                                <label class="label label-warning">{{ data.warning }}</label>
+                                <label class="label label-danger">{{ data.failure }}</label>
+                            </td>
+                        </tr>
+                        {% for time, level, obj, url, message in data.log %}
+                            <tr class="{% if level == 'failure' %}danger{% elif level %}{{ level }}{% endif %}">
+                                <!-- TODO: it would be nice to format this timestamp more nicely -->
+                                <td>{{ time }}</td>
+                                <td>
+                                    {% log_level level %}
+                                </td>
+                                <td>
+                                    {% if obj and url %}
+                                        <a href="{{ url }}">{{ obj }}</a>
+                                    {% elif obj %}
+                                        {{ obj }}
+                                    {% endif %}
+                                </td>
+                                <td class="rendered-markdown">{{ message | render_markdown }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="well">Pending results</div>
+{% endif %}

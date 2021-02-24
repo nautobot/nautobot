@@ -1,0 +1,15 @@
+{% extends 'generic/object_edit.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Power Panel</strong></div>
+        <div class="panel-body">
+            {% render_field form.region %}
+            {% render_field form.site %}
+            {% render_field form.rack_group %}
+            {% render_field form.name %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}

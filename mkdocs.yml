@@ -1,0 +1,82 @@
+dev_addr: '127.0.0.1:8001'
+site_name: Nautobot Documentation
+site_url: https://nautobot.readthedocs.io/
+repo_url: https://github.com/nautobot/nautobot
+python:
+    install:
+        - requirements: docs/requirements.txt
+theme:
+    name: readthedocs
+    navigation_depth: 3
+extra_css:
+    - extra.css
+markdown_extensions:
+    - admonition:
+    - markdown_include.include:
+        headingOffset: 1
+nav:
+    - Introduction: 'index.md'
+    - Installation:
+        - Installing Nautobot: 'installation/index.md'
+        - 1. PostgreSQL: 'installation/1-postgresql.md'
+        - 2. Redis: 'installation/2-redis.md'
+        - 3. Nautobot: 'installation/3-nautobot.md'
+        - 4. Gunicorn: 'installation/4-gunicorn.md'
+        - 5. HTTP Server: 'installation/5-http-server.md'
+        - 6. External Authentication (Optional): 'installation/6-external-authentication.md'
+        - Migrating from NetBox: 'installation/migrating-from-netbox.md'
+        - Upgrading Nautobot: 'installation/upgrading.md'
+    - Configuration:
+        - Configuring Nautobot: 'configuration/index.md'
+        - Required Settings: 'configuration/required-settings.md'
+        - Optional Settings: 'configuration/optional-settings.md'
+    - Core Functionality:
+        - IP Address Management: 'core-functionality/ipam.md'
+        - VLAN Management: 'core-functionality/vlans.md'
+        - Sites and Racks: 'core-functionality/sites-and-racks.md'
+        - Devices and Cabling: 'core-functionality/devices.md'
+        - Device Types: 'core-functionality/device-types.md'
+        - Virtualization: 'core-functionality/virtualization.md'
+        - Service Mapping: 'core-functionality/services.md'
+        - Circuits: 'core-functionality/circuits.md'
+        - Power Tracking: 'core-functionality/power.md'
+        - Tenancy: 'core-functionality/tenancy.md'
+    - Additional Features:
+        - Caching: 'additional-features/caching.md'
+        - Change Logging: 'additional-features/change-logging.md'
+        - Context Data: 'models/extras/configcontext.md'
+        - Custom Fields: 'additional-features/custom-fields.md'
+        - Custom Links: 'models/extras/customlink.md'
+        - Export Templates: 'models/extras/exporttemplate.md'
+        - Jobs: 'additional-features/jobs.md'
+        - Git Repositories: 'models/extras/gitrepository.md'
+        - NAPALM: 'additional-features/napalm.md'
+        - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
+        - Statuses: 'models/extras/status.md'
+        - Tags: 'models/extras/tag.md'
+        - Webhooks: 'models/extras/webhook.md'
+    - Plugins:
+        - Using Plugins: 'plugins/index.md'
+        - Developing Plugins: 'plugins/development.md'
+        - Porting NetBox Plugins to Nautobot: 'plugins/porting-from-netbox.md'
+    - Administration:
+        - Permissions: 'administration/permissions.md'
+        - Replicating Nautobot: 'administration/replicating-nautobot.md'
+        - Nautobot Shell: 'administration/nautobot-shell.md'
+    - REST API:
+        - Overview: 'rest-api/overview.md'
+        - Filtering: 'rest-api/filtering.md'
+        - Authentication: 'rest-api/authentication.md'
+    - GraphQL API:
+        - Overview: 'additional-features/graphql.md'
+    - Development:
+        - Introduction: 'development/index.md'
+        - Getting Started: 'development/getting-started.md'
+        - Best Practices: 'development/best-practices.md'
+        - Style Guide: 'development/style-guide.md'
+        - Extending Models: 'development/extending-models.md'
+        - Application Registry: 'development/application-registry.md'
+        - User Preferences: 'development/user-preferences.md'
+        - Release Checklist: 'development/release-checklist.md'
+    - Release Notes:
+        - Version 1.0: 'release-notes/version-1.0.md'

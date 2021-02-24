@@ -1,0 +1,6 @@
+---
+version: '3'
+services:
+  nautobot:
+    command: >
+      /bin/sh -c "while sleep 1000; do :; done"

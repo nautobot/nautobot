@@ -1,0 +1,20 @@
+{% extends 'generic/object_list.html' %}
+{% load helpers %}
+
+{% block buttons %}
+    <div class="btn-group" role="group">
+        <div class="dropdown">
+            <button class="btn btn-default dropdown-toggle" type="button" id="max_length" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                Max Length{% if "mask_length__lte" in request.GET %}: {{ request.GET.mask_length__lte }}{% endif %}
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="max_length">
+                {% for i in "4,8,12,16,20,24,28,32,40,48,56,64"|split %}
+                    <li><a href="{% url 'ipam:prefix_list' %}{% querystring request mask_length__lte=i page=1 %}">
+                        {{ i }} {% if request.GET.mask_length__lte == i %}<i class="mdi mdi-check-bold"></i>{% endif %}
+                    </a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

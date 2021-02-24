@@ -1,0 +1,56 @@
+{% extends 'generic/object_edit.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Virtual Machine</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.role %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Cluster</strong></div>
+        <div class="panel-body">
+            {% render_field form.cluster_group %}
+            {% render_field form.cluster %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Management</strong></div>
+        <div class="panel-body">
+            {% render_field form.status %}
+            {% render_field form.platform %}
+            {% render_field form.primary_ip4 %}
+            {% render_field form.primary_ip6 %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Resources</strong></div>
+        <div class="panel-body">
+            {% render_field form.vcpus %}
+            {% render_field form.memory %}
+            {% render_field form.disk %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Tenancy</strong></div>
+        <div class="panel-body">
+            {% render_field form.tenant_group %}
+            {% render_field form.tenant %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Local Config Context Data</strong></div>
+        <div class="panel-body">
+            {% render_field form.local_context_data %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
+{% endblock %}

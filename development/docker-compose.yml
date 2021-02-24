@@ -1,0 +1,50 @@
+---
+version: "3"
+services:
+  nautobot:
+    build:
+      context: ../
+      dockerfile: development/Dockerfile
+    image: "nautobot/nautobot-py${PYTHON_VER}"
+    command: "nautobot-server runserver 0.0.0.0:8000 --insecure"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - dev.env
+    volumes:
+      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
+      - ../:/opt/nautobot
+    tty: true
+  worker:
+    build:
+      context: ../
+      dockerfile: development/Dockerfile
+    image: "nautobot/nautobot-py${PYTHON_VER}"
+    entrypoint: "nautobot-server rqworker"
+    depends_on:
+      - nautobot
+    env_file:
+      - ./dev.env
+    volumes:
+      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
+      - ../:/opt/nautobot
+    tty: true
+  postgres:
+    image: postgres:10
+    env_file:
+      - dev.env
+    volumes:
+      - pgdata_nautobot:/var/lib/postgresql/data
+  redis:
+    image: redis:5-alpine
+    command:
+      - sh
+      - -c # this is to evaluate the $REDIS_PASSWORD from the env
+      - redis-server --appendonly yes --requirepass $$REDIS_PASSWORD ## $$ because of docker-compose
+    env_file:
+      - dev.env
+volumes:
+  pgdata_nautobot:

@@ -1,0 +1,22 @@
+[Unit]
+Description=Nautobot WSGI Service
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+User=nautobot
+Group=nautobot
+PIDFile=/var/tmp/nautobot.pid
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/venv/bin/gunicorn --pid /var/tmp/nautobot.pid --pythonpath /opt/nautobot --config /opt/nautobot/gunicorn.py nautobot.wsgi
+
+Restart=on-failure
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

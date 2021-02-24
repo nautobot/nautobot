@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load static %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+
+{% block title %}{{ object }}{% endblock %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'ipam:vlangroup_list' %}">VLAN Groups</a></li>
+                <li>{{ object }}</li>
+            </ol>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url 'ipam:vlangroup_list' %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.ipam.add_vlangroup %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.ipam.change_vlangroup %}
+            {% edit_button object use_pk=1 %}
+        {% endif %}
+        {% if perms.ipam.delete_vlangroup %}
+            {% delete_button object use_pk=1 %}
+        {% endif %}
+    </div>
+    <h1>{{ object }}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">VLAN Group</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'ipam:vlangroup_changelog' pk=object.pk %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>VLAN Group</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Site</td>
+                    <td>
+                        {% if object.site %}
+                            <a href="{{ object.site.get_absolute_url }}">{{ object.site }}</a>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>VLANs</td>
+                    <td>
+                        <a href="{% url 'ipam:vlan_list' %}?group={{ object.pk }}">{{ vlan_table.rows|length }}</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        {% include 'inc/custom_fields_panel.html' %}
+        {% include 'inc/relationships_panel.html' %}
+        {% plugin_left_page object %}
+	</div>
+	<div class="col-md-8">
+    {% include 'utilities/obj_table.html' with table=vlan_table table_template='panel_table.html' heading='VLANs' bulk_edit_url='ipam:vlan_bulk_edit' bulk_delete_url='ipam:vlan_bulk_delete' vlan_group=object %}
+    {% plugin_right_page object %}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        {% plugin_full_width_page object %}
+    </div>
+</div>
+{% endblock %}
