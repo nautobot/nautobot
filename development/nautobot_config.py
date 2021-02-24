@@ -1,4 +1,5 @@
 """Nautobot configuration file."""
+from distutils.util import strtobool
 import os
 import sys
 
@@ -58,22 +59,43 @@ LOGGING = {
     },
 }
 
-REDIS = {
-    "caching": {
-        "HOST": os.environ.get("REDIS_HOST", "redis"),
+
+def is_truthy(arg):
+    """Convert "truthy" strings into Booleans.
+    Examples:
+        >>> is_truthy('yes')
+        True
+    Args:
+        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
+        f, false, off and 0. Raises ValueError if val is anything else.
+    """
+    if isinstance(arg, bool):
+        return arg
+    return bool(strtobool(str(arg)))
+
+
+RQ_QUEUES = {
+    "default": {
+        "HOST": os.environ["REDIS_HOST"],
         "PORT": int(os.environ.get("REDIS_PORT", 6379)),
-        "PASSWORD": os.environ.get("REDIS_PASSWORD", ""),
-        "DATABASE": 1,
-        "SSL": bool(os.environ.get("REDIS_SSL", False)),
+        "DB": 0,
+        "PASSWORD": os.environ["REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "DEFAULT_TIMEOUT": 300,
     },
-    "tasks": {
-        "HOST": os.environ.get("REDIS_HOST", "redis"),
+    "check_releases": {
+        "HOST": os.environ["REDIS_HOST"],
         "PORT": int(os.environ.get("REDIS_PORT", 6379)),
-        "PASSWORD": os.environ.get("REDIS_PASSWORD", ""),
-        "DATABASE": 0,
-        "SSL": bool(os.environ.get("REDIS_SSL", False)),
+        "DB": 0,
+        "PASSWORD": os.environ["REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "DEFAULT_TIMEOUT": 300,
     },
 }
+
+# REDIS CACHEOPS
+CACHEOPS_REDIS = f"redis://:{os.getenv('REDIS_PASSWORD')}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/2"
+
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
