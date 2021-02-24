@@ -2,7 +2,31 @@
 # This script will prepare Nautobot to run after the code has been upgraded to
 # its most recent release.
 
+export NAUTOBOT_CONFIG=/opt/nautobot/nautobot_config.py
+NAUTOBOT_USER=nautobot
+
+# Change to the directory where script is ran
 cd "$(dirname "$0")"
+
+STATIC_DIRS=(
+    "jobs"
+    "git"
+    "media/image-attachments"
+    "media/devicetype-images"
+)
+
+echo "Verifying static file directories..."
+for d in "${STATIC_DIRS[@]}"; do
+    STATIC_DIR="$(pwd -P)/$d"
+    # echo $STATIC_DIR
+    if [ ! -d "${STATIC_DIR}" ]; then
+        echo "  Creating ${STATIC_DIR}..."
+        mkdir -p $STATIC_DIR
+        chown -R $NAUTOBOT_USER $STATIC_DIR
+    fi
+done
+
+# Prep path to virtual environment
 VIRTUALENV="$(pwd -P)/venv"
 
 # Remove the existing virtual environment (if any)
@@ -36,7 +60,7 @@ eval $COMMAND || exit 1
 
 # Install required Python packages
 COMMAND="pip3 install nautobot"
-echo "Installing Nautobot dependencies ($COMMAND)..."
+echo "Installing Nautobot and its dependencies ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Install optional packages (if any)

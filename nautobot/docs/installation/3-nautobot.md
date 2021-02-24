@@ -12,13 +12,13 @@ Begin by installing all system packages required by Nautobot and its dependencie
 ### Ubuntu
 
 ```no-highlight
-$ sudo apt install -y python3 python3-pip python3-venv python3-dev git build-essential libxml2-dev libxslt1-dev libffi-dev libpq-dev libssl-dev zlib1g-dev
+$ sudo apt install -y git python3 python3-pip python3-venv python3-dev 
 ```
 
 ### CentOS
 
 ```no-highlight
-$ sudo yum install -y gcc python36 python36-devel python3-pip git libxml2-devel libxslt-devel libffi-devel openssl-devel redhat-rpm-config
+$ sudo yum install -y gcc git python36 python36-devel python3-pip libxml2-devel libxslt-devel libffi-devel openssl-devel redhat-rpm-config
 ```
 
 Before continuing with either platform, update [`pip`](https://pip.pypa.io/), Python's package installer, to its latest release:
@@ -66,20 +66,6 @@ Create the base directory for the Nautobot installation. For this guide, we'll u
 sudo mkdir -p /opt/nautobot/ && cd /opt/nautobot/
 ```
 
-If `git` is not already installed, install it:
-
-#### Ubuntu
-
-```no-highlight
-sudo apt install -y git
-```
-
-#### CentOS
-
-```no-highlight
-sudo yum install -y git
-```
-
 Next, clone the **main** branch of the Nautobot GitHub repository into the current directory. (This branch always holds
 the current stable release.)
 
@@ -101,15 +87,6 @@ Checking connectivity... done.
 
 ## Setup the Nautobot User Environment
 
-### Create the Media Directories
-
-These directories are used for storing files uploaded to Nautobot.
-
-```
-$ sudo mkdir -p /opt/nautobot/nautobot/media/image-attachments
-$ sudo mkdir -p /opt/nautobot/nautobot/media/devicetype-images
-```
-
 ### Create the Nautobot System User
 
 Create a system user account named `nautobot`. We'll configure the WSGI and HTTP services to run under this account.
@@ -128,7 +105,14 @@ $ sudo chown --recursive nautobot /opt/nautobot/nautobot/media/
 ```
 $ sudo groupadd --system nautobot
 $ sudo adduser --system -g nautobot nautobot
-$ sudo chown --recursive nautobot /opt/nautobot/nautobot/media/
+```
+
+For CentOS, you'll also need to create the static file directories:
+
+```
+$ cd /opt/nautobot/
+$ sudo mkdir -p git jobs media/image-attachments media/devicetype-images
+$ sudo chown --recursive nautobot git jobs media
 ```
 
 ## Install Nautobot
@@ -148,7 +132,7 @@ The included install script (`install.sh`) will perform the following actions:
 - Aggregate static resource files on disk
 
 !!! warning
-    As of Nautobot v1.0.0b1 the first time you run `install.sh` it will fail with the error `Configuration file does not exist at '/root/.nautobot/nautobot_config.py'`
+    As of Nautobot v1.0.0b1 the first time you run `install.sh` it will fail with the error `Configuration file does not exist at '/opt/nautobot/nautobot_config.py'`
 
 
 ```no-highlight
@@ -160,7 +144,7 @@ You should see a lot of Python packages get installed, and then end here:
 ```
 Skipping local dependencies (local_requirements.txt not found)
 Applying database migrations (nautobot-server migrate)...
-Configuration file does not exist at '/root/.nautobot/nautobot_config.py'
+Configuration file does not exist at '/opt/nautobot/nautobot_config.py'
 ```
 
 Great! We have a virtualenv to use now that was created by the `install.sh` script, so let's proceed to verifying the
@@ -168,8 +152,8 @@ installation. We will end up running `install.sh` again after this.
 
 ### Activate the Virtual Environment
 
-Enter the Python virtual environment (aka virtualenv) created by the install script and observe that afterward your
-prompt will change to the name of the virtualenv (`venv`):
+To verify the installation worked, activate the Python virtual environment (aka virtualenv) created by the install
+script and observe that afterward your prompt will change to the name of the virtualenv (`venv`):
 
 ```no-highlight
 $ source /opt/nautobot/venv/bin/activate
@@ -182,9 +166,20 @@ You should now have a fancy `nautobot-server` command in your environment. This 
 Nautobot! Run it to confirm the installed version of `nautobot`:
 
 ```
-$ nautobot-server --version
+(venv) $ nautobot-server --version
 1.0.0b1
 ```
+
+## Deactivate the Virtual Environment
+
+Now exit the virtualenv. Observe that your prompt returns to normal.
+
+```
+(venv) $ deactivate
+$
+```
+
+You've now got a working Nautobot virtual environment. Excellent!
 
 ## Configuration
 
@@ -200,10 +195,10 @@ instructions for this are covered in the documentation on [Nautobot Configuratio
     For pre-release, please run `nautobot-server init` as root using `sudo`. This will not be required as we approach
     final release.
 
-We'll want to create the config in the Nautobot root at `/opt/nautobot/nautobot_config.py`:
+We'll want to create the `nautobot_config.py` your current directory at `/opt/nautobot`:
 
 ```no-highlight
-$ sudo nautobot-server init /opt/nautobot/nautobot_config.py
+$ sudo /opt/nautobot/venv/bin/nautobot-server init /opt/nautobot/nautobot_config.py
 Configuration file created at '/opt/nautobot/nautobot_config.py'
 ```
 
@@ -265,6 +260,14 @@ Upgrade complete! Don't forget to restart the Nautobot services:
     Upon completion, the upgrade script may warn that no existing virtual environment was detected. As this is a new
     installation, this warning can be safely ignored.
 
+## Set the NAUTOBOT_CONFIG variable
+
+This will tell the `nautobot-server` command where to find the configuration when it isn't deployed to a default
+location. This can also be done using the `--config` argument.
+
+```
+$ export NAUTOBOT_CONFIG=/opt/nautobot/nautobot_config.py
+```
 
 ## Create a Super User
 

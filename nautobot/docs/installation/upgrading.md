@@ -48,18 +48,12 @@ your media, but in general moving or copying the media directory will suffice.)
 sudo cp -pr /opt/nautobot-X.Y.Z/nautobot_root/media/ /opt/nautobot
 ```
 
-Also make sure to copy or link any jobs (formerly "custom scripts" and "reports") that you've made. Note that if these
-are stored outside the project root, you will not need to copy them. (Check the `SCRIPTS_ROOT` and `REPORTS_ROOT`
-parameters in the configuration file above if you're unsure.)
-
-!!! note
-    When migrating to this release, note that `SCRIPTS_ROOT` and `REPORTS_ROOT` are deprecated and these files should be
-    consolidated into a single shared `JOBS_ROOT` directory.
+Also make sure to copy or link any jobs that you've made. Note that if these are stored outside of the project root, you
+may not need to copy them. (Check the `JOBS_ROOT` parameter in the configuration file above if you're unsure.)
 
 ```no-highlight
-sudo cp /opt/nautobot-X.Y.Z/scripts/*.py /opt/nautobot/jobs/
-sudo cp /opt/nautobot-X.Y.Z/reports/*.py /opt/nautobot/jobs/
-# If you have any script data files (YAML, JSON) stored in the SCRIPTS_ROOT directory, be sure to copy those as well
+sudo cp /opt/nautobot-X.Y.Z/jobs/*.py /opt/nautobot/jobs
+# If you have any job data files (such as YAML or JSON) stored in the JOBS_ROOT directory, be sure to copy those as well
 ```
 
 If you followed the original installation guide to set up gunicorn, be sure to copy its configuration as well:
