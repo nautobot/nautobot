@@ -1,4 +1,4 @@
-![Nautobot](nautobot/docs/nautobot_logo.svg "Nautobot logo")
+![Nautobot](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/nautobot_logo.svg "Nautobot logo")
 
 Nautobot is a Network Source of Truth and Network Automation Platform.  
 
@@ -13,22 +13,22 @@ or join us in the **#nautobot** Slack channel on [Network to Code](https://netwo
 
 ### Build Status
 
-|             | status |
+| Branch      | Status |
 |-------------|------------|
 | **main** | [![Build Status](https://travis-ci.com/nautobot/nautobot.svg?branch=main)](https://travis-ci.com/nautobot/nautobot) |
 | **develop** | [![Build Status](https://travis-ci.com/nautobot/nautobot.svg?branch=develop)](https://travis-ci.com/nautobot/nautobot) |
 
 ### Screenshots
 
-![Screenshot of main page](nautobot/docs/media/screenshot1.png "Main page")
+![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot1.png "Main page")
 
 ---
 
-![Screenshot of rack elevation](nautobot/docs/media/screenshot2.png "Rack elevation")
+![Screenshot of rack elevation](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot2.png "Rack elevation")
 
 ---
 
-![Screenshot of prefix hierarchy](nautobot/docs/media/screenshot3.png "Prefix hierarchy")
+![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/screenshot3.png "Prefix hierarchy")
 
 ## Installation
 
