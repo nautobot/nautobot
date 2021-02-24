@@ -1,5 +1,6 @@
 import re
 
+import netaddr
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -25,8 +26,9 @@ from nautobot.extras.forms import (
     StatusFilterFormMixin,
 )
 from nautobot.extras.models import Tag
-from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
+from nautobot.ipam.constants import *
 from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
@@ -1672,6 +1674,8 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         required=False,
         query_params={"manufacturer_id": ["$manufacturer", "null"]},
     )
+    primary_ip4 = IPNetworkFormField(required=False)
+    primary_ip6 = IPNetworkFormField(required=False)
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -1736,8 +1740,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                interface_ips = IPAddress.objects.filter(
-                    address__family=family,
+                interface_ips = IPAddress.objects.ip_family(family).filter(
                     assigned_object_type=ContentType.objects.get_for_model(Interface),
                     assigned_object_id__in=interface_ids,
                 ).prefetch_related("assigned_object")
@@ -1747,8 +1750,8 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
                 # Collect NAT IPs
                 nat_ips = (
                     IPAddress.objects.prefetch_related("nat_inside")
+                    .ip_family(family)
                     .filter(
-                        address__family=family,
                         nat_inside__assigned_object_type=ContentType.objects.get_for_model(Interface),
                         nat_inside__assigned_object_id__in=interface_ids,
                     )
@@ -1788,6 +1791,16 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         if position:
             self.fields["position"].widget.choices = [(position, f"U{position}")]
 
+        def save(self, *args, **kwargs):
+            instance = super().save(*args, commit=False, **kwargs)
+            if instance.primary_ip4:
+                instance.primary_ip4.address = self.cleaned_data.get('primary_ip4')
+            if instance.primary_ip6:
+                instance.primary_ip6.address = self.cleaned_data.get('primary_ip6')
+            instance.save()
+            self.save_m2m()
+            return instance
+
 
 class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     device_role = CSVModelChoiceField(
@@ -1817,6 +1830,8 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Assigned platform",
     )
+    primary_ip4 = IPNetworkFormField(required=False)
+    primary_ip6 = IPNetworkFormField(required=False)
     cluster = CSVModelChoiceField(
         queryset=Cluster.objects.all(),
         to_field_name="name",
@@ -1836,6 +1851,24 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             # Limit device type queryset by manufacturer
             params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
+
+    def clean(self):
+        self.cleaned_data = super().clean()
+        ip4 = self.cleaned_data.get('primary_ip4')
+        self.address_ip4 = netaddr.IPNetwork(ip4) if ip4 else None
+        ip6 = self.cleaned_data.get('primary_ip6')
+        self.address_ip6 = netaddr.IPNetwork(ip6) if ip6 else None
+        return self.cleaned_data
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, commit=False, **kwargs)
+        if instance.primary_ip4:
+            instance.primary_ip4.address = self.cleaned_data.get('primary_ip4')
+        if instance.primary_ip6:
+            instance.primary_ip6.address = self.cleaned_data.get('primary_ip6')
+        instance.save()
+        self.save_m2m()
+        return instance
 
 
 class DeviceCSVForm(BaseDeviceCSVForm):

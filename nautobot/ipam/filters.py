@@ -418,7 +418,7 @@ class IPAddressFilterSet(
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(field_name="address", lookup_expr="family")
+    family = django_filters.NumberFilter(method='filter_ip_family', label='Family',)
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -506,7 +506,7 @@ class IPAddressFilterSet(
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(dns_name__icontains=value) | Q(description__icontains=value) | Q(address__istartswith=value)
+        qs_filter = Q(dns_name__icontains=value) | Q(description__icontains=value)
         return queryset.filter(qs_filter)
 
     def search_by_parent(self, queryset, name, value):
@@ -514,26 +514,29 @@ class IPAddressFilterSet(
         if not value:
             return queryset
         try:
-            query = str(netaddr.IPNetwork(value.strip()).cidr)
-            return queryset.filter(address__net_host_contained=query)
+            query = netaddr.IPNetwork(value.strip()).cidr
+            return queryset.net_host_contained(query)
         except (AddrFormatError, ValueError):
             return queryset.none()
 
     def filter_address(self, queryset, name, value):
         try:
-            return queryset.filter(address__net_in=value)
+            return queryset.net_in(value)
         except ValidationError:
             return queryset.none()
 
     def filter_mask_length(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.filter(address__net_mask_length=value)
+        return queryset.filter(prefix_length=value)
 
     def filter_present_in_vrf(self, queryset, name, vrf):
         if vrf is None:
             return queryset.none
         return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+
+    def filter_ip_family(self, queryset, name, value):
+        return queryset.ip_family(value)
 
     def filter_device(self, queryset, name, value):
         devices = Device.objects.filter(**{"{}__in".format(name): value})

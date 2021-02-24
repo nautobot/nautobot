@@ -32,7 +32,7 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
+    BOOLEAN_WITH_BLANK_CHOICES, AddressFieldMixin,
 )
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import *
@@ -557,9 +557,11 @@ class IPAddressForm(
     BootstrapMixin,
     TenancyForm,
     ReturnURLForm,
+    AddressFieldMixin,
     CustomFieldModelForm,
     RelationshipModelForm,
 ):
+    address = IPNetworkFormField()
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -710,7 +712,7 @@ class IPAddressForm(
                 self.initial["primary_for_parent"] = True
 
     def clean(self):
-        super().clean()
+        self.cleaned_data = super().clean()
 
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
@@ -750,7 +752,8 @@ class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
-class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, CustomFieldModelForm):
+    address = IPNetworkFormField()
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -781,7 +784,8 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
         self.fields["vrf"].empty_label = "Global"
 
 
-class IPAddressCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
+    address = IPNetworkFormField()
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",

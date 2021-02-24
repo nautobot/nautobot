@@ -18,9 +18,8 @@ from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import *
 from .constants import *
-from .fields import IPNetworkField, IPAddressField, VarbinaryIPField
-from .managers import IPAddressManager
-from .querysets import PrefixQuerySet, AggregateQuerySet
+from .fields import VarbinaryIPField
+from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet
 from .validators import DNSValidator
 
 
@@ -636,9 +635,9 @@ class Prefix(PrimaryModel, StatusModel):
         child IPAddresses belonging to any VRF.
         """
         if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
-            return IPAddress.objects.filter(address__net_host_contained=str(self.prefix))
+            return IPAddress.objects.net_host_contained(self.prefix)
         else:
-            return IPAddress.objects.filter(address__net_host_contained=str(self.prefix), vrf=self.vrf)
+            return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
 
     def get_available_prefixes(self):
         """
@@ -740,7 +739,18 @@ class IPAddress(PrimaryModel, StatusModel):
     which has a NAT outside IP, that Interface's Device can use either the inside or outside IP as its primary IP.
     """
 
-    address = IPAddressField(help_text="IPv4 or IPv6 address (with mask)")
+    host = VarbinaryIPField(
+        null=False, db_index=True, max_length=16,
+        help_text='IPv4 or IPv6 host address',
+    )
+    broadcast = VarbinaryIPField(
+        null=False, db_index=True, max_length=16,
+        help_text='IPv4 or IPv6 broadcast address'
+    )
+    prefix_length = models.IntegerField(
+        null=False, db_index=True,
+        help_text='Length of the Network prefix, in bits.'
+    )
     vrf = models.ForeignKey(
         to="ipam.VRF",
         on_delete=models.PROTECT,
@@ -810,21 +820,35 @@ class IPAddress(PrimaryModel, StatusModel):
         "description",
     ]
 
-    objects = IPAddressManager()
+    objects = IPAddressQuerySet.as_manager()
 
     class Meta:
-        ordering = ("address",)  # address may be non-unique
+        ordering = ('host', 'prefix_length', 'pk')  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
 
+    def __init__(self, *args, **kwargs):
+        address = kwargs.pop('address', None)
+        super(IPAddress, self).__init__(*args, **kwargs)
+        self._deconstruct_address(address)
+
     def __str__(self):
         return str(self.address)
+
+    def _deconstruct_address(self, address):
+        if address:
+            if isinstance(address, str):
+                address = netaddr.IPNetwork(address)
+            self.host = bytes(address.ip)
+            self.prefix_length = address.prefixlen
+            if address.broadcast:
+                self.broadcast = bytes(address.broadcast)
 
     def get_absolute_url(self):
         return reverse("ipam:ipaddress", args=[self.pk])
 
     def get_duplicates(self):
-        return IPAddress.objects.filter(vrf=self.vrf, address__net_host=str(self.address.ip)).exclude(pk=self.pk)
+        return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
     @classproperty
     def STATUS_SLAAC(cls):
@@ -907,7 +931,7 @@ class IPAddress(PrimaryModel, StatusModel):
             obj_type = f"{self.assigned_object_type.app_label}.{self.assigned_object_type.model}"
 
         return (
-            self.address,
+            self.host,
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
@@ -918,6 +942,17 @@ class IPAddress(PrimaryModel, StatusModel):
             self.dns_name,
             self.description,
         )
+
+    @property
+    def address(self):
+        if self.host and self.prefix_length:
+            host = netaddr.IPAddress(int.from_bytes(self.host, 'big'))
+            cidr = u'%s/%s' % (host, self.prefix_length)
+            return netaddr.IPNetwork(cidr)
+
+    @address.setter
+    def address(self, address):
+        self._deconstruct_address(address)
 
     @property
     def family(self):
@@ -931,7 +966,7 @@ class IPAddress(PrimaryModel, StatusModel):
         e.g. for bulk editing.
         """
         if self.address is not None:
-            self.address.prefixlen = value
+            self.prefix_length = value
 
     mask_length = property(fset=_set_mask_length)
 
