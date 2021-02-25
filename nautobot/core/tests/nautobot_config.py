@@ -25,21 +25,4 @@ PLUGINS = [
     "nautobot.extras.tests.dummy_plugin",
 ]
 
-REDIS = {
-    "tasks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 0,
-        "SSL": False,
-    },
-    "caching": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 1,
-        "SSL": False,
-    },
-}
-
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

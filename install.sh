@@ -53,6 +53,11 @@ eval $COMMAND || {
 # Activate the virtual environment
 source "${VIRTUALENV}/bin/activate"
 
+# Upgrade pip3
+COMMAND="pip3 install --upgrade pip"
+echo "Upgrading Python package installer ($COMMAND)..."
+eval $COMMAND || exit 1
+
 # Install necessary system packages
 COMMAND="pip3 install wheel"
 echo "Installing Python system packages ($COMMAND)..."
