@@ -223,7 +223,7 @@ def pycodestyle(context, python_ver=PYTHON_VER):
     """
     context.run(
         f"{COMPOSE_COMMAND} run nautobot"
-        " pycodestyle --ignore=W504,E501 "
+        " pycodestyle --ignore=E203,E501,W503,W504 "
         " contrib/ development/ nautobot/ tasks.py",
         env={"PYTHON_VER": python_ver},
         pty=True,
