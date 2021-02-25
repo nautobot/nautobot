@@ -2,8 +2,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: 📖 Contributing Policy
-    url: https://github.com/netbox-community/netbox/blob/develop/CONTRIBUTING.md
+    url: https://github.com/nautobot/nautobot/blob/develop/CONTRIBUTING.md
     about: Please read through our contributing policy before opening an issue or pull request
-  - name: 💬 Discussion Group
-    url: https://groups.google.com/g/netbox-discuss
-    about: Join our discussion group for assistance with installation issues and other problems

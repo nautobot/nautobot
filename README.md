@@ -1,56 +1,50 @@
-![NetBox](docs/netbox_logo.svg "NetBox logo")
+![Nautobot](nautobot/docs/nautobot_logo.svg "Nautobot logo")
 
-NetBox is an IP address management (IPAM) and data center infrastructure
-management (DCIM) tool. Initially conceived by the network engineering team at
-[DigitalOcean](https://www.digitalocean.com/), NetBox was developed specifically
-to address the needs of network and infrastructure engineers. It is intended to
-function as a domain-specific source of truth for network operations.
+Nautobot is source of truth and automation platform for networks.
 
-NetBox runs as a web application atop the [Django](https://www.djangoproject.com/)
-Python framework with a [PostgreSQL](https://www.postgresql.org/) database. For a
-complete list of requirements, see `requirements.txt`. The code is available [on GitHub](https://github.com/netbox-community/netbox).
+Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/)
+Python framework with a [PostgreSQL](https://www.postgresql.org/) database. 
 
-The complete documentation for NetBox can be found at [Read the Docs](https://netbox.readthedocs.io/en/stable/).
+The complete documentation for Nautobot can be found at [Read the Docs](https://nautobot.readthedocs.io/en/stable/).
 
-Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/netbox-community/netbox/discussions) for the topic you have in mind.
+Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind,
+or join us in the **#nautobot** Slack channel on [NetworkToCode](https://networktocode.slack.com)!
 
 ### Build Status
 
 |             | status |
 |-------------|------------|
-| **master** | ![Build status](https://github.com/netbox-community/netbox/workflows/CI/badge.svg?branch=master) |
-| **develop** | ![Build status](https://github.com/netbox-community/netbox/workflows/CI/badge.svg?branch=develop) |
+| **main** | ![Build status](https://github.com/nautobot/nautobot/workflows/CI/badge.svg?branch=main) |
+| **develop** | ![Build status](https://github.com/nautobot/nautobot/workflows/CI/badge.svg?branch=develop) |
 
 ### Screenshots
 
-![Screenshot of main page](docs/media/screenshot1.png "Main page")
+![Screenshot of main page](nautobot/docs/media/screenshot1.png "Main page")
 
 ---
 
-![Screenshot of rack elevation](docs/media/screenshot2.png "Rack elevation")
+![Screenshot of rack elevation](nautobot/docs/media/screenshot2.png "Rack elevation")
 
 ---
 
-![Screenshot of prefix hierarchy](docs/media/screenshot3.png "Prefix hierarchy")
+![Screenshot of prefix hierarchy](nautobot/docs/media/screenshot3.png "Prefix hierarchy")
 
 ## Installation
 
-Please see [the documentation](https://netbox.readthedocs.io/en/stable/) for
-instructions on installing NetBox. To upgrade NetBox, please download the
-[latest release](https://github.com/netbox-community/netbox/releases) and
-run `upgrade.sh`.
+Please see [the documentation](https://nautobot.readthedocs.io/en/stable/) for
+instructions on installing Nautobot.
 
 ## Providing Feedback
 
 The best platform for general feedback, assistance, and other discussion is our
-[GitHub discussions](https://github.com/netbox-community/netbox/discussions).
+[GitHub discussions](https://github.com/nautobot/nautobot/discussions).
 To report a bug or request a specific feature, please open a GitHub issue using
-the [appropriate template](https://github.com/netbox-community/netbox/issues/new/choose).
+the [appropriate template](https://github.com/nautobot/nautobot/issues/new/choose).
 
-If you are interested in contributing to the development of NetBox, please read
+If you are interested in contributing to the development of Nautobot, please read
 our [contributing guide](CONTRIBUTING.md) prior to beginning any work.
 
 ## Related projects
 
-Please see [our wiki](https://github.com/netbox-community/netbox/wiki/Community-Contributions)
+Please see [our wiki](https://github.com/nautobot/nautobot/wiki/Community-Contributions)
 for a list of relevant community projects.

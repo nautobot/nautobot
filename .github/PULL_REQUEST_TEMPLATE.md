@@ -1,5 +1,5 @@
 <!--
-    Thank you for your interest in contributing to NetBox! Please note
+    Thank you for your interest in contributing to Nautobot! Please note
     that our contribution policy requires that a feature request or bug
     report be opened for approval prior to filing a pull request. This
     helps avoid wasting time and effort on something that we might not

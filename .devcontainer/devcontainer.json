@@ -1,0 +1,21 @@
+{
+    "dockerComposeFile": ["../development/docker-compose.yml", "../development/docker-compose.debug.yml"],
+    "service": "nautobot",
+	"workspaceFolder": "/opt/nautobot/",
+	"extensions": [
+		"ms-python.vscode-pylance",
+		"streetsidesoftware.code-spell-checker",
+		"eamodio.gitlens",
+		"oderwat.indent-rainbow",
+		"ms-python.python",
+		"ms-vsliveshare.vsliveshare",
+		"littlefoxteam.vscode-python-test-adapter"
+	],
+	"settings": {
+		"python.pythonPath": "/usr/local/bin/python",
+		"python.analysis.extraPaths": ["/opt/nautobot"],
+		"python.linting.pylintEnabled": true,
+		"python.linting.enabled": true,
+		"pythonTestExplorer.testFramework": "pytest"
+	}
+}

@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:webhook_list' %}">Webhooks</a></li>
+                {% if object.name %}
+                    <li><a href="{% url 'extras:webhook' pk=object.pk %}">{{ object.name }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.extras.add_webhook %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_webhook %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_webhook %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Webhook</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:webhook_changelog' pk=object.pk %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+	<div class="col-md-7">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Webhook</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Object Type(s)</td>
+                    <td>
+                        <ul>
+                            {% for content_type in content_types %}
+                                <li>{{ content_type }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Call On:</td>
+                    <td>
+                        {% if object.type_create %}
+                            <span class="text-success">
+                                <i class="mdi mdi-check-bold"></i>
+                            </span>
+                        {% else %}
+                            <span class="text-danger">
+                                <i class="mdi mdi-close"></i>
+                            </span>
+                        {% endif %}
+                        <span>Create</span>
+
+                        {% if object.type_update %}
+                            <span style="margin-left: 1rem;" class="text-success">
+                                <i class="mdi mdi-check-bold"></i>
+                            </span>
+                        {% else %}
+                            <span style="margin-left: 1rem;" class="text-danger">
+                                <i class="mdi mdi-close"></i>
+                            </span>
+                        {% endif %}
+                        <span>Update</span>
+
+                        {% if object.type_delete %}
+                            <span style="margin-left: 1rem;" class="text-success">
+                                <i class="mdi mdi-check-bold"></i>
+                            </span>
+                        {% else %}
+                            <span style="margin-left: 1rem;" class="text-danger">
+                                <i class="mdi mdi-close"></i>
+                            </span>
+                        {% endif %}
+                        <span>Delete </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Enabled</td>
+                    <td>
+                        {% if object.enabled %}
+                            <span class="text-success">
+                                <i class="mdi mdi-check-bold"></i>
+                            </span>
+                        {% else %}
+                            <span class="text-danger">
+                                <i class="mdi mdi-close"></i>
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>HTTP</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>HTTP Method</td>
+                    <td><span>{{ object.http_method }}</span></td>
+                </tr>
+                <tr>
+                    <td>HTTP Content Type</td>
+                    <td><span>{{ object.http_content_type }}</span></td>
+                </tr>
+                <tr>
+                    <td>Payload URL</td>
+                    <td><span>{{ object.payload_url }}</span></td>
+                </tr>
+                <tr>
+                    <td>Additional Headers</td>
+                    <td><span>{% if object.additional_headers %} <pre>{{ object.additional_headers }}</pre> {% else %} {{ None }} {% endif %}</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Security</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Secret</td>
+                    <td><span>{% if object.secret %} {{ object.secret }} {% else %} {{ None }} {% endif %}</span></td>
+                </tr>
+                <tr>
+                    <td>SSL Verification</td>
+                    <td>
+                        {% if object.ssl_verification %}
+                            <span class="text-success">
+                                <i class="mdi mdi-check-bold"></i>
+                            </span>
+                        {% else %}
+                            <span class="text-danger">
+                                <i class="mdi mdi-close"></i>
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>CA File Path</td>
+                    <td><span>{{ object.ca_file_path }}</span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Body Template</strong>
+            </div>
+                {% if object.body_template %} <pre>{{ object.body_template }}</pre> {% else %} {{ None }} {% endif %}
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

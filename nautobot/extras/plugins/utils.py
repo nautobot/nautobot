@@ -1,0 +1,113 @@
+"""
+Plugin utilities.
+"""
+
+import importlib.util
+import logging
+import sys
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.module_loading import import_string
+
+from .exceptions import PluginNotFound, PluginImproperlyConfigured
+
+
+# Logging object
+logger = logging.getLogger("nautobot.plugins")
+
+
+def import_object(module_and_object):
+    """
+    Import a specific object from a specific module by name, such as "nautobot.extras.plugins.utils.import_object".
+
+    Returns the imported object, or None if it doesn't exist.
+    """
+    target_module_name, object_name = module_and_object.rsplit(".", 1)
+    module_hierarchy = target_module_name.split(".")
+
+    # Iterate through the module hierarchy, checking for the existence of each successive submodule.
+    # We have to do this rather than jumping directly to calling find_spec(target_module_name)
+    # because find_spec will raise a ModuleNotFoundError if any parent module of target_module_name does not exist.
+    module_name = ""
+    for module_component in module_hierarchy:
+        module_name = f"{module_name}.{module_component}" if module_name else module_component
+        spec = importlib.util.find_spec(module_name)
+        if spec is None:
+            # No such module
+            return None
+
+    # Okay, target_module_name exists. Load it if not already loaded
+    if target_module_name in sys.modules:
+        module = sys.modules[target_module_name]
+    else:
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[target_module_name] = module
+        spec.loader.exec_module(module)
+
+    return getattr(module, object_name, None)
+
+
+def load_plugins(PLUGINS, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE, CACHEOPS):
+    """Process plugins and log errors if they can't be loaded."""
+    for plugin_name in PLUGINS:
+        # Attempt to load the plugin but let any errors bubble up.
+        load_plugin(plugin_name, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE, CACHEOPS)
+
+
+def load_plugin(plugin_name, INSTALLED_APPS, PLUGINS_CONFIG, VERSION, MIDDLEWARE, CACHEOPS):
+    """Process a single plugin or raise errors that get bubbled up."""
+
+    logger.debug(f"Loading {plugin_name}!")
+
+    # Import plugin module
+    try:
+        plugin = importlib.import_module(plugin_name)
+    except ModuleNotFoundError as err:
+        if getattr(err, "name") == plugin_name:
+            raise PluginNotFound(
+                f"Unable to import plugin {plugin_name}: Module not found. Check that the plugin module has been "
+                f"installed within the correct Python environment."
+            ) from err
+        raise err
+
+    # Validate plugin config
+    try:
+        plugin_config = plugin.config
+    except AttributeError as err:
+        raise PluginImproperlyConfigured(
+            f"Plugin {plugin_name} does not provide a 'config' variable. This should be defined in the plugin's "
+            f"__init__.py file and point to the PluginConfig subclass."
+        ) from err
+
+    # Validate user-provided configuration settings and assign defaults. Plugin
+    # validation that fails will stop before modifying any settings.
+    if plugin_name not in PLUGINS_CONFIG:
+        PLUGINS_CONFIG[plugin_name] = {}
+    plugin_config.validate(PLUGINS_CONFIG[plugin_name], VERSION)
+
+    # Plugin config is valid, so now we can and add to INSTALLED_APPS.
+    INSTALLED_APPS.append(f"{plugin_config.__module__}.{plugin_config.__name__}")
+
+    # Include any extra installed apps provided by the plugin
+    # TODO(jathan): We won't be able to support advanced app-ordering concerns
+    # and if the time comes that we do, this will have to be rethought.
+    INSTALLED_APPS.extend(plugin_config.installed_apps)
+
+    # Include any extra middleware provided by the plugin
+    MIDDLEWARE.extend(plugin_config.middleware)
+
+    # Update caching configg
+    CACHEOPS.update({f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()})
+
+
+def get_sso_backend_name(social_auth_module):
+    """
+    Return the name parameter of the social auth module defined in the module itself.
+
+    :param social_auth_module: The social auth python module to read the name parameter from
+    """
+    try:
+        backend_class = import_string(social_auth_module)
+    except ImportError:
+        raise ImproperlyConfigured(f"Unable to import Social Auth Module {social_auth_module}.")
+    backend_name = backend_class.name
+    return backend_name

@@ -1,0 +1,23 @@
+{% extends 'generic/object_edit.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Virtual Chassis</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.domain %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Member Devices</strong></div>
+        <div class="panel-body">
+            {% render_field form.region %}
+            {% render_field form.site %}
+            {% render_field form.rack %}
+            {% render_field form.members %}
+            {% render_field form.initial_position %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}
