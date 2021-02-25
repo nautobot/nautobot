@@ -1,0 +1,31 @@
+{% extends 'generic/object_edit.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Device Type</strong></div>
+        <div class="panel-body">
+            {% render_field form.manufacturer %}
+            {% render_field form.model %}
+            {% render_field form.slug %}
+            {% render_field form.part_number %}
+            {% render_field form.u_height %}
+            {% render_field form.is_full_depth %}
+            {% render_field form.subdevice_role %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Rack Images</strong></div>
+        <div class="panel-body">
+            {% render_field form.front_image %}
+            {% render_field form.rear_image %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script will prepare NetBox to run after the code has been upgraded to
+# This script will prepare Nautobot to run after the code has been upgraded to
 # its most recent release.
 
 cd "$(dirname "$0")"
@@ -35,8 +35,8 @@ echo "Installing Python system packages ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Install required Python packages
-COMMAND="pip3 install -r requirements.txt"
-echo "Installing core dependencies ($COMMAND)..."
+COMMAND="pip3 install nautobot"
+echo "Installing Nautobot ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Install optional packages (if any)
@@ -51,32 +51,32 @@ else
 fi
 
 # Apply any database migrations
-COMMAND="python3 netbox/manage.py migrate"
+COMMAND="nautobot-server migrate"
 echo "Applying database migrations ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Trace any missing cable paths (not typically needed)
-COMMAND="python3 netbox/manage.py trace_paths --no-input"
+COMMAND="nautobot-server trace_paths --no-input"
 echo "Checking for missing cable paths ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Collect static files
-COMMAND="python3 netbox/manage.py collectstatic --no-input"
+COMMAND="nautobot-server collectstatic --no-input"
 echo "Collecting static files ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Delete any stale content types
-COMMAND="python3 netbox/manage.py remove_stale_contenttypes --no-input"
+COMMAND="nautobot-server remove_stale_contenttypes --no-input"
 echo "Removing stale content types ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Delete any expired user sessions
-COMMAND="python3 netbox/manage.py clearsessions"
+COMMAND="nautobot-server clearsessions"
 echo "Removing expired user sessions ($COMMAND)..."
 eval $COMMAND || exit 1
 
 # Clear all cached data
-COMMAND="python3 netbox/manage.py invalidate all"
+COMMAND="nautobot-server invalidate all"
 echo "Clearing cache data ($COMMAND)..."
 eval $COMMAND || exit 1
 
@@ -87,10 +87,10 @@ if [ -v WARN_MISSING_VENV ]; then
   echo "Python and gunicorn executables. (If this is a new installation,"
   echo "this warning can be ignored.)"
   echo ""
-  echo "netbox.service ExecStart:"
+  echo "nautobot.service ExecStart:"
   echo "  ${VIRTUALENV}/bin/gunicorn"
   echo ""
-  echo "netbox-rq.service ExecStart:"
+  echo "nautobot-rq.service ExecStart:"
   echo "  ${VIRTUALENV}/bin/python"
   echo ""
   echo "After modifying these files, reload the systemctl daemon:"
@@ -98,5 +98,5 @@ if [ -v WARN_MISSING_VENV ]; then
   echo "--------------------------------------------------------------------"
 fi
 
-echo "Upgrade complete! Don't forget to restart the NetBox services:"
-echo "  > sudo systemctl restart netbox netbox-rq"
+echo "Upgrade complete! Don't forget to restart the Nautobot services:"
+echo "  > sudo systemctl restart nautobot nautobot-rq"

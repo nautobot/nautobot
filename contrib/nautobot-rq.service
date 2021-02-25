@@ -1,0 +1,21 @@
+[Unit]
+Description=Nautobot Request Queue Worker
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+User=nautobot
+Group=nautobot
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/venv/bin/python3 /opt/nautobot/manage.py rqworker
+
+Restart=on-failure
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,6 @@
 ---
 name: ✨ Feature Request
-about: Propose a new NetBox feature or enhancement
+about: Propose a new Nautobot feature or enhancement
 
 ---
 
@@ -9,18 +9,18 @@ about: Propose a new NetBox feature or enhancement
 
     This form is only for proposing specific new features or enhancements.
     If you have a general idea or question, please start a discussion instead:
-    https://github.com/netbox-community/netbox/discussions
+    https://github.com/nautobot/nautobot/discussions
 
     NOTE: Due to an excessive backlog of feature requests, we are not currently
-    accepting any proposals which significantly extend NetBox's feature scope.
+    accepting any proposals which significantly extend Nautobot's feature scope.
 
-    Please describe the environment in which you are running NetBox. Be sure
+    Please describe the environment in which you are running Nautobot. Be sure
     that you are running an unmodified instance of the latest stable release
     before submitting a bug report.
 -->
 ### Environment
-* Python version: 
-* NetBox version: 
+* Python version:
+* Nautobot version:
 
 <!--
     Describe in detail the new functionality you are proposing. Include any
@@ -31,7 +31,7 @@ about: Propose a new NetBox feature or enhancement
 
 <!--
     Convey an example use case for your proposed feature. Write from the
-    perspective of a NetBox user who would benefit from the proposed
+    perspective of a Nautobot user who would benefit from the proposed
     functionality and describe how.
 --->
 ### Use Case

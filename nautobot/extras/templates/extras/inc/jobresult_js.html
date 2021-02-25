@@ -1,0 +1,17 @@
+{% load helpers %}
+{% load static %}
+
+<script type="text/javascript">
+{% if not result.completed %}
+var pending_result_id = "{{ result.pk }}";
+{% else %}
+var pending_result_id = null;
+{% endif %}
+
+function jobTerminatedAction(){
+    refreshWindow();
+}
+
+</script>
+<script src="{% static 'js/job_result.js' %}?v{{ settings.VERSION }}"
+        onerror="window.location='{% url 'media_failure' %}?filename=js/job_result.js'"></script>

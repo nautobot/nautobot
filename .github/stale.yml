@@ -21,9 +21,9 @@ staleLabel: "pending closure"
 # Comment to post when marking an issue as stale. Set to `false` to disable
 markComment: >
   This issue has been automatically marked as stale because it has not had
-  recent activity. It will be closed if no further activity occurs. NetBox
+  recent activity. It will be closed if no further activity occurs. Nautobot
   is governed by a small group of core maintainers which means not all opened
-  issues may receive direct feedback. Please see our [contributing guide](https://github.com/netbox-community/netbox/blob/develop/CONTRIBUTING.md).
+  issues may receive direct feedback. Please see our [contributing guide](https://github.com/nautobot/nautobot/blob/develop/CONTRIBUTING.md).
 
 # Comment to post when closing a stale issue. Set to `false` to disable
 closeComment: >

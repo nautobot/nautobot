@@ -1,6 +1,6 @@
 ---
 name: 📖 Documentation Change
-about: Suggest an addition or modification to the NetBox documentation
+about: Suggest an addition or modification to the Nautobot documentation
 
 ---
 
