@@ -24,7 +24,7 @@ DATABASES = {
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),  # Database server
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
         "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),  # Database timeout
-        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postres only supported!)
+        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postgres only supported!)
     }
 }
 
@@ -271,5 +271,5 @@ DATETIME_FORMAT = "N j, Y g:i a"
 SHORT_DATETIME_FORMAT = "Y-m-d H:i"
 
 # A list of strings designating all applications that are enabled in this Django installation. Each string should be a dotted Python path to an application configuration class (preferred), or a package containing an application.
-# http://nautobot.readthedocs.io/configuration/optional-settings/#extra-applications
+# https://nautobot.readthedocs.io/en/latest/configuration/optional-settings/#extra-applications
 EXTRA_INSTALLED_APPS = []
