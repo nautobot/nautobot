@@ -49,8 +49,8 @@ If the location of ssl certificates had to be changed in `Obtain an SSL Certific
     Edit the `/etc/nginx.conf` file. In the `http` section, add:
 
     ```no-highlight
-        include /etc/nginx/sites-enabled/*.conf;
-		server_names_hash_bucket_size 64;
+    include /etc/nginx/sites-enabled/*.conf;
+    server_names_hash_bucket_size 64;
     ```
 
 ```no-highlight
