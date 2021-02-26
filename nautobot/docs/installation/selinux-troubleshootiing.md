@@ -14,7 +14,7 @@ $ sudo tail -f /var/log/nginx/error.log
 2021/02/26 15:16:58 [crit] 67245#0: *544 connect() to 127.0.0.1:8001 failed (13: Permission denied) while connecting to upstream, client: 47.221.167.40, server: nautobot.example.com, request: "GET /favicon.ico HTTP/1.1", upstream: "http://127.0.0.1:8001/favicon.ico", host: "nautobot.example.com", referrer: "https://nautobot.example.com/"
 ```
 
-A quick way to verify that SELinux is preventing the application from working is to first verify that SELinux is indeed `enabled` and operating in `enforcing` mode and second; temporarily put SELinux in `permissive` mode. With SELinux in `permissive` mode, the application stack can be tested again. If the application starts working as expected, then SELinux is most likely the culprit.
+A quick way to verify that SELinux is preventing the application from working is to first, verify that SELinux is indeed `enabled` and operating in `enforcing` mode, and second, temporarily put SELinux in `permissive` mode. With SELinux in `permissive` mode, the application stack can be tested again. If the application starts working as expected, then SELinux is most likely the culprit.
 
 ```no-highlight
 # sestatus | egrep 'SELinux status|Current mode'
