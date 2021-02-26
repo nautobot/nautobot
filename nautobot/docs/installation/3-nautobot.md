@@ -42,7 +42,7 @@ Download the [latest stable release](https://github.com/nautobot/nautobot/releas
 archive and extract it to your desired path. In this example, we'll use `/opt/nautobot` as the Nautobot root.
 
 ```no-highlight
-$ sudo wget https://github.com/nautobot-community/nautobot/archive/vX.Y.Z.tar.gz
+$ sudo wget https://github.com/nautobot/nautobot/archive/vX.Y.Z.tar.gz
 $ sudo tar -xzf vX.Y.Z.tar.gz -C /opt
 $ sudo ln -s /opt/nautobot-X.Y.Z/ /opt/nautobot
 $ ls -ld /opt/nautobot*
@@ -161,7 +161,7 @@ Nautobot! Run it to confirm the installed version of `nautobot`:
 1.0.0b1
 ```
 
-## Deactivate the Virtual Environment
+### Deactivate the Virtual Environment
 
 Now exit the virtualenv. Observe that your prompt returns to normal.
 
@@ -215,7 +215,7 @@ Nautobot to fetch live data from devices and return it to a requester via its RE
 `NAPALM_PASSWORD` configuration parameters define the credentials to be used when connecting to a device.
 
 ```no-highlight
-sudo echo napalm >> /opt/nautobot/local_requirements.txt
+$ echo napalm | sudo tee -a /opt/nautobot/local_requirements.txt
 ```
 
 ### Remote File Storage
@@ -225,7 +225,7 @@ By default, Nautobot will use the local filesystem to store uploaded files. To u
 backend](/configuration/optional-settings/#storage_backend) in `configuration.py`.
 
 ```no-highlight
-sudo echo django-storages >> /opt/nautobot/local_requirements.txt
+$ echo django-storages | sudo tee -a /opt/nautobot/local_requirements.txt
 ```
 
 ## Run the Install Script Again
