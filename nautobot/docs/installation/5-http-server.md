@@ -35,7 +35,7 @@ Begin by installing nginx:
 sudo apt install -y nginx
 ```
 
-Once nginx is installed, copy the nginx configuration file provided by Nautobot to `/etc/nginx/sites-available/nautobot.conf`. Be sure to replace `nautobot.example.com` with the domain name or IP address of your installation. (This should match the value configured for `ALLOWED_HOSTS` in `configuration.py`.)
+Once nginx is installed, copy the nginx configuration file provided by Nautobot to `/etc/nginx/sites-available/nautobot.conf`. Be sure to replace `nautobot.example.com` with the domain name or IP address of your installation. (This should match the value configured for `ALLOWED_HOSTS` in `nautobot_config.py`.)
 
 If the location of ssl certificates had to be changed in `Obtain an SSL Certificate` step, then the location will need to be changed in the `nginx.conf` file as well.
 

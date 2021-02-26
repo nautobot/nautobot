@@ -1,10 +1,10 @@
 # SELinux Troubleshooting
 
-When installing Nautobot for the first time on a Redhat-based Linux Distribution, SELinux may prevent the Nautobot stack from working properly. An example is SELinux prevents the HTTP daemon (Nginx, Apache, etc) from communicating to the Django application stack on the backend.
+When installing Nautobot for the first time on a Redhat-based Linux Distribution, SELinux may prevent the Nautobot stack from working properly. An example is SELinux preventing the HTTP daemon (Nginx, Apache, etc) from communicating to the Django application stack on the backend.
 
 ## Determine if SELinux is the Culprit
 
-An example a broken application can be seen in the Nginx error logs below:
+An example of a broken application can be seen in the Nginx error logs below:
 
 ```no-highlight
 $ sudo tail -f /var/log/nginx/error.log
@@ -25,10 +25,6 @@ Current mode:                   enforcing
 To put SELinux in `permissive` mode, execute the `setenforce` command with the `0` flag.
 
 ```no-highlight
-# sestatus | egrep 'SELinux status|Current mode'
-SELinux status:                 enabled
-Current mode:                   enforcing
-
 # setenforce 0
 
 # sestatus | egrep 'SELinux status|Current mode'
@@ -39,10 +35,6 @@ Current mode:                   permissive
 With SELinux in `permissive` mode, test the application stack and ensure everything is working properly. If the application is working, put SELinux in `enforce` mode. This is done by executing the `setenforce` command with the `1` flag.
 
 ```no-highlight
-# sestatus | egrep 'SELinux status|Current mode'
-SELinux status:                 enabled
-Current mode:                   permissive
-
 # setenforce 1
 
 # sestatus | egrep 'SELinux status|Current mode'
@@ -51,7 +43,7 @@ Current mode:                   enforcing
 ```
 ## Troubleshoot SELinux
 
-Troubleshooting SELinux in most instances is straight forward. Using the `sealert` command to parse `/var/log/audit/audit.log` is the fastest way to pin-point SELinux specific issues. In many cases, `sealert` will also provide guidance as to how to resolve the issue.
+Troubleshooting SELinux in most instances is straightforward. Using the `sealert` command to parse `/var/log/audit/audit.log` is the fastest way to pin-point SELinux specific issues. In many cases, `sealert` will also provide guidance as to how to resolve the issue.
 
 ```no-highlight
 # sealert -a /var/log/audit/audit.log
@@ -154,6 +146,8 @@ setsebool -P httpd_can_network_connect 1
 
 Executing `setsebool -P httpd_can_network_connect 1` should remedy the issue. Verify this by executing the `setsebool` command, verify that SELinux is enabled and in `enforcing` mode via the `sestatus` command, and test the application stack for functionality.
 
+The first curl command demonstrates the failure. Nginx responds with a HTTP response code of 502, indicating that it is unable to communicate with the Nautobot application. After executing the `setsebool` command, curl is used again to verify that Nginx is able to communicate with the Nautobot application. This is verified with the HTTP response code of 200.
+
 ```no-highlight
 # curl -ik https://nautobot.example.com
 HTTP/1.1 502 Bad Gateway
@@ -163,13 +157,6 @@ Content-Type: text/html
 Content-Length: 173
 Connection: keep-alive
 
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body bgcolor="white">
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx/1.14.1</center>
-</body>
-</html>
 
 # sestatus
 SELinux status:                 enabled
@@ -183,7 +170,9 @@ Policy deny_unknown status:     allowed
 Memory protection checking:     actual (secure)
 Max kernel policy version:      32
 
+
 # setsebool -P httpd_can_network_connect 1
+
 
 # curl -ik https://nautobot.example.com
 HTTP/1.1 200 OK
