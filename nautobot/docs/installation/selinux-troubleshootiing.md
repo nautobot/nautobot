@@ -32,7 +32,7 @@ SELinux status:                 enabled
 Current mode:                   permissive
 ```
 
-With SELinux in `permissive` mode, test the application stack and ensure everything is working properly. If the application is working, put SELinux in `enforce` mode. This is done by executing the `setenforce` command with the `1` flag.
+With SELinux in `permissive` mode, test the application stack and ensure everything is working properly. If the application is working, put SELinux back into `enforcing` mode. This is done by executing the `setenforce` command with the `1` flag.
 
 ```no-highlight
 # setenforce 1
