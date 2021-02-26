@@ -11,18 +11,18 @@ about: Suggest an addition or modification to the Nautobot documentation
     boxes below.
 -->
 ### Change Type
-[ ] Addition
-[ ] Correction
-[ ] Deprecation
-[ ] Cleanup (formatting, typos, etc.)
+- [ ] Addition
+- [ ] Correction
+- [ ] Deprecation
+- [ ] Cleanup (formatting, typos, etc.)
 
 ### Area
-[ ] Installation instructions
-[ ] Configuration parameters
-[ ] Functionality/features
-[ ] REST API
-[ ] Administration/development
-[ ] Other
+- [ ] Installation instructions
+- [ ] Configuration parameters
+- [ ] Functionality/features
+- [ ] REST API
+- [ ] Administration/development
+- [ ] Other
 
 <!-- Describe the proposed change(s). -->
 ### Proposed Changes
