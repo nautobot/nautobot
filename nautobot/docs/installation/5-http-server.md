@@ -115,4 +115,4 @@ If you are able to connect but receive a 502 (bad gateway) error, check the foll
 
 * The WSGI worker processes (gunicorn) are running (`systemctl status nautobot` should show a status of "active (running)")
 * Nginx/Apache is configured to connect to the port on which gunicorn is listening (default is 8001).
-* SELinux is not preventing the reverse proxy connection. You may need to allow HTTP network connections with the command `setsebool -P httpd_can_network_connect 1`. For further information view the [SELinux troubleshooting](selinux-troubleshooting.md) guide.
+* SELinux is not preventing the reverse proxy connection. You may need to allow HTTP network connections with the command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux troubleshooting](selinux-troubleshooting.md) guide.
