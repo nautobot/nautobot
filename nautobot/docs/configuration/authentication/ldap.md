@@ -44,7 +44,7 @@ Enable the LDAP authentication backend by adding the following to your `nautobot
 ```python
 AUTHENTICATION_BACKENDS = [
     'django_auth_ldap.backend.LDAPBackend',
-    'nautobot.authentication.ObjectPermissionBackend',
+    'nautobot.core.authentication.ObjectPermissionBackend',
 ]
 ```
 
