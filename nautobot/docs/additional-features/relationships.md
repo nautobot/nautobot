@@ -4,7 +4,7 @@ Sometimes it is desirable to create a new kind of relationship between one (or m
 ## Relationship Types
 
 * Many to Many -  where both sides of the relationship connection can be connected to multiple objects. e.g. VLANs can be connected to multiple devices and devices will have multiple VLANs.
-* One to Many - where one side of the connection can only have one object. e.g. where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many fex. 
+* One to Many - where one side of the connection can only have one object. e.g. where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many FEX. 
 * One to One - where there can be only one object on either side of the relationship. e.g. a primary VLAN for a site or device. It doesn't make sense to have more than 1 'primary' vlan for a device.
 
 ## Relationship Filters
@@ -38,28 +38,34 @@ The API endpoint for relationship creation is `/extras/relationships/`
 
 From our many to many example above, we would use the following data to create the relationship. 
 
-    {"name": "Device VLANs",
-    "slug": "device-vlans",
-    "type": "many-to-many",
-    "source_type": "ipam.vlan",
-    "destination_type": "dcim.device"}
+```json
+{"name": "Device VLANs",
+"slug": "device-vlans",
+"type": "many-to-many",
+"source_type": "ipam.vlan",
+"destination_type": "dcim.device"}
+```
 
-## Configuring the Relationship between objects
+## Configuring the Relationship between Objects
 
 Configuring the relationship is similarly easy. Send a request to `/extras/relationship-associations/` like the following:
 
 Here we specify the IDs of each object. We specify the UUID of each object in their respective fields.
 
-    {"relationship": "bff38197-26ed-4bbd-b637-3e688acf361c",
-    "source_type": "ipam.vlan",
-    "source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
-    "destination_type": "dcim.device",
-    "destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"}
+```json
+{"relationship": "bff38197-26ed-4bbd-b637-3e688acf361c",
+"source_type": "ipam.vlan",
+"source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
+"destination_type": "dcim.device",
+"destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"}
+```
 
 In the relationship field, you may specify a dictionary of object attributes instead:
 
-    {"relationship": {"slug": "device-vlans",
-    "source_type": "ipam.vlan",
-    "source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
-    "destination_type": "dcim.device",
-    "destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"}
+```json
+{"relationship": {"slug": "device-vlans"},
+"source_type": "ipam.vlan",
+"source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
+"destination_type": "dcim.device",
+"destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"}
+```
