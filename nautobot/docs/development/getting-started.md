@@ -95,6 +95,72 @@ These will create the user with the specified username, email, password, and API
 
 After these two files are created, you can use the normal **invoke** commands to manage the development containers.
 
+### MS Visual Studio Code - Debugging Inside Development Container
+
+For running the nautobot-server in **Visual Studio Code debugger**, add the line `command: sleep infinity` to the file `docker-compose.override.yml`. This prevents starting the http server and keeps the container up and running.
+
+1. Update docker-compose.override.yml
+
+    ```bash
+    edit development/docker-compose.override.yml
+    ```
+
+    ```
+    ---
+    services:
+      nautobot:
+        env_file:
+          - "override.env"
+        command: sleep infinity
+    ```
+
+2. Start the debug container
+   
+   ```bash
+   invoke debug
+   ```
+
+3. Attach Visual Studio Code to Running Container
+
+   Right click in Docker-extension (`ms-azuretools.vscode-docker`) in section 'CONTAINERS' the `development_nautobot_1` container and select 'Attach Visual Studio Code' menu item.
+
+4. Setup Launch Configuration
+
+   To run the server open the folder `/opt/nautobot` in vscode and add the debug configuration in `launch.json`.
+
+   ```json
+   {
+     "folders": [
+       {
+         "path": "."
+       }
+     ],
+     "settings": {
+       "python.linting.pylintEnabled": true,
+       "python.linting.enabled": true,
+       "pythonTestExplorer.testFramework": "pytest",
+       "python.pythonPath": "/usr/local/bin/python"
+     },
+     "launch": {
+       "version": "0.2.0",
+       "configurations": [
+         {
+           "name": "Python: Nautobot",
+           "type": "python",
+           "request": "launch",
+           "program": "manage.py",
+           "console": "integratedTerminal",
+           "args": [
+             "runserver",
+             "0.0.0.0:8000"
+           ],
+           "django": true
+         }
+       ]
+     }
+   }
+   ```
+
 ### Python Virtual Environment Workflow
 
 There are a few things you'll need:
