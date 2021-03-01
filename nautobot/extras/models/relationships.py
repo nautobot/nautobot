@@ -212,7 +212,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         max_length=50,
         blank=True,
         verbose_name="Destination Label",
-        help_text="Name of the relationship as displayed on the source object.",
+        help_text="Name of the relationship as displayed on the destination object.",
     )
     destination_hidden = models.BooleanField(
         default=False,
