@@ -15,7 +15,7 @@
 				"name": "Python: Nautobot",
 				"type": "python",
 				"request": "launch",
-				"program": "nautobot-server",
+				"program": "/usr/local/bin/nautobot-server",
 				"console": "integratedTerminal",
 				"args": [
 					"runserver",
