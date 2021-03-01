@@ -266,7 +266,7 @@ class Aggregate(PrimaryModel):
 
             # Ensure that the aggregate being added is not covered by an existing aggregate
             covering_aggregates = Aggregate.objects.filter(prefix__net_contains_or_equals=str(self.prefix))
-            if not self._state.adding:
+            if self.present_in_database:
                 covering_aggregates = covering_aggregates.exclude(pk=self.pk)
             if covering_aggregates:
                 raise ValidationError(
@@ -279,7 +279,7 @@ class Aggregate(PrimaryModel):
 
             # Ensure that the aggregate being added does not cover an existing aggregate
             covered_aggregates = Aggregate.objects.filter(prefix__net_contained=str(self.prefix))
-            if not self._state.adding:
+            if self.present_in_database:
                 covered_aggregates = covered_aggregates.exclude(pk=self.pk)
             if covered_aggregates:
                 raise ValidationError(
@@ -770,7 +770,7 @@ class IPAddress(PrimaryModel, StatusModel):
                     )
 
         # Check for primary IP assignment that doesn't match the assigned device/VM
-        if not self._state.adding:
+        if self.present_in_database:
             device = Device.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
             if device:
                 if getattr(self.assigned_object, "device", None) != device:

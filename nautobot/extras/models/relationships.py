@@ -341,7 +341,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
                     raise ValidationError(f"'{key}' is not a valid filter parameter for {model_name} object")
 
         # If the model already exist, ensure that it's not possible to modify the source or destination type
-        if not self._state.adding:
+        if self.present_in_database:
             nbr_existing_cras = RelationshipAssociation.objects.filter(relationship=self).count()
 
             if nbr_existing_cras and self.__class__.objects.get(pk=self.pk).type != self.type:
