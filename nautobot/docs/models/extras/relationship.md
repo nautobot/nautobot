@@ -39,11 +39,13 @@ The API endpoint for relationship creation is `/extras/relationships/`
 From our many to many example above, we would use the following data to create the relationship. 
 
 ```json
-{"name": "Device VLANs",
-"slug": "device-vlans",
-"type": "many-to-many",
-"source_type": "ipam.vlan",
-"destination_type": "dcim.device"}
+{
+    "name": "Device VLANs",
+    "slug": "device-vlans",
+    "type": "many-to-many",
+    "source_type": "ipam.vlan",
+    "destination_type": "dcim.device"
+}
 ```
 
 ## Configuring the Relationship between Objects
@@ -53,19 +55,25 @@ Configuring the relationship is similarly easy. Send a request to `/extras/relat
 Here we specify the IDs of each object. We specify the UUID of each object in their respective fields.
 
 ```json
-{"relationship": "bff38197-26ed-4bbd-b637-3e688acf361c",
-"source_type": "ipam.vlan",
-"source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
-"destination_type": "dcim.device",
-"destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"}
+{
+    "relationship": "bff38197-26ed-4bbd-b637-3e688acf361c",
+    "source_type": "ipam.vlan",
+    "source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
+    "destination_type": "dcim.device",
+    "destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"
+}
 ```
 
 In the relationship field, you may specify a dictionary of object attributes instead:
 
 ```json
-{"relationship": {"slug": "device-vlans"},
-"source_type": "ipam.vlan",
-"source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
-"destination_type": "dcim.device",
-"destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"}
+{
+    "relationship": {
+        "slug": "device-vlans"
+    },
+    "source_type": "ipam.vlan",
+    "source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",
+    "destination_type": "dcim.device",
+    "destination_id": "6e8e72da-ce6e-468d-90f9-b4473d449db7"
+}
 ```
