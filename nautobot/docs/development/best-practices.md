@@ -5,7 +5,7 @@ While there are many different development interfaces in Nautobot that each expo
 ## Model Existence in the Database
 
 A common Django pattern is to check whether an model instance's primary key (`pk`) field is set as a proxy for whether the instance has been written to the database or whether it exists only in memory.
-Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID *at creation time*, not at the time they are written to the database.
+Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID in memory *at instance creation time*, not at the time they are written to the database (when the model's `save()` method is called).
 Instead, for any model which inherits from `nautobot.core.models.BaseModel`, you should check an instance's `present_in_database` property which will be either `True` or `False`.
 
 Wrong:
