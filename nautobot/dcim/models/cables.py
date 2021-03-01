@@ -169,7 +169,7 @@ class Cable(PrimaryModel, StatusModel):
             raise ValidationError({"termination_b": "Invalid ID for type {}".format(self.termination_b_type)})
 
         # If editing an existing Cable instance, check that neither termination has been modified.
-        if not self._state.adding:
+        if self.present_in_database:
             err_msg = "Cable termination points may not be modified. Delete and recreate the cable instead."
             if (
                 self.termination_a_type_id != self._orig_termination_a_type_id

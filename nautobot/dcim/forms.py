@@ -1726,7 +1726,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not self.instance._state.adding:
+        if self.instance.present_in_database:
 
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:
@@ -3795,7 +3795,7 @@ class VirtualChassisCreateForm(BootstrapMixin, CustomFieldModelForm, Relationshi
         instance = super().save(*args, **kwargs)
 
         # Assign VC members
-        if not instance._state.adding:
+        if instance.present_in_database:
             initial_position = self.cleaned_data.get("initial_position") or 1
             for i, member in enumerate(self.cleaned_data["members"], start=initial_position):
                 member.virtual_chassis = instance

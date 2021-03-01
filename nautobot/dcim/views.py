@@ -519,7 +519,7 @@ class RackReservationEditView(generic.ObjectEditView):
     template_name = "dcim/rackreservation_edit.html"
 
     def alter_obj(self, obj, request, args, kwargs):
-        if obj._state.adding:
+        if not obj.present_in_database:
             if "rack" in request.GET:
                 obj.rack = get_object_or_404(Rack, pk=request.GET.get("rack"))
             obj.user = request.user

@@ -67,7 +67,7 @@ class CustomFieldModelForm(forms.ModelForm):
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
             field_name = "cf_{}".format(cf.name)
-            if not self.instance._state.adding:
+            if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
                 self.fields[field_name].initial = self.instance.custom_field_data.get(cf.name)
             else:
@@ -230,7 +230,7 @@ class RelationshipModelForm(forms.ModelForm):
                 self.fields[field_name] = cr.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
-                if not self.instance._state.adding:
+                if self.instance.present_in_database:
                     if cr.has_many(peer_side):
                         initial = [getattr(cra, peer_side) for cra in queryset.all()]
                         self.fields[field_name].initial = initial
