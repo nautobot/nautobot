@@ -14,6 +14,9 @@ To enable HTTPS access to Nautobot, you'll need a valid SSL certificate. You can
 
 The command below can be used to generate a self-signed certificate for testing purposes, however it is strongly recommended to use a certificate from a trusted authority in production. Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
+!!! info
+    Some Linux installations have changed the location for ssl certificates from `/etc/ssl/` to `/etc/pki/tli/`. The command below may need to be changed to reflect the certificate location.
+
 ```no-highlight
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 -keyout /etc/ssl/private/nautobot.key \
@@ -32,17 +35,33 @@ Begin by installing nginx:
 sudo apt install -y nginx
 ```
 
-Once nginx is installed, copy the nginx configuration file provided by Nautobot to `/etc/nginx/sites-available/nautobot`. Be sure to replace `nautobot.example.com` with the domain name or IP address of your installation. (This should match the value configured for `ALLOWED_HOSTS` in `configuration.py`.)
+Once nginx is installed, copy the nginx configuration file provided by Nautobot to `/etc/nginx/sites-available/nautobot.conf`. Be sure to replace `nautobot.example.com` with the domain name or IP address of your installation. (This should match the value configured for `ALLOWED_HOSTS` in `nautobot_config.py`.)
+
+If the location of ssl certificates had to be changed in `Obtain an SSL Certificate` step, then the location will need to be changed in the `nginx.conf` file as well.
+
+!!! info
+    Redhat based systems running nginx will need to create the directory structure and update the default `nginx.conf` file. To do this, create the `sites-available` and `sites-enabled` directories.
+
+    ```no-highlight
+    mkdir -p /etc/nginx/{sites-available,sites-enabled}
+    ```
+
+    Edit the `/etc/nginx.conf` file. In the `http` section, add:
+
+    ```no-highlight
+    include /etc/nginx/sites-enabled/*.conf;
+    server_names_hash_bucket_size 64;
+    ```
 
 ```no-highlight
-sudo cp /opt/nautobot/contrib/nginx.conf /etc/nginx/sites-available/nautobot
+sudo cp /opt/nautobot/contrib/nginx.conf /etc/nginx/sites-available/nautobot.conf
 ```
 
 Then, delete `/etc/nginx/sites-enabled/default` and create a symlink in the `sites-enabled` directory to the configuration file you just created.
 
 ```no-highlight
 sudo rm /etc/nginx/sites-enabled/default
-sudo ln -s /etc/nginx/sites-available/nautobot /etc/nginx/sites-enabled/nautobot
+sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
 ```
 
 Finally, restart the `nginx` service to use the new configuration.
@@ -60,6 +79,8 @@ sudo apt install -y apache2
 ```
 
 Next, copy the default configuration file to `/etc/apache2/sites-available/`. Be sure to modify the `ServerName` parameter appropriately.
+
+If the location of ssl certificates had to be changed in `Obtain an SSL Certificate` step, then the location will need to be changed in the `apache.conf` file as well.
 
 ```no-highlight
 sudo cp /opt/nautobot/contrib/apache.conf /etc/apache2/sites-available/nautobot.conf
@@ -94,4 +115,4 @@ If you are able to connect but receive a 502 (bad gateway) error, check the foll
 
 * The WSGI worker processes (gunicorn) are running (`systemctl status nautobot` should show a status of "active (running)")
 * Nginx/Apache is configured to connect to the port on which gunicorn is listening (default is 8001).
-* SELinux is not preventing the reverse proxy connection. You may need to allow HTTP network connections with the command `setsebool -P httpd_can_network_connect 1`
+* SELinux is not preventing the reverse proxy connection. You may need to allow HTTP network connections with the command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux troubleshooting](selinux-troubleshooting.md) guide.
