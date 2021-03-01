@@ -78,7 +78,7 @@ configurations.
 
 Nautobot supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops).
 
-Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL. 
+Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
 
 For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
 
@@ -134,7 +134,7 @@ environment.
 
 #### RQ_QUEUES
 
-Default: 
+Default:
 
 ```python
 RQ_QUEUES = {
@@ -224,7 +224,7 @@ This is a secret, random string used to assist in the creation new cryptographic
 
 Please note that this key is **not** used directly for hashing user passwords or for the encrypted storage of secret data in Nautobot.
 
-`SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols. 
+`SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
 
 A unique `SECRET_KEY` is generated for you automatically when you use `nautobot init` to create a new configuration. You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
@@ -236,4 +236,4 @@ $ nautobot-server generate_secret_key.py
 !!! warning
     In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
 
-For more details see [Nautobot Configuration](..).
+For more details see [Nautobot Configuration](../).

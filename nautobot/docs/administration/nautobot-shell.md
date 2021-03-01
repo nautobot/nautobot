@@ -175,7 +175,7 @@ To modify an existing object, we retrieve it, update the desired field(s), and c
 ```
 
 !!! warning
-   It is recommended to make use of the `validated_save()` convenience method which exists on all core models. While the Django `save()` method still exists, the `validated_save()` method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../../development/best-practices.md).
+   It is recommended to make use of the `validated_save()` convenience method which exists on all core models. While the Django `save()` method still exists, the `validated_save()` method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../development/best-practices.md).
 
 !!! warning
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
