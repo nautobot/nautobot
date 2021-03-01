@@ -55,6 +55,7 @@ nav:
         - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
         - Webhooks: 'models/extras/webhook.md'
+        - Relationships: 'models/extras/relationships.md'
     - Plugins:
         - Using Plugins: 'plugins/index.md'
         - Developing Plugins: 'plugins/development.md'
