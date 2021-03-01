@@ -1,6 +1,6 @@
 [Unit]
 Description=Nautobot Request Queue Worker
-Documentation=https://nautobot.readthedocs.io/en/stable/
+Documentation=https://nautobot.readthedocs.io/
 After=network-online.target
 Wants=network-online.target
 
