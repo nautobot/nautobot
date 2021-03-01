@@ -681,3 +681,13 @@ class JobResult(BaseModel):
             else:
                 log_level = logging.INFO
             logger.log(log_level, str(message))
+
+
+@extras_features("graphql")
+class GraphqlQuery(BaseModel, ChangeLoggedModel):
+    name = models.CharField(max_length=255, unique=True)
+    slug = models.CharField(max_length=255, unique=True)
+    query = models.TextField()
+
+    def get_absolute_url(self):
+        return reverse("extras:graphqlquery", kwargs={"pk": self.pk})

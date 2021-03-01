@@ -11,6 +11,7 @@ __all__ = [
     "NestedCustomLinkSerializer",
     "NestedExportTemplateSerializer",
     "NestedGitRepositorySerializer",
+    "NestedGraphqlQuerySerializer",
     "NestedImageAttachmentSerializer",
     "NestedJobResultSerializer",
     "NestedRelationshipSerializer",
@@ -111,3 +112,11 @@ class NestedRelationshipSerializer(WritableNestedSerializer):
     class Meta:
         model = models.Relationship
         fields = ["id", "url", "name", "slug"]
+
+
+class NestedGraphqlQuerySerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
+
+    class Meta:
+        model = models.GraphqlQuery
+        fields = ["id", "url", "name"]

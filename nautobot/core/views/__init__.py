@@ -3,15 +3,18 @@ import sys
 
 from django.conf import settings
 from django.db.models import F
-from django.http import HttpResponseServerError
+from django.http import HttpResponse, HttpResponseNotAllowed, HttpResponseServerError
 from django.shortcuts import render
 from django.template import loader
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
-from django.views.decorators.csrf import requires_csrf_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie, requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME
 from django.views.generic import View
 from packaging import version
+from graphene_django.settings import graphene_settings
+from graphene_django.views import GraphQLView
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.dcim.models import (
@@ -30,7 +33,7 @@ from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import GitRepository, ObjectChange, JobResult
+from nautobot.extras.models import GitRepository, GraphqlQuery, ObjectChange, JobResult
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -208,3 +211,69 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
             }
         )
     )
+
+class HttpError(Exception):
+    def __init__(self, response, message=None, *args, **kwargs):
+        self.response = response
+        self.message = message = message or response.content.decode()
+        super(HttpError, self).__init__(message, *args, **kwargs)
+
+class CustomGraphQLView(GraphQLView):
+    @method_decorator(ensure_csrf_cookie)
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            if request.method.lower() not in ("get", "post"):
+                raise HttpError(
+                    HttpResponseNotAllowed(
+                        ["GET", "POST"], "GraphQL only supports GET and POST requests."
+                    )
+                )
+
+            data = self.parse_body(request)
+            show_graphiql = self.graphiql and self.can_display_graphiql(request, data)
+
+            if show_graphiql:
+                return self.render_graphiql(
+                    request,
+                    # Dependency parameters.
+                    whatwg_fetch_version=self.whatwg_fetch_version,
+                    whatwg_fetch_sri=self.whatwg_fetch_sri,
+                    react_version=self.react_version,
+                    react_sri=self.react_sri,
+                    react_dom_sri=self.react_dom_sri,
+                    graphiql_version=self.graphiql_version,
+                    graphiql_sri=self.graphiql_sri,
+                    graphiql_css_sri=self.graphiql_css_sri,
+                    subscriptions_transport_ws_version=self.subscriptions_transport_ws_version,
+                    subscriptions_transport_ws_sri=self.subscriptions_transport_ws_sri,
+                    # The SUBSCRIPTION_PATH setting.
+                    subscription_path=self.subscription_path,
+                    # GraphiQL headers tab,
+                    graphiql_header_editor_enabled=graphene_settings.GRAPHIQL_HEADER_EDITOR_ENABLED,
+                    saved_graphiql_queries=GraphqlQuery.objects.all()
+                )
+
+            if self.batch:
+                responses = [self.get_response(request, entry) for entry in data]
+                result = "[{}]".format(
+                    ",".join([response[0] for response in responses])
+                )
+                status_code = (
+                    responses
+                    and max(responses, key=lambda response: response[1])[1]
+                    or 200
+                )
+            else:
+                result, status_code = self.get_response(request, data, show_graphiql)
+
+            return HttpResponse(
+                status=status_code, content=result, content_type="application/json"
+            )
+
+        except HttpError as e:
+            response = e.response
+            response["Content-Type"] = "application/json"
+            response.content = self.json_encode(
+                request, {"errors": [self.format_error(e)]}
+            )
+            return response

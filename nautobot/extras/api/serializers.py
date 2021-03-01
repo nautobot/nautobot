@@ -27,6 +27,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphqlQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -663,3 +664,22 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
             "destination_type",
             "destination_id",
         ]
+
+
+#
+# GraphQL Queries
+#
+
+
+class GraphqlQuerySerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
+
+    class Meta:
+        model = GraphqlQuery
+        fields = (
+            "id",
+            "url",
+            "name",
+            "slug",
+            "query",
+        )

@@ -13,6 +13,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphqlQuery,
     ObjectChange,
     Status,
     Tag,
@@ -377,4 +378,44 @@ class WebhookTestCase(
             "payload_url": "http://test-url.com/test-4",
             "http_method": "POST",
             "http_content_type": "application/json",
+        }
+
+
+class GraphqlQueriesTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = GraphqlQuery
+
+    @classmethod
+    def setUpTestData(cls):
+        graphqlqueries = (
+            GraphqlQuery(
+                name="graphql-query-1",
+                slug="graphql-query-1",
+                query="{query: sites {name}}",
+            ),
+            GraphqlQuery(
+                name="graphql-query-2",
+                slug="graphql-query-2",
+                query="{query: sites {name}}",
+            ),
+            GraphqlQuery(
+                name="graphql-query-3",
+                slug="graphql-query-3",
+                query="{query: sites {name}}",
+            ),
+        )
+
+        for query in graphqlqueries:
+            query.save()
+
+        cls.form_data = {
+            "name": "graphql-query-4",
+            "slug": "graphql-query-4",
+            "query": "{query: sites {name}}",
         }

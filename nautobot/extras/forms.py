@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields import TextField
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
@@ -33,6 +34,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphqlQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -868,3 +870,21 @@ class StatusModelCSVFormMixin(CSVModelForm):
         to_field_name="slug",
         help_text="Operational status",
     )
+
+
+class GraphqlQueryForm(BootstrapMixin, forms.ModelForm):
+    slug = SlugField()
+    query = TextField()
+
+    class Meta:
+        model = GraphqlQuery
+        fields = (
+            "name",
+            "slug",
+            "query",
+        )
+
+
+class GraphqlQueryFilterForm(BootstrapMixin, forms.Form):
+    model = GraphqlQuery
+    q = forms.CharField(required=False, label="Search")

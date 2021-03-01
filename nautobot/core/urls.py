@@ -3,12 +3,11 @@ from django.conf.urls import include
 from django.urls import path, re_path
 from django.views.static import serve
 
-from graphene_django.views import GraphQLView
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 
 from nautobot.core.api.views import APIRootView, StatusView, GraphQLDRFAPIView
-from nautobot.core.views import HomeView, StaticMediaFailureView, SearchView
+from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
@@ -65,7 +64,7 @@ _patterns = [
         name="schema_swagger",
     ),
     # GraphQL
-    path("graphql/", GraphQLView.as_view(graphiql=True), name="graphql"),
+    path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
     path("api/graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Serving static media in Django
     path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),

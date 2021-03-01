@@ -20,6 +20,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphqlQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -383,3 +384,14 @@ class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
+
+
+#
+# GraphQL Queries
+#
+
+
+class GraphqlQueryViewSet(ModelViewSet):
+    queryset = GraphqlQuery.objects.all()
+    serializer_class = serializers.GraphqlQuerySerializer
+    filterset_class = filters.GraphqlQueryFilterSet

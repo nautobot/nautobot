@@ -30,6 +30,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphqlQuery,
     ImageAttachment,
     JobResult,
     Status,
@@ -722,3 +723,49 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
         See `extras.management.create_custom_statuses` for context.
         """
+
+
+class GraphqlQueryTest(APIViewTestCases.APIViewTestCase):
+    model = GraphqlQuery
+    brief_fields = ["id", "name", "url"]
+
+    create_data = [
+        {
+            "name": "graphql-query-4",
+            "slug": "graphql-query-4",
+            "query": "{query: sites {name}}",
+        },
+        {
+            "name": "graphql-query-5",
+            "slug": "graphql-query-5",
+            "query": "{query: sites {name}}",
+        },
+        {
+            "name": "graphql-query-6",
+            "slug": "graphql-query-6",
+            "query": "{query: sites {name}}",
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        graphqlqueries = (
+            GraphqlQuery(
+                name="graphql-query-1",
+                slug="graphql-query-1",
+                query="{query: sites {name}}",
+            ),
+            GraphqlQuery(
+                name="graphql-query-2",
+                slug="graphql-query-2",
+                query="{query: sites {name}}",
+            ),
+            GraphqlQuery(
+                name="graphql-query-3",
+                slug="graphql-query-3",
+                query="{query: sites {name}}",
+            ),
+        )
+
+        for query in graphqlqueries:
+            query.save()

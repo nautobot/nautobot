@@ -690,7 +690,7 @@
                 </li>
             {% endif %}
 
-            {% if perms.extras.view_objectchange or perms.extras.view_jobresult or perms.extras.view_gitrepository or perms.extras.view_relationship or perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+            {% if perms.extras.view_objectchange or perms.extras.view_jobresult or perms.extras.view_gitrepository or perms.extras.view_graphqlquery or perms.extras.view_relationship or perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extensibility <span class="caret"></span></a>
                     <ul class="dropdown-menu">
@@ -723,7 +723,7 @@
                         </li>
                 {% endif %}
 
-                {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
+                {% if perms.extras.view_graphqlquery or perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
                         <li class="divider"></li>
                         <li class="dropdown-header">Data Management</li>
                     {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
@@ -734,6 +734,16 @@
                                 </div>
                             {% endif %}
                             <a href="{% url 'extras:relationship_list' %}">Relationships</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.extras.view_graphqlquery or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_graphqlquery %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_graphqlquery %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:graphqlquery_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:graphqlquery_list' %}">GraphQL Queries</a>
                         </li>
                     {% endif %}
                 {% endif %}
@@ -837,6 +847,30 @@
                     </span>
                 </div>
             </form>
+            {% if  saved_graphiql_queries %}
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" title="{{ request.user }}" role="button" aria-haspopup="true" aria-expanded="false">
+                            <span>Queries </span>
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            {% for query in saved_graphiql_queries %}
+                                <li class="dropdown-header">
+                                    <a href="{% url 'graphql' %}?q=True#query={{ query.query|iriencode }}">{{ query.name }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    <li>
+                </ul>
+            {% endif %}
         </div>
     </div>
 </nav>
+<script>
+    function reload(frag) {
+        window.location.href += frag;
+        window.location.reload(true);
+    }
+</script>

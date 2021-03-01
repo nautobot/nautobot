@@ -418,3 +418,16 @@ class RelationshipAssociationTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
         fields = ("relationship", "source", "destination", "actions")
+
+
+class GraphqlQueryTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = Webhook
+        fields = (
+            "pk",
+            "name",
+            "slug",
+        )

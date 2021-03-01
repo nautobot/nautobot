@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:graphqlquery_list' %}">GraphQL Query</a></li>
+                {% if object.name %}
+                    <li><a href="{% url 'extras:graphqlquery' pk=object.pk %}">{{ object.name }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        <a class="btn btn-primary" href="{% url 'graphql' %}?q=True#query={{ object.query|iriencode }}">Open in GraphiQL</a>
+        {% if perms.extras.add_graphqlquery %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_graphqlquery %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_graphqlquery %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object.name }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">GraphQL Query</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:graphqlquery_changelog' pk=object.pk %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+
+{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="col-md-5">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Query</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td><span>{{ object.name }}</span></td>
+                </tr>
+                <tr>
+                    <td>Slug</td>
+                    <td><span>{{ object.slug }}</span></td>
+                </tr>
+            </table>
+            {% if object.query %} <pre>{{ object.query }}</pre> {% else %} {{ None }} {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Response</strong>
+            </div>
+                <pre id="query_output">
+
+                </pre>
+        </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(e) {
+    var output = $("#query_output")
+
+    $.ajax({
+        url: "{% url 'graphql' %}",
+        method: "POST",
+        headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+        dataType: "json",
+        data: {
+            "query": `{{ object.query }}`
+        },
+        success: function(data) {
+            output.text(JSON.stringify(data, undefined, 2));
+            console.log(data)
+        },
+        error: function(error) {
+            console.log(error)
+            output.text(error.responseText);
+        }
+    });
+
+});
+</script>
+{% endblock %}
