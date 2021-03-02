@@ -215,4 +215,3 @@ class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
         data['saved_graphiql_queries'] = GraphqlQuery.objects.all()
         return render(request, self.graphiql_template, data)
-
