@@ -16,7 +16,8 @@ from .runner import run_app
 
 
 # Default file location for the generated config emitted by `init`
-DEFAULT_CONFIG_PATH = "~/.nautobot/nautobot_config.py"
+NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+DEFAULT_CONFIG_PATH = os.path.join(NAUTOBOT_ROOT, "nautobot_config.py")
 
 # Default settings to use when building the config
 DEFAULT_SETTINGS = "nautobot.core.settings"

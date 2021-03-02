@@ -6,12 +6,13 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
 
 User=nautobot
 Group=nautobot
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/venv/bin/nautobot-server --config=/opt/nautobot/nautobot_config.py rqworker
+ExecStart=/opt/nautobot/bin/nautobot-server rqworker
 
 Restart=on-failure
 RestartSec=30

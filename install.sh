@@ -119,7 +119,7 @@ if [ -v WARN_MISSING_VENV ]; then
   echo "nautobot.service ExecStart:"
   echo "  ${VIRTUALENV}/bin/gunicorn"
   echo ""
-  echo "nautobot-rq.service ExecStart:"
+  echo "nautobot-worker.service ExecStart:"
   echo "  ${VIRTUALENV}/bin/python"
   echo ""
   echo "After modifying these files, reload the systemctl daemon:"
@@ -128,4 +128,4 @@ if [ -v WARN_MISSING_VENV ]; then
 fi
 
 echo "Upgrade complete! Don't forget to restart the Nautobot services:"
-echo "  > sudo systemctl restart nautobot nautobot-rq"
+echo "  > sudo systemctl restart nautobot nautobot-worker"

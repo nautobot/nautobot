@@ -244,7 +244,7 @@ This time the script should complete with output that looks something like this:
 
 ```no-highlight
 Upgrade complete! Don't forget to restart the Nautobot services:
-  > sudo systemctl restart nautobot nautobot-rq
+  > sudo systemctl restart nautobot nautobot-worker
 ```
 
 !!! note

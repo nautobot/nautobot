@@ -16,7 +16,10 @@ markdown_extensions:
         headingOffset: 1
 nav:
     - Introduction: 'index.md'
-    - Installation:
+    - Getting Started (New):
+        - Quick Start: 'installation/quickstart.md'
+        - Installing Nautobot: 'installation/index.md'
+    - Installation (Old):
         - Installing Nautobot: 'installation/index.md'
         - 1. PostgreSQL: 'installation/1-postgresql.md'
         - 2. Redis: 'installation/2-redis.md'
