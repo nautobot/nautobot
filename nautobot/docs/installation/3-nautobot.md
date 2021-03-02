@@ -277,7 +277,7 @@ Next, we'll create a superuser account using the `createsuperuser` Django manage
 Specifying an email address for the user is not required, but be sure to use a very strong password.
 
 ```no-highlight
-(venv) $ nautobot-server createsuperuser
+(venv) $ sudo /opt/nautobot/venv/bin/nautobot-server --config /opt/nautobot/nautobot_config.py createsuperuser
 Username: admin
 Email address: admin@example.com
 Password:
