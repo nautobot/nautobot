@@ -184,16 +184,15 @@ At this point, you should be able to connect to the HTTPS service at the server 
 ### Unable to Connect
 If you are unable to connect to the HTTP server, check that:
 
-* NGINX/Apache is running and configured to listen on the correct port.
-* Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
+- NGINX/Apache is running and configured to listen on the correct port.
+- Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
 
 ### 502 Bad Gateway
 
 If you are able to connect but receive a 502 (bad gateway) error, check the following:
 
-* The WSGI worker processes (gunicorn) are running (`systemctl status nautobot` should show a status of `active
-  (running)`)
-* NGINX/Apache is configured to connect to the port on which gunicorn is listening (default is `8001`).
-* SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the
+- The Gunicorn WSGI worker processes are running (`systemctl status nautobot` should show a status of `active (running)`)
+- NGINX/Apache is configured to connect to the port on which gunicorn is listening (default is `8001`).
+- SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the
   command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux
   troubleshooting](selinux-troubleshooting.md) guide.

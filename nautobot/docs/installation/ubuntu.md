@@ -8,6 +8,7 @@ Install the prerequisite system libraries and utilities.
 
 This will install:
 
+- Git
 - Python 3
 - Pip
 - PostgreSQL database server and client
@@ -15,7 +16,7 @@ This will install:
 
 ```
 $ sudo apt update -y
-$ sudo apt install -y python3 python3-pip python3-venv python3-dev postgresql redis-server
+$ sudo apt install -y git python3 python3-pip python3-venv python3-dev postgresql redis-server
 ```
 
 ## Database Setup
@@ -47,8 +48,9 @@ postgres=# \q
 
 ## Verify Service Status
 
-You can verify that authentication works issuing the following command and providing the configured password. (Replace
-`localhost` with your database server if using a remote database.)
+You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
+
+If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
 ```no-highlight
 $ psql --username nautobot --password --host localhost nautobot
@@ -62,8 +64,6 @@ You are connected to database "nautobot" as user "nautobot" on host "localhost" 
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
 nautobot=> \q
 ```
-
-If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
 ## Redis Setup
 

@@ -11,7 +11,7 @@ Nautobot is very easy to get running. If you want to get up and running with Nau
 This quick start guide makes the following assumptions:
 
 - You have Python 3.6 or higher
-- You have the latest version `pip`
+- You have the latest version of Pip 
 - You have a Python `virtualenv` or similar isolated Python environment to 
 - You have a PostgreSQL database or know how to create one
 - You have a Redis server
@@ -25,7 +25,7 @@ over to the [Installation](..) guide.
 ### 1. Install Nautobot
 
 ```
-$ pip install nautobot
+$ pip3 install nautobot
 ```
 
 ### 2. Initialize a new configuration 
@@ -43,8 +43,8 @@ You'll need to edit `nautobot_config.py` to update your database and Redis setti
 !!! note
     The default values assume that you're running PostgreSQL and Redis on `localhost`.
 
-- Update `DATABASES` to point to your PostgreSQL database with any necessary credentials
-- Update `RQ_QUEUES` and `CACHE_OPS` to point to your Redis server
+- Update [`DATABASES`](../../configuration/required-settings#databases) to point to your PostgreSQL database with any necessary credentials
+- Update [`RQ_QUEUES`](../../configuration/required-settings#rq_queues) and [`CACHEOPS_REDIS`](../../configuration/required-settings#cacheops_redis) to point to your Redis server
 
 ### 4. Populate the database schema
 
