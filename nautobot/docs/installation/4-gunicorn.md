@@ -61,7 +61,7 @@ You can use the command `systemctl status nautobot` to verify that the WSGI serv
 ● nautobot.service - Nautobot WSGI Service
      Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
      Active: active (running) since Tue 2020-11-17 16:18:23 UTC; 3min 35s ago
-       Docs: https://nautobot.readthedocs.io/en/stable/
+       Docs: https://nautobot.readthedocs.io/
    Main PID: 22836 (gunicorn)
       Tasks: 6 (limit: 2345)
      Memory: 339.3M
