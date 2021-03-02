@@ -21,6 +21,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphqlQuery,
     JobResult,
     ObjectChange,
     Relationship,
@@ -425,7 +426,7 @@ class GraphqlQueryTable(BaseTable):
     name = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
-        model = Webhook
+        model = GraphqlQuery
         fields = (
             "pk",
             "name",
