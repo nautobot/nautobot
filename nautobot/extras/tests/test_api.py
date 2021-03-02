@@ -741,16 +741,18 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "Primary VLAN",
             "slug": "primary-vlan",
-            "type": "one-to-one",
+            "type": "one-to-many",
             "source_type": "ipam.vlan",
             "destination_type": "dcim.device",
         },
         {
-            "name": "FEX",
-            "slug": "fex",
-            "type": "one-to-many",
+            "name": "Primary Interface",
+            "slug": "primary-interface",
+            "type": "one-to-one",
             "source_type": "dcim.device",
-            "destination_type": "dcim.device",
+            "source_label": "primary interface",
+            "destination_type": "dcim.interface",
+            "destination_hidden": True,
         }
     ]
 
