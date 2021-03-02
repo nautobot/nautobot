@@ -305,7 +305,7 @@ urlpatterns = [
         views.GraphqlQueryBulkDeleteView.as_view(),
         name="graphqlquery_bulk_delete",
     ),
-    path("graphql-queries/<uuid:pk>/", views.GraphqlQueryView.as_view(), name="graphqlquery"),
+    path("graphql-queries/<str:slug>/", views.GraphqlQueryView.as_view(), name="graphqlquery"),
     path(
         "graphql-queries/<str:slug>/edit/",
         views.GraphqlQueryEditView.as_view(),

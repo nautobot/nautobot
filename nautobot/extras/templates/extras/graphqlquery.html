@@ -13,7 +13,7 @@
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:graphqlquery_list' %}">GraphQL Query</a></li>
                 {% if object.name %}
-                    <li><a href="{% url 'extras:graphqlquery' pk=object.pk %}">{{ object.name }}</a></li>
+                    <li><a href="{% url 'extras:graphqlquery' slug=object.slug %}">{{ object.name }}</a></li>
                 {% endif %}
             </ol>
         </div>
@@ -21,7 +21,7 @@
 
     <div class="pull-right noprint">
         {% plugin_buttons object %}
-        <a class="btn btn-primary" href="{% url 'graphql' %}?q=True#query={{ object.query|iriencode }}">Open in GraphiQL</a>
+        <a class="btn btn-primary" href="{% url 'graphql' %}#query={{ object.query|iriencode }}">Open in GraphiQL</a>
         {% if perms.extras.add_graphqlquery %}
             {% clone_button object %}
         {% endif %}
@@ -68,6 +68,10 @@
                     <td>Slug</td>
                     <td><span>{{ object.slug }}</span></td>
                 </tr>
+                <tr>
+                    <td>Query:</td>
+                    <td></td>
+                </tr>
             </table>
             {% if object.query %} <pre>{{ object.query }}</pre> {% else %} {{ None }} {% endif %}
         </div>
@@ -77,6 +81,7 @@
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Response</strong>
+                <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
             </div>
                 <pre id="query_output">
 
@@ -87,7 +92,7 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(e) {
+function test_query() {
     var output = $("#query_output")
 
     $.ajax({
@@ -100,7 +105,6 @@ document.addEventListener('DOMContentLoaded', function(e) {
         },
         success: function(data) {
             output.text(JSON.stringify(data, undefined, 2));
-            console.log(data)
         },
         error: function(error) {
             console.log(error)
@@ -108,6 +112,6 @@ document.addEventListener('DOMContentLoaded', function(e) {
         }
     });
 
-});
+};
 </script>
 {% endblock %}

@@ -857,20 +857,26 @@
                         </a>
                         <ul class="dropdown-menu">
                             {% for query in saved_graphiql_queries %}
-                                <li class="dropdown-header">
-                                    <a href="{% url 'graphql' %}?q=True#query={{ query.query|iriencode }}">{{ query.name }}</a>
+                                <li>
+                                    <a href="#" onclick="reload('{{ query.query|iriencode }}')">{{ query.name }}</a>
                                 </li>
                             {% endfor %}
                         </ul>
                     <li>
                 </ul>
+
+                <script>
+
+                    function reload(query) {
+                        window.location.replace("#");
+                        window.location.hash = 'query=' + query;
+                        console.log(window.location.href)
+                        window.location.reload()
+                    }
+
+                </script>
+
             {% endif %}
         </div>
     </div>
 </nav>
-<script>
-    function reload(frag) {
-        window.location.href += frag;
-        window.location.reload(true);
-    }
-</script>

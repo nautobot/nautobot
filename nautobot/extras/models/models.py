@@ -689,5 +689,8 @@ class GraphqlQuery(BaseModel, ChangeLoggedModel):
     slug = models.CharField(max_length=255, unique=True)
     query = models.TextField()
 
+    class Meta:
+        ordering = ("slug",)
+
     def get_absolute_url(self):
-        return reverse("extras:graphqlquery", kwargs={"pk": self.pk})
+        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
