@@ -213,5 +213,5 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
 
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
-        data['saved_graphiql_queries'] = GraphqlQuery.objects.all()
+        data["saved_graphiql_queries"] = GraphqlQuery.objects.all()
         return render(request, self.graphiql_template, data)
