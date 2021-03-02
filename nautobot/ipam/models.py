@@ -506,10 +506,9 @@ class Prefix(PrimaryModel, StatusModel):
 
     class Meta:
         ordering = (
-            F('vrf').asc(nulls_first=True),
+            F("vrf__name").asc(nulls_first=True),
             'network',
-            'prefix_length',
-            'pk',
+            'broadcast',
         )  # (vrf, prefix) may be non-unique
         verbose_name_plural = "prefixes"
 

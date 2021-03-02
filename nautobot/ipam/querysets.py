@@ -1,7 +1,7 @@
 import uuid
 
 import netaddr
-from django.db.models import ExpressionWrapper, IntegerField, F, QuerySet, Q
+from django.db.models import ExpressionWrapper, IntegerField, F, QuerySet, Q, UUIDField
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce, Length
 
@@ -65,7 +65,7 @@ class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
 
         qs = self.annotate(maybe_vrf=ExpressionWrapper(
             Coalesce(F('vrf_id'), FAKE_UUID),
-            output_field=IntegerField()
+            output_field=UUIDField(),
         ))
 
         return qs.annotate(
