@@ -30,17 +30,13 @@ CentOS requires a manual step to generate the initial configurations required by
 
 ```no-highlight
 $ sudo postgresql-setup --initdb
- * Initializing database in '/var/lib/pgsql/data'
- * Initialized, logs are in /var/lib/pgsql/initdb_postgresql.log
 ```
 
 ### Configure Authentication
 
-CentOS configures [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication or
-PostgreSQL by default. Because Nautobot will need to authenticate using a username and password, we must update
-`pg_hba.conf` to support to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
+CentOS configures PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
 
-Edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
+As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
 
 Before: 
 ```no-highlight
@@ -129,15 +125,6 @@ $ redis-cli ping
 PONG
 ```
 
-## Setup the Nautobot User Environment
+## Deploy Nautobot
 
-### Create the Nautobot System User
-
-Create a system user account named `nautobot`. We'll configure the WSGI and HTTP services to run under this account.
-Later we will also change some files and directories to be owned by `nautobot`.
-
-```no-highlight
-$ sudo useradd --create-home --system --shell /bin/bash nautobot
-```
-
-{!docs/installation/pip-install.md!}
+Now that Nautobot dependencies are installed and configured, you're ready to [Deploy Nautobot](../nautobot)!

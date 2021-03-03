@@ -16,17 +16,14 @@ markdown_extensions:
         headingOffset: 1
 nav:
     - Introduction: 'index.md'
-    - Getting Started (New):
+    - Installation (New):
         - Quick Start: 'installation/quickstart.md'
-        - Installing Nautobot: 'installation/index.md'
-    - Installation (Old):
-        - Installing Nautobot: 'installation/index.md'
-        - 1. PostgreSQL: 'installation/1-postgresql.md'
-        - 2. Redis: 'installation/2-redis.md'
-        - 3. Nautobot: 'installation/3-nautobot.md'
-        - 4. Gunicorn: 'installation/4-gunicorn.md'
-        - 5. HTTP Server: 'installation/5-http-server.md'
-        - 6. External Authentication (Optional): 'installation/6-external-authentication.md'
+        - Install Nautobot: 'installation/index.md'
+        - Deploy Nautobot: 'installation/nautobot.md'
+        - Configure Web Services: 'installation/wsgi.md'
+        - Configure HTTP Server: 'installation/http-server.md'
+        - Configure External Authentication (Optional): 'installation/external-authentication.md'
+    - Administration:
         - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
     - Configuration:

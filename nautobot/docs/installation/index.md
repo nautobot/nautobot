@@ -33,7 +33,8 @@ All Nautobot plugins and library dependencies will be written using Python.
 
 PostgreSQL was selected as the database backend due to its native support for [network address types](https://www.postgresql.org/docs/13/datatype-net-types.html).
 
-MySQL or other relational databases are not currently supported.
+!!! note
+    MySQL or other relational databases are not currently supported.
 
 #### Redis
 
@@ -49,7 +50,7 @@ For production deployment we recommend the following:
 
 - [Gunicorn](https://gunicorn.org) WSGI server
 - [NGINX](https://www.nginx.com/resources/wiki/) HTTP server
-- External authentication service for SSO such as SAML, OAuth2, or LDAP, or an authenticating proxy
+- [External authentication](external-authentication) service for SSO such as SAML, OAuth2, or LDAP, or an authenticating proxy
 
 For additional features:
 
@@ -68,15 +69,6 @@ can be found by following the link to each.
 
 - [CentOS](centos)
 - [Ubuntu](ubuntu)
-
-### Additional Setup
-
-The following sections detail how to set up a new instance of Nautobot:
-
-3. [Nautobot components](3-nautobot.md)
-4. [Gunicorn](4-gunicorn.md)
-5. [HTTP server](5-http-server.md)
-6. [External authentication](6-external-authentication.md) (optional)
 
 ## Upgrading
 

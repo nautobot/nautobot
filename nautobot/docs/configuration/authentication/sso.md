@@ -13,10 +13,15 @@ by default including:
 
 ## Installation
 
+!!! warning
+    This and all remaining steps in this document should all be performed as the `nautobot` user!
+
+    Hint: Use `sudo su - nautobot` 
+
 ### Install Dependencies
 
 ```shell
-pip install social-auth-app-django
+$ pip3 install social-auth-app-django
 ```
 
 ### Extra Dependencies
@@ -26,13 +31,13 @@ If you are using OpenID Connect or SAML you will also need to include the extra 
 #### OpenID Connect
 
 ```shell
-pip install "social-auth-core[openidconnect]"
+$ pip3 install "social-auth-core[openidconnect]"
 ```
 
 #### SAML
 
 ```shell
-pip install "social-auth-core[saml]"
+$ pip3 install "social-auth-core[saml]"
 ```
 
 !!! note

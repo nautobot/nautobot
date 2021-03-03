@@ -6,31 +6,39 @@ This guide explains how to implement LDAP authentication using an external serve
 
 ### Install System Packages
 
+!!! danger
+    FIXME(jathan): With `wheel` packages asserted, let's make doubly sure these development libraries even need to be installed anymore.
+
 On Ubuntu:
 
 ```no-highlight
-sudo apt install -y libldap2-dev libsasl2-dev libssl-dev
+$ sudo apt install -y libldap2-dev libsasl2-dev libssl-dev
 ```
 
 On CentOS:
 
 ```no-highlight
-sudo yum install -y openldap-devel
+$ sudo yum install -y openldap-devel
 ```
 
 ### Install django-auth-ldap
 
+!!! warning
+    This and all remaining steps in this document should all be performed as the `nautobot` user!
+
+    Hint: Use `sudo su - nautobot`
+
 Activate the Python virtual environment and install the `django-auth-ldap` package using pip:
 
 ```no-highlight
-source /opt/nautobot/venv/bin/activate
-pip3 install django-auth-ldap
+$ source /opt/nautobot/bin/activate
+(nautobot) $ pip3 install django-auth-ldap
 ```
 
 Once installed, add the package to `local_requirements.txt` to ensure it is re-installed during future rebuilds of the virtual environment:
 
 ```no-highlight
-sudo echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
+(nautobot) $ echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
 ```
 
 ## Configuration

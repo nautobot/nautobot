@@ -14,7 +14,7 @@ This will install:
 - PostgreSQL database server and client
 - Redis server and client
 
-```
+```no-highlight
 $ sudo apt update -y
 $ sudo apt install -y git python3 python3-pip python3-venv python3-dev postgresql redis-server
 ```
@@ -74,15 +74,6 @@ $ redis-cli ping
 PONG
 ```
 
-## Setup the Nautobot User Environment
+## Deploy Nautobot
 
-### Create the Nautobot System User
-
-Create a system user account named `nautobot`. We'll configure the WSGI and HTTP services to run under this account.
-Later we will also change some files and directories to be owned by `nautobot`.
-
-```no-highlight
-$ sudo useradd --create-home --system --shell /bin/bash nautobot
-```
-
-{!docs/installation/pip-install.md!}
+Now that Nautobot dependencies are installed and configured, you're ready to [Deploy Nautobot](../nautobot)!
