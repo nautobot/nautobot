@@ -3,6 +3,9 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import TextField
 from django.utils.safestring import mark_safe
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend
+from graphql.error import GraphQLSyntaxError
 
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -883,6 +886,15 @@ class GraphqlQueryForm(BootstrapMixin, forms.ModelForm):
             "slug",
             "query",
         )
+
+    def clean(self):
+        super().clean()
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        try:
+            backend.document_from_string(schema, self.cleaned_data["query"])
+        except GraphQLSyntaxError as error:
+            raise forms.ValidationError({"query": error})
 
 
 class GraphqlQueryFilterForm(BootstrapMixin, forms.Form):
