@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterModelOptions(
             name='prefix',
-            options={'ordering': (django.db.models.expressions.OrderBy(django.db.models.expressions.F('vrf'), nulls_first=True), 'network', 'prefix_length', 'pk'), 'verbose_name_plural': 'prefixes'},
+            options={'ordering': (django.db.models.expressions.OrderBy(django.db.models.expressions.F('vrf__name'), nulls_first=True), 'network', 'prefix_length'), 'verbose_name_plural': 'prefixes'},
         ),
         migrations.AddField(
             model_name='prefix',

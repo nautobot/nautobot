@@ -26,7 +26,7 @@ from nautobot.extras.forms import (
     StatusFilterFormMixin,
 )
 from nautobot.extras.models import Tag
-from nautobot.ipam.constants import *
+from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN, IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
