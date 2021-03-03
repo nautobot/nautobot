@@ -617,9 +617,6 @@ class ViewTestCases:
             elif hasattr(self.model, "get_absolute_url"):
                 self.assertIn(instance1.get_absolute_url(), content)
                 self.assertNotIn(instance2.get_absolute_url(), content)
-            else:
-                self.assertIn(str(instance1.pk), content)
-                self.assertNotIn(str(instance2.pk), content)
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """

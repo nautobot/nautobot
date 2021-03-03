@@ -189,24 +189,22 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
 
     type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
-    source_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Source Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
+    source_type = CSVMultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
+            "app_label", "model"
         ),
+        required=False,
+        label="Source Type",
+        # TODO widget=ContentTypeSelect(),
     )
 
-    destination_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Destination Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
+    destination_type = CSVMultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
+            "app_label", "model"
         ),
+        required=False,
+        label="Destination Type",
+        # TODO widget=ContentTypeSelect(),
     )
 
 
@@ -312,24 +310,22 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
 
-    source_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Source Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
+    source_type = CSVMultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
+            "app_label", "model"
         ),
+        required=False,
+        label="Source Type",
+        # TODO widget=ContentTypeSelect(),
     )
 
-    destination_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Destination Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
+    destination_type = CSVMultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
+            "app_label", "model"
         ),
+        required=False,
+        label="Destination Type",
+        # TODO widget=ContentTypeSelect(),
     )
 
 

@@ -45,6 +45,8 @@ __all__ = (
     "JobResultFilterSet",
     "LocalConfigContextFilterSet",
     "ObjectChangeFilterSet",
+    "RelationshipFilterSet",
+    "RelationshipAssociationFilterSet",
     "StatusFilter",
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
@@ -535,13 +537,20 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 #
 
 
-class RelationshipFilterSet(django_filters.FilterSet):
+class RelationshipFilterSet(BaseFilterSet):
+
+    # FIXME(glenn): We should be able to pass `conjoined=False` here to allow filtering to include multiple types,
+    # but it doesn't look like ContentTypeMultipleChoiceFilter actually respects that flag, despite the docstring
+    # claiming that it does.
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
+    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
+
     class Meta:
         model = Relationship
-        fields = ["name", "type", "source_type", "destination_type"]
+        fields = ["id", "name", "type", "source_type", "destination_type"]
 
 
-class RelationshipAssociationFilterSet(django_filters.FilterSet):
+class RelationshipAssociationFilterSet(BaseFilterSet):
 
     relationship = django_filters.ModelMultipleChoiceFilter(
         field_name="relationship__slug",
@@ -549,7 +558,12 @@ class RelationshipAssociationFilterSet(django_filters.FilterSet):
         to_field_name="slug",
         label="Relationship (slug)",
     )
+    # FIXME(glenn): We should be able to pass `conjoined=False` here to allow filtering to include multiple types,
+    # but it doesn't look like ContentTypeMultipleChoiceFilter actually respects that flag, despite the docstring
+    # claiming that it does.
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
+    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
 
     class Meta:
         model = RelationshipAssociation
-        fields = ["source_type", "source_id", "destination_type", "destination_id"]
+        fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]
