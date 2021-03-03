@@ -222,7 +222,7 @@ $ echo napalm | sudo tee -a /opt/nautobot/local_requirements.txt
 
 By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the
 [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage
-backend](/configuration/optional-settings/#storage_backend) in `configuration.py`.
+backend](../../configuration/optional-settings/#storage_backend) in `configuration.py`.
 
 ```no-highlight
 $ echo django-storages | sudo tee -a /opt/nautobot/local_requirements.txt
