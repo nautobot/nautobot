@@ -12,7 +12,7 @@ This quick start guide makes the following assumptions:
 
 - You have Python 3.6 or higher
 - You have the latest version of Pip 
-- You have a Python `virtualenv` or similar isolated Python environment to 
+- You have a Python `virtualenv` or similar isolated Python environment
 - You have a PostgreSQL database or know how to create one
 - You have a Redis server
 - You can directly access the system where Nautobot will be installed
