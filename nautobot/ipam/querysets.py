@@ -71,10 +71,10 @@ class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
         return qs.annotate(
             parents=RawSQL(
                 'SELECT COUNT(*) FROM ipam_prefix AS U0 '
-               'WHERE U0.prefix_length < ipam_prefix.prefix_length '
-               'AND U0.network <= ipam_prefix.network '
-               'AND U0.broadcast >= ipam_prefix.broadcast '
-               f'AND COALESCE(U0.vrf_id, \'{FAKE_UUID}\') >= COALESCE(ipam_prefix.vrf_id, \'{FAKE_UUID}\')', ()
+                'WHERE U0.prefix_length < ipam_prefix.prefix_length '
+                'AND U0.network <= ipam_prefix.network '
+                'AND U0.broadcast >= ipam_prefix.broadcast '
+                f'AND COALESCE(U0.vrf_id, \'{FAKE_UUID}\') >= COALESCE(ipam_prefix.vrf_id, \'{FAKE_UUID}\')', ()
             ),
             children=RawSQL(
                 'SELECT COUNT(*) FROM ipam_prefix AS U1 '

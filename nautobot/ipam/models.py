@@ -528,7 +528,6 @@ class Prefix(PrimaryModel, StatusModel):
             self.broadcast = bytes(prefix.broadcast)
             self.prefix_length = prefix.prefixlen
 
-
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
