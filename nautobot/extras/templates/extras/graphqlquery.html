@@ -98,7 +98,6 @@
 function test_query() {
     var output = $("#query_output")
     var variables = $("#query_variables").val();
-    console.log(variables)
     $.ajax({
         url: "{% url 'graphql' %}",
         method: "POST",
