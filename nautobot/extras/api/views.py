@@ -1,13 +1,17 @@
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django_rq.queues import get_connection
 from drf_yasg.utils import swagger_auto_schema
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend, GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
+from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 from rq import Worker
 
@@ -395,3 +399,17 @@ class GraphqlQueryViewSet(ModelViewSet):
     queryset = GraphqlQuery.objects.all()
     serializer_class = serializers.GraphqlQuerySerializer
     filterset_class = filters.GraphqlQueryFilterSet
+
+    @swagger_auto_schema(method="post", request_body=serializers.GraphqlQuerySerializer)
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        query_object = get_object_or_404(self.queryset, slug=pk)
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        try:
+            document = backend.document_from_string(schema, query_object.query)
+            result = document.execute(context_value=request, variable_values=request.data).to_dict()
+            return Response(result)
+        except GraphQLError as error:
+            return Response({"error": error})
+
