@@ -698,7 +698,7 @@ class GraphqlQuery(BaseModel, ChangeLoggedModel):
         return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
 
     def save(self, *args, **kwargs):
-        query_vars = re.findall(f"\$[a-zA-Z0-9]+", self.query)
+        query_vars = re.findall(r"\$[a-zA-Z0-9]+", self.query)
         vars_object = {}
         for var in query_vars:
             vars_object[var[1:]] = ""
