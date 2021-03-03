@@ -412,4 +412,3 @@ class GraphqlQueryViewSet(ModelViewSet):
             return Response(result)
         except GraphQLError as error:
             return Response({"error": error})
-

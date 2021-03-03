@@ -21,7 +21,7 @@
 
     <div class="pull-right noprint">
         {% plugin_buttons object %}
-        <a class="btn btn-primary" href="{% url 'graphql' %}#query={{ object.query|iriencode }}">Open in GraphiQL</a>
+        <a class="btn btn-primary" href="{% url 'graphql' %}#query={{ object.query|iriencode }}&variables={{ object.variables|iriencode }}">Open in GraphiQL</a>
         {% if perms.extras.add_graphqlquery %}
             {% clone_button object %}
         {% endif %}
@@ -69,11 +69,14 @@
                     <td><span>{{ object.slug }}</span></td>
                 </tr>
                 <tr>
-                    <td>Query:</td>
-                    <td></td>
+                    <td>Query Variables</td>
+                    <td><textarea id="query_variables" class="form-control">{{ object.variables }}</textarea></td>
+                </tr>
+                <tr>
+                    <td>Query</td>
+                    <td>{% if object.query %} <pre id="query">{{ object.query }}</pre> {% else %} {{ None }} {% endif %}</td>
                 </tr>
             </table>
-            {% if object.query %} <pre>{{ object.query }}</pre> {% else %} {{ None }} {% endif %}
         </div>
     </div>
 
@@ -83,9 +86,9 @@
                 <strong>Response</strong>
                 <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
             </div>
-                <pre id="query_output">
+            <pre id="query_output">
 
-                </pre>
+            </pre>
         </div>
     </div>
 
@@ -94,14 +97,16 @@
 <script>
 function test_query() {
     var output = $("#query_output")
-
+    var variables = $("#query_variables").val();
+    console.log(variables)
     $.ajax({
         url: "{% url 'graphql' %}",
         method: "POST",
         headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
         dataType: "json",
         data: {
-            "query": `{{ object.query }}`
+            "query": `{{ object.query }}`,
+            "variables": variables,
         },
         success: function(data) {
             output.text(JSON.stringify(data, undefined, 2));

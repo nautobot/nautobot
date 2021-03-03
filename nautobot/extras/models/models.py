@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import uuid
 from collections import OrderedDict
 
@@ -688,9 +689,19 @@ class GraphqlQuery(BaseModel, ChangeLoggedModel):
     name = models.CharField(max_length=255, unique=True)
     slug = models.CharField(max_length=255, unique=True)
     query = models.TextField()
+    variables = models.JSONField(default=dict)
 
     class Meta:
         ordering = ("slug",)
 
     def get_absolute_url(self):
         return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
+
+    def save(self, *args, **kwargs):
+        query_vars = re.findall(f"\$[a-zA-Z0-9]+", self.query)
+        vars_object = {}
+        for var in query_vars:
+            vars_object[var[1:]] = ""
+
+        self.variables = json.dumps(vars_object)
+        return super().save(*args, **kwargs)

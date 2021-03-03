@@ -858,7 +858,7 @@
                         <ul class="dropdown-menu">
                             {% for query in saved_graphiql_queries %}
                                 <li>
-                                    <a href="#" onclick="reload('{{ query.query|iriencode }}')">{{ query.name }}</a>
+                                    <a href="#" onclick="reload('{{ query.query|iriencode }}', '{{ query.variables|iriencode }}')">{{ query.name }}</a>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -867,9 +867,9 @@
 
                 <script>
 
-                    function reload(query) {
+                    function reload(query, variables) {
                         window.location.replace("#");
-                        window.location.hash = 'query=' + query;
+                        window.location.hash = 'query=' + query + "&variables=" + variables;
                         console.log(window.location.href)
                         window.location.reload()
                     }
