@@ -19,6 +19,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
+    MultipleContentTypeField,
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -189,22 +190,22 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
 
     type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
-    source_type = CSVMultipleContentTypeField(
+    source_type = MultipleContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
             "app_label", "model"
         ),
         required=False,
         label="Source Type",
-        # TODO widget=ContentTypeSelect(),
+        widget=StaticSelect2Multiple(),
     )
 
-    destination_type = CSVMultipleContentTypeField(
+    destination_type = MultipleContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
             "app_label", "model"
         ),
         required=False,
         label="Destination Type",
-        # TODO widget=ContentTypeSelect(),
+        widget=StaticSelect2Multiple(),
     )
 
 
@@ -310,22 +311,22 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
 
-    source_type = CSVMultipleContentTypeField(
+    source_type = MultipleContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
             "app_label", "model"
         ),
         required=False,
         label="Source Type",
-        # TODO widget=ContentTypeSelect(),
+        widget=StaticSelect2Multiple(),
     )
 
-    destination_type = CSVMultipleContentTypeField(
+    destination_type = MultipleContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by(
             "app_label", "model"
         ),
         required=False,
         label="Destination Type",
-        # TODO widget=ContentTypeSelect(),
+        widget=StaticSelect2Multiple(),
     )
 
 
@@ -802,12 +803,11 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
     model = Status
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
-    content_types = CSVMultipleContentTypeField(
+    content_types = MultipleContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content type(s)",
+        widget=StaticSelect2Multiple(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
