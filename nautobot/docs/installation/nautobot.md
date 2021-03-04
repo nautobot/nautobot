@@ -11,6 +11,9 @@ The instructions will guide you through the following actions:
 - Run the database schema migrations
 - Aggregate static resource files on disk
 
+!!! important
+    PostgreSQL and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot](../../installation/#install-nautobot).
+
 ## Create the Nautobot System User
 
 Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account. 

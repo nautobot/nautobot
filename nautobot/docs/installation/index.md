@@ -7,6 +7,10 @@ This document will help you get Nautobot up and running.
 
 ## Dependencies
 
+This section describes the system dependencies required for Nautobot. They can be all installed on a single system, or distributed across your environment. That will be up to you. Our install instructions assume a single system install, and that is good for most use cases. More advanced configurations are also supported, but are not covered here.
+
+The [installation instructions](#install-nautobot) below will guide you through a fresh installation.
+
 ### Mandatory dependencies
 
 The following minimum versions are required for Nautobot to operate:
@@ -54,21 +58,32 @@ For production deployment we recommend the following:
 
 For additional features:
 
-- NAPALM support
-- Prometheus metrics
+- [NAPALM support](../additional-features/napalm) for retrieving operational data from network devices
+- [Prometheus metrics](../additional-features/prometheus-metrics) for exporting application performance and telemetry data
 
 ## Install Nautobot
 
 Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the
-required dependencies. Only the operating system platforms listed below are officially supported at this time.
-
-### Supported Platforms
+required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
 
 Nautobot has been tested and confirmed to work on the following platforms. Detailed install and deployment instructions
 can be found by following the link to each.
 
-- [CentOS](centos)
-- [Ubuntu](ubuntu)
+### Installing Nautobot on CentOS/RHEL
+
+Red Hat flavors of Linux including CentOS 8.2+ or Red Hat Enterprise Linux (RHEL) 8.2+ are supported. The same installation instructions can be used on either.
+
+- [Install Nautobot CentOS/RHEL](centos) 
+
+### Installing Nautobot on Ubuntu
+
+Ubuntu 20.04 or later is supported.
+
+- [Installing Nautobot on Ubuntu](ubuntu)
+
+### Installing Nautobot on Other Systems
+
+Nautobot should work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
 
 ## Upgrading
 
