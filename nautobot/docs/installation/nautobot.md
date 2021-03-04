@@ -4,8 +4,8 @@ This section of the documentation discusses installing and configuring the Nauto
 
 The instructions will guide you through the following actions:
 
-- Create a `nautobot` system account 
 - Establish a Nautobot root at `/opt/nautobot`
+- Create a `nautobot` system account
 - Create a Python virtual environment (virtualenv)
 - Install Nautobot and all required Python packages
 - Run the database schema migrations
@@ -14,12 +14,22 @@ The instructions will guide you through the following actions:
 !!! important
     PostgreSQL and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot](../../installation/#install-nautobot).
 
-## Create the Nautobot System User
+## Choose your `NAUTOBOT_ROOT`
 
-Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account. 
+This is where everything related to Nautobot will be installed. We're going to use this value across the documentation. You'll need to set the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings at `/opt/nautobot`.
+
+We're also going to use this as the home directory of the `nautobot` user.
 
 ```no-highlight
-$ sudo useradd --create-home --system --shell /bin/bash nautobot
+$ export NAUTOBOT_ROOT=/opt/nautobot
+```
+
+## Create the Nautobot System User
+
+Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account. This also creates the `NAUTOBOT_ROOT` directory and sets it as the home directory for the user.
+
+```no-highlight
+$ sudo useradd --system --shell /bin/bash --create-home --home-dir $NAUTOBOT_ROOT nautobot
 ```
 
 ## Upgrade Pip
@@ -32,33 +42,19 @@ Many common issues can be solved by running the latest version of Pip. Before co
 $ sudo pip3 install --upgrade pip
 ```
 
-## Choose your `NAUTOBOT_ROOT`
-
-This is where everything related to Nautobot will be installed. We're going to use this value across the documentation. You'll need to set the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings at `/opt/nautobot`.
-
-```no-highlight
-$ export NAUTOBOT_ROOT=/opt/nautobot
-```
-
 ## Create the Virtual Environment
 
 A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
 
-We're going to create the virtualenv as our `NAUTOBOT_ROOT` as the root user to bootstraps the `/opt/nautobot` directory and populate it with a self-contained Python environment. 
+We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment.
 
 ```no-highlight
-$ sudo python3 -m venv $NAUTOBOT_ROOT
-```
-
-Next, change ownership of `NAUTOBOT_ROOT` to the `nautobot` user:
-
-```no-highlight
-$ sudo chown -R nautobot:nautobot $NAUTOBOT_ROOT
+$ sudo -u nautobot python3 -m venv $NAUTOBOT_ROOT
 ```
 
 ## Sudo to nautobot
 
-Now that we've created the virtualenv, the remaining steps will be performed as the `nautobot` user. 
+Now that we've created the virtualenv, the remaining steps will be performed as the `nautobot` user.
 
 !!! warning
     Don't skip this step!!
@@ -75,7 +71,7 @@ After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variab
 $ export NAUTOBOT_ROOT=/opt/nautobot
 ```
 
-### Add `NAUTOBOT_ROOT` to `.bashrc`
+### Update the Nautobot `.bashrc`
 
 For bonus points, add this to `~/.bashrc` for `nautobot`:
 
@@ -92,7 +88,7 @@ From here on out, anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be se
 
     Hint: Use `sudo -iu nautobot`
 
-To work inside a Python virtualenv, it must be activated. This makes sure that the version of Python you're using, as well any dependencies that you install remain isolated in this environment. 
+To work inside a Python virtualenv, it must be activated. This makes sure that the version of Python you're using, as well any dependencies that you install remain isolated in this environment.
 
 If it helps, try to think of activating the virtualenv like entering a shell unique to Nautobot's application environment.
 
@@ -110,7 +106,7 @@ Observe that after activating, your prompt will now be preceded with the name of
 
 Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version. This is neecessary because sometimes when a new virtualenv is created, a cached version of Pip is installed into it. (Yes, even after we've deliberately upgraded Pip at the system level!)
 
-We also want to deliberately install the `wheel` library which will tell Pip to always try to install wheel packages if they are available. A [wheel is a pre-compiled Python package](https://realpython.com/python-wheels/), which is quicker and safer to install because it does not require development libraries or `gcc` to be installed on your system just so that some more advanced Python libraries can be compiled. 
+We also want to deliberately install the `wheel` library which will tell Pip to always try to install wheel packages if they are available. A [wheel is a pre-compiled Python package](https://realpython.com/python-wheels/), which is quicker and safer to install because it does not require development libraries or `gcc` to be installed on your system just so that some more advanced Python libraries can be compiled.
 
 ```no-highlight
 (nautobot) $ pip3 install --upgrade pip wheel
