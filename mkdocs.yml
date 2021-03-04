@@ -16,8 +16,7 @@ markdown_extensions:
         headingOffset: 1
 nav:
     - Introduction: 'index.md'
-    - Installation (New):
-        - Quick Start: 'installation/quickstart.md'
+    - Installation:
         - Install Nautobot: 'installation/index.md'
         - Deploy Nautobot: 'installation/nautobot.md'
         - Configure Web Services: 'installation/wsgi.md'
