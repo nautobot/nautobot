@@ -95,6 +95,14 @@ These will create the user with the specified username, email, password, and API
 
 After these two files are created, you can use the normal **invoke** commands to manage the development containers.
 
+### Docker Development - Microsoft Visual Studio Code
+
+The `devcontainer.json` and `nautobot.code-workspace` files are provided to ease development when using VS Code and the Remote-Containers extension. After opening the project directory in VS Code in a
+supported environment, you will be prompted by VS Code to "Reopen in Container" and "Open Workspace". Select "Reopen in Container" to build and start the dev containers. Once your window is
+connected to the container, you can open the workspace which enables support for Run/Debug.
+
+To start Nautobot, select "Run Without Debugging" or "Start Debugging" from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
+
 ### Python Virtual Environment Workflow
 
 There are a few things you'll need:
@@ -123,7 +131,7 @@ A [virtual environment](https://docs.python.org/3/tutorial/venv.html) is like a 
 
 For Nautobot development, we have selected Poetry, which will transparently create a virtualenv for you, automatically install all dependencies required for Nautobot to operate, and will also install the `nautobot-server` CLI command that you will utilize to interact with Nautobot from here on out.
 
-Bootstrap your virtual environment using `poetry install`. 
+Bootstrap your virtual environment using `poetry install`.
 
 ```bash
 $ poetry install
