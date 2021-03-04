@@ -100,8 +100,8 @@ After these two files are created, you can use the normal **invoke** commands to
 There are a few things you'll need:
 
 - A Linux system or environment
-- A PostgreSQL server, which can be installed locally [per the documentation](/installation/1-postgresql/)
-- A Redis server, which can also be [installed locally](/installation/2-redis/)
+- A PostgreSQL server, which can be installed locally [per the documentation](/installation/#install-nautobot)
+- A Redis server, which can also be [installed locally](/installation/#install-nautobot)
 - A supported version of Python
 - A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
