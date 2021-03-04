@@ -809,7 +809,7 @@ class IPAddress(PrimaryModel, StatusModel):
     objects = IPAddressQuerySet.as_manager()
 
     class Meta:
-        ordering = ("host", "prefix_length", "pk")  # address may be non-unique
+        ordering = ("host", "prefix_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
 
@@ -917,7 +917,7 @@ class IPAddress(PrimaryModel, StatusModel):
             obj_type = f"{self.assigned_object_type.app_label}.{self.assigned_object_type.model}"
 
         return (
-            self.host,
+            self.address,
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),

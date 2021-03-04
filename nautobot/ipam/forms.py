@@ -713,7 +713,7 @@ class IPAddressForm(
                 self.initial["primary_for_parent"] = True
 
     def clean(self):
-        self.cleaned_data = super().clean()
+        super().clean()
 
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):

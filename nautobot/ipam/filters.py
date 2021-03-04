@@ -253,7 +253,7 @@ class PrefixFilterSet(
         label="Prefixes which contain this prefix or IP",
     )
     mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
-    mask_length__gte = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
+    mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
     mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
@@ -327,7 +327,7 @@ class PrefixFilterSet(
             return queryset
         qs_filter = Q(description__icontains=value)
         try:
-            query = netaddr.IPNetwork(value.strip())
+            query = netaddr.IPNetwork(value)
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
                 network__lte=bytes(query.network),

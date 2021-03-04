@@ -6,16 +6,16 @@ from django import forms
 
 
 __all__ = (
+    "AddressFieldMixin",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkRenameForm",
     "ConfirmationForm",
     "CSVModelForm",
     "ImportForm",
+    "PrefixFieldMixin",
     "ReturnURLForm",
     "TableConfigForm",
-    "PrefixFieldMixin",
-    "AddressFieldMixin",
 )
 
 
