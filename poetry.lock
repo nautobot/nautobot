@@ -229,7 +229,7 @@ django-appconf = "*"
 name = "django-debug-toolbar"
 version = "3.2"
 description = "A configurable set of panels that display various debug information about the current request/response."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.6"
 
@@ -1099,7 +1099,7 @@ testing = ["pytest (>=3.5,!=3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "912e1fb7b4903230c4edb2ccc09f1e0cc2ca00948e346be146ff9a8d34117592"
+content-hash = "1948cde239a87bd4c75d3dff3c9ba32af781db611586447ae1c5f8ad6768195d"
 
 [metadata.files]
 aniso8601 = [

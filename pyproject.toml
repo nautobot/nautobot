@@ -39,8 +39,6 @@ django-cacheops = "~5.1"
 django-cors-headers = "~3.7.0"
 # Support for encrypted database fields
 django-cryptography = "~1.0"
-# Tool for debugging Django
-django-debug-toolbar = "~3.2"
 # Advanced query filters
 django-filter = "~2.4.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
@@ -91,6 +89,8 @@ svgwrite = "~1.4.1"
 black = "^20.8b1"
 # Test code coverage measurement
 coverage = "~5.4"
+# Tool for debugging Django
+django-debug-toolbar = "^3.2"
 # Code style checking and limited static analysis
 flake8 = "^3.8.4"
 # Alternative to Make, CLI based on `tasks.py`
