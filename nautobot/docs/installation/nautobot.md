@@ -80,7 +80,7 @@ $ export NAUTOBOT_ROOT=/opt/nautobot
 For bonus points, add this to `~/.bashrc` for `nautobot`:
 
 ```no-highlight
-$ echo "export NAUTOBOT_ROOT=/opt/autobot" >> ~/.bashrc
+$ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
 ```
 
 From here on out, anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
