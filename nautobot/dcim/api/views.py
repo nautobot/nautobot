@@ -204,8 +204,7 @@ class RackViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         """
         rack = get_object_or_404(self.queryset, pk=pk)
         serializer = serializers.RackElevationDetailFilterSerializer(data=request.GET)
-        if not serializer.is_valid():
-            return Response(serializer.errors, 400)
+        serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
         if data["render"] == "svg":

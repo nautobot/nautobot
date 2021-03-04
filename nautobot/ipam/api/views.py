@@ -148,8 +148,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                     "prefix": prefix,
                 },
             )
-            if not serializer.is_valid():
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
 
             requested_prefixes = serializer.validated_data
             # Allocate prefixes to the requested objects based on availability within the parent
@@ -179,11 +178,9 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                 serializer = serializers.PrefixSerializer(data=requested_prefixes[0], context=context)
 
             # Create the new Prefix(es)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         else:
 
@@ -254,11 +251,9 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                 serializer = serializers.IPAddressSerializer(data=requested_ips[0], context=context)
 
             # Create the new IP address(es)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         # Determine the maximum number of IPs to return
         else:
