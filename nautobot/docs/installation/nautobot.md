@@ -75,7 +75,7 @@ After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variab
 $ export NAUTOBOT_ROOT=/opt/nautobot
 ```
 
-### Add `NAUTOBOT_CONFIG` to `.bashrc`
+### Add `NAUTOBOT_ROOT` to `.bashrc`
 
 For bonus points, add this to `~/.bashrc` for `nautobot`:
 

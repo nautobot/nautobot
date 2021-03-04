@@ -21,7 +21,7 @@ The following minimum versions are required for Nautobot to operate:
 | PostgreSQL | 9.6             |
 | Redis      | 4.0             |
 
-Nautobot will not work with these dependencies.
+Nautobot will not work without these dependencies.
 
 #### Python
 

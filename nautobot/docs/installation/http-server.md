@@ -19,10 +19,11 @@ provider, obtain one for free from [Let's Encrypt](https://letsencrypt.org/getti
 (although self-signed certificates are generally untrusted). Both the public certificate and private key files need to
 be installed on your Nautobot server in a secure location that is readable only by the `root` user.
 
-The command below can be used to generate a self-signed certificate for testing purposes, however it is strongly
-recommended to use a certificate from a trusted authority in production. Two files will be created: the public
-certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas
-the private key must be kept secret at all times.
+!!! warning
+    The command below can be used to generate a self-signed certificate for testing purposes,
+    however it is strongly recommended to use a certificate from a trusted authority in production.
+
+Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
 !!! info
     Some Linux installations have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tli/`. The
