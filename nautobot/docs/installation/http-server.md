@@ -6,12 +6,6 @@
 This documentation provides example configurations for both [NGINX](https://www.nginx.com/resources/wiki/) and
 [Apache](https://httpd.apache.org/docs/current/), though any HTTP server which supports WSGI should be compatible.
 
-!!! note
-    For the sake of brevity, only Ubuntu 20.04 instructions are provided here.
-
-    These tasks are not unique to Nautobot and should carry over to other distributions with minimal changes. Please
-    consult your distribution's documentation for assistance if needed.
-
 ## Obtain an SSL Certificate
 
 To enable HTTPS access to Nautobot, you'll need a valid SSL certificate. You can purchase one from a trusted commercial
@@ -42,6 +36,9 @@ $ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 Any HTTP server of your choosing is supported. For your convenience, setup guides for the most common options are
 provided here.
 
+!!! warning
+    The following steps must be performed with root permissions.
+
 ### NGINX
 
 [NGINX](https://www.nginx.com/resources/wiki/) is a free, open source, high-performance HTTP server and reverse proxy
@@ -55,10 +52,32 @@ Begin by installing NGINX:
 $ sudo apt install -y nginx
 ```
 
-#### Configure NGINX
+#### For CentOS or RHEL users
 
-!!! warning
-    The following steps must be performed with root permissions.
+!!! note
+    If you are installing on Ubuntu, please continue [Configure NGINX](#configure-nginx) step below.
+
+Red Hat-based (CentOS & RHEL) systems running NGINX will need to create the directory structure and perform a
+minor update the default `nginx.conf` file to get it to read included configurations.
+
+##### Create the include directories
+
+To do this, create the `sites-available` and `sites-enabled` directories.
+
+```no-highlight
+$ sudo mkdir -p /etc/nginx/{sites-available,sites-enabled}
+```
+
+##### Edit `nginx.conf`
+
+As root, edit file `/etc/nginx/nginx.conf`. In the `http` section, add:
+
+```no-highlight
+    include /etc/nginx/sites-enabled/*.conf;
+    server_names_hash_bucket_size 64;
+```
+
+#### Configure NGINX
 
 Once NGINX is installed, copy and paste the following NGINX configuration into
 `/etc/nginx/sites-available/nautobot.conf`: 
@@ -100,30 +119,6 @@ the value configured for `ALLOWED_HOSTS` in `nautobot_config.py`.
 - If the file location of SSL certificates had to be changed in the [Obtain an SSL
   Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX
   configuration you pasted.
-
-#### For CentOS or RHEL users
-
-Red Hat-based (namely CentOS & RHEL) systems running NGINX will need to create the directory structure and perform a
-minor update the default `nginx.conf` file to get it to read included configurations.
-
-##### Create the include directories
-To do this, create the `sites-available` and `sites-enabled` directories.
-
-```no-highlight
-$ sudo mkdir -p /etc/nginx/{sites-available,sites-enabled}
-```
-
-##### Edit `nginx.conf`
-
-As root, edit file `/etc/nginx/nginx.conf`. In the `http` section, add:
-
-```no-highlight
-    include /etc/nginx/sites-enabled/*.conf;
-    server_names_hash_bucket_size 64;
-```
-
-Now you may return to the [Configure NGINX](#configure-nginx) step above, and then continue to [Enable
-Nautobot](#enable-nautobot) when done.
 
 #### Enable Nautobot 
 

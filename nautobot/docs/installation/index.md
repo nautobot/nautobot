@@ -73,7 +73,7 @@ can be found by following the link to each.
 
 Red Hat flavors of Linux including CentOS 8.2+ or Red Hat Enterprise Linux (RHEL) 8.2+ are supported. The same installation instructions can be used on either.
 
-- [Install Nautobot CentOS/RHEL](centos) 
+- [Installing Nautobot on CentOS/RHEL](centos) 
 
 ### Installing Nautobot on Ubuntu
 
