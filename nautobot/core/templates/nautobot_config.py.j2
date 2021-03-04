@@ -18,7 +18,7 @@ ALLOWED_HOSTS = []
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {
-        "NAME": os.getenv("NAUTOBOT_DATABASE", ""),  # Database name
+        "NAME": os.getenv("NAUTOBOT_DATABASE", "nautobot"),  # Database name
         "USER": os.getenv("NAUTOBOT_USER", ""),  # Database username
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),  # Datbase password
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),  # Database server

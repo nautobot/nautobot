@@ -6,14 +6,14 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-Environment="NAUTOBOT_CONFIG=/opt/nautobot/nautobot_config.py"
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
 
 User=nautobot
 Group=nautobot
 PIDFile=/var/tmp/nautobot.pid
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/venv/bin/gunicorn --pid /var/tmp/nautobot.pid --config /opt/nautobot/gunicorn.py nautobot.core.wsgi
+ExecStart=/opt/nautobot/bin/gunicorn --pid /var/tmp/nautobot.pid --config /opt/nautobot/gunicorn.py nautobot.core.wsgi
 
 Restart=on-failure
 RestartSec=30

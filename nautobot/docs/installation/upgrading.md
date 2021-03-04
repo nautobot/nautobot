@@ -106,5 +106,5 @@ This script performs the following actions:
 Finally, restart the gunicorn and RQ services:
 
 ```no-highlight
-sudo systemctl restart nautobot nautobot-rq
+sudo systemctl restart nautobot nautobot-worker
 ```
