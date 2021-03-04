@@ -311,7 +311,6 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "cacheops",
     "corsheaders",
-    "debug_toolbar",
     "django_filters",
     "django_tables2",
     "django_prometheus",
@@ -335,7 +334,6 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

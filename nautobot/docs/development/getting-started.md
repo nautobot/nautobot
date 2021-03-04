@@ -199,8 +199,8 @@ The newly created configuration includes sane defaults. If you need to customize
 * `ALLOWED_HOSTS`: This can be set to `['*']` for development purposes and must be set if `DEBUG=False`
 * `DATABASES`: PostgreSQL database connection parameters, if different from the defaults
 * `REDIS`: Redis configuration, if different from the defaults
-* `DEBUG`: Set to `True` to enable verbose exception logging and the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
-* `EXTRA_INSTALLLED_APPS`: Optionally provide a list of extra Django apps/plugins you may desire to use for development
+* `DEBUG`: Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* `EXTRA_INSTALLED_APPS`: Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
 #### Starting the Development Server
 

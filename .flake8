@@ -1,0 +1,16 @@
+[flake8]
+ignore =
+    # E203 whitespace before ':' (per Black, this is actually correct in some cases)
+    E203,
+    # F401 module imported but unused (TODO: fix and re-enable this one)
+    F401,
+    # F403 'from module import *' used (TODO: fix and re-enable this one)
+    F403,
+    # F405 name may be undefined or defined from star imports (TODO: fix and re-enable this one)
+    F405,
+    # E501 line greater than 80 characters in length (we use a 120-character line length, enforced by Black)
+    E501,
+    # W503 line break before binary operator (per Black, this is actually correct in some cases)
+    W503,
+    # W504 line break after binary operator (per Black, this is actually correct in some cases)
+    W504

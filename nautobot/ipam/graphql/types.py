@@ -14,7 +14,7 @@ def convert_field_to_string(field, registry=None):
     return graphene.String()
 
 
-@convert_django_field.register(IPNetworkField)
+@convert_django_field.register(IPNetworkField)  # noqa: F811
 def convert_field_to_string(field, registry=None):  # noqa: F811
     """Convert IPNetworkField to String."""
     return graphene.String()

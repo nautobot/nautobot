@@ -263,7 +263,8 @@ HTTP_PROXIES = {
 Default: `('127.0.0.1', '::1')`
 
 A list of IP addresses recognized as internal to the system, used to control the display of debugging output. For
-example, the debugging toolbar will be viewable only when a client is accessing Nautobot from one of the listed IP
+example, the [Django debugging toolbar](https://django-debug-toolbar.readthedocs.io/), if installed,
+will be viewable only when a client is accessing Nautobot from one of the listed IP
 addresses (and [`DEBUG`](#debug) is true).
 
 ---
