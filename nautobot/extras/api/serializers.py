@@ -682,4 +682,5 @@ class GraphqlQuerySerializer(ValidatedModelSerializer):
             "name",
             "slug",
             "query",
+            "variables",
         )

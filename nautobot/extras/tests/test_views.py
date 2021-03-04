@@ -398,16 +398,19 @@ class GraphqlQueriesTestCase(
                 name="graphql-query-1",
                 slug="graphql-query-1",
                 query="{query: sites {name}}",
+                variables="{}",
             ),
             GraphqlQuery(
                 name="graphql-query-2",
                 slug="graphql-query-2",
                 query="{query: sites {name}}",
+                variables="{}",
             ),
             GraphqlQuery(
                 name="graphql-query-3",
                 slug="graphql-query-3",
                 query="{query: sites {name}}",
+                variables="{}",
             ),
         )
 
@@ -418,4 +421,5 @@ class GraphqlQueriesTestCase(
             "name": "graphql-query-4",
             "slug": "graphql-query-4",
             "query": "{query: sites {name}}",
+            "variables": "{}",
         }
