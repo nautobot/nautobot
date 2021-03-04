@@ -326,17 +326,13 @@ class RelationshipTestCase(TestCase):
         params = {"type": "one-to-many"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    # FIXME(glenn): Although source_type and destination_type allow the specification of multiple types,
-    # the filters currently operate as an AND rather than an OR, so specifying multiple types will
-    # always result in a filter that matches nothing.
-
     def test_source_type(self):
         params = {"source_type": ["dcim.device"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_destination_type(self):
-        params = {"destination_type": ["ipam.vlan"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"destination_type": ["ipam.vlan", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class RelationshipAssociationTestCase(TestCase):
@@ -416,7 +412,7 @@ class RelationshipAssociationTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_source_type(self):
-        params = {"source_type": ["dcim.device"]}
+        params = {"source_type": ["dcim.device", "dcim.interface"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_source_id(self):
@@ -424,7 +420,7 @@ class RelationshipAssociationTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_destination_type(self):
-        params = {"destination_type": ["dcim.device"]}
+        params = {"destination_type": ["dcim.device", "dcim.interface"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_destination_id(self):

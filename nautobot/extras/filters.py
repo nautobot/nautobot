@@ -539,11 +539,8 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 
 class RelationshipFilterSet(BaseFilterSet):
 
-    # FIXME(glenn): We should be able to pass `conjoined=False` here to allow filtering to include multiple types,
-    # but it doesn't look like ContentTypeMultipleChoiceFilter actually respects that flag, despite the docstring
-    # claiming that it does.
-    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
-    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
 
     class Meta:
         model = Relationship
@@ -558,11 +555,8 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Relationship (slug)",
     )
-    # FIXME(glenn): We should be able to pass `conjoined=False` here to allow filtering to include multiple types,
-    # but it doesn't look like ContentTypeMultipleChoiceFilter actually respects that flag, despite the docstring
-    # claiming that it does.
-    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
-    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices)
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
 
     class Meta:
         model = RelationshipAssociation
