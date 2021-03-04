@@ -237,10 +237,7 @@ def flake8(context, python_ver=PYTHON_VER):
         python_ver (str): Will use the Python version docker image to build from
     """
     context.run(
-        f"{COMPOSE_COMMAND} run nautobot"
-        # TODO: we eventually want to re-enable F401,F403,F405 at least
-        " flake8 --ignore=E203,F401,F403,F405,E501,W503,W504 --exclude '*migrations*'"
-        " contrib/ development/ nautobot/ tasks.py",
+        f"{COMPOSE_COMMAND} run nautobot flake8 contrib/ development/ nautobot/ tasks.py",
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
