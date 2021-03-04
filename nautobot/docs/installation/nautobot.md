@@ -32,16 +32,6 @@ Create a system user account named `nautobot`. This user will own all of the Nau
 $ sudo useradd --system --shell /bin/bash --create-home --home-dir $NAUTOBOT_ROOT nautobot
 ```
 
-## Upgrade Pip
-
-[Pip]((https://pip.pypa.io/)) is Python's package installer and is referred interchangeably as `pip` or `pip3`. For the purpose of this document, we'll deliberately be referring to it as `pip3`.
-
-Many common issues can be solved by running the latest version of Pip. Before continuing with installing Nautobot, upgrade Pip to its latest release:
-
-```no-highlight
-$ sudo pip3 install --upgrade pip
-```
-
 ## Create the Virtual Environment
 
 A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
@@ -73,13 +63,11 @@ $ export NAUTOBOT_ROOT=/opt/nautobot
 
 ### Update the Nautobot `.bashrc`
 
-For bonus points, add this to `~/.bashrc` for `nautobot`:
+Add this to `~/.bashrc` for `nautobot` so that from here on out, anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
 ```no-highlight
 $ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
 ```
-
-From here on out, anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
 ## Activate the Virtual Environment
 
@@ -104,7 +92,9 @@ Observe that after activating, your prompt will now be preceded with the name of
 
 ## Prepare the Virtual Environment
 
-Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version. This is neecessary because sometimes when a new virtualenv is created, a cached version of Pip is installed into it. (Yes, even after we've deliberately upgraded Pip at the system level!)
+Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version. 
+
+[Pip]((https://pip.pypa.io/)) is Python's package installer and is referred interchangeably as `pip` or `pip3`. For the purpose of this document, we'll deliberately be referring to it as `pip3`. Many common issues can be solved by running the latest version of Pip. Before continuing with installing Nautobot, upgrade Pip to its latest release.
 
 We also want to deliberately install the `wheel` library which will tell Pip to always try to install wheel packages if they are available. A [wheel is a pre-compiled Python package](https://realpython.com/python-wheels/), which is quicker and safer to install because it does not require development libraries or `gcc` to be installed on your system just so that some more advanced Python libraries can be compiled.
 

@@ -1,6 +1,6 @@
-# CentOS
+# CentOS/RHEL
 
-This installation guide assumes that you are running CentOS version 8.2 on your system.
+This installation guide assumes that you are running CentOS or RHEL version 8.2+ on your system.
 
 ## Install System Packages
 
@@ -15,7 +15,7 @@ This will install:
 - Redis server and client
 
 ```no-highlight
-$ sudo yum update -y
+$ sudo yum check-update
 $ sudo yum install -y git python36 python36-devel python3-pip postgresql-server redis
 ```
 
@@ -26,7 +26,7 @@ connection to the database.
 
 ### Initialize Postgres
 
-CentOS requires a manual step to generate the initial configurations required by PostgreSQL.
+CentOS/RHEL requires a manual step to generate the initial configurations required by PostgreSQL.
 
 ```no-highlight
 $ sudo postgresql-setup --initdb
@@ -34,7 +34,7 @@ $ sudo postgresql-setup --initdb
 
 ### Configure Authentication
 
-CentOS configures PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
+CentOS/RHEL configures PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
 
 As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
 
@@ -59,8 +59,7 @@ host    all             all             ::1/128                 md5
 Start the service and enable it to run at system startup:
 
 ```no-highlight
-$ sudo systemctl start postgresql
-$ sudo systemctl enable postgresql
+$ sudo systemctl enable --now postgresql
 ```
 
 ### Create a Database
@@ -96,12 +95,10 @@ If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm y
 $ psql --username nautobot --password --host localhost nautobot
 Password for user nautobot:
 psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
-SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
 Type "help" for help.
 
 nautobot=> \conninfo
 You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "127.0.0.1") at port "5432".
-SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
 nautobot=> \q
 ```
 
@@ -112,8 +109,7 @@ nautobot=> \q
 Start the service and enable it to run at system startup:
 
 ```no-highlight
-$ sudo systemctl start redis
-$ sudo systemctl enable redis
+$ sudo systemctl enable --now redis
 ```
 
 ### Verify Service Status
