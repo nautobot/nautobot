@@ -66,7 +66,7 @@ Now that we've created the virtualenv, the remaining steps will be performed as 
     It's important to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
 ```no-highlight
-$ sudo su - nautobot
+$ sudo -iu nautobot
 ```
 
 After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variable again for this user (since it is a fresh session as far as the system is concerned):
@@ -90,7 +90,7 @@ From here on out, anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be se
 !!! warning
     This and all remaining steps in this document should all be performed as the `nautobot` user!
 
-    Hint: Use `sudo su - nautobot`
+    Hint: Use `sudo -iu nautobot`
 
 To work inside a Python virtualenv, it must be activated. This makes sure that the version of Python you're using, as well any dependencies that you install remain isolated in this environment. 
 

@@ -26,7 +26,7 @@ $ sudo yum install -y openldap-devel
 !!! warning
     This and all remaining steps in this document should all be performed as the `nautobot` user!
 
-    Hint: Use `sudo su - nautobot`
+    Hint: Use `sudo -iu nautobot`
 
 Activate the Python virtual environment and install the `django-auth-ldap` package using pip:
 
