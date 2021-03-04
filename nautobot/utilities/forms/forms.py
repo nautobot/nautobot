@@ -19,6 +19,18 @@ __all__ = (
 )
 
 
+class AddressFieldMixin(forms.ModelForm):
+    """ ModelForm mixin for IPAddress based models """
+
+    def save(self, *args, **kwargs):
+        instance = super().save(commit=False)
+        # call the model's address.setter
+        instance.address = self.cleaned_data.get("address")
+        instance.save()
+        self.save_m2m()
+        return instance
+
+
 class BootstrapMixin(forms.BaseForm):
     """
     Add the base Bootstrap CSS classes to form elements.
@@ -110,6 +122,18 @@ class CSVModelForm(forms.ModelForm):
                     self.fields[field].to_field_name = to_field
 
 
+class PrefixFieldMixin(forms.ModelForm):
+    """ ModelForm mixin for IPNetwork based models """
+
+    def save(self, *args, **kwargs):
+        instance = super().save(commit=False)
+        # call the model's prefix.setter method
+        instance.prefix = self.cleaned_data.get("prefix")
+        instance.save()
+        self.save_m2m()
+        return instance
+
+
 class ImportForm(BootstrapMixin, forms.Form):
     """
     Generic form for creating an object from JSON/YAML data
@@ -170,27 +194,3 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
-
-
-class PrefixFieldMixin(forms.ModelForm):
-    """ ModelForm mixin for IPNetwork based models """
-
-    def save(self, *args, **kwargs):
-        instance = super().save(commit=False)
-        # call the model's prefix.setter method
-        instance.prefix = self.cleaned_data.get("prefix")
-        instance.save()
-        self.save_m2m()
-        return instance
-
-
-class AddressFieldMixin(forms.ModelForm):
-    """ ModelForm mixin for IPAddress based models """
-
-    def save(self, *args, **kwargs):
-        instance = super().save(commit=False)
-        # call the model's address.setter
-        instance.address = self.cleaned_data.get("address")
-        instance.save()
-        self.save_m2m()
-        return instance
