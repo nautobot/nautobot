@@ -214,8 +214,23 @@ def migrate(context, python_ver=PYTHON_VER):
 # TESTS
 # ------------------------------------------------------------------------------
 @task
-def pycodestyle(context, python_ver=PYTHON_VER):
-    """Check PEP8 compliance
+def black(context, python_ver=PYTHON_VER):
+    """Check Python code style with Black
+
+    Args:
+        context (obj): Used to run specific commands
+        python_ver (str): Will use the Python version docker image to build from
+    """
+    context.run(
+        f"{COMPOSE_COMMAND} run nautobot black --check --diff contrib/ development/ nautobot/ tasks.py",
+        env={"PYTHON_VER": python_ver},
+        pty=True,
+    )
+
+
+@task
+def flake8(context, python_ver=PYTHON_VER):
+    """Check PEP8 compliance and other style issues
 
     Args:
         context (obj): Used to run specific commands
@@ -223,7 +238,8 @@ def pycodestyle(context, python_ver=PYTHON_VER):
     """
     context.run(
         f"{COMPOSE_COMMAND} run nautobot"
-        " pycodestyle --ignore=E203,E501,W503,W504 "
+        # TODO: we eventually want to re-enable F401,F403,F405 at least
+        " flake8 --ignore=E203,F401,F403,F405,E501,W503,W504 --exclude '*migrations*'"
         " contrib/ development/ nautobot/ tasks.py",
         env={"PYTHON_VER": python_ver},
         pty=True,
@@ -259,3 +275,17 @@ def coverage_report(context, python_ver=PYTHON_VER):
         env={"PYTHON_VER": python_ver},
         pty=True,
     )
+
+
+@task
+def tests(context, python_ver=PYTHON_VER):
+    """Run all tests
+
+    Args:
+        context (obj): Used to run specific commands
+        python_ver (str): WIll use the Python version docker image to build from
+    """
+    black(context, python_ver=python_ver)
+    flake8(context, python_ver=python_ver)
+    coverage_run(context, python_ver=python_ver)
+    coverage_report(context, python_ver=python_ver)
