@@ -182,10 +182,12 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
                     app_label, model = v.lower().split(".")
                 except ValueError:
                     continue
-                q |= models.Q(**{
-                    f"{self.field_name}__app_label": app_label,
-                    f"{self.field_name}__model": model,
-                })
+                q |= models.Q(
+                    **{
+                        f"{self.field_name}__app_label": app_label,
+                        f"{self.field_name}__model": model,
+                    }
+                )
 
         if not self.conjoined:
             qs = qs.filter(q)

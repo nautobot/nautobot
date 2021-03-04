@@ -753,7 +753,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
             "source_label": "primary interface",
             "destination_type": "dcim.interface",
             "destination_hidden": True,
-        }
+        },
     ]
 
     bulk_update_data = {

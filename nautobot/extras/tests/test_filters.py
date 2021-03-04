@@ -358,7 +358,7 @@ class RelationshipAssociationTestCase(TestCase):
                 type="one-to-many",
                 source_type=cls.vlan_type,
                 destination_type=cls.device_type,
-            )
+            ),
         )
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -393,14 +393,14 @@ class RelationshipAssociationTestCase(TestCase):
             source_type=cls.vlan_type,
             source_id=cls.vlans[0].pk,
             destination_type=cls.device_type,
-            destination_id=cls.devices[0].pk
+            destination_id=cls.devices[0].pk,
         )
         RelationshipAssociation.objects.create(
             relationship=cls.relationships[1],
             source_type=cls.vlan_type,
             source_id=cls.vlans[1].pk,
             destination_type=cls.device_type,
-            destination_id=cls.devices[1].pk
+            destination_id=cls.devices[1].pk,
         )
 
     def test_id(self):

@@ -540,7 +540,9 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 class RelationshipFilterSet(BaseFilterSet):
 
     source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
-    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    destination_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("relationships").get_choices, conjoined=False
+    )
 
     class Meta:
         model = Relationship
@@ -556,7 +558,9 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         label="Relationship (slug)",
     )
     source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
-    destination_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    destination_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("relationships").get_choices, conjoined=False
+    )
 
     class Meta:
         model = RelationshipAssociation
