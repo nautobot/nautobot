@@ -35,8 +35,6 @@ All Nautobot plugins and library dependencies will be written using Python.
 
 [PostgreSQL](https://www.postgresql.org) is a powerful, open source relational database server. Nautobot uses the database to store its data.
 
-PostgreSQL was selected as the database backend due to its native support for [network address types](https://www.postgresql.org/docs/13/datatype-net-types.html).
-
 !!! note
     MySQL or other relational databases are not currently supported.
 
