@@ -25,6 +25,14 @@ class VarbinaryIPField(models.BinaryField):
         max_length = DictWrapper(self.__dict__, connection.ops.quote_name, "qn_")
         return "varbinary(%(max_length)s)" % max_length
 
+    def form_class(self):
+        return IPNetworkFormField
+
+    def formfield(self, **kwargs):
+        defaults = {"form_class": self.form_class()}
+        defaults.update(kwargs)
+        return super().formfield(**defaults)
+
 
 class BaseIPField(models.Field):
     def python_type(self):

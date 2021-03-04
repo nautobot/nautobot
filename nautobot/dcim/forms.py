@@ -1,12 +1,12 @@
 import re
 
-import netaddr
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.safestring import mark_safe
+import netaddr
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
@@ -28,7 +28,6 @@ from nautobot.extras.forms import (
 from nautobot.extras.models import Tag
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN, IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
@@ -1674,8 +1673,6 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         required=False,
         query_params={"manufacturer_id": ["$manufacturer", "null"]},
     )
-    primary_ip4 = IPNetworkFormField(required=False)
-    primary_ip6 = IPNetworkFormField(required=False)
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -1834,8 +1831,6 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Assigned platform",
     )
-    primary_ip4 = IPNetworkFormField(required=False)
-    primary_ip6 = IPNetworkFormField(required=False)
     cluster = CSVModelChoiceField(
         queryset=Cluster.objects.all(),
         to_field_name="name",
