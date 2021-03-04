@@ -146,7 +146,10 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(method='filter_ip_family', label='Family',)
+    family = django_filters.NumberFilter(
+        method="filter_ip_family",
+        label="Family",
+    )
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -176,7 +179,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
                 network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast)
+                broadcast__gte=bytes(query.broadcast),
             )
         except (AddrFormatError, ValueError):
             pass
@@ -196,10 +199,8 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         elif value == 6:
             length = IPV6_BYTE_LENGTH
         else:
-            raise ValueError('invalid IP family {}'.format(value))
-        return queryset.annotate(
-            network_len=Length(F('network'))
-        ).filter(
+            raise ValueError("invalid IP family {}".format(value))
+        return queryset.annotate(network_len=Length(F("network"))).filter(
             network_len=length,
         )
 
@@ -231,7 +232,10 @@ class PrefixFilterSet(
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(method='filter_ip_family', label='Family',)
+    family = django_filters.NumberFilter(
+        method="filter_ip_family",
+        label="Family",
+    )
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -248,9 +252,9 @@ class PrefixFilterSet(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
-    mask_length = django_filters.NumberFilter(label='mask_length', method='filter_prefix_length_eq')
-    mask_length__gte = django_filters.NumberFilter(label='mask_length', method='filter_prefix_length_eq')
-    mask_length__lte = django_filters.NumberFilter(label='mask_length__lte', method='filter_prefix_length_lte')
+    mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
+    mask_length__gte = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
+    mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         label="VRF",
@@ -315,7 +319,7 @@ class PrefixFilterSet(
 
     class Meta:
         model = Prefix
-        fields = ['id', 'is_pool', 'prefix']
+        fields = ["id", "is_pool", "prefix"]
 
     def search(self, queryset, name, value):
         value = value.strip()
@@ -327,7 +331,7 @@ class PrefixFilterSet(
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
                 network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast)
+                broadcast__gte=bytes(query.broadcast),
             )
         except (AddrFormatError, ValueError):
             pass
@@ -399,10 +403,8 @@ class PrefixFilterSet(
         elif value == 6:
             length = IPV6_BYTE_LENGTH
         else:
-            raise ValueError('invalid IP family {}'.format(value))
-        return queryset.annotate(
-            network_len=Length(F('network'))
-        ).filter(
+            raise ValueError("invalid IP family {}".format(value))
+        return queryset.annotate(network_len=Length(F("network"))).filter(
             network_len=length,
         )
 
@@ -418,7 +420,10 @@ class IPAddressFilterSet(
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(method='filter_ip_family', label='Family',)
+    family = django_filters.NumberFilter(
+        method="filter_ip_family",
+        label="Family",
+    )
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",

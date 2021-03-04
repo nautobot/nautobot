@@ -19,7 +19,6 @@ __all__ = [
 
 
 class IPFieldSerializer(serializers.CharField):
-
     def to_representation(self, value):
         return str(value)
 

@@ -1740,10 +1740,14 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                interface_ips = IPAddress.objects.ip_family(family).filter(
-                    assigned_object_type=ContentType.objects.get_for_model(Interface),
-                    assigned_object_id__in=interface_ids,
-                ).prefetch_related("assigned_object")
+                interface_ips = (
+                    IPAddress.objects.ip_family(family)
+                    .filter(
+                        assigned_object_type=ContentType.objects.get_for_model(Interface),
+                        assigned_object_id__in=interface_ids,
+                    )
+                    .prefetch_related("assigned_object")
+                )
                 if interface_ips:
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
@@ -1794,9 +1798,9 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         def save(self, *args, **kwargs):
             instance = super().save(*args, commit=False, **kwargs)
             if instance.primary_ip4:
-                instance.primary_ip4.address = self.cleaned_data.get('primary_ip4')
+                instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
             if instance.primary_ip6:
-                instance.primary_ip6.address = self.cleaned_data.get('primary_ip6')
+                instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
             instance.save()
             self.save_m2m()
             return instance
@@ -1854,18 +1858,18 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
     def clean(self):
         self.cleaned_data = super().clean()
-        ip4 = self.cleaned_data.get('primary_ip4')
+        ip4 = self.cleaned_data.get("primary_ip4")
         self.address_ip4 = netaddr.IPNetwork(ip4) if ip4 else None
-        ip6 = self.cleaned_data.get('primary_ip6')
+        ip6 = self.cleaned_data.get("primary_ip6")
         self.address_ip6 = netaddr.IPNetwork(ip6) if ip6 else None
         return self.cleaned_data
 
     def save(self, *args, **kwargs):
         instance = super().save(*args, commit=False, **kwargs)
         if instance.primary_ip4:
-            instance.primary_ip4.address = self.cleaned_data.get('primary_ip4')
+            instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
         if instance.primary_ip6:
-            instance.primary_ip6.address = self.cleaned_data.get('primary_ip6')
+            instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
         instance.save()
         self.save_m2m()
         return instance

@@ -32,7 +32,8 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES, AddressFieldMixin,
+    BOOLEAN_WITH_BLANK_CHOICES,
+    AddressFieldMixin,
 )
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import *

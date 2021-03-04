@@ -11,18 +11,19 @@ class VarbinaryIPField(models.BinaryField):
     """
     IP network address
     """
+
     description = "IP network address"
 
     def db_type(self, connection):
-        engine = connection.settings_dict['ENGINE']
+        engine = connection.settings_dict["ENGINE"]
 
         # Use 'bytea' type for Postgres.
-        if 'postgres' in engine:
+        if "postgres" in engine:
             return super().db_type(connection)
 
         # Or 'varbinary' for everyone else.
         max_length = DictWrapper(self.__dict__, connection.ops.quote_name, "qn_")
-        return 'varbinary(%(max_length)s)' % max_length
+        return "varbinary(%(max_length)s)" % max_length
 
 
 class BaseIPField(models.Field):

@@ -178,7 +178,7 @@ class PrefixFieldMixin(forms.ModelForm):
     def save(self, *args, **kwargs):
         instance = super().save(commit=False)
         # call the model's prefix.setter method
-        instance.prefix = self.cleaned_data.get('prefix')
+        instance.prefix = self.cleaned_data.get("prefix")
         instance.save()
         self.save_m2m()
         return instance
@@ -190,7 +190,7 @@ class AddressFieldMixin(forms.ModelForm):
     def save(self, *args, **kwargs):
         instance = super().save(commit=False)
         # call the model's address.setter
-        instance.address = self.cleaned_data.get('address')
+        instance.address = self.cleaned_data.get("address")
         instance.save()
         self.save_m2m()
         return instance

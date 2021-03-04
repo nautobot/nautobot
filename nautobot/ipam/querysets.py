@@ -10,7 +10,6 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class NetworkQuerySet(QuerySet):
-
     def net_equals(self, prefix):
         return self.filter(
             prefix_length=prefix.prefixlen,
@@ -36,14 +35,14 @@ class NetworkQuerySet(QuerySet):
         return self.filter(
             prefix_length__lt=prefix.prefixlen,
             network__lte=bytes(prefix.network),
-            broadcast__gte=bytes(prefix.broadcast)
+            broadcast__gte=bytes(prefix.broadcast),
         )
 
     def net_contains_or_equal(self, prefix):
         return self.filter(
             prefix_length__lte=prefix.prefixlen,
             network__lte=bytes(prefix.network),
-            broadcast__gte=bytes(prefix.broadcast)
+            broadcast__gte=bytes(prefix.broadcast),
         )
 
 
@@ -63,25 +62,29 @@ class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
         # The value itself has no meaning, so we just generate a random UUID for the query.
         FAKE_UUID = uuid.uuid4()
 
-        qs = self.annotate(maybe_vrf=ExpressionWrapper(
-            Coalesce(F('vrf_id'), FAKE_UUID),
-            output_field=UUIDField(),
-        ))
+        qs = self.annotate(
+            maybe_vrf=ExpressionWrapper(
+                Coalesce(F("vrf_id"), FAKE_UUID),
+                output_field=UUIDField(),
+            )
+        )
 
         return qs.annotate(
             parents=RawSQL(
-                'SELECT COUNT(*) FROM ipam_prefix AS U0 '
-                'WHERE U0.prefix_length < ipam_prefix.prefix_length '
-                'AND U0.network <= ipam_prefix.network '
-                'AND U0.broadcast >= ipam_prefix.broadcast '
-                f'AND COALESCE(U0.vrf_id, \'{FAKE_UUID}\') >= COALESCE(ipam_prefix.vrf_id, \'{FAKE_UUID}\')', ()
+                "SELECT COUNT(*) FROM ipam_prefix AS U0 "
+                "WHERE U0.prefix_length < ipam_prefix.prefix_length "
+                "AND U0.network <= ipam_prefix.network "
+                "AND U0.broadcast >= ipam_prefix.broadcast "
+                f"AND COALESCE(U0.vrf_id, '{FAKE_UUID}') >= COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
+                (),
             ),
             children=RawSQL(
-                'SELECT COUNT(*) FROM ipam_prefix AS U1 '
-                'WHERE U1.prefix_length = ipam_prefix.prefix_length '
-                'AND U1.network >= ipam_prefix.network '
-                'AND U1.broadcast <= ipam_prefix.broadcast '
-                f'AND COALESCE(U1.vrf_id, \'{FAKE_UUID}\') <= COALESCE(ipam_prefix.vrf_id, \'{FAKE_UUID}\')', ()
+                "SELECT COUNT(*) FROM ipam_prefix AS U1 "
+                "WHERE U1.prefix_length = ipam_prefix.prefix_length "
+                "AND U1.network >= ipam_prefix.network "
+                "AND U1.broadcast <= ipam_prefix.broadcast "
+                f"AND COALESCE(U1.vrf_id, '{FAKE_UUID}') <= COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
+                (),
             ),
         )
 
@@ -106,13 +109,9 @@ class IPAddressQuerySet(RestrictedQuerySet):
         try:
             byte_len = self.ip_family_map[family]
         except KeyError:
-            raise ValueError('invalid IP family {}'.format(family))
+            raise ValueError("invalid IP family {}".format(family))
 
-        return self.annotate(
-            address_len=Length(F('host'))
-        ).filter(
-            address_len=byte_len
-        )
+        return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
 
     def net_host_contained(self, network):
         return self.filter(
@@ -129,11 +128,7 @@ class IPAddressQuerySet(RestrictedQuerySet):
     def net_in(self, networks):
         # for a tuple of IP addresses, filter queryset for matches.
         # values may or may not have netmasks: ['10.0.0.1', '10.0.0.1/24', '10.0.0.1/25']
-        masked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if '/' in val]
-        masked_prefixes = [netaddr.IPNetwork(val).prefixlen for val in networks if '/' in val]
-        unmasked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if '/' not in val]
-        return self.filter(
-            Q(host__in=masked_hosts,
-              prefix_length__in=masked_prefixes) |
-            Q(host__in=unmasked_hosts)
-        )
+        masked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" in val]
+        masked_prefixes = [netaddr.IPNetwork(val).prefixlen for val in networks if "/" in val]
+        unmasked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" not in val]
+        return self.filter(Q(host__in=masked_hosts, prefix_length__in=masked_prefixes) | Q(host__in=unmasked_hosts))

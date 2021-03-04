@@ -206,10 +206,11 @@ class RIRBulkDeleteView(generic.BulkDeleteView):
 class AggregateListView(generic.ObjectListView):
     queryset = Aggregate.objects.annotate(
         child_count=RawSQL(
-            'SELECT COUNT(*) FROM ipam_prefix '
-            'WHERE ipam_prefix.prefix_length >= ipam_aggregate.prefix_length '
-            'AND ipam_prefix.network >= ipam_aggregate.network '
-            'AND ipam_prefix.broadcast <= ipam_aggregate.broadcast', ()
+            "SELECT COUNT(*) FROM ipam_prefix "
+            "WHERE ipam_prefix.prefix_length >= ipam_aggregate.prefix_length "
+            "AND ipam_prefix.network >= ipam_aggregate.network "
+            "AND ipam_prefix.broadcast <= ipam_aggregate.broadcast",
+            (),
         )
     )
     filterset = filters.AggregateFilterSet
@@ -412,19 +413,13 @@ class PrefixView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         try:
-            aggregate = (
-                Aggregate.objects
-                .restrict(request.user, "view")
-                .net_contains_or_equal(instance.prefix)
-                .first()
-            )
+            aggregate = Aggregate.objects.restrict(request.user, "view").net_contains_or_equal(instance.prefix).first()
         except Aggregate.DoesNotExist:
             aggregate = None
 
         # Parent prefixes table
         parent_prefixes = (
-            Prefix.objects
-            .restrict(request.user, "view")
+            Prefix.objects.restrict(request.user, "view")
             .net_contains(instance.prefix)
             .filter(Q(vrf=instance.vrf) | Q(vrf__isnull=True))
             .prefetch_related("role", "site", "status")

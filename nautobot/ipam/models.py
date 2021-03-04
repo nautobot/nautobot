@@ -218,17 +218,13 @@ class Aggregate(PrimaryModel):
     """
 
     network = VarbinaryIPField(
-        null=False, db_index=True, max_length=16,
-        help_text='IPv4 or IPv6 network address',
+        null=False,
+        db_index=True,
+        max_length=16,
+        help_text="IPv4 or IPv6 network address",
     )
-    broadcast = VarbinaryIPField(
-        null=False, db_index=True, max_length=16,
-        help_text='IPv4 or IPv6 broadcast address'
-    )
-    prefix_length = models.IntegerField(
-        null=False, db_index=True,
-        help_text='Length of the Network prefix, in bits.'
-    )
+    broadcast = VarbinaryIPField(null=False, db_index=True, max_length=16, help_text="IPv4 or IPv6 broadcast address")
+    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     rir = models.ForeignKey(
         to="ipam.RIR",
         on_delete=models.PROTECT,
@@ -256,10 +252,10 @@ class Aggregate(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ('network', 'broadcast', 'pk')  # prefix may be non-unique
+        ordering = ("network", "broadcast", "pk")  # prefix may be non-unique
 
     def __init__(self, *args, **kwargs):
-        prefix = kwargs.pop('prefix', None)
+        prefix = kwargs.pop("prefix", None)
         super(Aggregate, self).__init__(*args, **kwargs)
         self._deconstruct_prefix(prefix)
 
@@ -327,8 +323,8 @@ class Aggregate(PrimaryModel):
     @property
     def cidr_str(self):
         if self.network and self.prefix_length:
-            ip = netaddr.IPAddress(int.from_bytes(self.network, 'big'))
-            return u'%s/%s' % (ip, self.prefix_length)
+            ip = netaddr.IPAddress(int.from_bytes(self.network, "big"))
+            return "%s/%s" % (ip, self.prefix_length)
 
     @property
     def prefix(self):
@@ -423,17 +419,13 @@ class Prefix(PrimaryModel, StatusModel):
     """
 
     network = VarbinaryIPField(
-        null=False, db_index=True, max_length=16,
-        help_text='IPv4 or IPv6 network address',
+        null=False,
+        db_index=True,
+        max_length=16,
+        help_text="IPv4 or IPv6 network address",
     )
-    broadcast = VarbinaryIPField(
-        null=False, db_index=True, max_length=16,
-        help_text='IPv4 or IPv6 broadcast address'
-    )
-    prefix_length = models.IntegerField(
-        null=False, db_index=True,
-        help_text='Length of the Network prefix, in bits.'
-    )
+    broadcast = VarbinaryIPField(null=False, db_index=True, max_length=16, help_text="IPv4 or IPv6 broadcast address")
+    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -507,13 +499,13 @@ class Prefix(PrimaryModel, StatusModel):
     class Meta:
         ordering = (
             F("vrf__name").asc(nulls_first=True),
-            'network',
-            'prefix_length',
+            "network",
+            "prefix_length",
         )  # (vrf, prefix) may be non-unique
         verbose_name_plural = "prefixes"
 
     def __init__(self, *args, **kwargs):
-        prefix = kwargs.pop('prefix', None)
+        prefix = kwargs.pop("prefix", None)
         super(Prefix, self).__init__(*args, **kwargs)
         self._deconstruct_prefix(prefix)
 
@@ -596,8 +588,8 @@ class Prefix(PrimaryModel, StatusModel):
     @property
     def cidr_str(self):
         if self.network and self.prefix_length:
-            ip = netaddr.IPAddress(int.from_bytes(self.network, 'big'))
-            return u'%s/%s' % (ip, self.prefix_length)
+            ip = netaddr.IPAddress(int.from_bytes(self.network, "big"))
+            return "%s/%s" % (ip, self.prefix_length)
 
     @property
     def prefix(self):
@@ -738,17 +730,13 @@ class IPAddress(PrimaryModel, StatusModel):
     """
 
     host = VarbinaryIPField(
-        null=False, db_index=True, max_length=16,
-        help_text='IPv4 or IPv6 host address',
+        null=False,
+        db_index=True,
+        max_length=16,
+        help_text="IPv4 or IPv6 host address",
     )
-    broadcast = VarbinaryIPField(
-        null=False, db_index=True, max_length=16,
-        help_text='IPv4 or IPv6 broadcast address'
-    )
-    prefix_length = models.IntegerField(
-        null=False, db_index=True,
-        help_text='Length of the Network prefix, in bits.'
-    )
+    broadcast = VarbinaryIPField(null=False, db_index=True, max_length=16, help_text="IPv4 or IPv6 broadcast address")
+    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     vrf = models.ForeignKey(
         to="ipam.VRF",
         on_delete=models.PROTECT,
@@ -821,12 +809,12 @@ class IPAddress(PrimaryModel, StatusModel):
     objects = IPAddressQuerySet.as_manager()
 
     class Meta:
-        ordering = ('host', 'prefix_length', 'pk')  # address may be non-unique
+        ordering = ("host", "prefix_length", "pk")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
 
     def __init__(self, *args, **kwargs):
-        address = kwargs.pop('address', None)
+        address = kwargs.pop("address", None)
         super(IPAddress, self).__init__(*args, **kwargs)
         self._deconstruct_address(address)
 
@@ -944,8 +932,8 @@ class IPAddress(PrimaryModel, StatusModel):
     @property
     def address(self):
         if self.host and self.prefix_length:
-            host = netaddr.IPAddress(int.from_bytes(self.host, 'big'))
-            cidr = u'%s/%s' % (host, self.prefix_length)
+            host = netaddr.IPAddress(int.from_bytes(self.host, "big"))
+            cidr = "%s/%s" % (host, self.prefix_length)
             return netaddr.IPNetwork(cidr)
 
     @address.setter
