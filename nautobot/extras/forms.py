@@ -157,7 +157,9 @@ class CustomFieldFilterForm(forms.Form):
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
     slug = SlugField()
+    source_type = forms.ModelChoiceField(queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"))
     source_filter = JSONField(required=False, help_text='Enter any filters for the source object in <a href="https://json.org/">JSON</a> format.')
+    destination_type = forms.ModelChoiceField(queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"))
     destination_filter = JSONField(required=False, help_text='Enter any filters for the destination object in <a href="https://json.org/">JSON</a> format.')
 
     class Meta:
