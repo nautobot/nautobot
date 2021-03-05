@@ -95,6 +95,10 @@ RQ_QUEUES = {
     },
 }
 
+# Base URL path if accessing Nautobot within a directory. For example, if installed at https://example.com/nautobot/, set:
+# BASE_PATH = 'nautobot/'
+BASE_PATH = os.environ.get("BASE_PATH", "")
+
 # REDIS CACHEOPS
 CACHEOPS_REDIS = f"redis://:{os.getenv('REDIS_PASSWORD')}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/2"
 
