@@ -8,24 +8,6 @@ from nautobot.ipam.filters import IPAddressFilterSet
 from nautobot.extras.graphql.types import TagType  # noqa: F401
 
 
-@convert_django_field.register(VarbinaryIPField)
-def convert_field_to_string(field, registry=None):
-    """Convert IPNetworkField to String."""
-    return graphene.String()
-
-
-@convert_django_field.register(IPAddressField)
-def convert_field_to_string(field, registry=None):
-    """Convert IPAddressField to String."""
-    return graphene.String()
-
-
-@convert_django_field.register(IPNetworkField)  # noqa: F811
-def convert_field_to_string(field, registry=None):  # noqa: F811
-    """Convert IPNetworkField to String."""
-    return graphene.String()
-
-
 class IPAddressType(DjangoObjectType):
     """Graphql Type Object for IPAddress model."""
 
