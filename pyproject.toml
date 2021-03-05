@@ -65,7 +65,6 @@ drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 GitPython = "~3.1.13"
 # GraphQL support
 graphene-django = "~2.15.0"
-# WSGI HTTP server
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 # Template rendering engine
@@ -80,7 +79,7 @@ Pillow = "~8.1.0"
 psycopg2-binary = "~2.8.6"
 # Cryptographic library
 pycryptodome = "~3.10.1"
-# The uWSGI server as a Python module
+# The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "^2.0.19"
 # YAML parsing and rendering
 PyYAML = "~5.4.1"
