@@ -5,40 +5,58 @@
 
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
-Nautobot comes preinstalled with [Gunicorn](http://gunicorn.org/) to use as the WSGI server, however other WSGI servers are available and should work similarly well. [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) is a popular alternative.
+Nautobot comes preinstalled with [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) to use as the WSGI server, however other WSGI servers are available and should work similarly well. [Gunicorn](http://gunicorn.org/) is a popular alternative.
 
-This document will guide you through setting up Gunicorn and establishing Nautobot web services to run on system startup.
+This document will guide you through setting up uWSGI and establishing Nautobot web services to run on system startup.
+
+Nautobot includes a `nautobot-server start` management command that directly invokes uWSGI. This command behaves exactly as uWSGI does, but allows us to maintain a single entrypoint into the Nautobot application.
+
+```
+(nautobot) $ nautobot-server start
+```
+
 
 ## Configuration
 
-Copy and paste the following into `/opt/nautobot/gunicorn.py`:
+Copy and paste the following into `/opt/nautobot/uwsgi.ini`:
 
-```python
-# The IP address (typically localhost) and port that the Netbox WSGI process should listen on
-bind = '127.0.0.1:8001'
+```ini
+[uwsgi]
+; The IP address (typically localhost) and port that the WSGI process should listen on
+http-socket = 127.0.0.1:8001
 
-# Number of gunicorn workers to spawn. This should typically be 2n+1, where
-# n is the number of CPU cores present.
-workers = 5
+; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
+processes = 5
 
 # Number of threads per worker process
 threads = 3
 
-# Timeout (in seconds) for a request to complete
-timeout = 120
+# Set internal buffer size
+buffer-size = 8192
 
-# The maximum number of requests a worker can handle before being respawned
-max_requests = 5000
-max_requests_jitter = 500
+# Set the socket listen queue size
+listen = 1024
+
+# Enable master process
+master = true
+
+# Enable threading
+enable-threads = true
+
+# Try to remove all of the generated file/sockets
+vacuum = true
+
+# Do not use multiple interpreters (where available)
+single-interpreter = true
 ```
 
 This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
-address and/or port number, or to make performance-related adjustments. See [Gunicorn
-documentation](https://docs.gunicorn.org/en/stable/configure.html) for the available configuration parameters.
+address and/or port number, or to make performance-related adjustments. See [uWSGI
+documentation](https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html) for the available configuration parameters.
 
 ## Setup systemd
 
-We'll use `systemd` to control both Gunicorn and Nautobot's background worker process. 
+We'll use `systemd` to control both uWSGI and Nautobot's background worker process. 
 
 !!! warning
     The following steps must be performed with root permissions.
@@ -50,7 +68,7 @@ First, copy and paste the following into `/etc/systemd/system/nautobot.service`:
 ```
 [Unit]
 Description=Nautobot WSGI Service
-Documentation=https://nautobot.readthedocs.io/en/latest/
+Documentation=https://nautobot.readthedocs.io/
 After=network-online.target
 Wants=network-online.target
 
@@ -63,7 +81,7 @@ Group=nautobot
 PIDFile=/var/tmp/nautobot.pid
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/bin/gunicorn --pid /var/tmp/nautobot.pid --config /opt/nautobot/gunicorn.py nautobot.core.wsgi
+ExecStart=/opt/nautobot/bin/nautobot-server start --pidfile /var/tmp/nautobot.pid --ini /opt/nautobot/uwsgi.ini
 
 Restart=on-failure
 RestartSec=30
@@ -80,7 +98,7 @@ Next, copy and paste the following into `/etc/systemd/system/nautobot-worker.ser
 ```
 [Unit]
 Description=Nautobot Request Queue Worker
-Documentation=https://nautobot.readthedocs.io/en/latest/
+Documentation=https://nautobot.readthedocs.io/
 After=network-online.target
 Wants=network-online.target
 
@@ -113,22 +131,27 @@ $ sudo systemctl daemon-reload
 Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
 
 ```no-highlight
-$ sudo systemctl start nautobot nautobot-worker
-$ sudo systemctl enable nautobot nautobot-worker
+$ sudo systemctl enable --now nautobot nautobot-worker
 ```
 
 ### Verify the service
 You can use the command `systemctl status nautobot.service` to verify that the WSGI service is running:
 
 ```no-highlight
-$ sudo systemctl status nautobot.service
-   Main PID: 22836 (gunicorn)
-      Tasks: 6 (limit: 2345)
-     Memory: 339.3M
+● nautobot.service - Nautobot WSGI Service
+     Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2021-03-05 22:23:33 UTC; 35min ago
+       Docs: https://nautobot.readthedocs.io/en/latest/
+   Main PID: 6992 (nautobot-server)
+      Tasks: 16 (limit: 9513)
+     Memory: 221.1M
      CGroup: /system.slice/nautobot.service
-             ├─22836 /opt/nautobot/bin/python3 /opt/nautobot/bin/gunicorn --pid>
-             ├─22854 /opt/nautobot/bin/python3 /opt/nautobot/bin/gunicorn --pid>
-             ├─22855 /opt/nautobot/bin/python3 /opt/nautobot/bin/gunicorn --pid>
+             ├─6992 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
+             ├─7007 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
+             ├─7010 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
+             ├─7013 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
+             ├─7016 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
+             └─7019 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
 ```
 
 !!! note

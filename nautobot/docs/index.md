@@ -50,7 +50,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python framework a
 | Function           | Component         |
 |--------------------|-------------------|
 | HTTP service       | NGINX or Apache   |
-| WSGI service       | Gunicorn or uWSGI |
+| WSGI service       | uWSGI or Gunicorn |
 | Application        | Django/Python     |
 | Database           | PostgreSQL 9.6+   |
 | Task queuing       | Redis/django-rq   |

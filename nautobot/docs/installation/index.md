@@ -50,7 +50,7 @@ environment without them. The installation and configuration of these dependenci
 
 For production deployment we recommend the following:
 
-- [Gunicorn](https://gunicorn.org) WSGI server
+- [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) WSGI server
 - [NGINX](https://www.nginx.com/resources/wiki/) HTTP server
 - [External authentication](external-authentication) service for SSO such as SAML, OAuth2, or LDAP, or an authenticating proxy
 
