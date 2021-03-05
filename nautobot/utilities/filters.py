@@ -178,6 +178,10 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
             if self.conjoined:
                 qs = ContentTypeFilter.filter(self, qs, v)
             else:
+                # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
+                # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
+                # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
+                # Q((field__app_label="dcim" AND field__model="device") OR (field__app_label="ipam" AND field__model="VLAN"))
                 try:
                     app_label, model = v.lower().split(".")
                 except ValueError:
