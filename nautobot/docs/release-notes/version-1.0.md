@@ -4,6 +4,47 @@ This document describes all new features and changes in Nautobot 1.0, a divergen
 
 Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation as well.
 
+## v1.0.0b2 (2021-03-05)
+
+### Added
+
+- [#35](https://github.com/nautobot/nautobot/issues/35) - Documentation for troubleshooting Nautobot's interaction with SELinux.
+- [#47](https://github.com/nautobot/nautobot/issues/47) - Basic user documentation for Relationships feature.
+- [#48](https://github.com/nautobot/nautobot/issues/48) - Additional unit testing and bug fixes for Relationships feature.
+
+### Changed
+
+- [#52](https://github.com/nautobot/nautobot/pull/52) - Disabled Poetry's "parallel installation" feature for CI and development builds.
+- [#61](https://github.com/nautobot/nautobot/pull/61) - Updated pull request template contents for clarity.
+- [#74](https://github.com/nautobot/nautobot/pull/74) - Refactor install instructions to be more streamlined and more intuitive.
+  - Renamed `nautobot-rq` service to `nautobot-worker`
+  - Replaced `BASE_STORAGE_DIR` configuration setting with `NAUTOBOT_ROOT`; this new setting also influences the default value of `DEFAULT_CONFIG_PATH`.
+- [#89](https://github.com/nautobot/nautobot/pull/89) - Development workflow improvements
+  - Replace `pycodestyle` with `flake8` for linting.
+  - Add `invoke black` and `invoke tests` commands
+  - Improve speed of development Docker container rebuilds
+  - `django-debug-toolbar` is now a development dependency rather than a production dependency for Nautobot.
+
+### Removed
+
+- [#72](https://github.com/nautobot/nautobot/pull/72) - Removed issue template for "Documentation Change"; use "Bug" or "Feature Request" issue templates instead.
+
+### Fixed
+
+- [#26](https://github.com/nautobot/nautobot/issues/26) - `poetry run nautobot-server` does not work.
+- [#36](https://github.com/nautobot/nautobot/pull/36) - Broken links to ReadTheDocs pages.
+- [#41](https://github.com/nautobot/nautobot/pull/41) - Incorrect field name in CustomLink Admin page.
+- [#42](https://github.com/nautobot/nautobot/issues/42) - Incorrect link to `nautobot-plugin-golden-config` GitHub repository
+- [#45](https://github.com/nautobot/nautobot/issues/45) - Incorrect button labels when creating/editing an Interface record.
+- [#43](https://github.com/nautobot/nautobot/issues/43) - Incorrect commands in documentation for adding optional dependencies to `local_requirements.txt`
+- [#51](https://github.com/nautobot/nautobot/issues/51) - Incorrect functioning of "development container" in VSCode integration.
+- [#57](https://github.com/nautobot/nautobot/pull/57) - Incorrect `AUTHENTICATION_BACKENDS` example in `authentication/ldap.md`
+- [#63](https://github.com/nautobot/nautobot/issues/63) - Incorrect help text for "Destination Label" field when creating/editing Relationship records.
+- [#64](https://github.com/nautobot/nautobot/issues/64) - Incorrect absolute link to ReadTheDocs page.
+- [#69](https://github.com/nautobot/nautobot/issues/69) - More incorrect links to ReadTheDocs pages.
+- [#79](https://github.com/nautobot/nautobot/issues/79) - Incorrect internal documentation link to `STORAGE_BACKEND` optional setting.
+- [#81](https://github.com/nautobot/nautobot/issues/81) - Unable to change Device rack position after creation.
+
 ## v1.0.0b1 (2021-02-24)
 
 ### Added
