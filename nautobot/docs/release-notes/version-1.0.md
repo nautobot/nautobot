@@ -31,7 +31,6 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 ### Fixed
 
-- [#26](https://github.com/nautobot/nautobot/issues/26) - `poetry run nautobot-server` does not work.
 - [#36](https://github.com/nautobot/nautobot/pull/36) - Broken links to ReadTheDocs pages.
 - [#41](https://github.com/nautobot/nautobot/pull/41) - Incorrect field name in CustomLink Admin page.
 - [#42](https://github.com/nautobot/nautobot/issues/42) - Incorrect link to `nautobot-plugin-golden-config` GitHub repository
