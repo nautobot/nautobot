@@ -82,7 +82,20 @@ The filesystem path to use to store Nautobot files (jobs, uploaded images, Git r
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
 
+!!! warning
+    It is an error to set the timeout value to `0`. If you wish to disable caching, please use [`CACHEOPS_ENABLED`](#cacheops_enabled).
+
 Various defaults for caching, the most important of which being the cache timeout. The `timeout` is the number of seconds that cache entries will be retained before expiring.
+
+---
+
+## CACHEOPS_ENABLED
+
+Default: `True`
+
+A boolean that turns on/off caching.
+
+If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
 
 ---
 

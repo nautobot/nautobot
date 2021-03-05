@@ -213,6 +213,19 @@ This step is entirely optional. As indicated above, we mentioned that any extra 
 (nautobot) $ pip3 install -r /opt/nautobot/local_requirements.txt
 ```
 
+## Check your Configuration
+
+Nautobot leverages Django's built-in [system check framework](https://docs.djangoproject.com/en/stable/topics/checks/#writing-your-own-checks) to validate the configuration to detect common problems and to provide hints for how to fix them. 
+
+Checks are ran automatically when running a development server using `nautobot-server runserver`, but not when running in production using WSGI.
+
+!!! hint
+    Get into the habit of running checks before deployments!
+
+```no-highlight
+(nautobot) $ nautobot-server check
+```
+
 ## Test the Application
 
 At this point, we should be able to run Nautobot's development server for testing. We can check by starting a
