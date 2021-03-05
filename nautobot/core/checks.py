@@ -8,7 +8,7 @@ E001 = Error(
 )
 
 
-@register(Tags.database)
+@register(Tags.caches)
 def cache_timeout_check(app_configs, **kwargs):
     if settings.CACHEOPS_DEFAULTS.get("timeout") == 0:
         return [E001]

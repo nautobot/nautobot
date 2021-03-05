@@ -172,6 +172,19 @@ To use remote file storage, add `django-storages` to your `local_requirements.tx
 (nautobot) $ echo django-storages >> /opt/nautobot/local_requirements.txt
 ```
 
+## Check your Configuration
+
+Nautobot leverages Django's built-in [system check framework](https://docs.djangoproject.com/en/stable/topics/checks/#writing-your-own-checks) to validate the configuration to detect common problems and to provide hints for how to fix them. 
+
+Checks are ran automatically when running a development server using `nautobot-server runserver`, but not when running in production using WSGI.
+
+!!! hint
+    Get into the habit of running checks before deployments!
+
+```no-highlight
+(nautobot) $ nautobot-server check
+```
+
 ## Prepare the Database
 
 Before Nautobot can run, the database migrations must be performed to prepare the database for use. This will populate the database tables and relationships:
