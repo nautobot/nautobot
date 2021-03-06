@@ -361,6 +361,8 @@ class CablePath(BaseModel):
         if origin is None or origin.cable is None:
             return None
 
+        from nautobot.circuits.models import CircuitTermination
+
         destination = None
         path = []
         position_stack = []
@@ -403,6 +405,19 @@ class CablePath(BaseModel):
                     path.append(object_to_path_node(node))
                 except ObjectDoesNotExist:
                     # No corresponding FrontPort found for the RearPort
+                    break
+            
+            elif isinstance(peer_termination, CircuitTermination):
+                node = peer_termination.get_peer_termination()
+                if node is None:
+                    destination = peer_termination
+                    break
+                path.append(object_to_path_node(peer_termination))
+                path.append(object_to_path_node(node))
+                try:
+                    path.append(object_to_path_node(node.cable))
+                except AttributeError:
+                    # Deleted cable does not exist.
                     break
 
             # Anything else marks the end of the path
