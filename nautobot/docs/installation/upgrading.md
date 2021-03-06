@@ -56,10 +56,10 @@ sudo cp /opt/nautobot-X.Y.Z/jobs/*.py /opt/nautobot/jobs
 # If you have any job data files (such as YAML or JSON) stored in the JOBS_ROOT directory, be sure to copy those as well
 ```
 
-If you followed the original installation guide to set up gunicorn, be sure to copy its configuration as well:
+If you followed the original installation guide to set up uWSGI, be sure to copy its configuration as well:
 
 ```no-highlight
-sudo cp /opt/nautobot-X.Y.Z/gunicorn.py /opt/nautobot/
+sudo cp /opt/nautobot-X.Y.Z/uwsgi.ini /opt/nautobot/
 ```
 
 ### Option B: Clone the Git Repository

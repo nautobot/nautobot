@@ -13,7 +13,7 @@ Group=nautobot
 PIDFile=/var/tmp/nautobot.pid
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/bin/gunicorn --pid /var/tmp/nautobot.pid --config /opt/nautobot/gunicorn.py nautobot.core.wsgi
+ExecStart=/opt/nautobot/bin/nautobot-server start --pidfile /var/tmp/nautobot.pid --ini /opt/nautobot/uwsgi.ini
 
 Restart=on-failure
 RestartSec=30

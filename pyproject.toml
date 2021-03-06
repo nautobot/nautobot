@@ -47,6 +47,8 @@ django-mptt = "~0.11.0"
 django-pglocks = "~1.0.4"
 # Prometheus metrics for Django
 django-prometheus = "~2.1.0"
+# Run production webservers such as uWSGI/gunicorn as a Django management command.
+django-webserver = "~1.2.0"
 # RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
 django-rq = "^2.4.0"
 # Advanced HTML tables
@@ -63,8 +65,6 @@ drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 GitPython = "~3.1.13"
 # GraphQL support
 graphene-django = "~2.15.0"
-# WSGI HTTP server
-gunicorn = "~20.0.4"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 # Template rendering engine
@@ -79,6 +79,8 @@ Pillow = "~8.1.0"
 psycopg2-binary = "~2.8.6"
 # Cryptographic library
 pycryptodome = "~3.10.1"
+# The uWSGI WSGI HTTP server as a Python module
+pyuwsgi = "^2.0.19"
 # YAML parsing and rendering
 PyYAML = "~5.4.1"
 # Rendering of SVG images (for rack elevations, etc.)
