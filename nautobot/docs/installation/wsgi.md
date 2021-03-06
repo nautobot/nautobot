@@ -11,10 +11,9 @@ This document will guide you through setting up uWSGI and establishing Nautobot 
 
 Nautobot includes a `nautobot-server start` management command that directly invokes uWSGI. This command behaves exactly as uWSGI does, but allows us to maintain a single entrypoint into the Nautobot application.
 
+```no-highlight
+$ nautobot-server start --help
 ```
-(nautobot) $ nautobot-server start
-```
-
 
 ## Configuration
 

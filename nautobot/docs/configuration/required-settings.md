@@ -2,12 +2,12 @@
 
 ## ALLOWED_HOSTS
 
-This is a list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the Nautobot service. Usually this is the same as the hostname for the Nautobot server, but can also be different; for example, when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the Nautobot server. To help guard against [HTTP Host header attackes](https://docs.djangoproject.com/en/3.0/topics/security/#host-headers-virtual-hosting), Nautobot will not permit access to the server via any other hostnames (or IPs).
+This is a list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the Nautobot service. Usually this is the same as the hostname for the Nautobot server, but can also be different; for example, when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the Nautobot server. To help guard against [HTTP Host header attacks](https://docs.djangoproject.com/en/stable/topics/security/#host-headers-virtual-hosting), Nautobot will not permit access to the server via any other hostnames (or IPs).
 
 !!! note
     This parameter must always be defined as a list or tuple, even if only a single value is provided.
 
-The value of this option is also used to set `CSRF_TRUSTED_ORIGINS`, which restricts POST requests to the same set of hosts (more about this [here](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-CSRF_TRUSTED_ORIGINS)). Keep in mind that Nautobot, by default, sets `USE_X_FORWARDED_HOST` to true, which means that if you're using a reverse proxy, it's the FQDN used to reach that reverse proxy which needs to be in this list (more about this [here](https://docs.djangoproject.com/en/stable/ref/settings/#allowed-hosts)).
+The value of this option is also used to set [`CSRF_TRUSTED_ORIGINS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-CSRF_TRUSTED_ORIGINS), which restricts POST requests to the same set of hosts. Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs.djangoproject.com/en/stable/ref/settings/#use-x-forwarded-host) to `True`, which means that if you're using a reverse proxy, the FQDN used to reach that reverse proxy needs to be in this list.
 
 Example:
 
@@ -20,6 +20,9 @@ If you are not yet sure what the domain name and/or IP address of the Nautobot i
 ```
 ALLOWED_HOSTS = ['*']
 ```
+
+!!! warning
+    It is not recommended to leave this value as `['*']` for production deployments. Please see the [official Django documentation on `ALLOWED_HOSTS`](https://docs.djangoproject.com/en/stable/ref/settings/#allowed-hosts) for help.
 
 ---
 
@@ -55,7 +58,7 @@ DATABASES = {
 ```
 
 !!! note
-    Nautobot supports all PostgreSQL database options supported by the underlying Django framework. For a complete list of available parameters, please see [the Django documentation](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
+    Nautobot supports all PostgreSQL database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
 
 ---
 
@@ -71,8 +74,9 @@ to different Redis instances/databases per feature.
 
     For this reason, the default settings utilize database `1` for caching and database `0` for tasks.
 
-The default settings should be suitable for most deployments and should only require customization for more advanced
-configurations.
+!!! tip
+    The default settings in your `nautobot_config.py` should be suitable for most deployments and should only require customization for more advanced configurations.
+
 
 ### Caching
 
@@ -80,7 +84,7 @@ Nautobot supports database query caching using [`django-cacheops`](https://githu
 
 Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
 
-For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
+For more details Nautobot's caching see the guide on [Caching](/additional-features/caching).
 
 #### CACHEOPS_REDIS
 
@@ -226,7 +230,10 @@ Please note that this key is **not** used directly for hashing user passwords or
 
 `SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
 
-A unique `SECRET_KEY` is generated for you automatically when you use `nautobot init` to create a new configuration. You may run `nautobot-server generate_secret_key` to generate a new key at any time.
+!!! note
+    A unique `SECRET_KEY` is generated for you automatically when you use `nautobot-server init` to create a new `nautobot_config.py`. 
+
+You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
 ```no-highlight
 $ nautobot-server generate_secret_key.py
@@ -236,4 +243,4 @@ $ nautobot-server generate_secret_key.py
 !!! warning
     In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
 
-For more details see [Nautobot Configuration](../).
+For more details see [Nautobot Configuration](..).
