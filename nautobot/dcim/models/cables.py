@@ -406,7 +406,7 @@ class CablePath(BaseModel):
                 except ObjectDoesNotExist:
                     # No corresponding FrontPort found for the RearPort
                     break
-            
+
             elif isinstance(peer_termination, CircuitTermination):
                 node = peer_termination.get_peer_termination()
                 if node is None:
