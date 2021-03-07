@@ -109,6 +109,6 @@ class Command(BaseCommand):
 
         # Run invalidate all
         if options.get("invalidate_all"):
-            print("Invalidating cache ...")
+            print("Invalidating cache...")
             call_command("invalidate", "all")
             print()
