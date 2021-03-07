@@ -506,7 +506,8 @@ class Rack(PrimaryModel, StatusModel):
                 available_units.remove(u)
 
         occupied_unit_count = self.u_height - len(available_units)
-        percentage = int(float(occupied_unit_count) / self.u_height * 100)
+        # Return the numerator and denominator as percentage is to be calculated later where needed
+        return (occupied_unit_count, self.u_height)
 
         return percentage
 
@@ -517,7 +518,7 @@ class Rack(PrimaryModel, StatusModel):
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
         if not available_power_total:
-            return 0
+            return (0, 0)
 
         pf_powerports = PowerPort.objects.filter(
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
@@ -532,7 +533,7 @@ class Rack(PrimaryModel, StatusModel):
             or 0
         )
 
-        return int(allocated_draw_total / available_power_total * 100)
+        return (allocated_draw_total, available_power_total)
 
 
 @extras_features(

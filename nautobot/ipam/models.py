@@ -311,7 +311,7 @@ class Aggregate(PrimaryModel):
         """
         queryset = Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
-        return int(float(child_prefixes.size) / self.prefix.size * 100)
+        return (child_prefixes.size, self.prefix.size)
 
 
 @extras_features(
@@ -613,21 +613,26 @@ class Prefix(PrimaryModel, StatusModel):
         return "{}/{}".format(next(available_ips.__iter__()), self.prefix.prefixlen)
 
     def get_utilization(self):
-        """
-        Determine the utilization of the prefix and return it as a percentage. For Prefixes with a status of
-        "container", calculate utilization based on child prefixes. For all others, count child IP addresses.
+        """Get the child prefix size and parent size.
+
+        Get the child prefix size and parent prefix size return them as a tuple. For Prefixes with a status of
+        "container", get the number child prefixes. For all others, count child IP addresses.
+
+        Returns:
+
         """
         if self.status == Prefix.STATUS_CONTAINER:
             queryset = Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
-            return int(float(child_prefixes.size) / self.prefix.size * 100)
+            return (child_prefixes.size, self.prefix.size)
+
         else:
             # Compile an IPSet to avoid counting duplicate IPs
             child_count = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()]).size
             prefix_size = self.prefix.size
             if self.prefix.version == 4 and self.prefix.prefixlen < 31 and not self.is_pool:
                 prefix_size -= 2
-            return int(float(child_count) / prefix_size * 100)
+            return (child_count, prefix_size)
 
 
 @extras_features(

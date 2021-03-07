@@ -32,7 +32,7 @@ AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>'
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
-{% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
+{% if record.pk %}{% utilization_graph record.get_utilization.0 record.get_utilization.1 %}{% else %}&mdash;{% endif %}
 """
 
 PREFIX_LINK = """
