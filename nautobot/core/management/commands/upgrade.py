@@ -47,7 +47,7 @@ class Command(BaseCommand):
             action="store_false",
             dest="invalidate_all",
             default=True,
-            help="Do not invalidate cache for entire application",
+            help="Do not automatically invalidate cache for entire application.",
         )
         parser.add_argument(
             "--no-migrate",
