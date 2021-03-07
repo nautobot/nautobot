@@ -201,7 +201,7 @@ class TestPrefix(TestCase):
             # Create 32 IPAddresses within the Prefix
             [IPAddress(address=netaddr.IPNetwork("10.0.0.{}/24".format(i))) for i in range(1, 33)]
         )
-        self.assertEqual(prefix.get_utilization(), 12)  # ~= 12%
+        self.assertEqual(prefix.get_utilization(), (32, 254))
 
     #
     # Uniqueness enforcement tests
