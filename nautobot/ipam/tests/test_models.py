@@ -192,7 +192,7 @@ class TestPrefix(TestCase):
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.128/26")),
             )
         )
-        self.assertEqual(prefix.get_utilization(), 50)
+        self.assertEqual(prefix.get_utilization(), (128, 256))
 
         # Non-container Prefix
         prefix.status = self.statuses.get(slug="active")
