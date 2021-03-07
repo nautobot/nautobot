@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django_rq.queues import get_connection
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -241,10 +240,9 @@ class JobViewSet(ViewSet):
 
         job_class = self._get_job_class(class_path)
         job = job_class()
-        input_serializer = serializers.JobInputSerializer(data=request.data)
 
-        if not input_serializer.is_valid():
-            return Response(input_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        input_serializer = serializers.JobInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
 
         data = input_serializer.data["data"]
         commit = input_serializer.data["commit"]

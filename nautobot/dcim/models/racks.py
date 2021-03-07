@@ -298,7 +298,7 @@ class Rack(PrimaryModel, StatusModel):
         elif self.outer_width is None and self.outer_depth is None:
             self.outer_unit = ""
 
-        if not self._state.adding:
+        if self.present_in_database:
             # Validate that Rack is tall enough to house the installed Devices
             top_device = Device.objects.filter(rack=self).exclude(position__isnull=True).order_by("-position").first()
             if top_device:
@@ -381,7 +381,7 @@ class Rack(PrimaryModel, StatusModel):
             }
 
         # Add devices to rack units list
-        if not self._state.adding:
+        if self.present_in_database:
 
             # Retrieve all devices installed within the rack
             queryset = (

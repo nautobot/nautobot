@@ -6,8 +6,7 @@
 	],
 	"settings": {
 		"python.linting.pylintEnabled": true,
-		"python.linting.enabled": true,
-		"pythonTestExplorer.testFramework": "pytest"
+		"python.linting.enabled": true
 	},
 	"launch": {
 		"version": "0.2.0",
@@ -16,13 +15,18 @@
 				"name": "Python: Nautobot",
 				"type": "python",
 				"request": "launch",
-				"program": "nautobot-server",
+				"program": "/usr/local/bin/nautobot-server",
 				"console": "integratedTerminal",
 				"args": [
 					"runserver",
 					"0.0.0.0:8000"
 				],
-				"django": true
+				"django": true,
+				"serverReadyAction": {
+					"action": "openExternally",
+					"pattern": "Starting development server at (https?://\\S+|[0-9]+)",
+					"uriFormat": "%s"
+				}
 			}
 		]
 	}

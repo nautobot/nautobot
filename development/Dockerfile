@@ -33,11 +33,13 @@ RUN poetry config installer.parallel false
 # Used if someone wants to override the entrypoint and provision a super user
 COPY development/docker-entrypoint.sh /tmp/nautobot/docker-entrypoint.sh
 
-COPY . /opt/nautobot
+COPY pyproject.toml poetry.lock /opt/nautobot/
 WORKDIR /opt/nautobot
+
+RUN poetry install --no-root
+
+COPY . /opt/nautobot
 
 RUN poetry install
-
-WORKDIR /opt/nautobot
 
 ENTRYPOINT ["/tmp/nautobot/docker-entrypoint.sh"]

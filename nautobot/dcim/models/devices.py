@@ -241,7 +241,7 @@ class DeviceType(PrimaryModel):
         # If editing an existing DeviceType to have a larger u_height, first validate that *all* instances of it have
         # room to expand within their racks. This validation will impose a very high performance penalty when there are
         # many instances to check, but increasing the u_height of a DeviceType should be a very rare occurrence.
-        if not self._state.adding and self.u_height > self._original_u_height:
+        if self.present_in_database and self.u_height > self._original_u_height:
             for d in Device.objects.filter(device_type=self, position__isnull=False):
                 face_required = None if self.is_full_depth else d.face
                 u_available = d.rack.get_available_units(
@@ -256,7 +256,7 @@ class DeviceType(PrimaryModel):
                     )
 
         # If modifying the height of an existing DeviceType to 0U, check for any instances assigned to a rack position.
-        elif not self._state.adding and self._original_u_height > 0 and self.u_height == 0:
+        elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
                 url = f"{reverse('dcim:device_list')}?manufactuer_id={self.manufacturer_id}&device_type_id={self.pk}"
@@ -638,7 +638,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
                 # Validate rack space
                 rack_face = self.face if not self.device_type.is_full_depth else None
-                exclude_list = [self.pk] if not self._state.adding else []
+                exclude_list = [self.pk] if self.present_in_database else []
                 available_units = self.rack.get_available_units(
                     u_height=self.device_type.u_height,
                     rack_face=rack_face,
@@ -708,7 +708,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
     def save(self, *args, **kwargs):
 
-        is_new = self._state.adding
+        is_new = not self.present_in_database
 
         super().save(*args, **kwargs)
 
@@ -875,7 +875,7 @@ class VirtualChassis(PrimaryModel):
 
         # Verify that the selected master device has been assigned to this VirtualChassis. (Skip when creating a new
         # VirtualChassis.)
-        if (not self._state.adding) and self.master and self.master not in self.members.all():
+        if self.present_in_database and self.master and self.master not in self.members.all():
             raise ValidationError(
                 {"master": f"The selected master ({self.master}) is not assigned to this virtual chassis."}
             )

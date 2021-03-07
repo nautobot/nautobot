@@ -19,6 +19,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
+    MultipleContentTypeField,
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -67,7 +68,7 @@ class CustomFieldModelForm(forms.ModelForm):
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
             field_name = "cf_{}".format(cf.name)
-            if not self.instance._state.adding:
+            if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
                 self.fields[field_name].initial = self.instance.custom_field_data.get(cf.name)
             else:
@@ -156,6 +157,20 @@ class CustomFieldFilterForm(forms.Form):
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
     slug = SlugField()
+    source_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+    )
+    source_filter = JSONField(
+        required=False,
+        help_text='Enter any filters for the source object in <a href="https://json.org/">JSON</a> format.',
+    )
+    destination_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+    )
+    destination_filter = JSONField(
+        required=False,
+        help_text='Enter any filters for the destination object in <a href="https://json.org/">JSON</a> format.',
+    )
 
     class Meta:
         model = Relationship
@@ -187,24 +202,18 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
 
     type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
-    source_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
+    source_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         required=False,
-        display_field="display_name",
         label="Source Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+        widget=StaticSelect2Multiple(),
     )
 
-    destination_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
+    destination_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         required=False,
-        display_field="display_name",
         label="Destination Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+        widget=StaticSelect2Multiple(),
     )
 
 
@@ -230,7 +239,7 @@ class RelationshipModelForm(forms.ModelForm):
                 self.fields[field_name] = cr.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
-                if not self.instance._state.adding:
+                if self.instance.present_in_database:
                     if cr.has_many(peer_side):
                         initial = [getattr(cra, peer_side) for cra in queryset.all()]
                         self.fields[field_name].initial = initial
@@ -310,24 +319,18 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
 
-    source_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
+    source_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         required=False,
-        display_field="display_name",
         label="Source Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+        widget=StaticSelect2Multiple(),
     )
 
-    destination_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
+    destination_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         required=False,
-        display_field="display_name",
         label="Destination Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+        widget=StaticSelect2Multiple(),
     )
 
 
@@ -804,12 +807,11 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
     model = Status
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
-    content_types = CSVMultipleContentTypeField(
+    content_types = MultipleContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content type(s)",
+        widget=StaticSelect2Multiple(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 

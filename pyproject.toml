@@ -31,41 +31,76 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+# Fundamental web framework for Nautobot
 Django = "~3.1.7"
+# Caching with Redis
 django-cacheops = "~5.1"
+# Permit cross-domain API requests
 django-cors-headers = "~3.7.0"
+# Support for encrypted database fields
 django-cryptography = "~1.0"
-django-debug-toolbar = "~3.2"
+# Advanced query filters
 django-filter = "~2.4.0"
+# Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
+# PostgreSQL advisory lock handling
 django-pglocks = "~1.0.4"
+# Prometheus metrics for Django
 django-prometheus = "~2.1.0"
+# Run production webservers such as uWSGI/gunicorn as a Django management command.
+django-webserver = "~1.2.0"
+# RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
 django-rq = "^2.4.0"
+# Advanced HTML tables
 django-tables2 = "~2.3.4"
+# Tags
 django-taggit = "~1.3.0"
+# Represent time zones in Django
 django-timezone-field = "~4.1.1"
+# REST API framework
 djangorestframework = "~3.12.2"
+# Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
+# Git integrations for Python
 GitPython = "~3.1.13"
+# GraphQL support
 graphene-django = "~2.15.0"
-gunicorn = "~20.0.4"
+# Package version detection in older versions of Python
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}
+# Template rendering engine
 Jinja2 = "~2.11.3"
+# Rendering of markdown files to HTML
 Markdown = "~3.3.3"
+# IP prefix and address handling
 netaddr = "~0.8.0"
+# Image processing library
 Pillow = "~8.1.0"
+# PostgreSQL database adapter
 psycopg2-binary = "~2.8.6"
+# Cryptographic library
 pycryptodome = "~3.10.1"
+# The uWSGI WSGI HTTP server as a Python module
+pyuwsgi = "^2.0.19"
+# YAML parsing and rendering
 PyYAML = "~5.4.1"
+# Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
 
 [tool.poetry.dev-dependencies]
-pycodestyle = "~2.6.0"
-coverage = "~5.4"
-invoke = "~1.5.0"
+# Code style enforcement
 black = "^20.8b1"
-mkdocs = "~1.1.2"
+# Test code coverage measurement
+coverage = "~5.4"
+# Tool for debugging Django
+django-debug-toolbar = "^3.2"
+# Code style checking and limited static analysis
+flake8 = "^3.8.4"
+# Alternative to Make, CLI based on `tasks.py`
+invoke = "~1.5.0"
+# Allow Markdown files to include other files
 markdown-include = "~0.6.0"
+# Rendering docs to HTML
+mkdocs = "~1.1.2"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

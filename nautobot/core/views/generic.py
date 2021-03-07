@@ -280,7 +280,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
-                "editing": not obj._state.adding,
+                "editing": obj.present_in_database,
             },
         )
 
@@ -295,7 +295,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             try:
                 with transaction.atomic():
-                    object_created = form.instance.pk is None
+                    object_created = not form.instance.present_in_database
                     obj = form.save()
 
                     # Check that the new object conforms with any assigned object-level permissions
@@ -343,7 +343,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
-                "editing": not obj._state.adding,
+                "editing": obj.present_in_database,
             },
         )
 

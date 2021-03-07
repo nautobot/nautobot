@@ -18,7 +18,7 @@ ALLOWED_HOSTS = []
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {
-        "NAME": os.getenv("NAUTOBOT_DATABASE", ""),  # Database name
+        "NAME": os.getenv("NAUTOBOT_DATABASE", "nautobot"),  # Database name
         "USER": os.getenv("NAUTOBOT_USER", ""),  # Database username
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),  # Datbase password
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),  # Database server
@@ -108,8 +108,11 @@ BANNER_LOGIN = ""
 # BASE_PATH = 'nautobot/'
 BASE_PATH = ""
 
-# Cache timeout in seconds. Set to 0 to dissable caching. Defaults to 900 (15 minutes)
+# Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
 CACHEOPS_DEFAULTS = {"timeout": 900}
+
+# Set to False to disable caching with cacheops. (Default: True)
+CACHEOPS_ENABLED = True
 
 # Maximum number of days to retain logged changes. Set to 0 to retain changes indefinitely. (Default: 90)
 CHANGELOG_RETENTION = 90

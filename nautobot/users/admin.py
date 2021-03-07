@@ -169,7 +169,7 @@ class ObjectPermissionForm(forms.ModelForm):
         self.fields["users"].queryset = self.fields["users"].queryset.order_by("username")
 
         # Check the appropriate checkboxes when editing an existing ObjectPermission
-        if not self.instance._state.adding:
+        if self.instance.present_in_database:
             for action in ["view", "add", "change", "delete"]:
                 if action in self.instance.actions:
                     self.fields[f"can_{action}"].initial = True
