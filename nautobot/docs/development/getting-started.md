@@ -131,8 +131,8 @@ The `devcontainer` will startup now. As a last step open the folder `/opt/nautob
 There are a few things you'll need:
 
 - A Linux system or environment
-- A PostgreSQL server, which can be installed locally [per the documentation](/installation/#install-nautobot)
-- A Redis server, which can also be [installed locally](/installation/#install-nautobot)
+- A PostgreSQL server, which can be installed locally [per the documentation](/installation/#installing-nautobot-dependencies)
+- A Redis server, which can also be [installed locally](/installation/#installing-nautobot-dependencies)
 - A supported version of Python
 - A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 

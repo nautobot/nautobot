@@ -1,8 +1,8 @@
-# Deploy Nautobot
+# Installing Nautobot
 
 This section of the documentation discusses installing and configuring the Nautobot application itself.
 
-The instructions will guide you through the following actions:
+These instructions will guide you through the following actions:
 
 - Establish a Nautobot root directory for the application environment
 - Create a `nautobot` system account
@@ -10,9 +10,10 @@ The instructions will guide you through the following actions:
 - Install Nautobot and all required Python packages
 - Run the database schema migrations
 - Aggregate static resource files on disk
+- Verify the installation using the development/test server
 
 !!! important
-    PostgreSQL and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot](../../installation/#install-nautobot)
+    PostgreSQL and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
 
 ## Choose your `NAUTOBOT_ROOT`
 

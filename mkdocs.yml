@@ -21,12 +21,12 @@ markdown_extensions:
 nav:
     - Introduction: 'index.md'
     - Installation:
-        - Install Prerequisites: 'installation/index.md'
-        - Install Nautobot: 'installation/nautobot.md'
-        - Deploy Nautobot: 'installation/wsgi.md'
-        - Configure HTTP Server: 'installation/http-server.md'
-        - Configure External Authentication (Optional): 'installation/external-authentication.md'
-    - Administration:
+        - Installing Prerequisites: 'installation/index.md'
+        - Installing Nautobot: 'installation/nautobot.md'
+        - Deploying Nautobot: 'installation/wsgi.md'
+        - Configuring an HTTP Server: 'installation/http-server.md'
+        - External Authentication (Optional): 'installation/external-authentication.md'
+    - Migration:
         - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
     - Configuration:
