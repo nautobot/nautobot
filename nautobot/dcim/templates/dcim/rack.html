@@ -150,11 +150,11 @@
                 </tr>
                 <tr>
                     <td>Space Utilization</td>
-                    <td>{% utilization_graph object.get_utilization.0 object.get_utilization.1 %}</td>
+                    <td>{% utilization_graph object.get_utilization.occupied object.get_utilization.rack_height %}</td>
                 </tr>
                 <tr>
                     <td>Power Utilization</td>
-                    <td>{% utilization_graph object.get_power_utilization.0 object.get_power_utilization.1 %}</td>
+                    <td>{% utilization_graph object.get_power_utilization.allocated_draw_total object.get_power_utilization.available_power_total %}</td>
                 </tr>
             </table>
         </div>

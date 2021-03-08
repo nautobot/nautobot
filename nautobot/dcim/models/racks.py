@@ -498,6 +498,9 @@ class Rack(PrimaryModel, StatusModel):
         Returns:
             tuple: (Occupied Unit Count, U Height of the rack)
         """
+        # Setup Named Tuple
+        Utilization = namedtuple('Utilization', ['occupied', 'rack_height'])
+
         # Determine unoccupied units
         available_units = self.get_available_units()
 
@@ -506,10 +509,8 @@ class Rack(PrimaryModel, StatusModel):
             if u in available_units:
                 available_units.remove(u)
 
-        occupied_unit_count = self.u_height - len(available_units)
-
         # Return the numerator and denominator as percentage is to be calculated later where needed
-        return (occupied_unit_count, self.u_height)
+        return Utilization(rack_height=self.u_height, occupied=self.u_height - len(available_units))
 
     def get_power_utilization(self):
         """Determine the utilization numerator and denominator for power utilization on the rack.
@@ -517,10 +518,12 @@ class Rack(PrimaryModel, StatusModel):
         Returns:
             tuple: (Allocated Draw, Total available power)
         """
+        # Setup Named Tuple
+        PowerUtilization = namedtuple('PowerUtilization', ["allocated_draw_total", "available_power_total"])
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
         if not available_power_total:
-            return (0, 0)
+            return PowerUtilization(allocated_draw_total=0, available_power_total=0)
 
         pf_powerports = PowerPort.objects.filter(
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
@@ -535,7 +538,7 @@ class Rack(PrimaryModel, StatusModel):
             or 0
         )
 
-        return (allocated_draw_total, available_power_total)
+        return PowerUtilization(allocated_draw_total=allocated_draw_total, available_power_total=available_power_total)
 
 
 @extras_features(
