@@ -4,26 +4,32 @@ This document describes all new features and changes in Nautobot 1.0, a divergen
 
 Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation as well.
 
-## v1.0.0b2 (2021-03-05)
+## v1.0.0b2 (2021-03-08)
 
 ### Added
 
 - [#35](https://github.com/nautobot/nautobot/issues/35) - Documentation for troubleshooting Nautobot's interaction with SELinux.
 - [#47](https://github.com/nautobot/nautobot/issues/47) - Basic user documentation for Relationships feature.
 - [#48](https://github.com/nautobot/nautobot/issues/48) - Additional unit testing and bug fixes for Relationships feature.
+- [#99](https://github.com/nautobot/nautobot/pull/99) - Add `BASE_PATH` to `development/nautobot_config.py`.
+- [#101](https://github.com/nautobot/nautobot/issues/101) - Complete documentation of `NAUTOBOT_ROOT`
+- [#107](https://github.com/nautobot/nautobot/pull/107) - Add `nautobot-server post_upgrade` command
 
 ### Changed
 
 - [#52](https://github.com/nautobot/nautobot/pull/52) - Disabled Poetry's "parallel installation" feature for CI and development builds.
 - [#61](https://github.com/nautobot/nautobot/pull/61) - Updated pull request template contents for clarity.
 - [#74](https://github.com/nautobot/nautobot/pull/74) - Refactor install instructions to be more streamlined and more intuitive.
-  - Renamed `nautobot-rq` service to `nautobot-worker`
-  - Replaced `BASE_STORAGE_DIR` configuration setting with `NAUTOBOT_ROOT`; this new setting also influences the default value of `DEFAULT_CONFIG_PATH`.
+    - Renamed `nautobot-rq` service to `nautobot-worker`
+    - Replaced `BASE_STORAGE_DIR` configuration setting with `NAUTOBOT_ROOT`; this new setting also influences the default value of `DEFAULT_CONFIG_PATH`.
+- [#88](https://github.com/nautobot/nautobot/issues/88) - Replace Gunicorn w/ uWSGI
 - [#89](https://github.com/nautobot/nautobot/pull/89) - Development workflow improvements
-  - Replace `pycodestyle` with `flake8` for linting.
-  - Add `invoke black` and `invoke tests` commands
-  - Improve speed of development Docker container rebuilds
-  - `django-debug-toolbar` is now a development dependency rather than a production dependency for Nautobot.
+    - Replace `pycodestyle` with `flake8` for linting.
+    - Add `invoke black` and `invoke tests` commands
+    - Improve speed of development Docker container rebuilds
+    - `django-debug-toolbar` is now a development dependency rather than a production dependency for Nautobot.
+- [#106](https://github.com/nautobot/nautobot/pull/106) - Revise deployment docs to use `$PATH` instead of venv activate
+- [#108](https://github.com/nautobot/nautobot/pull/108) - Document special workflow for development using containers on remote servers
 
 ### Removed
 
@@ -43,6 +49,7 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 - [#69](https://github.com/nautobot/nautobot/issues/69) - More incorrect links to ReadTheDocs pages.
 - [#79](https://github.com/nautobot/nautobot/issues/79) - Incorrect internal documentation link to `STORAGE_BACKEND` optional setting.
 - [#81](https://github.com/nautobot/nautobot/issues/81) - Unable to change Device rack position after creation.
+- [#93](https://github.com/nautobot/nautobot/issues/93) - Bug when setting `CACHEOPS_DEFAULTS` timeout value to `0`.
 
 ## v1.0.0b1 (2021-02-24)
 
