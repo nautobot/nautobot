@@ -2,7 +2,7 @@
 
 Certain objects in Nautobot support the attachment of uploaded images. These will be saved to the Nautobot server and made available whenever the object is viewed.
 
-The location of where image attachements are stored can be customized using the [`MEDIA_ROOT`](/configuration/optional-settings/#media_root) setting in your `nautobot_config.py`.
+The location of where image attachements are stored can be customized using the [`MEDIA_ROOT`](../../../configuration/optional-settings/#media_root) setting in your `nautobot_config.py`.
 
 Currently, the following types of image attachments can be stored in Nautobot:
 

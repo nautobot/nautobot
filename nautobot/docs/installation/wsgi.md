@@ -55,7 +55,7 @@ documentation](https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html) f
 
 ## Setup systemd
 
-We'll use `systemd` to control both uWSGI and Nautobot's background worker process. 
+We'll use `systemd` to control both uWSGI and Nautobot's background worker process.
 
 !!! warning
     The following steps must be performed with root permissions.

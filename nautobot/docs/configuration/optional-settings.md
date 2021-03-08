@@ -238,7 +238,7 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 
 Default: `os.path.join(NAUTOBOT_ROOT, "git")`
 
-The file path to a directory where cloned [Git repositories](/models/extras/gitrepository) will be located.
+The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
 
@@ -290,7 +290,7 @@ addresses (and [`DEBUG`](#debug) is true).
 
 Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
 
-The file path to a directory where [Jobs](/additional-features/jobs) can be discovered.
+The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_JOBS_ROOT` to a directory path of your choosing.
 
@@ -341,7 +341,7 @@ LOGGING = {
 * `nautobot.auth.*` - Authentication events
 * `nautobot.api.views.*` - Views which handle business logic for the REST API
 * `nautobot.jobs.*` - Job execution (`* = JobClassName`)
-* `nautobot.graphql.*` - [GraphQL](/additional-features/graphql) initialization and operation.
+* `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
 * `nautobot.plugins.*` - Plugin loading and activity
 * `nautobot.views.*` - Views which handle business logic for the web UI
 * `rq.worker` - Background task handling
@@ -368,7 +368,7 @@ A web user or API consumer can request an arbitrary number of objects by appendi
 
 Default: `os.path.join(NAUTOBOT_ROOT, "media")`
 
-The file path to the location where media files (such as [image attachments](/models/extras/imageattachment)) are stored.
+The file path to the location where media files (such as [image attachments](../models/extras/imageattachment.md)) are stored.
 
 Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#media-root) for more information.
 
@@ -378,7 +378,7 @@ Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djan
 
 Default: `False`
 
-Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](/additional-features/prometheus-metrics/) documentation for more details.
+Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../additional-features/prometheus-metrics.md) documentation for more details.
 
 ---
 
@@ -435,7 +435,7 @@ Default: `~/.nautobot/`
 
 The filesystem path to use to store Nautobot files (Jobs, uploaded images, Git repositories, etc.).
 
-This setting is used internally in the core settings to provide default locations for [features that require file storage](http://localhost:8001/configuration/#file-storage), and the [default location of the `nautobot_config.py`](/configuration/#specifying-your-configuration).
+This setting is used internally in the core settings to provide default locations for [features that require file storage](../../configuration/#file-storage), and the [default location of the `nautobot_config.py`](../../configuration/#specifying-your-configuration).
 
 !!! warning
     Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
@@ -454,7 +454,7 @@ The default maximum number of objects to display per page within each list of ob
 
 Default: `[]` (Empty list)
 
-A list of installed [Nautobot plugins](/plugins) to enable. Plugins will not take effect unless they are listed here.
+A list of installed [Nautobot plugins](../../plugins) to enable. Plugins will not take effect unless they are listed here.
 
 !!! warning
     Plugins extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install plugins from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with plugins enabled.
@@ -533,7 +533,7 @@ This parameter defines the URL of the repository that will be checked periodical
 
 Default: `300`
 
-The maximum execution time of a background task (such as running a [Job](/additional-features/jobs)), in seconds.
+The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
 
 ---
 ## SESSION_COOKIE_AGE

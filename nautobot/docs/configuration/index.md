@@ -56,7 +56,7 @@ The `NAUTOBOT_ROOT` configuration setting specifies where these files will be st
 $ export NAUTOBOT_ROOT=/opt/nautobot
 ```
 
-This setting is also used in the [Nautobot deployment guide](/installation/nautobot/) to make the `nautobot-server` command easier to find and use.
+This setting is also used in the [Nautobot deployment guide](../installation/nautobot/) to make the `nautobot-server` command easier to find and use.
 
 !!! note
     The `--config` argument and the `NAUTOBOT_CONFIG` environment variable will always take precedence over `NAUTOBOT_ROOT` for the purpose of telling Nautobot where your `nautobot_config.py` can be found.
@@ -66,7 +66,7 @@ This setting is also used in the [Nautobot deployment guide](/installation/nauto
 
 ## File Storage
 
-Nautobot is capable of storing various types of files. This includes [Jobs](/additional-features/jobs), [Git repositories](/models/extras/gitrepository), [image attachments](/models/extras/imageattachment), and [static files](/configuration/optional-settings/#static_root) (CSS, JavaScript, etc.).
+Nautobot is capable of storing various types of files. This includes [Jobs](../additional-features/jobs), [Git repositories](../models/extras/gitrepository), [image attachments](../models/extras/imageattachment), and [static files](../configuration/optional-settings/#static_root) (CSS, JavaScript, etc.).
 
 Each of the features requiring use of file storage default to being stored in `NAUTOBOT_ROOT`. If desired, you may customize each one individually. Please see each feature's respective documentation linked above for how to do that.
 
