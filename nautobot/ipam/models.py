@@ -315,10 +315,9 @@ class Aggregate(PrimaryModel):
         utilization = self.get_utilization()
         return int(utilization.child_prefix_size / float(utilization.prefix_size) * 100)
 
-
     def get_utilization(self):
         """Gets the numerator and denominator for calculating utilization of an Aggregrate.
-        
+
         Returns:
             namedtuple: Representing the Aggregrate utilization
         """
@@ -633,7 +632,7 @@ class Prefix(PrimaryModel, StatusModel):
         For Prefixes with a status of "container", get the number child prefixes. For all others, count child IP addresses.
 
         Returns:
-            PrefixUtilization (namedtuple): (child_size - prefixes or IP addresses, prefix_size) 
+            PrefixUtilization (namedtuple): (child_size - prefixes or IP addresses, prefix_size)
         """
         # Setup the namedtuple
         PrefixUtilization = namedtuple("PrefixUtilization", ["child_size", "prefix_size"])

@@ -494,12 +494,12 @@ class Rack(PrimaryModel, StatusModel):
 
     def get_utilization(self):
         """Gets utilization numerator and denominator for racks.
-        
+
         Returns:
             tuple: (Occupied Unit Count, U Height of the rack)
         """
         # Setup Named Tuple
-        Utilization = namedtuple('Utilization', ['occupied', 'rack_height'])
+        Utilization = namedtuple("Utilization", ["occupied", "rack_height"])
 
         # Determine unoccupied units
         available_units = self.get_available_units()
@@ -519,7 +519,7 @@ class Rack(PrimaryModel, StatusModel):
             tuple: (Allocated Draw, Total available power)
         """
         # Setup Named Tuple
-        PowerUtilization = namedtuple('PowerUtilization', ["allocated_draw_total", "available_power_total"])
+        PowerUtilization = namedtuple("PowerUtilization", ["allocated_draw_total", "available_power_total"])
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
         if not available_power_total:
