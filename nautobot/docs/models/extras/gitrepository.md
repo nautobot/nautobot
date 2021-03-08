@@ -7,7 +7,7 @@ Some text-based content is more conveniently stored in a separate Git repository
 * Export templates
 * Additional data types as registered by any installed plugins
 
-!!! note
+!!! important
     Nautobot's Git integration depends on the availability of the `git` program. If `git` is not installed, Nautobot will be unable to pull data from Git repositories.
 
 ## Repository Configuration
@@ -16,17 +16,20 @@ When defining a Git repository for Nautobot to consume, the `name`, `remote URL`
 
 The token implementation can vary from Git provider to Git provider, the following providers have been confirmed to work. In theory, additional providers using the same pattern will work, but there is currently no specific support for all providers.
 
-* GitHub's [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) does not require a `username`. 
-* GitLab's [`token`](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) requires a `username`, conventions are to use "oauth2".  In addition, GitLab's [`deploy tokens`](https://docs.gitlab.com/ee/user/project/deploy_tokens/) are also supported.  
-* For Bitbucket, there are two options [`Personal Access Tokens`](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html) or [`oauth2`](https://developer.atlassian.com/cloud/bitbucket/oauth-2/) depending on product.
+* GitHub's [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) does not require a `username`.
+* GitLab's [`token`](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) requires a `username`, conventions are to use the username "oauth2". In addition, GitLab's [deploy tokens](https://docs.gitlab.com/ee/user/project/deploy_tokens/) are also supported.
+* For Bitbucket, there are two options: [personal access tokens](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html) or [OAuth2](https://developer.atlassian.com/cloud/bitbucket/oauth-2/) depending on the product.
 
-Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under `GIT_ROOT`) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
+Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](/configuration/optional-settings/#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
 ## Repository Structure
 
 ### Jobs
 
-Jobs defined in Python files located in a `/jobs/` directory at the root of a Git repository will automatically be discovered by Nautobot and made available to be run as a job, just as they would be if manually installed to the `$JOBS_ROOT` directory. Note that there **must** be an `__init__.py` file in the `/jobs/` directory.
+Jobs defined in Python files located in a `/jobs/` directory at the root of a Git repository will automatically be discovered by Nautobot and made available to be run as a job, just as they would be if manually installed to the [`JOBS_ROOT`](/configuration/optional-settings/#jobs_root) directory.
+
+!!! note
+    That there **must** be an `__init__.py` file in the `/jobs/` directory.
 
 ### Configuration Contexts
 
