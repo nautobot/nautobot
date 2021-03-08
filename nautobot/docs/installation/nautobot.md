@@ -262,6 +262,9 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 !!! warning
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected.
 
+!!! important
+    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server rqworker` separately. For production use, both Nautobot and the worker should be managed by systemd rather than started manually, as described in the next section of this documentation.
+
 Note that the initial user interface will be locked down for non-authenticated users.
 
 ![Nautobot UI as seen by a non-authenticated user](../media/installation/nautobot_ui_guest.png)
@@ -270,4 +273,4 @@ Try logging in using the superuser account we just created. Once authenticated, 
 
 ![Nautobot UI as seen by an administrator](../media/installation/nautobot_ui_admin.png)
 
-Type `Ctrl-C` to stop the development server.
+Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](../wsgi).
