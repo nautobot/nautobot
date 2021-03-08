@@ -8,14 +8,14 @@ An initial configuration can be created by executing `nautobot-server init`. Thi
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
-```bash
+```no-highlight
 $ nautobot-server init
 Configuration file created at '/home/example/.nautobot/nautobot_config.py'
 ```
 
 You may specify a different location for the configuration as the argument to `init`:
 
-```bash
+```no-highlight
 $ nautobot-server init /tmp/custom_config.py
 Configuration file created at '/tmp/custom_config.py'
 ```
@@ -33,7 +33,7 @@ If you do not wish to utilize the default location, you have two options:
 
 You may provide the `--config` argument when executing `nautobot-server` to tell Nautobot where to find your configuration. For example, to start a shell with the configuration in an alternate location:
 
-```bash
+```no-highlight
 $ nautobot-server --config=/etc/nautobot_config.py nbshell
 ```
 
@@ -41,14 +41,34 @@ $ nautobot-server --config=/etc/nautobot_config.py nbshell
 
 You may also set the `NAUTOBOT_CONFIG` environment variable to the location of your configuration file so that you don't have to keep providing the `--config` argument. If set, this overrides the default location.
 
-```bash
+```no-highlight
 $ export NAUTOBOT_CONFIG=/etc/nautobot_config.py
 $ nautobot-server nbshell
 ```
 
+## Nautobot Root Directory
+
+By default, Nautobot will always read or store files in `~/.nautobot` to allow for installation without requiring superuser (root) permissions.
+
+The `NAUTOBOT_ROOT` configuration setting specifies where these files will be stored on your file system. You may customize this location by setting the `NAUTOBOT_ROOT` environment variable. For example:
+
+```no-highlight
+$ export NAUTOBOT_ROOT=/opt/nautobot
+```
+
+This setting is also used in the [Nautobot deployment guide](../installation/nautobot/) to make the `nautobot-server` command easier to find and use.
+
+!!! note
+    The `--config` argument and the `NAUTOBOT_CONFIG` environment variable will always take precedence over `NAUTOBOT_ROOT` for the purpose of telling Nautobot where your `nautobot_config.py` can be found.
+
+!!! warning
+    Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
+
 ## File Storage
 
-Nautobot is capable of storing various types of files. This includes [jobs](../additional-features/jobs.md), [Git repositories](../models/extras/gitrepository.md), and [image attachments](../models/extras/imageattachment.md). The `BASE_STORAGE_DIR` configuration setting specifies where these files will be stored on your file system; this variable defaults to the same `~/.nautobot/` directory used to store the default Nautobot configuration file, but may be overridden either in your configuration file or by setting the `NAUTOBOT_BASE_STORAGE_DIR` environment variable when using the default configuration.
+Nautobot is capable of storing various types of files. This includes [Jobs](../additional-features/jobs), [Git repositories](../models/extras/gitrepository), [image attachments](../models/extras/imageattachment), and [static files](../configuration/optional-settings/#static_root) (CSS, JavaScript, etc.).
+
+Each of the features requiring use of file storage default to being stored in `NAUTOBOT_ROOT`. If desired, you may customize each one individually. Please see each feature's respective documentation linked above for how to do that.
 
 ## Configuration Parameters
 
@@ -65,7 +85,7 @@ While Nautobot has many configuration settings, only a few of them must be defin
 
 ## Changing the Configuration
 
-Configuration settings may be changed at any time. However, the WSGI service (e.g. Gunicorn) must be restarted before the changes will take effect. For example, if you're running Nautobot using `systemd:`
+Configuration settings may be changed at any time. However, the WSGI service (e.g. uWSGI) must be restarted before the changes will take effect. For example, if you're running Nautobot using `systemd:`
 
 ```
 $ sudo systemctl restart nautobot
@@ -75,7 +95,7 @@ $ sudo systemctl restart nautobot
 
 ### Troubleshooting the Configuration
 
-To facilitate troubleshooting and debugging of settings, try inspecting the settings from a shell. 
+To facilitate troubleshooting and debugging of settings, try inspecting the settings from a shell.
 
 First get a shell and load the Django settings:
 

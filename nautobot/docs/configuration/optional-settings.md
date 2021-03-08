@@ -20,6 +20,8 @@ can specify additional apps with ease.
 
 ## ADMINS
 
+Default: `[]` (Empty list)
+
 Nautobot will email details about critical errors to the administrators listed here. This should be a list of (name, email) tuples. For example:
 
 ```python
@@ -28,6 +30,8 @@ ADMINS = [
     ['Dale Gribble', 'dgribble@example.com'],
 ]
 ```
+
+Please see the [official Django documentation on `ADMINS`](https://docs.djangoproject.com/en/stable/ref/settings/#admins) for more information.
 
 ---
 
@@ -43,6 +47,8 @@ A list of permitted URL schemes referenced when rendering links within Nautobot.
 
 ## BANNER_BOTTOM
 
+Default: `""` (Empty string)
+
 Setting these variables will display custom content in a banner at the top and/or bottom of the page, respectively. HTML is allowed. To replicate the content of the top banner in the bottom banner, set:
 
 ```python
@@ -54,13 +60,15 @@ BANNER_BOTTOM = BANNER_TOP
 
 ## BANNER_LOGIN
 
+Default: `""` (Empty string)
+
 This defines custom content to be displayed on the login page above the login form. HTML is allowed.
 
 ---
 
 ## BASE_PATH
 
-Default: None
+Default: `None`
 
 The base URL path to use when accessing Nautobot. Do not include the scheme or domain name. For example, if installed at https://example.com/nautobot/, set:
 
@@ -70,19 +78,24 @@ BASE_PATH = 'nautobot/'
 
 ---
 
-## BASE_STORAGE_DIR
-
-Default: `~/.nautobot/`
-
-The filesystem path to use to store Nautobot files (jobs, uploaded images, Git repositories, etc.).
-
----
-
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
 
+!!! warning
+    It is an error to set the timeout value to `0`. If you wish to disable caching, please use [`CACHEOPS_ENABLED`](#cacheops_enabled).
+
 Various defaults for caching, the most important of which being the cache timeout. The `timeout` is the number of seconds that cache entries will be retained before expiring.
+
+---
+
+## CACHEOPS_ENABLED
+
+Default: `True`
+
+A boolean that turns on/off caching.
+
+If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
 
 ---
 
@@ -96,10 +109,9 @@ The Redis connection string to use for caching.
 
 ## CHANGELOG_RETENTION
 
-Default: 90
+Default: `90`
 
-The number of days to retain logged changes (object creations, updates, and deletions). Set this to `0` to retain
-changes in the database indefinitely.
+The number of days to retain logged changes (object creations, updates, and deletions). Set this to `0` to retain changes in the database indefinitely.
 
 !!! warning
     If enabling indefinite changelog retention, it is recommended to periodically delete old entries. Otherwise, the database may eventually exceed capacity.
@@ -120,7 +132,7 @@ Previously this setting was called `CORS_ORIGIN_ALLOW_ALL`, which still works as
 
 ## CORS_ALLOWED_ORIGINS
 
-Default: `[]`
+Default: `[]` (Empty list)
 
 A list of origins that are authorized to make cross-site HTTP requests.
 
@@ -163,7 +175,7 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 ## DEBUG
 
-Default: False
+Default: `False`
 
 This setting enables debugging. Debugging should be enabled only during development or troubleshooting. Note that only
 clients which access Nautobot from a recognized [internal IP address](#internal_ips) will see debugging tools in the user interface.
@@ -172,27 +184,32 @@ clients which access Nautobot from a recognized [internal IP address](#internal_
     Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users and impose a
     substantial performance penalty.
 
+Please see the [official Django documentation on `DEBUG`](https://docs.djangoproject.com/en/stable/ref/settings/#debug) for more information.
+
 ---
 
 ## DOCS_ROOT
 
-Default: `$INSTALL_ROOT/docs/`
+Default: `$BASE_DIR/docs`
 
-The filesystem path to Nautobot's documentation. This is used when presenting context-sensitive documentation in the web UI. By default, this will be the `docs/` directory within the root Nautobot installation path. (Set this to `None` to disable the embedded documentation.)
+The filesystem path to Nautobot's documentation. This is used when presenting context-sensitive documentation in the web UI. By default, this will be the `docs` directory within the root Nautobot installation path. (Set this to `None` to disable the embedded documentation.)
+
+!!! warning
+    The `BASE_DIR` variable is internal to Nautobot and is referenced here to represent the fully qualified file path where the Nautobot library code is installed. Please do not modify the value of `BASE_DIR` as it can have unintended side effects.
 
 ---
 
 ## ENFORCE_GLOBAL_UNIQUE
 
-Default: False
+Default: `False`
 
-By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting `ENFORCE_GLOBAL_UNIQUE` to True.
+By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting `ENFORCE_GLOBAL_UNIQUE` to `True`.
 
 ---
 
 ## EXEMPT_VIEW_PERMISSIONS
 
-Default: Empty list
+Default: `[]` (Empty list)
 
 A list of Nautobot models to exempt from the enforcement of view permissions. Models listed here will be viewable by all users, both authenticated and anonymous.
 
@@ -219,7 +236,7 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 
 ## GIT_ROOT
 
-Default: `os.path.join(BASE_STORAGE_DIR, "git")`
+Default: `os.path.join(NAUTOBOT_ROOT, "git")`
 
 The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
 
@@ -237,15 +254,15 @@ By default, all custom fields in GraphQL will be prefixed with `cf`. A custom fi
 
 ## HIDE_RESTRICTED_UI
 
-Default: False
+Default: `False`
 
-When set to True, users with limited permissions will only be able to see items in the UI they have access too.
+When set to `True`, users with limited permissions will only be able to see items in the UI they have access too.
 
 ---
 
 ## HTTP_PROXIES
 
-Default: None
+Default: `None` (Disabled)
 
 A dictionary of HTTP proxies to use for outbound requests originating from Nautobot (e.g. when sending webhook requests). Proxies should be specified by schema (HTTP and HTTPS) as per the [Python requests library documentation](https://2.python-requests.org/en/master/user/advanced/). For example:
 
@@ -263,16 +280,17 @@ HTTP_PROXIES = {
 Default: `('127.0.0.1', '::1')`
 
 A list of IP addresses recognized as internal to the system, used to control the display of debugging output. For
-example, the debugging toolbar will be viewable only when a client is accessing Nautobot from one of the listed IP
+example, the [Django debugging toolbar](https://django-debug-toolbar.readthedocs.io/), if installed,
+will be viewable only when a client is accessing Nautobot from one of the listed IP
 addresses (and [`DEBUG`](#debug) is true).
 
 ---
 
 ## JOBS_ROOT
 
-Default: `os.path.join(BASE_STORAGE_DIR, "jobs")`
+Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
 
-The file path to a directory where [jobs](../additional-features/jobs.md) can be discovered.
+The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_JOBS_ROOT` to a directory path of your choosing.
 
@@ -282,6 +300,8 @@ The value of this variable can also be customized by setting the environment var
 ---
 
 ## LOGGING
+
+Default: `{}` (Empty dictionary)
 
 By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
 
@@ -330,15 +350,15 @@ LOGGING = {
 
 ## MAINTENANCE_MODE
 
-Default: False
+Default: `False`
 
-Setting this to True will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
+Setting this to `True` will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
 
 ---
 
 ## MAX_PAGE_SIZE
 
-Default: 1000
+Default: `1000`
 
 A web user or API consumer can request an arbitrary number of objects by appending the "limit" parameter to the URL (e.g. `?limit=1000`). This parameter defines the maximum acceptable limit. Setting this to `0` or `None` will allow a client to retrieve _all_ matching objects at once with no limit by specifying `?limit=0`.
 
@@ -346,23 +366,27 @@ A web user or API consumer can request an arbitrary number of objects by appendi
 
 ## MEDIA_ROOT
 
-Default: `os.path.join(BASE_STORAGE_DIR, "media")`
+Default: `os.path.join(NAUTOBOT_ROOT, "media")`
 
-The file path to the location where media files (such as image attachments) are stored. By default, this is located within your home directory.
+The file path to the location where media files (such as [image attachments](../models/extras/imageattachment.md)) are stored.
+
+Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#media-root) for more information.
 
 ---
 
 ## METRICS_ENABLED
 
-Default: False
+Default: `False`
 
-Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../../additional-features/prometheus-metrics/) documentation for more details.
+Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../additional-features/prometheus-metrics.md) documentation for more details.
 
 ---
 
 ## NAPALM_USERNAME
 
 ## NAPALM_PASSWORD
+
+Default: `""` (Empty string)
 
 Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm-automation.net/), if installed. Both parameters are optional.
 
@@ -372,6 +396,8 @@ Nautobot will use these credentials when authenticating to remote devices via th
 ---
 
 ## NAPALM_ARGS
+
+Default: `{}` (Empty dictionary)
 
 A dictionary of optional arguments to pass to NAPALM when instantiating a network driver. See the NAPALM documentation for a [complete list of optional arguments](https://napalm.readthedocs.io/en/latest/support/#optional-arguments). An example:
 
@@ -397,15 +423,28 @@ NAPALM_ARGS = {
 
 ## NAPALM_TIMEOUT
 
-Default: 30 seconds
+Default: `30`
 
 The amount of time (in seconds) to wait for NAPALM to connect to a device.
 
 ---
 
+## NAUTOBOT_ROOT
+
+Default: `~/.nautobot/`
+
+The filesystem path to use to store Nautobot files (Jobs, uploaded images, Git repositories, etc.).
+
+This setting is used internally in the core settings to provide default locations for [features that require file storage](../../configuration/#file-storage), and the [default location of the `nautobot_config.py`](../../configuration/#specifying-your-configuration).
+
+!!! warning
+    Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
+
+---
+
 ## PAGINATE_COUNT
 
-Default: 50
+Default: `50`
 
 The default maximum number of objects to display per page within each list of objects.
 
@@ -413,9 +452,9 @@ The default maximum number of objects to display per page within each list of ob
 
 ## PLUGINS
 
-Default: Empty
+Default: `[]` (Empty list)
 
-A list of installed [Nautobot plugins](../../plugins/) to enable. Plugins will not take effect unless they are listed here.
+A list of installed [Nautobot plugins](../../plugins) to enable. Plugins will not take effect unless they are listed here.
 
 !!! warning
     Plugins extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install plugins from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with plugins enabled.
@@ -424,7 +463,7 @@ A list of installed [Nautobot plugins](../../plugins/) to enable. Plugins will n
 
 ## PLUGINS_CONFIG
 
-Default: Empty
+Default: `{}` (Empty dictionary)
 
 This parameter holds configuration settings for individual Nautobot plugins. It is defined as a dictionary, with each key using the name of an installed plugin. The specific parameters supported are unique to each plugin: Reference the plugin's documentation to determine the supported parameters. An example configuration is shown below:
 
@@ -446,7 +485,7 @@ Note that a plugin must be listed in `PLUGINS` for its configuration to take eff
 
 ## PREFER_IPV4
 
-Default: False
+Default: `False`
 
 When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to prefer IPv4 instead.
 
@@ -454,7 +493,7 @@ When determining the primary IP address for a device, IPv6 is preferred over IPv
 
 ## RACK_ELEVATION_DEFAULT_UNIT_HEIGHT
 
-Default: 22
+Default: `22`
 
 Default height (in pixels) of a unit within a rack elevation. For best results, this should be approximately one tenth of `RACK_ELEVATION_DEFAULT_UNIT_WIDTH`.
 
@@ -462,7 +501,7 @@ Default height (in pixels) of a unit within a rack elevation. For best results, 
 
 ## RACK_ELEVATION_DEFAULT_UNIT_WIDTH
 
-Default: 220
+Default: `220`
 
 Default width (in pixels) of a unit within a rack elevation.
 
@@ -470,15 +509,18 @@ Default width (in pixels) of a unit within a rack elevation.
 
 ## RELEASE_CHECK_TIMEOUT
 
-Default: 86,400 (24 hours)
+Default: `86400` (24 hours)
 
-The number of seconds to retain the latest version that is fetched from the GitHub API before automatically invalidating it and fetching it from the API again. This must be set to at least one hour (3600 seconds).
+The number of seconds to retain the latest version that is fetched from the GitHub API before automatically invalidating it and fetching it from the API again.
+
+!!! warning
+    This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
 
 ---
 
 ## RELEASE_CHECK_URL
 
-Default: None (disabled)
+Default: `None` (disabled)
 
 This parameter defines the URL of the repository that will be checked periodically for new Nautobot releases. When a new release is detected, a message will be displayed to administrative users on the home page. This can be set to the official repository (`'https://api.github.com/repos/nautobot/nautobot/releases'`) or a custom fork. Set this to `None` to disable automatic update checks.
 
@@ -491,7 +533,7 @@ This parameter defines the URL of the repository that will be checked periodical
 
 Default: `300`
 
-The maximum execution time of a background task (such as running a [job](../additional-features/jobs.md)), in seconds.
+The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
 
 ---
 ## SESSION_COOKIE_AGE
@@ -538,37 +580,41 @@ See the guide on [Single Sign On Authentication](../authentication/sso) for more
 
 ## STATIC_ROOT
 
-Default: `os.path.join(BASE_STORAGE_DIR, "static")`
+Default: `os.path.join(NAUTOBOT_ROOT, "static")`
 
-The location where static files (CSS, Javascript, images) will be staged by the `nautobot-server collectstatic` command.
+The location where static files (such as CSS, JavaScript, fonts, or images) used to serve the web interface will be staged by the `nautobot-server collectstatic` command.
+
+Please see the [official Django documentation on `STATIC_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT) for more information.
 
 ---
 
 ## STORAGE_BACKEND
 
-Default: None (local storage)
+Default: `None` (local storage)
 
 The backend storage engine for handling uploaded files (e.g. image attachments). Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used.
 
-The configuration parameters for the specified storage backend are defined under the `STORAGE_CONFIG` setting.
+The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
 
 ---
 
 ## STORAGE_CONFIG
 
-Default: Empty
+Default: `{}` (Empty dictionary)
 
-A dictionary of configuration parameters for the storage backend configured as `STORAGE_BACKEND`. The specific parameters to be used here are specific to each backend; see the [`django-storages` documentation](https://django-storages.readthedocs.io/en/stable/) for more detail.
+A dictionary of configuration parameters for the storage backend configured as [`STORAGE_BACKEND`](#storage_backend). The specific parameters to be used here are specific to each backend; see the [`django-storages` documentation](https://django-storages.readthedocs.io/en/stable/) for more detail.
 
-If `STORAGE_BACKEND` is not defined, this setting will be ignored.
+If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ignored.
 
 ---
 
 ## TIME_ZONE
 
-Default: UTC
+Default: `"UTC"`
 
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
+
+Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.
 
 ---
 

@@ -3,6 +3,8 @@ from distutils.util import strtobool
 import os
 import sys
 
+from nautobot.core.settings import *
+
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(" ")
 
 DATABASES = {
@@ -93,13 +95,22 @@ RQ_QUEUES = {
     },
 }
 
+# Base URL path if accessing Nautobot within a directory. For example, if installed at https://example.com/nautobot/, set:
+# BASE_PATH = 'nautobot/'
+BASE_PATH = os.environ.get("BASE_PATH", "")
+
 # REDIS CACHEOPS
 CACHEOPS_REDIS = f"redis://:{os.getenv('REDIS_PASSWORD')}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/2"
 
+HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
 # Django Debug Toolbar
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
-HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
+
+if "debug_toolbar" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("debug_toolbar")
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")

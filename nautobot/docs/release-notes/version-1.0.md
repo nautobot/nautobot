@@ -4,6 +4,53 @@ This document describes all new features and changes in Nautobot 1.0, a divergen
 
 Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation as well.
 
+## v1.0.0b2 (2021-03-08)
+
+### Added
+
+- [#35](https://github.com/nautobot/nautobot/issues/35) - Documentation for troubleshooting Nautobot's interaction with SELinux.
+- [#47](https://github.com/nautobot/nautobot/issues/47) - Basic user documentation for Relationships feature.
+- [#48](https://github.com/nautobot/nautobot/issues/48) - Additional unit testing and bug fixes for Relationships feature.
+- [#99](https://github.com/nautobot/nautobot/pull/99) - Add `BASE_PATH` to `development/nautobot_config.py`.
+- [#101](https://github.com/nautobot/nautobot/issues/101) - Complete documentation of `NAUTOBOT_ROOT`
+- [#107](https://github.com/nautobot/nautobot/pull/107) - Add `nautobot-server post_upgrade` command
+
+### Changed
+
+- [#52](https://github.com/nautobot/nautobot/pull/52) - Disabled Poetry's "parallel installation" feature for CI and development builds.
+- [#61](https://github.com/nautobot/nautobot/pull/61) - Updated pull request template contents for clarity.
+- [#74](https://github.com/nautobot/nautobot/pull/74) - Refactor install instructions to be more streamlined and more intuitive.
+    - Renamed `nautobot-rq` service to `nautobot-worker`
+    - Replaced `BASE_STORAGE_DIR` configuration setting with `NAUTOBOT_ROOT`; this new setting also influences the default value of `DEFAULT_CONFIG_PATH`.
+- [#88](https://github.com/nautobot/nautobot/issues/88) - Replace Gunicorn w/ uWSGI
+- [#89](https://github.com/nautobot/nautobot/pull/89) - Development workflow improvements
+    - Replace `pycodestyle` with `flake8` for linting.
+    - Add `invoke black` and `invoke tests` commands
+    - Improve speed of development Docker container rebuilds
+    - `django-debug-toolbar` is now a development dependency rather than a production dependency for Nautobot.
+- [#106](https://github.com/nautobot/nautobot/pull/106) - Revise deployment docs to use `$PATH` instead of venv activate
+- [#108](https://github.com/nautobot/nautobot/pull/108) - Document special workflow for development using containers on remote servers
+
+### Removed
+
+- [#72](https://github.com/nautobot/nautobot/pull/72) - Removed issue template for "Documentation Change"; use "Bug" or "Feature Request" issue templates instead.
+
+### Fixed
+
+- [#36](https://github.com/nautobot/nautobot/pull/36) - Broken links to ReadTheDocs pages.
+- [#41](https://github.com/nautobot/nautobot/pull/41) - Incorrect field name in CustomLink Admin page.
+- [#42](https://github.com/nautobot/nautobot/issues/42) - Incorrect link to `nautobot-plugin-golden-config` GitHub repository
+- [#45](https://github.com/nautobot/nautobot/issues/45) - Incorrect button labels when creating/editing an Interface record.
+- [#43](https://github.com/nautobot/nautobot/issues/43) - Incorrect commands in documentation for adding optional dependencies to `local_requirements.txt`
+- [#51](https://github.com/nautobot/nautobot/issues/51) - Incorrect functioning of "development container" in VSCode integration.
+- [#57](https://github.com/nautobot/nautobot/pull/57) - Incorrect `AUTHENTICATION_BACKENDS` example in `authentication/ldap.md`
+- [#63](https://github.com/nautobot/nautobot/issues/63) - Incorrect help text for "Destination Label" field when creating/editing Relationship records.
+- [#64](https://github.com/nautobot/nautobot/issues/64) - Incorrect absolute link to ReadTheDocs page.
+- [#69](https://github.com/nautobot/nautobot/issues/69) - More incorrect links to ReadTheDocs pages.
+- [#79](https://github.com/nautobot/nautobot/issues/79) - Incorrect internal documentation link to `STORAGE_BACKEND` optional setting.
+- [#81](https://github.com/nautobot/nautobot/issues/81) - Unable to change Device rack position after creation.
+- [#93](https://github.com/nautobot/nautobot/issues/93) - Bug when setting `CACHEOPS_DEFAULTS` timeout value to `0`.
+
 ## v1.0.0b1 (2021-02-24)
 
 ### Added
@@ -65,7 +112,7 @@ Nautobot now supports single sign on as an authentication option using OAuth2, O
 
 #### User-Defined Relationships
 
-User-Defined, or "custom", [relationships](../additional-features/relationships.md) <!-- FIXME no docs yet --> allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design. Nautobot comes with opinionated data models and relationships.
+User-Defined, or "custom", [relationships](../../models/extras/relationship) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design. Nautobot comes with opinionated data models and relationships.
 
 <!-- FIXME: improve example here -->
 For example, a VLAN is mapped to a Site by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites.  Other use cases include circuits, ASNs, or IP addressing--just to name a few--allowing users to define the exact relationships required for their network.
