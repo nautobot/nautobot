@@ -414,11 +414,6 @@ class CablePath(BaseModel):
                     break
                 path.append(object_to_path_node(peer_termination))
                 path.append(object_to_path_node(node))
-                try:
-                    path.append(object_to_path_node(node.cable))
-                except AttributeError:
-                    # Deleted cable does not exist.
-                    break
 
             # Anything else marks the end of the path
             else:
