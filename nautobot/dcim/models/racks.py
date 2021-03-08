@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -493,9 +493,10 @@ class Rack(PrimaryModel, StatusModel):
         return self.devices.filter(position=0)
 
     def get_utilization(self):
-        """
-        Determine the utilization rate of the rack and return it as a percentage. Occupied and reserved units both count
-        as utilized.
+        """Gets utilization numerator and denominator for racks.
+        
+        Returns:
+            tuple: (Occupied Unit Count, U Height of the rack)
         """
         # Determine unoccupied units
         available_units = self.get_available_units()
@@ -506,14 +507,15 @@ class Rack(PrimaryModel, StatusModel):
                 available_units.remove(u)
 
         occupied_unit_count = self.u_height - len(available_units)
+
         # Return the numerator and denominator as percentage is to be calculated later where needed
         return (occupied_unit_count, self.u_height)
 
-        return percentage
-
     def get_power_utilization(self):
-        """
-        Determine the utilization rate of power in the rack and return it as a percentage.
+        """Determine the utilization numerator and denominator for power utilization on the rack.
+
+        Returns:
+            tuple: (Allocated Draw, Total available power)
         """
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
