@@ -124,7 +124,7 @@ The `Select the container to attach VScode` input field provides a list of runni
 
 Click on `development_nautobot_1` to use VScode inside the container.
 
-The `devcontainer` will startup now.
+The `devcontainer` will startup now. As a last step open the folder `/opt/nautobot` in VScode.
 
 ### Python Virtual Environment Workflow
 
