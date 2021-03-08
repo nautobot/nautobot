@@ -89,16 +89,23 @@ $ echo $PATH
 
 Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first. 
 
-Because `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically be used because they come first in the `$PATH`. 
+Because `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically prefer the virtualenv's commands because they come first in the `$PATH`. 
 
-This makes sure that the version of Python you're using, as well any dependencies that you install remain isolated in this environment.
+As the `nautobot` user, you may use `which pip3` to confirm that you are using the correct version of `pip3`. The path should match that of `$NAUTOBOT_ROOT/bin`. For example:
 
-!!! warning
-    Unless explicitly stated, this and all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should all be performed as the `nautobot` user!
+```no-highlight
+$ which pip3
+/opt/nautobot/bin/pip3
+```
 
-    Hint: Use `sudo -iu nautobot` to become the `nautobot` user.
+This makes sure that the version of Python you're using, as well any dependencies that you install, remain isolated in this environment.
 
 ## Prepare the Virtual Environment
+
+!!! warning
+    Unless explicitly stated, this and all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
+
+    Hint: Use `sudo -iu nautobot` to become the `nautobot` user.
 
 Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version. 
 

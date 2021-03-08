@@ -75,7 +75,7 @@ to different Redis instances/databases per feature.
     For this reason, the default settings utilize database `1` for caching and database `0` for tasks.
 
 !!! tip
-    The default settings in your `nautobot_config.py` should be suitable for most deployments and should only require customization for more advanced configurations.
+    The default Redis settings in your `nautobot_config.py` should be suitable for most deployments and should only require customization for more advanced configurations.
 
 
 ### Caching
