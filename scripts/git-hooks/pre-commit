@@ -1,11 +1,6 @@
 #!/bin/sh
 # Create a link to this file at .git/hooks/pre-commit to
-# force PEP8 validation prior to committing
-#
-# Ignored violations:
-#
-#   W504: Line break after binary operator
-#   E501: Line too long
+# force PEP8 and Black style validation prior to committing
 
 exec 1>&2
 
@@ -23,11 +18,15 @@ if [ -d ./venv/ ]; then
 fi
 
 echo "Validating PEP8 compliance..."
-pycodestyle \
-    --ignore=W504,E501 \
-    contrib/ development/ nautobot/ tasks.py
+flake8 contrib/ development/ nautobot/ tasks.py
 if [ $? != 0 ]; then
 	EXIT=1
+fi
+
+# Check that all files conform to Black.
+black --check contrib/ development/ nautobot/ tasks.py
+if [[ $? != 0 ]]; then
+    EXIT=1
 fi
 
 echo "Checking for missing migrations..."

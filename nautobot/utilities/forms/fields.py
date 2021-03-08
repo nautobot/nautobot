@@ -30,6 +30,7 @@ __all__ = (
     "ExpandableIPAddressField",
     "ExpandableNameField",
     "JSONField",
+    "MultipleContentTypeField",
     "LaxURLField",
     "SlugField",
     "TagFilterField",
@@ -163,7 +164,7 @@ class CSVContentTypeField(CSVModelChoiceField):
             raise forms.ValidationError("Invalid object type")
 
 
-class CSVMultipleContentTypeField(forms.ModelMultipleChoiceField):
+class MultipleContentTypeField(forms.ModelMultipleChoiceField):
     """
     Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
     """
@@ -179,6 +180,12 @@ class CSVMultipleContentTypeField(forms.ModelMultipleChoiceField):
     def _generate_choices_from_queryset(self):
         """Overload choices to return "<app>.<model>" for CSV import help text."""
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
+
+
+class CSVMultipleContentTypeField(MultipleContentTypeField):
+    """
+    Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
+    """
 
     def prepare_value(self, value):
         """Parse a comma-separated string of model names into a list of PKs."""

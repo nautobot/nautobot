@@ -179,14 +179,14 @@ class CustomLinkForm(forms.ModelForm):
         exclude = []
         widgets = {
             "text": forms.Textarea,
-            "url": forms.Textarea,
+            "target_url": forms.Textarea,
         }
         help_texts = {
             "weight": "A numeric weight to influence the ordering of this link among its peers. Lower weights appear "
             "first in a list.",
             "text": "Jinja2 template code for the link text. Reference the object as <code>{{ obj }}</code>. Links "
             "which render as empty text will not be displayed.",
-            "url": "Jinja2 template code for the link URL. Reference the object as <code>{{ obj }}</code>.",
+            "target_url": "Jinja2 template code for the link URL. Reference the object as <code>{{ obj }}</code>.",
         }
 
     def __init__(self, *args, **kwargs):
@@ -213,7 +213,7 @@ class CustomLinkAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("Templates", {"fields": ("text", "url"), "classes": ("monospace",)}),
+        ("Templates", {"fields": ("text", "target_url"), "classes": ("monospace",)}),
     )
     list_display = [
         "name",

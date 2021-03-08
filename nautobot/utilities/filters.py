@@ -171,10 +171,30 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
 
         e.g. `['dcim.device', 'dcim.rack']`
         """
-        # Recursively call `ContentTypeFilter.filter()` for each item in the
-        # list of incoming filter values.
+        if not self.conjoined:
+            q = models.Q()
+
         for v in value:
-            qs = ContentTypeFilter.filter(self, qs, v)
+            if self.conjoined:
+                qs = ContentTypeFilter.filter(self, qs, v)
+            else:
+                # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
+                # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
+                # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
+                # Q((field__app_label="dcim" AND field__model="device") OR (field__app_label="ipam" AND field__model="VLAN"))
+                try:
+                    app_label, model = v.lower().split(".")
+                except ValueError:
+                    continue
+                q |= models.Q(
+                    **{
+                        f"{self.field_name}__app_label": app_label,
+                        f"{self.field_name}__model": model,
+                    }
+                )
+
+        if not self.conjoined:
+            qs = qs.filter(q)
 
         return qs
 

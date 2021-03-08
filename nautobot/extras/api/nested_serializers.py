@@ -14,6 +14,7 @@ __all__ = [
     "NestedImageAttachmentSerializer",
     "NestedJobResultSerializer",
     "NestedRelationshipSerializer",
+    "NestedRelationshipAssociationSerializer",
     "NestedStatusSerializer",
     "NestedTagSerializer",
     "NestedWebhookSerializer",
@@ -111,3 +112,11 @@ class NestedRelationshipSerializer(WritableNestedSerializer):
     class Meta:
         model = models.Relationship
         fields = ["id", "url", "name", "slug"]
+
+
+class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationshipassociation-detail")
+
+    class Meta:
+        model = models.RelationshipAssociation
+        fields = ["id", "url", "relationship", "source_id", "destination_id"]

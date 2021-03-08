@@ -693,7 +693,7 @@ class IPAddressForm(
         self.fields["vrf"].empty_label = "Global"
 
         # Initialize primary_for_parent if IP address is already assigned
-        if (not self.instance._state.adding) and self.instance.assigned_object:
+        if self.instance.present_in_database and self.instance.assigned_object:
             parent = self.instance.assigned_object.parent
             if (
                 self.instance.address.version == 4

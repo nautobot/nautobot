@@ -45,6 +45,8 @@ __all__ = (
     "JobResultFilterSet",
     "LocalConfigContextFilterSet",
     "ObjectChangeFilterSet",
+    "RelationshipFilterSet",
+    "RelationshipAssociationFilterSet",
     "StatusFilter",
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
@@ -535,13 +537,19 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 #
 
 
-class RelationshipFilterSet(django_filters.FilterSet):
+class RelationshipFilterSet(BaseFilterSet):
+
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    destination_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("relationships").get_choices, conjoined=False
+    )
+
     class Meta:
         model = Relationship
-        fields = ["name", "type", "source_type", "destination_type"]
+        fields = ["id", "name", "type", "source_type", "destination_type"]
 
 
-class RelationshipAssociationFilterSet(django_filters.FilterSet):
+class RelationshipAssociationFilterSet(BaseFilterSet):
 
     relationship = django_filters.ModelMultipleChoiceFilter(
         field_name="relationship__slug",
@@ -549,7 +557,11 @@ class RelationshipAssociationFilterSet(django_filters.FilterSet):
         to_field_name="slug",
         label="Relationship (slug)",
     )
+    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    destination_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("relationships").get_choices, conjoined=False
+    )
 
     class Meta:
         model = RelationshipAssociation
-        fields = ["source_type", "source_id", "destination_type", "destination_id"]
+        fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]

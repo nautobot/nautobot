@@ -14,16 +14,17 @@ markdown_extensions:
     - admonition:
     - markdown_include.include:
         headingOffset: 1
+    - toc:
+        permalink: true
 nav:
     - Introduction: 'index.md'
     - Installation:
-        - Installing Nautobot: 'installation/index.md'
-        - 1. PostgreSQL: 'installation/1-postgresql.md'
-        - 2. Redis: 'installation/2-redis.md'
-        - 3. Nautobot: 'installation/3-nautobot.md'
-        - 4. Gunicorn: 'installation/4-gunicorn.md'
-        - 5. HTTP Server: 'installation/5-http-server.md'
-        - 6. External Authentication (Optional): 'installation/6-external-authentication.md'
+        - Install Nautobot: 'installation/index.md'
+        - Deploy Nautobot: 'installation/nautobot.md'
+        - Configure Web Services: 'installation/wsgi.md'
+        - Configure HTTP Server: 'installation/http-server.md'
+        - Configure External Authentication (Optional): 'installation/external-authentication.md'
+    - Administration:
         - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
     - Configuration:
@@ -48,10 +49,11 @@ nav:
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'
         - Export Templates: 'models/extras/exporttemplate.md'
-        - Jobs: 'additional-features/jobs.md'
         - Git Repositories: 'models/extras/gitrepository.md'
+        - Jobs: 'additional-features/jobs.md'
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
+        - Relationships: 'models/extras/relationship.md'
         - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
         - Webhooks: 'models/extras/webhook.md'
