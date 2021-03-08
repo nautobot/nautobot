@@ -30,6 +30,8 @@ def create_cablepath(node):
             print(node, node.pk)
             raise e
 
+    rebuild_paths(node)
+
 
 def rebuild_paths(obj):
     """
