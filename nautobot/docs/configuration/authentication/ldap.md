@@ -157,7 +157,7 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 `systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `nautobot_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
 
-For troubleshooting LDAP user/group queries, add or merge the following [logging](/configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
+For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
 
 ```python
 LOGGING = {
