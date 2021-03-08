@@ -1037,6 +1037,14 @@ class CablePathTestCase(TestCase):
             status=self.status,
         )
         cable1.save()
+
+        self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, circuittermination1, circuittermination2),
+            is_active=False,
+        )
+
         # Create cable 2
         cable2 = Cable(
             termination_a=interface2,
@@ -1044,31 +1052,37 @@ class CablePathTestCase(TestCase):
             status=self.status,
         )
         cable2.save()
-        path1 = self.assertPathExists(
+
+        self.assertPathExists(
             origin=interface1,
             destination=interface2,
             path=(cable1, circuittermination1, circuittermination2, cable2),
             is_active=True,
         )
-        path2 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface2,
             destination=interface1,
             path=(cable2, circuittermination2, circuittermination1, cable1),
             is_active=True,
         )
-        self.assertEqual(CablePath.objects.count(), 2)
-        interface1.refresh_from_db()
-        interface2.refresh_from_db()
-        circuittermination1.refresh_from_db()
-        circuittermination2.refresh_from_db()
-        self.assertPathIsSet(interface1, path1)
-        self.assertPathIsSet(interface2, path2)
-
-        # Delete cable 1
-        cable1.delete()
+        self.assertEqual(CablePath.objects.count(), 4)
 
         # Delete cable 2
         cable2.delete()
+        path1 = self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, circuittermination1, circuittermination2),
+            is_active=False,
+        )
+        self.assertEqual(CablePath.objects.count(), 2)
+        interface1.refresh_from_db()
+        interface2.refresh_from_db()
+        self.assertPathIsSet(interface1, path1)
+        self.assertPathIsNotSet(interface2)
+
+        # Delete cable 1
+        cable1.delete()
 
         # Check that all CablePaths have been deleted
         self.assertEqual(CablePath.objects.count(), 0)
