@@ -84,7 +84,7 @@ Nautobot supports database query caching using [`django-cacheops`](https://githu
 
 Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
 
-For more details Nautobot's caching see the guide on [Caching](/additional-features/caching).
+For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
 
 #### CACHEOPS_REDIS
 
@@ -231,7 +231,7 @@ Please note that this key is **not** used directly for hashing user passwords or
 `SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
 
 !!! note
-    A unique `SECRET_KEY` is generated for you automatically when you use `nautobot-server init` to create a new `nautobot_config.py`. 
+    A unique `SECRET_KEY` is generated for you automatically when you use `nautobot-server init` to create a new `nautobot_config.py`.
 
 You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 

@@ -14,6 +14,8 @@ markdown_extensions:
     - admonition:
     - markdown_include.include:
         headingOffset: 1
+    - toc:
+        permalink: true
 nav:
     - Introduction: 'index.md'
     - Installation:
