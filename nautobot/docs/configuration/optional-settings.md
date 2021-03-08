@@ -514,7 +514,7 @@ Default: `86400` (24 hours)
 The number of seconds to retain the latest version that is fetched from the GitHub API before automatically invalidating it and fetching it from the API again.
 
 !!! warning
-    This must be set to at least one hour (`3600` seconds). Setting it to a value lower this is an error.
+    This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
 
 ---
 
