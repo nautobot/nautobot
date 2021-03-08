@@ -107,7 +107,7 @@ To start Nautobot, select "Run Without Debugging" or "Start Debugging" from the 
 
 A slightly different workflow is needed when the container is running on a ssh connected server. VScode will not offer the "Reopen in Container" option on a remote connected server.
 
-After `invoke build` use docker-compose to start the containers. This prevents that the http service is starting inside the container.
+After `invoke build` use `docker-compose` as follows to start the containers. This prevents the HTTP service from automatically starting inside the container.
 
 ```bash
 # change current directory
