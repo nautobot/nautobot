@@ -83,9 +83,14 @@ RACKGROUP_ELEVATIONS = """
 </a>
 """
 
-UTILIZATION_GRAPH = """
+UTILIZATION_GRAPH_RACK = """
 {% load helpers %}
-{% utilization_graph value.0 value.1 %}
+{% utilization_graph value.occupied value.rack_height %}
+"""
+
+UTILIZATION_GRAPH_POWER = """
+{% load helpers %}
+{% utilization_graph value.allocated_draw_total value.available_power_total %}
 """
 
 #
