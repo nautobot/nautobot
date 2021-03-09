@@ -17,47 +17,35 @@ These instructions will guide you through the following actions:
 
 ## Choose your `NAUTOBOT_ROOT`
 
-This is where everything related to Nautobot will be installed. We're going to use this value across the documentation. You'll need to set the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings.
+You need to select a directory path where everything related to Nautobot will be installed. We will to use this value across the documentation and will be referred to as `NAUTOBOT_ROOT`. 
 
-We're also going to use this as the home directory of the `nautobot` user.
+We will be using this path as the home directory of the `nautobot` user.
 
 !!! tip
     We have selected `/opt/nautobot`, but you may use any directory you choose.
 
-```no-highlight
-$ export NAUTOBOT_ROOT=/opt/nautobot
-```
+Later on, we will need to set this directory path as the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings.
 
 ## Create the Nautobot System User
 
-Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account. This also creates the `NAUTOBOT_ROOT` directory and sets it as the home directory for the user.
+Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account.
+
+The following command also creates the `/opt/nautobot` directory and sets it as the home directory for the user.
 
 ```no-highlight
-$ sudo useradd --system --shell /bin/bash --create-home --home-dir $NAUTOBOT_ROOT nautobot
-```
-
-## Create the Virtual Environment
-
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
-
-We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment.
-
-```no-highlight
-$ sudo -u nautobot python3 -m venv $NAUTOBOT_ROOT
+$ sudo useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
 ```
 
 ## Sudo to nautobot
 
-Now that we've created the virtualenv, the remaining steps will be performed as the `nautobot` user.
-
-!!! warning
-    Don't skip this step!!
-
-    It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
+It is critical to create the virtualenv and install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
 ```no-highlight
 $ sudo -iu nautobot
 ```
+!!! warning
+    Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
+
 
 ### Update the Nautobot `.bashrc`
 
@@ -77,6 +65,16 @@ Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` is set and display 
 $ source ~/.bashrc
 $ echo $NAUTOBOT_ROOT
 /opt/nautobot
+```
+
+## Create the Virtual Environment
+
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
+
+We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment.
+
+```no-highlight
+$ python3 -m venv $NAUTOBOT_ROOT
 ```
 
 ## Understanding the Virtual Environment
@@ -102,11 +100,6 @@ $ which pip3
 This makes sure that the version of Python you're using, as well any dependencies that you install, remain isolated in this environment.
 
 ## Prepare the Virtual Environment
-
-!!! warning
-    Unless explicitly stated, this and all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
-
-    Hint: Use `sudo -iu nautobot` to become the `nautobot` user.
 
 Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version.
 
@@ -226,6 +219,9 @@ $ nautobot-server collectstatic
 ```
 
 ## Install Local Requirements
+
+!!! note
+    If you did not create a `local_requirements.txt` above, please skip this step.
 
 This step is entirely optional. As indicated above, we mentioned that any extra local requirements should go into `$NAUTOBOT_ROOT/local_requirements.txt`.
 
