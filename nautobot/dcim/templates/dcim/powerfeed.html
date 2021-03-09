@@ -166,13 +166,12 @@
                         <td>Cable</td>
                         <td>
                             <a href="{{ object.cable.get_absolute_url }}">{{ object.cable }}</a>
-                            <a href="{% url 'dcim:powerfeed_trace' pk=object.pk %}" class="btn btn-primary btn-xs"
-                                title="Trace">
+                            <a href="{% url 'dcim:powerfeed_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
                                 <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                             </a>
                         </td>
                     </tr>
-                        {% if object.connected_endpoint %}
+                    {% if object.connected_endpoint %}
                         <tr>
                             <td>Device</td>
                             <td>
@@ -197,9 +196,9 @@
                             <td>Path Status</td>
                             <td>
                                 {% if object.path.is_active %}
-                                <span class="label label-success">Reachable</span>
+                                    <span class="label label-success">Reachable</span>
                                 {% else %}
-                                <span class="label label-danger">Not Reachable</span>
+                                    <span class="label label-danger">Not Reachable</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -208,8 +207,7 @@
             {% else %}
                 <div class="panel-body text-muted">
                     {% if perms.dcim.add_cable %}
-                    <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}"
-                        class="btn btn-primary btn-sm pull-right">
+                    <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm pull-right">
                         <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                     </a>
                     {% endif %}
@@ -223,9 +221,9 @@
             </div>
             <div class="panel-body rendered-markdown">
                 {% if object.comments %}
-                {{ object.comments|render_markdown }}
+                   {{ object.comments|render_markdown }}
                 {% else %}
-                <span class="text-muted">None</span>
+                    <span class="text-muted">None</span>
                 {% endif %}
             </div>
         </div>
