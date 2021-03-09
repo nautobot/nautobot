@@ -261,7 +261,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
         danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
 
     Returns:
-        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for 
+        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
                 display
     """
     return utilization_graph_raw_data(
