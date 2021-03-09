@@ -1,7 +1,7 @@
-# Configure Web Services
+# Deploying Nautobot: Web Service and Worker
 
 !!! warning
-    As of Nautobot v1.0.0b1 these instructions are in a pre-release state and will be evolving rapidly!
+    As of Nautobot v1.0.0b2 these instructions are in a pre-release state and will be evolving rapidly!
 
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
@@ -157,4 +157,4 @@ You can use the command `systemctl status nautobot.service` to verify that the W
     If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that
     may indicate the problem.
 
-Once you've verified that the WSGI workers are up and running, move on to [HTTP server setup](../http-server).
+Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](../http-server).
