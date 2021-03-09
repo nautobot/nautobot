@@ -172,38 +172,38 @@
                             </a>
                         </td>
                     </tr>
-                    {% if object.connected_endpoint %}
-                    <tr>
-                        <td>Device</td>
-                        <td>
-                            <a href="{{ object.connected_endpoint.device.get_absolute_url }}">{{ object.connected_endpoint.device }}</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Name</td>
-                        <td>
-                            <a href="{{ object.connected_endpoint.get_absolute_url }}">{{ object.connected_endpoint.name }}</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Type</td>
-                        <td>{{ object.connected_endpoint.get_type_display|placeholder }}</td>
-                    </tr>
-                    <tr>
-                        <td>Description</td>
-                        <td>{{ object.connected_endpoint.description|placeholder }}</td>
-                    </tr>
-                    <tr>
-                        <td>Path Status</td>
-                        <td>
-                            {% if object.path.is_active %}
-                            <span class="label label-success">Reachable</span>
-                            {% else %}
-                            <span class="label label-danger">Not Reachable</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endif %}
+                        {% if object.connected_endpoint %}
+                        <tr>
+                            <td>Device</td>
+                            <td>
+                                <a href="{{ object.connected_endpoint.device.get_absolute_url }}">{{ object.connected_endpoint.device }}</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Name</td>
+                            <td>
+                                <a href="{{ object.connected_endpoint.get_absolute_url }}">{{ object.connected_endpoint.name }}</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Type</td>
+                            <td>{{ object.connected_endpoint.get_type_display|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td>{{ object.connected_endpoint.description|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Path Status</td>
+                            <td>
+                                {% if object.path.is_active %}
+                                <span class="label label-success">Reachable</span>
+                                {% else %}
+                                <span class="label label-danger">Not Reachable</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
                 </table>
             {% else %}
                 <div class="panel-body text-muted">
