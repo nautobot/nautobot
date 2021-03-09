@@ -1,3 +1,4 @@
+from collections import namedtuple
 import datetime
 import json
 import re
@@ -249,22 +250,57 @@ def querystring(request, **kwargs):
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
-def utilization_graph(used_count, total, warning_threshold=75, danger_threshold=90):
-    """
-    Display a horizontal bar graph indicating a percentage of utilization.
+def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=90):
+    """Display a horizontal bar graph indicating a percentage of utilization.
+
+    Args:
+        utilization_data (namedtuple): Namedtuple with numerator and denominator keys
+        warning_threshold (int, optional): Warning Threshold Value. Defaults to 75.
+        danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
+
+    Returns:
+        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for display
     """
     # Check for possible division by zero error
-    if total == 0:
+    if utilization_data.denominator == 0:
         utilization = 0
     else:
-        utilization = int(float(used_count) / total * 100)
+        utilization = int(float(utilization_data.numerator) / utilization_data.denominator * 100)
 
     return {
         "utilization": utilization,
         "warning_threshold": warning_threshold,
         "danger_threshold": danger_threshold,
-        "utilization_count": used_count,
-        "total_count": total,
+        "utilization_count": utilization_data.numerator,
+        "total_count": utilization_data.denominator,
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/utilization_graph_raw_data.html")
+def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, danger_threshold=90):
+    """Display a horizontal bar graph indicating a percentage of utilization.
+
+    Args:
+        numerator (int): Numerator for creating a percentage
+        denominator (int): Denominator for creating a percentage
+        warning_threshold (int, optional): Warning Threshold Value. Defaults to 75.
+        danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
+
+    Returns:
+        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for display
+    """
+    # Check for possible division by zero error
+    if denominator == 0:
+        utilization = 0
+    else:
+        utilization = int(float(numerator) / denominator * 100)
+
+    return {
+        "utilization": utilization,
+        "warning_threshold": warning_threshold,
+        "danger_threshold": danger_threshold,
+        "utilization_count": numerator,
+        "total_count": denominator,
     }
 
 

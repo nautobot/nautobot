@@ -83,14 +83,10 @@ RACKGROUP_ELEVATIONS = """
 </a>
 """
 
-UTILIZATION_GRAPH_RACK = """
+# Value is a namedtuple that takes a numerator and denominator to pass in.
+UTILIZATION_GRAPH = """
 {% load helpers %}
-{% utilization_graph value.occupied value.rack_height %}
-"""
-
-UTILIZATION_GRAPH_POWER = """
-{% load helpers %}
-{% utilization_graph value.allocated_draw_total value.available_power_total %}
+{% utilization_graph value %}
 """
 
 #

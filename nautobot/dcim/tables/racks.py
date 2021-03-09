@@ -13,7 +13,7 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from .template_code import MPTT_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH_POWER, UTILIZATION_GRAPH_RACK
+from .template_code import MPTT_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
 
 __all__ = (
     "RackTable",
@@ -117,9 +117,9 @@ class RackDetailTable(RackTable):
         url_params={"rack_id": "pk"},
         verbose_name="Devices",
     )
-    get_utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH_RACK, orderable=False, verbose_name="Space")
+    get_utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Space")
     get_power_utilization = tables.TemplateColumn(
-        template_code=UTILIZATION_GRAPH_POWER, orderable=False, verbose_name="Power"
+        template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Power"
     )
     tags = TagColumn(url_name="dcim:rack_list")
 

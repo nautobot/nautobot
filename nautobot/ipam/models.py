@@ -1,4 +1,3 @@
-from collections import namedtuple
 import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -15,7 +14,7 @@ from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import ObjectChange, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, serialize_object
+from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .choices import *
 from .constants import *
@@ -313,7 +312,7 @@ class Aggregate(PrimaryModel):
             float: Percentage utilization
         """
         utilization = self.get_utilization()
-        return int(utilization.child_prefix_size / float(utilization.prefix_size) * 100)
+        return int(utilization.numerator / float(utilization.denominator) * 100)
 
     def get_utilization(self):
         """Gets the numerator and denominator for calculating utilization of an Aggregrate.
@@ -321,11 +320,9 @@ class Aggregate(PrimaryModel):
         Returns:
             namedtuple: Representing the Aggregrate utilization
         """
-        # Setup named tuple
-        AggregrateUtilization = namedtuple("AggregrateUtilization", ["child_prefix_size", "prefix_size"])
         queryset = Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
-        return AggregrateUtilization(child_prefix_size=child_prefixes.size, prefix_size=self.prefix.size)
+        return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
 
 @extras_features(
@@ -632,14 +629,12 @@ class Prefix(PrimaryModel, StatusModel):
         For Prefixes with a status of "container", get the number child prefixes. For all others, count child IP addresses.
 
         Returns:
-            PrefixUtilization (namedtuple): (child_size - prefixes or IP addresses, prefix_size)
+            UtilizationData (namedtuple): (numerator, denominator)
         """
-        # Setup the namedtuple
-        PrefixUtilization = namedtuple("PrefixUtilization", ["child_size", "prefix_size"])
         if self.status == Prefix.STATUS_CONTAINER:
             queryset = Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
-            return PrefixUtilization(child_size=child_prefixes.size, prefix_size=self.prefix.size)
+            return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
         else:
             # Compile an IPSet to avoid counting duplicate IPs
@@ -647,7 +642,7 @@ class Prefix(PrimaryModel, StatusModel):
             prefix_size = self.prefix.size
             if self.prefix.version == 4 and self.prefix.prefixlen < 31 and not self.is_pool:
                 prefix_size -= 2
-            return PrefixUtilization(child_size=child_count, prefix_size=prefix_size)
+            return UtilizationData(numerator=child_count, denominator=prefix_size)
 
 
 @extras_features(

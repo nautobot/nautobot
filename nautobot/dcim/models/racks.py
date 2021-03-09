@@ -1,4 +1,4 @@
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -21,7 +21,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.fields import ColorField, NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import array_to_string, serialize_object
+from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -498,9 +498,6 @@ class Rack(PrimaryModel, StatusModel):
         Returns:
             tuple: (Occupied Unit Count, U Height of the rack)
         """
-        # Setup Named Tuple
-        Utilization = namedtuple("Utilization", ["occupied", "rack_height"])
-
         # Determine unoccupied units
         available_units = self.get_available_units()
 
@@ -510,20 +507,18 @@ class Rack(PrimaryModel, StatusModel):
                 available_units.remove(u)
 
         # Return the numerator and denominator as percentage is to be calculated later where needed
-        return Utilization(rack_height=self.u_height, occupied=self.u_height - len(available_units))
+        return UtilizationData(numerator=self.u_height - len(available_units), denominator=self.u_height)
 
     def get_power_utilization(self):
         """Determine the utilization numerator and denominator for power utilization on the rack.
 
         Returns:
-            tuple: (Allocated Draw, Total available power)
+            UtilizationData: (numerator, denominator)
         """
-        # Setup Named Tuple
-        PowerUtilization = namedtuple("PowerUtilization", ["allocated_draw_total", "available_power_total"])
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
         if not available_power_total:
-            return PowerUtilization(allocated_draw_total=0, available_power_total=0)
+            return UtilizationData(numerator=0, denominator=0)
 
         pf_powerports = PowerPort.objects.filter(
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
@@ -538,7 +533,7 @@ class Rack(PrimaryModel, StatusModel):
             or 0
         )
 
-        return PowerUtilization(allocated_draw_total=allocated_draw_total, available_power_total=available_power_total)
+        return UtilizationData(numerator=allocated_draw_total, denominator=available_power_total)
 
 
 @extras_features(
