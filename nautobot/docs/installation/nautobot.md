@@ -17,7 +17,7 @@ These instructions will guide you through the following actions:
 
 ## Choose your `NAUTOBOT_ROOT`
 
-You need to select a directory path where everything related to Nautobot will be installed. We will to use this value across the documentation and will be referred to as `NAUTOBOT_ROOT`. 
+You need to select a directory path where everything related to Nautobot will be installed. We will use this value across the documentation and it will be referred to as `NAUTOBOT_ROOT`. 
 
 We will be using this path as the home directory of the `nautobot` user.
 
