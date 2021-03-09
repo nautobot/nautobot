@@ -26,7 +26,7 @@ Due to a number of significant infrastructural changes between the applications,
 
 Uploaded media (device images, etc.) are stored on the filesystem rather than in the database and hence need to be migrated separately. The same is true for custom scripts and reports that you may wish to import.
 
-### Copy uploaded media
+### Copy Uploaded Media
 
 The exact command will depend on where your [`MEDIA_ROOT`](../../configuration/optional-settings/#media_root) is configured in NetBox as well as where it's configured in Nautobot, but in general it will be:
 
@@ -34,7 +34,7 @@ The exact command will depend on where your [`MEDIA_ROOT`](../../configuration/o
 cp -pr $NETBOX_MEDIA_ROOT/* $NAUTOBOT_MEDIA_ROOT/*
 ```
 
-### Copy custom scripts and reports
+### Copy Custom Scripts and Reports
 
 Similarly, the exact commands depend on your `SCRIPTS_ROOT` and `REPORTS_ROOT` settings in NetBox and your [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) in Nautobot, but in general they will be:
 
@@ -55,3 +55,18 @@ Depending on the complexity of your scripts and reports, and how tightly integra
 - `tenancy.* -> nautobot.tenancy.*`
 - `utilities.* -> nautobot.utilities.*`
 - `virtualization.* -> nautobot.virtualization.*`
+
+## Data Model Changes
+
+The following backwards-incompatible changes have been made to the data model.
+
+### Status Fields
+
+!!! tip
+    Status names are now lower-cased when setting the `status` field on CSV imports.
+
+A new [`Status`](../models/extras/status.md) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), and a `slug` field (e.g. `active`).
+
+When using CSV import to define a `status` field on imported objects, such as when importing Devices or Prefixes, the `Status.slug` field is used.
+
+For example, the default **Active** status has a slug of `active`, so the `active` value would be used for import.
