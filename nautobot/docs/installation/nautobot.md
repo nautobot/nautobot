@@ -49,9 +49,7 @@ $ sudo -iu nautobot
 
 ### Update the Nautobot `.bashrc`
 
-After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variable again for this user (since it is a fresh session as far as the system is concerned).
-
-We want to make sure that this variable is always set.
+After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variable for this user and make sure that this variable is always set.
 
 Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
@@ -59,7 +57,7 @@ Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, yo
 $ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
 ```
 
-Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` is set and display its value to verify it worked:
+Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` gets set and then echo its value to verify it worked:
 
 ```no-highlight
 $ source ~/.bashrc
