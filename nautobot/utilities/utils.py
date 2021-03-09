@@ -400,5 +400,6 @@ def is_truthy(arg):
         return arg
     return bool(strtobool(str(arg)))
 
+
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
