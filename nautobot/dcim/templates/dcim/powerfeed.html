@@ -207,9 +207,9 @@
             {% else %}
                 <div class="panel-body text-muted">
                     {% if perms.dcim.add_cable %}
-                    <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm pull-right">
-                        <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
-                    </a>
+                        <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm pull-right">
+                            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
+                        </a>
                     {% endif %}
                     Not connected
                 </div>
