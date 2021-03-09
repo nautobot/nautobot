@@ -6,8 +6,6 @@ Nautobot provides the ability for custom statuses to be defined within an organi
 
 The value of a `status` field on a model (such as `Device.status`) will be represented as a `nautobot.extras.models.Status` object.
 
-This is a foreign key relationship that is designed to behave like a regular choice field but constrained to the content-types for the associated models for that status.
-
 When created, a `Status` can be associated to one or more model content-types using a many-to-many relationship. The relationship to each model is referenced across all user interfaces using the `{app_label}.{model}` naming convention (e.g. `dcim.device`).
 
 Statuses may be managed by navigating to *Organization* > *Statuses* in the navigation menu.
