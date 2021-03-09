@@ -3,7 +3,7 @@ from django.test import TestCase
 from nautobot.circuits.choices import *
 from nautobot.circuits.filters import *
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.dcim.models import Cable, Region, Site, Manufacturer, DeviceType, DeviceRole, Device, Interface
+from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant, TenantGroup
 
