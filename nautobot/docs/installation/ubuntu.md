@@ -1,4 +1,4 @@
-# Ubuntu
+# Installing Nautobot Dependencies on Ubuntu
 
 This installation guide assumes that you are running Ubuntu version 20.04 on your system.
 
@@ -76,4 +76,4 @@ PONG
 
 ## Deploy Nautobot
 
-Now that Nautobot dependencies are installed and configured, you're ready to [Deploy Nautobot](../nautobot)!
+Now that Nautobot dependencies are installed and configured, you're ready to [Install Nautobot](../nautobot)!

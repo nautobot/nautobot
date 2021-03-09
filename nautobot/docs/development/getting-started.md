@@ -103,13 +103,36 @@ connected to the container, you can open the workspace which enables support for
 
 To start Nautobot, select "Run Without Debugging" or "Start Debugging" from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
 
+#### Special Workflow for Containers on Remote Servers
+
+A slightly different workflow is needed when the container is running on a ssh connected server. VScode will not offer the "Reopen in Container" option on a remote connected server.
+
+After `invoke build` use `docker-compose` as follows to start the containers. This prevents the HTTP service from automatically starting inside the container.
+
+```bash
+# change current directory
+cd development
+
+# Start all services using docker-compose
+docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
+```
+
+Now open the VScode `Docker` extension. In the `CONTAINERS/development` section
+right click on a running container and select the `Attach Visual Studio Code` menu item.
+
+The `Select the container to attach VScode` input field provides a list of running containers.
+
+Click on `development_nautobot_1` to use VScode inside the container.
+
+The `devcontainer` will startup now. As a last step open the folder `/opt/nautobot` in VScode.
+
 ### Python Virtual Environment Workflow
 
 There are a few things you'll need:
 
 - A Linux system or environment
-- A PostgreSQL server, which can be installed locally [per the documentation](/installation/#install-nautobot)
-- A Redis server, which can also be [installed locally](/installation/#install-nautobot)
+- A PostgreSQL server, which can be installed locally [per the documentation](../../installation/#installing-nautobot-dependencies)
+- A Redis server, which can also be [installed locally](../../installation/#installing-nautobot-dependencies)
 - A supported version of Python
 - A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
