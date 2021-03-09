@@ -13,7 +13,7 @@
                 <li><a href="{{ object.power_panel.site.get_absolute_url }}">{{ object.power_panel.site }}</a></li>
                 <li><a href="{{ object.power_panel.get_absolute_url }}">{{ object.power_panel }}</a></li>
                 {% if object.rack %}
-                <li><a href="{{ object.rack.get_absolute_url }}">{{ object.rack }}</a></li>
+                    <li><a href="{{ object.rack.get_absolute_url }}">{{ object.rack }}</a></li>
                 {% endif %}
                 <li>{{ object }}</li>
             </ol>
@@ -34,13 +34,13 @@
     <div class="pull-right noprint">
         {% plugin_buttons object %}
         {% if perms.dcim.add_powerfeed %}
-        {% clone_button object %}
+            {% clone_button object %}
         {% endif %}
         {% if perms.dcim.change_powerfeed %}
-        {% edit_button object %}
+            {% edit_button object %}
         {% endif %}
         {% if perms.dcim.delete_powerfeed %}
-        {% delete_button object %}
+            {% delete_button object %}
         {% endif %}
     </div>
     <h1>{% block title %}{{ object }}{% endblock %}</h1>
@@ -49,13 +49,13 @@
         {% custom_links object %}
     </div>
     <ul class="nav nav-tabs">
-        <li role="presentation" {% if not active_tab %} class="active" {% endif %}>
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Cable</a>
         </li>
         {% if perms.extras.view_objectchange %}
-        <li role="presentation" {% if active_tab == 'changelog' %} class="active" {% endif %}>
-            <a href="{% url 'dcim:powerfeed_changelog' pk=object.pk %}">Change Log</a>
-        </li>
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'dcim:powerfeed_changelog' pk=object.pk %}">Change Log</a>
+            </li>
         {% endif %}
     </ul>
 {% endblock %}
