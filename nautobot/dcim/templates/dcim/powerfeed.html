@@ -109,16 +109,16 @@
                 <tr>
                     <td>Utilization (Allocated)</td>
                     {% with utilization=object.connected_endpoint.get_power_draw %}
-                    {% if utilization %}
-                    <td>
-                        {{ utilization.allocated }}VA / {{ object.available_power }}VA
-                        {% if object.available_power > 0 %}
-                        {% utilization_graph_raw_data utilization.allocated object.available_power %}
+                        {% if utilization %}
+                        <td>
+                            {{ utilization.allocated }}VA / {{ object.available_power }}VA
+                            {% if object.available_power > 0 %}
+                                {% utilization_graph_raw_data utilization.allocated object.available_power %}
+                            {% endif %}
+                        </td>
+                        {% else %}
+                        <td class="text-muted">N/A</td>
                         {% endif %}
-                    </td>
-                    {% else %}
-                    <td class="text-muted">N/A</td>
-                    {% endif %}
                     {% endwith %}
                 </tr>
             </table>
@@ -161,60 +161,60 @@
                 <strong>Connection</strong>
             </div>
             {% if object.cable %}
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>Cable</td>
-                    <td>
-                        <a href="{{ object.cable.get_absolute_url }}">{{ object.cable }}</a>
-                        <a href="{% url 'dcim:powerfeed_trace' pk=object.pk %}" class="btn btn-primary btn-xs"
-                            title="Trace">
-                            <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% if object.connected_endpoint %}
-                <tr>
-                    <td>Device</td>
-                    <td>
-                        <a href="{{ object.connected_endpoint.device.get_absolute_url }}">{{ object.connected_endpoint.device }}</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Name</td>
-                    <td>
-                        <a href="{{ object.connected_endpoint.get_absolute_url }}">{{ object.connected_endpoint.name }}</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Type</td>
-                    <td>{{ object.connected_endpoint.get_type_display|placeholder }}</td>
-                </tr>
-                <tr>
-                    <td>Description</td>
-                    <td>{{ object.connected_endpoint.description|placeholder }}</td>
-                </tr>
-                <tr>
-                    <td>Path Status</td>
-                    <td>
-                        {% if object.path.is_active %}
-                        <span class="label label-success">Reachable</span>
-                        {% else %}
-                        <span class="label label-danger">Not Reachable</span>
-                        {% endif %}
-                    </td>
-                </tr>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Cable</td>
+                        <td>
+                            <a href="{{ object.cable.get_absolute_url }}">{{ object.cable }}</a>
+                            <a href="{% url 'dcim:powerfeed_trace' pk=object.pk %}" class="btn btn-primary btn-xs"
+                                title="Trace">
+                                <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% if object.connected_endpoint %}
+                    <tr>
+                        <td>Device</td>
+                        <td>
+                            <a href="{{ object.connected_endpoint.device.get_absolute_url }}">{{ object.connected_endpoint.device }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            <a href="{{ object.connected_endpoint.get_absolute_url }}">{{ object.connected_endpoint.name }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        <td>{{ object.connected_endpoint.get_type_display|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.connected_endpoint.description|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Path Status</td>
+                        <td>
+                            {% if object.path.is_active %}
+                            <span class="label label-success">Reachable</span>
+                            {% else %}
+                            <span class="label label-danger">Not Reachable</span>
+                            {% endif %}
+                        </td>
+                    </tr>
                 {% endif %}
-            </table>
+                </table>
             {% else %}
-            <div class="panel-body text-muted">
-                {% if perms.dcim.add_cable %}
-                <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}"
-                    class="btn btn-primary btn-sm pull-right">
-                    <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
-                </a>
-                {% endif %}
-                Not connected
-            </div>
+                <div class="panel-body text-muted">
+                    {% if perms.dcim.add_cable %}
+                    <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}"
+                        class="btn btn-primary btn-sm pull-right">
+                        <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
+                    </a>
+                    {% endif %}
+                    Not connected
+                </div>
             {% endif %}
         </div>
         <div class="panel panel-default">
