@@ -33,7 +33,7 @@ Traced from Interface 1 on Device A, Nautobot will show the following path:
 * Cable 2: Rear Port 1 to Rear Port 2
 * Cable 3: Front Port 2 to Interface 2
 
-A cable can also be traced through a circuit.  Due to the path caching, the Circuit must have both terminations added before connecting a cable.
+A cable can also be traced through a circuit.  Due to the path caching, the Circuit should have both terminations added before connecting a cable.  If a cable is already connected, changing the cable status from `Connected` to another status such as `Planned` followed by changing the status back to `Connected` will trigger a path refresh. 
 
 ![Cable path circuit](../../media/models/dcim_cable_trace_circuit.png)
 
