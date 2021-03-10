@@ -175,6 +175,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             return queryset
         qs_filter = Q(description__icontains=value)
         try:
+            # filter for Aggregates containing |value|
             query = netaddr.IPNetwork(value.strip())
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
@@ -327,6 +328,7 @@ class PrefixFilterSet(
             return queryset
         qs_filter = Q(description__icontains=value)
         try:
+            # filter for Prefixes containing |value|
             query = netaddr.IPNetwork(value)
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
@@ -384,6 +386,9 @@ class PrefixFilterSet(
                 return queryset.net_contains_or_equal(netaddr.IPNetwork(value).cidr)
             # Searching by IP address
             else:
+                # filter for Prefixes containing |value|
+                # netaddr.IPAddress objects have no netmask
+                # so prefix_length is not considered
                 query = netaddr.IPAddress(value)
                 return queryset.filter(
                     network__lte=bytes(query),

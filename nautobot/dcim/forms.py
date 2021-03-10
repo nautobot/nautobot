@@ -1792,15 +1792,17 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         if position:
             self.fields["position"].widget.choices = [(position, f"U{position}")]
 
-        def save(self, *args, **kwargs):
-            instance = super().save(*args, commit=False, **kwargs)
-            if instance.primary_ip4:
-                instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
-            if instance.primary_ip6:
-                instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
-            instance.save()
-            self.save_m2m()
-            return instance
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, commit=False, **kwargs)
+        # call IPAddress setter method to deconstruct netaddr.IPNetwork
+        # into host, broadcast, and prefix_length model fields
+        if instance.primary_ip4:
+            instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
+        if instance.primary_ip6:
+            instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
+        instance.save()
+        self.save_m2m()
+        return instance
 
 
 class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -1851,16 +1853,10 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
 
-    def clean(self):
-        self.cleaned_data = super().clean()
-        ip4 = self.cleaned_data.get("primary_ip4")
-        self.address_ip4 = netaddr.IPNetwork(ip4) if ip4 else None
-        ip6 = self.cleaned_data.get("primary_ip6")
-        self.address_ip6 = netaddr.IPNetwork(ip6) if ip6 else None
-        return self.cleaned_data
-
     def save(self, *args, **kwargs):
         instance = super().save(*args, commit=False, **kwargs)
+        # call IPAddress setter method to deconstruct netaddr.IPNetwork
+        # into host, broadcast, and prefix_length model fields
         if instance.primary_ip4:
             instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
         if instance.primary_ip6:
