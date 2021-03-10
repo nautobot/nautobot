@@ -11,12 +11,7 @@ about: Propose a new Nautobot feature or enhancement
     If you have a general idea or question, please start a discussion instead:
     https://github.com/nautobot/nautobot/discussions
 
-    NOTE: Due to an excessive backlog of feature requests, we are not currently
-    accepting any proposals which significantly extend Nautobot's feature scope.
-
-    Please describe the environment in which you are running Nautobot. Be sure
-    that you are running an unmodified instance of the latest stable release
-    before submitting a bug report.
+    Please describe the environment in which you are running Nautobot.
 -->
 ### Environment
 * Python version:
