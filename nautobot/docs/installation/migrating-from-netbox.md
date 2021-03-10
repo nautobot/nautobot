@@ -58,7 +58,7 @@ Depending on the complexity of your scripts and reports, and how tightly integra
 
 ## Data Model Changes
 
-The following backwards-incompatible changes have been made to the data model.
+The following backwards-incompatible changes have been made to the data model in Nautobot.
 
 ### Status Fields
 
@@ -71,9 +71,9 @@ When using CSV import to define a `status` field on imported objects, such as wh
 
 For example, the default **Active** status has a slug of `active`, so the `active` value would be used for import.
 
-### Primary Key Fields
+### UUID Primary Database Keys
 
 !!! tip
-    ID fields are no longer auto-incrementing integers and are now randomly-generated UUIDs.
+    Primary key (aka ID) fields are no longer auto-incrementing integers and are now randomly-generated UUIDs.
 
 Database keys are now defined as randomly-generated [Universally Unique Identifiers](https://tools.ietf.org/html/rfc4122.html) (UUIDs) instead of integers, protecting against certain classes of data-traversal attacks.
