@@ -12,7 +12,7 @@ def convert_field_to_string(field, registry=None):
     return generic.GenericScalar()
 
 
-@convert_django_field.register(BinaryField)
+@convert_django_field.register(BinaryField)  # noqa: F811
 def convert_field_to_string(field, registry=None):  # noqa: F811
     """Convert BinaryField to String."""
     return graphene.String()

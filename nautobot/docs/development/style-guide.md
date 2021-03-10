@@ -1,31 +1,31 @@
 # Style Guide
 
-Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Pycodestyle](https://github.com/pycqa/pycodestyle) is used to validate code formatting, ignoring certain violations. See `scripts/cibuild.sh`.
+Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. See `scripts/cibuild.sh` and `tasks.py`.
 
-## PEP 8 Exceptions
+## Flake8 Exceptions
 
-* Wildcard imports (for example, `from .constants import *`) are acceptable under any of the following conditions:
-    * The library being import contains only constant declarations (e.g. `constants.py`)
-    * The library being imported explicitly defines `__all__`
-
+* Whitespace before ':' is permitted (E203) as Black maintains that there are cases where this is the preferred style.
+* Imported-but-unused modules (F401) are currently not flagged, but we want to fix this in the future.
+* Wildcard imports (for example `from .constants import *`, F403) are currently not flagged, as this is a pattern inherited from NetBox's coding style, but we want to change this in the future, and recommend against introducing this pattern in any new code.
+* "Name may be undefined or defined from star imports" (F405) is currently not flagged due to the previous item; we plan to
+enable this check after changing the above import pattern.
 * Maximum line length is 120 characters (E501)
-    * This does not apply to HTML templates or to automatically generated code (e.g. database migrations).
-
-* Line breaks are permitted following binary operators (W504)
+* Line breaks are permitted both before (W503) and after (W504) binary operators.
 
 ## Enforcing Code Style
 
-The `pycodestyle` utility (previously `pep8`) is used by the CI process to enforce code style. It is strongly recommended to include as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `pycodestyle` prior to every commit attempt and abort if the validation fails.
+The `flake8` and `black` utilities are used by the CI process to enforce code style. It is strongly recommended to include both as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `flake8` and `black --check` prior to every commit attempt and abort if the validation fails.
 
 ```
 $ cd .git/hooks/
 $ ln -s ../../scripts/git-hooks/pre-commit
 ```
 
-To invoke `pycodestyle` manually, run:
+You can also invoke these utilities manually against the development Docker containers by running:
 
 ```
-pycodestyle --ignore=W504,E501 ./
+invoke flake8
+invoke black
 ```
 
 ## Introducing New Dependencies
@@ -39,7 +39,7 @@ If there's a strong case for introducing a new dependency, it must meet the foll
 * It must be actively maintained, with no longer than one year between releases.
 * It must be available via the [Python Package Index](https://pypi.org/) (PyPI).
 
-When adding a new dependency, a short description of the package and the URL of its code repository must be added to `base_requirements.txt`. Additionally, a line specifying the package name pinned to the current stable release must be added to `requirements.txt`. This ensures that Nautobot will install only the known-good release and simplify support efforts.
+New dependencies can be added to the project via the `poetry add` command. This will correctly add the dependency to `pyproject.toml` as well as the `poetry.lock` file. You should then update the `pyproject.toml` with a comment providing a short description of the package and/or how Nautobot is making use of it.
 
 ## General Guidance
 
@@ -59,4 +59,4 @@ When adding a new dependency, a short description of the package and the URL of 
 
 * When referring to Nautobot in writing, use the proper form "Nautobot," with the letter N. The lowercase form "nautobot" should be used in code, filenames, etc.
 
-* There is an SVG form of the Nautobot logo at [docs/nautobot_logo.svg](../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
+* There is an SVG form of the Nautobot logo at [nautobot/docs/nautobot_logo.svg](../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.

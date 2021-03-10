@@ -81,11 +81,14 @@ _patterns = [
 
 
 if settings.DEBUG:
-    import debug_toolbar
+    try:
+        import debug_toolbar
 
-    _patterns += [
-        path("__debug__/", include(debug_toolbar.urls)),
-    ]
+        _patterns += [
+            path("__debug__/", include(debug_toolbar.urls)),
+        ]
+    except ImportError:
+        pass
 
 if settings.METRICS_ENABLED:
     _patterns += [

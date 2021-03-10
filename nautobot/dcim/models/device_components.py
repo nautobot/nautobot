@@ -476,7 +476,7 @@ class BaseInterface(RelationshipModel):
             self.untagged_vlan = None
 
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
-        if not self._state.adding and self.mode != InterfaceModeChoices.MODE_TAGGED:
+        if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:
             self.tagged_vlans.clear()
 
         return super().save(*args, **kwargs)
@@ -606,7 +606,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
 
         # A LAG interface cannot be its own parent
-        if not self._state.adding and self.lag_id == self.pk:
+        if self.present_in_database and self.lag_id == self.pk:
             raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
 
         # Validate untagged VLAN

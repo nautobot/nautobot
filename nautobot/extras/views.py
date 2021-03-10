@@ -439,7 +439,7 @@ class ImageAttachmentEditView(generic.ObjectEditView):
     model_form = forms.ImageAttachmentForm
 
     def alter_obj(self, imageattachment, request, args, kwargs):
-        if not imageattachment.pk:
+        if not imageattachment.present_in_database:
             # Assign the parent object based on URL kwargs
             model = kwargs.get("model")
             imageattachment.parent = get_object_or_404(model, pk=kwargs["object_id"])

@@ -246,10 +246,9 @@ class JobViewSet(ViewSet):
 
         job_class = self._get_job_class(class_path)
         job = job_class()
-        input_serializer = serializers.JobInputSerializer(data=request.data)
 
-        if not input_serializer.is_valid():
-            return Response(input_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        input_serializer = serializers.JobInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
 
         data = input_serializer.data["data"]
         commit = input_serializer.data["commit"]

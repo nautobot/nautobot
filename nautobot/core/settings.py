@@ -52,8 +52,8 @@ if BASE_PATH:
     BASE_PATH = BASE_PATH.strip("/") + "/"  # Enforce trailing slash only
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-BASE_STORAGE_DIR = os.environ.get(
-    "NAUTOBOT_BASE_STORAGE_DIR", os.path.expanduser("~/.nautobot")
+NAUTOBOT_ROOT = os.environ.get(
+    "NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot")
 )
 
 CHANGELOG_RETENTION = 90
@@ -75,11 +75,11 @@ EXEMPT_EXCLUDE_MODELS = (
 
 EXEMPT_VIEW_PERMISSIONS = []
 GIT_ROOT = os.environ.get(
-    "NAUTOBOT_GIT_ROOT", os.path.join(BASE_STORAGE_DIR, "git").rstrip("/")
+    "NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/")
 )
 HTTP_PROXIES = None
 JOBS_ROOT = os.environ.get(
-    "NAUTOBOT_JOBS_ROOT", os.path.join(BASE_STORAGE_DIR, "jobs").rstrip("/")
+    "NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/")
 )
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000
@@ -293,7 +293,7 @@ ALLOWED_HOSTS = []
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
 LOGGING = {}
-MEDIA_ROOT = os.path.join(BASE_STORAGE_DIR, "media").rstrip("/")
+MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_FILE_PATH = None
 SHORT_DATE_FORMAT = "Y-m-d"
 SHORT_DATETIME_FORMAT = "Y-m-d H:i"
@@ -311,7 +311,6 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "cacheops",
     "corsheaders",
-    "debug_toolbar",
     "django_filters",
     "django_tables2",
     "django_prometheus",
@@ -335,7 +334,6 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -390,7 +388,7 @@ USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # Static files (CSS, JavaScript, Images)
-STATIC_ROOT = os.path.join(BASE_STORAGE_DIR, "static")
+STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "/{}static/".format(BASE_PATH)
 STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
 
@@ -461,6 +459,7 @@ CACHEOPS = {
     "virtualization.*": {"ops": "all"},
 }
 CACHEOPS_DEGRADE_ON_FAILURE = True
+CACHEOPS_ENABLED = True
 CACHEOPS_REDIS = "redis://localhost:6379/1"
 CACHEOPS_DEFAULTS = {"timeout": 900}
 
