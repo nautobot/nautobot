@@ -1087,6 +1087,74 @@ class CablePathTestCase(TestCase):
         # Check that all CablePaths have been deleted
         self.assertEqual(CablePath.objects.count(), 0)
 
+    def test_209_single_path_via_circuit_add_circuit_termination(self):
+        """
+        Tests case where a user might want to add a second termination to a circuit at a later time.
+        [IF1] --C1-- [CT1A] then [IF1] --C1-- [CT1A][CT1Z] --C2-- [IF2]
+        """
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
+        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
+
+        # Create cable 1
+        cable1 = Cable(
+            termination_a=interface1,
+            termination_b=circuittermination1,
+            status=self.status,
+        )
+        cable1.save()
+
+        self.assertPathExists(
+            origin=interface1,
+            destination=circuittermination1,
+            path=(cable1,),
+            is_active=True,
+        )
+
+        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+
+        # Create cable 2
+        cable2 = Cable(
+            termination_a=interface2,
+            termination_b=circuittermination2,
+            status=self.status,
+        )
+        cable2.save()
+
+        self.assertPathExists(
+            origin=interface1,
+            destination=interface2,
+            path=(cable1, circuittermination1, circuittermination2, cable2),
+            is_active=True,
+        )
+        self.assertPathExists(
+            origin=interface2,
+            destination=interface1,
+            path=(cable2, circuittermination2, circuittermination1, cable1),
+            is_active=True,
+        )
+        self.assertEqual(CablePath.objects.count(), 4)
+
+        # Delete cable 2
+        cable2.delete()
+        path1 = self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, circuittermination1, circuittermination2),
+            is_active=False,
+        )
+        self.assertEqual(CablePath.objects.count(), 2)
+        interface1.refresh_from_db()
+        interface2.refresh_from_db()
+        self.assertPathIsSet(interface1, path1)
+        self.assertPathIsNotSet(interface2)
+
+        # Delete cable 1
+        cable1.delete()
+
+        # Check that all CablePaths have been deleted
+        self.assertEqual(CablePath.objects.count(), 0)
+
     def test_301_create_path_via_existing_cable(self):
         """
         [IF1] --C1-- [FP1] [RP2] --C2-- [RP2] [FP2] --C3-- [IF2]
