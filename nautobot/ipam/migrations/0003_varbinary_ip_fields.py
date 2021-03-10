@@ -26,13 +26,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="prefix",
             name="broadcast",
-            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b"", max_length=16),
+            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b""),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name="prefix",
             name="network",
-            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b"", max_length=16),
+            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b""),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -48,13 +48,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="aggregate",
             name="broadcast",
-            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b"", max_length=16),
+            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b""),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name="aggregate",
             name="network",
-            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b"", max_length=16),
+            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b""),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -74,13 +74,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="ipaddress",
             name="broadcast",
-            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b"", max_length=16),
+            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b""),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name="ipaddress",
             name="host",
-            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b"", max_length=16),
+            field=nautobot.ipam.fields.VarbinaryIPField(db_index=True, default=b""),
             preserve_default=False,
         ),
         migrations.AddField(

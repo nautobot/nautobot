@@ -14,6 +14,10 @@ class VarbinaryIPField(models.BinaryField):
 
     description = "IP network address"
 
+    def __init__(self, **kwargs):
+        kwargs['max_length'] = 16
+        super().__init__(**kwargs)
+
     def db_type(self, connection):
         engine = connection.settings_dict["ENGINE"]
 
