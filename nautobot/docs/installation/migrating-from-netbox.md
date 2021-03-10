@@ -70,3 +70,10 @@ A new [`Status`](../models/extras/status.md) model has been added to represent t
 When using CSV import to define a `status` field on imported objects, such as when importing Devices or Prefixes, the `Status.slug` field is used.
 
 For example, the default **Active** status has a slug of `active`, so the `active` value would be used for import.
+
+### Primary Key Fields
+
+!!! tip
+    ID fields are no longer auto-incrementing integers and are now randomly-generated UUIDs.
+
+Database keys are now defined as randomly-generated [Universally Unique Identifiers](https://tools.ietf.org/html/rfc4122.html) (UUIDs) instead of integers, protecting against certain classes of data-traversal attacks.
