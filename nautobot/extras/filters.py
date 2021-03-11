@@ -21,7 +21,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
-    GraphqlQuery,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -568,14 +568,14 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]
 
 
-class GraphqlQueryFilterSet(BaseFilterSet):
+class GraphQLQueryFilterSet(BaseFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
     )
 
     class Meta:
-        model = GraphqlQuery
+        model = GraphQLQuery
         fields = (
             "name",
             "slug",

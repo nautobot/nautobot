@@ -685,11 +685,11 @@ class JobResult(BaseModel):
 
 
 @extras_features("graphql")
-class GraphqlQuery(BaseModel, ChangeLoggedModel):
-    name = models.CharField(max_length=255, unique=True)
-    slug = models.CharField(max_length=255, unique=True)
+class GraphQLQuery(BaseModel, ChangeLoggedModel):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.CharField(max_length=100, unique=True)
     query = models.TextField()
-    variables = models.JSONField(default=dict)
+    variables = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ("slug",)

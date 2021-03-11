@@ -24,7 +24,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
-    GraphqlQuery,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -394,12 +394,12 @@ class RelationshipAssociationViewSet(ModelViewSet):
 #
 
 
-class GraphqlQueryViewSet(ModelViewSet):
-    queryset = GraphqlQuery.objects.all()
-    serializer_class = serializers.GraphqlQuerySerializer
-    filterset_class = filters.GraphqlQueryFilterSet
+class GraphQLQueryViewSet(ModelViewSet):
+    queryset = GraphQLQuery.objects.all()
+    serializer_class = serializers.GraphQLQuerySerializer
+    filterset_class = filters.GraphQLQueryFilterSet
 
-    @swagger_auto_schema(method="post", request_body=serializers.GraphqlQuerySerializer)
+    @swagger_auto_schema(method="post", request_body=serializers.GraphQLQuerySerializer)
     @action(detail=True, methods=["post"])
     def run(self, request, pk):
         query_object = get_object_or_404(self.queryset, slug=pk)

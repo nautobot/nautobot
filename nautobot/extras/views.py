@@ -25,7 +25,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
-    GraphqlQuery,
+    GraphQLQuery,
     ImageAttachment,
     ObjectChange,
     JobResult,
@@ -842,27 +842,27 @@ class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
     queryset = RelationshipAssociation.objects.all()
 
 
-class GraphqlQueryListView(generic.ObjectListView):
-    queryset = GraphqlQuery.objects.all()
-    table = tables.GraphqlQueryTable
-    filterset = filters.GraphqlQueryFilterSet
-    filterset_form = forms.GraphqlQueryFilterForm
+class GraphQLQueryListView(generic.ObjectListView):
+    queryset = GraphQLQuery.objects.all()
+    table = tables.GraphQLQueryTable
+    filterset = filters.GraphQLQueryFilterSet
+    filterset_form = forms.GraphQLQueryFilterForm
     action_buttons = ("add",)
 
 
-class GraphqlQueryView(generic.ObjectView):
-    queryset = GraphqlQuery.objects.all()
+class GraphQLQueryView(generic.ObjectView):
+    queryset = GraphQLQuery.objects.all()
 
 
-class GraphqlQueryEditView(generic.ObjectEditView):
-    queryset = GraphqlQuery.objects.all()
-    model_form = forms.GraphqlQueryForm
+class GraphQLQueryEditView(generic.ObjectEditView):
+    queryset = GraphQLQuery.objects.all()
+    model_form = forms.GraphQLQueryForm
 
 
-class GraphqlQueryDeleteView(generic.ObjectDeleteView):
-    queryset = GraphqlQuery.objects.all()
+class GraphQLQueryDeleteView(generic.ObjectDeleteView):
+    queryset = GraphQLQuery.objects.all()
 
 
-class GraphqlQueryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GraphqlQuery.objects.all()
-    table = tables.GraphqlQueryTable
+class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
+    queryset = GraphQLQuery.objects.all()
+    table = tables.GraphQLQueryTable

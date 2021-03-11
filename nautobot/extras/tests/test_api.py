@@ -30,7 +30,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
-    GraphqlQuery,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     Relationship,
@@ -727,8 +727,8 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
         """
 
 
-class GraphqlQueryTest(APIViewTestCases.APIViewTestCase):
-    model = GraphqlQuery
+class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
+    model = GraphQLQuery
     brief_fields = ["id", "name", "url"]
 
     create_data = [
@@ -736,42 +736,36 @@ class GraphqlQueryTest(APIViewTestCases.APIViewTestCase):
             "name": "graphql-query-4",
             "slug": "graphql-query-4",
             "query": "{query: sites {name}}",
-            "variables": "{}",
         },
         {
             "name": "graphql-query-5",
             "slug": "graphql-query-5",
-            "query": "{query: sites {name}}",
-            "variables": "{}",
+            "query": "{ devices(role: 'edge') { id, name, device_role { name slug } } }",
         },
         {
             "name": "graphql-query-6",
             "slug": "graphql-query-6",
-            "query": "{query: sites {name}}",
-            "variables": "{}",
+            "query": "{query ($device: String!) { devices(name: $device) { config_context name position serial primary_ip4 { id primary_ip4_for { id name } } tenant { name } tags { name slug } device_role { name } platform { name slug manufacturer { name } napalm_driver } site { name slug vlans { id name vid } vlan_groups { id } } interfaces { description mac_address enabled name ip_addresses { address tags { id } } connected_circuit_termination { circuit { cid commit_rate provider { name } } } tagged_vlans { id } untagged_vlan { id } cable { termination_a_type status { name } color } tagged_vlans { site { name } id } tags { id } } } }}",
         },
     ]
 
     @classmethod
     def setUpTestData(cls):
         graphqlqueries = (
-            GraphqlQuery(
+            GraphQLQuery(
                 name="graphql-query-1",
                 slug="graphql-query-1",
                 query="{query: sites {name}}",
-                variables="{}",
             ),
-            GraphqlQuery(
+            GraphQLQuery(
                 name="graphql-query-2",
                 slug="graphql-query-2",
                 query="{query: sites {name}}",
-                variables="{}",
             ),
-            GraphqlQuery(
+            GraphQLQuery(
                 name="graphql-query-3",
                 slug="graphql-query-3",
                 query="{query: sites {name}}",
-                variables="{}",
             ),
         )
 

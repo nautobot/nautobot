@@ -38,7 +38,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
-    GraphqlQuery,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -877,12 +877,12 @@ class StatusModelCSVFormMixin(CSVModelForm):
     )
 
 
-class GraphqlQueryForm(BootstrapMixin, forms.ModelForm):
+class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
     slug = SlugField()
     query = TextField()
 
     class Meta:
-        model = GraphqlQuery
+        model = GraphQLQuery
         fields = (
             "name",
             "slug",
@@ -899,6 +899,6 @@ class GraphqlQueryForm(BootstrapMixin, forms.ModelForm):
             raise forms.ValidationError({"query": error})
 
 
-class GraphqlQueryFilterForm(BootstrapMixin, forms.Form):
-    model = GraphqlQuery
+class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):
+    model = GraphQLQuery
     q = forms.CharField(required=False, label="Search")

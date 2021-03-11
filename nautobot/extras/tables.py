@@ -21,7 +21,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
-    GraphqlQuery,
+    GraphQLQuery,
     JobResult,
     ObjectChange,
     Relationship,
@@ -421,12 +421,12 @@ class RelationshipAssociationTable(BaseTable):
         fields = ("relationship", "source", "destination", "actions")
 
 
-class GraphqlQueryTable(BaseTable):
+class GraphQLQueryTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
-        model = GraphqlQuery
+        model = GraphQLQuery
         fields = (
             "pk",
             "name",

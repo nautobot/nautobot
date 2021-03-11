@@ -11,7 +11,7 @@
     <div class="row noprint">
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
-                <li><a href="{% url 'extras:graphqlquery_list' %}">GraphQL Query</a></li>
+                <li><a href="{% url 'extras:graphqlquery_list' %}">GraphQL Queries</a></li>
                 {% if object.name %}
                     <li><a href="{% url 'extras:graphqlquery' slug=object.slug %}">{{ object.name }}</a></li>
                 {% endif %}
@@ -21,7 +21,7 @@
 
     <div class="pull-right noprint">
         {% plugin_buttons object %}
-        <a class="btn btn-primary" href="{% url 'graphql' %}#query={{ object.query|iriencode }}&variables={{ object.variables|iriencode }}">Open in GraphiQL</a>
+        <a class="btn btn-primary" href="{% url 'graphql' %}#query={{ object.query|urlencode }}&variables={{ object.variables|iriencode }}">Open in GraphiQL</a>
         {% if perms.extras.add_graphqlquery %}
             {% clone_button object %}
         {% endif %}
@@ -74,7 +74,7 @@
                 </tr>
                 <tr>
                     <td>Query</td>
-                    <td>{% if object.query %} <pre id="query">{{ object.query }}</pre> {% else %} {{ None }} {% endif %}</td>
+                    <td><pre id="query">{{ object.query }}</pre></td>
                 </tr>
             </table>
         </div>
@@ -96,7 +96,7 @@
 
 <script>
 function test_query() {
-    var output = $("#query_output")
+    var output = $("#query_output");
     var variables = $("#query_variables").val();
     $.ajax({
         url: "{% url 'graphql' %}",
@@ -111,7 +111,7 @@ function test_query() {
             output.text(JSON.stringify(data, undefined, 2));
         },
         error: function(error) {
-            console.log(error)
+            console.log(error);
             output.text(error.responseText);
         }
     });
