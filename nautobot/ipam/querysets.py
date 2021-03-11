@@ -11,51 +11,57 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 class NetworkQuerySet(QuerySet):
     @staticmethod
-    def _split_prefix(prefix):
+    def _maybe_convert_prefix(prefix):
         if isinstance(prefix, str):
             prefix = netaddr.IPNetwork(prefix)
-        broadcast = prefix.broadcast
-        if prefix.broadcast is None:
-            broadcast = prefix.network
-        return prefix.prefixlen, prefix.network, broadcast
+        return prefix
+
+    @staticmethod
+    def _get_broadcast(prefix):
+        return prefix.broadcast if prefix.broadcast else prefix.network
 
     def net_equals(self, prefix):
-        prefixlen, network, broadcast = self._split_prefix(prefix)
+        prefix = self._maybe_convert_prefix(prefix)
+        broadcast = self._get_broadcast(prefix)
         return self.filter(
-            prefix_length=prefixlen,
-            network=bytes(network),
+            prefix_length=prefix.prefixlen,
+            network=bytes(prefix.network),
             broadcast=bytes(broadcast),
         )
 
     def net_contained(self, prefix):
-        prefixlen, network, broadcast = self._split_prefix(prefix)
+        prefix = self._maybe_convert_prefix(prefix)
+        broadcast = self._get_broadcast(prefix)
         return self.filter(
-            prefix_length__gt=prefixlen,
-            network__gte=bytes(network),
+            prefix_length__gt=prefix.prefixlen,
+            network__gte=bytes(prefix.network),
             broadcast__lte=bytes(broadcast),
         )
 
     def net_contained_or_equal(self, prefix):
-        prefixlen, network, broadcast = self._split_prefix(prefix)
+        prefix = self._maybe_convert_prefix(prefix)
+        broadcast = self._get_broadcast(prefix)
         return self.filter(
-            prefix_length__gte=prefixlen,
-            network__gte=bytes(network),
+            prefix_length__gte=prefix.prefixlen,
+            network__gte=bytes(prefix.network),
             broadcast__lte=bytes(broadcast),
         )
 
     def net_contains(self, prefix):
-        prefixlen, network, broadcast = self._split_prefix(prefix)
+        prefix = self._maybe_convert_prefix(prefix)
+        broadcast = self._get_broadcast(prefix)
         return self.filter(
-            prefix_length__lt=prefixlen,
-            network__lte=bytes(network),
+            prefix_length__lt=prefix.prefixlen,
+            network__lte=bytes(prefix.network),
             broadcast__gte=bytes(broadcast),
         )
 
     def net_contains_or_equal(self, prefix):
-        prefixlen, network, broadcast = self._split_prefix(prefix)
+        prefix = self._maybe_convert_prefix(prefix)
+        broadcast = self._get_broadcast(prefix)
         return self.filter(
-            prefix_length__lte=prefixlen,
-            network__lte=bytes(network),
+            prefix_length__lte=prefix.prefixlen,
+            network__lte=bytes(prefix.network),
             broadcast__gte=bytes(broadcast),
         )
 
@@ -109,6 +115,16 @@ class IPAddressQuerySet(RestrictedQuerySet):
         6: IPV6_BYTE_LENGTH,
     }
 
+    @staticmethod
+    def _maybe_convert_network(network):
+        if isinstance(network, str):
+            network = netaddr.IPNetwork(network)
+        return network
+
+    @staticmethod
+    def _get_broadcast(network):
+        return network.broadcast if network.broadcast else network.network
+
     def get_queryset(self):
         """
         By default, PostgreSQL will order INETs with shorter (larger) prefix lengths ahead of those with longer
@@ -128,14 +144,18 @@ class IPAddressQuerySet(RestrictedQuerySet):
         return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
 
     def net_host_contained(self, network):
+        network = self._maybe_convert_network(network)
+        broadcast = self._get_broadcast(network)
         return self.filter(
-            host__lte=bytes(network.broadcast),
+            host__lte=bytes(broadcast),
             host__gte=bytes(network.network),
         )
 
     def net_contained_or_equal(self, network):
+        network = self._maybe_convert_network(network)
+        broadcast = self._get_broadcast(network)
         return self.filter(
-            host__lte=bytes(network.broadcast),
+            host__lte=bytes(broadcast),
             host__gte=bytes(network.host),
         )
 
