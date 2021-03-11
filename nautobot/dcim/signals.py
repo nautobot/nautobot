@@ -33,7 +33,6 @@ def create_cablepath(node, rebuild=True):
             raise e
     if rebuild:
         rebuild_paths(node)
-        test = "changeme"
 
 
 def rebuild_paths(obj):
