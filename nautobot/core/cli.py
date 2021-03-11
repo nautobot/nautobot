@@ -9,7 +9,7 @@ import warnings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.management.utils import get_random_secret_key
 from django.core.validators import URLValidator
-from jinja2 import Template
+from jinja2 import BaseLoader, Environment, Template
 
 from nautobot.extras.plugins.utils import load_plugins, get_sso_backend_name
 from .runner import run_app
@@ -73,7 +73,8 @@ def generate_settings(config_template=CONFIG_TEMPLATE, **kwargs):
     secret_key = get_random_secret_key()
 
     with open(config_template) as fh:
-        config = Template(fh.read())
+        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)
+        config = environment.from_string(fh.read())
 
     return config.render(secret_key=secret_key)
 
