@@ -16,11 +16,12 @@ def rebuild_paths_circuits(obj):
     """
     Rebuild all CablePaths which traverse, begin or end with the specified node.
     """
+    termination_type = ContentType.objects.get_for_model(CircuitTermination)
 
     cable_paths = CablePath.objects.filter(
         Q(path__contains=obj)
-        | Q(destination_type=ContentType.objects.get_for_model(CircuitTermination), destination_id=obj.pk)
-        | Q(origin_type=ContentType.objects.get_for_model(CircuitTermination), origin_id=obj.pk)
+        | Q(destination_type=termination_type, destination_id=obj.pk)
+        | Q(origin_type=termination_type, origin_id=obj.pk)
     )
 
     with transaction.atomic():

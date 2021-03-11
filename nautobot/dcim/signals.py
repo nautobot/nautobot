@@ -21,6 +21,8 @@ from .models import (
 def create_cablepath(node, rebuild=True):
     """
     Create CablePaths for all paths originating from the specified node.
+
+    rebuild (bool) - Used to refresh paths where this node is not an endpoint.
     """
     cp = CablePath.from_origin(node)
     if cp:
@@ -31,6 +33,7 @@ def create_cablepath(node, rebuild=True):
             raise e
     if rebuild:
         rebuild_paths(node)
+        test = "changeme"
 
 
 def rebuild_paths(obj):
