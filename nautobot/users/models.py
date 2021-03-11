@@ -4,17 +4,14 @@ import os
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
 
-from nautobot.utilities.fields import JSONArrayField
 from nautobot.core.models import BaseModel
+from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import flatten_dict
 

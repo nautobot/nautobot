@@ -85,7 +85,7 @@ class NaturalOrderingField(models.CharField):
 
 
 class JSONArrayField(models.JSONField):
-    _default_hint = ('list', '[]')
+    _default_hint = ("list", "[]")
 
     def __init__(self, base_field, **kwargs):
         self.base_field = base_field
@@ -97,7 +97,7 @@ class JSONArrayField(models.JSONField):
 
     @property
     def description(self):
-        return 'JSON Array of %s' % self.base_field.description
+        return "JSON Array of %s" % self.base_field.description
 
     def get_prep_value(self, value):
         if value is not None:
@@ -108,9 +108,11 @@ class JSONArrayField(models.JSONField):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        kwargs.update({
-            'base_field': self.base_field.clone(),
-        })
+        kwargs.update(
+            {
+                "base_field": self.base_field.clone(),
+            }
+        )
         return name, path, args, kwargs
 
     def to_python(self, value):
@@ -152,8 +154,10 @@ class JSONArrayField(models.JSONField):
                 raise error
 
     def formfield(self, **kwargs):
-        return super().formfield(**{
-            'form_class': JSONArrayFormField,
-            'base_field': self.base_field.formfield(),
-            **kwargs,
-        })
+        return super().formfield(
+            **{
+                "form_class": JSONArrayFormField,
+                "base_field": self.base_field.formfield(),
+                **kwargs,
+            }
+        )

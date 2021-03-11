@@ -461,8 +461,7 @@ class JSONField(_JSONField):
 
 
 class JSONArrayFormField(forms.JSONField):
-
-    def __init__(self, base_field, *, delimiter=',', **kwargs):
+    def __init__(self, base_field, *, delimiter=",", **kwargs):
         self.base_field = base_field
         self.delimiter = delimiter
         super().__init__(**kwargs)
