@@ -39,7 +39,7 @@ def rebuild_paths(obj):
     """
     Rebuild all CablePaths which traverse the specified node
     """
-    cable_paths = CablePath.objects.filter(path__contains=obj)
+    cable_paths = CablePath.objects.filter(path__pathcontains=obj)
 
     with transaction.atomic():
         for cp in cable_paths:
@@ -151,7 +151,7 @@ def update_connected_endpoints(instance, created, raw=False, **kwargs):
         # may change in the future.) However, we do need to capture status changes and update
         # any CablePaths accordingly.
         if instance.status != Cable.STATUS_CONNECTED:
-            CablePath.objects.filter(path__contains=instance).update(is_active=False)
+            CablePath.objects.filter(path__pathcontains=instance).update(is_active=False)
         else:
             rebuild_paths(instance)
 
@@ -176,7 +176,7 @@ def nullify_connected_endpoints(instance, **kwargs):
         instance.termination_b.save()
 
     # Delete and retrace any dependent cable paths
-    for cablepath in CablePath.objects.filter(path__contains=instance):
+    for cablepath in CablePath.objects.filter(path__pathcontains=instance):
         cp = CablePath.from_origin(cablepath.origin)
         if cp:
             CablePath.objects.filter(pk=cablepath.pk).update(

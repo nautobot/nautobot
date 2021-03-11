@@ -13,6 +13,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
+from nautobot.utilities.fields import JSONArrayField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import flatten_dict
@@ -230,7 +231,7 @@ class ObjectPermission(BaseModel):
     )
     groups = models.ManyToManyField(to=Group, blank=True, related_name="object_permissions")
     users = models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name="object_permissions")
-    actions = ArrayField(
+    actions = JSONArrayField(
         base_field=models.CharField(max_length=30),
         help_text="The list of actions granted by this permission",
     )

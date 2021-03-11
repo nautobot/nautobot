@@ -5,6 +5,7 @@ from django.db import models
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
 
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
+from nautobot.utilities.fields import JSONArrayField
 from .lookups import PathContains
 
 
@@ -104,3 +105,15 @@ class PathField(ArrayField):
 
 
 PathField.register_lookup(PathContains)
+
+
+class JSONPathField(JSONArrayField):
+    """
+    An ArrayField which holds a set of objects, each identified by a (type, ID) tuple.
+    """
+    def __init__(self, **kwargs):
+        kwargs['base_field'] = models.CharField(max_length=40)
+        super().__init__(**kwargs)
+
+
+JSONPathField.register_lookup(PathContains)
