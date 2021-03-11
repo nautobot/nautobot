@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
         migrations.AlterModelOptions(
             name="ipaddress",
             options={
-                "ordering": ("host", "prefix_length", "pk"),
+                "ordering": ("host", "prefix_length"),
                 "verbose_name": "IP address",
                 "verbose_name_plural": "IP addresses",
             },
