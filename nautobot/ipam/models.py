@@ -510,13 +510,16 @@ class Prefix(PrimaryModel, StatusModel):
     def __str__(self):
         return str(self.prefix)
 
-    def _deconstruct_prefix(self, prefix):
-        if prefix:
-            if isinstance(prefix, str):
-                prefix = netaddr.IPNetwork(prefix)
-            self.network = bytes(prefix.network)
-            self.broadcast = bytes(prefix.broadcast)
-            self.prefix_length = prefix.prefixlen
+    def _deconstruct_prefix(self, pre):
+        if pre:
+            if isinstance(pre, str):
+                pre = netaddr.IPNetwork(pre)
+            # if |prefix.prefixlen| is 32 (ip4) or 128 (ip6)
+            # then |prefix.broadcast| is None
+            broadcast = pre.broadcast if pre.broadcast else pre.network
+            self.network = bytes(pre.network)
+            self.broadcast = bytes(broadcast)
+            self.prefix_length = pre.prefixlen
 
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])

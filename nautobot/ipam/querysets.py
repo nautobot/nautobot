@@ -10,39 +10,53 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class NetworkQuerySet(QuerySet):
+    @staticmethod
+    def _split_prefix(prefix):
+        if isinstance(prefix, str):
+            prefix = netaddr.IPNetwork(prefix)
+        broadcast = prefix.broadcast
+        if prefix.broadcast is None:
+            broadcast = prefix.network
+        return prefix.prefixlen, prefix.network, broadcast
+
     def net_equals(self, prefix):
+        prefixlen, network, broadcast = self._split_prefix(prefix)
         return self.filter(
-            prefix_length=prefix.prefixlen,
-            network=bytes(prefix.network),
-            broadcast=bytes(prefix.broadcast),
+            prefix_length=prefixlen,
+            network=bytes(network),
+            broadcast=bytes(broadcast),
         )
 
     def net_contained(self, prefix):
+        prefixlen, network, broadcast = self._split_prefix(prefix)
         return self.filter(
-            prefix_length__gt=prefix.prefixlen,
-            network__gte=bytes(prefix.network),
-            broadcast__lte=bytes(prefix.broadcast),
+            prefix_length__gt=prefixlen,
+            network__gte=bytes(network),
+            broadcast__lte=bytes(broadcast),
         )
 
     def net_contained_or_equal(self, prefix):
+        prefixlen, network, broadcast = self._split_prefix(prefix)
         return self.filter(
-            prefix_length__gte=prefix.prefixlen,
-            network__gte=bytes(prefix.network),
-            broadcast__lte=bytes(prefix.broadcast),
+            prefix_length__gte=prefixlen,
+            network__gte=bytes(network),
+            broadcast__lte=bytes(broadcast),
         )
 
     def net_contains(self, prefix):
+        prefixlen, network, broadcast = self._split_prefix(prefix)
         return self.filter(
-            prefix_length__lt=prefix.prefixlen,
-            network__lte=bytes(prefix.network),
-            broadcast__gte=bytes(prefix.broadcast),
+            prefix_length__lt=prefixlen,
+            network__lte=bytes(network),
+            broadcast__gte=bytes(broadcast),
         )
 
     def net_contains_or_equal(self, prefix):
+        prefixlen, network, broadcast = self._split_prefix(prefix)
         return self.filter(
-            prefix_length__lte=prefix.prefixlen,
-            network__lte=bytes(prefix.network),
-            broadcast__gte=bytes(prefix.broadcast),
+            prefix_length__lte=prefixlen,
+            network__lte=bytes(network),
+            broadcast__gte=bytes(broadcast),
         )
 
 
