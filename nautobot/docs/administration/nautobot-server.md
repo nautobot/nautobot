@@ -376,7 +376,7 @@ Commit changes to DB (defaults to dry-run if unset).
 $ nautobot-server runjob local/example/MyJobWithVars --commit
 ```
 
-Please see the [guide on Jobs](../additional-features/jobs.md) for more information on worknig with and running jobs.
+Please see the [guide on Jobs](../additional-features/jobs.md) for more information on orking with and running jobs.
 
 ### `start`
 
@@ -431,7 +431,7 @@ Please see the guide on [Deploying Nautobot](../installation/wsgi.md) for our re
 
 `nautobot-server trace_paths`
 
-Generate any missing cable paths among all cable termination objects in Nautobot
+Generate any missing cable paths among all cable termination objects in Nautobot.
 
 After upgrading the database or working with Cables, Circuits, or other related objects, there may be a need to rebuild cached cable paths.
 
