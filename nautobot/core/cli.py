@@ -9,7 +9,7 @@ import warnings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.management.utils import get_random_secret_key
 from django.core.validators import URLValidator
-from jinja2 import BaseLoader, Environment, Template
+from jinja2 import BaseLoader, Environment
 
 from nautobot.extras.plugins.utils import load_plugins, get_sso_backend_name
 from .runner import run_app
