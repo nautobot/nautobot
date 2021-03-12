@@ -14,6 +14,8 @@ PIDFile=/var/tmp/nautobot.pid
 WorkingDirectory=/opt/nautobot
 
 ExecStart=/opt/nautobot/bin/nautobot-server start --pidfile /var/tmp/nautobot.pid --ini /opt/nautobot/uwsgi.ini
+ExecStop=/opt/nautobot/bin/nautobot-server start --stop /var/tmp/nautobot.pid
+ExecReload=/opt/nautobot/bin/nautobot-server start --reload /var/tmp/nautobot.pid
 
 Restart=on-failure
 RestartSec=30
