@@ -16,7 +16,7 @@ PATHENDPOINT = """
     {% with traced_path=value.origin.trace %}
         {% for near_end, cable, far_end in traced_path %}
             {% if near_end.circuit %}
-                <small>via<i class="fa fa-fw fa-globe" title="Circuit"></i>
+                <small>via
                     <a href="{{ near_end.circuit.get_absolute_url }}">
                         {{ near_end.circuit }}
                         {{ near_end.circuit.provider }}

@@ -26,11 +26,13 @@ class CablePathTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
         device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
+        device_status = Status.objects.get_for_model(Device).get(slug="active")
         cls.device = Device.objects.create(
             site=cls.site,
             device_type=device_type,
             device_role=device_role,
             name="Test Device",
+            status=device_status,
         )
 
         cls.powerpanel = PowerPanel.objects.create(site=cls.site, name="Power Panel")

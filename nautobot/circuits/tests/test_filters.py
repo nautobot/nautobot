@@ -292,17 +292,20 @@ class CircuitTerminationTestCase(TestCase):
             slug="test-device-type-1",
         )
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        device_status = Status.objects.get_for_model(Device).get(slug="active")
         device1 = Device.objects.create(
             device_type=devicetype,
             device_role=devicerole,
             name="TestDevice1",
             site=sites[0],
+            status=device_status,
         )
         device2 = Device.objects.create(
             device_type=devicetype,
             device_role=devicerole,
             name="TestDevice2",
             site=sites[1],
+            status=device_status,
         )
         interface1 = Interface.objects.create(device=device1, name="eth0")
         interface2 = Interface.objects.create(device=device2, name="eth0")
