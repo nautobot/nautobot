@@ -20,6 +20,7 @@ $ nautobot-server start --help
 Copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 
 ```ini
+[uwsgi]
 ; The IP address (typically localhost) and port that the WSGI process should listen on
 http-socket = 127.0.0.1:8001
 
