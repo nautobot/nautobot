@@ -65,7 +65,7 @@ To count all objects matching the query, replace `all()` with `count()`:
 To retrieve a particular object (typically by its primary key or other unique field), use `get()`:
 
 ```python
->>> Site.objects.get(pk=7)
+>>> Site.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")
 <Site: Test Lab>
 ```
 
@@ -74,7 +74,7 @@ To retrieve a particular object (typically by its primary key or other unique fi
 In most cases, you will want to retrieve only a specific subset of objects. To filter a queryset, replace `all()` with `filter()` and pass one or more keyword arguments. For example:
 
 ```python
->>> Device.objects.filter(status="active")
+>>> Device.objects.filter(status__slug="active")
 <QuerySet [<Device: TestDevice1>, <Device: TestDevice2>, <Device: TestDevice3>,
 <Device: TestDevice8>, <Device: TestDevice9>, '...(remaining elements truncated)...']>
 ```
@@ -82,14 +82,14 @@ In most cases, you will want to retrieve only a specific subset of objects. To f
 Querysets support slicing to return a specific range of objects.
 
 ```python
->>> Device.objects.filter(status="active")[:3]
+>>> Device.objects.filter(status__slug="active")[:3]
 <QuerySet [<Device: TestDevice1>, <Device: TestDevice2>, <Device: TestDevice3>]>
 ```
 
 The `count()` method can be appended to the queryset to return a count of objects rather than the full list.
 
 ```python
->>> Device.objects.filter(status="active").count()
+>>> Device.objects.filter(status__slug="active").count()
 982
 ```
 
@@ -151,26 +151,26 @@ To return the inverse of a filtered queryset, use `exclude()` instead of `filter
 New objects can be created by instantiating the desired model, defining values for all required attributes, and calling `validated_save()` on the instance. For example, we can create a new VLAN by specifying its numeric ID, name, and assigned site:
 
 ```python
->>> lab1 = Site.objects.get(pk=7)
->>> myvlan = VLAN(vid=123, name='MyNewVLAN', site=lab1)
+>>> lab1 = Site.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")
+>>> myvlan = VLAN(vid=123, name="MyNewVLAN", site=lab1)
 >>> myvlan.validated_save()
 ```
 
 Alternatively, the above can be performed as a single operation. (Note, however, that `validated_save()` does _not_ return the new instance for reuse.)
 
 ```python
->>> VLAN(vid=123, name='MyNewVLAN', site=Site.objects.get(pk=7)).validated_save()
+>>> VLAN(vid=123, name="MyNewVLAN", site=Site.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")).validated_save()
 ```
 
 To modify an existing object, we retrieve it, update the desired field(s), and call `validated_save()` again.
 
 ```python
->>> vlan = VLAN.objects.get(pk=1280)
+>>> vlan = VLAN.objects.get(pk="b4b4344f-f6bb-4ceb-85bc-4f169c753157")
 >>> vlan.name
 'MyNewVLAN'
 >>> vlan.name = 'BetterName'
 >>> vlan.validated_save()
->>> VLAN.objects.get(pk=1280).name
+>>> VLAN.objects.get(pk="b4b4344f-f6bb-4ceb-85bc-4f169c753157").name
 'BetterName'
 ```
 
