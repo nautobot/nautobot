@@ -496,7 +496,7 @@ class Rack(PrimaryModel, StatusModel):
         """Gets utilization numerator and denominator for racks.
 
         Returns:
-            tuple: (Occupied Unit Count, U Height of the rack)
+            UtilizationData: (numerator=Occupied Unit Count, denominator=U Height of the rack)
         """
         # Determine unoccupied units
         available_units = self.get_available_units()

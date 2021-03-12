@@ -318,7 +318,7 @@ class Aggregate(PrimaryModel):
         """Gets the numerator and denominator for calculating utilization of an Aggregrate.
 
         Returns:
-            namedtuple: Representing the Aggregrate utilization
+            UtilizationData: Aggregate utilization (numerator=size of child prefixes, denominator=prefix size)
         """
         queryset = Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
