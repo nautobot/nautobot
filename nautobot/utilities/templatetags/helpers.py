@@ -256,7 +256,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
     the utilization_graph_raw_data to handle the generation graph data.
 
     Args:
-        utilization_data (namedtuple): Namedtuple with numerator and denominator keys
+        utilization_data (UtilizationData): Namedtuple with numerator and denominator keys
         warning_threshold (int, optional): Warning Threshold Value. Defaults to 75.
         danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
 
