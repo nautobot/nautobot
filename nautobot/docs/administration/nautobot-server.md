@@ -285,7 +285,7 @@ Commit changes to DB (defaults to dry-run if unset).
 $ nautobot-server runjob local/example/MyJobWithVars --commit
 ```
 
-Please see the [guide on Jobs](../additional-features/jobs.md) for more information on orking with and running jobs.
+Please see the [guide on Jobs](../additional-features/jobs.md) for more information on working with and running jobs.
 
 ### `start`
 
