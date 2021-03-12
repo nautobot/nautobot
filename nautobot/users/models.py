@@ -1,7 +1,8 @@
 import binascii
 import os
 
-from django.contrib.auth.models import Group, User
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField
 from django.core.serializers.json import DjangoJSONEncoder
@@ -19,65 +20,43 @@ from nautobot.utilities.utils import flatten_dict
 
 __all__ = (
     "AdminGroup",
-    "AdminUser",
     "ObjectPermission",
     "Token",
+    "User",
     "UserConfig",
 )
 
 
 #
-# Proxy models for admin
+# Custom User model
 #
 
 
-class AdminGroup(Group):
+class User(BaseModel, AbstractUser):
     """
-    Proxy contrib.auth.models.Group for the admin UI
+    Nautobot implements its own User model to suport several specific use cases.
+
+    This model also implements the user configuration (preferences) data store functionality.
     """
+
+    config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+
+    # We must use the stock UserManager instead of RestrictedQuerySet from BaseModel
+    objects = UserManager()
 
     class Meta:
-        verbose_name = "Group"
-        proxy = True
+        db_table = "auth_user"
 
-
-class AdminUser(User):
-    """
-    Proxy contrib.auth.models.User for the admin UI
-    """
-
-    class Meta:
-        verbose_name = "User"
-        proxy = True
-
-
-#
-# User preferences
-#
-
-
-class UserConfig(BaseModel):
-    """
-    This model stores arbitrary user-specific preferences in a JSON data structure.
-    """
-
-    user = models.OneToOneField(to=User, on_delete=models.CASCADE, related_name="config")
-    data = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
-
-    class Meta:
-        ordering = ["user"]
-        verbose_name = verbose_name_plural = "User Preferences"
-
-    def get(self, path, default=None):
+    def get_config(self, path, default=None):
         """
         Retrieve a configuration parameter specified by its dotted path. Example:
 
-            userconfig.get('foo.bar.baz')
+            user.get_config('foo.bar.baz')
 
-        :param path: Dotted path to the configuration key. For example, 'foo.bar' returns self.data['foo']['bar'].
+        :param path: Dotted path to the configuration key. For example, 'foo.bar' returns self.config_data['foo']['bar'].
         :param default: Default value to return for a nonexistent key (default: None).
         """
-        d = self.data
+        d = self.config_data
         keys = path.split(".")
 
         # Iterate down the hierarchy, returning the default value if any invalid key is encountered
@@ -89,28 +68,28 @@ class UserConfig(BaseModel):
 
         return d
 
-    def all(self):
+    def all_config(self):
         """
         Return a dictionary of all defined keys and their values.
         """
-        return flatten_dict(self.data)
+        return flatten_dict(self.config_data)
 
-    def set(self, path, value, commit=False):
+    def set_config(self, path, value, commit=False):
         """
         Define or overwrite a configuration parameter. Example:
 
-            userconfig.set('foo.bar.baz', 123)
+            user.set_config('foo.bar.baz', 123)
 
         Leaf nodes (those which are not dictionaries of other nodes) cannot be overwritten as dictionaries. Similarly,
         branch nodes (dictionaries) cannot be overwritten as single values. (A TypeError exception will be raised.) In
         both cases, the existing key must first be cleared. This safeguard is in place to help avoid inadvertently
         overwriting the wrong key.
 
-        :param path: Dotted path to the configuration key. For example, 'foo.bar' sets self.data['foo']['bar'].
+        :param path: Dotted path to the configuration key. For example, 'foo.bar' sets self.config_data['foo']['bar'].
         :param value: The value to be written. This can be any type supported by JSON.
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
-        d = self.data
+        d = self.config_data
         keys = path.split(".")
 
         # Iterate through the hierarchy to find the key we're setting. Raise TypeError if we encounter any
@@ -134,19 +113,19 @@ class UserConfig(BaseModel):
         if commit:
             self.save()
 
-    def clear(self, path, commit=False):
+    def clear_config(self, path, commit=False):
         """
         Delete a configuration parameter specified by its dotted path. The key and any child keys will be deleted.
         Example:
 
-            userconfig.clear('foo.bar.baz')
+            user.clear_config('foo.bar.baz')
 
         Invalid keys will be ignored silently.
 
-        :param path: Dotted path to the configuration key. For example, 'foo.bar' deletes self.data['foo']['bar'].
+        :param path: Dotted path to the configuration key. For example, 'foo.bar' deletes self.config_data['foo']['bar'].
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
-        d = self.data
+        d = self.config_data
         keys = path.split(".")
 
         for key in keys[:-1]:
@@ -162,14 +141,19 @@ class UserConfig(BaseModel):
             self.save()
 
 
-@receiver(post_save, sender=User)
-@receiver(post_save, sender=AdminUser)
-def create_userconfig(instance, created, **kwargs):
+#
+# Proxy models for admin
+#
+
+
+class AdminGroup(Group):
     """
-    Automatically create a new UserConfig when a new User is created.
+    Proxy contrib.auth.models.Group for the admin UI
     """
-    if created:
-        UserConfig(user=instance).save()
+
+    class Meta:
+        verbose_name = "Group"
+        proxy = True
 
 
 #
@@ -183,7 +167,7 @@ class Token(BaseModel):
     It also supports setting an expiration time and toggling write ability.
     """
 
-    user = models.ForeignKey(to=User, on_delete=models.CASCADE, related_name="tokens")
+    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tokens")
     created = models.DateTimeField(auto_now_add=True)
     expires = models.DateTimeField(blank=True, null=True)
     key = models.CharField(max_length=40, unique=True, validators=[MinLengthValidator(40)])
@@ -246,7 +230,7 @@ class ObjectPermission(BaseModel):
         related_name="object_permissions",
     )
     groups = models.ManyToManyField(to=Group, blank=True, related_name="object_permissions")
-    users = models.ManyToManyField(to=User, blank=True, related_name="object_permissions")
+    users = models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name="object_permissions")
     actions = ArrayField(
         base_field=models.CharField(max_length=30),
         help_text="The list of actions granted by this permission",

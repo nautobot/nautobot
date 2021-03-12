@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings
@@ -38,7 +38,7 @@ class APITestCase(ModelTestCase):
         Create a superuser and token for API calls.
         """
         # Create the test user and assign permissions
-        self.user = User.objects.create_user(username="testuser")
+        self.user = get_user_model().objects.create_user(username="testuser")
         self.add_permissions(*self.user_permissions)
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}

@@ -1,6 +1,6 @@
 import django_rq
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from nautobot.dcim.models import Site
@@ -11,7 +11,9 @@ from nautobot.extras.models import ObjectChange, Webhook
 
 class web_request_contextTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="jacob", email="jacob@example.com", password="top_secret")
+        self.user = get_user_model().objects.create_user(
+            username="jacob", email="jacob@example.com", password="top_secret"
+        )
 
         site_ct = ContentType.objects.get_for_model(Site)
         DUMMY_URL = "http://localhost/"

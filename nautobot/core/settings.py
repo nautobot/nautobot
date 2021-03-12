@@ -20,6 +20,9 @@ HOSTNAME = platform.node()
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Set the swapable User model to the Nautobot custom User model
+AUTH_USER_MODEL = "users.User"
+
 
 ###############################################################
 # NAUTOBOT - Settings for Nautobot internals/plugins/defaults #

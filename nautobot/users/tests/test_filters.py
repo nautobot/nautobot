@@ -1,4 +1,5 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
@@ -11,7 +12,7 @@ from nautobot.users.models import ObjectPermission
 
 
 class UserTestCase(TestCase):
-    queryset = User.objects.all()
+    queryset = get_user_model().objects.all()
     filterset = UserFilterSet
 
     @classmethod
@@ -24,32 +25,32 @@ class UserTestCase(TestCase):
         )
 
         users = (
-            User.objects.create(
+            get_user_model().objects.create(
                 username="User1",
                 first_name="Hank",
                 last_name="Hill",
                 email="hank@stricklandpropane.com",
                 is_staff=True,
             ),
-            User.objects.create(
+            get_user_model().objects.create(
                 username="User2",
                 first_name="Dale",
                 last_name="Gribble",
                 email="dale@dalesdeadbug.com",
             ),
-            User.objects.create(
+            get_user_model().objects.create(
                 username="User3",
                 first_name="Bill",
                 last_name="Dauterive",
                 email="bill.dauterive@army.mil",
             ),
-            User.objects.create(
+            get_user_model().objects.create(
                 username="User4",
                 first_name="Jeff",
                 last_name="Boomhauer",
                 email="boomhauer@dangolemail.com",
             ),
-            User.objects.create(
+            get_user_model().objects.create(
                 username="User5",
                 first_name="Debbie",
                 last_name="Grund",
@@ -131,9 +132,9 @@ class ObjectPermissionTestCase(TestCase):
         )
 
         users = (
-            User.objects.create(username="User1"),
-            User.objects.create(username="User2"),
-            User.objects.create(username="User3"),
+            get_user_model().objects.create(username="User1"),
+            get_user_model().objects.create(username="User2"),
+            get_user_model().objects.create(username="User3"),
         )
 
         object_types = (
@@ -176,7 +177,7 @@ class ObjectPermissionTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_user(self):
-        users = User.objects.filter(username__in=["User1", "User2"])
+        users = get_user_model().objects.filter(username__in=["User1", "User2"])
         params = {"user_id": [users[0].pk, users[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"user": [users[0].username, users[1].username]}

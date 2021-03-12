@@ -1,9 +1,10 @@
 import types
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.test import override_settings
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import Group, User
 from django.urls import reverse
 from graphene_django import DjangoObjectType
 from rest_framework import status
@@ -265,10 +266,10 @@ class GraphQLAPIPermissionTest(TestCase):
         )
 
         self.users = (
-            User.objects.create(username="User 1", is_active=True),
-            User.objects.create(username="User 2", is_active=True),
-            User.objects.create(username="Super User", is_active=True, is_superuser=True),
-            User.objects.create(username="Nobody", is_active=True),
+            get_user_model().objects.create(username="User 1", is_active=True),
+            get_user_model().objects.create(username="User 2", is_active=True),
+            get_user_model().objects.create(username="Super User", is_active=True, is_superuser=True),
+            get_user_model().objects.create(username="Nobody", is_active=True),
         )
 
         self.tokens = (

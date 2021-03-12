@@ -1,7 +1,7 @@
 import uuid
 from contextlib import contextmanager
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models.signals import m2m_changed, pre_delete, post_save
 from django.test.client import RequestFactory
@@ -64,8 +64,8 @@ def web_request_context(user, request=None):
     if not isinstance(request, WSGIRequest):
         raise TypeError("The request object must be an instance of django.core.handlers.wsgi.WSGIRequest")
 
-    if not isinstance(user, User):
-        raise TypeError("The user object must be an instance of django.contrib.auth.models.User")
+    if not isinstance(user, get_user_model()):
+        raise TypeError("The user object must be an instance of nautobot.users.models.User")
 
     if not hasattr(request, "id"):
         request.id = uuid.uuid4()

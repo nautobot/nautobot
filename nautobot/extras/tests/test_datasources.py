@@ -6,7 +6,7 @@ import uuid
 
 import yaml
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase
 
@@ -30,7 +30,7 @@ class GitTest(TestCase):
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
 
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser")
+        self.user = get_user_model().objects.create_user(username="testuser")
         self.factory = RequestFactory()
         self.dummy_request = self.factory.get("/no-op/")
         self.dummy_request.user = self.user

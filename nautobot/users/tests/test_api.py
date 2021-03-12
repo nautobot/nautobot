@@ -1,4 +1,5 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
@@ -17,7 +18,7 @@ class AppTest(APITestCase):
 
 
 class UserTest(APIViewTestCases.APIViewTestCase):
-    model = User
+    model = get_user_model()
     view_namespace = "users"
     brief_fields = ["id", "url", "username"]
     validation_excluded_fields = ["password"]
@@ -39,9 +40,9 @@ class UserTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        User.objects.create(username="User_1")
-        User.objects.create(username="User_2")
-        User.objects.create(username="User_3")
+        get_user_model().objects.create(username="User_1")
+        get_user_model().objects.create(username="User_2")
+        get_user_model().objects.create(username="User_3")
 
 
 class GroupTest(APIViewTestCases.APIViewTestCase):
@@ -91,9 +92,9 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
         )
 
         users = (
-            User.objects.create(username="User 1", is_active=True),
-            User.objects.create(username="User 2", is_active=True),
-            User.objects.create(username="User 3", is_active=True),
+            get_user_model().objects.create(username="User 1", is_active=True),
+            get_user_model().objects.create(username="User 2", is_active=True),
+            get_user_model().objects.create(username="User 3", is_active=True),
         )
 
         object_type = ContentType.objects.get(app_label="dcim", model="device")
@@ -145,7 +146,6 @@ class UserConfigTest(APITestCase):
         """
         Retrieve user configuration via GET request.
         """
-        userconfig = self.user.config
         url = reverse("users-api:userconfig-list")
 
         response = self.client.get(url, **self.header)
@@ -156,8 +156,8 @@ class UserConfigTest(APITestCase):
             "b": 456,
             "c": 789,
         }
-        userconfig.data = data
-        userconfig.save()
+        self.user.config_data = data
+        self.user.save()
         response = self.client.get(url, **self.header)
         self.assertEqual(response.data, data)
 
@@ -165,7 +165,6 @@ class UserConfigTest(APITestCase):
         """
         Set user config via PATCH requests.
         """
-        userconfig = self.user.config
         url = reverse("users-api:userconfig-list")
 
         data = {
@@ -179,12 +178,12 @@ class UserConfigTest(APITestCase):
         }
         response = self.client.patch(url, data=data, format="json", **self.header)
         self.assertDictEqual(response.data, data)
-        userconfig.refresh_from_db()
-        self.assertDictEqual(userconfig.data, data)
+        self.user.refresh_from_db()
+        self.assertDictEqual(self.user.config_data, data)
 
         update_data = {"c": 123}
         response = self.client.patch(url, data=update_data, format="json", **self.header)
         new_data = deepmerge(data, update_data)
         self.assertDictEqual(response.data, new_data)
-        userconfig.refresh_from_db()
-        self.assertDictEqual(userconfig.data, new_data)
+        self.user.refresh_from_db()
+        self.assertDictEqual(self.user.config_data, new_data)

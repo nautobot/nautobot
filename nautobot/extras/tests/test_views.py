@@ -1,7 +1,7 @@
 import urllib.parse
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
@@ -109,7 +109,7 @@ class ObjectChangeTestCase(TestCase):
         site.save()
 
         # Create three ObjectChanges
-        user = User.objects.create_user(username="testuser2")
+        user = get_user_model().objects.create_user(username="testuser2")
         for i in range(1, 4):
             oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
@@ -120,7 +120,7 @@ class ObjectChangeTestCase(TestCase):
 
         url = reverse("extras:objectchange_list")
         params = {
-            "user": User.objects.first().pk,
+            "user": get_user_model().objects.first().pk,
         }
 
         response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
