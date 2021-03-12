@@ -83,6 +83,7 @@ RACKGROUP_ELEVATIONS = """
 </a>
 """
 
+# Value is a namedtuple that takes a numerator and denominator to pass in.
 UTILIZATION_GRAPH = """
 {% load helpers %}
 {% utilization_graph value %}

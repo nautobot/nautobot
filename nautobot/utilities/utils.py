@@ -2,7 +2,7 @@ import datetime
 import json
 import inspect
 from importlib import import_module
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from distutils.util import strtobool
 
@@ -399,3 +399,7 @@ def is_truthy(arg):
     if isinstance(arg, bool):
         return arg
     return bool(strtobool(str(arg)))
+
+
+# Setup UtilizationData named tuple for use by multiple methods
+UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
