@@ -59,9 +59,6 @@ log-5xx = true
 
 ; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
 ; processes = 5
-
-; Number of threads per worker process
-; threads = 3
 ```
 
 This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
