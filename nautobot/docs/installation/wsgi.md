@@ -17,36 +17,49 @@ $ nautobot-server start --help
 
 ## Configuration
 
-Copy and paste the following into `/opt/nautobot/uwsgi.ini`:
+Copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 
 ```ini
 [uwsgi]
 ; The IP address (typically localhost) and port that the WSGI process should listen on
 http-socket = 127.0.0.1:8001
 
-; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
-processes = 5
+; Fail to start if any parameter in the configuration file isn’t explicitly understood by uWSGI
+strict = true
 
-# Number of threads per worker process
-threads = 3
-
-# Set internal buffer size
-buffer-size = 8192
-
-# Set the socket listen queue size
-listen = 1024
-
-# Enable master process
+; Enable master process to gracefully re-spawn and pre-fork workers
 master = true
 
-# Enable threading
+; Allow Python app-generated threads to run
 enable-threads = true
 
-# Try to remove all of the generated file/sockets
+;Try to remove all of the generated file/sockets during shutdown
 vacuum = true
 
-# Do not use multiple interpreters (where available)
+; Do not use multiple interpreters, allowing only Nautobot to run
 single-interpreter = true
+
+; Shutdown when receiving SIGTERM (default is respawn)
+die-on-term = true
+
+; Prevents uWSGI from starting if it is unable load Nautobot (usually due to errors)
+need-app = true
+
+; By default, uWSGI has rather verbose logging that can be noisy
+disable-logging = true
+
+; Assert that critical 4xx and 5xx errors are still logged
+log-4xx = true
+log-5xx = true
+
+;
+; Advanced settings (disabled by default)
+; Customize these for your environment if and only if you need them.
+; Ref: https://uwsgi-docs.readthedocs.io/en/latest/Options.html
+;
+
+; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
+; processes = 5
 ```
 
 This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
@@ -81,6 +94,8 @@ PIDFile=/var/tmp/nautobot.pid
 WorkingDirectory=/opt/nautobot
 
 ExecStart=/opt/nautobot/bin/nautobot-server start --pidfile /var/tmp/nautobot.pid --ini /opt/nautobot/uwsgi.ini
+ExecStop=/opt/nautobot/bin/nautobot-server start --stop /var/tmp/nautobot.pid
+ExecReload=/opt/nautobot/bin/nautobot-server start --reload /var/tmp/nautobot.pid
 
 Restart=on-failure
 RestartSec=30

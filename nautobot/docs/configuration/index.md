@@ -4,7 +4,7 @@ This section describes how to get started with configuring Nautobot.
 
 ## Initializing the Configuration
 
-An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique `SECRET_KEY`.
+An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](required-settings.md#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -87,7 +87,7 @@ While Nautobot has many configuration settings, only a few of them must be defin
 
 Configuration settings may be changed at any time. However, the WSGI service (e.g. uWSGI) must be restarted before the changes will take effect. For example, if you're running Nautobot using `systemd:`
 
-```
+```no-highlight
 $ sudo systemctl restart nautobot
 ```
 
@@ -99,17 +99,17 @@ To facilitate troubleshooting and debugging of settings, try inspecting the sett
 
 First get a shell and load the Django settings:
 
-```bash
+```no-highlight
 $ nautobot-server nbshell
 ### Nautobot interactive shell (localhost)
-### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0b1
+### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0
 ### lsmodels() will show available models. Use help(<model>) for more info.
 >>> from django.conf import settings
 ```
 
 Inspect the `SETTINGS_PATH` variable. Does it match the configuration you're expecting to be loading?
 
-```bash
+```no-highlight
 >>> settings.SETTINGS_PATH
 '/home/example/.nautobot/nautobot_config.py'
 ```
