@@ -6,9 +6,8 @@ from pathlib import Path
 import os
 import warnings
 
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
-from django.core.validators import URLValidator
 from jinja2 import BaseLoader, Environment
 
 from nautobot.extras.plugins.utils import load_plugins, get_sso_backend_name
@@ -143,36 +142,6 @@ def _configure_settings(config):
         settings.PER_PAGE_DEFAULTS = sorted(settings.PER_PAGE_DEFAULTS)
 
     #
-    # Authentication
-    #
-
-    # FIXME(jathan): This is just here as an interim validation check, to be
-    # replaced in a future update when all other validations hard-coded here in
-    # settings are moved to use the Django system check framework.
-    if "nautobot.core.authentication.ObjectPermissionBackend" not in settings.AUTHENTICATION_BACKENDS:
-        raise ImproperlyConfigured(
-            "nautobot.core.authentication.ObjectPermissionBackend must be defined in " "'AUTHENTICATION_BACKENDS'"
-        )
-
-    #
-    # Releases
-    #
-
-    # Validate update repo URL and timeout
-    if settings.RELEASE_CHECK_URL:
-        try:
-            URLValidator(settings.RELEASE_CHECK_URL)
-        except ValidationError:
-            raise ImproperlyConfigured(
-                "RELEASE_CHECK_URL must be a valid API URL. Example: " "https://api.github.com/repos/nautobot/nautobot"
-            )
-
-    # FIXME(jathan): Why is this enforced here? This would be better enforced in the core.
-    # Enforce a minimum cache timeout for update checks
-    if settings.RELEASE_CHECK_TIMEOUT < 3600:
-        raise ImproperlyConfigured("RELEASE_CHECK_TIMEOUT has to be at least 3600 seconds (1 hour)")
-
-    #
     # Media storage
     #
 
@@ -199,12 +168,6 @@ def _configure_settings(config):
                 return globals().get(name, default)
 
             storages.utils.setting = _setting
-
-    if settings.STORAGE_CONFIG and settings.STORAGE_BACKEND is None:
-        warnings.warn(
-            "STORAGE_CONFIG has been set in settings but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be "
-            "ignored."
-        )
 
     #
     # SSO
