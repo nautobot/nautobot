@@ -17,6 +17,7 @@ from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
     add_blank_choice,
+    AddressFieldMixin,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     CSVChoiceField,
@@ -33,7 +34,6 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
     BOOLEAN_WITH_BLANK_CHOICES,
-    AddressFieldMixin,
 )
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import *

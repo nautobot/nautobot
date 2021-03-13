@@ -80,10 +80,10 @@ class IPAddressQuerySet(TestCase):
         self.assertEqual(self.queryset.ip_family(6).count(), 3)
 
     def test_net_host_contained(self):
-        pass
-
-    def test_net_contained_or_equal(self):
-        pass
+        print([ad.address.ip for ad in self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/30"))])
+        self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/24")).count(), 5)
+        self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/30")).count(), 4)
+        self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.10.0/24")).count(), 0)
 
     def test_net_in(self):
         args = ["10.0.0.1/24"]

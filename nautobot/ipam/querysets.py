@@ -11,17 +11,11 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 class NetworkQuerySet(QuerySet):
     @staticmethod
-    def _maybe_convert_prefix(prefix):
-        if isinstance(prefix, str):
-            prefix = netaddr.IPNetwork(prefix)
-        return prefix
-
-    @staticmethod
     def _get_broadcast(prefix):
         return prefix.broadcast if prefix.broadcast else prefix.network
 
     def net_equals(self, prefix):
-        prefix = self._maybe_convert_prefix(prefix)
+        prefix = netaddr.IPNetwork(prefix)
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length=prefix.prefixlen,
@@ -30,7 +24,7 @@ class NetworkQuerySet(QuerySet):
         )
 
     def net_contained(self, prefix):
-        prefix = self._maybe_convert_prefix(prefix)
+        prefix = netaddr.IPNetwork(prefix)
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__gt=prefix.prefixlen,
@@ -39,7 +33,7 @@ class NetworkQuerySet(QuerySet):
         )
 
     def net_contained_or_equal(self, prefix):
-        prefix = self._maybe_convert_prefix(prefix)
+        prefix = netaddr.IPNetwork(prefix)
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__gte=prefix.prefixlen,
@@ -48,7 +42,7 @@ class NetworkQuerySet(QuerySet):
         )
 
     def net_contains(self, prefix):
-        prefix = self._maybe_convert_prefix(prefix)
+        prefix = netaddr.IPNetwork(prefix)
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__lt=prefix.prefixlen,
@@ -57,7 +51,7 @@ class NetworkQuerySet(QuerySet):
         )
 
     def net_contains_or_equal(self, prefix):
-        prefix = self._maybe_convert_prefix(prefix)
+        prefix = netaddr.IPNetwork(prefix)
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__lte=prefix.prefixlen,
@@ -95,15 +89,15 @@ class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
                 "WHERE U0.prefix_length < ipam_prefix.prefix_length "
                 "AND U0.network <= ipam_prefix.network "
                 "AND U0.broadcast >= ipam_prefix.broadcast "
-                f"AND COALESCE(U0.vrf_id, '{FAKE_UUID}') >= COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
+                f"AND COALESCE(U0.vrf_id, '{FAKE_UUID}') = COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
                 (),
             ),
             children=RawSQL(
                 "SELECT COUNT(*) FROM ipam_prefix AS U1 "
-                "WHERE U1.prefix_length = ipam_prefix.prefix_length "
+                "WHERE U1.prefix_length > ipam_prefix.prefix_length "
                 "AND U1.network >= ipam_prefix.network "
                 "AND U1.broadcast <= ipam_prefix.broadcast "
-                f"AND COALESCE(U1.vrf_id, '{FAKE_UUID}') <= COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
+                f"AND COALESCE(U1.vrf_id, '{FAKE_UUID}') = COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
                 (),
             ),
         )
@@ -114,12 +108,6 @@ class IPAddressQuerySet(RestrictedQuerySet):
         4: IPV4_BYTE_LENGTH,
         6: IPV6_BYTE_LENGTH,
     }
-
-    @staticmethod
-    def _maybe_convert_network(network):
-        if isinstance(network, str):
-            network = netaddr.IPNetwork(network)
-        return network
 
     @staticmethod
     def _get_broadcast(network):
@@ -144,19 +132,13 @@ class IPAddressQuerySet(RestrictedQuerySet):
         return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
 
     def net_host_contained(self, network):
-        network = self._maybe_convert_network(network)
+        # consider only host ip address when
+        # filtering for membership in |network|
+        network = netaddr.IPNetwork(network)
         broadcast = self._get_broadcast(network)
         return self.filter(
             host__lte=bytes(broadcast),
             host__gte=bytes(network.network),
-        )
-
-    def net_contained_or_equal(self, network):
-        network = self._maybe_convert_network(network)
-        broadcast = self._get_broadcast(network)
-        return self.filter(
-            host__lte=bytes(broadcast),
-            host__gte=bytes(network.host),
         )
 
     def net_in(self, networks):

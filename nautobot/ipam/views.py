@@ -609,7 +609,7 @@ class IPAddressView(generic.ObjectView):
         # Related IP table
         related_ips = (
             IPAddress.objects.restrict(request.user, "view")
-            .net_contained_or_equal(instance)
+            .net_host_contained(instance.address)
             .exclude(host=bytes(instance.host))
             .filter(vrf=instance.vrf)
         )
