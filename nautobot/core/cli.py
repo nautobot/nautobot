@@ -223,11 +223,4 @@ def _configure_settings(config):
 
     # Process the plugins and manipulate the specified config settings that are
     # passed in.
-    load_plugins(
-        settings.PLUGINS,
-        settings.INSTALLED_APPS,
-        settings.PLUGINS_CONFIG,
-        settings.VERSION,
-        settings.MIDDLEWARE,
-        settings.CACHEOPS,
-    )
+    load_plugins(settings)
