@@ -8,6 +8,19 @@
 {% block title %}{{ object }}{% endblock %}
 
 {% block header %}
+<script src="{% static 'clipboard.js/clipboard-2.0.6.min.js' %}"
+    onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'"></script>
+    <script>
+        var clipboard = new ClipboardJS('.btn');
+
+        clipboard.on('success', function (e) {
+            console.log(e);
+        });
+
+        clipboard.on('error', function (e) {
+            console.log(e);
+        });
+    </script>
     <div class="row noprint">
         <div class="col-sm-8 col-md-9">
         <ol class="breadcrumb">
@@ -81,7 +94,7 @@
             {% delete_button object %}
         {% endif %}
     </div>
-    <h1>{{ object }}</h1>
+    <h1 id="devicename">{{ object }}<button class="btn" data-clipboard-target="#devicename"><span class="ui-icon ui-icon-clipboard"></span></button></h1>
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">
         {% custom_links object %}
