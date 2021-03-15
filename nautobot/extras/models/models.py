@@ -166,11 +166,14 @@ class CustomLink(BaseModel, ChangeLoggedModel):
         limit_choices_to=FeatureQuery("custom_links"),
     )
     name = models.CharField(max_length=100, unique=True)
-    text = models.CharField(max_length=500, help_text="Jinja2 template code for link text")
+    text = models.CharField(
+        max_length=500,
+        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
+    )
     target_url = models.CharField(
         max_length=500,
         verbose_name="URL",
-        help_text="Jinja2 template code for link URL",
+        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
