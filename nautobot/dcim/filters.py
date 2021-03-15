@@ -574,7 +574,7 @@ class PlatformFilterSet(
 
     class Meta:
         model = Platform
-        fields = ["id", "name", "slug", "napalm_driver", "description"]
+        fields = ["id", "name", "slug", "napalm_driver", "ansible_connection", "description"]
 
 
 class DeviceFilterSet(

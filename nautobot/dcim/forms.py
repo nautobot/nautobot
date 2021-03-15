@@ -1598,6 +1598,7 @@ class PlatformForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
             "name",
             "slug",
             "manufacturer",
+            "ansible_connection",
             "napalm_driver",
             "napalm_args",
             "description",

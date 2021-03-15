@@ -1268,6 +1268,7 @@ class PlatformTestCase(TestCase):
             name="Platform 1",
             slug="platform-1",
             manufacturer=manufacturers[0],
+            ansible_connection="connection.one.cli",
             napalm_driver="driver-1",
             description="A",
         )
@@ -1275,6 +1276,7 @@ class PlatformTestCase(TestCase):
             name="Platform 2",
             slug="platform-2",
             manufacturer=manufacturers[1],
+            ansible_connection="connection.two.cli",
             napalm_driver="driver-2",
             description="B",
         )
@@ -1282,6 +1284,7 @@ class PlatformTestCase(TestCase):
             name="Platform 3",
             slug="platform-3",
             manufacturer=manufacturers[2],
+            ansible_connection="connection.three.cli",
             napalm_driver="driver-3",
             description="C",
         )
@@ -1300,6 +1303,10 @@ class PlatformTestCase(TestCase):
 
     def test_description(self):
         params = {"description": ["A", "B"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_ansible_connection(self):
+        params = {"ansible_connection": ["connection.one.cli", "connection.two.cli"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_napalm_driver(self):
