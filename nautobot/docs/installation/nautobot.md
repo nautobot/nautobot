@@ -46,12 +46,30 @@ $ sudo -iu nautobot
 !!! warning
     Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
+## Setup the Virtual Environment
+
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
+
+When installed per the documentation, Nautobot uses a virtual environment in production.
+
+In the following steps, we will have you create the virtualenv within the `NAUTOBOT_ROOT` you chose in the previous step. This is the same we had you set as the home directory as the `nautobot` user.
+
+!!! note
+    Instead of deliberately requiring you to activate/deactivate the virtualenv, we are emphasizing on relying on the `$PATH` to access programs installed within it. We find this to be much more intuitive and natural when working with Nautobot in this way.
+
+### Create the Virtual Environment
+
+We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libaries.
+
+```no-highlight
+$ python3 -m venv /opt/nautobot
+```
 
 ### Update the Nautobot `.bashrc`
 
-After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variable for this user and make sure that this variable is always set.
+So what about the `NAUTOBOT_ROOT`? We've referenced this environment variable several times. Here is where it finally gets set.
 
-Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
+We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user and make sure that it always set without having to do it manually. Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
 ```no-highlight
 $ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
@@ -63,16 +81,6 @@ Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` gets set and then e
 $ source ~/.bashrc
 $ echo $NAUTOBOT_ROOT
 /opt/nautobot
-```
-
-## Create the Virtual Environment
-
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
-
-We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment.
-
-```no-highlight
-$ python3 -m venv $NAUTOBOT_ROOT
 ```
 
 ## Understanding the Virtual Environment
