@@ -10,7 +10,7 @@ E001 = Error(
 )
 
 E002 = Error(
-    "'nautobot.core.authentication.ObjectPermissionBackend' must be defined in AUTHENTICATION_BACKENDS",
+    "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",
     id="core.E002",
 )
 
