@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0004_initial_part_4'),
+        ("dcim", "0004_initial_part_4"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='platform',
-            name='ansible_connection',
+            model_name="platform",
+            name="ansible_connection",
             field=models.CharField(blank=True, max_length=255),
         ),
     ]
