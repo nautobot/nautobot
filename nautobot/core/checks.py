@@ -6,27 +6,27 @@ from django.core.validators import URLValidator
 
 E001 = Error(
     "CACHEOPS_DEFAULTS['timeout'] value cannot be 0. To disable caching set CACHEOPS_ENABLED=False.",
-    id="core.E001",
+    id="nautobot.core.E001",
 )
 
 E002 = Error(
     "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",
-    id="core.E002",
+    id="nautobot.core.E002",
 )
 
 E003 = Error(
     "RELEASE_CHECK_TIMEOUT must be at least 3600 seconds (1 hour)",
-    id="core.E003",
+    id="nautobot.core.E003",
 )
 
 E004 = Error(
     "RELEASE_CHECK_URL must be a valid API URL. Example: https://api.github.com/repos/nautobot/nautobot",
-    id="core.E004",
+    id="nautobot.core.E004",
 )
 
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
-    id="core.W005",
+    id="nautobot.core.W005",
 )
 
 
