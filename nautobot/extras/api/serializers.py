@@ -673,7 +673,7 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
 
 class GraphQLQuerySerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
-    variables = serializers.CharField(allow_null=True, default=None)
+    variables = serializers.DictField(allow_null=True, default={})
 
     class Meta:
         model = GraphQLQuery

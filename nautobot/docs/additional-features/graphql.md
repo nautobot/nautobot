@@ -127,4 +127,15 @@ Result
 }
 ```
 
+## Saved Queries
+
+Queries can now be stored inside of Nautobot. Allowing the user to easy rerun queries using a slug.
+
+Inside of Extensibility > Data Management > GraphQL Queries, there are views to create and manage GraphQL queries.
+
+These queries can be ran through the detailed view or from an API request. The queries can also be passed into GraphiQL by using the "Open in GraphiQL" button or from a new tab in the navigation called "Queries". This tab is only visible when viewing GraphiQL.
+
+To launch a stored query, a POST request needs to be sent to `http://127.0.0.1:8000/api/extras/graphql-queries/[slug]/run/`. This request can use a JSON body to pass in GraphQL variables into the query.
+
+
 

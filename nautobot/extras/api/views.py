@@ -3,8 +3,8 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django_rq.queues import get_connection
 from drf_yasg.utils import swagger_auto_schema
-from graphene_django.settings import graphene_settings
-from graphql import get_default_backend, GraphQLError
+from graphene_django.views import GraphQLView
+from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -17,6 +17,7 @@ from rq import Worker
 
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import ModelViewSet
+from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models import (
@@ -402,12 +403,12 @@ class GraphQLQueryViewSet(ModelViewSet):
     @swagger_auto_schema(method="post", request_body=serializers.GraphQLQuerySerializer)
     @action(detail=True, methods=["post"])
     def run(self, request, pk):
-        query_object = get_object_or_404(self.queryset, slug=pk)
-        schema = graphene_settings.SCHEMA
-        backend = get_default_backend()
         try:
-            document = backend.document_from_string(schema, query_object.query)
-            result = document.execute(context_value=request, variable_values=request.data).to_dict()
+            query_object = get_object_or_404(self.queryset, slug=pk)
+            result = execute_saved_query(query_object.query, variable=request.data, request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
-            return Response({"error": error})
+            return Response(
+                {"errors": [GraphQLView.format_error(error)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

@@ -13,6 +13,9 @@ from django.db import models
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend
+from graphql.error import GraphQLSyntaxError
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.extras.choices import *
@@ -689,7 +692,7 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
     name = models.CharField(max_length=100, unique=True)
     slug = models.CharField(max_length=100, unique=True)
     query = models.TextField()
-    variables = models.JSONField(default=dict, blank=True)
+    variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
     class Meta:
         ordering = ("slug",)
@@ -703,5 +706,14 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
         for var in query_vars:
             vars_object[var[1:]] = ""
 
-        self.variables = json.dumps(vars_object)
+        self.variables = vars_object
         return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        try:
+            backend.document_from_string(schema, self.query)
+        except GraphQLSyntaxError as error:
+            raise ValidationError({"query": error})

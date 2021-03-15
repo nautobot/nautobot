@@ -1,10 +1,11 @@
 import types
-
+import time
 from django.test import TestCase
 from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import Group, User
 from django.urls import reverse
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -27,8 +28,10 @@ from nautobot.extras.models import (
     ChangeLoggedModel,
     CustomField,
     ConfigContext,
+    GraphQLQuery,
     Relationship,
 )
+from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
     extend_schema_type,
@@ -42,6 +45,43 @@ from nautobot.core.graphql.generators import (
     generate_schema_type,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.utilities.testing.utils import create_test_user
+
+
+class GraphQLTestCase(TestCase):
+    @classmethod
+    def setUp(self):
+        self.user = create_test_user("graphql_testuser")
+        GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
+        GraphQLQuery.objects.create(
+            name="GQL 2", slug="gql-2", query="query ($name: String!) { sites(name:$name) {name} }"
+        )
+
+    def test_execute_query(self):
+        query = "{ query: sites {name} }"
+        resp = execute_query(query, user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+
+    def test_execute_query_with_variable(self):
+        query = "query ($name: String!) { sites(name:$name) {name} }"
+        resp = execute_query(query, user=self.user, variables={"name": "site-1"}).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+
+    def test_execute_query_with_error(self):
+        query = "THIS TEST WILL ERROR"
+        try:
+            execute_query(query, user=self.user).to_dict()
+            self.assertTrue("Exception was not raised.")
+        except GraphQLError:
+            pass
+
+    def test_execute_saved_query(self):
+        resp = execute_saved_query("gql-1", user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+
+    def test_execute_saved_query_with_variable(self):
+        resp = execute_saved_query("gql-2", user=self.user, variables={"name": "site-1"}).to_dict()
+        self.assertFalse(resp["data"].get("error"))
 
 
 class GraphQLUtilsTestCase(TestCase):
@@ -480,7 +520,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(site_names, ["Site 1", "Site 2"])
 
 
-class GraphQLQuery(APITestCase):
+class GraphQLQueryTest(APITestCase):
     def setUp(self):
         """Initialize the Database with some datas."""
         super().setUp()

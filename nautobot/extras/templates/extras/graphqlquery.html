@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load buttons %}
 {% load custom_links %}
+{% load to_json %}
 {% load helpers %}
 {% load plugins %}
 {% load static %}
@@ -70,7 +71,7 @@
                 </tr>
                 <tr>
                     <td>Query Variables</td>
-                    <td><textarea id="query_variables" class="form-control">{{ object.variables }}</textarea></td>
+                    <td><textarea id="query_variables" class="form-control">{{ object.variables|to_json }}</textarea></td>
                 </tr>
                 <tr>
                     <td>Query</td>
@@ -112,7 +113,7 @@ function test_query() {
         },
         error: function(error) {
             console.log(error);
-            output.text(error.responseText);
+            output.text(JSON.stringify(error.responseJSON, undefined, 2));
         }
     });
 
