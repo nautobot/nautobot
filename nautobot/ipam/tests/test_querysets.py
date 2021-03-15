@@ -59,6 +59,19 @@ class AggregateQuerysetTestCase(TestCase):
         self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
         self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
 
+    def test_get_by_prefix(self):
+        prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
+        self.assertEqual(self.queryset.get(prefix="192.168.0.0/16"), prefix)
+
+    def test_get_by_prefix_fails(self):
+        _ = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
+        with self.assertRaises(Aggregate.DoesNotExist):
+            self.queryset.get(prefix="192.168.3.0/16")
+
+    def test_filter_by_prefix(self):
+        prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
+        self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)
+
 
 class IPAddressQuerySet(TestCase):
     queryset = IPAddress.objects.all()
@@ -80,7 +93,6 @@ class IPAddressQuerySet(TestCase):
         self.assertEqual(self.queryset.ip_family(6).count(), 3)
 
     def test_net_host_contained(self):
-        print([ad.address.ip for ad in self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/30"))])
         self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/24")).count(), 5)
         self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/30")).count(), 4)
         self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.10.0/24")).count(), 0)
@@ -94,6 +106,14 @@ class IPAddressQuerySet(TestCase):
 
         args = ["10.0.0.1/24", "10.0.0.1/25"]
         self.assertEqual(self.queryset.net_in(args).count(), 2)
+
+    def test_get_by_address(self):
+        address = self.queryset.net_in(["10.0.0.1/24"])[0]
+        self.assertEqual(self.queryset.get(address="10.0.0.1/24"), address)
+
+    def test_filter_by_address(self):
+        address = self.queryset.net_in(["10.0.0.1/24"])[0]
+        self.assertEqual(self.queryset.filter(address="10.0.0.1/24")[0], address)
 
 
 class PrefixQuerysetTestCase(TestCase):
@@ -111,6 +131,10 @@ class PrefixQuerysetTestCase(TestCase):
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"))
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"))
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"))
+
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/64"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/120"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/122"))
 
     def test_net_equals(self):
         self.assertEqual(self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
@@ -148,3 +172,31 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/28")).count(), 3)
         self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
         self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
+
+    def test_annotate_tree(self):
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.0.0/16").parents, 0)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.0.0/16").children, 6)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.0/24").parents, 1)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.0/24").children, 3)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.224/28").parents, 2)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.224/28").children, 0)
+
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/64").parents, 0)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/64").children, 2)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/120").parents, 1)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/120").children, 1)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/122").parents, 2)
+        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/122").children, 0)
+
+    def test_get_by_prefix(self):
+        prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
+        self.assertEqual(self.queryset.get(prefix="192.168.0.0/16"), prefix)
+
+    def test_get_by_prefix_fails(self):
+        _ = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
+        with self.assertRaises(Prefix.DoesNotExist):
+            self.queryset.get(prefix="192.168.3.0/16")
+
+    def test_filter_by_prefix(self):
+        prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
+        self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)

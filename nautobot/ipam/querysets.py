@@ -1,7 +1,18 @@
 import uuid
 
 import netaddr
-from django.db.models import ExpressionWrapper, IntegerField, F, QuerySet, Q, UUIDField
+from django.db.models import (
+    Count,
+    ExpressionWrapper,
+    IntegerField,
+    F,
+    OuterRef,
+    Subquery,
+    Q,
+    QuerySet,
+    UUIDField,
+    Value,
+)
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce, Length
 
@@ -59,6 +70,32 @@ class NetworkQuerySet(QuerySet):
             broadcast__gte=bytes(broadcast),
         )
 
+    def get(self, *args, prefix=None, **kwargs):
+        """
+        Provide a convenience for `.get(prefix=<prefix>)`
+        """
+        if prefix:
+            _prefix = netaddr.IPNetwork(prefix)
+            if str(_prefix) != prefix:
+                raise self.model.DoesNotExist()
+            broadcast = self._get_broadcast(_prefix)
+            kwargs["prefix_length"] = _prefix.prefixlen
+            kwargs["network"] = bytes(_prefix.ip)  # Query based on the input, not the true network address
+            kwargs["broadcast"] = bytes(broadcast)
+        return super().get(*args, **kwargs)
+
+    def filter(self, *args, prefix=None, **kwargs):
+        """
+        Provide a convenience for `.filter(prefix=<prefix>)`
+        """
+        if prefix:
+            _prefix = netaddr.IPNetwork(prefix)
+            broadcast = self._get_broadcast(_prefix)
+            kwargs["prefix_length"] = _prefix.prefixlen
+            kwargs["network"] = bytes(_prefix.ip)  # Query based on the input, not the true network address
+            kwargs["broadcast"] = bytes(broadcast)
+        return super().filter(*args, **kwargs)
+
 
 class AggregateQuerySet(NetworkQuerySet, RestrictedQuerySet):
     pass
@@ -67,38 +104,66 @@ class AggregateQuerySet(NetworkQuerySet, RestrictedQuerySet):
 class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
     def annotate_tree(self):
         """
-        Annotate the number of parent and child prefixes for each Prefix. Raw SQL is needed for these subqueries
-        because we need to cast NULL VRF values to UUID for comparison. (NULL != NULL).
+        Annotate the number of parent and child prefixes for each Prefix.
 
-        The UUID being used is fake.
+        The UUID being used is fake for purposes of satisfying the COALESCE condition.
         """
         # The COALESCE needs a valid, non-zero, non-null UUID value to do the comparison.
         # The value itself has no meaning, so we just generate a random UUID for the query.
         FAKE_UUID = uuid.uuid4()
 
-        qs = self.annotate(
-            maybe_vrf=ExpressionWrapper(
-                Coalesce(F("vrf_id"), FAKE_UUID),
-                output_field=UUIDField(),
-            )
-        )
+        from nautobot.ipam.models import Prefix
 
-        return qs.annotate(
-            parents=RawSQL(
-                "SELECT COUNT(*) FROM ipam_prefix AS U0 "
-                "WHERE U0.prefix_length < ipam_prefix.prefix_length "
-                "AND U0.network <= ipam_prefix.network "
-                "AND U0.broadcast >= ipam_prefix.broadcast "
-                f"AND COALESCE(U0.vrf_id, '{FAKE_UUID}') = COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
-                (),
+        return self.annotate(
+            parents=Subquery(
+                Prefix.objects.annotate(
+                    maybe_vrf=ExpressionWrapper(
+                        Coalesce(F("vrf_id"), FAKE_UUID),
+                        output_field=UUIDField(),
+                    )
+                )
+                .filter(
+                    Q(prefix_length__lt=OuterRef("prefix_length"))
+                    & Q(network__lte=OuterRef("network"))
+                    & Q(broadcast__gte=OuterRef("broadcast"))
+                    & Q(
+                        maybe_vrf=ExpressionWrapper(
+                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
+                            output_field=UUIDField(),
+                        )
+                    )
+                )
+                .order_by()
+                .annotate(dummy_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
+                .values("dummy_group_by")
+                .annotate(count=Count("*"))
+                .values("count")[:1],
+                output_field=IntegerField(),
             ),
-            children=RawSQL(
-                "SELECT COUNT(*) FROM ipam_prefix AS U1 "
-                "WHERE U1.prefix_length > ipam_prefix.prefix_length "
-                "AND U1.network >= ipam_prefix.network "
-                "AND U1.broadcast <= ipam_prefix.broadcast "
-                f"AND COALESCE(U1.vrf_id, '{FAKE_UUID}') = COALESCE(ipam_prefix.vrf_id, '{FAKE_UUID}')",
-                (),
+            children=Subquery(
+                Prefix.objects.annotate(
+                    maybe_vrf=ExpressionWrapper(
+                        Coalesce(F("vrf_id"), FAKE_UUID),
+                        output_field=UUIDField(),
+                    )
+                )
+                .filter(
+                    Q(prefix_length__gt=OuterRef("prefix_length"))
+                    & Q(network__gte=OuterRef("network"))
+                    & Q(broadcast__lte=OuterRef("broadcast"))
+                    & Q(
+                        maybe_vrf=ExpressionWrapper(
+                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
+                            output_field=UUIDField(),
+                        )
+                    )
+                )
+                .order_by()
+                .annotate(dummy_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
+                .values("dummy_group_by")
+                .annotate(count=Count("*"))
+                .values("count")[:1],
+                output_field=IntegerField(),
             ),
         )
 
@@ -148,3 +213,27 @@ class IPAddressQuerySet(RestrictedQuerySet):
         masked_prefixes = [netaddr.IPNetwork(val).prefixlen for val in networks if "/" in val]
         unmasked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" not in val]
         return self.filter(Q(host__in=masked_hosts, prefix_length__in=masked_prefixes) | Q(host__in=unmasked_hosts))
+
+    def get(self, *args, address=None, **kwargs):
+        """
+        Provide a convenience for `.get(address=<address>)`
+        """
+        if address:
+            address = netaddr.IPNetwork(address)
+            broadcast = self._get_broadcast(address)
+            kwargs["prefix_length"] = address.prefixlen
+            kwargs["host"] = bytes(address.ip)
+            kwargs["broadcast"] = bytes(broadcast)
+        return super().get(*args, **kwargs)
+
+    def filter(self, *args, address=None, **kwargs):
+        """
+        Provide a convenience for `.filter(address=<address>)`
+        """
+        if address:
+            address = netaddr.IPNetwork(address)
+            broadcast = self._get_broadcast(address)
+            kwargs["prefix_length"] = address.prefixlen
+            kwargs["host"] = bytes(address.ip)
+            kwargs["broadcast"] = bytes(broadcast)
+        return super().filter(*args, **kwargs)
