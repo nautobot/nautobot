@@ -79,9 +79,13 @@ While Nautobot has many configuration settings, only a few of them must be defin
 
 ## Optional Authentication Configuration
 
+!!! note
+    User permissions are not setup by default.  Be sure to [configure permissions](authentication/permissions.md) after setting up remote authentication.
+
 * [LDAP Authentication](authentication/ldap.md)
 * [Remote User Authentication](authentication/remote.md)
 * [SSO Authentication](authentication/sso.md)
+* [User Permissions](authentication/permissions.md)
 
 ## Changing the Configuration
 

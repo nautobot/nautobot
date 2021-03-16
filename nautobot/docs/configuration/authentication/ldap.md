@@ -182,3 +182,7 @@ LOGGING = {
 ```
 
 Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the nautobot service and attempt to log into the site to trigger log entries to this file.
+
+---
+
+Be sure to [configure permissions](permissions.md) next!
