@@ -224,7 +224,7 @@ $ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 
 ### Python Virtual Environment Workflow
 
-This workflows uses Python and Poetry to work with your development environment locally. It requires that you install the requireed system dependencies on your system yourself.
+This workflow uses Python and Poetry to work with your development environment locally. It requires that you install the required system dependencies on your system yourself.
 
 There are a few things you'll need:
 
