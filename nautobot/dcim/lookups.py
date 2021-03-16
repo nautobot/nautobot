@@ -5,7 +5,7 @@ from nautobot.dcim.utils import object_to_path_node
 
 
 class PathContains(Lookup):
-    lookup_name = "pathcontains"
+    lookup_name = "contains"
 
     def get_prep_lookup(self):
         self.prepare_rhs = False

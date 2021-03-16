@@ -85,6 +85,11 @@ class NaturalOrderingField(models.CharField):
 
 
 class JSONArrayField(models.JSONField):
+    """
+    An ArrayField implementation backed JSON storage.
+    Replicates ArrayField's base field validation.
+    """
+
     _default_hint = ("list", "[]")
 
     def __init__(self, base_field, **kwargs):

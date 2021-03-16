@@ -461,6 +461,12 @@ class JSONField(_JSONField):
 
 
 class JSONArrayFormField(forms.JSONField):
+    """
+    A FormField counterpart to JSONArrayField.
+    Replicates ArrayFormField's base field validation: Field values are validated as JSON Arrays,
+    and each Array element is validated by |base_field| validators.
+    """
+
     def __init__(self, base_field, *, delimiter=",", **kwargs):
         self.base_field = base_field
         self.delimiter = delimiter
