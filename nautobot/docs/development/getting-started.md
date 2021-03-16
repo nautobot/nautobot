@@ -299,7 +299,7 @@ Collecting ipython
 It may not always be convenient to enter into the virtual shell just to run programs. You may also execute a given command ad hoc within the project's virtual shell by using `poetry run`:
 
 ```
-$ poetry run mkdocs server
+$ poetry run mkdocs serve
 ```
 
 Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.	
