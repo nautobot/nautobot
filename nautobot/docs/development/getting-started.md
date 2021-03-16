@@ -190,7 +190,7 @@ SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 !!! warning
     Please name the **.env** file ``override.env`` to prevent credentials from accidentally being checked into Git as ``override.env`` is set in the ``.gitignore`` file.
 
-These variables will tell `docker-entrypoint.sh` to create the superuser with the specified username, email, password, and API token.
+The variables defined above within `override.env` will signal the `docker-entrypoint.sh` script to create the superuser with the specified username, email, password, and API token.
 
 After these two files are created, you can use the `invoke` tasks to manage the development containers.
 
