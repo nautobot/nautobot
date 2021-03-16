@@ -22,7 +22,7 @@
 
     <div class="pull-right noprint">
         {% plugin_buttons object %}
-        <a class="btn btn-primary" href="{% url 'graphql' %}#query={{ object.query|urlencode }}&variables={{ object.variables|iriencode }}">Open in GraphiQL</a>
+        <a class="btn btn-primary" href="{% url 'graphql' %}#query={{ object.query|urlencode }}&variables={{ object.variables|urlencode }}">Open in GraphiQL</a>
         {% if perms.extras.add_graphqlquery %}
             {% clone_button object %}
         {% endif %}

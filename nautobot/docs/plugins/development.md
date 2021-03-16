@@ -248,6 +248,54 @@ class AnotherDummyType(DjangoObjectType):
 graphql_types = [AnotherDummyType]
 ```
 
+#### Using GraphQL ORM Utility
+
+Two new GraphQL utility functions have been created:
+
+1) `execute_query()`: Runs string as a query against GraphQL.
+2) `execute_saved_query()`: Execute a saved query from Nautobot database.
+
+Both functions have the same arguments other than `execute_saved_query()` which requires a slug to identify the saved query rather than a string holding a query.
+
+For authentication either a request object or user object needs to be passed in. If there is none, the function will error out.
+
+Arguments:
+
+* `execute_query()`:
+  * query (str): String with GraphQL query.
+  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * request (django.test.client.RequestFactory, optional): Used to authenticate.
+  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+* `execute_saved_query()`:
+  * saved_query_slug (str): Slug of a saved GraphQL query.
+  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * request (django.test.client.RequestFactory, optional): Used to authenticate.
+  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+
+Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
+
+Usage in a view:
+
+``` python
+from nautobot.core.graphql import execute_saved_query
+
+
+class GraphQLModelView(ModelViewSet):
+    queryset = GraphQLModelQuery.objects.all()
+
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        try:
+            query_object = get_object_or_404(self.queryset, slug=pk)
+            result = execute_saved_query(query_object.query, variable=request.data, request=request).to_dict()
+            return Response(result)
+        except GraphQLError as error:
+            return Response(
+                {"errors": [GraphQLView.format_error(error)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+```
+
 ## Views
 
 If your plugin needs its own page or pages in the Nautobot web UI, you'll need to define views. A view is a particular page tied to a URL within Nautobot, which renders content using a template. Views are typically defined in `views.py`, and URL patterns in `urls.py`. As an example, let's write a view which displays a random animal and the sound it makes. First, we'll create the view in `views.py`:

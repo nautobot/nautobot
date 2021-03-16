@@ -862,7 +862,7 @@
                         <ul class="dropdown-menu">
                             {% for query in saved_graphiql_queries %}
                                 <li>
-                                    <a href="#" onclick="reload('{{ query.query|iriencode }}', '{{ query.variables|iriencode }}')">{{ query.name }}</a>
+                                    <a href="#" onclick="reload('{{ query.query|urlencode }}', '{{ query.variables|urlencode }}')">{{ query.name }}</a>
                                 </li>
                             {% endfor %}
                         </ul>
