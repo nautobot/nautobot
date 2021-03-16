@@ -73,6 +73,29 @@ upstream	git@github.com:nautobot/nautobot.git (push)
 
 You're now ready to proceed to the next steps.
 
+!!! hint
+	You will always **push** changes to `origin` (your fork) and **pull** changes from `upstream` (official repo).
+
+### Creating a Branch
+
+Before you make any changes, always create a new branch. In the majority of cases, you'll always want to create your branches from the `develop` branch.
+
+Before you ever create a new branch, always  checkout the `develop` branch and make sure you you've got the latest changes from `upstream`.
+
+```no-highlight
+$ git checkout develop
+$ git pull upstream develop
+```
+
+!!! warning
+	If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
+
+Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username, separated by hyphens. For example:
+
+```no-highlight
+$ git checkout -b yourusername-myfeature
+```
+
 ## Enabling Pre-Commit Hooks
 
 Nautobot ships with a [Git pre-commit hook](https://githooks.com/) script that automatically checks for style compliance and missing database migrations prior to committing changes. This helps avoid erroneous commits that result in CI test failures. You are encouraged to enable it by creating a link to `scripts/git-hooks/pre-commit`:
