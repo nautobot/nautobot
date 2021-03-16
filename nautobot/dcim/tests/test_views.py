@@ -876,6 +876,7 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Platform X",
             "slug": "platform-x",
             "manufacturer": manufacturer.pk,
+            "ansible_connection": "juniper.junos.junos",
             "napalm_driver": "junos",
             "napalm_args": None,
             "description": "A new platform",

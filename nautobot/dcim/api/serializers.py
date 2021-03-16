@@ -609,6 +609,7 @@ class PlatformSerializer(CustomFieldModelSerializer):
             "name",
             "slug",
             "manufacturer",
+            "ansible_connection",
             "napalm_driver",
             "napalm_args",
             "description",

@@ -378,6 +378,12 @@ class Platform(OrganizationalModel):
         null=True,
         help_text="Optionally limit this platform to devices of a certain manufacturer",
     )
+    ansible_connection = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Ansible Connection",
+        help_text="The name of the connection driver to use for use with ansible_network_os",
+    )
     napalm_driver = models.CharField(
         max_length=50,
         blank=True,
@@ -397,6 +403,7 @@ class Platform(OrganizationalModel):
         "name",
         "slug",
         "manufacturer",
+        "ansible_connection",
         "napalm_driver",
         "napalm_args",
         "description",
@@ -416,6 +423,7 @@ class Platform(OrganizationalModel):
             self.name,
             self.slug,
             self.manufacturer.name if self.manufacturer else None,
+            self.ansible_connection,
             self.napalm_driver,
             self.napalm_args,
             self.description,
