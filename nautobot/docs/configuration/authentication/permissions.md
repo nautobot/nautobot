@@ -3,9 +3,9 @@
 ## Configuration
 
 !!! note
-    By default, once authenticated, if the user has never logged in before a new user account will be created for the user.
-    This new user will not be a member of any group or have any permissions assigned. If you would like to create users with
-    a default set of permissions there are some additional variables to configure the permissions:
+    When a user logs in for the first time via remote user authentication or SSO, Nautobot will create a new user account for them.
+    By default, this new user will not be a member of any group or have any permissions assigned. If you would like to create users with
+    a default set of permissions, there are some additional variables to configure:
 
 ---
 
