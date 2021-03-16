@@ -389,7 +389,7 @@ $ nautobot-server test
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time. 
 
 !!! note
-	Note that this argument will cause errors if you've modified any model fields since the previous test run.
+	Using the `--keepdb` argument will cause errors if you've modified any model fields since the previous test run.
 
 ```no-highlight
 $ nautobot-server test --keepdb
