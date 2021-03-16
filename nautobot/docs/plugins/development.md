@@ -1,13 +1,13 @@
 # Plugin Development
 
-This documentation covers the development of custom plugins for Nautobot. Plugins are essentially self-contained [Django apps](https://docs.djangoproject.com/en/stable/) which integrate with Nautobot to provide custom functionality. Since the development of Django apps is already very well-documented, we'll only be covering the aspects that are specific to Nautobot.
+This documentation covers the development of custom plugins for Nautobot. Plugins are essentially self-contained [Django applications](https://docs.djangoproject.com/en/stable/ref/applications/) which integrate with Nautobot to provide custom functionality. Since the development of Django applications is already very well-documented, we'll only be covering the aspects that are specific to Nautobot.
 
 Plugins can do a lot, including:
 
 * Create Django models to store data in the database
 * Add custom validation logic to apply to existing data models
 * Provide their own "pages" (views) in the web user interface
-* Provide [jobs](../additional-features/jobs.md)
+* Provide [Jobs](../additional-features/jobs.md)
 * Inject template content and navigation links
 * Establish their own REST API endpoints
 * Add custom request/response middleware
@@ -59,7 +59,9 @@ The plugin source directory contains all of the actual Python code and other res
 
 ### Create setup.py
 
-`setup.py` is the [setup script](https://docs.python.org/3.6/distutils/setupscript.html) we'll use to install our plugin once it's finished. The primary function of this script is to call the setuptools library's `setup()` function to create a Python distribution package. We can pass a number of keyword arguments to inform the package creation as well as to provide metadata about the plugin. An example `setup.py` is below:
+The`setup.py` script is the [setup script](https://docs.python.org/3.6/distutils/setupscript.html) we'll use to install our plugin once it's finished. The primary function of this script is to call the setuptools library's `setup()` function to create a Python distribution package. We can pass a number of keyword arguments to inform the package creation as well as to provide metadata about the plugin. 
+
+An example `setup.py` is below:
 
 ```python
 from setuptools import find_packages, setup
