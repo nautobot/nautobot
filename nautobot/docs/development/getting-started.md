@@ -2,13 +2,14 @@
 
 ## Git Branches
 
-The Nautobot project utilizes three persistent git branches to track work:
+The Nautobot project follows a branching model based on [Git-flow](https://nvie.com/posts/a-successful-git-branching-model/). As such, there are two persistent git branches:
 
 * `main` - Serves as a snapshot of the current stable release
 * `develop` - All development on the upcoming stable release occurs here
-* `feature` - Tracks work on an upcoming major release
 
-You will always base pull requests off of the `develop` branch, or off of `feature` if you're working on a new major release. **Never** merge pull requests into the `main` branch, which receives merges only from the `develop` branch.
+At any given time, there may additionally be zero or more long-lived branches of the form `develop-X.Y.Z`, where `X.Y.Z` is a future stable release later than the one currently being worked on in the main `develop` branch.
+
+You will always base pull requests off of the `develop` branch, or off of `develop-X.Y.Z` if you're working on a feature targeted for a later release. **Never** target pull requests into the `main` branch, which receives merges only from the `develop` branch.
 
 ## Forking the Repo
 
