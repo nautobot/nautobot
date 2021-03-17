@@ -16,7 +16,7 @@ This will install:
 
 ```no-highlight
 $ sudo yum check-update
-$ sudo yum install -y git python36 python36-devel python3-pip postgresql-server redis
+$ sudo yum install -y git python38 python38-devel python38-pip postgresql-server redis
 ```
 
 ## Database Setup
@@ -73,7 +73,7 @@ is done with the following commands.
 
 ```no-highlight
 $ sudo -u postgres psql
-psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
+psql (10.15)
 Type "help" for help.
 
 postgres=# CREATE DATABASE nautobot;
@@ -94,7 +94,7 @@ If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm y
 ```no-highlight
 $ psql --username nautobot --password --host localhost nautobot
 Password for user nautobot:
-psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
+psql (10.15)
 Type "help" for help.
 
 nautobot=> \conninfo
