@@ -148,11 +148,8 @@ class JSONArrayField(models.JSONField):
 
     def run_validators(self, value):
         super().run_validators(value)
-        for index, part in enumerate(value):
-            try:
-                self.base_field.run_validators(part)
-            except exceptions.ValidationError as error:
-                raise error
+        for part in value:
+            self.base_field.run_validators(part)
 
     def formfield(self, **kwargs):
         return super().formfield(

@@ -490,7 +490,7 @@ class JSONArrayFormField(forms.JSONField):
             items = []
         errors = []
         values = []
-        for index, item in enumerate(items):
+        for item in items:
             try:
                 values.append(self.base_field.to_python(item))
             except ValidationError as error:
@@ -502,7 +502,7 @@ class JSONArrayFormField(forms.JSONField):
     def validate(self, value):
         super().validate(value)
         errors = []
-        for index, item in enumerate(value):
+        for item in value:
             try:
                 self.base_field.validate(item)
             except ValidationError as error:
@@ -513,7 +513,7 @@ class JSONArrayFormField(forms.JSONField):
     def run_validators(self, value):
         super().run_validators(value)
         errors = []
-        for index, item in enumerate(value):
+        for item in value:
             try:
                 self.base_field.run_validators(item)
             except ValidationError as error:
@@ -522,11 +522,7 @@ class JSONArrayFormField(forms.JSONField):
             raise ValidationError(errors)
 
     def has_changed(self, initial, data):
-        try:
-            value = self.to_python(data)
-        except ValidationError:
-            pass
-        else:
-            if initial in self.empty_values and value in self.empty_values:
-                return False
+        value = self.to_python(data)
+        if initial in self.empty_values and value in self.empty_values:
+            return False
         return super().has_changed(initial, data)
