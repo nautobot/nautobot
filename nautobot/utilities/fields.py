@@ -104,6 +104,7 @@ class JSONArrayField(models.JSONField):
         return "JSON Array of %s" % self.base_field.description
 
     def get_prep_value(self, value):
+        """Perform preliminary non-db specific value checks and conversions."""
         if value is not None:
             if not isinstance(value, (list, tuple)):
                 raise ValueError("value {} is not list or tuple".format(value))
@@ -111,6 +112,16 @@ class JSONArrayField(models.JSONField):
         return super().get_prep_value(value)
 
     def deconstruct(self):
+        """
+        Return enough information to recreate the field as a 4-tuple:
+         * The name of the field on the model, if contribute_to_class() has
+           been run.
+         * The import path of the field, including the class:e.g.
+           django.db.models.IntegerField This should be the most portable
+           version, so less specific may be better.
+         * A list of positional arguments.
+         * A dict of keyword arguments.
+        """
         name, path, args, kwargs = super().deconstruct()
         kwargs.update(
             {
@@ -120,6 +131,10 @@ class JSONArrayField(models.JSONField):
         return name, path, args, kwargs
 
     def to_python(self, value):
+        """
+        Convert |value| into JSON, raising django.core.exceptions.ValidationError
+        if the data can't be converted. Return the converted value.
+        """
         if isinstance(value, str):
             # Assume we're deserializing
             vals = json.loads(value)
@@ -127,6 +142,10 @@ class JSONArrayField(models.JSONField):
         return value
 
     def value_to_string(self, obj):
+        """
+        Return a string value of this field from the passed obj.
+        This is used by the serialization framework.
+        """
         values = []
         vals = self.value_from_object(obj)
         base_field = self.base_field
@@ -140,6 +159,9 @@ class JSONArrayField(models.JSONField):
         return json.dumps(values)
 
     def validate(self, value, model_instance):
+        """
+        Validate |value| and raise ValidationError if necessary.
+        """
         super().validate(value, model_instance)
         if isinstance(self.base_field, JSONArrayField):
             raise exceptions.ValidationError("cannot nest JSONArrayFields")
@@ -147,11 +169,16 @@ class JSONArrayField(models.JSONField):
             self.base_field.validate(part, model_instance)
 
     def run_validators(self, value):
+        """
+        Runs all validators against |value| and raise ValidationError if necessary.
+        Some validators can't be created at field initialization time.
+        """
         super().run_validators(value)
         for part in value:
             self.base_field.run_validators(part)
 
     def formfield(self, **kwargs):
+        """Return a django.forms.Field instance for this field."""
         return super().formfield(
             **{
                 "form_class": JSONArrayFormField,

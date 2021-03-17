@@ -473,15 +473,26 @@ class JSONArrayFormField(forms.JSONField):
         super().__init__(**kwargs)
 
     def clean(self, value):
+        """
+        Validate |value| and return its "cleaned" value as an appropriate
+        Python object. Raise ValidationError for any errors.
+        """
         value = super().clean(value)
         return [self.base_field.clean(val) for val in value]
 
     def prepare_value(self, value):
+        """
+        Return a string of this value.
+        """
         if isinstance(value, list):
             return self.delimiter.join(str(self.base_field.prepare_value(v)) for v in value)
         return value
 
     def to_python(self, value):
+        """
+        Convert |value| into JSON, raising django.core.exceptions.ValidationError
+        if the data can't be converted. Return the converted value.
+        """
         if isinstance(value, list):
             items = value
         elif value:
@@ -500,6 +511,9 @@ class JSONArrayFormField(forms.JSONField):
         return values
 
     def validate(self, value):
+        """
+        Validate |value| and raise ValidationError if necessary.
+        """
         super().validate(value)
         errors = []
         for item in value:
@@ -511,6 +525,10 @@ class JSONArrayFormField(forms.JSONField):
             raise ValidationError(errors)
 
     def run_validators(self, value):
+        """
+        Runs all validators against |value| and raise ValidationError if necessary.
+        Some validators can't be created at field initialization time.
+        """
         super().run_validators(value)
         errors = []
         for item in value:
@@ -522,6 +540,9 @@ class JSONArrayFormField(forms.JSONField):
             raise ValidationError(errors)
 
     def has_changed(self, initial, data):
+        """
+        Return True if |data| differs from |initial|.
+        """
         value = self.to_python(data)
         if initial in self.empty_values and value in self.empty_values:
             return False
