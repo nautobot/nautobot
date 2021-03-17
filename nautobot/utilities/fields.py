@@ -2,8 +2,7 @@ import json
 
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models.fields import mixins
-from django.core import checks, exceptions
+from django.core import exceptions
 
 from nautobot.utilities.ordering import naturalize
 from .forms import ColorSelect
@@ -144,11 +143,8 @@ class JSONArrayField(models.JSONField):
         super().validate(value, model_instance)
         if isinstance(self.base_field, JSONArrayField):
             raise exceptions.ValidationError("cannot nest JSONArrayFields")
-        for index, part in enumerate(value):
-            try:
-                self.base_field.validate(part, model_instance)
-            except exceptions.ValidationError as error:
-                raise error
+        for part in value:
+            self.base_field.validate(part, model_instance)
 
     def run_validators(self, value):
         super().run_validators(value)
