@@ -92,6 +92,8 @@ class JSONArrayField(models.JSONField):
     _default_hint = ("list", "[]")
 
     def __init__(self, base_field, **kwargs):
+        if isinstance(base_field, JSONArrayField):
+            raise TypeError("cannot nest JSONArrayFields")
         self.base_field = base_field
         super().__init__(**kwargs)
 
@@ -136,9 +138,12 @@ class JSONArrayField(models.JSONField):
         if the data can't be converted. Return the converted value.
         """
         if isinstance(value, str):
-            # Assume we're deserializing
-            vals = json.loads(value)
-            value = [self.base_field.to_python(val) for val in vals]
+            try:
+                # Assume we're deserializing
+                vals = json.loads(value)
+                value = [self.base_field.to_python(val) for val in vals]
+            except json.JSONDecodeError as e:
+                raise exceptions.ValidationError(e)
         return value
 
     def value_to_string(self, obj):
@@ -163,8 +168,6 @@ class JSONArrayField(models.JSONField):
         Validate |value| and raise ValidationError if necessary.
         """
         super().validate(value, model_instance)
-        if isinstance(self.base_field, JSONArrayField):
-            raise exceptions.ValidationError("cannot nest JSONArrayFields")
         for part in value:
             self.base_field.validate(part, model_instance)
 

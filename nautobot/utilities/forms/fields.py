@@ -30,6 +30,7 @@ __all__ = (
     "ExpandableIPAddressField",
     "ExpandableNameField",
     "JSONField",
+    "JSONArrayFormField",
     "MultipleContentTypeField",
     "LaxURLField",
     "SlugField",
@@ -496,9 +497,13 @@ class JSONArrayFormField(forms.JSONField):
         if isinstance(value, list):
             items = value
         elif value:
-            items = value.split(self.delimiter)
+            try:
+                items = value.split(self.delimiter)
+            except Exception as e:
+                raise ValidationError(e)
         else:
             items = []
+
         errors = []
         values = []
         for item in items:
