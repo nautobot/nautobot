@@ -16,8 +16,8 @@ Enable the remote user authentication backend by adding the following to your `n
 
 ```python
 AUTHENTICATION_BACKENDS = [
-    'nautobot.authentication.RemoteUserBackend',
-    'nautobot.authentication.ObjectPermissionBackend',
+    'nautobot.core.authentication.RemoteUserBackend',
+    'nautobot.core.authentication.ObjectPermissionBackend',
 ]
 ```
 
