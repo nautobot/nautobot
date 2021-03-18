@@ -42,14 +42,17 @@ def running_nautobot_python_versions(context):
         List[str]: List of python versions found
     """
     python_versions = []
-    container_image_names = context.run(
-        "docker ps -f name=nautobot --format='{{ .Image }}'", pty=True, hide="out"
-    ).stdout
-    for dockerimage in container_image_names.splitlines():
-        searchfor = "nautobot-py"
-        parts = dockerimage.splitlines()[0].split("/")
-        if len(parts) == 2 and parts[1].find(searchfor) > -1:
-            python_versions += [parts[1][len(searchfor) :]]
+    try:
+        container_image_names = context.run(
+            "docker ps -f name=nautobot --format='{{ .Image }}'", pty=True, hide="out"
+        ).stdout
+        for dockerimage in container_image_names.splitlines():
+            searchfor = "nautobot-py"
+            parts = dockerimage.splitlines()[0].split("/")
+            if len(parts) == 2 and parts[1].find(searchfor) > -1:
+                python_versions += [parts[1][len(searchfor) :]]
+    except:  # noqa: E722
+        pass
     return python_versions
 
 
@@ -69,7 +72,7 @@ def default_python_ver(context, python_ver=PYTHON_VER):
             print("Python version of running Nautobot containers:")
             for ver in py_versions:
                 print("  -", ver)
-            if not PYTHON_VER in py_versions:
+            if PYTHON_VER not in py_versions:
                 print("Default Python version:", PYTHON_VER)
     return python_ver
 
