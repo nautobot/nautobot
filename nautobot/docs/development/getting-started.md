@@ -231,7 +231,7 @@ To start Nautobot, select **Run Without Debugging** or **Start Debugging** from 
 
 ##### Special Workflow for Containers on Remote Servers
 
-A slightly different workflow is needed when your development container is running on a remotely-connected server (such as with SSH). VS Code, will not offer the **Reopen in Container** option on a remote server.
+A slightly different workflow is needed when your development container is running on a remotely-connected server (such as with SSH). VS Code will not offer the **Reopen in Container** option on a remote server.
 
 To work with remote containers, after `invoke build` use `docker-compose` as follows to start the containers. This prevents the HTTP service from automatically starting inside the container:
 
