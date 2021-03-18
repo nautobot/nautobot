@@ -164,7 +164,7 @@ Additional useful commands for the development environment:
 
 #### Working with Docker Compose
 
-The files related to the Docker container environment used for development can be found inside of the `development` directory a the root of the project.
+The files related to the Docker container environment used for development can be found inside of the `development` directory at the root of the project.
 
 In this directory you'll find the following core files:
 
