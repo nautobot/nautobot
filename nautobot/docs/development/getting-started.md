@@ -328,7 +328,7 @@ $ poetry run mkdocs serve
 Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.	
 
 !!! note
-	Unless otherwise noted, all following commands will assumed to be ran inside the virtualenv. 
+	Unless otherwise noted, all following commands should be executed inside the virtualenv. 
 
 !!! hint
 	Use `poetry shell` to enter the virtualenv.
