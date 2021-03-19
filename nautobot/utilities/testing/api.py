@@ -17,6 +17,10 @@ __all__ = (
 )
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 #
 # REST API Tests
 #
@@ -38,7 +42,7 @@ class APITestCase(ModelTestCase):
         Create a superuser and token for API calls.
         """
         # Create the test user and assign permissions
-        self.user = get_user_model().objects.create_user(username="testuser")
+        self.user = User.objects.create_user(username="testuser")
         self.add_permissions(*self.user_permissions)
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}

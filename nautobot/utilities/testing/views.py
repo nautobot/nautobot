@@ -27,13 +27,17 @@ __all__ = (
 )
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class TestCase(_TestCase):
     user_permissions = ()
 
     def setUp(self):
 
         # Create the test user and assign permissions
-        self.user = get_user_model().objects.create_user(username="testuser")
+        self.user = User.objects.create_user(username="testuser")
         self.add_permissions(*self.user_permissions)
 
         # Initialize the test client

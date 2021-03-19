@@ -8,6 +8,10 @@ from nautobot.utilities.testing import APIViewTestCases, APITestCase
 from nautobot.utilities.utils import deepmerge
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class AppTest(APITestCase):
     def test_root(self):
 
@@ -18,7 +22,7 @@ class AppTest(APITestCase):
 
 
 class UserTest(APIViewTestCases.APIViewTestCase):
-    model = get_user_model()
+    model = User
     view_namespace = "users"
     brief_fields = ["id", "url", "username"]
     validation_excluded_fields = ["password"]
@@ -40,9 +44,9 @@ class UserTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        get_user_model().objects.create(username="User_1")
-        get_user_model().objects.create(username="User_2")
-        get_user_model().objects.create(username="User_3")
+        User.objects.create(username="User_1")
+        User.objects.create(username="User_2")
+        User.objects.create(username="User_3")
 
 
 class GroupTest(APIViewTestCases.APIViewTestCase):
@@ -92,9 +96,9 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
         )
 
         users = (
-            get_user_model().objects.create(username="User 1", is_active=True),
-            get_user_model().objects.create(username="User 2", is_active=True),
-            get_user_model().objects.create(username="User 3", is_active=True),
+            User.objects.create(username="User 1", is_active=True),
+            User.objects.create(username="User 2", is_active=True),
+            User.objects.create(username="User 3", is_active=True),
         )
 
         object_type = ContentType.objects.get(app_label="dcim", model="device")

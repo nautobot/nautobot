@@ -23,7 +23,6 @@ __all__ = (
     "ObjectPermission",
     "Token",
     "User",
-    "UserConfig",
 )
 
 

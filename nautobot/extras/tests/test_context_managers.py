@@ -1,6 +1,6 @@
 import django_rq
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.dcim.models import Site
@@ -9,11 +9,13 @@ from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ObjectChange, Webhook
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class web_request_contextTestCase(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="jacob", email="jacob@example.com", password="top_secret"
-        )
+        self.user = User.objects.create_user(username="jacob", email="jacob@example.com", password="top_secret")
 
         site_ct = ContentType.objects.get_for_model(Site)
         DUMMY_URL = "http://localhost/"

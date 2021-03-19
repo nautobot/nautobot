@@ -15,6 +15,10 @@ from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.testing import TestCase
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 # Authentication backends required for remote authentication to work
 TEST_AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.RemoteUserBackend",
@@ -25,7 +29,7 @@ TEST_AUTHENTICATION_BACKENDS = [
 class ExternalAuthenticationTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = get_user_model().objects.create(username="remoteuser1")
+        cls.user = User.objects.create(username="remoteuser1")
 
     def setUp(self):
         self.client = Client()
@@ -109,7 +113,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Local user should have been automatically created
-        new_user = get_user_model().objects.get(username="remoteuser2")
+        new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
             int(self.client.session.get("_auth_user_id")),
             new_user.pk,
@@ -144,7 +148,7 @@ class ExternalAuthenticationTestCase(TestCase):
         response = self.client.get(reverse("home"), follow=True, **headers)
         self.assertEqual(response.status_code, 200)
 
-        new_user = get_user_model().objects.get(username="remoteuser2")
+        new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
             int(self.client.session.get("_auth_user_id")),
             new_user.pk,
@@ -179,7 +183,7 @@ class ExternalAuthenticationTestCase(TestCase):
         response = self.client.get(reverse("home"), follow=True, **headers)
         self.assertEqual(response.status_code, 200)
 
-        new_user = get_user_model().objects.get(username="remoteuser2")
+        new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
             int(self.client.session.get("_auth_user_id")),
             new_user.pk,
@@ -218,7 +222,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         """
         Create a test user and token for API calls.
         """
-        self.user = get_user_model().objects.create(username="testuser")
+        self.user = User.objects.create(username="testuser")
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 

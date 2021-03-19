@@ -2,10 +2,14 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class UserConfigTest(TestCase):
     def setUp(self):
 
-        user = get_user_model().objects.create_user(username="testuser")
+        user = User.objects.create_user(username="testuser")
         user.config_data = {
             "a": True,
             "b": {

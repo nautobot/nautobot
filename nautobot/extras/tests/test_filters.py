@@ -26,6 +26,10 @@ from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class ExportTemplateTestCase(TestCase):
     queryset = ExportTemplate.objects.all()
     filterset = ExportTemplateFilterSet
@@ -463,9 +467,9 @@ class ObjectChangeTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         users = (
-            get_user_model().objects.create(username="user1"),
-            get_user_model().objects.create(username="user2"),
-            get_user_model().objects.create(username="user3"),
+            User.objects.create(username="user1"),
+            User.objects.create(username="user2"),
+            User.objects.create(username="user3"),
         )
 
         site = Site.objects.create(name="Test Site 1", slug="test-site-1")
@@ -531,9 +535,7 @@ class ObjectChangeTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_user(self):
-        params = {
-            "user_id": get_user_model().objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)
-        }
+        params = {"user_id": User.objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"user": ["user1", "user2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)

@@ -24,13 +24,17 @@ from nautobot.extras.models import (
 )
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
 class GitTest(TestCase):
 
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user(username="testuser")
+        self.user = User.objects.create_user(username="testuser")
         self.factory = RequestFactory()
         self.dummy_request = self.factory.get("/no-op/")
         self.dummy_request.user = self.user

@@ -43,6 +43,10 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterType
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class RegionTestCase(TestCase):
     queryset = Region.objects.all()
     filterset = RegionFilterSet
@@ -564,9 +568,9 @@ class RackReservationTestCase(TestCase):
         )
 
         users = (
-            get_user_model().objects.create(username="User 1"),
-            get_user_model().objects.create(username="User 2"),
-            get_user_model().objects.create(username="User 3"),
+            User.objects.create(username="User 1"),
+            User.objects.create(username="User 2"),
+            User.objects.create(username="User 3"),
         )
 
         tenant_groups = (
@@ -604,7 +608,7 @@ class RackReservationTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_user(self):
-        users = get_user_model().objects.all()[:2]
+        users = User.objects.all()[:2]
         params = {"user_id": [users[0].pk, users[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"user": [users[0].username, users[1].username]}

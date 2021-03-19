@@ -44,6 +44,10 @@ from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class AppTest(APITestCase):
     def test_root(self):
 
@@ -393,7 +397,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        user = get_user_model().objects.create(username="user1", is_active=True)
+        user = User.objects.create(username="user1", is_active=True)
         site = Site.objects.create(name="Test Site 1", slug="test-site-1")
 
         cls.racks = (

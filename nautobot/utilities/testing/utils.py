@@ -6,6 +6,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 def post_data(data):
     """
     Take a dictionary of test data (suitable for comparison to an instance) and return a dict suitable for POSTing.
@@ -34,7 +38,7 @@ def create_test_user(username="testuser", permissions=None):
     """
     Create a User with the given permissions.
     """
-    user = get_user_model().objects.create_user(username=username)
+    user = User.objects.create_user(username=username)
     if permissions is None:
         permissions = ()
     for perm_name in permissions:

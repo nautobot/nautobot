@@ -11,8 +11,12 @@ from nautobot.users.filters import (
 from nautobot.users.models import ObjectPermission
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class UserTestCase(TestCase):
-    queryset = get_user_model().objects.all()
+    queryset = User.objects.all()
     filterset = UserFilterSet
 
     @classmethod
@@ -25,32 +29,32 @@ class UserTestCase(TestCase):
         )
 
         users = (
-            get_user_model().objects.create(
+            User.objects.create(
                 username="User1",
                 first_name="Hank",
                 last_name="Hill",
                 email="hank@stricklandpropane.com",
                 is_staff=True,
             ),
-            get_user_model().objects.create(
+            User.objects.create(
                 username="User2",
                 first_name="Dale",
                 last_name="Gribble",
                 email="dale@dalesdeadbug.com",
             ),
-            get_user_model().objects.create(
+            User.objects.create(
                 username="User3",
                 first_name="Bill",
                 last_name="Dauterive",
                 email="bill.dauterive@army.mil",
             ),
-            get_user_model().objects.create(
+            User.objects.create(
                 username="User4",
                 first_name="Jeff",
                 last_name="Boomhauer",
                 email="boomhauer@dangolemail.com",
             ),
-            get_user_model().objects.create(
+            User.objects.create(
                 username="User5",
                 first_name="Debbie",
                 last_name="Grund",
@@ -132,9 +136,9 @@ class ObjectPermissionTestCase(TestCase):
         )
 
         users = (
-            get_user_model().objects.create(username="User1"),
-            get_user_model().objects.create(username="User2"),
-            get_user_model().objects.create(username="User3"),
+            User.objects.create(username="User1"),
+            User.objects.create(username="User2"),
+            User.objects.create(username="User3"),
         )
 
         object_types = (
@@ -177,7 +181,7 @@ class ObjectPermissionTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_user(self):
-        users = get_user_model().objects.filter(username__in=["User1", "User2"])
+        users = User.objects.filter(username__in=["User1", "User2"])
         params = {"user_id": [users[0].pk, users[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"user": [users[0].username, users[1].username]}

@@ -45,6 +45,10 @@ from nautobot.core.graphql.generators import (
 from nautobot.extras.choices import CustomFieldTypeChoices
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class GraphQLUtilsTestCase(TestCase):
     def test_str_to_var_name(self):
 
@@ -266,10 +270,10 @@ class GraphQLAPIPermissionTest(TestCase):
         )
 
         self.users = (
-            get_user_model().objects.create(username="User 1", is_active=True),
-            get_user_model().objects.create(username="User 2", is_active=True),
-            get_user_model().objects.create(username="Super User", is_active=True, is_superuser=True),
-            get_user_model().objects.create(username="Nobody", is_active=True),
+            User.objects.create(username="User 1", is_active=True),
+            User.objects.create(username="User 2", is_active=True),
+            User.objects.create(username="Super User", is_active=True, is_superuser=True),
+            User.objects.create(username="Nobody", is_active=True),
         )
 
         self.tokens = (

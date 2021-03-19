@@ -24,6 +24,10 @@ from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, TestCase
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
 
@@ -109,7 +113,7 @@ class ObjectChangeTestCase(TestCase):
         site.save()
 
         # Create three ObjectChanges
-        user = get_user_model().objects.create_user(username="testuser2")
+        user = User.objects.create_user(username="testuser2")
         for i in range(1, 4):
             oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
@@ -120,7 +124,7 @@ class ObjectChangeTestCase(TestCase):
 
         url = reverse("extras:objectchange_list")
         params = {
-            "user": get_user_model().objects.first().pk,
+            "user": User.objects.first().pk,
         }
 
         response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
