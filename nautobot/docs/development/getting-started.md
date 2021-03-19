@@ -40,12 +40,12 @@ NOTICE           dist         nautobot    scripts
 
 Git refers to remote repositories as *remotes*. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
 
-- `origin` - The default remote name used to refer to *your fork of Nautobot* 
+- `origin` - The default remote name used to refer to *your fork of Nautobot*
 - `upstream` - The main remote used to refer to the *official Nautobot repository*
 
 ### Setting up your Remotes
 
-Remote repos are managed using the `git remote` command. 
+Remote repos are managed using the `git remote` command.
 
 Upon cloning Nautobot for the first time, you will have only a single remote:
 
@@ -98,7 +98,12 @@ $ git checkout -b yourusername-myfeature
 
 ## Enabling Pre-Commit Hooks
 
-Nautobot ships with a [Git pre-commit hook](https://githooks.com/) script that automatically checks for style compliance and missing database migrations prior to committing changes. This helps avoid erroneous commits that result in CI test failures. You are encouraged to enable it by creating a link to `scripts/git-hooks/pre-commit`:
+Nautobot ships with a [Git pre-commit hook](https://githooks.com/) script that automatically checks for style compliance and missing database migrations prior to committing changes. This helps avoid erroneous commits that result in CI test failures.
+
+!!! note
+	This pre-commit hook currently only supports the Python Virtual Environment Workflow.
+
+You are encouraged to enable it by creating a link to `scripts/git-hooks/pre-commit`:
 
 ```no-highlight
 $ cd .git/hooks/
@@ -117,11 +122,19 @@ For the Docker Compose workflow, Nautobot uses [Invoke](http://docs.pyinvoke.org
 
 #### Install Invoke
 
-Because it is used to execute all common Docker workflow tasks, Invoke must be installed globally for your user environment.
+Because it is used to execute all common Docker workflow tasks, Invoke must be installed for your user environment. On most systems, if you're installing without root/superuser permissions, the default will install into your local user environment.
 
 ```no-highlight
-$ pip install invoke
+$ pip3 install invoke
 ```
+
+If you run into issues, you may also deliberately tell `pip3` to install into your user environment by adding the `--user` flag:
+
+```no-highlight
+$ pip3 install --user invoke
+```
+
+Please see the [official documentation on Pip user installs](https://pip.pypa.io/en/stable/user_guide/#user-installs) for more information.
 
 #### List Invoke Tasks
 
@@ -177,7 +190,7 @@ In this directory you'll find the following core files:
 
 #### Docker-Compose Overrides
 
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml```. 
+If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml```.
 
 This file will override any configuration in the main `docker-compose.yml` file, without making changes to the repository.
 
@@ -197,7 +210,7 @@ services:
       - "override.env"
 ```
 
-The `docker-entrypoint.sh` script will run any migrations and then look for specific variables set to create the superuser. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above. 
+The `docker-entrypoint.sh` script will run any migrations and then look for specific variables set to create the superuser. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
 
  Any variables defined in this file will override the defaults. The `override.env` should look like the following:
 
@@ -242,7 +255,7 @@ $ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 
 - Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.
 - The **Select the container to attach VS Code** input field provides a list of running containers.
-- Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now. 
+- Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
 - As a last step open the folder `/opt/nautobot` in VS Code.
 
 ### Python Virtual Environment Workflow
@@ -257,11 +270,11 @@ There are a few things you'll need:
 - A supported version of Python
 - A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
-#### What is Poetry?
+#### Install Poetry
 
-Poetry is a tool for dependency management and packaging in Python. It allows you to declare the libraries your project depends on and it will manage (install/update) them for you. It will also manage virtual environments automatically, and allow for publishing packages to the [Python Package Index](https://pypi.org).
+[Poetry](https://python-poetry.org/docs/) is a tool for dependency management and packaging in Python. It allows you to declare the libraries your project depends on and it will manage (install/update/remove) them for you. It will also manage virtual environments automatically, and allow for publishing packages to the [Python Package Index](https://pypi.org).
 
-You may install Poetry by running:
+You may install Poetry in your user environment by running:
 
 ```no-highlight
 $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
@@ -328,14 +341,14 @@ $ poetry run mkdocs serve
 Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.	
 
 !!! note
-	Unless otherwise noted, all following commands should be executed inside the virtualenv. 
+	Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
 	Use `poetry shell` to enter the virtualenv.
 
 #### Configuring Nautobot
 
-Nautobot's configuration file is `nautobot_config.py`. 
+Nautobot's configuration file is `nautobot_config.py`.
 
 ##### Initializing a Config
 
@@ -409,7 +422,7 @@ Throughout the course of development, it's a good idea to occasionally run Nauto
 $ nautobot-server test
 ```
 
-In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time. 
+In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
 !!! note
 	Using the `--keepdb` argument will cause errors if you've modified any model fields since the previous test run.
