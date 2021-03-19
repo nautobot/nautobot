@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -50,7 +52,7 @@ class ExternalAuthenticationTestCase(TestCase):
         response = self.client.get(reverse("home"), follow=True, **headers)  # noqa
         self.assertNotIn("_auth_user_id", self.client.session)
 
-    @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS)
+    @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS, REMOTE_AUTH_ENABLED=True)
     def test_remote_auth_enabled(self):
         """
         Test enabling remote authentication with the default configuration.
@@ -65,14 +67,13 @@ class ExternalAuthenticationTestCase(TestCase):
         response = self.client.get(reverse("home"), follow=True, **headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             self.user.pk,
             msg="Authentication failed",
         )
 
     @override_settings(
-        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
-        REMOTE_AUTH_HEADER="HTTP_FOO",
+        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS, REMOTE_AUTH_HEADER="HTTP_FOO", REMOTE_AUTH_ENABLED=True
     )
     def test_remote_auth_custom_header(self):
         """
@@ -88,7 +89,7 @@ class ExternalAuthenticationTestCase(TestCase):
         response = self.client.get(reverse("home"), follow=True, **headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             self.user.pk,
             msg="Authentication failed",
         )
@@ -96,6 +97,7 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
+        REMOTE_AUTH_ENABLED=True,
     )
     def test_remote_auth_auto_create(self):
         """
@@ -115,7 +117,7 @@ class ExternalAuthenticationTestCase(TestCase):
         # Local user should have been automatically created
         new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             new_user.pk,
             msg="Authentication failed",
         )
@@ -124,6 +126,7 @@ class ExternalAuthenticationTestCase(TestCase):
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
         REMOTE_AUTH_DEFAULT_GROUPS=["Group 1", "Group 2"],
+        REMOTE_AUTH_ENABLED=True,
     )
     def test_remote_auth_default_groups(self):
         """
@@ -150,7 +153,7 @@ class ExternalAuthenticationTestCase(TestCase):
 
         new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             new_user.pk,
             msg="Authentication failed",
         )
@@ -163,6 +166,7 @@ class ExternalAuthenticationTestCase(TestCase):
             "dcim.add_site": None,
             "dcim.change_site": None,
         },
+        REMOTE_AUTH_ENABLED=True,
     )
     def test_remote_auth_default_permissions(self):
         """
@@ -185,7 +189,7 @@ class ExternalAuthenticationTestCase(TestCase):
 
         new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             new_user.pk,
             msg="Authentication failed",
         )
