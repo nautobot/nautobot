@@ -288,3 +288,15 @@ def table_config_form(table, table_name=None):
         "table_name": table_name or table.__class__.__name__,
         "table_config_form": TableConfigForm(table=table),
     }
+
+
+@register.inclusion_tag("utilities/templatetags/model_form_as_dialog.html")
+def model_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
+    return {
+        "editing": editing,
+        "form": form,
+        "form_action_url": form.get_action_url(),
+        "form_name": form_name or form.__class__.__name__,
+        "obj": obj,
+        "obj_type": obj_type,
+    }

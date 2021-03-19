@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import TextField
+from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
@@ -885,6 +886,9 @@ class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
             "slug",
             "query",
         )
+
+    def get_action_url(self):
+        return reverse("extras:graphqlquery_add")
 
 
 class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):

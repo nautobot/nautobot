@@ -4,6 +4,7 @@ import uuid
 from django.contrib.auth.models import User
 from django.db.models import JSONField
 from django.db.models.fields import BinaryField
+from django.shortcuts import get_object_or_404
 from django.test.client import RequestFactory
 
 from nautobot.extras.context_managers import web_request_context
@@ -64,5 +65,5 @@ def execute_saved_query(saved_query_slug, **kwargs):
     Returns:
         GraphQL Object: Result for query
     """
-    query = GraphQLQuery.objects.get(slug=saved_query_slug)
+    query = get_object_or_404(GraphQLQuery, slug=saved_query_slug)
     return execute_query(query=query.query, **kwargs)

@@ -32,6 +32,7 @@ from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models import GitRepository, GraphQLQuery, ObjectChange, JobResult
+from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -213,5 +214,10 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
 
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
+        query_slug = request.GET.get("slug")
+        if query_slug:
+            data["obj"] = GraphQLQuery.objects.get(slug=query_slug)
+            data["editing"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
+        data["form"] = GraphQLQueryForm
         return render(request, self.graphiql_template, data)

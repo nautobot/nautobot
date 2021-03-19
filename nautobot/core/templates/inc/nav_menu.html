@@ -859,26 +859,20 @@
                             <span>Queries </span>
                             <span class="caret"></span>
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu" id="graphql-queries-menu">
+                            <li>
+                                <a href="#" onclick="reload('', '')">None</a>
+                            </li>
                             {% for query in saved_graphiql_queries %}
                                 <li>
-                                    <a href="#" onclick="reload('{{ query.query|urlencode }}', '{{ query.variables|urlencode }}')">{{ query.name }}</a>
+                                    <a href="#" onclick="reload('{{query.id}}', '{{ query.query|urlencode }}', '{{ query.variables|urlencode }}')">{{ query.name }}</a>
                                 </li>
                             {% endfor %}
+                            <button type="button" class="btn btn-default" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save</button>
+                            <button type="button" class="btn btn-default" onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form"><i class="mdi mdi-content-save"></i> Save As</button>
                         </ul>
                     <li>
                 </ul>
-
-                <script>
-
-                    function reload(query, variables) {
-                        window.location.replace("#");
-                        window.location.hash = 'query=' + query + "&variables=" + variables;
-                        console.log(window.location.href)
-                        window.location.reload()
-                    }
-
-                </script>
 
             {% endif %}
         </div>

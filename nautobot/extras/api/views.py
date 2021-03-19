@@ -1,6 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
-from django.shortcuts import get_object_or_404
 from django_rq.queues import get_connection
 from drf_yasg.utils import swagger_auto_schema
 from graphene_django.views import GraphQLView
@@ -404,8 +403,7 @@ class GraphQLQueryViewSet(ModelViewSet):
     @action(detail=True, methods=["post"])
     def run(self, request, pk):
         try:
-            query_object = get_object_or_404(self.queryset, slug=pk)
-            result = execute_saved_query(query_object.query, variable=request.data, request=request).to_dict()
+            result = execute_saved_query(pk, variables=request.data, request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(
