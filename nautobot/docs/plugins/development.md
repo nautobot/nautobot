@@ -127,10 +127,10 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types)` |
 | `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
-| `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
 | `max_version` | Maximum version of Nautobot with which the plugin is compatible |
-| `min_version` | Minimum version of Nautobot with which the plugin is compatible |
+| `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
 | `middleware` | A list of middleware classes to append after Nautobot's built-in middleware |
+| `min_version` | Minimum version of Nautobot with which the plugin is compatible |
 | `name` | Raw plugin name; same as the plugin's source directory |
 | `required_settings` | A list of any configuration parameters that **must** be defined by the user |
 | `template_extensions` | The dotted path to the list of template extension classes (default: `template_content.template_extensions`) |
