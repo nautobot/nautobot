@@ -1,7 +1,7 @@
 import json
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
@@ -25,6 +25,10 @@ __all__ = (
     "ModelViewTestCase",
     "ViewTestCases",
 )
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class TestCase(_TestCase):

@@ -1,6 +1,6 @@
 # User Preferences
 
-The `users.UserConfig` model holds individual preferences for each user in the form of JSON data. This page serves as a manifest of all recognized user preferences in Nautobot.
+The `users.User` model holds individual preferences for each user in the form of JSON data in the `config_data` field. This page serves as a manifest of all recognized user preferences in Nautobot.
 
 ## Available Preferences
 

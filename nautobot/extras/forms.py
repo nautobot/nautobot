@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
@@ -587,7 +587,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(),
     )
     user_id = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",
@@ -640,7 +640,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",

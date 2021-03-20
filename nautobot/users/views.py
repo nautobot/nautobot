@@ -148,20 +148,20 @@ class UserConfigView(LoginRequiredMixin, View):
             request,
             self.template_name,
             {
-                "preferences": request.user.config.all(),
+                "preferences": request.user.all_config(),
                 "active_tab": "preferences",
             },
         )
 
     def post(self, request):
-        userconfig = request.user.config
-        data = userconfig.all()
+        user = request.user
+        data = user.all_config()
 
         # Delete selected preferences
         for key in request.POST.getlist("pk"):
             if key in data:
-                userconfig.clear(key)
-        userconfig.save()
+                user.clear_config(key)
+        user.save()
         messages.success(request, "Your preferences have been updated.")
 
         return redirect("user:preferences")

@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from nautobot.dcim.choices import *
@@ -41,6 +41,10 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class RegionTestCase(TestCase):

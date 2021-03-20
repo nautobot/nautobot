@@ -1,9 +1,10 @@
 import types
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.test import override_settings
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import Group, User
 from django.urls import reverse
 from graphene_django import DjangoObjectType
 from rest_framework import status
@@ -42,6 +43,10 @@ from nautobot.core.graphql.generators import (
     generate_schema_type,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class GraphQLUtilsTestCase(TestCase):

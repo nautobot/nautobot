@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField
@@ -559,7 +558,7 @@ class RackReservation(PrimaryModel):
         blank=True,
         null=True,
     )
-    user = models.ForeignKey(to=User, on_delete=models.PROTECT)
+    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     description = models.CharField(max_length=200)
 
     csv_headers = [

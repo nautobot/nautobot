@@ -2,7 +2,6 @@
 import logging
 
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -10,15 +9,13 @@ from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
 )
-from nautobot.users.models import AdminUser
 
 logger = logging.getLogger("nautobot.users.signals")
 
 
-# By default social auth with automatically create users, if you need to change this you will need
+# By default social auth will automatically create users, if you need to change this you will need
 # to modify the social auth pipeline https://python-social-auth.readthedocs.io/en/latest/pipeline.html
-@receiver(post_save, sender=User)
-@receiver(post_save, sender=AdminUser)
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def setup_new_user(sender, instance, created, **kwargs):
     """Adds a newly created user to default groups and assigns default permissions."""
     if not created or not settings.SOCIAL_AUTH_ENABLED:
