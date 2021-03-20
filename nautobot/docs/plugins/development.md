@@ -122,9 +122,9 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `caching_config` | Plugin-specific cache configuration |
 | `custom_validators` | The dotted path to the list of custom validator classes (default: `custom_validators.custom_validators`) |
 | `datasource_contents` | The dotted path to the list of datasource (Git, etc.) content types to register (default: `datasources.datasource_contents`) |
+| `default_settings` | A dictionary of configuration parameters and their default values |
 | `description` | Brief description of the plugin's purpose |
 | `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types)` |
-| `default_settings` | A dictionary of configuration parameters and their default values |
 | `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
