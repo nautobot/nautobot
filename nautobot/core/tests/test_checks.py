@@ -42,3 +42,18 @@ class CheckCoreSettingsTest(TestCase):
     def test_check_storage_config_and_backend(self):
         """Warn if STORAGE_CONFIG and STORAGE_BACKEND aren't mutually set."""
         self.assertEqual(checks.check_storage_config_and_backend(None), [checks.W005])
+
+    @override_settings(
+        BASE_PATH="nautobot/",
+    )
+    def test_check_base_path_and_login_url_failure(self):
+        """Error if BASE_PATH and LOGIN_URL aren't mutually set."""
+        self.assertEqual(checks.check_base_path_and_login_url(None), [checks.E006])
+
+    @override_settings(
+        BASE_PATH="nautobot/",
+        LOGIN_URL="/nautobot/login/",
+    )
+    def test_check_base_path_and_login_url_success(self):
+        """Pass if BASE_PATH and LOGIN_URL are mutually set."""
+        self.assertEqual(checks.check_base_path_and_login_url(None), [])

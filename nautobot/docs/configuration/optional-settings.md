@@ -68,13 +68,16 @@ This defines custom content to be displayed on the login page above the login fo
 
 ## BASE_PATH
 
-Default: `None`
+Default: `""` (Empty string)
 
-The base URL path to use when accessing Nautobot. Do not include the scheme or domain name. For example, if installed at https://example.com/nautobot/, set:
+The base URL path to use as a prefix when accessing Nautobot. Do not include the scheme or domain name. For example, if Nautobot is installed at *https://example.com/nautobot/*, set:
 
 ```python
 BASE_PATH = 'nautobot/'
 ```
+
+!!! warning
+    When setting [`BASE_PATH`](#base_path) you must also update [`LOGIN_URL`](#login_url) to begin with the value of `BASE_PATH`. For example if `BASE_PATH` is set to `"nautobot/"`, then `LOGIN_URL` must be set to `"/nautobot/login/"`.
 
 ---
 
@@ -345,6 +348,17 @@ LOGGING = {
 * `nautobot.plugins.*` - Plugin loading and activity
 * `nautobot.views.*` - Views which handle business logic for the web UI
 * `rq.worker` - Background task handling
+
+---
+
+## LOGIN_URL
+
+Default: `"/login/"`
+
+The URL where requests are redirected for login to authenticate users requiring access to protected views. Any views inheriting from [`LoginRequiredMixin`](https://docs.djangoproject.com/en/stable/topics/auth/default/#django.contrib.auth.mixins.LoginRequiredMixin) or [`AccessMixin`](https://docs.djangoproject.com/en/stable/topics/auth/default/#django.contrib.auth.mixins.AccessMixin) will require login.
+
+!!! warning
+    When setting [`BASE_PATH`](#base_path) you must also update [`LOGIN_URL`](#login_url) to begin with the value of `BASE_PATH`. For example if `BASE_PATH` is set to `"nautobot/"`, then `LOGIN_URL` must be set to `"/nautobot/login/"`.
 
 ---
 

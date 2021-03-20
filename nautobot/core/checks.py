@@ -2,6 +2,7 @@ from django.conf import settings
 from django.core.checks import register, Error, Tags, Warning
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
+import urllib
 
 
 E001 = Error(
@@ -27,6 +28,11 @@ E004 = Error(
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
+)
+
+E006 = Error(
+    "BASE_PATH has been updated but LOGIN_URL has not. LOGIN_URL must include BASE_PATH.",
+    id="nautobot.core.E006",
 )
 
 
@@ -66,4 +72,13 @@ def check_release_check_url(app_configs, **kwargs):
 def check_storage_config_and_backend(app_configs, **kwargs):
     if settings.STORAGE_CONFIG and (settings.STORAGE_BACKEND is None):
         return [W005]
+    return []
+
+
+@register(Tags.compatibility)
+def check_base_path_and_login_url(app_configs, **kwargs):
+    if settings.BASE_PATH not in settings.LOGIN_URL:
+        login_url = urllib.parse.urljoin("/" + settings.BASE_PATH, settings.LOGIN_URL.lstrip("/"))
+        E006.hint = f"Your BASE_PATH is set to {settings.BASE_PATH!r}; Set LOGIN_URL = {login_url!r}"
+        return [E006]
     return []
