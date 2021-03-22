@@ -284,6 +284,7 @@ class TokenEditView(LoginRequiredMixin, View):
                 "obj_type": token._meta.verbose_name,
                 "form": form,
                 "return_url": reverse("user:token_list"),
+                "editing": token.present_in_database,
             },
         )
 
