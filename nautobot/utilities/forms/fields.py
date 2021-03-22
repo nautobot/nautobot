@@ -6,12 +6,14 @@ from io import StringIO
 import django_filters
 from django import forms
 from django.apps import apps
+from django.contrib.contenttypes.models import ContentType
 from django.forms.fields import JSONField as _JSONField, InvalidJSONInput
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db.models import Count
 from django.forms import BoundField
 from django.urls import reverse
 
+from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
@@ -171,7 +173,20 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
 
     STATIC_CHOICES = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, feature=None, **kwargs):
+        """
+        Construct a MultipleContentTypeField.
+
+        Args:
+            feature (str): Feature name to use in constructing a FeatureQuery for the queryset.
+        """
+        if "queryset" not in kwargs:
+            kwargs["queryset"] = ContentType.objects.filter(FeatureQuery(feature).get_query()).order_by(
+                "app_label", "model"
+            )
+        if "widget" not in kwargs:
+            kwargs["widget"] = widgets.StaticSelect2Multiple()
+
         super().__init__(*args, **kwargs)
 
         # Generate choices from queryset each time form is initialized.
