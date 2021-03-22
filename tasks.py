@@ -156,13 +156,17 @@ def migrate(context):
 @task
 def black(context):
     """Check Python code style with Black."""
-    docker_compose(context, "run nautobot black --check --diff contrib/ development/ nautobot/ tasks.py", pty=True)
+    docker_compose(
+        context,
+        "run --entrypoint 'black --check --diff contrib/ development/ nautobot/ tasks.py' nautobot",
+        pty=True,
+    )
 
 
 @task
 def flake8(context):
     """Check for PEP8 compliance and other style issues."""
-    docker_compose(context, "run nautobot flake8 contrib/ development/ nautobot/ tasks.py", pty=True)
+    docker_compose(context, "run --entrypoint 'flake8 contrib/ development/ nautobot/ tasks.py' nautobot", pty=True)
 
 
 @task
@@ -174,16 +178,17 @@ def unittest(context, label="nautobot", keepdb=False):
         label (str): Indicate a directory or module to test instead of running all Nautobot tests
         keepdb (bool): Save and re-use test database between test runs for faster re-testing.
     """
-    command = f"run nautobot coverage run scripts/test_runner.py test {label}"
+    command = f"run --entrypoint 'coverage run scripts/test_runner.py test {label}"
     if keepdb:
         command += " --keepdb"
+    command += "' nautobot"
     docker_compose(context, command, pty=True)
 
 
 @task
 def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
-    docker_compose(context, "run nautobot coverage report --skip-covered --omit *migrations*", pty=True)
+    docker_compose(context, "run --entrypoint 'coverage report --skip-covered --omit *migrations*' nautobot", pty=True)
 
 
 @task
