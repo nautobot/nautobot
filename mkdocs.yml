@@ -83,5 +83,7 @@ nav:
         - Application Registry: 'development/application-registry.md'
         - User Preferences: 'development/user-preferences.md'
         - Release Checklist: 'development/release-checklist.md'
+    - User Guides:
+        - Git as a Data Source: 'user-guides/git-data-source.md'
     - Release Notes:
         - Version 1.0: 'release-notes/version-1.0.md'
