@@ -261,13 +261,16 @@ class Aggregate(PrimaryModel):
     def __str__(self):
         return str(self.prefix)
 
-    def _deconstruct_prefix(self, prefix):
-        if prefix:
-            if isinstance(prefix, str):
-                prefix = netaddr.IPNetwork(prefix)
-            self.network = bytes(prefix.network)
-            self.broadcast = bytes(prefix.broadcast)
-            self.prefix_length = prefix.prefixlen
+    def _deconstruct_prefix(self, pre):
+        if pre:
+            if isinstance(pre, str):
+                pre = netaddr.IPNetwork(pre)
+            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
+            # then |address.broadcast| is None
+            broadcast = pre.broadcast if pre.broadcast else pre.network
+            self.network = bytes(pre.network)
+            self.broadcast = bytes(broadcast)
+            self.prefix_length = pre.prefixlen
 
     def get_absolute_url(self):
         return reverse("ipam:aggregate", args=[self.pk])
@@ -825,10 +828,12 @@ class IPAddress(PrimaryModel, StatusModel):
         if address:
             if isinstance(address, str):
                 address = netaddr.IPNetwork(address)
+            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
+            # then |address.broadcast| is None
+            broadcast = address.broadcast if address.broadcast else address.network
             self.host = bytes(address.ip)
+            self.broadcast = bytes(broadcast)
             self.prefix_length = address.prefixlen
-            if address.broadcast:
-                self.broadcast = bytes(address.broadcast)
 
     def get_absolute_url(self):
         return reverse("ipam:ipaddress", args=[self.pk])
