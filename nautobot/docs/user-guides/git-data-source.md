@@ -9,7 +9,7 @@ For more in depth details on how this feature [see](https://nautobot.readthedocs
 The feature uses the concept of a `provides` field to map a repository to a use case. A list of the supported options is provided below.
 
 |Name|Summary|Related Plugin|
-|:--|:--:|--:|
+|:--|:--|:--|
 |Export Templates|Nautobot allows users to define custom templates that can be used when exporting objects.|N/A|
 |Jobs|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|N/A|
 |Config Contexts||[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
@@ -35,6 +35,7 @@ Parameters:
 This section will focus on examples and use the `user-guide` branch on the demo-git-datasources repo: `https://github.com/nautobot/demo-git-datasource`.
 
 ### Export Templates
+
 Export Templates allow a user to export Nautobot objects based on a custom template.  Export templates can change over time depending on the needs of a user.  Allowing export templates to reference a git repo makes managing templates easier.
 
 A template can be used to put objects into a specific format for ingestion into another system, tool, or report.  It is possible that different templates are needed depending on specific users or teams.  This can lead to sprawl of export templates.  To keep accurate templates synced with Nautobot the Git Data Sources extensibility feature can be used.
@@ -72,7 +73,7 @@ Once the repository is synced each template will now be available in the Export 
 
 >Note: If the templates don't populate make sure your git directory is named `export-templates` with the Nautobot `content type` for the object as folders.  Example below:
 
-```bash
+```
 ▶ tree export_templates 
 export_templates
 └── dcim
@@ -87,7 +88,7 @@ export_templates
 #### Step 3
 Now that the export templates have been loaded into Nautobot they can be utilized as normal.  For example navigate to `Devices -> Devices` and click on `Export` in the top right corner, the dropdown will now include the templates loaded from the Git repository.
 
-The power of having export templates utilizing the git integration comes with the native source control features that git comes with.  To illusturate a simple git sync within Nautobot assume the following template needs to be updated.
+The power of having export templates utilizing the git integration comes with the native source control features that git comes with.  To illustrate a simple git sync within Nautobot assume the following template needs to be updated.
 
 Filename: `/export_templates/dcim/device/yaml_export.yml
 Current contents:
@@ -131,10 +132,100 @@ Now that the git repository is linked for export templates it can be controlled 
 ### Jobs
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
+Detailed information on jobs is already documented [here](https://nautobot.readthedocs.io/en/latest/additional-features/jobs/#jobs).
+
+Jobs allow a user to write scripts in Python.  By integrating the scripts with git, a user can utilize git workflows to manage source control, versioning, and pipelines.
+
+Setting up the repository can be done following the same steps from [Export Templates](#Export-Templates).  The only differences is the `provides` selection which will be `jobs`.
+
+Jobs need to be defined in `/jobs/` directory at the root of a Git repository.
+
+An example tree for `/jobs/`.
+
+```
+▶ tree jobs 
+jobs
+├── __init__.py
+└── get-device-connection.py
+
+1 directory, 2 files
+```
+
+Once the repository is created in Nautobot.
+![](./images/git-data-source_10.png)
+
+> Note: The same repository and branch can be used for the different `provides` methods.  Nautobot git as a data source will look for specific root directory names.
+
+Once the scripts have been pushed into the repository, a sync needs to be executed, after which navigating to Jobs via `Extensibility -> Jobs` will show the new jobs loaded from the git repository.
+
+![](./images/git-data-source_11.png)
+
+Jobs now shows the job from the git repository.
+
+![](./images/git-data-source_12.png)
+
+At this point all changes, and history can be kept using git.  A simple `sync` operation can be done from Nautobot to pull in any changes.
+
+### Config Contexts
+Detailed information on [config contexts](https://nautobot.readthedocs.io/en/latest/models/extras/gitrepository/#configuration-contexts).
+
+Config contexts may be provided as JSON or YAML files located in `/config_contexts/`.
+
+Config contexts can be used to provide additional details to different automation tooling.  For example `Ansible vars`, or any other data that you can't natively store in Nautobot.  It can also be used in the Golden Configuration Nautobot plugin to provide extra details to generate configuration templates.
+
+A few simple examples of Configuration Context data might be:
+ - DNS Servers
+ - NTP Servers
+ - ACL Data
+ - Routing Information such as BGP ASNs etc.
+
+Similar to the other data sources, the repository can be added by navigating to `Extensibility -> Git repositories`. Click on Add, and fill out the repository details.
+
+![](./images/git-data-source_13.png)
+
+Once the repository syncs the details can be found in the `Synchronization Status` tab.  For example the platform specifics were synced.
+
+![](./images/git-data-source_14.png)
+
+The repository structure is:
+```
+▶ tree config_contexts 
+config_contexts
+├── devices
+│   ├── site-a-bb-01.yml
+│   ├── site-a-rtr-01.yml
+│   ├── site-a-rtr-02.yml
+│   ├── site-a-spine-01.yml
+│   ├── site-a-spine-02.yml
+│   ├── site-b-bb-01.yml
+│   ├── site-b-leaf-01.yml
+│   ├── site-b-leaf-02.yml
+│   ├── site-b-rtr-01.yml
+│   ├── site-b-rtr-02.yml
+│   ├── site-b-spine-01.yml
+│   └── site-b-spine-02.yml
+├── platform_eos.yml
+├── platform_junos.yml
+├── platform_nxos.yml
+└── role_spine.yml
+
+1 directory, 16 files
+```
+
+Configuration Context details:
+- Follows an inheritance methodology similar to what Ansible implements.  Global contexts can be overwritten by local contexts at both a group level, as well as at a device specific level.
+- Nautobot UI provides a simple view to see merged config contexts.  It can be visualized by navigating to a device and clicking on the `config contexts` tab.
+
+Here's an example, with some of the details omitted for brevity.
+
+![](./images/git-data-source_15.png)
+
+There is a huge benefit to having `config contexts` managed by a git workflow.  This type of data can be modified often, especially platform specifics, or new device roles.  Utilizing a standard git workflow allows for all the proper reviews and approvals to be accomplished before accepting the changes into Nautobot for use.
+
 
 ## Additional Git Data Sources
 
-As seen in [above](#Step-2), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorportated using the Nautobot plugin system.  For example, the [nautobot-plugin-golden-config](https://github.com/nautobot/nautobot-plugin-golden-config) plugin implements four additional data sources.
+As seen in [above](#Step-2), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot plugin system.  For example, the [nautobot-plugin-golden-config](https://github.com/nautobot/nautobot-plugin-golden-config) plugin implements four additional data sources.
 
 - Config Contexts
 - Backup Configs
