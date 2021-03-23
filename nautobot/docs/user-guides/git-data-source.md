@@ -90,7 +90,7 @@ Now that the export templates have been loaded into Nautobot they can be utilize
 
 The power of having export templates utilizing the git integration comes with the native source control features that git comes with.  To illustrate a simple git sync within Nautobot assume the following template needs to be updated.
 
-Filename: `/export_templates/dcim/device/yaml_export.yml
+Filename: `/export_templates/dcim/device/yaml_export.yml`
 Current contents:
 ```jinja
 ---
