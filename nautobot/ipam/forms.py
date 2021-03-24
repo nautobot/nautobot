@@ -239,7 +239,6 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
 
 class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldModelForm, RelationshipModelForm):
-    prefix = IPNetworkFormField()
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -264,7 +263,6 @@ class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldMo
 
 
 class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
-    prefix = IPNetworkFormField()
     rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -340,7 +338,6 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 
 
 class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
-    prefix = IPNetworkFormField()
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -398,7 +395,6 @@ class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModel
 
 
 class PrefixCSVForm(PrefixFieldMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    prefix = IPNetworkFormField()
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -754,7 +750,6 @@ class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
 
 
 class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, CustomFieldModelForm):
-    address = IPNetworkFormField()
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -786,7 +781,6 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, Custo
 
 
 class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
-    address = IPNetworkFormField()
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",

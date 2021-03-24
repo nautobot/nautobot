@@ -4,6 +4,7 @@ import re
 import yaml
 from django import forms
 
+from nautobot.ipam.formfields import IPNetworkFormField
 
 __all__ = (
     "AddressFieldMixin",
@@ -21,6 +22,8 @@ __all__ = (
 
 class AddressFieldMixin(forms.ModelForm):
     """ ModelForm mixin for IPAddress based models """
+
+    address = IPNetworkFormField()
 
     def save(self, *args, **kwargs):
         instance = super().save(commit=False)
@@ -124,6 +127,8 @@ class CSVModelForm(forms.ModelForm):
 
 class PrefixFieldMixin(forms.ModelForm):
     """ ModelForm mixin for IPNetwork based models """
+
+    prefix = IPNetworkFormField()
 
     def save(self, *args, **kwargs):
         instance = super().save(commit=False)
