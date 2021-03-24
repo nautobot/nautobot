@@ -580,7 +580,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         display_field="username",
         label="User",
         widget=APISelectMultiple(
-            api_url="/api/users/users/",
+            api_url='users-api:user-list',
         ),
     )
     changed_object_type_id = DynamicModelMultipleChoiceField(
@@ -589,7 +589,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         display_field="display_name",
         label="Object Type",
         widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
+            api_url='extras-api:contenttype-list',
         ),
     )
 
@@ -633,7 +633,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         display_field="username",
         label="User",
         widget=APISelectMultiple(
-            api_url="/api/users/users/",
+            api_url='users-api:user-list',
         ),
     )
     status = forms.ChoiceField(
