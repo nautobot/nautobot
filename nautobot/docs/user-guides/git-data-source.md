@@ -1,6 +1,6 @@
 # Git as a Data Source
 
-Using Git as a Data Source feature was developed to provide the ability to populate existing data, templates, scripts, and much more into Nautobot; while leveraging the benefits that GitHub already provides including issue tracking, discussions, pipelines, and approvals.
+Using Git&trade; as a Data Source feature was developed to provide the ability to populate existing data, templates, scripts, and much more into Nautobot; while leveraging the benefits that GitHub already provides including issue tracking, discussions, pipelines, and approvals.
 
 For more technical details on how to use this feature, please see the documentation on [Git Repositories](https://nautobot.readthedocs.io/en/latest/models/extras/gitrepository/).
 
@@ -71,7 +71,7 @@ Once the repository is synced each template will now be available in the Export 
 
 ![](./images/git-data-source_7.png)
 
-> Note: If the templates don't populate make sure the Git directory is named `export-templates` and the Nautobot `content type` for the object is the sub-directory name.
+> Note: If the templates don't populate make sure the Git directory is named `export_templates` and the Nautobot `content type` for the object is the sub-directory name.
 
 Example below:
 ```
@@ -235,3 +235,23 @@ As seen in [Step 2](#Step-2), the standard installation of Nautobot will come na
 - Jinja Templates
 
 For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Repo](https://github.com/nautobot/nautobot-plugin-golden-config/blob/develop/docs/navigating-golden.md#git-settings).
+
+
+## Common Issues and Troubleshooting
+1. Repository is linked, but data is not properly loaded into Nautobot.
+    - Validate the root directory is set to the proper name.
+    - Export Templates -> `export_templates`.
+    - Jobs -> `jobs`.
+    - Config Contexts -> `config_contexts`.
+2. Synchronization Status Failures.
+    - Validate branch is correct and exists in the remote repository.
+    ![](./images/git-data-source_16.png)
+    - Validate remote url is correct and is the `https` url.  `ssh` urls are not currently supported.
+    ![](./images/git-data-source_17.png)    
+3. Authentication Issues.
+    - Check repository permissions.
+    - Ensure the password is the Personal Access Token (PAT) for the username supplied.
+    - Ensure the PAT permissions are setup properly.
+      - At a minimum the `repo` option should be checked or access.
+    
+    ![](./images/git-data-source_18.png)
