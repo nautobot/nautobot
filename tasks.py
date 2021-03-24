@@ -42,20 +42,19 @@ def docker_compose(context, command, **kwargs):
 # ------------------------------------------------------------------------------
 # BUILD
 # ------------------------------------------------------------------------------
-@task
-def build(context, nocache=False, forcerm=False):
-    """Build all docker images.
-
-    Args:
-        context (obj): Used to run specific commands
-        nocache (bool): Do not use cache when building the image
-        forcerm (bool): Always remove intermediate containers
-    """
+@task(
+    help={
+        "force_rm": "Always remove intermediate containers",
+        "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+    }
+)
+def build(context, force_rm=False, cache=True):
+    """Build Nautobot docker image."""
     print("Building Nautobot .. ")
     command = f"build --build-arg PYTHON_VER={PYTHON_VER}"
-    if nocache:
+    if not cache:
         command += " --no-cache"
-    if forcerm:
+    if force_rm:
         command += " --force-rm"
     docker_compose(context, command)
 
@@ -119,25 +118,15 @@ def cli(context):
     docker_compose(context, "exec nautobot bash", pty=True)
 
 
-@task
+@task(help={"user": "name of the superuser to create"})
 def createsuperuser(context, user="admin"):
-    """Create a new Nautobot superuser account (default: "admin"), will prompt for password.
-
-    Args:
-        context (obj): Used to run specific commands
-        user (str): name of the superuser to create
-    """
+    """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
     docker_compose(context, "run nautobot nautobot-server createsuperuser --username {user}", pty=True)
 
 
-@task
+@task(help={"name": "name of the migration to be created; if unspecified, will autogenerate a name"})
 def makemigrations(context, name=""):
-    """Perform makemigrations operation in Django.
-
-    Args:
-        context (obj): Used to run specific commands
-        name (str): Name of the migration to be created (if not specified, will autogenerate a name)
-    """
+    """Perform makemigrations operation in Django."""
     command = "run nautobot nautobot-server makemigrations"
     if name:
         command += f" --name {name}"
@@ -153,12 +142,20 @@ def migrate(context):
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
-@task
-def black(context):
+@task(
+    help={
+        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect."
+    }
+)
+def black(context, autoformat=False):
     """Check Python code style with Black."""
+    if autoformat:
+        black_command = "black"
+    else:
+        black_command = "black --check --diff"
     docker_compose(
         context,
-        "run --entrypoint 'black --check --diff contrib/ development/ nautobot/ tasks.py' nautobot",
+        f"run --entrypoint '{black_command} contrib/ development/ nautobot/ tasks.py' nautobot",
         pty=True,
     )
 
@@ -169,15 +166,14 @@ def flake8(context):
     docker_compose(context, "run --entrypoint 'flake8 contrib/ development/ nautobot/ tasks.py' nautobot", pty=True)
 
 
-@task
-def unittest(context, label="nautobot", keepdb=False):
-    """Run Nautobot unit tests.
-
-    Args:
-        context (obj): Used to run specific commands
-        label (str): Indicate a directory or module to test instead of running all Nautobot tests
-        keepdb (bool): Save and re-use test database between test runs for faster re-testing.
-    """
+@task(
+    help={
+        "keepdb": "save and re-use test database between test runs for faster re-testing.",
+        "label": "specify a directory or module to test instead of running all Nautobot tests",
+    }
+)
+def unittest(context, keepdb=False, label="nautobot"):
+    """Run Nautobot unit tests."""
     command = f"run --entrypoint 'coverage run scripts/test_runner.py test {label}"
     if keepdb:
         command += " --keepdb"
