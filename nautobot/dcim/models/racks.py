@@ -3,7 +3,6 @@ from collections import OrderedDict
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -18,7 +17,7 @@ from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.fields import ColorField, NaturalOrderingField
+from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from .device_components import PowerOutlet, PowerPort
@@ -550,7 +549,7 @@ class RackReservation(PrimaryModel):
     """
 
     rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="reservations")
-    units = ArrayField(base_field=models.PositiveSmallIntegerField())
+    units = JSONArrayField(base_field=models.PositiveSmallIntegerField())
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,

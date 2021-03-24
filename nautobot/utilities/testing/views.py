@@ -3,7 +3,6 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
@@ -16,6 +15,7 @@ from taggit.managers import TaggableManager
 from nautobot.extras.models import Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
+from nautobot.utilities.fields import JSONArrayField
 from .utils import disable_warnings, extract_form_failures, post_data
 
 
@@ -96,8 +96,8 @@ class TestCase(_TestCase):
 
             else:
 
-                # Convert ArrayFields to CSV strings
-                if type(instance._meta.get_field(key)) is ArrayField:
+                # Convert JSONArrayField to CSV strings
+                if isinstance(instance._meta.get_field(key), JSONArrayField):
                     model_dict[key] = ",".join([str(v) for v in value])
 
                 # Convert JSONField dict values to JSON strings

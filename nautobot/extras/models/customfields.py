@@ -4,7 +4,6 @@ from datetime import datetime, date
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
@@ -13,6 +12,7 @@ from django.utils.safestring import mark_safe
 from nautobot.extras.choices import *
 from nautobot.extras.utils import FeatureQuery
 from nautobot.core.models import BaseModel
+from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
     CSVChoiceField,
     DatePicker,
@@ -139,7 +139,7 @@ class CustomField(BaseModel):
         help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
         "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters.",
     )
-    choices = ArrayField(
+    choices = JSONArrayField(
         base_field=models.CharField(max_length=100),
         blank=True,
         null=True,

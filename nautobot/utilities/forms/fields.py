@@ -7,7 +7,7 @@ import django_filters
 from django import forms
 from django.apps import apps
 from django.forms.fields import JSONField as _JSONField, InvalidJSONInput
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Count
 from django.forms import BoundField
 from django.urls import reverse
@@ -30,6 +30,7 @@ __all__ = (
     "ExpandableIPAddressField",
     "ExpandableNameField",
     "JSONField",
+    "JSONArrayFormField",
     "MultipleContentTypeField",
     "LaxURLField",
     "SlugField",
@@ -458,3 +459,96 @@ class JSONField(_JSONField):
         if value is None:
             return ""
         return json.dumps(value, sort_keys=True, indent=4)
+
+
+class JSONArrayFormField(forms.JSONField):
+    """
+    A FormField counterpart to JSONArrayField.
+    Replicates ArrayFormField's base field validation: Field values are validated as JSON Arrays,
+    and each Array element is validated by `base_field` validators.
+    """
+
+    def __init__(self, base_field, *, delimiter=",", **kwargs):
+        self.base_field = base_field
+        self.delimiter = delimiter
+        super().__init__(**kwargs)
+
+    def clean(self, value):
+        """
+        Validate `value` and return its "cleaned" value as an appropriate
+        Python object. Raise ValidationError for any errors.
+        """
+        value = super().clean(value)
+        return [self.base_field.clean(val) for val in value]
+
+    def prepare_value(self, value):
+        """
+        Return a string of this value.
+        """
+        if isinstance(value, list):
+            return self.delimiter.join(str(self.base_field.prepare_value(v)) for v in value)
+        return value
+
+    def to_python(self, value):
+        """
+        Convert `value` into JSON, raising django.core.exceptions.ValidationError
+        if the data can't be converted. Return the converted value.
+        """
+        if isinstance(value, list):
+            items = value
+        elif value:
+            try:
+                items = value.split(self.delimiter)
+            except Exception as e:
+                raise ValidationError(e)
+        else:
+            items = []
+
+        errors = []
+        values = []
+        for item in items:
+            try:
+                values.append(self.base_field.to_python(item))
+            except ValidationError as error:
+                errors.append(error)
+        if errors:
+            raise ValidationError(errors)
+        return values
+
+    def validate(self, value):
+        """
+        Validate `value` and raise ValidationError if necessary.
+        """
+        super().validate(value)
+        errors = []
+        for item in value:
+            try:
+                self.base_field.validate(item)
+            except ValidationError as error:
+                errors.append(error)
+        if errors:
+            raise ValidationError(errors)
+
+    def run_validators(self, value):
+        """
+        Runs all validators against `value` and raise ValidationError if necessary.
+        Some validators can't be created at field initialization time.
+        """
+        super().run_validators(value)
+        errors = []
+        for item in value:
+            try:
+                self.base_field.run_validators(item)
+            except ValidationError as error:
+                errors.append(error)
+        if errors:
+            raise ValidationError(errors)
+
+    def has_changed(self, initial, data):
+        """
+        Return True if `data` differs from `initial`.
+        """
+        value = self.to_python(data)
+        if initial in self.empty_values and value in self.empty_values:
+            return False
+        return super().has_changed(initial, data)
