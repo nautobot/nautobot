@@ -81,7 +81,8 @@ server {
         alias /opt/nautobot/static/;
     }
 
-    # For subdirectory hosting, you'll want to toggle this (e.g. /nautobot)
+    # For subdirectory hosting, you'll want to toggle this (e.g. /nautobot).
+    # Don't forget to set `FORCE_SCRIPT_NAME` in your `nautobot_config.py` to match.
     # location /nautobot {
     location / {
         include uwsgi_params;

@@ -1,6 +1,7 @@
 import urllib.parse
 
-from django.urls import reverse
+from django.test import override_settings
+from django.urls import get_script_prefix, reverse
 
 from nautobot.utilities.testing import TestCase
 
@@ -22,3 +23,17 @@ class HomeViewTestCase(TestCase):
 
         response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
         self.assertHttpStatus(response, 200)
+
+
+class ForceScriptNameTestcase(TestCase):
+    """Basic test to assert that `settings.FORCE_SCRIPT_NAME` works as intended."""
+
+    @override_settings(
+        FORCE_SCRIPT_NAME="/nautobot",
+    )
+    def test_subdirectory_routes(self):
+        prefix = get_script_prefix()
+        routes = ("home", "login", "search", "api-root")
+        for route in routes:
+            url = reverse(route)
+            self.assertTrue(url.startswith(prefix))
