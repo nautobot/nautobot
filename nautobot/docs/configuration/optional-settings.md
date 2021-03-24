@@ -66,18 +66,6 @@ This defines custom content to be displayed on the login page above the login fo
 
 ---
 
-## BASE_PATH
-
-Default: `None`
-
-The base URL path to use when accessing Nautobot. Do not include the scheme or domain name. For example, if installed at https://example.com/nautobot/, set:
-
-```python
-BASE_PATH = 'nautobot/'
-```
-
----
-
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)

@@ -32,7 +32,7 @@ schema_view = get_schema_view(
     public=True,
 )
 
-_patterns = [
+urlpatterns = [
     # Base views
     path("", HomeView.as_view(), name="home"),
     path("search/", SearchView.as_view(), name="search"),
@@ -85,26 +85,23 @@ if settings.DEBUG:
     try:
         import debug_toolbar
 
-        _patterns += [
+        urlpatterns += [
             path("__debug__/", include(debug_toolbar.urls)),
         ]
     except ImportError:
         pass
 
 if settings.METRICS_ENABLED:
-    _patterns += [
+    urlpatterns += [
         path("", include("django_prometheus.urls")),
     ]
 
 if settings.SOCIAL_AUTH_ENABLED:
-    _patterns += [
+    urlpatterns += [
         path(
             "",
             include("social_django.urls", namespace=settings.SOCIAL_AUTH_URL_NAMESPACE),
         )
     ]
-
-# Prepend BASE_PATH
-urlpatterns = [path("{}".format(settings.BASE_PATH), include(_patterns))]
 
 handler500 = "nautobot.core.views.server_error"

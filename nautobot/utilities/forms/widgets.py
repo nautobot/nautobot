@@ -135,7 +135,7 @@ class APISelect(SelectWithDisabled):
 
         self.attrs["class"] = "nautobot-select2-api"
         if api_url:
-            self.attrs["data-url"] = "/{}{}".format(settings.BASE_PATH, api_url.lstrip("/"))  # Inject BASE_PATH
+            self.attrs["data-url"] = api_url
 
     def add_query_param(self, name, value):
         """

@@ -81,12 +81,21 @@ server {
         alias /opt/nautobot/static/;
     }
 
+    # For subdirectory hosting, you'll want to toggle this (e.g. /nautobot)
+    # location /nautobot {
     location / {
-        proxy_pass http://127.0.0.1:8001;
-        proxy_set_header X-Forwarded-Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        include uwsgi_params;
+        uwsgi_pass  127.0.0.1:8001;
+        uwsgi_param Host $host;
+        uwsgi_param X-Real-IP $remote_addr;
+        uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
+        uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
+
+        # If you want subdirectory hosting, uncomment this. The path must match
+        # the path of this location block (e.g. /nautobot)
+        # uwsgi_param SCRIPT_NAME /nautobot;
     }
+
 }
 
 server {
@@ -143,6 +152,7 @@ At this point, you should be able to connect to the HTTPS service at the server 
 ## Troubleshooting
 
 ### Unable to Connect
+
 If you are unable to connect to the HTTP server, check that:
 
 - NGINX/Apache is running and configured to listen on the correct port.
