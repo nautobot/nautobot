@@ -1,8 +1,10 @@
 import json
+from urllib.parse import urljoin
 
 from django import forms
 from django.conf import settings
 from django.contrib.postgres.forms import SimpleArrayField
+from django.urls import get_script_prefix
 
 from nautobot.utilities.choices import ColorChoices
 from .utils import add_blank_choice, parse_numeric_range
@@ -135,7 +137,8 @@ class APISelect(SelectWithDisabled):
 
         self.attrs["class"] = "nautobot-select2-api"
         if api_url:
-            self.attrs["data-url"] = api_url
+            # Prefix the URL w/ the script prefix (e.g. # `/nautobot`)
+            self.attrs["data-url"] = urljoin(get_script_prefix(), api_url)
 
     def add_query_param(self, name, value):
         """
