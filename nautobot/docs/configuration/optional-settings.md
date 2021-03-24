@@ -226,10 +226,10 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 
 Default: `None`
 
-If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. *example.com/nautobot*).
+If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. *example.com/nautobot/*).
 
 !!! important
-    To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot`, you must set `FORCE_SCRIPT_NAME = "/nautobot"`.
+    To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot/`, you must set `FORCE_SCRIPT_NAME = "/nautobot/"`.
 
 Please see the [official Django documentation on `FORCE_SCRIPT_NAME`](https://docs.djangoproject.com/en/stable/ref/settings/#force-script-name) for more information.
 
