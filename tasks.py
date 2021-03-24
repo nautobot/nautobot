@@ -1,6 +1,6 @@
 """Tasks for use with Invoke.
 
-(c) 2020 Network To Code
+(c) 2020-2021 Network To Code
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -26,263 +26,170 @@ COMPOSE_COMMAND = f'docker-compose --project-directory "{COMPOSE_DIR}" -f "{COMP
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
 
-NAUTOBOT_ROOT = "/opt/nautobot/"
+
+def docker_compose(context, command, **kwargs):
+    """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
+
+    Args:
+        context (obj): Used to run specific commands
+        command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
+        **kwargs: Passed through to the context.run() call.
+    """
+    print(f'Running docker-compose command "{command}"')
+    return context.run(f"{COMPOSE_COMMAND} {command}", env={"PYTHON_VER": PYTHON_VER}, **kwargs)
 
 
 # ------------------------------------------------------------------------------
 # BUILD
 # ------------------------------------------------------------------------------
-@task
-def build(context, python_ver=PYTHON_VER):
-    """Build all docker images.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
+@task(
+    help={
+        "force_rm": "Always remove intermediate containers",
+        "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+    }
+)
+def build(context, force_rm=False, cache=True):
+    """Build Nautobot docker image."""
     print("Building Nautobot .. ")
-
-    context.run(
-        f"{COMPOSE_COMMAND} build --build-arg PYTHON_VER={python_ver}",
-        env={"PYTHON_VER": python_ver},
-    )
+    command = f"build --build-arg PYTHON_VER={PYTHON_VER}"
+    if not cache:
+        command += " --no-cache"
+    if force_rm:
+        command += " --force-rm"
+    docker_compose(context, command)
 
 
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
 @task
-def debug(context, python_ver=PYTHON_VER):
-    """Start Nautobot and its dependencies in debug mode.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    print("Starting Nautobot in debug mode.. ")
-
-    context.run(
-        f"{COMPOSE_COMMAND} up",
-        env={"PYTHON_VER": python_ver},
-    )
+def debug(context):
+    """Start Nautobot and its dependencies in debug mode."""
+    print("Starting Nautobot in debug mode...")
+    docker_compose(context, "up")
 
 
 @task
-def start(context, python_ver=PYTHON_VER):
-    """Start Nautobot and its dependencies in detached mode.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    print("Starting Nautobot in detached mode .. ")
-
-    context.run(
-        f"{COMPOSE_COMMAND} up -d",
-        env={"PYTHON_VER": python_ver},
-    )
+def start(context):
+    """Start Nautobot and its dependencies in detached mode."""
+    print("Starting Nautobot in detached mode...")
+    docker_compose(context, "up --detach")
 
 
 @task
-def stop(context, python_ver=PYTHON_VER):
-    """Stop Nautobot and its dependencies.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    print("Stopping Nautobot .. ")
-
-    context.run(
-        f"{COMPOSE_COMMAND} stop",
-        env={"PYTHON_VER": python_ver},
-    )
+def restart(context):
+    """Gracefully restart all containers."""
+    print("Restarting Nautobot...")
+    docker_compose(context, "restart")
 
 
 @task
-def destroy(context, python_ver=PYTHON_VER):
-    """Destroy all containers and volumes.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    print("Destroying Nautobot .. ")
-
-    # Removes volumes associated with the COMPOSE_PROJECT_NAME
-    context.run(
-        f"{COMPOSE_COMMAND} down --volumes",
-        env={"PYTHON_VER": python_ver},
-    )
+def stop(context):
+    """Stop Nautobot and its dependencies."""
+    print("Stopping Nautobot...")
+    docker_compose(context, "down")
 
 
 @task
-def vscode(context, python_ver=PYTHON_VER):
-    """Launch Visual Studio Code with the appropriate Environment variables to run in a container.
+def destroy(context):
+    """Destroy all containers and volumes."""
+    print("Destroying Nautobot...")
+    docker_compose(context, "down --volumes")
 
-    Args:
-        context (obj): Used to run specific commands
-    """
-    context.run("code nautobot.code-workspace", env={"PYTHON_VER": python_ver})
+
+@task
+def vscode(context):
+    """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
+    context.run("code nautobot.code-workspace", env={"PYTHON_VER": PYTHON_VER})
 
 
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
 @task
-def nbshell(context, python_ver=PYTHON_VER):
-    """Launch a nbshell session.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} exec nautobot nautobot-server nbshell",
-        env={"PYTHON_VER": python_ver},
-        pty=True,
-    )
+def nbshell(context):
+    """Launch an interactive nbshell session."""
+    docker_compose(context, "run nautobot nautobot-server nbshell", pty=True)
 
 
 @task
-def cli(context, python_ver=PYTHON_VER):
-    """Launch a bash shell inside the running Nautobot container.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} exec nautobot bash",
-        env={"PYTHON_VER": python_ver},
-        pty=True,
-    )
+def cli(context):
+    """Launch a bash shell inside the running Nautobot container."""
+    docker_compose(context, "exec nautobot bash", pty=True)
 
 
-@task
-def createsuperuser(context, user="admin", python_ver=PYTHON_VER):
-    """Create a new superuser in django (default: admin), will prompt for password.
-
-    Args:
-        context (obj): Used to run specific commands
-        user (str): name of the superuser to create
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} run nautobot nautobot-server createsuperuser --username {user}",
-        env={"PYTHON_VER": python_ver},
-        pty=True,
-    )
+@task(help={"user": "name of the superuser to create"})
+def createsuperuser(context, user="admin"):
+    """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
+    docker_compose(context, "run nautobot nautobot-server createsuperuser --username {user}", pty=True)
 
 
-@task
-def makemigrations(context, name="", python_ver=PYTHON_VER):
-    """Run Make Migration in Django.
-
-    Args:
-        context (obj): Used to run specific commands
-        name (str): Name of the migration to be created
-        python_ver (str): Will use the Python version docker image to build from
-    """
+@task(help={"name": "name of the migration to be created; if unspecified, will autogenerate a name"})
+def makemigrations(context, name=""):
+    """Perform makemigrations operation in Django."""
+    command = "run nautobot nautobot-server makemigrations"
     if name:
-        context.run(
-            f"{COMPOSE_COMMAND} run nautobot nautobot-server makemigrations --name {name}",
-            env={"PYTHON_VER": python_ver},
-        )
-    else:
-        context.run(
-            f"{COMPOSE_COMMAND} run nautobot nautobot-server makemigrations",
-            env={"PYTHON_VER": python_ver},
-        )
+        command += f" --name {name}"
+    docker_compose(context, command)
 
 
 @task
-def migrate(context, python_ver=PYTHON_VER):
-    """Perform migrate operation in Django.
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} run nautobot nautobot-server migrate",
-        env={"PYTHON_VER": python_ver},
-    )
+def migrate(context):
+    """Perform migrate operation in Django."""
+    docker_compose(context, "run nautobot nautobot-server migrate")
 
 
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
-@task
-def black(context, python_ver=PYTHON_VER):
-    """Check Python code style with Black
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} run nautobot black --check --diff contrib/ development/ nautobot/ tasks.py",
-        env={"PYTHON_VER": python_ver},
+@task(
+    help={
+        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect."
+    }
+)
+def black(context, autoformat=False):
+    """Check Python code style with Black."""
+    if autoformat:
+        black_command = "black"
+    else:
+        black_command = "black --check --diff"
+    docker_compose(
+        context,
+        f"run --entrypoint '{black_command} contrib/ development/ nautobot/ tasks.py' nautobot",
         pty=True,
     )
 
 
 @task
-def flake8(context, python_ver=PYTHON_VER):
-    """Check PEP8 compliance and other style issues
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} run nautobot flake8 contrib/ development/ nautobot/ tasks.py",
-        env={"PYTHON_VER": python_ver},
-        pty=True,
-    )
+def flake8(context):
+    """Check for PEP8 compliance and other style issues."""
+    docker_compose(context, "run --entrypoint 'flake8 contrib/ development/ nautobot/ tasks.py' nautobot", pty=True)
 
 
-@task
-def coverage_run(context, dir="./", python_ver=PYTHON_VER):
-    """Run tests
-
-    Args:
-        context (obj): Used to run specific commands
-        dir (str): Used to indicate tested directory
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} run nautobot" f" coverage run scripts/test_runner.py test {dir}",
-        env={"PYTHON_VER": python_ver},
-        pty=True,
-    )
+@task(
+    help={
+        "keepdb": "save and re-use test database between test runs for faster re-testing.",
+        "label": "specify a directory or module to test instead of running all Nautobot tests",
+    }
+)
+def unittest(context, keepdb=False, label="nautobot"):
+    """Run Nautobot unit tests."""
+    command = f"run --entrypoint 'coverage run scripts/test_runner.py test {label}"
+    if keepdb:
+        command += " --keepdb"
+    command += "' nautobot"
+    docker_compose(context, command, pty=True)
 
 
 @task
-def coverage_report(context, python_ver=PYTHON_VER):
-    """Run coverage report
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): Will use the Python version docker image to build from
-    """
-    context.run(
-        f"{COMPOSE_COMMAND} run nautobot" f" coverage report --skip-covered --omit *migrations*",
-        env={"PYTHON_VER": python_ver},
-        pty=True,
-    )
+def unittest_coverage(context):
+    """Report on code test coverage as measured by 'invoke unittest'."""
+    docker_compose(context, "run --entrypoint 'coverage report --skip-covered --omit *migrations*' nautobot", pty=True)
 
 
 @task
-def tests(context, python_ver=PYTHON_VER):
-    """Run all tests
-
-    Args:
-        context (obj): Used to run specific commands
-        python_ver (str): WIll use the Python version docker image to build from
-    """
-    black(context, python_ver=python_ver)
-    flake8(context, python_ver=python_ver)
-    coverage_run(context, python_ver=python_ver)
-    coverage_report(context, python_ver=python_ver)
+def tests(context):
+    """Run all tests and linters."""
+    black(context)
+    flake8(context)
+    unittest(context)

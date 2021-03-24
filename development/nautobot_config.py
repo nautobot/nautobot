@@ -23,43 +23,47 @@ DEBUG = True
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "normal": {
-            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
-            "datefmt": "%H:%M:%S",
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+
+# Verbose logging during normal development operation, but quiet logging during unit test execution
+if not TESTING:
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "normal": {
+                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+                "datefmt": "%H:%M:%S",
+            },
+            "verbose": {
+                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+                "datefmt": "%H:%M:%S",
+            },
         },
-        "verbose": {
-            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
-            "datefmt": "%H:%M:%S",
+        "handlers": {
+            "normal_console": {
+                "level": "INFO",
+                "class": "rq.utils.ColorizingStreamHandler",
+                "formatter": "normal",
+            },
+            "verbose_console": {
+                "level": "DEBUG",
+                "class": "rq.utils.ColorizingStreamHandler",
+                "formatter": "verbose",
+            },
         },
-    },
-    "handlers": {
-        "normal_console": {
-            "level": "INFO",
-            "class": "rq.utils.ColorizingStreamHandler",
-            "formatter": "normal",
+        "loggers": {
+            "django": {"handlers": ["normal_console"], "level": "INFO"},
+            "nautobot": {
+                "handlers": ["verbose_console" if DEBUG else "normal_console"],
+                "level": LOG_LEVEL,
+            },
+            "rq.worker": {
+                "handlers": ["verbose_console" if DEBUG else "normal_console"],
+                "level": LOG_LEVEL,
+            },
         },
-        "verbose_console": {
-            "level": "DEBUG",
-            "class": "rq.utils.ColorizingStreamHandler",
-            "formatter": "verbose",
-        },
-    },
-    "loggers": {
-        "django": {"handlers": ["normal_console"], "level": "INFO"},
-        "nautobot": {
-            "handlers": ["verbose_console" if DEBUG else "normal_console"],
-            "level": LOG_LEVEL,
-        },
-        "rq.worker": {
-            "handlers": ["verbose_console" if DEBUG else "normal_console"],
-            "level": LOG_LEVEL,
-        },
-    },
-}
+    }
 
 
 def is_truthy(arg):
@@ -107,7 +111,6 @@ HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
 # Django Debug Toolbar
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
 
 if "debug_toolbar" not in INSTALLED_APPS:
