@@ -1,4 +1,5 @@
-from django.contrib.postgres.aggregates import JSONBAgg
+from django.db.models import Aggregate, JSONField, Value
+
 from django.contrib.postgres.aggregates.mixins import OrderableAggMixin
 from django.db.models import Func
 
@@ -10,6 +11,28 @@ class CollateAsChar(Func):
 
     function = "C"
     template = '(%(expressions)s) COLLATE "%(function)s"'
+
+
+class JSONBAgg(Aggregate):
+    function = None
+    output_field = JSONField()
+
+    # borrowed from django.contrib.postrgres.aggregats.JSONBagg
+    def convert_value(self, value, expression, connection):
+        if not value:
+            return "[]"
+        return value
+
+    def as_sql(self, compiler, connection, **extra_context):
+        engine = connection.settings_dict["ENGINE"]
+        if not JSONBAgg.function:
+            if "postgres" in engine:
+                JSONBAgg.function = "JSONB_AGG"
+            elif "mysql" in engine:
+                JSONBAgg.function = "JSON_ARRAYAGG"
+            else:
+                raise ConnectionError("Only Postgres and MySQL supported")
+        return super().as_sql(compiler, connection, **extra_context)
 
 
 class OrderableJSONBAgg(OrderableAggMixin, JSONBAgg):
