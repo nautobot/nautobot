@@ -465,7 +465,7 @@ class JSONArrayFormField(forms.JSONField):
     """
     A FormField counterpart to JSONArrayField.
     Replicates ArrayFormField's base field validation: Field values are validated as JSON Arrays,
-    and each Array element is validated by |base_field| validators.
+    and each Array element is validated by `base_field` validators.
     """
 
     def __init__(self, base_field, *, delimiter=",", **kwargs):
@@ -475,7 +475,7 @@ class JSONArrayFormField(forms.JSONField):
 
     def clean(self, value):
         """
-        Validate |value| and return its "cleaned" value as an appropriate
+        Validate `value` and return its "cleaned" value as an appropriate
         Python object. Raise ValidationError for any errors.
         """
         value = super().clean(value)
@@ -491,7 +491,7 @@ class JSONArrayFormField(forms.JSONField):
 
     def to_python(self, value):
         """
-        Convert |value| into JSON, raising django.core.exceptions.ValidationError
+        Convert `value` into JSON, raising django.core.exceptions.ValidationError
         if the data can't be converted. Return the converted value.
         """
         if isinstance(value, list):
@@ -517,7 +517,7 @@ class JSONArrayFormField(forms.JSONField):
 
     def validate(self, value):
         """
-        Validate |value| and raise ValidationError if necessary.
+        Validate `value` and raise ValidationError if necessary.
         """
         super().validate(value)
         errors = []
@@ -531,7 +531,7 @@ class JSONArrayFormField(forms.JSONField):
 
     def run_validators(self, value):
         """
-        Runs all validators against |value| and raise ValidationError if necessary.
+        Runs all validators against `value` and raise ValidationError if necessary.
         Some validators can't be created at field initialization time.
         """
         super().run_validators(value)
@@ -546,7 +546,7 @@ class JSONArrayFormField(forms.JSONField):
 
     def has_changed(self, initial, data):
         """
-        Return True if |data| differs from |initial|.
+        Return True if `data` differs from `initial`.
         """
         value = self.to_python(data)
         if initial in self.empty_values and value in self.empty_values:

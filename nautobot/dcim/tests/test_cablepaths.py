@@ -109,6 +109,12 @@ class CablePathTestCase(TestCase):
         self.assertIsNone(origin._path_id, msg=msg)
 
     def assertContainedByPath(self, path_parts):
+        """
+        For each {part: count} in `path_parts`, assert that part is contained in
+        count number of CablePaths.
+
+        :param path_parts: A dictionary of CablePath parts mapped to their counts
+        """
         for part, count in path_parts.items():
             self.assertEqual(CablePath.objects.filter(path__contains=part).count(), count)
         self.assertEqual(CablePath.objects.filter(path__contains=self.dneCable).count(), 0)

@@ -134,7 +134,7 @@ class JSONArrayField(models.JSONField):
 
     def to_python(self, value):
         """
-        Convert |value| into JSON, raising django.core.exceptions.ValidationError
+        Convert `value` into JSON, raising django.core.exceptions.ValidationError
         if the data can't be converted. Return the converted value.
         """
         if isinstance(value, str):
@@ -165,7 +165,7 @@ class JSONArrayField(models.JSONField):
 
     def validate(self, value, model_instance):
         """
-        Validate |value| and raise ValidationError if necessary.
+        Validate `value` and raise ValidationError if necessary.
         """
         super().validate(value, model_instance)
         for part in value:
@@ -173,7 +173,7 @@ class JSONArrayField(models.JSONField):
 
     def run_validators(self, value):
         """
-        Runs all validators against |value| and raise ValidationError if necessary.
+        Runs all validators against `value` and raise ValidationError if necessary.
         Some validators can't be created at field initialization time.
         """
         super().run_validators(value)
