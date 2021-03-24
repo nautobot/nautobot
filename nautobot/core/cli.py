@@ -187,3 +187,7 @@ def _configure_settings(config):
     # Process the plugins and manipulate the specified config settings that are
     # passed in.
     load_plugins(settings)
+
+
+if __name__ == "__main__":
+    main()

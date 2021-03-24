@@ -42,7 +42,9 @@ def is_truthy(arg):
         return arg
     return bool(strtobool(str(arg)))
 
-
+# Here we are setting up a separate DB for the tests to use.
+# This allows us to keep the rqworker running when working
+# through the devcontainer or when using invoke.
 RQ_QUEUES = {
     "default": {
         "HOST": os.getenv("REDIS_HOST", "localhost"),
