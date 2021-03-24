@@ -64,9 +64,10 @@ nav:
         - Developing Plugins: 'plugins/development.md'
         - Porting NetBox Plugins to Nautobot: 'plugins/porting-from-netbox.md'
     - Administration:
+        - Nautobot Server: 'administration/nautobot-server.md'
+        - Nautobot Shell: 'administration/nautobot-shell.md'
         - Permissions: 'administration/permissions.md'
         - Replicating Nautobot: 'administration/replicating-nautobot.md'
-        - Nautobot Shell: 'administration/nautobot-shell.md'
     - REST API:
         - Overview: 'rest-api/overview.md'
         - Filtering: 'rest-api/filtering.md'

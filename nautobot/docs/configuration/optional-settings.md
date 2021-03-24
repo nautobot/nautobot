@@ -528,14 +528,6 @@ This parameter defines the URL of the repository that will be checked periodical
     The URL provided **must** be compatible with the [GitHub REST API](https://docs.github.com/en/rest).
 
 ---
-
-## RQ_DEFAULT_TIMEOUT
-
-Default: `300`
-
-The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
-
----
 ## SESSION_COOKIE_AGE
 
 Default: `1209600` (2 weeks, in seconds)

@@ -32,3 +32,12 @@ Traced from Interface 1 on Device A, Nautobot will show the following path:
 * Cable 1: Interface 1 to Front Port 1
 * Cable 2: Rear Port 1 to Rear Port 2
 * Cable 3: Front Port 2 to Interface 2
+
+A cable can also be traced through a circuit.
+
+![Cable path circuit](../../media/models/dcim_cable_trace_circuit.png)
+
+Traced from Interface 1 on Device A, Nautobot will show the following path:
+
+* Cable 1: Interface 1 to Side A
+* Cable 2: Side Z to Interface 2

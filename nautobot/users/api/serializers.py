@@ -1,4 +1,5 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
@@ -21,7 +22,7 @@ class UserSerializer(ValidatedModelSerializer):
     )
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = (
             "id",
             "url",
@@ -68,7 +69,7 @@ class ObjectPermissionSerializer(ValidatedModelSerializer):
         many=True,
     )
     users = SerializedPKRelatedField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         serializer=NestedUserSerializer,
         required=False,
         many=True,

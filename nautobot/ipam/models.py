@@ -14,7 +14,7 @@ from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import ObjectChange, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, serialize_object
+from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .choices import *
 from .constants import *
@@ -305,13 +305,24 @@ class Aggregate(PrimaryModel):
             return self.prefix.version
         return None
 
-    def get_utilization(self):
+    def get_percent_utilized(self):
+        """Gets the percentage utilized from the get_utilization method.
+
+        Returns
+            float: Percentage utilization
         """
-        Determine the prefix utilization of the aggregate and return it as a percentage.
+        utilization = self.get_utilization()
+        return int(utilization.numerator / float(utilization.denominator) * 100)
+
+    def get_utilization(self):
+        """Gets the numerator and denominator for calculating utilization of an Aggregrate.
+
+        Returns:
+            UtilizationData: Aggregate utilization (numerator=size of child prefixes, denominator=prefix size)
         """
         queryset = Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
-        return int(float(child_prefixes.size) / self.prefix.size * 100)
+        return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
 
 @extras_features(
@@ -613,21 +624,25 @@ class Prefix(PrimaryModel, StatusModel):
         return "{}/{}".format(next(available_ips.__iter__()), self.prefix.prefixlen)
 
     def get_utilization(self):
-        """
-        Determine the utilization of the prefix and return it as a percentage. For Prefixes with a status of
-        "container", calculate utilization based on child prefixes. For all others, count child IP addresses.
+        """Get the child prefix size and parent size.
+
+        For Prefixes with a status of "container", get the number child prefixes. For all others, count child IP addresses.
+
+        Returns:
+            UtilizationData (namedtuple): (numerator, denominator)
         """
         if self.status == Prefix.STATUS_CONTAINER:
             queryset = Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
-            return int(float(child_prefixes.size) / self.prefix.size * 100)
+            return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
+
         else:
             # Compile an IPSet to avoid counting duplicate IPs
             child_count = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()]).size
             prefix_size = self.prefix.size
             if self.prefix.version == 4 and self.prefix.prefixlen < 31 and not self.is_pool:
                 prefix_size -= 2
-            return int(float(child_count) / prefix_size * 100)
+            return UtilizationData(numerator=child_count, denominator=prefix_size)
 
 
 @extras_features(

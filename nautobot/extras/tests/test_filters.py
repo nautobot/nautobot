@@ -1,6 +1,6 @@
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
@@ -24,6 +24,10 @@ from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class ExportTemplateTestCase(TestCase):

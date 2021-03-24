@@ -20,6 +20,9 @@ HOSTNAME = platform.node()
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Set the swapable User model to the Nautobot custom User model
+AUTH_USER_MODEL = "users.User"
+
 
 ###############################################################
 # NAUTOBOT - Settings for Nautobot internals/plugins/defaults #
@@ -52,9 +55,7 @@ if BASE_PATH:
     BASE_PATH = BASE_PATH.strip("/") + "/"  # Enforce trailing slash only
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.environ.get(
-    "NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot")
-)
+NAUTOBOT_ROOT = os.environ.get("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
 CHANGELOG_RETENTION = 90
 DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), "docs")
@@ -74,13 +75,9 @@ EXEMPT_EXCLUDE_MODELS = (
 )
 
 EXEMPT_VIEW_PERMISSIONS = []
-GIT_ROOT = os.environ.get(
-    "NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/")
-)
+GIT_ROOT = os.environ.get("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
-JOBS_ROOT = os.environ.get(
-    "NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/")
-)
+JOBS_ROOT = os.environ.get("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000
 
@@ -118,9 +115,6 @@ REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 # Releases
 RELEASE_CHECK_URL = None
 RELEASE_CHECK_TIMEOUT = 24 * 3600
-
-# RQ
-RQ_DEFAULT_TIMEOUT = 300
 
 # SSO
 SOCIAL_AUTH_ENABLED = False
@@ -176,9 +170,7 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
-    "DEFAULT_PERMISSION_CLASSES": (
-        "nautobot.core.api.authentication.TokenPermissions",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",

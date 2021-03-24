@@ -1,7 +1,7 @@
 import re
 
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist
@@ -696,7 +696,7 @@ class RackReservationForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rel
         base_field=forms.IntegerField(),
         help_text="Comma-separated list of numeric unit IDs. A range may be specified using a hyphen.",
     )
-    user = forms.ModelChoiceField(queryset=User.objects.order_by("username"), widget=StaticSelect2())
+    user = forms.ModelChoiceField(queryset=get_user_model().objects.order_by("username"), widget=StaticSelect2())
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -757,7 +757,7 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
 class RackReservationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackReservation.objects.all(), widget=forms.MultipleHiddenInput())
     user = forms.ModelChoiceField(
-        queryset=User.objects.order_by("username"),
+        queryset=get_user_model().objects.order_by("username"),
         required=False,
         widget=StaticSelect2(),
     )
@@ -794,7 +794,7 @@ class RackReservationFilterForm(BootstrapMixin, TenancyFilterForm):
         null_option="None",
     )
     user_id = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",

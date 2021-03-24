@@ -17,61 +17,65 @@ These instructions will guide you through the following actions:
 
 ## Choose your `NAUTOBOT_ROOT`
 
-This is where everything related to Nautobot will be installed. We're going to use this value across the documentation. You'll need to set the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings.
+You need to select a directory path where everything related to Nautobot will be installed. We will use this value across the documentation and it will be referred to as `NAUTOBOT_ROOT`. 
 
-We're also going to use this as the home directory of the `nautobot` user.
+We will be using this path as the home directory of the `nautobot` user.
 
 !!! tip
     We have selected `/opt/nautobot`, but you may use any directory you choose.
 
-```no-highlight
-$ export NAUTOBOT_ROOT=/opt/nautobot
-```
+Later on, we will need to set this directory path as the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings.
 
 ## Create the Nautobot System User
 
-Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account. This also creates the `NAUTOBOT_ROOT` directory and sets it as the home directory for the user.
+Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account.
+
+The following command also creates the `/opt/nautobot` directory and sets it as the home directory for the user.
 
 ```no-highlight
-$ sudo useradd --system --shell /bin/bash --create-home --home-dir $NAUTOBOT_ROOT nautobot
-```
-
-## Create the Virtual Environment
-
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
-
-We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment.
-
-```no-highlight
-$ sudo -u nautobot python3 -m venv $NAUTOBOT_ROOT
+$ sudo useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
 ```
 
 ## Sudo to nautobot
 
-Now that we've created the virtualenv, the remaining steps will be performed as the `nautobot` user.
-
-!!! warning
-    Don't skip this step!!
-
-    It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
+It is critical to create the virtualenv and install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
 ```no-highlight
 $ sudo -iu nautobot
 ```
+!!! warning
+    Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
+
+## Setup the Virtual Environment
+
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
+
+When installed per the documentation, Nautobot uses a virtual environment in production.
+
+In the following steps, we will have you create the virtualenv within the `NAUTOBOT_ROOT` you chose in the previous step. This is the same we had you set as the home directory as the `nautobot` user.
+
+!!! note
+    Instead of deliberately requiring you to activate/deactivate the virtualenv, we are emphasizing on relying on the `$PATH` to access programs installed within it. We find this to be much more intuitive and natural when working with Nautobot in this way.
+
+### Create the Virtual Environment
+
+We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libaries.
+
+```no-highlight
+$ python3 -m venv /opt/nautobot
+```
 
 ### Update the Nautobot `.bashrc`
 
-After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variable again for this user (since it is a fresh session as far as the system is concerned).
+So what about the `NAUTOBOT_ROOT`? We've referenced this environment variable several times. Here is where it finally gets set.
 
-We want to make sure that this variable is always set.
-
-Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
+We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user and make sure that it always set without having to do it manually. Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
 ```no-highlight
 $ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
 ```
 
-Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` is set and display its value to verify it worked:
+Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` gets set and then echo its value to verify it worked:
 
 ```no-highlight
 $ source ~/.bashrc
@@ -102,11 +106,6 @@ $ which pip3
 This makes sure that the version of Python you're using, as well any dependencies that you install, remain isolated in this environment.
 
 ## Prepare the Virtual Environment
-
-!!! warning
-    Unless explicitly stated, this and all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
-
-    Hint: Use `sudo -iu nautobot` to become the `nautobot` user.
 
 Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version.
 
@@ -155,12 +154,16 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 
 Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.
 
-Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings.
+Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
+
+* [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
+* [`DATABASES`](../../configuration/required-settings/#databases): PostgreSQL database connection parameters. If you installed PostgreSQL on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
-Save your changes to your `nautobot_config.py` and then return here.
+Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
 ## Optional Settings
 
@@ -226,6 +229,9 @@ $ nautobot-server collectstatic
 ```
 
 ## Install Local Requirements
+
+!!! note
+    If you did not create a `local_requirements.txt` above, please skip this step.
 
 This step is entirely optional. As indicated above, we mentioned that any extra local requirements should go into `$NAUTOBOT_ROOT/local_requirements.txt`.
 

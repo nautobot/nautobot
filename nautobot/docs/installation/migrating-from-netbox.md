@@ -14,19 +14,19 @@ Although Nautobot will run perfectly well with a default configuration (such as 
 
 ## Migrate database contents using `nautobot-netbox-importer`
 
-Due to a number of significant infrastructural changes between the applications, you cannot simply point Nautobot at your existing NetBox PostgreSQL database and have it automatically load your data. Fortunately, Network to Code (NTC) and collaborators have developed a Nautobot plugin, `nautobot-netbox-importer`, that can be used to import a NetBox database dump file into Nautobot. For full details, refer to [the plugin's own documentation](https://github.com/nautobot/nautobot-plugin-netbox-importer/), but in brief, the following steps will be required:
+Due to a number of significant infrastructural changes between the applications, you cannot simply point Nautobot at your existing NetBox PostgreSQL database and have it automatically load your data. Fortunately, Network to Code (NTC) and collaborators have developed a Nautobot plugin, `nautobot-netbox-importer`, that can be used to import a NetBox database dump file into Nautobot. For full details, refer to [the plugin's own documentation](https://github.com/nautobot/nautobot-plugin-netbox-importer/), but here is a brief overview:
 
-1. Export your NetBox database to a JSON file using the `manage.py dumpdata` command
-2. Install the `nautobot-netbox-importer` Nautobot plugin using `pip install nautobot-netbox-importer`
-3. Enable the `nautobot-netbox-importer` plugin in your Nautobot configuration file
-4. Run the command `nautobot-server import_netbox_json </path/to/netbox_dump.json> <netbox version, such as 2.10.4>`. This may take some time depending on the size of your database dump.
+1. Export your NetBox database to a JSON file.
+2. Install the importer plugin.
+3. Enable the importer plugin.
+4. Run the plugin's import command to import the data.
 5. Connect to Nautobot and verify that your data has been successfully imported.
 
 ## Migrate files from NetBox to Nautobot
 
 Uploaded media (device images, etc.) are stored on the filesystem rather than in the database and hence need to be migrated separately. The same is true for custom scripts and reports that you may wish to import.
 
-### Copy uploaded media
+### Copy Uploaded Media
 
 The exact command will depend on where your [`MEDIA_ROOT`](../../configuration/optional-settings/#media_root) is configured in NetBox as well as where it's configured in Nautobot, but in general it will be:
 
@@ -34,7 +34,7 @@ The exact command will depend on where your [`MEDIA_ROOT`](../../configuration/o
 cp -pr $NETBOX_MEDIA_ROOT/* $NAUTOBOT_MEDIA_ROOT/*
 ```
 
-### Copy custom scripts and reports
+### Copy Custom Scripts and Reports
 
 Similarly, the exact commands depend on your `SCRIPTS_ROOT` and `REPORTS_ROOT` settings in NetBox and your [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) in Nautobot, but in general they will be:
 
@@ -55,3 +55,25 @@ Depending on the complexity of your scripts and reports, and how tightly integra
 - `tenancy.* -> nautobot.tenancy.*`
 - `utilities.* -> nautobot.utilities.*`
 - `virtualization.* -> nautobot.virtualization.*`
+
+## Data Model Changes
+
+The following backwards-incompatible changes have been made to the data model in Nautobot.
+
+### Status Fields
+
+!!! tip
+    Status names are now lower-cased when setting the `status` field on CSV imports.
+
+A new [`Status`](../models/extras/status.md) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), and a `slug` field (e.g. `active`).
+
+When using CSV import to define a `status` field on imported objects, such as when importing Devices or Prefixes, the `Status.slug` field is used.
+
+For example, the default **Active** status has a slug of `active`, so the `active` value would be used for import.
+
+### UUID Primary Database Keys
+
+!!! tip
+    Primary key (aka ID) fields are no longer auto-incrementing integers and are now randomly-generated UUIDs.
+
+Database keys are now defined as randomly-generated [Universally Unique Identifiers](https://tools.ietf.org/html/rfc4122.html) (UUIDs) instead of integers, protecting against certain classes of data-traversal attacks.

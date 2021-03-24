@@ -361,6 +361,9 @@ class CablePath(BaseModel):
         if origin is None or origin.cable is None:
             return None
 
+        # Import added here to avoid circular imports with Cable.
+        from nautobot.circuits.models import CircuitTermination
+
         destination = None
         path = []
         position_stack = []
@@ -404,6 +407,17 @@ class CablePath(BaseModel):
                 except ObjectDoesNotExist:
                     # No corresponding FrontPort found for the RearPort
                     break
+
+            # Follow a Circuit Termination if there is a corresponding Circuit Termination
+            # Side A and Side Z exist
+            elif isinstance(peer_termination, CircuitTermination):
+                node = peer_termination.get_peer_termination()
+                # A Circuit Termination does not require a peer.
+                if node is None:
+                    destination = peer_termination
+                    break
+                path.append(object_to_path_node(peer_termination))
+                path.append(object_to_path_node(node))
 
             # Anything else marks the end of the path
             else:

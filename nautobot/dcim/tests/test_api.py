@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 
@@ -42,6 +42,10 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class AppTest(APITestCase):
