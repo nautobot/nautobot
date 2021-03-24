@@ -110,13 +110,15 @@ class HomeView(TemplateView):
                     }
 
         context = self.get_context_data()
-        context.update({
-            "search_form": SearchForm(),
-            "stats": stats,
-            "job_results": job_results[:10],
-            "changelog": changelog[:15],
-            "new_release": new_release,
-        })
+        context.update(
+            {
+                "search_form": SearchForm(),
+                "stats": stats,
+                "job_results": job_results[:10],
+                "changelog": changelog[:15],
+                "new_release": new_release,
+            }
+        )
 
         return self.render_to_response(context)
 
