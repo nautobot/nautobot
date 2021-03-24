@@ -22,7 +22,7 @@ Copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 ```ini
 [uwsgi]
 ; The IP address (typically localhost) and port that the WSGI process should listen on
-http-socket = 127.0.0.1:8001
+socket = 127.0.0.1:8001
 
 ; Fail to start if any parameter in the configuration file isn’t explicitly understood by uWSGI
 strict = true
