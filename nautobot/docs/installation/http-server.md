@@ -93,8 +93,9 @@ server {
         uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
 
         # If you want subdirectory hosting, uncomment this. The path must match
-        # the path of this location block `(e.g. `/nautobot/`)
-        # uwsgi_param SCRIPT_NAME /nautobot/;
+        # the path of this location block (e.g. `/nautobot`). For NGINX the path
+        # MUST NOT end with a trailing "/".
+        # uwsgi_param SCRIPT_NAME /nautobot;
     }
 
 }

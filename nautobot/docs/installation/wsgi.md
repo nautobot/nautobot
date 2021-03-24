@@ -61,7 +61,7 @@ log-5xx = true
 ; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
 ; processes = 5
 
-; If using subdirectory hosting e.g. example.com/nautobot, you must uncomment this line. Otherwise you'll get double paths e.g. example.com/nautobot/nautobot.
+; If using subdirectory hosting e.g. example.com/nautobot, you must uncomment this line. Otherwise you'll get double paths e.g. example.com/nautobot/nautobot/.
 ; See: https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.11.html#fixpathinfo-routing-action
 ; route-run = fixpathinfo:
 ```
