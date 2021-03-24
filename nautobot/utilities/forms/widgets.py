@@ -137,7 +137,7 @@ class APISelect(SelectWithDisabled):
 
         self.attrs["class"] = "nautobot-select2-api"
         if api_url:
-            # Prefix the URL w/ the script prefix (e.g. # `/nautobot`)
+            # Prefix the URL w/ the script prefix (e.g. `/nautobot`)
             self.attrs["data-url"] = urljoin(get_script_prefix(), api_url.lstrip("/"))
 
     def add_query_param(self, name, value):
