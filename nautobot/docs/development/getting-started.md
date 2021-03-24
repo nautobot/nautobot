@@ -103,6 +103,9 @@ connected to the container, you can open the workspace which enables support for
 
 To start Nautobot, select "Run Without Debugging" or "Start Debugging" from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
 
+!!! note
+    You can run tests with `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` while inside the Container.
+
 #### Special Workflow for Containers on Remote Servers
 
 A slightly different workflow is needed when the container is running on a ssh connected server. VScode will not offer the "Reopen in Container" option on a remote connected server.
