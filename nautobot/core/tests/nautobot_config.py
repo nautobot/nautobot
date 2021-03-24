@@ -45,18 +45,18 @@ def is_truthy(arg):
 
 RQ_QUEUES = {
     "default": {
-        "HOST": os.environ["REDIS_HOST", "localhost"],
+        "HOST": os.getenv("REDIS_HOST", "localhost"),
         "PORT": int(os.environ.get("REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.environ["REDIS_PASSWORD", ""],
+        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
         "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "check_releases": {
-        "HOST": os.environ["REDIS_HOST", "localhost"],
+        "HOST": os.getenv("REDIS_HOST", "localhost"),
         "PORT": int(os.environ.get("REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.environ["REDIS_PASSWORD", ""],
+        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
         "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
