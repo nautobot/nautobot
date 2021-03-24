@@ -28,6 +28,7 @@ PLUGINS = [
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+
 def is_truthy(arg):
     """Convert "truthy" strings into Booleans.
     Examples:
@@ -41,20 +42,21 @@ def is_truthy(arg):
         return arg
     return bool(strtobool(str(arg)))
 
+
 RQ_QUEUES = {
     "default": {
-        "HOST": os.environ["REDIS_HOST"],
+        "HOST": os.environ["REDIS_HOST", "localhost"],
         "PORT": int(os.environ.get("REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
+        "PASSWORD": os.environ["REDIS_PASSWORD", ""],
         "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "check_releases": {
-        "HOST": os.environ["REDIS_HOST"],
+        "HOST": os.environ["REDIS_HOST", "localhost"],
         "PORT": int(os.environ.get("REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
+        "PASSWORD": os.environ["REDIS_PASSWORD", ""],
         "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
