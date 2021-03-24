@@ -425,15 +425,15 @@ $ nautobot-server nbshell
 
 Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
 
-| Docker Compose Workflow | Virtual Environment Workflow |
-|-------------------------|------------------------------|
-| `invoke unittest`       | `nautobot-server test`       |
+| Docker Compose Workflow | Virtual Environment Workflow                                           |
+|-------------------------|------------------------------------------------------------------------|
+| `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
-| Docker Compose Workflow    | Virtual Environment Workflow    |
-|----------------------------|---------------------------------|
-| `invoke unittest --keepdb` | `nautobot-server test --keepdb` |
+| Docker Compose Workflow    | Virtual Environment Workflow                                                    |
+|----------------------------|---------------------------------------------------------------------------------|
+| `invoke unittest --keepdb` | `nautobot-server test --keepdb --config=nautobot/core/tests/nautobot_config.py` |
 
 !!! note
 	Using the `--keepdb` argument will cause errors if you've modified any model fields since the previous test run.
