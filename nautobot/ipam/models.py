@@ -18,9 +18,8 @@ from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import *
 from .constants import *
-from .fields import IPNetworkField, IPAddressField
-from .managers import IPAddressManager
-from .querysets import PrefixQuerySet
+from .fields import VarbinaryIPField
+from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet
 from .validators import DNSValidator
 
 
@@ -218,7 +217,13 @@ class Aggregate(PrimaryModel):
     the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
     """
 
-    prefix = IPNetworkField()
+    network = VarbinaryIPField(
+        null=False,
+        db_index=True,
+        help_text="IPv4 or IPv6 network address",
+    )
+    broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
+    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     rir = models.ForeignKey(
         to="ipam.RIR",
         on_delete=models.PROTECT,
@@ -235,6 +240,8 @@ class Aggregate(PrimaryModel):
     date_added = models.DateField(blank=True, null=True)
     description = models.CharField(max_length=200, blank=True)
 
+    objects = AggregateQuerySet.as_manager()
+
     csv_headers = ["prefix", "rir", "tenant", "date_added", "description"]
     clone_fields = [
         "rir",
@@ -244,10 +251,26 @@ class Aggregate(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ("prefix",)  # prefix may be non-unique
+        ordering = ("network", "broadcast", "pk")  # prefix may be non-unique
+
+    def __init__(self, *args, **kwargs):
+        prefix = kwargs.pop("prefix", None)
+        super(Aggregate, self).__init__(*args, **kwargs)
+        self._deconstruct_prefix(prefix)
 
     def __str__(self):
         return str(self.prefix)
+
+    def _deconstruct_prefix(self, pre):
+        if pre:
+            if isinstance(pre, str):
+                pre = netaddr.IPNetwork(pre)
+            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
+            # then |address.broadcast| is None
+            broadcast = pre.broadcast if pre.broadcast else pre.network
+            self.network = bytes(pre.network)
+            self.broadcast = bytes(broadcast)
+            self.prefix_length = pre.prefixlen
 
     def get_absolute_url(self):
         return reverse("ipam:aggregate", args=[self.pk])
@@ -265,7 +288,7 @@ class Aggregate(PrimaryModel):
                 raise ValidationError({"prefix": "Cannot create aggregate with /0 mask."})
 
             # Ensure that the aggregate being added is not covered by an existing aggregate
-            covering_aggregates = Aggregate.objects.filter(prefix__net_contains_or_equals=str(self.prefix))
+            covering_aggregates = Aggregate.objects.net_contains_or_equal(self.prefix)
             if self.present_in_database:
                 covering_aggregates = covering_aggregates.exclude(pk=self.pk)
             if covering_aggregates:
@@ -278,7 +301,7 @@ class Aggregate(PrimaryModel):
                 )
 
             # Ensure that the aggregate being added does not cover an existing aggregate
-            covered_aggregates = Aggregate.objects.filter(prefix__net_contained=str(self.prefix))
+            covered_aggregates = Aggregate.objects.net_contained(self.prefix)
             if self.present_in_database:
                 covered_aggregates = covered_aggregates.exclude(pk=self.pk)
             if covered_aggregates:
@@ -298,6 +321,21 @@ class Aggregate(PrimaryModel):
             self.date_added,
             self.description,
         )
+
+    @property
+    def cidr_str(self):
+        if self.network and self.prefix_length:
+            ip = netaddr.IPAddress(int.from_bytes(self.network, "big"))
+            return "%s/%s" % (ip, self.prefix_length)
+
+    @property
+    def prefix(self):
+        if self.cidr_str:
+            return netaddr.IPNetwork(self.cidr_str)
+
+    @prefix.setter
+    def prefix(self, prefix):
+        self._deconstruct_prefix(prefix)
 
     @property
     def family(self):
@@ -320,7 +358,7 @@ class Aggregate(PrimaryModel):
         Returns:
             UtilizationData: Aggregate utilization (numerator=size of child prefixes, denominator=prefix size)
         """
-        queryset = Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
+        queryset = Prefix.objects.net_contained_or_equal(self.prefix)
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
         return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
@@ -382,7 +420,13 @@ class Prefix(PrimaryModel, StatusModel):
     assigned to a VLAN where appropriate.
     """
 
-    prefix = IPNetworkField(help_text="IPv4 or IPv6 network with mask")
+    network = VarbinaryIPField(
+        null=False,
+        db_index=True,
+        help_text="IPv4 or IPv6 network address",
+    )
+    broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
+    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -456,12 +500,29 @@ class Prefix(PrimaryModel, StatusModel):
     class Meta:
         ordering = (
             F("vrf__name").asc(nulls_first=True),
-            "prefix",
+            "network",
+            "prefix_length",
         )  # (vrf, prefix) may be non-unique
         verbose_name_plural = "prefixes"
 
+    def __init__(self, *args, **kwargs):
+        prefix = kwargs.pop("prefix", None)
+        super(Prefix, self).__init__(*args, **kwargs)
+        self._deconstruct_prefix(prefix)
+
     def __str__(self):
         return str(self.prefix)
+
+    def _deconstruct_prefix(self, pre):
+        if pre:
+            if isinstance(pre, str):
+                pre = netaddr.IPNetwork(pre)
+            # if |prefix.prefixlen| is 32 (ip4) or 128 (ip6)
+            # then |prefix.broadcast| is None
+            broadcast = pre.broadcast if pre.broadcast else pre.network
+            self.network = bytes(pre.network)
+            self.broadcast = bytes(broadcast)
+            self.prefix_length = pre.prefixlen
 
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
@@ -529,23 +590,28 @@ class Prefix(PrimaryModel, StatusModel):
         )
 
     @property
+    def cidr_str(self):
+        if self.network and self.prefix_length:
+            ip = netaddr.IPAddress(int.from_bytes(self.network, "big"))
+            return "%s/%s" % (ip, self.prefix_length)
+
+    @property
+    def prefix(self):
+        if self.cidr_str:
+            return netaddr.IPNetwork(self.cidr_str)
+
+    @prefix.setter
+    def prefix(self, prefix):
+        self._deconstruct_prefix(prefix)
+
+    @property
     def family(self):
         if self.prefix:
             return self.prefix.version
         return None
 
-    def _set_prefix_length(self, value):
-        """
-        Expose the IPNetwork object's prefixlen attribute on the parent model so that it can be manipulated directly,
-        e.g. for bulk editing.
-        """
-        if self.prefix is not None:
-            self.prefix.prefixlen = value
-
-    prefix_length = property(fset=_set_prefix_length)
-
     def get_duplicates(self):
-        return Prefix.objects.filter(vrf=self.vrf, prefix=str(self.prefix)).exclude(pk=self.pk)
+        return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
 
     def get_child_prefixes(self):
         """
@@ -553,9 +619,9 @@ class Prefix(PrimaryModel, StatusModel):
         Prefixes belonging to any VRF.
         """
         if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
-            return Prefix.objects.filter(prefix__net_contained=str(self.prefix))
+            return Prefix.objects.net_contained(self.prefix)
         else:
-            return Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
+            return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
 
     def get_child_ips(self):
         """
@@ -563,9 +629,9 @@ class Prefix(PrimaryModel, StatusModel):
         child IPAddresses belonging to any VRF.
         """
         if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
-            return IPAddress.objects.filter(address__net_host_contained=str(self.prefix))
+            return IPAddress.objects.net_host_contained(self.prefix)
         else:
-            return IPAddress.objects.filter(address__net_host_contained=str(self.prefix), vrf=self.vrf)
+            return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
 
     def get_available_prefixes(self):
         """
@@ -632,7 +698,7 @@ class Prefix(PrimaryModel, StatusModel):
             UtilizationData (namedtuple): (numerator, denominator)
         """
         if self.status == Prefix.STATUS_CONTAINER:
-            queryset = Prefix.objects.filter(prefix__net_contained=str(self.prefix), vrf=self.vrf)
+            queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
@@ -667,7 +733,13 @@ class IPAddress(PrimaryModel, StatusModel):
     which has a NAT outside IP, that Interface's Device can use either the inside or outside IP as its primary IP.
     """
 
-    address = IPAddressField(help_text="IPv4 or IPv6 address (with mask)")
+    host = VarbinaryIPField(
+        null=False,
+        db_index=True,
+        help_text="IPv4 or IPv6 host address",
+    )
+    broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
+    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     vrf = models.ForeignKey(
         to="ipam.VRF",
         on_delete=models.PROTECT,
@@ -737,21 +809,37 @@ class IPAddress(PrimaryModel, StatusModel):
         "description",
     ]
 
-    objects = IPAddressManager()
+    objects = IPAddressQuerySet.as_manager()
 
     class Meta:
-        ordering = ("address",)  # address may be non-unique
+        ordering = ("host", "prefix_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
 
+    def __init__(self, *args, **kwargs):
+        address = kwargs.pop("address", None)
+        super(IPAddress, self).__init__(*args, **kwargs)
+        self._deconstruct_address(address)
+
     def __str__(self):
         return str(self.address)
+
+    def _deconstruct_address(self, address):
+        if address:
+            if isinstance(address, str):
+                address = netaddr.IPNetwork(address)
+            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
+            # then |address.broadcast| is None
+            broadcast = address.broadcast if address.broadcast else address.network
+            self.host = bytes(address.ip)
+            self.broadcast = bytes(broadcast)
+            self.prefix_length = address.prefixlen
 
     def get_absolute_url(self):
         return reverse("ipam:ipaddress", args=[self.pk])
 
     def get_duplicates(self):
-        return IPAddress.objects.filter(vrf=self.vrf, address__net_host=str(self.address.ip)).exclude(pk=self.pk)
+        return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
     @classproperty
     def STATUS_SLAAC(cls):
@@ -847,6 +935,17 @@ class IPAddress(PrimaryModel, StatusModel):
         )
 
     @property
+    def address(self):
+        if self.host and self.prefix_length:
+            host = netaddr.IPAddress(int.from_bytes(self.host, "big"))
+            cidr = "%s/%s" % (host, self.prefix_length)
+            return netaddr.IPNetwork(cidr)
+
+    @address.setter
+    def address(self, address):
+        self._deconstruct_address(address)
+
+    @property
     def family(self):
         if self.address:
             return self.address.version
@@ -858,7 +957,7 @@ class IPAddress(PrimaryModel, StatusModel):
         e.g. for bulk editing.
         """
         if self.address is not None:
-            self.address.prefixlen = value
+            self.prefix_length = value
 
     mask_length = property(fset=_set_mask_length)
 

@@ -96,8 +96,8 @@ class TestCase(_TestCase):
 
             else:
 
-                # Convert JSONArrayField to CSV strings
-                if isinstance(instance._meta.get_field(key), JSONArrayField):
+                # Convert ArrayFields to CSV strings
+                if type(field) is JSONArrayField:
                     model_dict[key] = ",".join([str(v) for v in value])
 
                 # Convert JSONField dict values to JSON strings
