@@ -18,10 +18,12 @@ from invoke import task
 
 PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
 
+PROJECT_NAME = "nautobot_dev"
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
 COMPOSE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.yml")
-COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.override.yml")
-COMPOSE_COMMAND = f'docker-compose --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
+OVERRIDE_FILENAME = os.getenv("OVERRIDE_FILENAME", "docker-compose.dev.yml")
+COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, OVERRIDE_FILENAME)
+COMPOSE_COMMAND = f'docker-compose --project-name {PROJECT_NAME} --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
 
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'

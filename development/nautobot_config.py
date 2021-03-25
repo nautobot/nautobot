@@ -5,15 +5,15 @@ import sys
 
 from nautobot.core.settings import *
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(" ")
+ALLOWED_HOSTS = os.environ.get("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
 DATABASES = {
     "default": {
-        "NAME": os.environ.get("DB_NAME", "nautobot"),
-        "USER": os.environ.get("DB_USER", ""),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", ""),
+        "NAME": os.environ.get("NAUTOBOT_DB_NAME", "nautobot"),
+        "USER": os.environ.get("NAUTOBOT_DB_USER", ""),
+        "PASSWORD": os.environ.get("NAUTOBOT_DB_PASSWORD", ""),
+        "HOST": os.environ.get("NAUTOBOT_DB_HOST", "localhost"),
+        "PORT": os.environ.get("NAUTOBOT_DB_PORT", ""),
         "CONN_MAX_AGE": 300,
         "ENGINE": "django.db.backends.postgresql",
     }
@@ -82,19 +82,19 @@ def is_truthy(arg):
 
 RQ_QUEUES = {
     "default": {
-        "HOST": os.environ["REDIS_HOST"],
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 0,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.environ["NAUTOBOT_REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "check_releases": {
-        "HOST": os.environ["REDIS_HOST"],
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 0,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.environ["NAUTOBOT_REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
 }
@@ -104,11 +104,11 @@ RQ_QUEUES = {
 BASE_PATH = os.environ.get("BASE_PATH", "")
 
 # REDIS CACHEOPS
-CACHEOPS_REDIS = f"redis://:{os.getenv('REDIS_PASSWORD')}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/2"
+CACHEOPS_REDIS = f"redis://:{os.getenv('NAUTOBOT_REDIS_PASSWORD')}@{os.getenv('NAUTOBOT_REDIS_HOST')}:{os.getenv('NAUTOBOT_REDIS_PORT')}/2"
 
 HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "")
+SECRET_KEY = os.environ.get("NAUTOBOT_SECRET_KEY", "")
 
 # Django Debug Toolbar
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}

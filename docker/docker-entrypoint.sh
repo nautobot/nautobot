@@ -4,9 +4,6 @@
 # Stop when an error occures
 set -e
 
-# Allows Nautobot to be run as non-root users
-umask 002
-
 # Try to connect to the DB
 DB_WAIT_TIMEOUT=${DB_WAIT_TIMEOUT-3}
 MAX_DB_WAIT_TIME=${MAX_DB_WAIT_TIME-30}
@@ -20,6 +17,9 @@ if [ "${CUR_DB_WAIT_TIME}" -ge "${MAX_DB_WAIT_TIME}" ]; then
   echo "❌ Waited ${MAX_DB_WAIT_TIME}s or more for the DB to become ready."
   exit 1
 fi
+
+# Collect Static files (still required for uwsgi static files)
+nautobot-server collectstatic --no-input
 
 # Create Superuser if required
 if [ "$CREATE_SUPERUSER" == "true" ]; then
@@ -65,6 +65,10 @@ else:
 END
 
   echo "💡 Superuser Username: ${SUPERUSER_NAME}, E-Mail: ${SUPERUSER_EMAIL}"
+fi
+
+if [ "$NAUTOBOT_UWSGI_PROCESSES" == "true" ]; then
+  sed -i "s@.*processes = .*\$@processes = $NAUTOBOT_UWSGI_PROCESSES@" /opt/nautobot/uwsgi.ini
 fi
 
 

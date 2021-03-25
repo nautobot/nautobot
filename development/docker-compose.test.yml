@@ -1,0 +1,13 @@
+# Used to run the final container images vs the dev containers
+---
+version: "3"
+services:
+  nautobot:
+    build:
+      target: final
+    image: "nautobot/nautobot-py${PYTHON_VER}"
+    ports:
+      - 80:80
+      - 443:443
+  worker:
+    image: "nautobot/nautobot-py${PYTHON_VER}"

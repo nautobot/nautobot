@@ -4,33 +4,24 @@ services:
   nautobot:
     build:
       context: ../
-      dockerfile: development/Dockerfile
-    image: "nautobot/nautobot-py${PYTHON_VER}"
-    command: "nautobot-server runserver 0.0.0.0:8000 --insecure"
+      dockerfile: docker/Dockerfile
+      target: dev
+    image: "nautobot/nautobot-py${PYTHON_VER}-dev"
     ports:
-      - "8000:8000"
+      - "8001:8001"
     depends_on:
       - postgres
       - redis
     env_file:
       - dev.env
-    volumes:
-      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
-      - ../:/opt/nautobot
     tty: true
   worker:
-    build:
-      context: ../
-      dockerfile: development/Dockerfile
-    image: "nautobot/nautobot-py${PYTHON_VER}"
+    image: "nautobot/nautobot-py${PYTHON_VER}-dev"
     entrypoint: "nautobot-server rqworker"
     depends_on:
       - nautobot
     env_file:
       - ./dev.env
-    volumes:
-      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
-      - ../:/opt/nautobot
     tty: true
   postgres:
     image: postgres:10
