@@ -14,7 +14,6 @@ The feature uses the concept of a `provides` field to map a repository to a use 
 |[Export Templates](../models/extras/exporttemplate.md)|Nautobot allows users to define custom templates that can be used when exporting objects.|
 |[Jobs](../additional-features/jobs.md)|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|
 |[Config Contexts](../models/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
----
 
 ### Examples of Plugins Defining Additional Providers
 |Name|Summary|Related Plugin|
@@ -25,16 +24,20 @@ The feature uses the concept of a `provides` field to map a repository to a use 
 
 ## Repository Details
 
-Parameters:
 |Field|Explanation|
 |:--|:--|
 |Name|User friendly name for the repo.|
 |Slug|Computer-friendly name for the repo. Auto-generated based on the `name` provided, but you can change it if you wish.|
 |Remote URL|The URL pointing to the Git repo. Current git url usage is limited to `http` or `https`.|
 |Branch|The branch in the Git repo to use. Defaults to `main`.|
-|Token|The token is a personal access token for the `username` provided.  For more information on generating a personal access token. [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
-|Username|The Git username that corresponds with the personal access token above.|
+|Token|The token is a personal access token for the `username` provided.  For more information on generating a personal access token see the corresponding links below. **Token is the only option supported currently.**|
+|Username|The Git username that corresponds with the personal access token above. Note not required for GitHub, but is for GitLab.|
 |Provides|Resource type(s) provided by this Git repo.|
+
+- [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
+- [GitLab Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
+- [Bitbucket Personal Access Token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
+
 
 ## Using Git Data Sources
 This section will focus on examples and use the `user-guide` branch on the demo-git-datasources repo: `https://github.com/nautobot/demo-git-datasource`.
