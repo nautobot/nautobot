@@ -336,7 +336,7 @@ SHORT_DATETIME_FORMAT = env("NAUTOBOT_SHORT_DATETIME_FORMAT")
 EXTRA_INSTALLED_APPS = env("NAUTOBOT_EXTRA_INSTALLED_APPS")
 
 
-#### Extra config for dev container should be moved elsewhere
+# Extra config for dev container should be moved elsewhere
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
