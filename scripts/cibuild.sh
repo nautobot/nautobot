@@ -37,6 +37,14 @@ if [[ $RC != 0 ]]; then
 	EXIT=$RC
 fi
 
+# Dockerfile lint with hadolint
+hadolintw docker/Dockerfile
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) Dockerfile did not pass hadolint; failing build."
+	EXIT=$RC
+fi
+
 # Point to the testing nautobot_config file for use in CI
 TEST_CONFIG=nautobot/core/tests/nautobot_config.py
 

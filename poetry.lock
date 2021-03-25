@@ -522,6 +522,17 @@ promise = ">=2.2,<3"
 six = ">=1.12"
 
 [[package]]
+name = "hadolintw"
+version = "1.2.1"
+description = "Pretty output for hadolint"
+category = "dev"
+optional = false
+python-versions = ">=3.6.0,<4.0.0"
+
+[package.dependencies]
+click = ">=5.0"
+
+[[package]]
 name = "idna"
 version = "2.10"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -1112,7 +1123,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "6703fa1cb289b9b9c0227033613dfad8faafe257295d408db30092e3dd74d2d0"
+content-hash = "f0fdfef2a6feb0231088999463745774f515c3f199a5faebcb5785c04e5e44ef"
 
 [metadata.files]
 aniso8601 = [
@@ -1362,6 +1373,10 @@ graphql-core = [
 graphql-relay = [
     {file = "graphql-relay-2.0.1.tar.gz", hash = "sha256:870b6b5304123a38a0b215a79eace021acce5a466bf40cd39fa18cb8528afabb"},
     {file = "graphql_relay-2.0.1-py3-none-any.whl", hash = "sha256:ac514cb86db9a43014d7e73511d521137ac12cf0101b2eaa5f0a3da2e10d913d"},
+]
+hadolintw = [
+    {file = "hadolintw-1.2.1-py3-none-any.whl", hash = "sha256:be6d63db331729d37f79975d62cb85add2e336d3600a480171be337f2f7c3ce9"},
+    {file = "hadolintw-1.2.1.tar.gz", hash = "sha256:8566c2664f4c29bff9ce81dd669ebf38e99e2389ce0ac78d72b054d8119b1ea0"},
 ]
 idna = [
     {file = "idna-2.10-py2.py3-none-any.whl", hash = "sha256:b97d804b1e9b523befed77c48dacec60e6dcb0b5391d57af6a65a312a90648c0"},
