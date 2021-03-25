@@ -1,8 +1,8 @@
 # Git as a Data Source
 
-Using Git&trade; as a Data Source feature was developed to provide the ability to populate existing data, templates, scripts, and much more into Nautobot; while leveraging the benefits that GitHub already provides including issue tracking, discussions, pipelines, and approvals.
+The "Git™ as a Data Source" feature was developed to provide the ability to populate existing data, templates, scripts, and much more into Nautobot; while leveraging the benefits that tools such as GitHub and GitLab already provide, including issue tracking, discussions, pipelines, and approvals.
 
-For more technical details on how to use this feature, please see the documentation on [Git Repositories](https://nautobot.readthedocs.io/en/latest/models/extras/gitrepository/).
+For more technical details on how to use this feature, please see the documentation on [Git Repositories](../models/extras/gitrepository.md).
 
 
 ## Supported Providers
@@ -23,12 +23,12 @@ Parameters:
 |Field|Explanation|
 |:--|:--|
 |Name|User friendly name for the repo.|
-|Slug|Auto-generated based on the `name` provided.|
+|Slug|Computer-friendly name for the repo. Auto-generated based on the `name` provided, but you can change it if you wish.|
 |Remote URL|The URL pointing to the Git repo. Current git url usage is limited to `http` or `https`.|
 |Branch|The branch in the Git repo to use. Defaults to `main`.|
 |Token|The token is a personal access token for the `username` provided.  For more information on generating a personal access token. [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
 |Username|The Git username that corresponds with the personal access token above.|
-|Provides|Valid providers for Git Repo.|
+|Provides|Resource type(s) provided by this Git repo.|
 <br>
 
 ## Using Git Data Sources
@@ -36,7 +36,7 @@ This section will focus on examples and use the `user-guide` branch on the demo-
 
 ### Export Templates
 
-Export Templates allow a user to export Nautobot objects based on a custom template.  Export templates can change over time depending on the needs of a user.  Allowing export templates to reference a Git repo makes managing templates easier.
+[Export Templates](../models/extras/exporttemplate.md) allow a user to export Nautobot objects based on a custom template.  Export templates can change over time depending on the needs of a user.  Allowing export templates to reference a Git repo makes managing templates easier.
 
 A template can be used to put objects into a specific format for ingestion into another system, tool, or report.  It is possible that different templates are needed depending on specific users or teams.  This can lead to sprawl of export templates.  To keep accurate templates synced with Nautobot the Git Data Sources extensibility feature can be used.
 
@@ -51,7 +51,8 @@ That loads a default page to add a repository.
 
 ![](./images/git-data-source_2.png)
 
-> By default only config contexts, export templates, and jobs are implemented.  Other data sources will get added when a specific plugin is used.
+!!! note
+    By default only config contexts, export templates, and jobs are available resource types.  Others may be added when specific plugins are used.
 
 #### Step 2
 Fill out the details for the Git repository. More information on the inputs can be found in the [fields section](#repository-details).
@@ -71,7 +72,8 @@ Once the repository is synced each template will now be available in the Export 
 
 ![](./images/git-data-source_7.png)
 
-> Note: If the templates don't populate make sure the Git directory is named `export_templates` and the Nautobot `content type` for the object is the sub-directory name.
+> !!! note
+    If the templates don't populate, make sure the Git directory is named `export_templates` and the sub-directory and sub-sub-directory names correctly match the Nautobot `content type`.
 
 Example below:
 ```
@@ -126,15 +128,16 @@ From the default Git repositories view:
 From the detailed view:
 ![](./images/git-data-source_9.png)
 
-> Once the repository has been synced its easy to check the history for the templates.
-Navigate to **Git Repositories** and select the repository in question.  Once you're in the detailed view you can look through the **Synchronization Status** or **Change Log** tabs.
+!!! tip
+    Once the repository has been synced it's easy to check the history for the templates.
+    Navigate to **Git Repositories** and select the repository in question.  Once you're in the detailed view you can look through the **Synchronization Status** or **Change Log** tabs.
 
 Now that the Git repository is linked for export templates it can be controlled via the normal Git operations workflow, which allows users or groups of users to perform code reviews using Pull Requests etc.
 
 ### Jobs
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
-For technical details on jobs, please see the documentation on [jobs](https://nautobot.readthedocs.io/en/latest/additional-features/jobs/#jobs).
+For technical details on jobs, please see the documentation on [jobs](../additional-features/jobs.md#jobs).
 
 Jobs allow a user to write scripts in Python.  By integrating the scripts with Git, a user can utilize Git workflows to manage source control, versioning, and pipelines.
 
@@ -156,7 +159,8 @@ jobs
 Once the repository is created in Nautobot.
 ![](./images/git-data-source_10.png)
 
-> Note: The same repository and branch can be used for the different `provides` methods.  Nautobot Git as a data source will look for specific root directory names.
+!!! tip
+    The same repository and branch can be used for the different `provides` methods.  Nautobot Git as a data source will look for specific root directory names.
 
 Once the scripts have been pushed into the repository, a sync needs to be executed, after which navigating to Jobs via **Extensibility -> Jobs** will show the new jobs loaded from the Git repository.
 
@@ -169,11 +173,11 @@ Jobs now shows the job from the Git repository.
 At this point all changes, and history can be kept using Git.  A simple `sync` operation can be done from Nautobot to pulldown any changes.
 
 ### Config Contexts
-Detailed information on [config contexts](https://nautobot.readthedocs.io/en/latest/models/extras/gitrepository/#configuration-contexts).
+Detailed information on [config contexts](../models/extras/gitrepository.md#configuration-contexts) in Git Repositories.
 
 Config contexts may be provided as JSON or YAML files located in `/config_contexts/`.
 
-Config contexts can be used to provide additional details to different automation tooling.  For example `Ansible vars`, or any other data that you can't natively store in Nautobot.  It can also be used in the Golden Configuration Nautobot plugin to provide extra details to generate configuration templates.
+Config contexts can be used to provide additional details to different automation tooling.  For example Ansible variables, or any other data that you can't natively store in Nautobot.  It can also be used in the Golden Configuration Nautobot plugin to provide extra details to generate configuration templates.
 
 A few simple examples of Configuration Context data might be:
  - DNS Servers
