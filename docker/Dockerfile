@@ -78,9 +78,9 @@ COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Common docker entrypoint for migrations, superuser creations, etc.
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["nautobot-server", "runserver", "0.0.0.0:8001", "--insecure"]
+CMD ["nautobot-server", "runserver", "0.0.0.0:8000", "--insecure"]
 
-################################ Stage: base
+################################ Stage: cleaninstall
 # Build an image with required dependencies to pull the installation from
 FROM base as cleaninstall
 
@@ -95,7 +95,7 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi
 
 RUN pip install --no-cache-dir /tmp/nautobot*.whl
 
-################################ Stage: base
+################################ Stage: final
 # This image will be the production ready image
 FROM base as final
 ARG PYTHON_VER

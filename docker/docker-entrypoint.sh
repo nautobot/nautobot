@@ -67,7 +67,7 @@ END
   echo "💡 Superuser Username: ${SUPERUSER_NAME}, E-Mail: ${SUPERUSER_EMAIL}"
 fi
 
-if [ "$NAUTOBOT_UWSGI_PROCESSES" == "true" ]; then
+if [ "$NAUTOBOT_UWSGI_PROCESSES" ]; then
   sed -i "s@.*processes = .*\$@processes = $NAUTOBOT_UWSGI_PROCESSES@" /opt/nautobot/uwsgi.ini
 fi
 

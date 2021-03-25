@@ -8,7 +8,7 @@ services:
       target: dev
     image: "nautobot/nautobot-py${PYTHON_VER}-dev"
     ports:
-      - "8001:8001"
+      - "8000:8000"
     depends_on:
       - postgres
       - redis

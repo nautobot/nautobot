@@ -49,7 +49,7 @@ DATABASES = {
 # For detailed configuration see: https://github.com/rq/django-rq#installation
 RQ_QUEUES = {
     "default": {
-        "HOST": os.getenv("NAUTOBOT_REDIS_HOST"),
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
         "PORT": int(os.getenv("NAUTOBOT_REDIS_PORT", "6379")),
         "DB": 0,
         "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
@@ -70,7 +70,7 @@ RQ_QUEUES = {
     #     },
     # },
     "check_releases": {
-        "HOST": os.getenv("NAUTOBOT_REDIS_HOST"),
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
         "PORT": int(os.getenv("NAUTOBOT_REDIS_PORT", "6379")),
         "DB": 0,
         "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
@@ -84,7 +84,7 @@ RQ_QUEUES = {
 # Set Cache Ops variables
 redis_protocol = "rediss" if is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)) else "redis"
 cache_ops_pwd = os.getenv("NAUTOBOT_REDIS_PASSWORD")
-cache_ops_host = os.getenv("NAUTOBOT_REDIS_HOST")
+cache_ops_host = os.getenv("NAUTOBOT_REDIS_HOST", "localhost")
 cache_ops_user = os.getenv("NAUTOBOT_REDIS_USER")
 cache_ops_port = int(os.getenv("NAUTOBOT_REDIS_PORT", 6379))
 
