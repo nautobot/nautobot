@@ -8,11 +8,17 @@ For more technical details on how to use this feature, please see the documentat
 ## Supported Providers
 The feature uses the concept of a `provides` field to map a repository to a use case. A list of the supported options is provided below.
 
+### Core Functionality
+|Name|Summary|
+|:--|:--|
+|[Export Templates](../models/extras/exporttemplate.md)|Nautobot allows users to define custom templates that can be used when exporting objects.|
+|[Jobs](../additional-features/jobs.md)|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|
+|[Config Contexts](../models/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
+---
+
+### Examples of Plugins Defining Additional Providers
 |Name|Summary|Related Plugin|
 |:--|:--|:--|
-|Export Templates|Nautobot allows users to define custom templates that can be used when exporting objects.|Core Functionality|
-|Jobs|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|Core Functionality|
-|Config Contexts|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|Core Functionality|
 |Backup Configs|Backup configuration data.|[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
 |Intended Configs|Stores the intended configurations, this grabs Nautobot data and runs through Jinja Templates.|[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
 |Jinja Templates|Repository that holds Jinja templates to be used to generate intended configs.|[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
@@ -29,7 +35,6 @@ Parameters:
 |Token|The token is a personal access token for the `username` provided.  For more information on generating a personal access token. [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
 |Username|The Git username that corresponds with the personal access token above.|
 |Provides|Resource type(s) provided by this Git repo.|
-<br>
 
 ## Using Git Data Sources
 This section will focus on examples and use the `user-guide` branch on the demo-git-datasources repo: `https://github.com/nautobot/demo-git-datasource`.
