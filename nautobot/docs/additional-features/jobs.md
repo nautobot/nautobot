@@ -457,13 +457,11 @@ from nautobot.extras.models import Status
 from nautobot.extras.jobs import Job
 
 
-STATUS_ACTIVE = Status.objects.get(slug='active')
-
-
 class DeviceConnectionsReport(Job):
     description = "Validate the minimum physical connections for each device"
 
     def test_console_connection(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every console port for every active device has a connection defined.
         for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
@@ -481,6 +479,7 @@ class DeviceConnectionsReport(Job):
                 self.log_success(obj=console_port.device)
 
     def test_power_connections(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every active device has at least two connected power supplies.
         for device in Device.objects.filter(status=STATUS_ACTIVE):
