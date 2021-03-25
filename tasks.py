@@ -176,7 +176,7 @@ def flake8(context):
 )
 def unittest(context, keepdb=False, label="nautobot"):
     """Run Nautobot unit tests."""
-    command = f"run --entrypoint 'coverage run scripts/test_runner.py test {label}"
+    command = f"run --entrypoint 'coverage run -m nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
     if keepdb:
         command += " --keepdb"
     command += "' nautobot"

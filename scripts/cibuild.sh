@@ -49,7 +49,7 @@ fi
 TEST_CONFIG=nautobot/core/tests/nautobot_config.py
 
 # Run Nautobot tests
-coverage run scripts/test_runner.py --config=$TEST_CONFIG test nautobot/
+coverage run -m nautobot.core.cli --config=$TEST_CONFIG test nautobot/
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."
