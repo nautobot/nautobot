@@ -246,6 +246,9 @@ After opening the project directory in VS Code in a supported environment, you w
 
 To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
 
+!!! note
+    You can run tests with `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` while inside the Container.
+
 ##### Special Workflow for Containers on Remote Servers
 
 A slightly different workflow is needed when your development container is running on a remotely-connected server (such as with SSH). VS Code will not offer the **Reopen in Container** option on a remote server.
@@ -422,15 +425,15 @@ $ nautobot-server nbshell
 
 Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
 
-| Docker Compose Workflow | Virtual Environment Workflow |
-|-------------------------|------------------------------|
-| `invoke unittest`       | `nautobot-server test`       |
+| Docker Compose Workflow | Virtual Environment Workflow                                           |
+|-------------------------|------------------------------------------------------------------------|
+| `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
-| Docker Compose Workflow    | Virtual Environment Workflow    |
-|----------------------------|---------------------------------|
-| `invoke unittest --keepdb` | `nautobot-server test --keepdb` |
+| Docker Compose Workflow    | Virtual Environment Workflow                                                    |
+|----------------------------|---------------------------------------------------------------------------------|
+| `invoke unittest --keepdb` | `nautobot-server test --keepdb --config=nautobot/core/tests/nautobot_config.py` |
 
 !!! note
 	Using the `--keepdb` argument will cause errors if you've modified any model fields since the previous test run.
