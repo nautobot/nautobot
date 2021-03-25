@@ -85,6 +85,8 @@ pyuwsgi = "^2.0.19"
 PyYAML = "~5.4.1"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+# Casting and validating environment variables for configuration
+django-environ = "^0.4.5"
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
