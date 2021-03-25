@@ -77,3 +77,7 @@ For example, the default **Active** status has a slug of `active`, so the `activ
     Primary key (aka ID) fields are no longer auto-incrementing integers and are now randomly-generated UUIDs.
 
 Database keys are now defined as randomly-generated [Universally Unique Identifiers](https://tools.ietf.org/html/rfc4122.html) (UUIDs) instead of integers, protecting against certain classes of data-traversal attacks.
+
+### Merge of UserConfig data into User model
+
+There is no longer a distinct `UserConfig` model; instead, user configuration and preferences are stored directly on the `User` model under the key `config_data`.

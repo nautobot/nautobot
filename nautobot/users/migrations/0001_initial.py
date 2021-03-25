@@ -3,7 +3,6 @@
 from django.conf import settings
 import django.contrib.auth.models
 import django.contrib.auth.validators
-import django.contrib.postgres.fields
 import django.core.serializers.json
 import django.core.validators
 from django.db import migrations, models
