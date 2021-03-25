@@ -323,7 +323,8 @@ Observe also that the `python` interpreter is bound within the virtualenv:
 ```
 
 To exit the virtual shell, use `exit`:
-```
+
+```no-highlight
 (nautobot-Ams_xyDt-py3.8) $ exit
 $
 ```
@@ -333,7 +334,7 @@ $
 Poetry automatically installs your dependencies. However, if you need to install any additional dependencies this can be done with `pip`. For example, if you really like using `ipython` for development:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ python -m pip install ipython
+(nautobot-Ams_xyDt-py3.8) $ pip3 install ipython
 Collecting ipython
   Using cached ipython-7.20.0-py3-none-any.whl (784 kB)
   ...
@@ -347,13 +348,13 @@ $ poetry run mkdocs serve
 
 Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.
 
+#### Configuring Nautobot
+
 !!! note
 	Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
 	Use `poetry shell` to enter the virtualenv.
-
-#### Configuring Nautobot
 
 Nautobot's configuration file is `nautobot_config.py`.
 
@@ -390,9 +391,12 @@ A newly created configuration includes sane defaults. If you need to customize t
 
 #### Starting the Development Server
 
-Django provides a lightweight, auto-updating HTTP/WSGI server for development use.
+Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
 
-Run the Nautobot development server with the `runserver` management command:
+!!! danger
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
+
+You can start the Nautobot development server with the `runserver` management command:
 
 ```no-highlight
 $ nautobot-server runserver
@@ -405,7 +409,10 @@ Starting development server at http://127.0.0.1:8000/
 Quit the server with CONTROL-C.
 ```
 
-This ensures that your development environment is now complete and operational. Any changes you make to the code base will be automatically adapted by the development server.
+!!! warning
+    Do not use `poetry run nautobot-server runserver` as it will crash unless you also pass the `--noreload` flag, which somewhat defeats the purpose of using the development server. It is recommended to use `nautobot-server runserver` from within an active virtualenv (e.g. `poetry shell`). This is a [known issue with Django and Poetry](https://github.com/python-poetry/poetry/issues/2435).
+
+Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
 #### Starting the Interactive Shell
 

@@ -263,8 +263,8 @@ $ nautobot-server runserver 0.0.0.0:8000 --insecure
 
 Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8000; for example, <http://127.0.0.1:8000/>. You should be greeted with the Nautobot home page.
 
-!!! warning
-    The development server is for development and testing purposes only. It is neither performant nor secure enough for production use. **Do not use it in production.**
+!!! danger
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 !!! warning
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected.
