@@ -168,7 +168,104 @@ INTERNAL_IPS = ("127.0.0.1", "::1")
 
 # Enable custom logging. Please see the Django documentation for detailed guidance on configuring custom logs:
 #   https://docs.djangoproject.com/en/stable/topics/logging/
-LOGGING = {}
+LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
+DJANGO_LOG_LEVEL = "INFO"
+
+# Verbose logging during normal development operation, but quiet logging during unit test execution
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "normal": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
+        },
+        "verbose": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
+        },
+    },
+    "handlers": {},
+    "loggers": {},
+    "root": {
+        "level": LOG_LEVEL,
+    },
+}
+
+if os.environ.get("NAUTOBOT_LOGGING_PRESET", None) == "files":
+    LOGGING["handlers"] = {
+        "worker_log": {
+            "level": "DEBUG",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": "/var/log/nautobot/nautbot_worker.log",
+            "when": "midnight",
+            "utc": True,
+            "interval": 1,
+            "backupCount": 5,
+            "formatter": "verbose" if DEBUG else "normal",
+        },
+        "nautbot_log": {
+            "level": "DEBUG",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": "/var/log/nautobot/nautbot.log",
+            "when": "midnight",
+            "utc": True,
+            "interval": 1,
+            "backupCount": 5,
+            "formatter": "verbose" if DEBUG else "normal",
+        },
+        "nautbot_auth_log": {
+            "level": "DEBUG",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": "/var/log/nautobot/nautbot_auth.log",
+            "when": "midnight",
+            "utc": True,
+            "interval": 1,
+            "backupCount": 5,
+            "formatter": "verbose" if DEBUG else "normal",
+        },
+    }
+    LOGGING["loggers"] = {
+        "django": {"handlers": ["nautbot_log"], "level": DJANGO_LOG_LEVEL},
+        "rq.worker": {
+            "handlers": ["worker_log"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django_auth_ldap": {
+            "handlers": ["nautbot_auth_log"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "nautbot.auth": {
+            "handlers": ["nautbot_auth_log"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    }
+    LOGGING["root"]["handlers"] = ["nautbot_log"]
+elif os.environ.get("NAUTOBOT_LOGGING_PRESET", None) == "console":
+    LOGGING["handlers"]["console"] = {
+        "level": "DEBUG",
+        "class": "rq.utils.ColorizingStreamHandler",
+        "formatter": "verbose" if DEBUG else "normal",
+    }
+    LOGGING["loggers"] = {
+        "django": {"handlers": ["console"], "level": DJANGO_LOG_LEVEL},
+    }
+    LOGGING["root"]["handlers"] = ["console"]
+elif os.environ.get("NAUTOBOT_LOGGING_PRESET", None) == "journal":
+    LOGGING["handlers"]["systemd"] = {
+        "level": "DEBUG",
+        "class": "systemd.journal.JournaldLogHandler",
+        "formatter": "verbose" if DEBUG else "normal",
+    }
+    LOGGING["loggers"] = {
+        "django": {"handlers": ["systemd"], "level": DJANGO_LOG_LEVEL},
+    }
+    LOGGING["root"]["handlers"] = ["systemd"]
+else:
+    LOGGING = {}
 
 # Setting this to True will display a "maintenance mode" banner at the top of every page.
 MAINTENANCE_MODE = False
