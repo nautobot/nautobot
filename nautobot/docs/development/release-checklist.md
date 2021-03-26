@@ -33,11 +33,11 @@ Each of the required packages pinned to its current stable version. When Nautobo
 
 Every minor version release should refresh `poetry.lock`, so that it lists the most recent stable release of each package. To do this:
 
-1. Run `poetry install` to install the latest version of all required packages.
-2. Run all tests and check that the UI and API function as expected.
-3. Review each requirement's release notes for any breaking or otherwise noteworthy changes.
-4. If a required package requires updating to a new release not covered in the version constraints for a package as defined in `pyproject.toml`, (e.g. `Django ~3.1.7` would never install `Django >=4.0.0`), update it manually in `pyproject.toml`.
-5. Run `poetry update <package>` to update the package versions in `poetry.lock` as appropriate.
+1. Review each requirement's release notes for any breaking or otherwise noteworthy changes.
+2. Run `poetry update <package>` to update the package versions in `poetry.lock` as appropriate.
+3. If a required package requires updating to a new release not covered in the version constraints for a package as defined in `pyproject.toml`, (e.g. `Django ~3.1.7` would never install `Django >=4.0.0`), update it manually in `pyproject.toml`.
+4. Run `poetry install` to install the refreshed versions of all required packages.
+5. Run all tests and check that the UI and API function as expected.
 
 !!! hint
     You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are avaiable and the versions it would upgrade.
