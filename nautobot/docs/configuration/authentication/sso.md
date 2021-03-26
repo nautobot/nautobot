@@ -50,14 +50,6 @@ The following settings are required and can be made with some simple additions t
 
 ---
 
-### SOCIAL_AUTH_ENABLED
-
-Default: `False`
-
-Enables the social auth backend, this setting is required to be enabled to use the Social Auth SSO for authentication:
-
----
-
 ### SOCIAL_AUTH_MODULE
 
 The Social Auth module name, see [the official backend documentation](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends) for more information.  Some common backend module names include:
@@ -91,79 +83,6 @@ a default set of permissions there are some additional variables to configure th
 
 ---
 
-### REMOTE_AUTH_DEFAULT_GROUPS
-
-Default: `[]` (Empty list)
-
-The list of groups to assign a new user account when created using SSO authentication.
-
----
-
-### REMOTE_AUTH_DEFAULT_PERMISSIONS
-
-Default: `{}` (Empty dictionary)
-
-A mapping of permissions to assign a new user account when created using SSO authentication. Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`, and the value should be set to the permission [constraints](../../administration/permissions.md#constraints), or `None` to allow all objects.
-
-#### Example Permissions
-
-| Permission | Description |
-|---|---|
-| `{'dcim.view_device': {}}` or `{'dcim.view_device': None}` | Users can view all devices |
-| `{'dcim.add_device': {}}` | Users can add devices, see note below |
-| `{'dcim.view_device': {"site__name__in":  ["HQ"]}}` | Users can view all devices in the HQ site |
-
-!!! warning
-    Permissions can be complicated! Be careful when restricting permissions to also add any required prerequisite permissions.
-
-    For example, when adding Devices the Device Role, Device Type, Site, and Status fields are all required fields in order for the UI to function properly. Users will also need view permissions for those fields or the corresponding field selections in the UI will be unavailable and potentially prevent objects from being able to be created or edited.
-
-The following example gives a user a reasonable amount of access to add devices to a single site (HQ in this case):
-
-```python
-{
-    'dcim.add_device': {"site__name__in":  ["HQ"]},
-    'dcim.view_device': {"site__name__in":  ["HQ"]},
-    'dcim.view_devicerole': None,
-    'dcim.view_devicetype': None,
-    'extras.view_status': None,
-    'dcim.view_site': {"name__in":  ["HQ"]},
-    'dcim.view_manufacturer': None,
-    'dcim.view_region': None,
-    'dcim.view_rack': None,
-    'dcim.view_rackgroup': None,
-    'dcim.view_platform': None,
-    'virtualization.view_cluster': None,
-    'virtualization.view_clustergroup': None,
-    'tenancy.view_tenant': None,
-    'tenancy.view_tenantgroup': None,
-}
-```
-
-Please see [the object permissions page](../../administration/permissions.md) for more information.
-
----
-
-### SOCIAL_AUTH_DEFAULT_SUPERUSER
-
-Default: `False`
-
-If set to `True`, local accounts created by the social auth module will have the Django superuser default set of privileges.  This means the user
-will be able to create, read, update, and delete all objects in Nautobot but will not have access to the Django admin pages.
-
----
-
-### SOCIAL_AUTH_DEFAULT_STAFF
-
-Default: `False`
-
-If set to `True`, local accounts created by the social auth module will have the Django staff default set of privileges.  This means the user
-will be able to access the Django admin pages.
-
-## Examples
-
-Below are some example configurations for common authentication backends, for details on configuring
-other backends please see the [full documentation on supported backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends).
 
 ### Okta - OpenID
 
@@ -177,7 +96,6 @@ other backends please see the [full documentation on supported backends](https:/
 3. Once the application is configured in Okta, edit your `nautobot_config.py` as follows:
 
 ```python
-SOCIAL_AUTH_ENABLED = True
 SOCIAL_AUTH_MODULE = 'social_core.backends.okta_openidconnect.OktaOpenIdConnect'
 
 SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = '<Client ID from Okta>'
@@ -218,10 +136,12 @@ information please utilize these additional resources.
 11. Edit your `nautobot_config.py` as follows:
 
 ```python
-SOCIAL_AUTH_ENABLED = True
 SOCIAL_AUTH_MODULE = 'social_core.backends.google.GoogleOAuth2'
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<Client ID from Google>'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<Secret ID from Google>'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 ```
+---
+
+Be sure to configure [EXTERNAL_AUTH_DEFAULT_GROUPS](../../configuration/optional-settings.md#external_auth_default_groups) and [EXTERNAL_AUTH_DEFAULT_PERMISSIONS](../../configuration/optional-settings.md#external_auth_default_permissions) next.

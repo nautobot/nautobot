@@ -5,7 +5,6 @@ from django.contrib.messages import constants as messages
 
 from nautobot import __version__
 
-
 #
 # Environment setup
 #
@@ -102,26 +101,21 @@ PREFER_IPV4 = False
 RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
 RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
-# Remote auth
+# Global 3rd-party authentication settings
+EXTERNAL_AUTH_DEFAULT_GROUPS = []
+EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+
+# Remote auth backend settings
 REMOTE_AUTH_AUTO_CREATE_USER = False
-REMOTE_AUTH_DEFAULT_GROUPS = []
-REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
-REMOTE_AUTH_ENABLED = True  # FIXME(jathan): Deprecated in Nautobot
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
+
+# SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
+SOCIAL_AUTH_POSTGRES_JSONFIELD = False
+SOCIAL_AUTH_URL_NAMESPACE = "sso"
 
 # Releases
 RELEASE_CHECK_URL = None
 RELEASE_CHECK_TIMEOUT = 24 * 3600
-
-# SSO
-SOCIAL_AUTH_ENABLED = False
-SOCIAL_AUTH_MODULE = ""
-SOCIAL_AUTH_DEFAULT_GROUPS = []
-SOCIAL_AUTH_DEFAULT_PERMISSIONS = {}
-SOCIAL_AUTH_DEFAULT_STAFF = False
-SOCIAL_AUTH_DEFAULT_SUPERUSER = False
-SOCIAL_AUTH_POSTGRES_JSONFIELD = False
-SOCIAL_AUTH_URL_NAMESPACE = "sso"
 
 # Storage
 STORAGE_BACKEND = None
@@ -335,6 +329,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
+    "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.APIVersionMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",

@@ -1,13 +1,25 @@
+import logging
 import uuid
 
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
+from django.utils.deprecation import MiddlewareMixin
+from django.core.exceptions import ImproperlyConfigured
 from django.db import ProgrammingError
 from django.http import Http404
 
 from nautobot.core.views import server_error
 from nautobot.extras.context_managers import change_logging
 from nautobot.utilities.api import is_api_request, rest_api_server_error
+from nautobot.core.settings_funcs import (
+    sso_auth_enabled,
+    remote_auth_enabled,
+    ldap_auth_enabled,
+)
+from nautobot.core.authentication import (
+    assign_groups_to_user,
+    assign_permissions_to_user,
+)
 
 
 class RemoteUserMiddleware(RemoteUserMiddleware_):
@@ -22,12 +34,36 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
         return settings.REMOTE_AUTH_HEADER
 
     def process_request(self, request):
-
         # Bypass middleware if remote authentication is not enabled
-        if not settings.REMOTE_AUTH_ENABLED:
+        if "nautobot.core.authentication.RemoteUserBackend" not in settings.AUTHENTICATION_BACKENDS:
             return
 
         return super().process_request(request)
+
+
+class ExternalAuthMiddleware(MiddlewareMixin):
+    """
+    Custom implementation of Django's AuthenticationMiddleware used to set permissions for ephemeral users
+    """
+
+    def process_request(self, request):
+        # Bypass middleware if external authentication is not enabled
+        # Session middleware handles attaching the user to the request
+        backends_enabled = (
+            remote_auth_enabled(auth_backends=settings.AUTHENTICATION_BACKENDS),
+            sso_auth_enabled(auth_backends=settings.AUTHENTICATION_BACKENDS),
+            ldap_auth_enabled(auth_backends=settings.AUTHENTICATION_BACKENDS),
+        )
+        if not any(backends_enabled) or not request.user.is_authenticated:
+            return
+
+        if settings.EXTERNAL_AUTH_DEFAULT_GROUPS:
+            # Assign default groups to the user
+            assign_groups_to_user(request.user, settings.EXTERNAL_AUTH_DEFAULT_GROUPS)
+
+        if settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS:
+            # Assign default object permissions to the user
+            assign_permissions_to_user(request.user, settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS)
 
 
 class ObjectChangeMiddleware(object):
