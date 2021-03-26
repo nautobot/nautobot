@@ -6,7 +6,7 @@ services:
       context: ../
       dockerfile: docker/Dockerfile
       target: dev
-    image: "nautobot/nautobot-py${PYTHON_VER}-dev"
+    image: "networktocode/nautobot-dev"
     ports:
       - "8000:8000"
     depends_on:
@@ -16,7 +16,7 @@ services:
       - dev.env
     tty: true
   worker:
-    image: "nautobot/nautobot-py${PYTHON_VER}-dev"
+    image: "networktocode/nautobot-dev"
     entrypoint: "nautobot-server rqworker"
     depends_on:
       - nautobot

@@ -16,7 +16,7 @@ import os
 from invoke import task
 
 
-PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
+PYTHON_VER = os.getenv("PYTHON_VER", "3.6")
 
 PROJECT_NAME = "nautobot_dev"
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
