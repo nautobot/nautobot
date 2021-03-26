@@ -50,9 +50,6 @@ ALLOWED_URL_SCHEMES = (
 BANNER_BOTTOM = ""
 BANNER_LOGIN = ""
 BANNER_TOP = ""
-BASE_PATH = ""
-if BASE_PATH:
-    BASE_PATH = BASE_PATH.strip("/") + "/"  # Enforce trailing slash only
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.environ.get("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
@@ -284,6 +281,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ALLOWED_HOSTS = []
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
+FORCE_SCRIPT_NAME = None
 LOGGING = {}
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_FILE_PATH = None
@@ -356,6 +354,8 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
                 "nautobot.core.context_processors.settings_and_registry",
             ],
         },
@@ -381,11 +381,11 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
-STATIC_URL = "/{}static/".format(BASE_PATH)
+STATIC_URL = "static/"
 STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
 
 # Media
-MEDIA_URL = "/{}media/".format(BASE_PATH)
+MEDIA_URL = "media/"
 
 # Disable default limit of 1000 fields per request. Needed for bulk deletion of objects. (Added in Django 1.10.)
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
@@ -396,8 +396,11 @@ MESSAGE_TAGS = {
 }
 
 # Authentication URLs
-LOGIN_URL = "/{}login/".format(BASE_PATH)
-LOGIN_REDIRECT_URL = "/"
+# This is the URL route name for the login view.
+LOGIN_URL = "login"
+
+# This is the URL route name for the home page (index) view.
+LOGIN_REDIRECT_URL = "home"
 
 CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 

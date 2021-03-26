@@ -159,7 +159,7 @@ def black(context, autoformat=False):
         black_command = "black --check --diff"
     docker_compose(
         context,
-        f"run --entrypoint '{black_command} contrib/ development/ nautobot/ tasks.py' nautobot",
+        f"run --entrypoint '{black_command} development/ nautobot/ tasks.py' nautobot",
         pty=True,
     )
 
@@ -167,7 +167,7 @@ def black(context, autoformat=False):
 @task
 def flake8(context):
     """Check for PEP8 compliance and other style issues."""
-    docker_compose(context, "run --entrypoint 'flake8 contrib/ development/ nautobot/ tasks.py' nautobot", pty=True)
+    docker_compose(context, "run --entrypoint 'flake8 development/ nautobot/ tasks.py' nautobot", pty=True)
 
 
 @task(

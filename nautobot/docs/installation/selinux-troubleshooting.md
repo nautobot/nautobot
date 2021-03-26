@@ -1,6 +1,6 @@
 # SELinux Troubleshooting
 
-When installing Nautobot for the first time on a Redhat-based Linux Distribution, SELinux may prevent the Nautobot stack from working properly. An example is SELinux preventing the HTTP daemon (Nginx, Apache, etc) from communicating to the Django application stack on the backend.
+When installing Nautobot for the first time on a Redhat-based Linux Distribution, SELinux may prevent the Nautobot stack from working properly. An example is SELinux preventing the HTTP daemon (NGINX, et al.) from communicating to the Django application stack on the backend.
 
 ## Determine if SELinux is the Culprit
 

@@ -66,18 +66,6 @@ This defines custom content to be displayed on the login page above the login fo
 
 ---
 
-## BASE_PATH
-
-Default: `None`
-
-The base URL path to use when accessing Nautobot. Do not include the scheme or domain name. For example, if installed at https://example.com/nautobot/, set:
-
-```python
-BASE_PATH = 'nautobot/'
-```
-
----
-
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
@@ -231,6 +219,19 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 
 !!! note
     Using a wildcard will not affect certain potentially sensitive models, such as user permissions. If there is a need to exempt these models, they must be specified individually.
+
+---
+
+## FORCE_SCRIPT_NAME
+
+Default: `None`
+
+If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. *example.com/nautobot/*).
+
+!!! important
+    To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot/`, you must set `FORCE_SCRIPT_NAME = "/nautobot/"`.
+
+Please see the [official Django documentation on `FORCE_SCRIPT_NAME`](https://docs.djangoproject.com/en/stable/ref/settings/#force-script-name) for more information.
 
 ---
 
