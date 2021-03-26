@@ -116,7 +116,7 @@ $ sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/n
 
 On CentOS:
 
-Run the following command:
+Run the following command to disable the default site that comes with the nginx package:
 
 ```no-highlight
 $ sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
