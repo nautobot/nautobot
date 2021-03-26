@@ -3,8 +3,7 @@
 !!! warning
     As of Nautobot v1.0.0b2 these instructions are in a pre-release state and will be evolving rapidly!
 
-This documentation provides example configurations for both [NGINX](https://www.nginx.com/resources/wiki/) and
-[Apache](https://httpd.apache.org/docs/current/), though any HTTP server which supports WSGI should be compatible.
+This documentation provides example configurations for [NGINX](https://www.nginx.com/resources/wiki/) though any HTTP server which supports WSGI should be compatible.
 
 ## Obtain an SSL Certificate
 
@@ -33,8 +32,7 @@ $ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 ## HTTP Server Installation
 
-Any HTTP server of your choosing is supported. For your convenience, setup guides for the most common options are
-provided here.
+Any HTTP server of your choosing is supported. For your convenience, setup instructions for NGINX are provided here.
 
 !!! warning
     The following steps must be performed with root permissions.
@@ -81,12 +79,23 @@ server {
         alias /opt/nautobot/static/;
     }
 
+    # For subdirectory hosting, you'll want to toggle this (e.g. `/nautobot/`).
+    # Don't forget to set `FORCE_SCRIPT_NAME` in your `nautobot_config.py` to match.
+    # location /nautobot/ {
     location / {
-        proxy_pass http://127.0.0.1:8001;
-        proxy_set_header X-Forwarded-Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        include uwsgi_params;
+        uwsgi_pass  127.0.0.1:8001;
+        uwsgi_param Host $host;
+        uwsgi_param X-Real-IP $remote_addr;
+        uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
+        uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
+
+        # If you want subdirectory hosting, uncomment this. The path must match
+        # the path of this location block (e.g. `/nautobot`). For NGINX the path
+        # MUST NOT end with a trailing "/".
+        # uwsgi_param SCRIPT_NAME /nautobot;
     }
+
 }
 
 server {
@@ -98,9 +107,8 @@ server {
 }
 ```
 
-- If the file location of SSL certificates had to be changed in the [Obtain an SSL
-  Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX
-  configuration you pasted.
+!!! note
+    If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration you pasted.
 
 #### Enable Nautobot
 
@@ -143,9 +151,10 @@ At this point, you should be able to connect to the HTTPS service at the server 
 ## Troubleshooting
 
 ### Unable to Connect
+
 If you are unable to connect to the HTTP server, check that:
 
-- NGINX/Apache is running and configured to listen on the correct port.
+- NGINX is running and configured to listen on the correct port.
 - Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
 
 ### 502 Bad Gateway
@@ -153,7 +162,7 @@ If you are unable to connect to the HTTP server, check that:
 If you are able to connect but receive a 502 (bad gateway) error, check the following:
 
 - The uWSGI worker processes are running (`systemctl status nautobot` should show a status of `active (running)`)
-- NGINX/Apache is configured to connect to the port on which uWSGI is listening (default is `8001`).
+- NGINX is configured to connect to the port on which uWSGI is listening (default is `8001`).
 - SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the
   command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux
   troubleshooting](selinux-troubleshooting.md) guide.

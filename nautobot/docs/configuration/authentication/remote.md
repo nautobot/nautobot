@@ -1,6 +1,6 @@
 # Remote User Authentication
 
-Nautobot can be configured to support remote user authentication by inferring users from an HTTP header set by an authenticating reverse proxy (e.g. nginx or Apache).
+Nautobot can be configured to support remote user authentication by inferring users from an HTTP header set by an authenticating reverse proxy (e.g. NGINX).
 
 This document describes how to make use of an external authentication source (where the Web server sets the `REMOTE_USER` environment variable). This type of authentication solution is typically seen on intranet sites, with single sign-on solutions.
 

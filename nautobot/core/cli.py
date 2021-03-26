@@ -177,8 +177,6 @@ def _configure_settings(config):
     if settings.SOCIAL_AUTH_ENABLED:
         settings.INSTALLED_APPS.append("social_django")
         settings.AUTHENTICATION_BACKENDS.insert(0, settings.SOCIAL_AUTH_MODULE)
-        backend_name = get_sso_backend_name(settings.SOCIAL_AUTH_MODULE)
-        settings.LOGIN_URL = "/{}login/{}/".format(settings.BASE_PATH, backend_name)
 
     #
     # Plugins
