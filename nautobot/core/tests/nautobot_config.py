@@ -12,9 +12,9 @@ ALLOWED_HOSTS = ["*"]
 
 DATABASES = {
     "default": {
-        "NAME": os.getenv("NAUTOBOT_DATABASE", "nautobot"),
-        "USER": os.getenv("NAUTOBOT_USER", ""),
-        "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
+        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
+        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
+        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": "",
         "CONN_MAX_AGE": 300,
@@ -48,19 +48,19 @@ def is_truthy(arg):
 # through the devcontainer or when using invoke.
 RQ_QUEUES = {
     "default": {
-        "HOST": os.getenv("REDIS_HOST", "localhost"),
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "check_releases": {
-        "HOST": os.getenv("REDIS_HOST", "localhost"),
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
 }

@@ -9,15 +9,9 @@ ALLOWED_HOSTS = os.environ.get("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
 DATABASES = {
     "default": {
-<<<<<<< HEAD
         "NAME": os.environ.get("NAUTOBOT_DB_NAME", "nautobot"),
         "USER": os.environ.get("NAUTOBOT_DB_USER", ""),
         "PASSWORD": os.environ.get("NAUTOBOT_DB_PASSWORD", ""),
-=======
-        "NAME": os.environ.get("NAUTOBOT_DATABASE", "nautobot"),
-        "USER": os.environ.get("NAUTOBOT_USER", ""),
-        "PASSWORD": os.environ.get("NAUTOBOT_PASSWORD", ""),
->>>>>>> develop
         "HOST": os.environ.get("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.environ.get("NAUTOBOT_DB_PORT", ""),
         "CONN_MAX_AGE": 300,

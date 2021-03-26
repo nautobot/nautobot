@@ -7,11 +7,11 @@ FROM python:${PYTHON_VER}-slim as base
 # hadolint ignore=DL3005,DL3008,DL3013
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git && \
+    apt-get install --no-install-recommends -y git mime-support && \
     apt-get autoremove -y && \
     apt-get clean all && \
-    rm -rf /var/lib/apt/lists/* \
-    pip install --no-cache-dir --upgrade pip wheel
+    rm -rf /var/lib/apt/lists/* && \
+    pip --no-cache-dir install --upgrade pip wheel
 
 ################################ Stage: dev
 # The dev container is used for development purposes but also to build the .whl for the final image

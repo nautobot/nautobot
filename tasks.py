@@ -23,7 +23,9 @@ COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
 COMPOSE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.yml")
 OVERRIDE_FILENAME = os.getenv("OVERRIDE_FILENAME", "docker-compose.dev.yml")
 COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, OVERRIDE_FILENAME)
-COMPOSE_COMMAND = f'docker-compose --project-name {PROJECT_NAME} --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
+COMPOSE_COMMAND = (
+    f'docker-compose --project-name {PROJECT_NAME} --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
+)
 
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
