@@ -751,7 +751,7 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
-    content_types = MultipleContentTypeField(feature="statuses", label="Content type(s)")
+    content_types = MultipleContentTypeField(feature="statuses", label="Content Type(s)")
 
     class Meta:
         model = Status
