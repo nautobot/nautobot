@@ -18,7 +18,7 @@ $ sudo apt install -y libldap2-dev libsasl2-dev libssl-dev
 On CentOS:
 
 ```no-highlight
-$ sudo yum install -y openldap-devel
+$ sudo dnf install -y openldap-devel
 ```
 
 ### Install django-auth-ldap

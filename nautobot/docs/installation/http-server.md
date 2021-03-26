@@ -48,8 +48,16 @@ and is by far the most popular choice.
 
 Begin by installing NGINX:
 
+On Ubuntu:
+
 ```no-highlight
 $ sudo apt install -y nginx
+```
+
+On CentOS/RHEL:
+
+```no-highlight
+$ sudo dnf install -y nginx
 ```
 
 #### Configure NGINX
@@ -59,10 +67,12 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
 
 ```
 server {
-    listen 443 ssl;
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
 
     # CHANGE THIS TO YOUR SERVER'S NAME
-    server_name nautobot.example.com;
+    # server_name nautobot.example.com;
+    server_name _;
 
     ssl_certificate /etc/ssl/certs/nautobot.crt;
     ssl_certificate_key /etc/ssl/private/nautobot.key;
@@ -83,7 +93,8 @@ server {
 
 server {
     # Redirect HTTP traffic to HTTPS
-    listen 80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     server_name _;
     return 301 https://$host$request_uri;
 }
@@ -97,8 +108,7 @@ the value configured for `ALLOWED_HOSTS` in `nautobot_config.py`.
 
 #### Enable Nautobot
 
-!!! note
-    If you are installing on CentOS/RHEL, please continue to [Restart NGINX](#restart-nginx) step below.
+On Ubuntu:
 
 To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/default` and create a symbolic link in the
 `sites-enabled` directory to the configuration file you just created:
@@ -106,6 +116,14 @@ To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/def
 ```no-highlight
 $ sudo rm -f /etc/nginx/sites-enabled/default
 $ sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
+```
+
+On CentOS:
+
+Run the following command:
+
+```no-highlight
+$ sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
 ```
 
 #### Restart NGINX

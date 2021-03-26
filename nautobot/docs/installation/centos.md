@@ -15,8 +15,8 @@ This will install:
 - Redis server and client
 
 ```no-highlight
-$ sudo yum check-update
-$ sudo yum install -y git python38 python38-devel python38-pip postgresql-server redis
+$ sudo dnf check-update
+$ sudo dnf install -y git python38 python38-devel python38-pip postgresql-server redis
 ```
 
 ## Database Setup
