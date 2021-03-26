@@ -56,15 +56,16 @@ Update the following static libraries to their most recent stable release:
 
 Add the release notes (`docs/release-notes/X.Y.md`) to the table of contents within `mkdocs.yml`, and point `index.md` to the new file.
 
-### Manually Perform a New Install
+### Verify and Revise the Install Documentation
 
-Fire up `mkdocs serve` in your local environment to start the documentation server:
+Follow the [install instructions](../installation/nautobot.md) to perform a new production installation of Nautobot.
 
-```no-highlight
-$ mkdocs serve
-```
+The goal of this step is to walk through the entire install process *as documented* to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 
-Follow these instructions to perform a new installation of Nautobot. This process must _not_ be automated: The goal of this step is to catch any errors or omissions in the documentation, and ensure that it is kept up-to-date for each release. Make any necessary changes to the documentation before proceeding with the release.
+!!! tip
+    Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
+
+Commit any necessary changes to the documentation before proceeding with the release.
 
 ### Close the Release Milestone
 
