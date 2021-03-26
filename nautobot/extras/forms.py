@@ -798,7 +798,7 @@ class StatusBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content type(s)")
+    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
 
     class Meta:
         nullable_fields = []
