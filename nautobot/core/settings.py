@@ -70,7 +70,7 @@ ENFORCE_GLOBAL_UNIQUE = False
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
     ("auth", "group"),
-    ("auth", "user"),
+    ("users", "user"),
     ("users", "objectpermission"),
 )
 
@@ -282,6 +282,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # Default overrides
 ALLOWED_HOSTS = []
+CSRF_TRUSTED_ORIGINS = []
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
 LOGGING = {}
@@ -398,8 +399,6 @@ MESSAGE_TAGS = {
 # Authentication URLs
 LOGIN_URL = "/{}login/".format(BASE_PATH)
 LOGIN_REDIRECT_URL = "/"
-
-CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 
 #
 # From django-cors-headers
