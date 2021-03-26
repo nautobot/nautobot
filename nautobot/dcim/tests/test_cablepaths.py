@@ -1319,14 +1319,12 @@ class CablePathTestCase(TestCase):
         """
         circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
         circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
-
+        cable1 = Cable(
+            termination_a=circuittermination1,
+            termination_b=circuittermination2,
+            status=self.status,
+        )
         with self.assertRaises(ValidationError):
-            # Create cable 1
-            cable1 = Cable(
-                termination_a=circuittermination1,
-                termination_b=circuittermination2,
-                status=self.status,
-            )
             cable1.save()
 
     def test_301_create_path_via_existing_cable(self):
