@@ -9,6 +9,7 @@ theme:
     name: readthedocs
     navigation_depth: 4
     hljs_languages:
+        - jinja
         - yaml
 extra_css:
     - extra.css
