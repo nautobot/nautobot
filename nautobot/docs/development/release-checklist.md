@@ -54,7 +54,7 @@ Update the following static libraries to their most recent stable release:
 
 ### Link to the Release Notes Page
 
-Add the release notes (`/docs/release-notes/X.Y.md`) to the table of contents within `mkdocs.yml`, and point `index.md` to the new file.
+Add the release notes (`docs/release-notes/X.Y.md`) to the table of contents within `mkdocs.yml`, and point `index.md` to the new file.
 
 ### Manually Perform a New Install
 
@@ -82,16 +82,55 @@ Submit a pull request to merge the `feature` branch into the `develop` branch in
 
 Ensure that continuous integration testing on the `develop` branch is completing successfully.
 
-### Update Version and Changelog
+### Bump the Version
 
-Update the package version in `pyproject.toml` to the new release version. For example, if we wanted to update the package to `2.0.0`:
+Update the package version using `poetry version`. This command shows the current version of the project or bumps the version of the project and writes the new version back to `pyproject.toml` if a valid bump rule is provided.
+
+The new version should ideally be a valid semver string or a valid bump rule: `patch`, `minor`, `major`, `prepatch`, `preminor`, `premajor`, `prerelease`. Always try to use a bump rule when you can.
+
+Display the current version with no arguments:
 
 ```no-highlight
-$ poetry version 2.0.0
-Bumping version from 1.0.0 to 2.0.0
+$ poetry version
+nautobot 1.0.0-beta.2
 ```
 
-Next, update the release notes for the new version and commit these changes to the `develop` branch.
+Bump pre-release versions using `prerelease`:
+
+```no-highlight
+$ poetry version prerelease
+Bumping version from 1.0.0-beta.2 to 1.0.0-beta.3
+```
+
+For major versions, use `major`:
+
+```no-highlight
+$ poetry version major
+Bumping version from 1.0.0-beta.2 to 1.0.0
+```
+
+For patch versions, use `minor`:
+
+```no-highlight
+$ poetry version minor
+Bumping version from 1.0.0 to 1.1.0
+```
+
+And lastly, for patch versions, you guessed it, use `patch`:
+
+```no-highlight
+$ poetry version patch
+Bumping version from 1.1.0 to 1.1.1
+```
+
+Please see the [official Poetry documentation on `version`](https://python-poetry.org/docs/cli/#version) for more information.
+
+### Update the Changelog
+
+Update the release notes for the new version and commit these changes to the `develop` branch.
+
+!!! important
+    The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
 
 ### Submit a Pull Request
 
@@ -123,4 +162,15 @@ Next, publish to PyPI using the username `__token__` and the Nautobot PyPI API t
 
 ```
 $ poetry publish --username __token__ --password <api_token>
+```
+
+### Bump the Development Version
+
+Use `poetry version prepatch` to bump the version to the next release and commit it to the `develop` branch.
+
+For example, if you just released `v1.1.0`:
+
+```
+$ poetry version prepatch
+Bumping version from 1.1.0 to 1.1.1-alpha.0
 ```
