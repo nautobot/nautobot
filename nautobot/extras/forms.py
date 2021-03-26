@@ -788,7 +788,7 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Status
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(
-        feature="statuses", choices_as_strings=True, required=False, label="Content type(s)"
+        feature="statuses", choices_as_strings=True, required=False, label="Content Type(s)"
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
