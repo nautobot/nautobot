@@ -202,9 +202,13 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
 
     type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
-    source_type = MultipleContentTypeField(feature="relationships", required=False, label="Source Type")
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
+    )
 
-    destination_type = MultipleContentTypeField(feature="relationships", required=False, label="Destination Type")
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
+    )
 
 
 class RelationshipModelForm(forms.ModelForm):
@@ -309,9 +313,13 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
 
-    source_type = MultipleContentTypeField(feature="relationships", required=False, label="Source Type")
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
+    )
 
-    destination_type = MultipleContentTypeField(feature="relationships", required=False, label="Destination Type")
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
+    )
 
 
 #
@@ -725,7 +733,9 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
 class WebhookFilterForm(BootstrapMixin, forms.Form):
     model = Webhook
     q = forms.CharField(required=False, label="Search")
-    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
+    content_types = MultipleContentTypeField(
+        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
+    )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -755,6 +765,7 @@ class StatusCSVForm(CustomFieldModelCSVForm):
     slug = SlugField()
     content_types = CSVMultipleContentTypeField(
         feature="statuses",
+        choices_as_strings=True,
         help_text=mark_safe(
             "The object types to which this status applies. Multiple values "
             "must be comma-separated and wrapped in double quotes. (e.g. "
@@ -776,7 +787,9 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
     model = Status
     q = forms.CharField(required=False, label="Search")
-    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content type(s)")
+    content_types = MultipleContentTypeField(
+        feature="statuses", choices_as_strings=True, required=False, label="Content type(s)"
+    )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
 

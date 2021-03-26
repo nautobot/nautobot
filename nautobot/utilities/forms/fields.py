@@ -168,32 +168,39 @@ class CSVContentTypeField(CSVModelChoiceField):
 
 class MultipleContentTypeField(forms.ModelMultipleChoiceField):
     """
-    Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
+    Field for choosing any number of `ContentType` objects.
+
+    Optionally can restrict the available ContentTypes to those supporting a particular feature only.
+    Optionally can pass the selection through as a list of "`{app_label}.{model}`" strings intead of PK values.
     """
 
     STATIC_CHOICES = True
 
-    def __init__(self, *args, feature=None, **kwargs):
+    def __init__(self, *args, feature=None, choices_as_strings=False, **kwargs):
         """
         Construct a MultipleContentTypeField.
 
         Args:
-            feature (str): Feature name to use in constructing a FeatureQuery for the queryset.
+            feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
+            choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
         """
         if "queryset" not in kwargs:
-            kwargs["queryset"] = ContentType.objects.filter(FeatureQuery(feature).get_query()).order_by(
-                "app_label", "model"
-            )
+            if feature is not None:
+                kwargs["queryset"] = ContentType.objects.filter(FeatureQuery(feature).get_query()).order_by(
+                    "app_label", "model"
+                )
+            else:
+                kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
         if "widget" not in kwargs:
             kwargs["widget"] = widgets.StaticSelect2Multiple()
 
         super().__init__(*args, **kwargs)
 
-        # Generate choices from queryset each time form is initialized.
-        self.choices = self._generate_choices_from_queryset
+        if choices_as_strings:
+            self.choices = self._string_choices_from_queryset
 
-    def _generate_choices_from_queryset(self):
-        """Overload choices to return "<app>.<model>" for CSV import help text."""
+    def _string_choices_from_queryset(self):
+        """Overload choices to return "<app>.<model>" instead of PKs."""
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
 
 
