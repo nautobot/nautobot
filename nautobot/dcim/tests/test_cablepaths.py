@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.circuits.models import *
@@ -1310,6 +1311,23 @@ class CablePathTestCase(TestCase):
 
         # Check that all CablePaths have been deleted
         self.assertEqual(CablePath.objects.count(), 0)
+
+    def test_210_single_path_via_circuit_add_circuit_termination(self):
+        """
+        Tests case for circuit termination loop.
+        [CT1A][CT1Z]
+        """
+        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
+        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+
+        with self.assertRaises(ValidationError):
+            # Create cable 1
+            cable1 = Cable(
+                termination_a=circuittermination1,
+                termination_b=circuittermination2,
+                status=self.status,
+            )
+            cable1.save()
 
     def test_301_create_path_via_existing_cable(self):
         """
