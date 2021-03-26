@@ -70,8 +70,6 @@ server {
     listen 443 ssl http2 default_server;
     listen [::]:443 ssl http2 default_server;
 
-    # CHANGE THIS TO YOUR SERVER'S NAME
-    # server_name nautobot.example.com;
     server_name _;
 
     ssl_certificate /etc/ssl/certs/nautobot.crt;
@@ -100,8 +98,6 @@ server {
 }
 ```
 
-- Be sure to replace `nautobot.example.com` with the domain name or IP address of your installation. This should match
-the value configured for `ALLOWED_HOSTS` in `nautobot_config.py`.
 - If the file location of SSL certificates had to be changed in the [Obtain an SSL
   Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX
   configuration you pasted.
