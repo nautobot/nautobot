@@ -167,7 +167,7 @@ Note that if the provided parameters do not return exactly one object, a validat
 Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, an IP address can be assigned to either a device interface _or_ a virtual machine interface. When making this assignment via the REST API, we must specify two attributes:
 
 * `assigned_object_type` - The content type of the assigned object, defined as `<app>.<model>`
-* `assigned_object_id` - The assigned object's unique UUID
+* `assigned_object_id` - The assigned object's UUID
 
 Together, these values identify a unique object in Nautobot. The assigned object (if any) is represented by the `assigned_object` attribute on the IP address model.
 
@@ -368,7 +368,7 @@ curl -s -X GET http://nautobot/api/ipam/ip-addresses/ | jq '.'
 
 ### Retrieving a Single Object
 
-To query Nautobot for a single object, make a `GET` request to the model's _detail_ endpoint specifying its unique UUID.
+To query Nautobot for a single object, make a `GET` request to the model's _detail_ endpoint specifying its UUID.
 
 !!! note
     Note that the trailing slash is required. Omitting this will return a 302 redirect.
@@ -470,7 +470,7 @@ http://nautobot/api/dcim/sites/ \
 
 ### Updating an Object
 
-To modify an object which has already been created, make a `PATCH` request to the model's _detail_ endpoint specifying its unique UUID. Include any data which you wish to update on the object. As with object creation, the `Authorization` and `Content-Type` headers must also be specified.
+To modify an object which has already been created, make a `PATCH` request to the model's _detail_ endpoint specifying its UUID. Include any data which you wish to update on the object. As with object creation, the `Authorization` and `Content-Type` headers must also be specified.
 
 ```no-highlight
 curl -s -X PATCH \
@@ -534,7 +534,7 @@ Note that there is no requirement for the attributes to be identical among objec
 
 ### Deleting an Object
 
-To delete an object from Nautobot, make a `DELETE` request to the model's _detail_ endpoint specifying its unique UUID. The `Authorization` header must be included to specify an authorization token, however this type of request does not support passing any data in the body.
+To delete an object from Nautobot, make a `DELETE` request to the model's _detail_ endpoint specifying its UUID. The `Authorization` header must be included to specify an authorization token, however this type of request does not support passing any data in the body.
 
 ```no-highlight
 curl -s -X DELETE \

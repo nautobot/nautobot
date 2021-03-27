@@ -358,7 +358,7 @@ class APIViewTestCases:
 
         def test_delete_object(self):
             """
-            DELETE a single object identified by its UUID.
+            DELETE a single object identified by its primary key.
             """
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
