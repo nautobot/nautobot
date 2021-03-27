@@ -85,7 +85,7 @@ class TestCase(_TestCase):
 
             if api:
 
-                # Replace ContentType numeric IDs with <app_label>.<model>
+                # Replace ContentType UUIDs with <app_label>.<model>
                 if type(getattr(instance, key)) is ContentType:
                     ct = ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
