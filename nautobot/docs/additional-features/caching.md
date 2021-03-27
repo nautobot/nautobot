@@ -6,10 +6,10 @@ If a change is made to any of the objects returned by the query within that time
 
 ## Invalidating Cached Data
 
-Although caching is performed automatically and rarely requires administrative intervention, Nautobot provides the `invalidate` management command to force invalidation of cached results. This command can reference a specific object my its type and numeric ID:
+Although caching is performed automatically and rarely requires administrative intervention, Nautobot provides the `invalidate` management command to force invalidation of cached results. This command can reference a specific object my its type and UUID:
 
 ```no-highlight
-$ nautobot-server invalidate dcim.Device.34
+$ nautobot-server invalidate dcim.Device.84ae706d-c189-4d13-a898-9737648e34b3
 ```
 
 Alternatively, it can also delete all cached results for an object type:
