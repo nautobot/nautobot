@@ -3,6 +3,7 @@
 import logging
 
 import graphene
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 
 from nautobot.core.graphql.utils import str_to_var_name
@@ -167,7 +168,10 @@ def generate_list_resolver(schema_type, resolver_name):
                 fsargs, model.objects.restrict(info.context.user, "view").all()
             )
             if resolved_obj.errors:
-                return resolved_obj.errors
+                errors = {}
+                for key in resolved_obj.errors:
+                    errors[key] = resolved_obj.errors[key]
+                raise GraphQLError(errors)
             return resolved_obj.qs.all()
 
         return model.objects.restrict(info.context.user, "view").all()
