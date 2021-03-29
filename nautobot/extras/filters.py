@@ -18,6 +18,7 @@ from .choices import *
 from .models import (
     ConfigContext,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -101,10 +102,50 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             self.filters["cf_{}".format(cf.name)] = CustomFieldFilter(field_name=cf.name, custom_field=cf)
 
 
-class CustomFieldFilterSet(django_filters.FilterSet):
+class CustomFieldFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("custom_fields").get_choices,
+    )
+
     class Meta:
         model = CustomField
         fields = ["id", "content_types", "name", "required", "filter_logic", "weight"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value))
+
+
+class CustomFieldChoiceFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    field_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="field",
+        queryset=CustomField.objects.all(),
+        label="Field",
+    )
+    field = django_filters.ModelMultipleChoiceFilter(
+        field_name="field__name",
+        queryset=CustomField.objects.all(),
+        to_field_name="name",
+        label="Field (name)",
+    )
+
+    class Meta:
+        model = CustomFieldChoice
+        fields = ["id", "value", "weight"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(value__icontains=value))
 
 
 class ExportTemplateFilterSet(BaseFilterSet):
@@ -346,7 +387,7 @@ class ContentTypeFilterSet(django_filters.FilterSet):
 #
 
 
-class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet):
+class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -367,7 +408,7 @@ class TagFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet)
 #
 
 
-class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet):
+class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
@@ -493,7 +534,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
         return {name: getattr(value, to_field_name)}
 
 
-class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldFilterSet):
+class StatusFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
     """API filter for filtering custom status object fields."""
 
     q = django_filters.CharFilter(

@@ -484,4 +484,12 @@ RQ_QUEUES = {
         "SSL": False,
         "DEFAULT_TIMEOUT": 300,
     },
+    "custom_fields": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300,
+    },
 }

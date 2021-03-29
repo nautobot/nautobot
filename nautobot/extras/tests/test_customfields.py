@@ -7,7 +7,7 @@ from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
 from nautobot.dcim.models import Site, Rack
 from nautobot.extras.choices import *
-from nautobot.extras.models import CustomField, Status
+from nautobot.extras.models import CustomField, CustomFieldChoice, Status
 from nautobot.utilities.testing import APITestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
@@ -93,10 +93,13 @@ class CustomFieldTest(TestCase):
             type=CustomFieldTypeChoices.TYPE_SELECT,
             name="my_field",
             required=False,
-            choices=["Option A", "Option B", "Option C"],
         )
         cf.save()
         cf.content_types.set([obj_type])
+
+        CustomFieldChoice.objects.create(field=cf, value="Option A")
+        CustomFieldChoice.objects.create(field=cf, value="Option B")
+        CustomFieldChoice.objects.create(field=cf, value="Option C")
 
         # Assign a value to the first Site
         site = Site.objects.first()
@@ -106,6 +109,40 @@ class CustomFieldTest(TestCase):
         # Retrieve the stored value
         site.refresh_from_db()
         self.assertEqual(site.custom_field_data[cf.name], "Option A")
+
+        # Delete the stored value
+        site.custom_field_data.pop(cf.name)
+        site.save()
+        site.refresh_from_db()
+        self.assertIsNone(site.custom_field_data.get(cf.name))
+
+        # Delete the custom field
+        cf.delete()
+
+    def test_multi_select_field(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            name="my_field",
+            required=False,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        CustomFieldChoice.objects.create(field=cf, value="Option A")
+        CustomFieldChoice.objects.create(field=cf, value="Option B")
+        CustomFieldChoice.objects.create(field=cf, value="Option C")
+
+        # Assign a value to the first Site
+        site = Site.objects.first()
+        site.custom_field_data[cf.name] = ["Option A", "Option B"]
+        site.save()
+
+        # Retrieve the stored value
+        site.refresh_from_db()
+        self.assertEqual(site.custom_field_data[cf.name], ["Option A", "Option B"])
 
         # Delete the stored value
         site.custom_field_data.pop(cf.name)
@@ -175,11 +212,27 @@ class CustomFieldAPITest(APITestCase):
         cls.cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             name="choice_field",
-            choices=["Foo", "Bar", "Baz"],
         )
-        cls.cf_select.default = "Foo"
         cls.cf_select.save()
         cls.cf_select.content_types.set([content_type])
+        CustomFieldChoice.objects.create(field=cls.cf_select, value="Foo")
+        CustomFieldChoice.objects.create(field=cls.cf_select, value="Bar")
+        CustomFieldChoice.objects.create(field=cls.cf_select, value="Baz")
+        cls.cf_select.default = "Foo"
+        cls.cf_select.save()
+
+        # Multi-select custom field
+        cls.cf_multi_select = CustomField(
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            name="multi_choice_field",
+        )
+        cls.cf_multi_select.save()
+        cls.cf_multi_select.content_types.set([content_type])
+        CustomFieldChoice.objects.create(field=cls.cf_multi_select, value="Foo")
+        CustomFieldChoice.objects.create(field=cls.cf_multi_select, value="Bar")
+        CustomFieldChoice.objects.create(field=cls.cf_multi_select, value="Baz")
+        cls.cf_multi_select.default = ["Foo", "Bar"]
+        cls.cf_multi_select.save()
 
         statuses = Status.objects.get_for_model(Site)
 
@@ -197,6 +250,7 @@ class CustomFieldAPITest(APITestCase):
             cls.cf_date.name: "2020-01-02",
             cls.cf_url.name: "http://example.com/2",
             cls.cf_select.name: "Bar",
+            cls.cf_multi_select.name: ["Bar", "Baz"],
         }
         cls.sites[1].save()
 
@@ -218,6 +272,7 @@ class CustomFieldAPITest(APITestCase):
                 "date_field": None,
                 "url_field": None,
                 "choice_field": None,
+                "multi_choice_field": None,
             },
         )
 
@@ -237,6 +292,7 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response.data["custom_fields"]["date_field"], site2_cfvs["date_field"])
         self.assertEqual(response.data["custom_fields"]["url_field"], site2_cfvs["url_field"])
         self.assertEqual(response.data["custom_fields"]["choice_field"], site2_cfvs["choice_field"])
+        self.assertEqual(response.data["custom_fields"]["multi_choice_field"], site2_cfvs["multi_choice_field"])
 
     def test_create_single_object_with_defaults(self):
         """
@@ -261,6 +317,7 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response_cf["date_field"], self.cf_date.default)
         self.assertEqual(response_cf["url_field"], self.cf_url.default)
         self.assertEqual(response_cf["choice_field"], self.cf_select.default)
+        self.assertEqual(response_cf["multi_choice_field"], self.cf_multi_select.default)
 
         # Validate database data
         site = Site.objects.get(pk=response.data["id"])
@@ -270,6 +327,7 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(str(site.custom_field_data["date_field"]), self.cf_date.default)
         self.assertEqual(site.custom_field_data["url_field"], self.cf_url.default)
         self.assertEqual(site.custom_field_data["choice_field"], self.cf_select.default)
+        self.assertEqual(site.custom_field_data["multi_choice_field"], self.cf_multi_select.default)
 
     def test_create_single_object_with_values(self):
         """
@@ -286,6 +344,7 @@ class CustomFieldAPITest(APITestCase):
                 "date_field": "2020-01-02",
                 "url_field": "http://example.com/2",
                 "choice_field": "Bar",
+                "multi_choice_field": ["Baz"],
             },
         }
         url = reverse("dcim-api:site-list")
@@ -303,6 +362,7 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response_cf["date_field"], data_cf["date_field"])
         self.assertEqual(response_cf["url_field"], data_cf["url_field"])
         self.assertEqual(response_cf["choice_field"], data_cf["choice_field"])
+        self.assertEqual(response_cf["multi_choice_field"], data_cf["multi_choice_field"])
 
         # Validate database data
         site = Site.objects.get(pk=response.data["id"])
@@ -312,6 +372,7 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(str(site.custom_field_data["date_field"]), data_cf["date_field"])
         self.assertEqual(site.custom_field_data["url_field"], data_cf["url_field"])
         self.assertEqual(site.custom_field_data["choice_field"], data_cf["choice_field"])
+        self.assertEqual(site.custom_field_data["multi_choice_field"], data_cf["multi_choice_field"])
 
     def test_create_multiple_objects_with_defaults(self):
         """
@@ -352,6 +413,7 @@ class CustomFieldAPITest(APITestCase):
             self.assertEqual(response_cf["date_field"], self.cf_date.default)
             self.assertEqual(response_cf["url_field"], self.cf_url.default)
             self.assertEqual(response_cf["choice_field"], self.cf_select.default)
+            self.assertEqual(response_cf["multi_choice_field"], self.cf_multi_select.default)
 
             # Validate database data
             site = Site.objects.get(pk=response.data[i]["id"])
@@ -361,6 +423,7 @@ class CustomFieldAPITest(APITestCase):
             self.assertEqual(str(site.custom_field_data["date_field"]), self.cf_date.default)
             self.assertEqual(site.custom_field_data["url_field"], self.cf_url.default)
             self.assertEqual(site.custom_field_data["choice_field"], self.cf_select.default)
+            self.assertEqual(site.custom_field_data["multi_choice_field"], self.cf_multi_select.default)
 
     def test_create_multiple_objects_with_values(self):
         """
@@ -373,6 +436,7 @@ class CustomFieldAPITest(APITestCase):
             "date_field": "2020-01-02",
             "url_field": "http://example.com/2",
             "choice_field": "Bar",
+            "multi_choice_field": ["Foo", "Bar"],
         }
         data = (
             {
@@ -411,6 +475,7 @@ class CustomFieldAPITest(APITestCase):
             self.assertEqual(response_cf["date_field"], custom_field_data["date_field"])
             self.assertEqual(response_cf["url_field"], custom_field_data["url_field"])
             self.assertEqual(response_cf["choice_field"], custom_field_data["choice_field"])
+            self.assertEqual(response_cf["multi_choice_field"], custom_field_data["multi_choice_field"])
 
             # Validate database data
             site = Site.objects.get(pk=response.data[i]["id"])
@@ -431,6 +496,10 @@ class CustomFieldAPITest(APITestCase):
             self.assertEqual(
                 site.custom_field_data["choice_field"],
                 custom_field_data["choice_field"],
+            )
+            self.assertEqual(
+                site.custom_field_data["multi_choice_field"],
+                custom_field_data["multi_choice_field"],
             )
 
     def test_update_single_object_with_values(self):
@@ -460,6 +529,7 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(response_cf["date_field"], original_cfvs["date_field"])
         self.assertEqual(response_cf["url_field"], original_cfvs["url_field"])
         self.assertEqual(response_cf["choice_field"], original_cfvs["choice_field"])
+        self.assertEqual(response_cf["multi_choice_field"], original_cfvs["multi_choice_field"])
 
         # Validate database data
         site.refresh_from_db()
@@ -472,6 +542,7 @@ class CustomFieldAPITest(APITestCase):
         self.assertEqual(site.custom_field_data["date_field"], original_cfvs["date_field"])
         self.assertEqual(site.custom_field_data["url_field"], original_cfvs["url_field"])
         self.assertEqual(site.custom_field_data["choice_field"], original_cfvs["choice_field"])
+        self.assertEqual(site.custom_field_data["multi_choice_field"], original_cfvs["multi_choice_field"])
 
     def test_minimum_maximum_values_validation(self):
         url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
@@ -532,12 +603,15 @@ class CustomFieldImportTest(TestCase):
             CustomField(
                 name="select",
                 type=CustomFieldTypeChoices.TYPE_SELECT,
-                choices=["Choice A", "Choice B", "Choice C"],
             ),
         )
         for cf in custom_fields:
             cf.save()
             cf.content_types.set([ContentType.objects.get_for_model(Site)])
+
+        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice A")
+        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice B")
+        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice C")
 
     def test_import(self):
         """
@@ -758,8 +832,7 @@ class CustomFieldFilterTest(TestCase):
         # Selection filtering
         cf = CustomField(
             name="cf8",
-            type=CustomFieldTypeChoices.TYPE_URL,
-            choices=["Foo", "Bar", "Baz"],
+            type=CustomFieldTypeChoices.TYPE_SELECT,
         )
         cf.save()
         cf.content_types.set([obj_type])

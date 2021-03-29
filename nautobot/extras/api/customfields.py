@@ -2,8 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework.fields import CreateOnlyDefault, Field
 
 from nautobot.core.api import ValidatedModelSerializer
+from nautobot.extras.api.nested_serializers import NestedCustomFieldSerializer
 from nautobot.extras.choices import *
-from nautobot.extras.models import CustomField
+from nautobot.extras.models import CustomField, CustomFieldChoice
 
 
 #
@@ -87,3 +88,11 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         instance.custom_fields = {}
         for field in custom_fields:
             instance.custom_fields[field.name] = instance.cf.get(field.name)
+
+
+class CustomFieldChoiceSerializer(ValidatedModelSerializer):
+    field = NestedCustomFieldSerializer()
+
+    class Meta:
+        model = CustomFieldChoice
+        fields = ["id", "url", "field", "value", "weight"]
