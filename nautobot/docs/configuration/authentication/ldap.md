@@ -182,4 +182,4 @@ Ensure the file and path specified in logfile exist and are writable and executa
 
 ---
 
-Be sure to configure [EXTERNAL_AUTH_DEFAULT_GROUPS](../../configuration/optional-settings.md#external_auth_default_groups) and [EXTERNAL_AUTH_DEFAULT_PERMISSIONS](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
