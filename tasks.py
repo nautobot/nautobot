@@ -246,9 +246,10 @@ def unittest_coverage(context):
 
 
 @task
-def tests(context):
+def tests(context, lint_only=False):
     """Run all tests and linters."""
     black(context)
     flake8(context)
     check_migrations(context)
-    unittest(context)
+    if not lint_only:
+        unittest(context)

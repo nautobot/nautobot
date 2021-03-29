@@ -1,20 +1,28 @@
-_full_stack: &full_stack
-  services:
-    - postgresql
-    - redis
-  addons:
-    postgresql: "9.6"
-  before_script:
-    - psql --version
-    - psql -U postgres -c 'SELECT version();'
-    - psql -U postgres -c 'create database nautobot;'
-
+# Linting/Testing available at https://config.travis-ci.com/explore
+os: linux
+dist: xenial
+services:
+  - postgresql
+  - redis
+addons:
+  postgresql: "9.6"
+language: python
 env:
   - INVOKE_LOCAL=True
-os:
-  - linux
-dist: xenial
-language: python
+jobs:
+  fast_finish: true
+  include:
+    - stage: Linting
+      python: "3.6"
+      script:
+        - "poetry run invoke tests --lint-only"
+    - stage: Unit Tests
+      python: "3.6"
+    - python: "3.7"
+    - python: "3.8"
+    - python: "3.9"
+  allow_failures:
+    - python: "3.9"
 before_install:
   - pip install poetry
 install:
@@ -25,40 +33,9 @@ install:
   # For now we disable it.
   - poetry config installer.parallel false
   - poetry install
-
+before_script:
+  - psql --version
+  - psql -U postgres -c 'SELECT version();'
+  - psql -U postgres -c 'create database nautobot;'
 script:
-  - invoke $TEST
-
-stages:
-  - Linting
-jobs:
-  fast_finish: true
-  allow_failures:
-    - python: "3.9"
-  include:
-    - name: Black
-      python: "3.6"
-      script: invoke black
-    - name: Flake8
-      python: "3.6"
-      script: invoke flake8
-    - name: Check Migrations
-      python: "3.6"
-      <<: *full_stack
-      script: "invoke make-migrations"
-    - name: Unit Tests (Python 3.6)
-      python: "3.6"
-      <<: *full_stack
-      script: "invoke unittest"
-    - name: Unit Tests (Python 3.7)
-      python: "3.7"
-      <<: *full_stack
-      script: "invoke unittest"
-    - name: Unit Tests (Python 3.8)
-      python: "3.8"
-      <<: *full_stack
-      script: "invoke unittest"
-    - name: Unit Tests (Python 3.9)
-      python: "3.9"
-      <<: *full_stack
-      script: "invoke unittest"
+  - poetry run ./scripts/cibuild.sh
