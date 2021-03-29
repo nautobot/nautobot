@@ -166,6 +166,7 @@ RQ_QUEUES = {
 - `PASSWORD` - Redis password (if set)
 * `DB` - Numeric database ID
 - `SSL` - Use SSL connection to Redis
+- `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
 
 #### Using Redis Sentinel
 

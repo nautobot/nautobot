@@ -17,6 +17,7 @@ from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
     add_blank_choice,
+    AddressFieldMixin,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     CSVChoiceField,
@@ -26,6 +27,7 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
     NumericArrayField,
+    PrefixFieldMixin,
     ReturnURLForm,
     SlugField,
     StaticSelect2,
@@ -36,6 +38,7 @@ from nautobot.utilities.forms import (
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import *
 from .constants import *
+from .formfields import IPNetworkFormField
 from .models import (
     Aggregate,
     IPAddress,
@@ -235,7 +238,7 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class AggregateForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldModelForm, RelationshipModelForm):
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -259,7 +262,7 @@ class AggregateForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relations
         }
 
 
-class AggregateCSVForm(CustomFieldModelCSVForm):
+class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
     rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -334,7 +337,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -391,7 +394,7 @@ class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         self.fields["vrf"].empty_label = "Global"
 
 
-class PrefixCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class PrefixCSVForm(PrefixFieldMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -551,9 +554,11 @@ class IPAddressForm(
     BootstrapMixin,
     TenancyForm,
     ReturnURLForm,
+    AddressFieldMixin,
     CustomFieldModelForm,
     RelationshipModelForm,
 ):
+    address = IPNetworkFormField()
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -744,7 +749,7 @@ class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
-class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
+class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, CustomFieldModelForm):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -775,7 +780,7 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, CustomFieldModelForm):
         self.fields["vrf"].empty_label = "Global"
 
 
-class IPAddressCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",

@@ -46,12 +46,30 @@ $ sudo -iu nautobot
 !!! warning
     Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
+## Setup the Virtual Environment
+
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
+
+When installed per the documentation, Nautobot uses a virtual environment in production.
+
+In the following steps, we will have you create the virtualenv within the `NAUTOBOT_ROOT` you chose in the previous step. This is the same we had you set as the home directory as the `nautobot` user.
+
+!!! note
+    Instead of deliberately requiring you to activate/deactivate the virtualenv, we are emphasizing on relying on the `$PATH` to access programs installed within it. We find this to be much more intuitive and natural when working with Nautobot in this way.
+
+### Create the Virtual Environment
+
+We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libaries.
+
+```no-highlight
+$ python3 -m venv /opt/nautobot
+```
 
 ### Update the Nautobot `.bashrc`
 
-After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variable for this user and make sure that this variable is always set.
+So what about the `NAUTOBOT_ROOT`? We've referenced this environment variable several times. Here is where it finally gets set.
 
-Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
+We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user and make sure that it always set without having to do it manually. Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
 ```no-highlight
 $ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
@@ -63,16 +81,6 @@ Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` gets set and then e
 $ source ~/.bashrc
 $ echo $NAUTOBOT_ROOT
 /opt/nautobot
-```
-
-## Create the Virtual Environment
-
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
-
-We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment.
-
-```no-highlight
-$ python3 -m venv $NAUTOBOT_ROOT
 ```
 
 ## Understanding the Virtual Environment
@@ -146,12 +154,16 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 
 Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.
 
-Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings.
+Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
+
+* [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
+* [`DATABASES`](../../configuration/required-settings/#databases): PostgreSQL database connection parameters. If you installed PostgreSQL on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
-Save your changes to your `nautobot_config.py` and then return here.
+Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
 ## Optional Settings
 
@@ -251,8 +263,8 @@ $ nautobot-server runserver 0.0.0.0:8000 --insecure
 
 Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8000; for example, <http://127.0.0.1:8000/>. You should be greeted with the Nautobot home page.
 
-!!! warning
-    The development server is for development and testing purposes only. It is neither performant nor secure enough for production use. **Do not use it in production.**
+!!! danger
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 !!! warning
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected.

@@ -376,8 +376,8 @@ These variables are presented as a web form to be completed by the user. Once su
 ```python
 from django.utils.text import slugify
 
-from nautobot.dcim.choices import DeviceStatusChoices, SiteStatusChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Status
 from nautobot.extras.jobs import *
 
 
@@ -408,12 +408,13 @@ class NewBranch(Job):
     )
 
     def run(self, data, commit):
+        STATUS_PLANNED = Status.objects.get(slug='planned')
 
         # Create the new site
         site = Site(
             name=data['site_name'],
             slug=slugify(data['site_name']),
-            status=SiteStatusChoices.STATUS_PLANNED
+            status=STATUS_PLANNED,
         )
         site.validated_save()
         self.log_success(obj=site, message="Created new site")
@@ -425,7 +426,7 @@ class NewBranch(Job):
                 device_type=data['switch_model'],
                 name=f'{site.slug}-switch{i}',
                 site=site,
-                status=DeviceStatusChoices.STATUS_PLANNED,
+                status=STATUS_PLANNED,
                 device_role=switch_role
             )
             switch.validated_save()
@@ -451,8 +452,8 @@ class NewBranch(Job):
 A job to perform various validation of Device data in Nautobot. As this job does not require any user input, it does not define any variables, nor does it implement a `run()` method.
 
 ```python
-from nautobot.dcim.choices import DeviceStatusChoices
 from nautobot.dcim.models import ConsolePort, Device, PowerPort
+from nautobot.extras.models import Status
 from nautobot.extras.jobs import Job
 
 
@@ -460,10 +461,10 @@ class DeviceConnectionsReport(Job):
     description = "Validate the minimum physical connections for each device"
 
     def test_console_connection(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every console port for every active device has a connection defined.
-        active = DeviceStatusChoices.STATUS_ACTIVE
-        for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=active):
+        for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
             if console_port.connected_endpoint is None:
                 self.log_failure(
                     obj=console_port.device,
@@ -478,9 +479,10 @@ class DeviceConnectionsReport(Job):
                 self.log_success(obj=console_port.device)
 
     def test_power_connections(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every active device has at least two connected power supplies.
-        for device in Device.objects.filter(status=DeviceStatusChoices.STATUS_ACTIVE):
+        for device in Device.objects.filter(status=STATUS_ACTIVE):
             connected_ports = 0
             for power_port in PowerPort.objects.filter(device=device):
                 if power_port.connected_endpoint is not None:
@@ -498,5 +500,3 @@ class DeviceConnectionsReport(Job):
             else:
                 self.log_success(obj=device)
 ```
-
-

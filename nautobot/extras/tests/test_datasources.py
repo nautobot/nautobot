@@ -6,7 +6,7 @@ import uuid
 
 import yaml
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase
 
@@ -22,6 +22,10 @@ from nautobot.extras.models import (
     JobResult,
     Status,
 )
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 @mock.patch("nautobot.extras.datasources.git.GitRepo")

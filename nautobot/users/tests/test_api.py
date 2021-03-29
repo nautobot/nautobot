@@ -1,10 +1,15 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APIViewTestCases, APITestCase
 from nautobot.utilities.utils import deepmerge
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class AppTest(APITestCase):
@@ -145,7 +150,6 @@ class UserConfigTest(APITestCase):
         """
         Retrieve user configuration via GET request.
         """
-        userconfig = self.user.config
         url = reverse("users-api:userconfig-list")
 
         response = self.client.get(url, **self.header)
@@ -156,8 +160,8 @@ class UserConfigTest(APITestCase):
             "b": 456,
             "c": 789,
         }
-        userconfig.data = data
-        userconfig.save()
+        self.user.config_data = data
+        self.user.save()
         response = self.client.get(url, **self.header)
         self.assertEqual(response.data, data)
 
@@ -165,7 +169,6 @@ class UserConfigTest(APITestCase):
         """
         Set user config via PATCH requests.
         """
-        userconfig = self.user.config
         url = reverse("users-api:userconfig-list")
 
         data = {
@@ -179,12 +182,12 @@ class UserConfigTest(APITestCase):
         }
         response = self.client.patch(url, data=data, format="json", **self.header)
         self.assertDictEqual(response.data, data)
-        userconfig.refresh_from_db()
-        self.assertDictEqual(userconfig.data, data)
+        self.user.refresh_from_db()
+        self.assertDictEqual(self.user.config_data, data)
 
         update_data = {"c": 123}
         response = self.client.patch(url, data=update_data, format="json", **self.header)
         new_data = deepmerge(data, update_data)
         self.assertDictEqual(response.data, new_data)
-        userconfig.refresh_from_db()
-        self.assertDictEqual(userconfig.data, new_data)
+        self.user.refresh_from_db()
+        self.assertDictEqual(self.user.config_data, new_data)

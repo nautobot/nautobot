@@ -1,6 +1,6 @@
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
@@ -24,6 +24,10 @@ from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class ExportTemplateTestCase(TestCase):
@@ -505,7 +509,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -514,7 +518,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -523,7 +527,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
 
     def test_id(self):

@@ -1,4 +1,5 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.db.models import Count
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,7 +8,7 @@ from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.views import ModelViewSet
 from nautobot.users import filters
-from nautobot.users.models import ObjectPermission, UserConfig
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import deepmerge
 from . import serializers
@@ -28,7 +29,7 @@ class UsersRootView(APIRootView):
 
 
 class UserViewSet(ModelViewSet):
-    queryset = RestrictedQuerySet(model=User).prefetch_related("groups").order_by("username")
+    queryset = RestrictedQuerySet(model=get_user_model()).prefetch_related("groups").order_by("username")
     serializer_class = serializers.UserSerializer
     filterset_class = filters.UserFilterSet
 
@@ -57,29 +58,24 @@ class ObjectPermissionViewSet(ModelViewSet):
 
 class UserConfigViewSet(ViewSet):
     """
-    An API endpoint via which a user can update his or her own UserConfig data (but no one else's).
+    An API endpoint via which a user can update his or her own config data (user preferences), but no one else's.
     """
 
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return UserConfig.objects.filter(user=self.request.user)
-
     def list(self, request):
         """
-        Return the UserConfig for the currently authenticated User.
+        Return the config_data for the currently authenticated User.
         """
-        userconfig = self.get_queryset().first()
-
-        return Response(userconfig.data)
+        return Response(request.user.config_data)
 
     def patch(self, request):
         """
-        Update the UserConfig for the currently authenticated User.
+        Update the config_data for the currently authenticated User.
         """
         # TODO: How can we validate this data?
-        userconfig = self.get_queryset().first()
-        userconfig.data = deepmerge(userconfig.data, request.data)
-        userconfig.save()
+        user = request.user
+        user.config_data = deepmerge(user.config_data, request.data)
+        user.save()
 
-        return Response(userconfig.data)
+        return Response(user.config_data)

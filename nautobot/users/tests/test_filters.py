@@ -1,4 +1,5 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
@@ -8,6 +9,10 @@ from nautobot.users.filters import (
     UserFilterSet,
 )
 from nautobot.users.models import ObjectPermission
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class UserTestCase(TestCase):
