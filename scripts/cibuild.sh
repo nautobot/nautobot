@@ -38,7 +38,7 @@ if [[ $RC != 0 ]]; then
 fi
 
 # Dockerfile lint with hadolint
-docker run --rm -i ghcr.io/hadolint/hadolint < docker/Dockerfile
+hadolint docker/Dockerfile
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) Dockerfile did not pass hadolint; failing build."

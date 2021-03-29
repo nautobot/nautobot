@@ -1,22 +1,35 @@
-dist: focal
-sudo: required
+# Linting available at https://config.travis-ci.com/explore
+os: linux
+dist: xenial
 services:
   - postgresql
-  - redis-server
+  - redis
   - docker
 addons:
   postgresql: "9.6"
 language: python
-matrix:
+jobs:
   include:
     - python: "3.6"
     - python: "3.7"
     - python: "3.8"
     - python: "3.9"
+    - stage: Docker
+      python: "3.6"
+      env:
+        - PYTHON_VER=3.6
+        - COMPOSE_OVERRIDE_FILE=docker-compose.test.yml
+      script:
+        - invoke build
+      after_script:
+        - docker images
   allow_failures:
     - python: "3.9"
 before_install:
   - pip install poetry
+  - echo $PATH
+  - curl -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+  - chmod +x /usr/local/bin/hadolint
 install:
   - poetry config virtualenvs.create false
   # Poetry 1.1.0 added parallel installation as an option;
@@ -32,13 +45,3 @@ before_script:
   - docker pull ghcr.io/hadolint/hadolint
 script:
   - poetry run ./scripts/cibuild.sh
-jobs:
-  include:
-    - stage: Docker
-      env:
-        - PYTHON_VER=3.6
-        - COMPOSE_OVERRIDE_FILE=docker-compose.test.yml
-      script:
-        - invoke build
-      after_script:
-        - docker images
