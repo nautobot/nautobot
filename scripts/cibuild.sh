@@ -12,6 +12,7 @@ info()
 # Track number of seconds required to run script
 START=$(date +%s)
 echo "$(info) starting build checks."
+export INVOKE_LOCAL=True
 
 # Syntax check all python source files
 SYNTAX=$(find . -name "*.py" -type f -exec python -m py_compile {} \; 2>&1)
@@ -22,7 +23,7 @@ if [[ ! -z $SYNTAX ]]; then
 fi
 
 # Check all built-in python source files for PEP 8 compliance
-flake8 development/ nautobot/ tasks.py
+invoke flake8
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more PEP 8 errors detected; failing build."
@@ -30,18 +31,15 @@ if [[ $RC != 0 ]]; then
 fi
 
 # Check that all files conform to Black.
-black --check development/ nautobot/ tasks.py
+invoke black
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more Black errors detected; failing build."
 	EXIT=$RC
 fi
 
-# Point to the testing nautobot_config file for use in CI
-TEST_CONFIG=nautobot/core/tests/nautobot_config.py
-
 # Run Nautobot tests
-coverage run -m nautobot.core.cli --config=$TEST_CONFIG test nautobot/
+invoke unittest
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."
