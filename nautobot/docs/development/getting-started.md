@@ -144,22 +144,23 @@ Now that you have an `invoke` command, list the tasks defined in `tasks.py`:
 $ invoke --list
 Available tasks:
 
-  black             Check Python code style with Black
-  build             Build all docker images.
-  cli               Launch a bash shell inside the running Nautobot container.
-  coverage-report   Run coverage report
-  coverage-run      Run tests
-  createsuperuser   Create a new superuser in django (default: admin), will prompt for password.
-  debug             Start Nautobot and its dependencies in debug mode.
-  destroy           Destroy all containers and volumes.
-  flake8            Check PEP8 compliance and other style issues
-  makemigrations    Run Make Migration in Django.
-  migrate           Perform migrate operation in Django.
-  nbshell           Launch a nbshell session.
-  start             Start Nautobot and its dependencies in detached mode.
-  stop              Stop Nautobot and its dependencies.
-  tests             Run all tests
-  vscode            Launch Visual Studio Code with the appropriate Environment variables to run in a container.
+  black               Check Python code style with Black.
+  build               Build all docker images.
+  cli                 Launch a bash shell inside the running Nautobot container.
+  createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
+  debug               Start Nautobot and its dependencies in debug mode.
+  destroy             Destroy all containers and volumes.
+  flake8              Check for PEP8 compliance and other style issues.
+  makemigrations      Perform makemigrations operation in Django.
+  migrate             Perform migrate operation in Django.
+  nbshell             Launch an interactive nbshell session.
+  restart             Gracefully restart all containers.
+  start               Start Nautobot and its dependencies in detached mode.
+  stop                Stop Nautobot and its dependencies.
+  tests               Run all tests and linters.
+  unittest            Run Nautobot unit tests.
+  unittest-coverage   Report on code test coverage as measured by 'invoke unittest'.
+  vscode              Launch Visual Studio Code with the appropriate Environment variables to run in a container.
 ```
 
 #### Using Docker with Invoke
@@ -174,6 +175,9 @@ Additional useful commands for the development environment:
 
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
 - `invoke stop` - Stops all containers created by `invoke start`
+
+!!! info
+    By default the Nautobot docker images for development are built with Python 3.7. If you wish to build them with a different Python version, stop any running containers, then set the environment variable `PYTHON_VER` to the desired version (for example, `export PYTHON_VER=3.8`) and rerun the `invoke build` command. As long as `PYTHON_VER` remains set, all other `invoke` tasks will use the containers built for this version instead of the default.
 
 #### Working with Docker Compose
 
@@ -241,6 +245,9 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 After opening the project directory in VS Code in a supported environment, you will be prompted by VS Code to **Reopen in Container** and **Open Workspace**. Select **Reopen in Container** to build and start the development containers. Once your window is connected to the container, you can open the workspace which enables support for Run/Debug.
 
 To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
+
+!!! note
+    You can run tests with `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` while inside the Container.
 
 ##### Special Workflow for Containers on Remote Servers
 
@@ -316,7 +323,8 @@ Observe also that the `python` interpreter is bound within the virtualenv:
 ```
 
 To exit the virtual shell, use `exit`:
-```
+
+```no-highlight
 (nautobot-Ams_xyDt-py3.8) $ exit
 $
 ```
@@ -326,7 +334,7 @@ $
 Poetry automatically installs your dependencies. However, if you need to install any additional dependencies this can be done with `pip`. For example, if you really like using `ipython` for development:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ python -m pip install ipython
+(nautobot-Ams_xyDt-py3.8) $ pip3 install ipython
 Collecting ipython
   Using cached ipython-7.20.0-py3-none-any.whl (784 kB)
   ...
@@ -338,15 +346,15 @@ It may not always be convenient to enter into the virtual shell just to run prog
 $ poetry run mkdocs serve
 ```
 
-Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.	
+Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.
+
+#### Configuring Nautobot
 
 !!! note
 	Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
 	Use `poetry shell` to enter the virtualenv.
-
-#### Configuring Nautobot
 
 Nautobot's configuration file is `nautobot_config.py`.
 
@@ -383,9 +391,12 @@ A newly created configuration includes sane defaults. If you need to customize t
 
 #### Starting the Development Server
 
-Django provides a lightweight, auto-updating HTTP/WSGI server for development use.
+Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
 
-Run the Nautobot development server with the `runserver` management command:
+!!! danger
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
+
+You can start the Nautobot development server with the `runserver` management command:
 
 ```no-highlight
 $ nautobot-server runserver
@@ -398,7 +409,10 @@ Starting development server at http://127.0.0.1:8000/
 Quit the server with CONTROL-C.
 ```
 
-This ensures that your development environment is now complete and operational. Any changes you make to the code base will be automatically adapted by the development server.
+!!! warning
+    Do not use `poetry run nautobot-server runserver` as it will crash unless you also pass the `--noreload` flag, which somewhat defeats the purpose of using the development server. It is recommended to use `nautobot-server runserver` from within an active virtualenv (e.g. `poetry shell`). This is a [known issue with Django and Poetry](https://github.com/python-poetry/poetry/issues/2435).
+
+Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
 #### Starting the Interactive Shell
 
@@ -416,23 +430,32 @@ $ nautobot-server nbshell
 
 ## Running Tests
 
-Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests are run using the `test` management command:
+Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
 
-```no-highlight
-$ nautobot-server test
-```
+| Docker Compose Workflow | Virtual Environment Workflow                                           |
+|-------------------------|------------------------------------------------------------------------|
+| `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
+
+| Docker Compose Workflow    | Virtual Environment Workflow                                                    |
+|----------------------------|---------------------------------------------------------------------------------|
+| `invoke unittest --keepdb` | `nautobot-server test --keepdb --config=nautobot/core/tests/nautobot_config.py` |
 
 !!! note
 	Using the `--keepdb` argument will cause errors if you've modified any model fields since the previous test run.
 
-```no-highlight
-$ nautobot-server test --keepdb
-```
-
 !!! warning
 	In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
+
+## Verifying Code Style
+
+To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). You should run both of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
+
+| Docker Compose Workflow | Virtual Environment Workflow |
+|-------------------------|------------------------------|
+| `invoke flake8`         | `flake8`                     |
+| `invoke black`          | `black`                      |
 
 ## Submitting Pull Requests
 

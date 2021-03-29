@@ -104,10 +104,6 @@ BANNER_BOTTOM = ""
 # Text to include on the login page above the login form. HTML is allowed.
 BANNER_LOGIN = ""
 
-# Base URL path if accessing Nautobot within a directory. For example, if installed at https://example.com/nautobot/, set:
-# BASE_PATH = 'nautobot/'
-BASE_PATH = ""
-
 # Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
 CACHEOPS_DEFAULTS = {"timeout": 900}
 
@@ -155,6 +151,9 @@ EXEMPT_VIEW_PERMISSIONS = [
     # 'dcim.region',
     # 'ipam.prefix',
 ]
+
+# If hosting Nautobot in a subdirectory, you must set this value to match the base URL prefix configured in your HTTP server (e.g. `/nautobot/`). When not set, URLs will default to being prefixed by `/`.
+FORCE_SCRIPT_NAME = None
 
 # HTTP proxies Nautobot should use when sending outbound HTTP requests (e.g. for webhooks).
 # HTTP_PROXIES = {

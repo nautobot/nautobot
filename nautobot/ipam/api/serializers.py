@@ -138,6 +138,7 @@ class RIRSerializer(CustomFieldModelSerializer):
 class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+    prefix = IPFieldSerializer()
     rir = NestedRIRSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
 
@@ -274,6 +275,7 @@ class VLANSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
 class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+    prefix = IPFieldSerializer()
     site = NestedSiteSerializer(required=False, allow_null=True)
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -357,6 +359,7 @@ class AvailablePrefixSerializer(serializers.Serializer):
 class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+    address = IPFieldSerializer()
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     role = ChoiceField(choices=IPAddressRoleChoices, allow_blank=True, required=False)

@@ -509,7 +509,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -518,7 +518,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -527,7 +527,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
 
     def test_id(self):

@@ -3,7 +3,6 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
@@ -16,6 +15,7 @@ from taggit.managers import TaggableManager
 from nautobot.extras.models import Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
+from nautobot.utilities.fields import JSONArrayField
 from .utils import disable_warnings, extract_form_failures, post_data
 
 
@@ -85,7 +85,7 @@ class TestCase(_TestCase):
 
             if api:
 
-                # Replace ContentType numeric IDs with <app_label>.<model>
+                # Replace ContentType primary keys with <app_label>.<model>
                 if type(getattr(instance, key)) is ContentType:
                     ct = ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
@@ -97,7 +97,7 @@ class TestCase(_TestCase):
             else:
 
                 # Convert ArrayFields to CSV strings
-                if type(instance._meta.get_field(key)) is ArrayField:
+                if type(field) is JSONArrayField:
                     model_dict[key] = ",".join([str(v) for v in value])
 
                 # Convert JSONField dict values to JSON strings

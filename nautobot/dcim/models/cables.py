@@ -10,7 +10,7 @@ from django.utils.functional import classproperty
 
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
-from nautobot.dcim.fields import PathField
+from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import (
     decompile_path_node,
     object_to_path_node,
@@ -330,7 +330,7 @@ class CablePath(BaseModel):
     )
     destination_id = models.UUIDField(blank=True, null=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
-    path = PathField()
+    path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
 
@@ -371,7 +371,11 @@ class CablePath(BaseModel):
         is_split = False
 
         node = origin
+        visited_nodes = set()
         while node.cable is not None:
+            if node.id in visited_nodes:
+                raise ValidationError("a loop is detected in the path")
+            visited_nodes.add(node.id)
             if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 

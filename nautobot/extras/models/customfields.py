@@ -4,7 +4,6 @@ from datetime import datetime, date
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
@@ -14,6 +13,7 @@ from nautobot.extras.choices import *
 from nautobot.extras.tasks import update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery
 from nautobot.core.models import BaseModel
+from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
     CSVChoiceField,
     DatePicker,

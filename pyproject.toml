@@ -83,6 +83,8 @@ pycryptodome = "~3.10.1"
 pyuwsgi = "^2.0.19"
 # YAML parsing and rendering
 PyYAML = "~5.4.1"
+# Social authentication/registration with support for many auth providers
+social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
 
@@ -127,7 +129,5 @@ exclude = '''
     | build
     | dist
   )/
-  | settings.py     # This is where you define files that should not be stylized by black
-                     # the root of the project
 )
 '''
