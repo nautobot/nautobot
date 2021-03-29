@@ -13,7 +13,7 @@ env:
   - INVOKE_LOCAL=True
 os:
   - linux
-dist: focal
+dist: xenial
 language: python
 before_install:
   - pip install poetry
