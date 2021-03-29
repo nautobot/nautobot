@@ -18,7 +18,7 @@ SYNTAX=$(find . -name "*.py" -type f -exec python -m py_compile {} \; 2>&1)
 if [[ ! -z $SYNTAX ]]; then
 	echo -e "$SYNTAX"
 	echo -e "\n$(info) detected one or more syntax errors; failing build."
-	EXIT=1
+	exit 1
 fi
 
 # Check all built-in python source files for PEP 8 compliance
@@ -26,7 +26,7 @@ flake8 development/ nautobot/ tasks.py
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more PEP 8 errors detected; failing build."
-	EXIT=$RC
+	exit $RC
 fi
 
 # Check that all files conform to Black.
@@ -34,15 +34,15 @@ black --check development/ nautobot/ tasks.py
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more Black errors detected; failing build."
-	EXIT=$RC
+	exit $RC
 fi
 
 # Dockerfile lint with hadolint
-hadolintw docker/Dockerfile
+docker run --rm -i ghcr.io/hadolint/hadolint < docker/Dockerfile
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) Dockerfile did not pass hadolint; failing build."
-	EXIT=$RC
+	exit $RC
 fi
 
 # Point to the testing nautobot_config file for use in CI
@@ -53,7 +53,7 @@ coverage run -m nautobot.core.cli --config=$TEST_CONFIG test nautobot/
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."
-	EXIT=$RC
+	exit $RC
 fi
 
 # Show code coverage report
@@ -61,7 +61,7 @@ coverage report --skip-covered --include "nautobot/*" --omit "*migrations*"
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) failed to generate code coverage report."
-	EXIT=$RC
+	exit $RC
 fi
 
 # Show build duration

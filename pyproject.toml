@@ -104,7 +104,6 @@ markdown-include = "~0.6.0"
 # Rendering docs to HTML
 mkdocs = "~1.1.2"
 # Dockerfile linting
-hadolintw = "^1.2.1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

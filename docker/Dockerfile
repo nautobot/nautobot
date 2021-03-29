@@ -116,7 +116,7 @@ COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
 # Copy SSL certs after the directory exists
 COPY --from=dev /opt/nautobot/nautobot.key /opt/nautobot/nautobot.crt /opt/nautobot/
 
-# TODO Change to contrib/uwsgi.ini once the uwsgi config has been ironed out
+# Configure UWSGI
 COPY docker/uwsgi.ini /opt/nautobot
 
 # Make sure everything under /opt/nautobot is owned by nautobot

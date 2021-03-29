@@ -1,37 +1,39 @@
+dist: focal
+sudo: required
+services:
+  - postgresql
+  - redis-server
+  - docker
+addons:
+  postgresql: "9.6"
+language: python
+matrix:
+  include:
+    - python: "3.6"
+    - python: "3.7"
+    - python: "3.8"
+    - python: "3.9"
+  allow_failures:
+    - python: "3.9"
+before_install:
+  - pip install poetry
+install:
+  - poetry config virtualenvs.create false
+  # Poetry 1.1.0 added parallel installation as an option;
+  # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
+  # while simultaneously atttempting to *use* those packages to install other packages.
+  # For now we disable it.
+  - poetry config installer.parallel false
+  - poetry install
+before_script:
+  - psql --version
+  - psql -U postgres -c 'SELECT version();'
+  - psql -U postgres -c 'create database nautobot;'
+  - docker pull ghcr.io/hadolint/hadolint
+script:
+  - poetry run ./scripts/cibuild.sh
 jobs:
   include:
-    - stage: Python
-      sudo: required
-      services:
-        - postgresql
-        - redis-server
-      addons:
-        postgresql: "9.6"
-      language: python
-      matrix:
-        include:
-          - python: "3.6"
-          - python: "3.7"
-          - python: "3.8"
-          - python: "3.9"
-        allow_failures:
-          - python: "3.9"
-      before_install:
-        - pip install poetry
-      install:
-        - poetry config virtualenvs.create false
-        # Poetry 1.1.0 added parallel installation as an option;
-        # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
-        # while simultaneously atttempting to *use* those packages to install other packages.
-        # For now we disable it.
-        - poetry config installer.parallel false
-        - poetry install
-      before_script:
-        - psql --version
-        - psql -U postgres -c 'SELECT version();'
-        - psql -U postgres -c 'create database nautobot;'
-      script:
-        - poetry run ./scripts/cibuild.sh
     - stage: Docker
       services: 
         - docker
