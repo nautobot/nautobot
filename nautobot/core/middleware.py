@@ -35,7 +35,7 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
 
     def process_request(self, request):
         # Bypass middleware if remote authentication is not enabled
-        if "nautobot.core.authentication.RemoteUserBackend" not in settings.AUTHENTICATION_BACKENDS:
+        if not remote_auth_enabled(auth_backends=settings.AUTHENTICATION_BACKENDS):
             return
 
         return super().process_request(request)
