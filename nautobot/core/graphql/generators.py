@@ -163,9 +163,12 @@ def generate_list_resolver(schema_type, resolver_name):
     def list_resolver(self, info, **kwargs):
         if schema_type._meta.filterset_class:
             fsargs = {key: [value] for key, value in kwargs.items()}
-            return schema_type._meta.filterset_class(
+            resolved_obj = schema_type._meta.filterset_class(
                 fsargs, model.objects.restrict(info.context.user, "view").all()
-            ).qs.all()
+            )
+            if resolved_obj.errors:
+                return resolved_obj.errors
+            return resolved_obj.qs.all()
 
         return model.objects.restrict(info.context.user, "view").all()
 
