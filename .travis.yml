@@ -9,6 +9,8 @@ _full_stack: &full_stack
     - psql -U postgres -c 'SELECT version();'
     - psql -U postgres -c 'create database nautobot;'
 
+env:
+  - INVOKE_LOCAL=True
 os:
   - linux
 dist: focal
