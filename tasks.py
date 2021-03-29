@@ -34,6 +34,7 @@ def is_truthy(arg):
 
 PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
 
+
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
 COMPOSE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.yml")
 COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.override.yml")
@@ -42,7 +43,8 @@ COMPOSE_COMMAND = f'docker-compose --project-directory "{COMPOSE_DIR}" -f "{COMP
 if os.path.isfile(COMPOSE_OVERRIDE_FILE):
     COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
 
-INVOKE_LOCAL = is_truthy(os.getenv("INVOKE_LOCAL", False)) 
+INVOKE_LOCAL = is_truthy(os.getenv("INVOKE_LOCAL", False))
+
 
 def docker_compose(context, command, **kwargs):
     """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
