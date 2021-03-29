@@ -167,10 +167,14 @@ def generate_list_resolver(schema_type, resolver_name):
             resolved_obj = schema_type._meta.filterset_class(
                 fsargs, model.objects.restrict(info.context.user, "view").all()
             )
+            # Check result filter for errors.
             if resolved_obj.errors:
                 errors = {}
+                # Build error message from results
+                # Error messages are collected from each filter object
                 for key in resolved_obj.errors:
                     errors[key] = resolved_obj.errors[key]
+                # Raising this exception will send the error message in the response of the GraphQL request
                 raise GraphQLError(errors)
             return resolved_obj.qs.all()
 
