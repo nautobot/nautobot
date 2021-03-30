@@ -55,7 +55,7 @@ jobs:
         - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
         - echo docker push ghcr.io/nautobot/nautobot:latest-dev
         - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
-      after_script:
+      before_cache:
         - docker images
         - rm -rf /home/travis/docker_images
   allow_failures:
