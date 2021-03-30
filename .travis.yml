@@ -2,6 +2,7 @@
 os: linux
 dist: xenial
 cache:
+  pip: true
   directories:
     - /home/travis/docker_images
 services:
@@ -24,6 +25,7 @@ jobs:
         - OVERRIDE_FILENAME=docker-compose.test.yml
       before_install:
         - pip install poetry docker-compose
+        - rm -rf /home/travis/docker_images
       script:
         - invoke build
       after_script:
@@ -54,6 +56,7 @@ jobs:
         - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
       after_script:
         - docker images
+        - rm -rf /home/travis/docker_images
   allow_failures:
     - python: "3.9"
 before_install:
