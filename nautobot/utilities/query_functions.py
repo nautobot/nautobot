@@ -25,15 +25,7 @@ class JSONBAgg(Aggregate):
         return super().as_sql(compiler, connection, **extra_context)
 
 
-class OrderableJSONBAgg(OrderableAggMixin, JSONBAgg):
-    """
-    TODO in Django 3.2 ordering is supported natively on JSONBAgg so this is no longer needed.
-    """
-
-    template = "%(function)s(%(distinct)s%(expressions)s %(ordering)s)"
-
-
-class EmptyGroupByJSONBAgg(OrderableJSONBAgg):
+class EmptyGroupByJSONBAgg(JSONBAgg):
     """
     JSONBAgg is a builtin aggregation function which means it includes the use of a GROUP BY clause.
     When used as an annotation for collecting config context data objects, the GROUP BY is
@@ -43,3 +35,11 @@ class EmptyGroupByJSONBAgg(OrderableJSONBAgg):
     """
 
     contains_aggregate = False
+
+
+class OrderableJSONBAgg(OrderableAggMixin, JSONBAgg):
+    """
+    TODO in Django 3.2 ordering is supported natively on JSONBAgg so this is no longer needed.
+    """
+
+    template = "%(function)s(%(distinct)s%(expressions)s %(ordering)s)"
