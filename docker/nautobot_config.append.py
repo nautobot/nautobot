@@ -30,8 +30,4 @@ LOGGING = {
             "level": LOG_LEVEL,
         },
     },
-    "root": {
-        "handlers": ["normal_console"],
-        "level": LOG_LEVEL,
-    },
 }
