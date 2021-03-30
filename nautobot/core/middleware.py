@@ -3,7 +3,6 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
-from django.utils.deprecation import MiddlewareMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.db import ProgrammingError
 from django.http import Http404
@@ -41,7 +40,7 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
         return super().process_request(request)
 
 
-class ExternalAuthMiddleware(MiddlewareMixin):
+class ExternalAuthMiddleware:
     """
     Custom implementation of Django's AuthenticationMiddleware used to set permissions for ephemeral users
     """
