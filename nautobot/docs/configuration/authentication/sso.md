@@ -25,7 +25,7 @@ This module supports several [authentication backends](https://python-social-aut
 
 ### Install Dependencies
 
-If you are using OpenID Connect or SAML you will also need to install the extra dependencies for those. 
+If you are using OpenID Connect or SAML you will also need to install the extra dependencies for those.
 
 #### OpenID Connect
 
@@ -88,7 +88,7 @@ AUTHENTICATION_BACKENDS = [
 
 ### Select your Authentication Backend
 
-You will need to select the correct social authentication module name for your desired method of external authentication. Please see [the official Python Social Auth documentation on supported backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends) for more the full list of backends and any specific configuration or required settings.  
+You will need to select the correct social authentication module name for your desired method of external authentication. Please see [the official Python Social Auth documentation on supported backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends) for more the full list of backends and any specific configuration or required settings.
 
 Some common backend module names include:
 
@@ -118,7 +118,7 @@ Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configura
 
 ## Configuration Guides
 
-The following guides are provided for some of the most common authentication methods. 
+The following guides are provided for some of the most common authentication methods.
 
 ### Okta - OpenID
 
@@ -186,7 +186,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 ```
 ### SAML
 
-This guide will wallk you through configuring Nautobot to authenticate using SAML with Google as the identity provider. 
+This guide will wallk you through configuring Nautobot to authenticate using SAML with Google as the identity provider.
 
 !!! important
 	Please note that there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
@@ -206,7 +206,7 @@ Before you begin you will need the following:
 #### Setup SAML in Google
 
 1. Visit the [Web and mobile apps](https://admin.google.com/ac/apps/unified) console in the Google Admin dashboard.
-2. Follow the instructions to create a new SAML application Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), pausing at step 6.
+2. Follow Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), pausing at step 6.
 3. From step 6 of the instructions, capture the **SSO URL**, **Entity ID**, and **Certificate**. You will use these in later steps to configure Nautobot. Each of these will be referred to as `GOOGLE_SSO_URL`, `GOOGLE_ENTITY_ID`, and `GOOGLE_CERTIFICATE` respectively.
 4. Skip step 7 in the instructions, as that does not apply here because we will be configuring Nautobot directly.
 5. For step 9 of the instructions under *Service provider details*, provide the following
@@ -225,10 +225,10 @@ Before you begin you will need the following:
 
 #### Configure Nautobot
 
-There is a lot to configure to tell SAML what to do, so please provide the following configuration very carefully. All of these values must be correctly configured in your `nautobot_config.py`.
+There is a lot to configure to Nautobot how to integrate with SAML, so please provide the following configuration very carefully. All of these values must be correctly configured in your `nautobot_config.py`.
 
 !!! important
-	Refer to the [official Python Social Auth documentation for required SAML configuration](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html#required-configuration) if you run into any issues. 
+	Refer to the [official Python Social Auth documentation for required SAML configuration](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html#required-configuration) if you run into any issues.
 
 ```python
 # Django authentication backends
@@ -240,13 +240,13 @@ AUTHENTICATION_BACKENDS = [
 # The https FQDN to your Nautobot instance
 SOCIAL_AUTH_SAML_SP_ENTITY_ID = "https://nautobot.example.com/"
 
-# X.509 cert/key pair used for host verification are not used for this example because Nautobot
-# is directly authenticating itself to Google. Set them to empty strings.
+# X.509 cert/key pair used for host verification are not used for this example because
+# Nautobot is directly authenticating itself to Google. Set them to empty strings.
 SOCIAL_AUTH_SAML_SP_PUBLIC_CERT = ""
 SOCIAL_AUTH_SAML_SP_PRIVATE_KEY = ""
 
-# A dictionary that contains information about your app. You must specify values for English at
-# a minimum. 
+# A dictionary that contains information about your app. You must specify values for
+# English at a minimum.
 SOCIAL_AUTH_SAML_ORG_INFO = {
     "en-US": {
         "name": "Nautobot",
@@ -276,8 +276,8 @@ GOOGLE_SSO_URL = "<SSO URL from Google>"
 # The Certificate for Google from step 3
 GOOGLE_CERTIFICATE = "<Certificate from Google>"
 
-# The most important setting. List the Entity ID, SSO URL, and x.509 public key certificate 
-# for each provider that you app wants to support. We are only supporting Google for this 
+# The most important setting. List the Entity ID, SSO URL, and x.509 public key certificate
+# for each provider that you app wants to support. We are only supporting Google for this
 # example.
 SOCIAL_AUTH_SAML_ENABLED_IDPS = {
     "google": {
@@ -293,7 +293,7 @@ SOCIAL_AUTH_SAML_ENABLED_IDPS = {
     }
 }
 
-# Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need 
+# Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
 # these depending on your production deployment. They are provided here just in case.
 SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -303,7 +303,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 Note the provider entry we configured in `SOCIAL_AUTH_SAML_ENABLED_IDPS` as `google`. This will be used to login and will be referenced in the query parameter using `idp=google`. For example `/login/saml/?idp=google`.
 
-This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account" , log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
+This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account", log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
 
 ---
 
