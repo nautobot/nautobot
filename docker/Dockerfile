@@ -118,6 +118,7 @@ COPY --from=dev /opt/nautobot/nautobot.key /opt/nautobot/nautobot.crt /opt/nauto
 
 # Configure UWSGI
 COPY docker/uwsgi.ini /opt/nautobot
+COPY docker/nautobot_config.append.py /opt/nautobot
 
 # Make sure everything under /opt/nautobot is owned by nautobot
 RUN chown -R nautobot:nautobot /opt/nautobot
@@ -126,7 +127,9 @@ USER nautobot
 
 WORKDIR /opt/nautobot
 
-RUN nautobot-server init
+RUN nautobot-server init && \
+    cat /opt/nautobot/nautobot_config.append.py >> /opt/nautobot/nautobot_config.py && \
+    rm -f /opt/nautobot/nautobot_config.append.py
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "nautobot-server", "check" ]
 
