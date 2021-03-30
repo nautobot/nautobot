@@ -1,10 +1,15 @@
+
+
+
+
+
+
 # Single Sign On
 
 Nautobot supports several different authentication mechanisms including OAuth (1 and 2), OpenID, SAML, and others.
-To accomplish this the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) python module is used.
+To accomplish this, Nautobot comes preinstalled with the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) python module.
 
-This module supports several [authentication backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html)
-by default including:
+This module supports several [authentication backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html) by default including:
 
 * Google
 * Microsoft Azure Active Directory
@@ -14,45 +19,78 @@ by default including:
 ## Installation
 
 !!! warning
-    This and all remaining steps in this document should all be performed as the `nautobot` user!
+    Unless otherwise noted, all remaining steps in this document should all be performed as the `nautobot` user!
 
     Hint: Use `sudo -iu nautobot`
 
 ### Install Dependencies
 
-```shell
-$ pip3 install social-auth-app-django
-```
-
-### Extra Dependencies
-
-If you are using OpenID Connect or SAML you will also need to include the extra dependencies for those.
+If you are using OpenID Connect or SAML you will also need to install the extra dependencies for those. 
 
 #### OpenID Connect
 
-```shell
+For OpenID connect, you'll need to install the `openidconnect` Python extra.
+
+```no-highlight
 $ pip3 install "social-auth-core[openidconnect]"
 ```
 
 #### SAML
 
-```shell
+For SAML, additional system-level dependencies are required so that the specialized XML libraries can be built and compiled for your system.
+
+!!! note
+	These instructions have only been certified on Ubuntu 20.04 at this time.
+
+Install the system dependencies as `root`:
+
+```no-highlight
+$ sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
+```
+
+Install the `saml` Python extra as the`nautobot` user.
+
+```no-highlight
 $ pip3 install "social-auth-core[saml]"
 ```
 
-!!! note
-    You should only enable one social auth authentication backend.  Please see the
-    [full documentation on supported backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends).
+Please see the SAML configuration guide below for an example of how to configure Nautobot to authenticate using SAML with Google as the identity provider.
 
 ## Configuration
 
-The following settings are required and can be made with some simple additions to your `nautobot_config.py`.
+### Authentication Backends
+
+To use external authentcation, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
+
+- Insert the desired external authentication backend as the first item in the list
+
+- You must also ensure that `nautobot.core.authentication.ObjectPermissionBackend` is always the second item in the list. It is an error to exclude this backend.
+
+!!! note
+	It is critical that you include the `ObjectPermissionsBackend` provided by Nautobot after the desired backend so that object-level permissions features can work properly.
+
+For example, if you wanted to use Google OAuth2 as your authentication backend:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.google.GoogleOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+```
+
+!!! note
+	Many backends have settings specific to that backend that are not covered in this guide. Please consult the documentation for your desired backend linked in the next section.
+
+!!! warning
+	You should only enable one social authentication authentication backend. It is technically possible to use multiple backends but we cannot officially support more than one at this time.
 
 ---
 
-### SOCIAL_AUTH_MODULE
+### Select your Authentication Backend
 
-The Social Auth module name, see [the official backend documentation](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends) for more information.  Some common backend module names include:
+You will need to select the correct social authentication module name for your desired method of external authentication. Please see [the official Python Social Auth documentation on supported backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html#supported-backends) for more the full list of backends and any specific configuration or required settings.  
+
+Some common backend module names include:
 
 | Backend | Social Auth Backend Module Name |
 |---------|---------------------------------|
@@ -66,17 +104,21 @@ The Social Auth module name, see [the official backend documentation](https://py
 | | `social_core.backends.google_openidconnect.GoogleOpenIdConnect` |
 | [Okta](https://python-social-auth.readthedocs.io/en/latest/backends/okta.html) | `social_core.backends.okta.OktaOAuth2` |
 | | `social_core.backends.okta_openidconnect.OktaOpenIdConnect` |
+| [SAML](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) | `social_core.backends.saml.SAMLAuth` |
 
----
-
-## User Permissions
+### User Permissions
 
 By default, once authenticated, if the user has never logged in before a new user account will be created for the user.
 This new user will not be a member of any group or have any permissions assigned. If you would like to create users with
-a default set of permissions there are some additional variables to configure the permissions:
+a default set of permissions there are some additional variables to configure the permissions.
+
+Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) for more information.
 
 ---
 
+## Configuration Guides
+
+The following guides are provided for some of the most common authentication methods. 
 
 ### Okta - OpenID
 
@@ -90,7 +132,10 @@ a default set of permissions there are some additional variables to configure th
 3. Once the application is configured in Okta, edit your `nautobot_config.py` as follows:
 
 ```python
-SOCIAL_AUTH_MODULE = 'social_core.backends.okta_openidconnect.OktaOpenIdConnect'
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.okta_openidconnect.OktaOpenIdConnect",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
 
 SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = '<Client ID from Okta>'
 SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = '<Client Secret From Okta>'
@@ -102,9 +147,9 @@ The default authentication server can be used for testing, however, it should no
 ### Google - OAuth2
 
 The following instructions guide you through the process of configuring Google for OAuth2 authentication.
-Please note there is further guidance provided by
-[python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2)
-as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1) themselves, for more
+
+!!! important
+	Please note there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more
 information please utilize these additional resources.
 
 1. In the [Google API Console](https://console.developers.google.com/) create a new project or select an existing one.
@@ -130,12 +175,136 @@ information please utilize these additional resources.
 11. Edit your `nautobot_config.py` as follows:
 
 ```python
-SOCIAL_AUTH_MODULE = 'social_core.backends.google.GoogleOAuth2'
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.google.GoogleOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<Client ID from Google>'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<Secret ID from Google>'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 ```
+### SAML
+
+This guide will wallk you through configuring Nautobot to authenticate using SAML with Google as the identity provider. 
+
+!!! important
+	Please note that there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
+
+#### Prerequisites
+
+!!! warning
+	SAML will not work without end-to-end encryption. These requirements are not flexible.
+
+Before you begin you will need the following:
+
+- The fully-qualified domain name (FQDN) of your Nautobot host must be registered in DNS. For this example we will be using `nautobot.example.com`.
+- A valid publicly trusted SSL certificate matching the FQDN of your host. You *cannot* use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
+- The name and email address for a technical point of contact. For this example we will use "Bob Jones, bob@example.com".
+- The name and email address for a support point of contact. For this example we will use "Alice Jenkins, alice@example.com."
+
+#### Setup SAML in Google
+
+1. Visit the [Web and mobile apps](https://admin.google.com/ac/apps/unified) console in the Google Admin dashboard.
+2. Follow the instructions to create a new SAML application Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), pausing at step 6.
+3. From step 6 of the instructions, capture the **SSO URL**, **Entity ID**, and **Certificate**. You will use these in later steps to configure Nautobot. Each of these will be referred to as `GOOGLE_SSO_URL`, `GOOGLE_ENTITY_ID`, and `GOOGLE_CERTIFICATE` respectively.
+4. Skip step 7 in the instructions, as that does not apply here because we will be configuring Nautobot directly.
+5. For step 9 of the instructions under *Service provider details*, provide the following
+    - **ACS URL**: `https://nautobot.example.com/complete/saml/`
+    - **Entity ID:** `https://nautobot.example.com/`
+    - **Start URL:** Leave this field blank
+6. Skip step 10 in the instructions, as a signed response is not required.
+7. For step 11 of the instructions, under *Name ID*, set the following:
+    - **Name ID Format**: Select *EMAIL*
+    - **Name ID:** Select *Basic Information > Primary Email*
+8. For step 13 of the instructions, on the *Attribute mapping* page, add the following mappings for *Google Directory attributes* to *App attributes*:
+    - *Primary email* --> `email`
+    - *First name* --> `first_name`
+    - *Last name* --> `last_name`
+9. Click *Finish*
+
+#### Configure Nautobot
+
+There is a lot to configure to tell SAML what to do, so please provide the following configuration very carefully. All of these values must be correctly configured in your `nautobot_config.py`.
+
+!!! important
+	Refer to the [official Python Social Auth documentation for required SAML configuration](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html#required-configuration) if you run into any issues. 
+
+```python
+# Django authentication backends
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.saml.SAMLAuth",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+# The https FQDN to your Nautobot instance
+SOCIAL_AUTH_SAML_SP_ENTITY_ID = "https://nautobot.example.com/"
+
+# X.509 cert/key pair used for host verification are not used for this example because Nautobot
+# is directly authenticating itself to Google. Set them to empty strings.
+SOCIAL_AUTH_SAML_SP_PUBLIC_CERT = ""
+SOCIAL_AUTH_SAML_SP_PRIVATE_KEY = ""
+
+# A dictionary that contains information about your app. You must specify values for English at
+# a minimum. 
+SOCIAL_AUTH_SAML_ORG_INFO = {
+    "en-US": {
+        "name": "Nautobot",
+        "displayname": "Nautobot",
+        "url": "https://nautobot.example.com",
+    }
+}
+
+# Technical point of contact
+SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
+    "givenName": "Bob Jones",
+    "emailAddress": "bob@example.com"
+}
+
+# Support point of contact
+SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
+    "givenName": "Alice Jenkins",
+    "emailAddress": "alice@example.com"
+}
+
+# The Entity ID URL for Google from step 3
+GOOGLE_ENTITY_ID = "<Entity ID from Google>"
+
+# The SSO URL for Google from step 3
+GOOGLE_SSO_URL = "<SSO URL from Google>"
+
+# The Certificate for Google from step 3
+GOOGLE_CERTIFICATE = "<Certificate from Google>"
+
+# The most important setting. List the Entity ID, SSO URL, and x.509 public key certificate 
+# for each provider that you app wants to support. We are only supporting Google for this 
+# example.
+SOCIAL_AUTH_SAML_ENABLED_IDPS = {
+    "google": {
+        "entity_id": GOOGLE_ENTITY_ID,
+        "url": GOOGLE_SSO_URL,
+        "x509cert": GOOGLE_CERTIFICATE,
+        # These are used to map Google attribute fields to User object fields in Nautobot
+        "attr_user_permanent_id": "email",
+        "attr_first_name": "first_name",
+        "attr_last_name": "last_name",
+        "attr_username": "email",
+        "attr_email": "email",
+    }
+}
+
+# Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need 
+# these depending on your production deployment. They are provided here just in case.
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+```
+
+#### Login with SAML
+
+Note the provider entry we configured in `SOCIAL_AUTH_SAML_ENABLED_IDPS` as `google`. This will be used to login and will be referenced in the query parameter using `idp=google`. For example `/login/saml/?idp=google`.
+
+This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account" , log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
+
 ---
 
 Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
