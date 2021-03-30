@@ -164,7 +164,7 @@ class ExternalAuthenticationTestCase(TestCase):
             "dcim.change_site": None,
         },
     )
-    def test_EXTERNAL_AUTH_DEFAULT_permissions(self):
+    def test_external_auth_default_permissions(self):
         """
         Test enabling remote authentication with the default configuration.
         """
@@ -191,37 +191,7 @@ class ExternalAuthenticationTestCase(TestCase):
         )
         self.assertTrue(new_user.has_perms(["dcim.add_site", "dcim.change_site"]))
 
-    @override_settings(
-        EXTERNAL_AUTH_DEFAULT_GROUPS=["Group 1", "Group 2"],
-    )
-    @mock.patch("nautobot.core.middleware.remote_auth_enabled")
-    @mock.patch("nautobot.core.middleware.sso_auth_enabled")
-    @mock.patch("nautobot.core.middleware.ldap_auth_enabled")
-    def test_remote_auth_middleware(self, ldap_auth_en, sso_auth_en, remote_auth_en):
-        """
-        Test ExternalAuthMiddleware while enabling remote authentication.
-        """
-        # Create required groups
-        self.assertEqual(settings.EXTERNAL_AUTH_DEFAULT_GROUPS, ["Group 1", "Group 2"])
-        # Mocks return an object by default, force the `or` to fall through
-        ldap_auth_en.return_value = False
-        remote_auth_en.return_value = False
-        sso_auth_en.return_value = False
-        # Since the or should fall through, each respective backend check should get called
-        test_backends = [
-            ("django_auth_ldap.backend.LDAPBackend", ldap_auth_en),
-            ("social_core.backends.open_id.OpenIdAuth", sso_auth_en),
-            ("nautobot.authentication.RemoteUserBackend", remote_auth_en),
-        ]
-        for test_backend, backend_fn in test_backends:
-            with mock.patch("nautobot.core.middleware.settings.AUTHENTICATION_BACKENDS", [test_backend]):
-                response = self.client.get(reverse("home"), follow=True)
-                self.assertEqual(response.status_code, 200)
-                # They hit home, but should not be auth'd by the backend since it's patched
-                self.assertNotIn("_auth_user_id", self.client.session)
-                backend_fn.assert_called()
-
-
+    
 class ObjectPermissionAPIViewTestCase(TestCase):
     client_class = APIClient
 
