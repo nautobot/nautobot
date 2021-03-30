@@ -130,9 +130,11 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     # r'^(https?://)?(\w+\.)?example\.com$',
 ]
 
-# The file path where jobs will be stored. A trailing slash is not needed. Note that the default value of
-# this setting is inside the invoking user's home directory.
-# JOBS_ROOT = os.path.expanduser('~/.nautobot/jobs')
+# FQDNs that are considered trusted origins for secure, cross-domain, requests such as HTTPS POST.
+# If running Nautobot under a single domain, you may not need to set this variable;
+# if running on multiple domains, you *may* need to set this variable to more or less the same as ALLOWED_HOSTS above.
+# https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins
+CSRF_TRUSTED_ORIGINS = []
 
 # Set to True to enable server debugging. WARNING: Debugging introduces a substantial performance penalty and may reveal
 # sensitive information about your installation. Only enable debugging while performing testing. Never enable debugging

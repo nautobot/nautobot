@@ -147,7 +147,7 @@ Previously this setting was called `CORS_ORIGIN_WHITELIST`, which still works as
 
 Default: `[]`
 
-A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests. Useful when [`CORS_ALLOWED_ORIGINS`](#cores_allowed_origins) is impractical, such as when you have a large number of subdomains.
+A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests. Useful when [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) is impractical, such as when you have a large number of subdomains.
 
 Example:
 
@@ -158,6 +158,16 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ```
 
 Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still works as an alias, with the new name taking precedence.
+
+---
+
+## CSRF_TRUSTED_ORIGINS
+
+Default: `[]`
+
+A list of hosts (fully-qualified domain names (FQDNs) or subdomains) that are considered trusted origins for cross-site secure requests such as HTTPS POST.
+
+For more information, please see the [official Django documentation on `CSRF_TRUSTED_ORIGINS`](https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins) and more generally the [official Django documentation on CSRF protection](https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works)
 
 ---
 
