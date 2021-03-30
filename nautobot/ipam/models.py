@@ -499,7 +499,7 @@ class Prefix(PrimaryModel, StatusModel):
 
     class Meta:
         ordering = (
-            F("vrf__name").asc(nulls_first=True),
+            F("vrf_id").asc(nulls_first=True),
             "network",
             "prefix_length",
         )  # (vrf, prefix) may be non-unique
@@ -621,7 +621,6 @@ class Prefix(PrimaryModel, StatusModel):
         :param select_for_update: if True, use select_for_update
         """
         qs = Prefix.objects.select_for_update() if select_for_update else Prefix.objects.all()
-
         if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
             return qs.net_contained(self.prefix)
         else:

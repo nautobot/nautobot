@@ -13,9 +13,9 @@ class OrderingTestBase(TestCase):
         Setup the VRFs for the class as a whole
         """
         self.vrfs = (
-            VRF.objects.create(name="VRF A"),
-            VRF.objects.create(name="VRF B"),
-            VRF.objects.create(name="VRF C"),
+            VRF.objects.create(id="11111111-1111-1111-1111-111111111111", name="VRF A"),
+            VRF.objects.create(id="22222222-2222-2222-2222-222222222222", name="VRF B"),
+            VRF.objects.create(id="33333333-3333-3333-3333-333333333333", name="VRF C"),
         )
 
         self.statuses = Status.objects.get_for_model(Prefix)
