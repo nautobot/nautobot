@@ -226,7 +226,7 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 
 Default: `[]` (Empty list)
 
-The list of groups to assign a new user account when created using 3rd-party authentication.
+The list of group names to assign a new user account when created using 3rd-party authentication.
 
 ---
 
