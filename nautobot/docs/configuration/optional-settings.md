@@ -625,16 +625,6 @@ If you set this value, you must also enable file-based sessions as explained abo
 
 ---
 
-## SOCIAL_AUTH_ENABLED
-
-Default: `False`
-
-Enables the social authentication backend to facilifate single-sign on (SSO) for common services like SAML, OAuth2, etc. This setting is required to be enabled to use the SSO for authentication.
-
-See the guide on [Single Sign On Authentication](../authentication/sso) for more details.
-
----
-
 ## STATIC_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "static")`

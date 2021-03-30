@@ -109,13 +109,12 @@ EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 REMOTE_AUTH_AUTO_CREATE_USER = False
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 
-# SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
-SOCIAL_AUTH_POSTGRES_JSONFIELD = False
-SOCIAL_AUTH_URL_NAMESPACE = "sso"
-
 # Releases
 RELEASE_CHECK_URL = None
 RELEASE_CHECK_TIMEOUT = 24 * 3600
+
+# SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
+SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 
 # Storage
 STORAGE_BACKEND = None

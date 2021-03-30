@@ -69,12 +69,6 @@ The Social Auth module name, see [the official backend documentation](https://py
 
 ---
 
-### SOCIAL_AUTH_URL_NAMESPACE
-
-Default: `sso`
-
-The [Django URL](https://docs.djangoproject.com/en/3.1/topics/http/urls/#url-namespaces) namespace to use for the social auth module. The default is typically fine and should only be changed if absolutely necessary.
-
 ## User Permissions
 
 By default, once authenticated, if the user has never logged in before a new user account will be created for the user.

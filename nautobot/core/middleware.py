@@ -6,6 +6,7 @@ from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMid
 from django.core.exceptions import ImproperlyConfigured
 from django.db import ProgrammingError
 from django.http import Http404
+from django.utils.deprecation import MiddlewareMixin
 
 from nautobot.core.views import server_error
 from nautobot.extras.context_managers import change_logging
@@ -40,9 +41,12 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
         return super().process_request(request)
 
 
-class ExternalAuthMiddleware:
+class ExternalAuthMiddleware(MiddlewareMixin):
     """
-    Custom implementation of Django's AuthenticationMiddleware used to set permissions for ephemeral users
+    Custom implementation of Django's AuthenticationMiddleware used to set permissions for
+    remotely-authenticated users.
+
+    This must inherit from `MiddlewareMixin` to support Django middleware magic.
     """
 
     def process_request(self, request):
