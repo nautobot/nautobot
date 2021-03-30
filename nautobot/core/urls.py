@@ -60,4 +60,12 @@ if settings.METRICS_ENABLED:
         path("", include("django_prometheus.urls")),
     ]
 
+if settings.SOCIAL_AUTH_ENABLED:
+    urlpatterns += [
+        path(
+            "",
+            include("social_django.urls", namespace=settings.SOCIAL_AUTH_URL_NAMESPACE),
+        )
+    ]
+
 handler500 = "nautobot.core.views.server_error"

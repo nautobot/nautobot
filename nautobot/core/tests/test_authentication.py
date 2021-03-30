@@ -191,7 +191,7 @@ class ExternalAuthenticationTestCase(TestCase):
         )
         self.assertTrue(new_user.has_perms(["dcim.add_site", "dcim.change_site"]))
 
-    
+
 class ObjectPermissionAPIViewTestCase(TestCase):
     client_class = APIClient
 
