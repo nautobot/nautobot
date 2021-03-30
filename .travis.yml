@@ -29,7 +29,7 @@ jobs:
       script:
         - invoke integration-tests
     - stage: Publish Docker Image (Develop)
-      if: branch = develop AND type = push 
+      if: branch = develop #AND type = push 
       script:
         - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
         - docker tag networktocode/nautobot:local networktocode/nautobot:latest-dev
