@@ -3,7 +3,7 @@ os: linux
 dist: xenial
 cache:
   directories:
-    - docker_images
+    - /home/travis/docker_images
 services:
   - postgresql
   - redis
@@ -27,14 +27,15 @@ jobs:
       script:
         - invoke build
       after_script:
-        - docker save -o docker_images/images.tar $(docker images -a -q)
+        - mkdir /home/travis/docker_images
+        - docker save -o /home/travis/docker_images/images.tar $(docker images -a -q)
     - stage: Docker Integration Tests
       script:
         - invoke integration-tests
     - stage: Publish Docker Image (Develop)
       if: branch = develop #AND type = push 
       before_script:
-        - docker load -i docker_images/images.tar || true
+        - docker load -i /home/travis/docker_images/images.tar || true
       script:
         - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
         - 'echo Using tag: ${COMMIT_DATE_TAG}'
