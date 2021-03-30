@@ -20,9 +20,15 @@ The following tags are available:
 
 ## Getting Started
 
+Nautobot requires a Postgres database and Redis cache before it will start, because of this the quickest and easiest way to get Nautobot running is with docker-compose.  Please see the docker-compose deployment repository for more information.
+
 ## Configuration
 
 Most configuration parameters are available via environment variables which can be passed to the container.  If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py`.
+
+### SSL
+
+Self signed SSL certificates are included by default with the container.  For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime.  The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`.
 
 ### Plugins
 
@@ -37,7 +43,7 @@ $ invoke build
 ...
 $ docker images
 REPOSITORY                                                                TAG                    IMAGE ID       CREATED          SIZE
-networktocode/nautobot-dev                                                latest                 25487d93fc1f   16 seconds ago   630MB
+networktocode/nautobot-dev                                                local                  25487d93fc1f   16 seconds ago   630MB
 ```
 
 If you need to build/use the production image set the `OVERRIDE_FILENAME`:
@@ -48,7 +54,7 @@ $ invoke build
 ...
 $ docker images
 REPOSITORY                                                                TAG                    IMAGE ID       CREATED          SIZE
-networktocode/nautobot                                                    latest                 0a24d68da987   55 seconds ago   337MB
+networktocode/nautobot                                                    local                  0a24d68da987   55 seconds ago   337MB
 ```
 
 If you do not have a development environment created you can also build the container using the regular `docker build` command:

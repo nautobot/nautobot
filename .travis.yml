@@ -29,13 +29,13 @@ jobs:
       script:
         - invoke integration-tests
     - stage: Publish Docker Image (Develop)
-      if: branch = nn_docker
+      if: branch = develop AND type = push 
       script:
         - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
-        - docker tag networktocode/nautobot:latest networktocode/nautobot:latest-dev
-        - docker tag networktocode/nautobot:latest networktocode/nautobot:${COMMIT_DATE_TAG}
-        - docker tag networktocode/nautobot:latest ghcr.io/nautobot/nautobot:latest-dev
-        - docker tag networktocode/nautobot:latest ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+        - docker tag networktocode/nautobot:local networktocode/nautobot:latest-dev
+        - docker tag networktocode/nautobot:local networktocode/nautobot:${COMMIT_DATE_TAG}
+        - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:latest-dev
+        - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
         - echo Sign into docker hub
         - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
         - echo Sign into ghcr

@@ -5,9 +5,9 @@ services:
   nautobot:
     build:
       target: final
-    image: "networktocode/nautobot"
+    image: "networktocode/nautobot:local"
     ports:
       - 80:80
       - 443:443
   worker:
-    image: "networktocode/nautobot"
+    image: "networktocode/nautobot:local"

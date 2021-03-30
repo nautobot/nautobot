@@ -170,6 +170,12 @@ def flake8(context):
     docker_compose(context, "run --entrypoint 'flake8 development/ nautobot/ tasks.py' nautobot", pty=True)
 
 
+@task
+def hadolint(context):
+    """Check Dockerfile for hadolint compliance and other style issues."""
+    docker_compose(context, "run --entrypoint 'hadolint docker/Dockerfile' nautobot", pty=True)
+
+
 @task(
     help={
         "keepdb": "save and re-use test database between test runs for faster re-testing.",
@@ -202,4 +208,5 @@ def tests(context):
     """Run all tests and linters."""
     black(context)
     flake8(context)
+    hadolint(context)
     unittest(context)

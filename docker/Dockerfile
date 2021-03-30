@@ -30,6 +30,10 @@ RUN apt-get update && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
 
+# Install hadolint for linting Dockerfiles
+RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && \
+    chmod +x /usr/bin/hadolint
+
 # Generate self signed ssl certificates
 RUN mkdir /opt/nautobot && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
     '/C=US/ST=NY/L=NYC/O=Nautobot/CN=nautobot.local' \
