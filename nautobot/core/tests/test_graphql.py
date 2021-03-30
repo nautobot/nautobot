@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 from graphene_django import DjangoObjectType
+from graphql.error import GraphQLLocatedError
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -538,3 +539,52 @@ class GraphQLQuery(APITestCase):
         config_context = [item["config_context"] for item in response.data["data"]["devices"]]
         self.assertIsInstance(config_context[0], dict)
         self.assertDictEqual(config_context[0], expected_data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_with_filter(self):
+
+        get_device_with_filter = """
+            query {
+                devices(role: "device-role-1") {
+                    id
+                    name
+                }
+            }
+        """
+        response = self.client.post(
+            self.api_url,
+            data=get_device_with_filter,
+            content_type="application/graphql",
+        )
+
+        self.assertEqual(len(response.data["data"]["devices"]), 1)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_with_bad_filter(self):
+
+        get_device_with_filter = """
+            query {
+                devices(role: "EXPECT NO ENTRIES") {
+                    id
+                    name
+                }
+            }
+        """
+        response = self.client.post(
+            self.api_url,
+            data=get_device_with_filter,
+            content_type="application/graphql",
+        )
+        self.assertEqual(
+            response.data,
+            {
+                "errors": [
+                    {
+                        "message": "{'role': ['Select a valid choice. EXPECT NO ENTRIES is not one of the available choices.']}",
+                        "locations": [{"line": 3, "column": 17}],
+                        "path": ["devices"],
+                    },
+                ],
+                "data": {"devices": None},
+            },
+        )
