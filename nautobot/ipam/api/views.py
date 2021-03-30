@@ -1,6 +1,6 @@
 from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django_pglocks import advisory_lock
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import action
@@ -126,7 +126,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     @swagger_auto_schema(method="get", responses={200: serializers.AvailablePrefixSerializer(many=True)})
     @swagger_auto_schema(method="post", responses={201: serializers.PrefixSerializer(many=False)})
     @action(detail=True, url_path="available-prefixes", methods=["get", "post"])
-    @advisory_lock(ADVISORY_LOCK_KEYS["available-prefixes"])
+    @transaction.atomic()
     def available_prefixes(self, request, pk=None):
         """
         A convenience method for returning available child prefixes within a parent.
@@ -135,7 +135,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         invoked in parallel, which results in a race condition where multiple insertions can occur.
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
-        available_prefixes = prefix.get_available_prefixes()
+        available_prefixes = prefix.get_available_prefixes(select_for_update=True)
 
         if request.method == "POST":
 
@@ -207,7 +207,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         methods=["get", "post"],
         queryset=IPAddress.objects.all(),
     )
-    @advisory_lock(ADVISORY_LOCK_KEYS["available-ips"])
+    @transaction.atomic()
     def available_ips(self, request, pk=None):
         """
         A convenience method for returning available IP addresses within a prefix. By default, the number of IPs
@@ -226,7 +226,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
             requested_ips = request.data if isinstance(request.data, list) else [request.data]
 
             # Determine if the requested number of IPs is available
-            available_ips = prefix.get_available_ips()
+            available_ips = prefix.get_available_ips(select_for_update=True)
             if available_ips.size < len(requested_ips):
                 return Response(
                     {
@@ -266,7 +266,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 
             # Calculate available IPs within the prefix
             ip_list = []
-            for index, ip in enumerate(prefix.get_available_ips(), start=1):
+            for index, ip in enumerate(prefix.get_available_ips(select_for_update=True), start=1):
                 ip_list.append(ip)
                 if index == limit:
                     break

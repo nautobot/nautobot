@@ -613,42 +613,55 @@ class Prefix(PrimaryModel, StatusModel):
     def get_duplicates(self):
         return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
 
-    def get_child_prefixes(self):
+    def get_child_prefixes(self, select_for_update=False):
         """
-        Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
-        Prefixes belonging to any VRF.
-        """
-        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
-            return Prefix.objects.net_contained(self.prefix)
-        else:
-            return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
+        Return all Prefixes within this Prefix and VRF.
+        If this Prefix is a container in the global table, return child Prefixes belonging to any VRF.
 
-    def get_child_ips(self):
+        :param select_for_update: if True, use select_for_update
+        """
+        qs = Prefix.objects.select_for_update() if select_for_update else Prefix.objects.all()
+
+        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
+            return qs.net_contained(self.prefix)
+        else:
+            return qs.net_contained(self.prefix).filter(vrf=self.vrf)
+
+    def get_child_ips(self, select_for_update=False):
         """
         Return all IPAddresses within this Prefix and VRF. If this Prefix is a container in the global table, return
         child IPAddresses belonging to any VRF.
-        """
-        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
-            return IPAddress.objects.net_host_contained(self.prefix)
-        else:
-            return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
 
-    def get_available_prefixes(self):
+        :param select_for_update: if True, use select_for_update
+        """
+        qs = IPAddress.objects.select_for_update() if select_for_update else IPAddress.objects.all()
+        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
+            return qs.net_host_contained(self.prefix)
+        else:
+            return qs.net_host_contained(self.prefix).filter(vrf=self.vrf)
+
+    def get_available_prefixes(self, select_for_update=False):
         """
         Return all available Prefixes within this prefix as an IPSet.
+
+        :param select_for_update: if True, use select_for_update
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_prefixes = netaddr.IPSet([child.prefix for child in self.get_child_prefixes()])
+        children = self.get_child_prefixes(select_for_update=select_for_update)
+        child_prefixes = netaddr.IPSet([child.prefix for child in children])
         available_prefixes = prefix - child_prefixes
 
         return available_prefixes
 
-    def get_available_ips(self):
+    def get_available_ips(self, select_for_update=False):
         """
         Return all available IPs within this prefix as an IPSet.
+
+        :param select_for_update: if True, use select_for_update
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()])
+        children = self.get_child_ips(select_for_update=select_for_update)
+        child_ips = netaddr.IPSet([ip.address.ip for ip in children])
         available_ips = prefix - child_ips
 
         # All IP addresses within a pool are considered usable
