@@ -31,6 +31,10 @@ nav:
         - Upgrading Nautobot: 'installation/upgrading.md'
     - Configuration:
         - Configuring Nautobot: 'configuration/index.md'
+        - External Authentication:
+            - LDAP: 'configuration/authentication/ldap.md'
+            - SSO: 'configuration/authentication/sso.md'
+            - Remote Header: 'configuration/authentication/remote.md'
         - Required Settings: 'configuration/required-settings.md'
         - Optional Settings: 'configuration/optional-settings.md'
     - Core Functionality:

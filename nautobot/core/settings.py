@@ -5,7 +5,6 @@ from django.contrib.messages import constants as messages
 
 from nautobot import __version__
 
-
 #
 # Environment setup
 #
@@ -67,7 +66,7 @@ ENFORCE_GLOBAL_UNIQUE = False
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
     ("auth", "group"),
-    ("auth", "user"),
+    ("users", "user"),
     ("users", "objectpermission"),
 )
 
@@ -102,26 +101,20 @@ PREFER_IPV4 = False
 RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
 RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
-# Remote auth
+# Global 3rd-party authentication settings
+EXTERNAL_AUTH_DEFAULT_GROUPS = []
+EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+
+# Remote auth backend settings
 REMOTE_AUTH_AUTO_CREATE_USER = False
-REMOTE_AUTH_DEFAULT_GROUPS = []
-REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
-REMOTE_AUTH_ENABLED = True  # FIXME(jathan): Deprecated in Nautobot
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 
 # Releases
 RELEASE_CHECK_URL = None
 RELEASE_CHECK_TIMEOUT = 24 * 3600
 
-# SSO
-SOCIAL_AUTH_ENABLED = False
-SOCIAL_AUTH_MODULE = ""
-SOCIAL_AUTH_DEFAULT_GROUPS = []
-SOCIAL_AUTH_DEFAULT_PERMISSIONS = {}
-SOCIAL_AUTH_DEFAULT_STAFF = False
-SOCIAL_AUTH_DEFAULT_SUPERUSER = False
+# SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
-SOCIAL_AUTH_URL_NAMESPACE = "sso"
 
 # Storage
 STORAGE_BACKEND = None
@@ -279,6 +272,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # Default overrides
 ALLOWED_HOSTS = []
+CSRF_TRUSTED_ORIGINS = []
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
@@ -306,6 +300,7 @@ INSTALLED_APPS = [
     "django_prometheus",
     "mptt",
     "rest_framework",
+    "social_django",
     "taggit",
     "timezone_field",
     "nautobot.core",
@@ -335,6 +330,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
+    "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.APIVersionMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
@@ -401,8 +397,6 @@ LOGIN_URL = "login"
 
 # This is the URL route name for the home page (index) view.
 LOGIN_REDIRECT_URL = "home"
-
-CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 
 #
 # From django-cors-headers

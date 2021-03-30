@@ -128,9 +128,6 @@ AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
 # Define a group required to login.
 AUTH_LDAP_REQUIRE_GROUP = "CN=NAUTOBOT_USERS,DC=example,DC=com"
 
-# Mirror LDAP group assignments.
-AUTH_LDAP_MIRROR_GROUPS = True
-
 # Define special user types using groups. Exercise great caution when assigning superuser status.
 AUTH_LDAP_USER_FLAGS_BY_GROUP = {
     "is_active": "cn=active,ou=groups,dc=example,dc=com",
@@ -182,3 +179,7 @@ LOGGING = {
 ```
 
 Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the nautobot service and attempt to log into the site to trigger log entries to this file.
+
+---
+
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
