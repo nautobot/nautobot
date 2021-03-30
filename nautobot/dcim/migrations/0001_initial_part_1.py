@@ -465,7 +465,7 @@ class Migration(migrations.Migration):
                 ("mgmt_only", models.BooleanField(default=False)),
             ],
             options={
-                "ordering": ("device", nautobot.utilities.query_functions.CollateAsChar("_name")),
+                "ordering": ("device", "_name"),
             },
         ),
         migrations.CreateModel(

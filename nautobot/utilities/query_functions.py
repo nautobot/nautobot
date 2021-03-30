@@ -1,16 +1,6 @@
-from django.db.models import Aggregate, JSONField, Value
+from django.db.models import Aggregate, JSONField
 
 from django.contrib.postgres.aggregates.mixins import OrderableAggMixin
-from django.db.models import Func
-
-
-class CollateAsChar(Func):
-    """
-    Disregard localization by collating a field as a plain character string. Helpful for ensuring predictable ordering.
-    """
-
-    function = "C"
-    template = '(%(expressions)s) COLLATE "%(function)s"'
 
 
 class JSONBAgg(Aggregate):
