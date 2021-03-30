@@ -821,7 +821,7 @@
                     </li>
                 {% else %}
                     {% if settings.SOCIAL_AUTH_ENABLED %}
-                        <li><a href="{% url 'social:begin' backends.backends.0 %}"><i class="mdi mdi-login"></i> Log in</a></li>
+                        <li><a href="{% url 'social:begin' backends.backends.0 %}?idp=google&next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
                     {% else %}
                         <li><a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
                     {% endif %}
