@@ -5,6 +5,7 @@ cache:
   pip: true
   directories:
     - /home/travis/docker_images
+    - /home/travis/virtualenv
 services:
   - postgresql
   - redis
@@ -28,7 +29,7 @@ jobs:
         - rm -rf /home/travis/docker_images
       script:
         - invoke build
-      after_script:
+      before_cache:
         - mkdir /home/travis/docker_images
         - docker save -o /home/travis/docker_images/images.tar $(docker images -a -q)
     - stage: Docker Integration Tests
