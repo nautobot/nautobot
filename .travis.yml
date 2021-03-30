@@ -44,7 +44,7 @@ jobs:
         - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
         - echo Sign into docker hub
         # - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
-        - echo Sign into ghcr
+        - echo Sign into Github Container Registry
         # - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
         - echo Pushing images
         - echo docker push networktocode/nautobot:latest-dev
