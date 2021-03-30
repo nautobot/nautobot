@@ -307,6 +307,7 @@ INSTALLED_APPS = [
     "django_prometheus",
     "mptt",
     "rest_framework",
+    "social_django",
     "taggit",
     "timezone_field",
     "nautobot.core",
