@@ -1,6 +1,9 @@
 # Linting available at https://config.travis-ci.com/explore
 os: linux
 dist: xenial
+cache:
+  directories:
+    - docker_images
 services:
   - postgresql
   - redis
@@ -24,22 +27,25 @@ jobs:
       script:
         - invoke build
       after_script:
-        - docker images
+        - docker save -o docker_images/images.tar $(docker images -a -q)
     - stage: Docker Integration Tests
       script:
         - invoke integration-tests
     - stage: Publish Docker Image (Develop)
       if: branch = develop #AND type = push 
+      before_script:
+        - docker load -i docker_images/images.tar || true
       script:
         - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
+        - 'echo Using tag: ${COMMIT_DATE_TAG}'
         - docker tag networktocode/nautobot:local networktocode/nautobot:latest-dev
         - docker tag networktocode/nautobot:local networktocode/nautobot:${COMMIT_DATE_TAG}
         - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:latest-dev
         - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
         - echo Sign into docker hub
-        - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
+        # - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
         - echo Sign into ghcr
-        - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
+        # - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
         - echo Pushing images
         - echo docker push networktocode/nautobot:latest-dev
         - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
@@ -60,7 +66,7 @@ install:
   # while simultaneously atttempting to *use* those packages to install other packages.
   # For now we disable it.
   - poetry config installer.parallel false
-  - poetry install
+  - poetry install --no-ansi
 before_script:
   - psql --version
   - psql -U postgres -c 'SELECT version();'

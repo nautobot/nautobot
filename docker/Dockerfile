@@ -65,14 +65,14 @@ WORKDIR /source
 # Local source code is mounted as volume into container. This approach does not require
 # to rebuild a container when source code change occurs.
 # -------------------------------------------------------------------------------------
-RUN poetry install --no-root
+RUN poetry install --no-root --no-ansi
 
 # Copy source to container
 COPY . /source
 
 # Build the whl for use in the final container and install for the dev container
 RUN poetry build && \
-    poetry install
+    poetry install --no-ansi
 
 # Used if someone wants to override the entrypoint and provision a super user
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
