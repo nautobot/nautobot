@@ -102,17 +102,6 @@ class RemoteUserBackend(_RemoteUserBackend):
     def create_unknown_user(self):
         return settings.REMOTE_AUTH_AUTO_CREATE_USER
 
-    def configure_user(self, request, user):
-        logger = logging.getLogger("nautobot.authentication.RemoteUserBackend")  # noqa: F841
-
-        # Assign default groups to the user
-        assign_groups_to_user(user, settings.REMOTE_AUTH_DEFAULT_GROUPS)
-
-        # Assign default object permissions to the user
-        assign_permissions_to_user(user, settings.REMOTE_AUTH_DEFAULT_PERMISSIONS)
-
-        return user
-
     def has_perm(self, user_obj, perm, obj=None):
         return False
 

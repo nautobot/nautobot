@@ -42,6 +42,8 @@ urlpatterns = [
     # Plugins
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
+    # Social auth/SSO
+    path("", include("social_django.urls", namespace="social")),
 ]
 
 
@@ -60,12 +62,5 @@ if settings.METRICS_ENABLED:
         path("", include("django_prometheus.urls")),
     ]
 
-if settings.SOCIAL_AUTH_ENABLED:
-    urlpatterns += [
-        path(
-            "",
-            include("social_django.urls", namespace=settings.SOCIAL_AUTH_URL_NAMESPACE),
-        )
-    ]
 
 handler500 = "nautobot.core.views.server_error"
