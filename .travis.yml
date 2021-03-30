@@ -14,23 +14,45 @@ jobs:
     # - python: "3.7"
     # - python: "3.8"
     # - python: "3.9"
-    - stage: Docker
+    - stage: Docker Build
       python: "3.6"
       env:
         - PYTHON_VER=3.6
-        - COMPOSE_OVERRIDE_FILE=docker-compose.test.yml
+        - OVERRIDE_FILENAME=docker-compose.test.yml
       before_install:
         - pip install poetry docker-compose
-        - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
-        - chmod +x /home/travis/bin/hadolint
       script:
         - invoke build
+      after_script:
+        - docker images
+    - stage: Docker Integration Tests
+      script:
+        - invoke integration-tests
+    - stage: Publish Docker Image (Develop)
+      if: branch = nn_docker
+      script:
+        - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
+        - docker tag networktocode/nautobot:latest networktocode/nautobot:latest-dev
+        - docker tag networktocode/nautobot:latest networktocode/nautobot:${COMMIT_DATE_TAG}
+        - docker tag networktocode/nautobot:latest ghcr.io/nautobot/nautobot:latest-dev
+        - docker tag networktocode/nautobot:latest ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+        - echo Sign into docker hub
+        - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
+        - echo Sign into ghcr
+        - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
+        - echo Pushing images
+        - echo docker push networktocode/nautobot:latest-dev
+        - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
+        - echo docker push ghcr.io/nautobot/nautobot:latest-dev
+        - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
       after_script:
         - docker images
   allow_failures:
     - python: "3.9"
 before_install:
   - pip install poetry
+  - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+  - chmod +x /home/travis/bin/hadolint
 install:
   - poetry config virtualenvs.create false
   # Poetry 1.1.0 added parallel installation as an option;

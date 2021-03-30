@@ -185,21 +185,24 @@ The files related to the Docker development environment can be found inside of t
 
 In this directory you'll find the following core files:
 
-- `docker-compose.debug.yml` - Docker override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
-- `docker-compose.dev.yml` - Docker service containers and their relationships to the Nautobot container
-- `docker-compose.test.yml` - Docker service containers and their relationships to the Nautobot container
+- `docker-compose.debug.yml` - Docker compose override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
+- `docker-compose.dev.yml` - Docker compose override file used to mount the Nautobot source code inside the container at `/source` and the `nautobot_config.py` from the same directory as `/opt/nautobot/nautobot_config.py` for the active configuration.
+- `docker-compose.test.yml` - Docker compose override file used to start/build the production docker images for local testing.
 - `docker-compose.yml` - Docker service containers and their relationships to the Nautobot container
-
-- `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
 - `dev.env` - Environment variables used to setup the container services
 - `nautobot_config.py` - Nautobot configuration file
 
+In addition to the development environment the `Dockerfile` which is used to build the Nautobot containers is located in the `docker` directory at the root of the project.  The development container is actually used to install the development tools necessary to build the packages which are used to install Nautobot in the production image as a separate build stage.
 
-- `Dockerfile` - Docker container definition for Nautobot
+In the `docker` directory you will find the following files:
+
+- `Dockerfile` - Docker container definition for Nautobot containers
+- `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
+- `uwsgi.ini` - The [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) ini file used in the production docker container
 
 #### Docker-Compose Overrides
 
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml```.
+If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml``` and set the environment variable `OVERRIDE_FILENAME=docker-compose.override.yml`.
 
 This file will override any configuration in the main `docker-compose.yml` file, without making changes to the repository.
 
@@ -225,11 +228,11 @@ The `docker-entrypoint.sh` script will run any migrations and then look for spec
 
 ```bash
 # Superuser information. CREATE_SUPERUSER defaults to false.
-NAUTOBOT_CREATE_SUPERUSER=true
-NAUTOBOT_SUPERUSER_NAME=admin
-NAUTOBOT_SUPERUSER_EMAIL=admin@example.com
-NAUTOBOT_SUPERUSER_PASSWORD=admin
-NAUTOBOT_SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
+CREATE_SUPERUSER=true
+SUPERUSER_NAME=admin
+SUPERUSER_EMAIL=admin@example.com
+SUPERUSER_PASSWORD=admin
+SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 ```
 
 !!! warning
@@ -268,7 +271,7 @@ $ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 - Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.
 - The **Select the container to attach VS Code** input field provides a list of running containers.
 - Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
-- As a last step open the folder `/source` in VS Code.
+- As a last step open the folder `/opt/nautobot` in VS Code.
 
 ### Python Virtual Environment Workflow
 

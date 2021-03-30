@@ -192,6 +192,12 @@ def unittest_coverage(context):
 
 
 @task
+def integration_tests(context):
+    """Some very generic high level integration tests."""
+    print("Not Implemented")
+
+
+@task
 def tests(context):
     """Run all tests and linters."""
     black(context)
