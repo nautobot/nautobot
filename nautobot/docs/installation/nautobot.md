@@ -152,7 +152,7 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 
 ### Required Settings
 
-Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.
+Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.  If you do not wish to modify the config, by default, many of these configuration settings can also be specified by environment variables see [Required Settings](../../configuration/required-settings) for further details.
 
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
 

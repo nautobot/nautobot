@@ -44,6 +44,8 @@ nav:
         - Circuits: 'core-functionality/circuits.md'
         - Power Tracking: 'core-functionality/power.md'
         - Tenancy: 'core-functionality/tenancy.md'
+    - Docker:
+        - Getting Started: 'docker/index.md'
     - Additional Features:
         - Caching: 'additional-features/caching.md'
         - Change Logging: 'additional-features/change-logging.md'

@@ -181,16 +181,21 @@ Additional useful commands for the development environment:
 
 #### Working with Docker Compose
 
-The files related to the Docker container environment used for development can be found inside of the `development` directory at the root of the project.
+The files related to the Docker development environment can be found inside of the `development` directory at the root of the project.
 
 In this directory you'll find the following core files:
 
-- `Dockerfile` - Docker container definition for Nautobot
-
+- `docker-compose.debug.yml` - Docker override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
+- `docker-compose.dev.yml` - Docker service containers and their relationships to the Nautobot container
+- `docker-compose.test.yml` - Docker service containers and their relationships to the Nautobot container
 - `docker-compose.yml` - Docker service containers and their relationships to the Nautobot container
+
 - `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
 - `dev.env` - Environment variables used to setup the container services
 - `nautobot_config.py` - Nautobot configuration file
+
+
+- `Dockerfile` - Docker container definition for Nautobot
 
 #### Docker-Compose Overrides
 
@@ -220,11 +225,11 @@ The `docker-entrypoint.sh` script will run any migrations and then look for spec
 
 ```bash
 # Superuser information. CREATE_SUPERUSER defaults to false.
-CREATE_SUPERUSER=true
-SUPERUSER_NAME=admin
-SUPERUSER_EMAIL=admin@example.com
-SUPERUSER_PASSWORD=admin
-SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
+NAUTOBOT_CREATE_SUPERUSER=true
+NAUTOBOT_SUPERUSER_NAME=admin
+NAUTOBOT_SUPERUSER_EMAIL=admin@example.com
+NAUTOBOT_SUPERUSER_PASSWORD=admin
+NAUTOBOT_SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 ```
 
 !!! warning
@@ -263,7 +268,7 @@ $ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 - Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.
 - The **Select the container to attach VS Code** input field provides a list of running containers.
 - Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
-- As a last step open the folder `/opt/nautobot` in VS Code.
+- As a last step open the folder `/source` in VS Code.
 
 ### Python Virtual Environment Workflow
 

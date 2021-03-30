@@ -22,49 +22,49 @@ fi
 nautobot-server collectstatic --no-input
 
 # Create Superuser if required
-if [ "$CREATE_SUPERUSER" == "true" ]; then
-  if [ -z ${SUPERUSER_NAME+x} ]; then
-    SUPERUSER_NAME='admin'
+if [ "$NAUTOBOT_CREATE_SUPERUSER" == "true" ]; then
+  if [ -z ${NAUTOBOT_SUPERUSER_NAME+x} ]; then
+    NAUTOBOT_SUPERUSER_NAME='admin'
   fi
-  if [ -z ${SUPERUSER_EMAIL+x} ]; then
-    SUPERUSER_EMAIL='admin@example.com'
+  if [ -z ${NAUTOBOT_SUPERUSER_EMAIL+x} ]; then
+    NAUTOBOT_SUPERUSER_EMAIL='admin@example.com'
   fi
   if [ -f "/run/secrets/superuser_password" ]; then
-    SUPERUSER_PASSWORD="$(< /run/secrets/superuser_password)"
-  elif [ -z ${SUPERUSER_PASSWORD+x} ]; then
-    echo "❌ SUPERUSER_PASSWORD is required to be defined when creating superuser"
+    NAUTOBOT_SUPERUSER_PASSWORD="$(< /run/secrets/superuser_password)"
+  elif [ -z ${NAUTOBOT_SUPERUSER_PASSWORD+x} ]; then
+    echo "❌ NAUTOBOT_SUPERUSER_PASSWORD is required to be defined when creating superuser"
     exit 1
   fi
   if [ -f "/run/secrets/superuser_api_token" ]; then
-    SUPERUSER_API_TOKEN="$(< /run/secrets/superuser_api_token)"
-  elif [ -z ${SUPERUSER_API_TOKEN+x} ]; then
-    echo "❌ SUPERUSER_API_TOKEN is required to be defined when creating superuser"
+    NAUTOBOT_SUPERUSER_API_TOKEN="$(< /run/secrets/superuser_api_token)"
+  elif [ -z ${NAUTOBOT_SUPERUSER_API_TOKEN+x} ]; then
+    echo "❌ NAUTOBOT_SUPERUSER_API_TOKEN is required to be defined when creating superuser"
     exit 1
   fi
 
   nautobot-server shell --interface python << END
 from django.contrib.auth import get_user_model
 from nautobot.users.models import Token
-u = get_user_model().objects.filter(username='${SUPERUSER_NAME}')
+u = get_user_model().objects.filter(username='${NAUTOBOT_SUPERUSER_NAME}')
 if not u:
-    u=get_user_model().objects.create_superuser('${SUPERUSER_NAME}', '${SUPERUSER_EMAIL}', '${SUPERUSER_PASSWORD}')
-    Token.objects.create(user=u, key='${SUPERUSER_API_TOKEN}')
+    u=get_user_model().objects.create_superuser('${NAUTOBOT_SUPERUSER_NAME}', '${NAUTOBOT_SUPERUSER_EMAIL}', '${NAUTOBOT_SUPERUSER_PASSWORD}')
+    Token.objects.create(user=u, key='${NAUTOBOT_SUPERUSER_API_TOKEN}')
 else:
     u = u[0]
-    if u.email != '${SUPERUSER_EMAIL}':
-        u.email = '${SUPERUSER_EMAIL}'
-    if not u.check_password('${SUPERUSER_PASSOWRD}'):
-        u.set_password('${SUPERUSER_PASSWORD}')
+    if u.email != '${NAUTOBOT_SUPERUSER_EMAIL}':
+        u.email = '${NAUTOBOT_SUPERUSER_EMAIL}'
+    if not u.check_password('${NAUTOBOT_SUPERUSER_PASSWORD}'):
+        u.set_password('${NAUTOBOT_SUPERUSER_PASSWORD}')
     u.save()
     t = Token.objects.filter(user=u)
     if t:
         t = t[0]
-        if t.key != '${SUPERUSER_API_TOKEN}':
-            t.key = '${SUPERUSER_API_TOKEN}'
+        if t.key != '${NAUTOBOT_SUPERUSER_API_TOKEN}':
+            t.key = '${NAUTOBOT_SUPERUSER_API_TOKEN}'
             t.save()
 END
 
-  echo "💡 Superuser Username: ${SUPERUSER_NAME}, E-Mail: ${SUPERUSER_EMAIL}"
+  echo "💡 Superuser Username: ${NAUTOBOT_SUPERUSER_NAME}, E-Mail: ${NAUTOBOT_SUPERUSER_EMAIL}"
 fi
 
 if [ "$NAUTOBOT_UWSGI_PROCESSES" ]; then
