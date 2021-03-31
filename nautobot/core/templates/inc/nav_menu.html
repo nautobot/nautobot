@@ -820,8 +820,8 @@
                         </ul>
                     </li>
                 {% else %}
-                    {% if settings.SOCIAL_AUTH_ENABLED %}
-                        <li><a href="{% url 'social:begin' backends.backends.0 %}?idp=google&next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
+                    {% if SSO_AUTH_ENABLED %}
+                        <li><a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}"><i class="mdi mdi-login"></i> Log in</a></li>
                     {% else %}
                         <li><a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
                     {% endif %}
