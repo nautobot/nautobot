@@ -1,7 +1,11 @@
+from logging import getLogger
+
 from django.contrib.contenttypes.models import ContentType
 from django_rq import job
 
 from nautobot.extras.choices import CustomFieldTypeChoices
+
+logger = getLogger("nautobot.extras.tasks")
 
 
 @job("custom_fields")
@@ -16,7 +20,11 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
     """
     from nautobot.extras.models import CustomField
 
-    field = CustomField.objects.get(pk=field_id)
+    try:
+        field = CustomField.objects.get(pk=field_id)
+    except CustomField.DoesNotExist:
+        logger.error(f"Custom field with ID {field_id} not found, failing to act on choice data.")
+        return False
 
     if field.type == CustomFieldTypeChoices.TYPE_SELECT:
         # Loop through all field content types and search for values to update
@@ -36,6 +44,10 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
                 obj.custom_field_data[field.name] = new_list
                 obj.save()
 
+    else:
+        logger.error(f"Unknown field type, failing to act on choice data for this field {field.name}.")
+        return False
+
 
 @job("custom_fields")
 def delete_custom_field_data(field_name, content_type_pk_set):
@@ -50,4 +62,28 @@ def delete_custom_field_data(field_name, content_type_pk_set):
         model = ct.model_class()
         for obj in model.objects.filter(**{f"custom_field_data__{field_name}__isnull": False}):
             del obj.custom_field_data[field_name]
+            obj.save()
+
+
+@job("custom_fields")
+def provision_field(field_id, content_type_pk_set):
+    """
+    Provision a new custom field on all relevant content type object instances.
+
+    Args:
+        field_id (uuid4): The PK of the custom field being provisioned
+        content_type_pk_set (list): List of PKs for content types to act upon
+    """
+    from nautobot.extras.models import CustomField
+
+    try:
+        field = CustomField.objects.get(pk=field_id)
+    except CustomField.DoesNotExist:
+        logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
+        return False
+
+    for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+        model = ct.model_class()
+        for obj in model.objects.all():
+            obj.custom_field_data[field.name] = field.default
             obj.save()

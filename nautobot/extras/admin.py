@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin, messages
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -106,12 +107,21 @@ class CustomFieldForm(forms.ModelForm):
 
 
 class CustomFieldChoiceAdmin(admin.TabularInline):
+    """
+    Defines the inline forset factory that handles choices for selection type custom field.
+    The `extra` defines the default number of inline rows that appear in the UI.
+    """
+
     model = CustomFieldChoice
     extra = 5
 
 
 @admin.register(CustomField)
 class CustomFieldAdmin(admin.ModelAdmin):
+    """
+    Define the structure and composition of the custom field form in the admin panel.
+    """
+
     actions = None
     form = CustomFieldForm
     inlines = [CustomFieldChoiceAdmin]
@@ -169,6 +179,7 @@ class CustomFieldAdmin(admin.ModelAdmin):
     def models(self, obj):
         return ", ".join([ct.name for ct in obj.content_types.all()])
 
+    @transaction.atomic
     def save_formset(self, request, form, formset, change):
         # TODO(John): revisit this when custom fields are moved out of admin... there is a better way...
         if formset.model != CustomFieldChoice:
@@ -182,6 +193,7 @@ class CustomFieldAdmin(admin.ModelAdmin):
                 obj.delete()
             except ProtectedError as e:
                 self.message_user(request, e, level=messages.ERROR)
+                raise e
 
 
 #

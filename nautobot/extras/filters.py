@@ -60,6 +60,7 @@ EXACT_FILTER_TYPES = (
     CustomFieldTypeChoices.TYPE_DATE,
     CustomFieldTypeChoices.TYPE_INTEGER,
     CustomFieldTypeChoices.TYPE_SELECT,
+    CustomFieldTypeChoices.TYPE_MULTISELECT,
 )
 
 
@@ -85,6 +86,10 @@ class CustomFieldFilter(django_filters.Filter):
         if custom_field.type not in EXACT_FILTER_TYPES:
             if custom_field.filter_logic == CustomFieldFilterLogicChoices.FILTER_LOOSE:
                 self.lookup_expr = "icontains"
+
+        if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+            # Contains handles lists within the JSON data for multi select fields
+            self.lookup_expr = "contains"
 
 
 class CustomFieldModelFilterSet(django_filters.FilterSet):
@@ -118,7 +123,7 @@ class CustomFieldFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(label__icontains=value))
 
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):

@@ -1,5 +1,8 @@
+import time
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.urls import reverse
 from rest_framework import status
 
@@ -604,6 +607,10 @@ class CustomFieldImportTest(TestCase):
                 name="select",
                 type=CustomFieldTypeChoices.TYPE_SELECT,
             ),
+            CustomField(
+                name="multiselect",
+                type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            ),
         )
         for cf in custom_fields:
             cf.save()
@@ -612,6 +619,9 @@ class CustomFieldImportTest(TestCase):
         CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice A")
         CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice B")
         CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice C")
+        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="multiselect"), value="Choice A")
+        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="multiselect"), value="Choice B")
+        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="multiselect"), value="Choice C")
 
     def test_import(self):
         """
@@ -628,6 +638,7 @@ class CustomFieldImportTest(TestCase):
                 "cf_date",
                 "cf_url",
                 "cf_select",
+                "cf_multiselect",
             ),
             (
                 "Site 1",
@@ -638,6 +649,7 @@ class CustomFieldImportTest(TestCase):
                 "True",
                 "2020-01-01",
                 "http://example.com/1",
+                "Choice A",
                 "Choice A",
             ),
             (
@@ -650,8 +662,9 @@ class CustomFieldImportTest(TestCase):
                 "2020-01-02",
                 "http://example.com/2",
                 "Choice B",
+                '"Choice A,Choice B"',
             ),
-            ("Site 3", "site-3", "active", "", "", "", "", "", ""),
+            ("Site 3", "site-3", "active", "", "", "", "", "", "", ""),
         )
         csv_data = "\n".join(",".join(row) for row in data)
 
@@ -660,23 +673,25 @@ class CustomFieldImportTest(TestCase):
 
         # Validate data for site 1
         site1 = Site.objects.get(name="Site 1")
-        self.assertEqual(len(site1.custom_field_data), 6)
+        self.assertEqual(len(site1.custom_field_data), 7)
         self.assertEqual(site1.custom_field_data["text"], "ABC")
         self.assertEqual(site1.custom_field_data["integer"], 123)
         self.assertEqual(site1.custom_field_data["boolean"], True)
         self.assertEqual(site1.custom_field_data["date"], "2020-01-01")
         self.assertEqual(site1.custom_field_data["url"], "http://example.com/1")
         self.assertEqual(site1.custom_field_data["select"], "Choice A")
+        self.assertEqual(site1.custom_field_data["multiselect"], ["Choice A"])
 
         # Validate data for site 2
         site2 = Site.objects.get(name="Site 2")
-        self.assertEqual(len(site2.custom_field_data), 6)
+        self.assertEqual(len(site2.custom_field_data), 7)
         self.assertEqual(site2.custom_field_data["text"], "DEF")
         self.assertEqual(site2.custom_field_data["integer"], 456)
         self.assertEqual(site2.custom_field_data["boolean"], False)
         self.assertEqual(site2.custom_field_data["date"], "2020-01-02")
         self.assertEqual(site2.custom_field_data["url"], "http://example.com/2")
         self.assertEqual(site2.custom_field_data["select"], "Choice B")
+        self.assertEqual(site2.custom_field_data["multiselect"], ["Choice A", "Choice B"])
 
         # No custom field data should be set for site 3
         site3 = Site.objects.get(name="Site 3")
@@ -837,6 +852,20 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
+        CustomFieldChoice.objects.create(field=cf, value="Foo")
+        CustomFieldChoice.objects.create(field=cf, value="Bar")
+
+        # Multi-select filtering
+        cf = CustomField(
+            name="cf9",
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        CustomFieldChoice.objects.create(field=cf, value="Foo")
+        CustomFieldChoice.objects.create(field=cf, value="Bar")
+
         Site.objects.create(
             name="Site 1",
             slug="site-1",
@@ -849,6 +878,7 @@ class CustomFieldFilterTest(TestCase):
                 "cf6": "http://foo.example.com/",
                 "cf7": "http://foo.example.com/",
                 "cf8": "Foo",
+                "cf9": [],
             },
         )
         Site.objects.create(
@@ -863,9 +893,15 @@ class CustomFieldFilterTest(TestCase):
                 "cf6": "http://bar.example.com/",
                 "cf7": "http://bar.example.com/",
                 "cf8": "Bar",
+                "cf9": ["Foo"],
             },
         )
-        Site.objects.create(name="Site 3", slug="site-3", custom_field_data={})
+        Site.objects.create(
+            name="Site 3",
+            slug="site-3",
+            custom_field_data={"cf9": ["Foo", "Bar"]},
+        )
+        Site.objects.create(name="Site 4", slug="site-4", custom_field_data={})
 
     def test_filter_integer(self):
         self.assertEqual(self.filterset({"cf_cf1": 100}, self.queryset).qs.count(), 1)
@@ -890,3 +926,117 @@ class CustomFieldFilterTest(TestCase):
 
     def test_filter_select(self):
         self.assertEqual(self.filterset({"cf_cf8": "Foo"}, self.queryset).qs.count(), 1)
+
+    def test_filter_multi_select(self):
+        self.assertEqual(self.filterset({"cf_cf9": "Foo"}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"cf_cf9": "Bar"}, self.queryset).qs.count(), 1)
+
+
+class CustomFieldChoiceTest(TestCase):
+    def setUp(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+        self.cf = CustomField(
+            name="cf1",
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+        )
+        self.cf.save()
+        self.cf.content_types.set([obj_type])
+
+        self.choice = CustomFieldChoice(field=self.cf, value="Foo")
+        self.choice.save()
+
+        self.site = Site(
+            name="Site 1",
+            slug="site-1",
+            custom_field_data={
+                "cf1": "Foo",
+            },
+        )
+        self.site.save()
+
+    def test_default_value_must_be_valid_choice_sad_path(self):
+        self.cf.default = "invalid value"
+        with self.assertRaises(ValidationError):
+            self.cf.full_clean()
+
+    def test_default_value_must_be_valid_choice_happy_path(self):
+        self.cf.default = "Foo"
+        self.cf.full_clean()
+        self.cf.save()
+        self.assertEqual(self.cf.default, "Foo")
+
+    def test_active_choice_cannot_be_deleted(self):
+        with self.assertRaises(ProtectedError):
+            self.choice.delete()
+
+    def test_custom_choice_deleted_with_field(self):
+        self.cf.delete()
+        self.assertEqual(CustomField.objects.count(), 0)
+        self.assertEqual(CustomFieldChoice.objects.count(), 0)
+
+
+class CustomFieldBackgroundTasks(TestCase):
+    def test_provision_field_task(self):
+        site = Site(
+            name="Site 1",
+            slug="site-1",
+        )
+        site.save()
+
+        obj_type = ContentType.objects.get_for_model(Site)
+        cf = CustomField(
+            name="cf1",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        time.sleep(1)  # wait for job to run in worker
+
+        site.refresh_from_db()
+
+        self.assertTrue("cf1" in site.custom_field_data)
+
+    def test_delete_custom_field_data_task(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+        cf = CustomField(
+            name="cf1",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        site = Site(name="Site 1", slug="site-1", custom_field_data={"cf1": "foo"})
+        site.save()
+
+        cf.delete()
+
+        time.sleep(1)  # wait for job to run in worker
+
+        site.refresh_from_db()
+
+        self.assertTrue("cf1" not in site.custom_field_data)
+
+    def test_update_custom_field_choice_data_task(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+        cf = CustomField(
+            name="cf1",
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        choice = CustomFieldChoice(field=cf, value="Foo")
+        choice.save()
+
+        site = Site(name="Site 1", slug="site-1", custom_field_data={"cf1": "Foo"})
+        site.save()
+
+        choice.value = "Bar"
+        choice.save()
+
+        time.sleep(1)  # wait for job to run in worker
+
+        site.refresh_from_db()
+
+        self.assertEqual(site.custom_field_data["cf1"], "Bar")

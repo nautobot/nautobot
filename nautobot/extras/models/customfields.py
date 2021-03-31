@@ -10,12 +10,13 @@ from django.db import models
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.choices import *
-from nautobot.extras.tasks import update_custom_field_choice_data
+from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
     CSVChoiceField,
+    CSVMultipleChoiceField,
     DatePicker,
     LaxURLField,
     StaticSelect2,
@@ -150,17 +151,6 @@ class CustomField(BaseModel):
     def __str__(self):
         return self.label or self.name.replace("_", " ").capitalize()
 
-    def remove_stale_data(self, content_types):
-        """
-        Delete custom field data which is no longer relevant (either because the CustomField is
-        no longer assigned to a model, or because it has been deleted).
-        """
-        for ct in content_types:
-            model = ct.model_class()
-            for obj in model.objects.filter(**{f"custom_field_data__{self.name}__isnull": False}):
-                del obj.custom_field_data[self.name]
-                obj.save()
-
     def clean(self):
         super().clean()
 
@@ -287,7 +277,7 @@ class CustomField(BaseModel):
                     widget=StaticSelect2(),
                 )
             else:
-                field_class = CSVChoiceField if for_csv_import else forms.MultipleChoiceField
+                field_class = CSVMultipleChoiceField if for_csv_import else forms.MultipleChoiceField
                 field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
 
         field.model = self
@@ -352,6 +342,16 @@ class CustomField(BaseModel):
         elif self.required:
             raise ValidationError("Required field cannot be empty.")
 
+    def delete(self, *args, **kwargs):
+        """
+        Handle the cleanup of old custom field data when a CustomField is deleted.
+        """
+        content_types = set(self.content_types.values_list("pk", flat=True))
+
+        super().delete(*args, **kwargs)
+
+        delete_custom_field_data.delay(self.name, content_types)
+
 
 class CustomFieldChoice(BaseModel):
     """
@@ -365,7 +365,7 @@ class CustomFieldChoice(BaseModel):
         limit_choices_to={"type": CustomFieldTypeChoices.TYPE_SELECT},
     )
     value = models.CharField(max_length=100)
-    weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear lower in the list")
+    weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     class Meta:
         ordering = ["field", "weight", "value"]
