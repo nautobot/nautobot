@@ -186,7 +186,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 ```
 ### SAML
 
-This guide will wallk you through configuring Nautobot to authenticate using SAML with Google as the identity provider.
+This guide will walk you through configuring Nautobot to authenticate using SAML with Google as the identity provider.
 
 !!! important
 	Please note that there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
