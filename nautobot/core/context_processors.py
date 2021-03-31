@@ -14,12 +14,12 @@ def get_saml_idp():
     If SAML is not configured, this returns `None`.
     """
 
-    idp_map = getattr(django_settings, 'SOCIAL_AUTH_SAML_ENABLED_IDPS', None)
+    idp_map = getattr(django_settings, "SOCIAL_AUTH_SAML_ENABLED_IDPS", None)
 
     # We will only retrieve the first and only IDP defined as we cannot support
     # more than a single IDP for SAML at this time until we come up with a more
     # robust login system.
-    value = ''
+    value = ""
     if idp_map is not None:
         try:
             idp = list(idp_map.keys())[0]
@@ -44,10 +44,10 @@ def settings_and_registry(request):
 
 def sso_auth(request):
     """
-    Expose SSO-related variables for use in generating login URL fragments for external authentication providers. 
+    Expose SSO-related variables for use in generating login URL fragments for external authentication providers.
     """
 
     return {
         "SAML_IDP": get_saml_idp,
-        "SSO_AUTH_ENABLED": lazy(lambda: sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS))
+        "SSO_AUTH_ENABLED": lazy(lambda: sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS)),
     }
