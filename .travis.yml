@@ -2,10 +2,10 @@
 os: linux
 dist: xenial
 cache:
-  pip: true
   directories:
     - /home/travis/docker_images
     - /home/travis/virtualenv
+    - /home/travis/.cache/pip
 services:
   - postgresql
   - redis
