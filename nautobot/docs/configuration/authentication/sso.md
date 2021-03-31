@@ -303,7 +303,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 Now that you've configured both Google and Nautobot for SAML, you still need to enable SAML for your users in your Google domain.
 
-On Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), scroll down to **Turn on your SAML app** and follow the remaining instructions to enable and verify SAML in Google.
+On Google's official site to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), scroll down to **Turn on your SAML app** and follow the remaining instructions to enable and verify SAML in Google.
 
 #### Login with SAML
 
