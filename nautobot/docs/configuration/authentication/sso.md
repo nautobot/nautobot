@@ -225,7 +225,7 @@ Before you begin you will need the following:
 
 #### Configure Nautobot
 
-There is a lot to configure to Nautobot how to integrate with SAML, so please provide the following configuration very carefully. All of these values must be correctly configured in your `nautobot_config.py`.
+There is a lot to configure to inform Nautobot how to integrate with SAML, so please provide the following configuration very carefully. All of these values must be correct in your `nautobot_config.py`.
 
 !!! important
 	Refer to the [official Python Social Auth documentation for required SAML configuration](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html#required-configuration) if you run into any issues.
