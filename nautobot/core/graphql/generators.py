@@ -163,7 +163,18 @@ def generate_list_resolver(schema_type, resolver_name):
 
     def list_resolver(self, info, **kwargs):
         if schema_type._meta.filterset_class:
-            fsargs = {key: [value] for key, value in kwargs.items()}
+            fsargs = {}
+            # fsargs used to store django filter values.
+            # In most cases these values need to be inside of a list per key.
+            # Except when a filter fields has a method attached. In this case
+            # the value cannot be inside a list. https://docs.djangoproject.com/en/3.1/ref/request-response/#querydict-objects
+            for key, value in kwargs.items():
+                # Check if filter field has a method attached
+                if schema_type._meta.filterset_class.base_filters[key]._method:
+                    fsargs[key] = value
+                else:
+                    # Put value inside of list if there is no method
+                    fsargs[key] = [value]
             resolved_obj = schema_type._meta.filterset_class(
                 fsargs, model.objects.restrict(info.context.user, "view").all()
             )
