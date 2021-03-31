@@ -299,6 +299,12 @@ SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ```
 
+#### Enable SAML in Google
+
+Now that you've configured both Google and Nautobot for SAML, you still need to enable SAML for your users in your Google domain.
+
+On Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), scroll down to **Turn on your SAML app** and follow the remaining instructions to enable and verify SAML in Google.
+
 #### Login with SAML
 
 Note the provider entry we configured in `SOCIAL_AUTH_SAML_ENABLED_IDPS` as `google`. This will be used to login and will be referenced in the query parameter using `idp=google`. For example `/login/saml/?idp=google`.
