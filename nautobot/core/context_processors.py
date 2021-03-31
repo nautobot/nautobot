@@ -1,5 +1,4 @@
 from django.conf import settings as django_settings
-from django.utils.functional import lazy
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.extras.registry import registry
@@ -49,5 +48,5 @@ def sso_auth(request):
 
     return {
         "SAML_IDP": get_saml_idp,
-        "SSO_AUTH_ENABLED": lazy(lambda: sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS)),
+        "SSO_AUTH_ENABLED": lambda: sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS),
     }
