@@ -457,6 +457,7 @@ class ConfigContextModel(models.Model):
         Return the rendered configuration context for a device or VM.
         """
 
+        # always manually query for config contexts
         config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
 
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
