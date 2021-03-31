@@ -170,15 +170,6 @@ def _configure_settings(config):
             storages.utils.setting = _setting
 
     #
-    # SSO
-    #
-
-    # If social auth is toggled, inject the appropriate settings
-    if settings.SOCIAL_AUTH_ENABLED:
-        settings.INSTALLED_APPS.append("social_django")
-        settings.AUTHENTICATION_BACKENDS.insert(0, settings.SOCIAL_AUTH_MODULE)
-
-    #
     # Plugins
     #
 
