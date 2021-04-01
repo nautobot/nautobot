@@ -154,6 +154,10 @@ EXEMPT_VIEW_PERMISSIONS = [
     # 'ipam.prefix',
 ]
 
+# Global 3rd-party authentication settings
+EXTERNAL_AUTH_DEFAULT_GROUPS = []
+EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+
 # If hosting Nautobot in a subdirectory, you must set this value to match the base URL prefix configured in your HTTP server (e.g. `/nautobot/`). When not set, URLs will default to being prefixed by `/`.
 FORCE_SCRIPT_NAME = None
 
@@ -230,13 +234,9 @@ PREFER_IPV4 = False
 RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
 RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
-# Remote authentication support
-REMOTE_AUTH_ENABLED = False
-REMOTE_AUTH_BACKEND = "nautobot.core.authentication.RemoteUserBackend"
+# Remote auth backend settings
+REMOTE_AUTH_AUTO_CREATE_USER = False
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
-REMOTE_AUTH_AUTO_CREATE_USER = True
-REMOTE_AUTH_DEFAULT_GROUPS = []
-REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
 
 # This determines how often the GitHub API is called to check the latest release of Nautobot. Must be at least 1 hour.
 RELEASE_CHECK_TIMEOUT = 24 * 3600
@@ -256,7 +256,7 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks, in seconds
 SESSION_FILE_PATH = None
 
 # Configure SSO, for more information see docs/configuration/authentication/sso.md
-SOCIAL_AUTH_ENABLED = False
+SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 
 # Time zone (default: UTC)
 TIME_ZONE = "UTC"
