@@ -1,7 +1,7 @@
 # Single Sign On
 
 Nautobot supports several different authentication mechanisms including OAuth (1 and 2), OpenID, SAML, and others.
-To accomplish this, Nautobot comes preinstalled with the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) python module.
+To accomplish this, Nautobot comes preinstalled with the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) Python module.
 
 This module supports several [authentication backends](https://python-social-auth.readthedocs.io/en/latest/backends/index.html) by default including:
 
