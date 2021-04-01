@@ -105,9 +105,11 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     Handle the cleanup of old custom field data when a CustomField is removed from one or more ContentTypes.
     """
     if action == "post_remove":
+        # Existing content types have been removed from the custom field, delete their data
         delete_custom_field_data.delay(instance.name, pk_set)
 
     elif action == "post_add":
+        # New content types have been added to the custom field, provision them
         provision_field.delay(instance.pk, pk_set)
 
 

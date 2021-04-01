@@ -29,6 +29,8 @@ W005 = Warning(
     id="nautobot.core.W005",
 )
 
+E006 = Error("RQ_QUEUES must define a valid queue named 'custom_fields'", id="nautobot.core.E006")
+
 
 @register(Tags.caches)
 def check_cache_timeout(app_configs, **kwargs):
@@ -66,4 +68,11 @@ def check_release_check_url(app_configs, **kwargs):
 def check_storage_config_and_backend(app_configs, **kwargs):
     if settings.STORAGE_CONFIG and (settings.STORAGE_BACKEND is None):
         return [W005]
+    return []
+
+
+@register(Tags.compatibility)
+def check_custom_fields_queue_defined(app_configs, **kwargs):
+    if settings.RQ_QUEUES and not settings.RQ_QUEUES.get("custom_fields"):
+        return [E006]
     return []

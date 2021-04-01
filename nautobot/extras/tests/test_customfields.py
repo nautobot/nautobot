@@ -1,5 +1,6 @@
 import time
 
+from django_rq import get_worker
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
@@ -991,7 +992,8 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        time.sleep(1)  # wait for job to run in worker
+        # Synchronously process all jobs on the queue in this process
+        get_worker("custom_fields").work(burst=True)
 
         site.refresh_from_db()
 
@@ -1006,12 +1008,16 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
+        # Synchronously process all jobs on the queue in this process
+        get_worker("custom_fields").work(burst=True)
+
         site = Site(name="Site 1", slug="site-1", custom_field_data={"cf1": "foo"})
         site.save()
 
         cf.delete()
 
-        time.sleep(1)  # wait for job to run in worker
+        # Synchronously process all jobs on the queue in this process
+        get_worker("custom_fields").work(burst=True)
 
         site.refresh_from_db()
 
@@ -1026,6 +1032,9 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
+        # Synchronously process all jobs on the queue in this process
+        get_worker("custom_fields").work(burst=True)
+
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
 
@@ -1035,7 +1044,8 @@ class CustomFieldBackgroundTasks(TestCase):
         choice.value = "Bar"
         choice.save()
 
-        time.sleep(1)  # wait for job to run in worker
+        # Synchronously process all jobs on the queue in this process
+        get_worker("custom_fields").work(burst=True)
 
         site.refresh_from_db()
 

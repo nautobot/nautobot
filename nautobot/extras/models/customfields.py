@@ -362,7 +362,9 @@ class CustomFieldChoice(BaseModel):
         to="extras.CustomField",
         on_delete=models.CASCADE,
         related_name="choices",
-        limit_choices_to={"type": CustomFieldTypeChoices.TYPE_SELECT},
+        limit_choices_to=models.Q(
+            type__in=[CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]
+        ),
     )
     value = models.CharField(max_length=100)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")

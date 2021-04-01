@@ -97,6 +97,14 @@ RQ_QUEUES = {
         "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
+    "custom_fields": {
+        "HOST": os.environ["REDIS_HOST"],
+        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "DB": 0,
+        "PASSWORD": os.environ["REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "DEFAULT_TIMEOUT": 900,
+    },
 }
 
 # Base URL path if accessing Nautobot within a directory. For example, if installed at https://example.com/nautobot/, set:
