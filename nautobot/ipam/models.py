@@ -613,53 +613,67 @@ class Prefix(PrimaryModel, StatusModel):
     def get_duplicates(self):
         return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
 
-    def get_child_prefixes(self, select_for_update=False):
+    def get_child_prefixes(self, db="default", select_for_update=False):
         """
         Return all Prefixes within this Prefix and VRF.
         If this Prefix is a container in the global table, return child Prefixes belonging to any VRF.
 
+        :param db: specifies the database to be used, allows for race testing
         :param select_for_update: if True, use select_for_update
         """
-        qs = Prefix.objects.select_for_update() if select_for_update else Prefix.objects.all()
+
+        if select_for_update:
+            qs = Prefix.objects.using(db).select_for_update()
+        else:
+            qs = Prefix.objects.using(db).all()
+
         if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
             return qs.net_contained(self.prefix)
         else:
             return qs.net_contained(self.prefix).filter(vrf=self.vrf)
 
-    def get_child_ips(self, select_for_update=False):
+    def get_child_ips(self, db="default", select_for_update=False):
         """
         Return all IPAddresses within this Prefix and VRF. If this Prefix is a container in the global table, return
         child IPAddresses belonging to any VRF.
 
+        :param db: specifies the database to be used, allows for race testing
         :param select_for_update: if True, use select_for_update
         """
-        qs = IPAddress.objects.select_for_update() if select_for_update else IPAddress.objects.all()
+
+        if select_for_update:
+            qs = IPAddress.objects.using(db).all()
+        else:
+            qs = IPAddress.objects.using(db).select_for_update()
+
         if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
             return qs.net_host_contained(self.prefix)
         else:
             return qs.net_host_contained(self.prefix).filter(vrf=self.vrf)
 
-    def get_available_prefixes(self, select_for_update=False):
+    def get_available_prefixes(self, db="default", select_for_update=False):
         """
         Return all available Prefixes within this prefix as an IPSet.
 
+        :param db: specifies the database to be used, allows for race testing
         :param select_for_update: if True, use select_for_update
         """
         prefix = netaddr.IPSet(self.prefix)
-        children = self.get_child_prefixes(select_for_update=select_for_update)
+        children = self.get_child_prefixes(db=db, select_for_update=select_for_update)
         child_prefixes = netaddr.IPSet([child.prefix for child in children])
         available_prefixes = prefix - child_prefixes
 
         return available_prefixes
 
-    def get_available_ips(self, select_for_update=False):
+    def get_available_ips(self, db="default", select_for_update=False):
         """
         Return all available IPs within this prefix as an IPSet.
 
+        :param db: specifies the database to be used, allows for race testing
         :param select_for_update: if True, use select_for_update
         """
         prefix = netaddr.IPSet(self.prefix)
-        children = self.get_child_ips(select_for_update=select_for_update)
+        children = self.get_child_ips(db=db, select_for_update=select_for_update)
         child_ips = netaddr.IPSet([ip.address.ip for ip in children])
         available_ips = prefix - child_ips
 
