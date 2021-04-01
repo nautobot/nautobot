@@ -12,24 +12,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from distutils.util import strtobool
 import os
-from invoke import task
-
-
-def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
-
-    Examples:
-        >>> is_truthy('yes')
-        True
-    Args:
-        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
-        f, false, off and 0. Raises ValueError if val is anything else.
-    """
-    if isinstance(arg, bool):
-        return arg
-    return bool(strtobool(arg))
+from invoke import Program, Argument, task
+from .nautobot.core.settings_funcs import is_truthy
 
 
 PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
@@ -45,6 +30,32 @@ if os.path.isfile(COMPOSE_OVERRIDE_FILE):
 
 INVOKE_LOCAL = is_truthy(os.getenv("INVOKE_LOCAL", False))
 
+class NautobotDevCLI(Program):
+    def core_args(self):
+        core_args = super(NautobotDevCLI, self).core_args()
+        extra_args = [
+            Argument(names=('foo', 'f'), help="Foo the bars"),
+            # ...
+        ]
+        return core_args + extra_args
+
+    @task(
+        help={
+            "force_rm": "Always remove intermediate containers",
+            "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+        }
+    )
+    def build(context, force_rm=False, cache=True):
+        """Build Nautobot docker image."""
+        print("Building Nautobot .. ")
+        command = f"build --build-arg PYTHON_VER={PYTHON_VER}"
+        if not cache:
+            command += " --no-cache"
+        if force_rm:
+            command += " --force-rm"
+        docker_compose(context, command)
+
+NautobotDevCLI()
 
 def docker_compose(context, command, **kwargs):
     """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
@@ -245,7 +256,7 @@ def unittest_coverage(context):
         docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
 
 
-@task
+@task(help={"lint-only": "only run linters, unit tests will be excluded"})
 def tests(context, lint_only=False):
     """Run all tests and linters."""
     black(context)

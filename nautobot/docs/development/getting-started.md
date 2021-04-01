@@ -436,6 +436,9 @@ Throughout the course of development, it's a good idea to occasionally run Nauto
 |-------------------------|------------------------------------------------------------------------|
 | `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
 
+!!! info
+    By default `invoke unittest` will start and run the unit tests inside the docker development container, this ensures a postgres and redis server are available during the test. However, if you have these configured such that `nautobot-server` can run locally, outside of the docker environment, you may wish to set the environment variable `INVOKE_LOCAL=True` to execute these tests in your local environment instead.
+
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
 | Docker Compose Workflow    | Virtual Environment Workflow                                                    |
