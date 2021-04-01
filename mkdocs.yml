@@ -7,7 +7,7 @@ python:
         - requirements: docs/requirements.txt
 theme:
     name: readthedocs
-    navigation_depth: 2
+    navigation_depth: 4
     hljs_languages:
         - yaml
 extra_css:
