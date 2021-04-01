@@ -177,3 +177,13 @@ You can use the command `systemctl status nautobot.service` to verify that the W
     may indicate the problem.
 
 Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](../http-server).
+
+## Troubleshooting
+
+### SSL Error
+
+If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI configuration and Nautobot's database settings.
+See [this conversation](https://github.com/nautobot/nautobot/issues/127) for more details.
+
+- Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
+
