@@ -10,7 +10,7 @@ def get_saml_idp():
 
     If the configured SAML IDP is `google`, this returns `idp=google`.
 
-    If SAML is not configured, this returns `None`.
+    If SAML is not configured, this returns an empty string.
     """
 
     idp_map = getattr(django_settings, "SOCIAL_AUTH_SAML_ENABLED_IDPS", None)
