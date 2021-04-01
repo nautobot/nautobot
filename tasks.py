@@ -12,50 +12,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from distutils.util import strtobool
 import os
-from invoke import Program, Argument, task
-from .nautobot.core.settings_funcs import is_truthy
+from invoke import Collection, task as invoke_task
 
 
-PYTHON_VER = os.getenv("PYTHON_VER", "3.7")
+def is_truthy(arg):
+    """Convert "truthy" strings into Booleans.
+
+    Examples:
+        >>> is_truthy('yes')
+        True
+    Args:
+        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
+        f, false, off and 0. Raises ValueError if val is anything else.
+    """
+    if isinstance(arg, bool):
+        return arg
+    return bool(strtobool(arg))
 
 
-COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
-COMPOSE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.yml")
-COMPOSE_OVERRIDE_FILE = os.path.join(COMPOSE_DIR, "docker-compose.override.yml")
-COMPOSE_COMMAND = f'docker-compose --project-directory "{COMPOSE_DIR}" -f "{COMPOSE_FILE}"'
+default_python_ver = "3.7"
 
-if os.path.isfile(COMPOSE_OVERRIDE_FILE):
-    COMPOSE_COMMAND += f' -f "{COMPOSE_OVERRIDE_FILE}"'
-
-INVOKE_LOCAL = is_truthy(os.getenv("INVOKE_LOCAL", False))
-
-class NautobotDevCLI(Program):
-    def core_args(self):
-        core_args = super(NautobotDevCLI, self).core_args()
-        extra_args = [
-            Argument(names=('foo', 'f'), help="Foo the bars"),
-            # ...
-        ]
-        return core_args + extra_args
-
-    @task(
-        help={
-            "force_rm": "Always remove intermediate containers",
-            "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+# Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
+# Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
+namespace = Collection("nautobot")
+namespace.configure(
+    {
+        "nautobot": {
+            "python_ver": default_python_ver,
+            "invoke_local": False,
+            "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
+            "compose_file": "docker-compose.yml",
+            "compose_override_file": "docker-compose.override.yml",
         }
-    )
-    def build(context, force_rm=False, cache=True):
-        """Build Nautobot docker image."""
-        print("Building Nautobot .. ")
-        command = f"build --build-arg PYTHON_VER={PYTHON_VER}"
-        if not cache:
-            command += " --no-cache"
-        if force_rm:
-            command += " --force-rm"
-        docker_compose(context, command)
+    }
+)
 
-NautobotDevCLI()
+
+def task(*args, **kwargs):
+    def task_wrapper(func):
+        """Wrapper around invoke.task to add the task to the namespace as well."""
+        task_func = invoke_task(*args, **kwargs)(func)
+        namespace.add_task(task_func)
+        return task_func
+
+    return task_wrapper
+
 
 def docker_compose(context, command, **kwargs):
     """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
@@ -65,8 +68,14 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
+    compose_file_path = os.path.join(context.nautobot.compose_dir, context.nautobot.compose_file)
+    compose_command = f'docker-compose --project-directory "{context.nautobot.compose_dir}" -f "{compose_file_path}"'
+    compose_override_path = os.path.join(context.nautobot.compose_dir, context.nautobot.compose_override_file)
+    if os.path.isfile(compose_override_path):
+        compose_command += f' -f "{compose_override_path}"'
+    compose_command += f" {command}"
     print(f'Running docker-compose command "{command}"')
-    return context.run(f"{COMPOSE_COMMAND} {command}", env={"PYTHON_VER": PYTHON_VER}, **kwargs)
+    return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
 
 
 # ------------------------------------------------------------------------------
@@ -76,109 +85,144 @@ def docker_compose(context, command, **kwargs):
     help={
         "force_rm": "Always remove intermediate containers",
         "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+        "python-ver": "The version of Python to build the container with (default: 3.7)",
     }
 )
-def build(context, force_rm=False, cache=True):
+def build(context, force_rm=False, cache=True, python_ver=None):
     """Build Nautobot docker image."""
-    print("Building Nautobot .. ")
-    command = f"build --build-arg PYTHON_VER={PYTHON_VER}"
+    if python_ver is None:
+        python_ver = context.nautobot.python_ver
+    else:
+        context.nautobot.python_ver = python_ver
+
+    command = f"build --build-arg PYTHON_VER={python_ver}"
+
     if not cache:
         command += " --no-cache"
     if force_rm:
         command += " --force-rm"
+
+    print(f"Building Nautobot with Python {python_ver}...")
     docker_compose(context, command)
 
 
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
-@task
+@task()
 def debug(context):
     """Start Nautobot and its dependencies in debug mode."""
     print("Starting Nautobot in debug mode...")
     docker_compose(context, "up")
 
 
-@task
+@task()
 def start(context):
     """Start Nautobot and its dependencies in detached mode."""
     print("Starting Nautobot in detached mode...")
     docker_compose(context, "up --detach")
 
 
-@task
+@task()
 def restart(context):
     """Gracefully restart all containers."""
     print("Restarting Nautobot...")
     docker_compose(context, "restart")
 
 
-@task
+@task()
 def stop(context):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     docker_compose(context, "down")
 
 
-@task
+@task()
 def destroy(context):
     """Destroy all containers and volumes."""
     print("Destroying Nautobot...")
     docker_compose(context, "down --volumes")
 
 
-@task
-def vscode(context):
+@task(help={"python-ver": f"The version of Python to build the container with (default: {default_python_ver})"})
+def vscode(context, python_ver=None):
     """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
-    context.run("code nautobot.code-workspace", env={"PYTHON_VER": PYTHON_VER})
+    command = "code nautobot.code-workspace"
+
+    if python_ver is None:
+        python_ver = context.nautobot.python_ver
+
+    context.run(command, env={"PYTHON_VER": python_ver})
 
 
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
-@task
-def nbshell(context):
+@task(help={"local": "run this task locally vs inside the docker container (default: False)"})
+def nbshell(context, local=None):
     """Launch an interactive nbshell session."""
     command = "nautobot-server nbshell"
-    if INVOKE_LOCAL:
+
+    if local is None:
+        local = context.nautobot.invoke_local
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run nautobot {command}", pty=True)
 
 
-@task
+@task()
 def cli(context):
     """Launch a bash shell inside the running Nautobot container."""
     docker_compose(context, "exec nautobot bash", pty=True)
 
 
-@task(help={"user": "name of the superuser to create"})
-def createsuperuser(context, user="admin"):
+@task(
+    help={
+        "user": "name of the superuser to create (default: admin)",
+        "local": "run this task locally vs inside the docker container (default: False)",
+    }
+)
+def createsuperuser(context, user="admin", local=None):
     """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
     command = f"nautobot-server createsuperuser --username {user}"
-    if INVOKE_LOCAL:
+
+    if local is None:
+        local = context.nautobot.invoke_local
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run nautobot {command}", pty=True)
 
 
-@task(help={"name": "name of the migration to be created; if unspecified, will autogenerate a name"})
-def makemigrations(context, name=""):
+@task(
+    help={
+        "name": "name of the migration to be created; if unspecified, will autogenerate a name",
+        "local": "run this task locally vs inside the docker container (default: False)",
+    }
+)
+def makemigrations(context, name="", local=None):
     """Perform makemigrations operation in Django."""
     command = "run nautobot nautobot-server makemigrations"
+
+    if local is None:
+        local = context.nautobot.invoke_local
     if name:
         command += f" --name {name}"
-    if INVOKE_LOCAL:
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, command)
 
 
-@task
-def migrate(context):
+@task(help={"local": "run this task locally vs inside the docker container (default: False)"})
+def migrate(context, local=None):
     """Perform migrate operation in Django."""
     command = "nautobot-server migrate"
-    if INVOKE_LOCAL:
+
+    if local is None:
+        local = context.nautobot.invoke_local
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run nautobot {command}")
@@ -189,17 +233,22 @@ def migrate(context):
 # ------------------------------------------------------------------------------
 @task(
     help={
-        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect."
+        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
+        "local": "run this task locally vs inside the docker container (default: False)",
     }
 )
-def black(context, autoformat=False):
+def black(context, autoformat=False, local=None):
     """Check Python code style with Black."""
+    if local is None:
+        local = context.nautobot.invoke_local
     if autoformat:
         black_command = "black"
     else:
         black_command = "black --check --diff"
+
     command = f"{black_command} development/ nautobot/ tasks.py"
-    if INVOKE_LOCAL:
+
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(
@@ -209,21 +258,27 @@ def black(context, autoformat=False):
         )
 
 
-@task
-def flake8(context):
+@task(help={"local": "run this task locally vs inside the docker container (default: False)"})
+def flake8(context, local=None):
     """Check for PEP8 compliance and other style issues."""
     command = "flake8 development/ nautobot/ tasks.py"
-    if INVOKE_LOCAL:
+
+    if local is None:
+        local = context.nautobot.invoke_local
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
 
 
-@task
-def check_migrations(context):
+@task(help={"local": "run this task locally vs inside the docker container (default: False)"})
+def check_migrations(context, local=None):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
-    if INVOKE_LOCAL:
+
+    if local is None:
+        local = context.nautobot.invoke_local
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
@@ -233,24 +288,34 @@ def check_migrations(context):
     help={
         "keepdb": "save and re-use test database between test runs for faster re-testing.",
         "label": "specify a directory or module to test instead of running all Nautobot tests",
+        "failfast": "fail as soon as a single test fails don't run the entire test suite",
+        "local": "run this task locally vs inside the docker container (default: False)",
     }
 )
-def unittest(context, keepdb=False, label="nautobot"):
+def unittest(context, keepdb=False, label="nautobot", failfast=False, local=None):
     """Run Nautobot unit tests."""
     command = f"coverage run -m nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
+
+    if local is None:
+        local = context.nautobot.invoke_local
     if keepdb:
         command += " --keepdb"
-    if INVOKE_LOCAL:
+    if failfast:
+        command += " --failfast"
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
 
 
-@task
-def unittest_coverage(context):
+@task(help={"local": "run this task locally vs inside the docker container (default: False)"})
+def unittest_coverage(context, local=None):
     """Report on code test coverage as measured by 'invoke unittest'."""
     command = "coverage report --skip-covered --omit *migrations*"
-    if INVOKE_LOCAL:
+
+    if local is None:
+        local = context.nautobot.invoke_local
+    if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)

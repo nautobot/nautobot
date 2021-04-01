@@ -11,7 +11,7 @@ START=$(date +%s)
 echo "$(info) starting build checks."
 
 # invoke defaults to running tests in a docker container for travis we want to execute them locally
-export INVOKE_LOCAL=True
+export INVOKE_NAUTOBOT_INVOKE_LOCAL=True
 
 # Syntax check all python source files
 SYNTAX=$(find . -name "*.py" -type f -exec python -m py_compile {} \; 2>&1)
@@ -22,7 +22,7 @@ if [[ ! -z $SYNTAX ]]; then
 fi
 
 # Run Nautobot tests
-invoke unittest
+invoke unittest --failfast
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more tests failed, failing build."
@@ -30,7 +30,7 @@ if [[ $RC != 0 ]]; then
 fi
 
 # Show code coverage report
-coverage report --skip-covered --include "nautobot/*" --omit "*migrations*"
+invoke unittest-coverage
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) failed to generate code coverage report."
