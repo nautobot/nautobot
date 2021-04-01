@@ -81,7 +81,7 @@ class CustomFieldFilter(django_filters.Filter):
 
         super().__init__(*args, **kwargs)
 
-        self.field_name = f"custom_field_data__{self.field_name}"
+        self.field_name = f"_custom_field_data__{self.field_name}"
 
         if custom_field.type not in EXACT_FILTER_TYPES:
             if custom_field.filter_logic == CustomFieldFilterLogicChoices.FILTER_LOOSE:

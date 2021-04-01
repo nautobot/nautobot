@@ -118,7 +118,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         site = Site(
             name="Test Site 1",
             slug="test-site-1",
-            custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
+            _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         site.save()
         self.create_tags("Tag 1", "Tag 2")
@@ -244,7 +244,7 @@ class ChangeLogAPITest(APITestCase):
             name="Test Site 1",
             slug="test-site-1",
             status=self.statuses.get(slug="active"),
-            custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
+            _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         site.save()
         site.tags.set(*Tag.objects.all()[:2])

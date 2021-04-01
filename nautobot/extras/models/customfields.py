@@ -32,24 +32,33 @@ class CustomFieldModel(models.Model):
     Abstract class for any model which may have custom fields associated with it.
     """
 
-    custom_field_data = models.JSONField(encoder=DjangoJSONEncoder, blank=True, default=dict)
+    _custom_field_data = models.JSONField(encoder=DjangoJSONEncoder, blank=True, default=dict)
 
     class Meta:
         abstract = True
+
+    @property
+    def custom_field_data(self):
+        """
+        Legacy interface to raw custom field data
+
+        TODO(John): remove this entirely when the cf property is enhanced
+        """
+        return self._custom_field_data
 
     @property
     def cf(self):
         """
         Convenience wrapper for custom field data.
         """
-        return self.custom_field_data
+        return self._custom_field_data
 
     def get_custom_fields(self):
         """
         Return a dictionary of custom fields for a single object in the form {<field>: value}.
         """
         fields = CustomField.objects.get_for_model(self)
-        return OrderedDict([(field, self.custom_field_data.get(field.name)) for field in fields])
+        return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
     def clean(self):
         super().clean()
@@ -57,7 +66,7 @@ class CustomFieldModel(models.Model):
         custom_fields = {cf.name: cf for cf in CustomField.objects.get_for_model(self)}
 
         # Validate all field values
-        for field_name, value in self.custom_field_data.items():
+        for field_name, value in self._custom_field_data.items():
             if field_name not in custom_fields:
                 raise ValidationError(f"Unknown field name '{field_name}' in custom field data.")
             try:
@@ -67,7 +76,7 @@ class CustomFieldModel(models.Model):
 
         # Check for missing required values
         for cf in custom_fields.values():
-            if cf.required and cf.name not in self.custom_field_data:
+            if cf.required and cf.name not in self._custom_field_data:
                 raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
 
@@ -413,14 +422,14 @@ class CustomFieldChoice(BaseModel):
             # Check if this value is in active use in a select field
             for ct in self.field.content_types.all():
                 model = ct.model_class()
-                if model.objects.filter(**{f"custom_field_data__{self.field.name}": self.value}).exists():
+                if model.objects.filter(**{f"_custom_field_data__{self.field.name}": self.value}).exists():
                     raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
 
         else:
             # Check if this value is in active use in a multi-select field
             for ct in self.field.content_types.all():
                 model = ct.model_class()
-                if model.objects.filter(**{f"custom_field_data__{self.field.name}__contains": self.value}).exists():
+                if model.objects.filter(**{f"_custom_field_data__{self.field.name}__contains": self.value}).exists():
                     raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
 
         super().delete(*args, **kwargs)

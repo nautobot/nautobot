@@ -11,7 +11,7 @@ logger = getLogger("nautobot.extras.tasks")
 @job("custom_fields")
 def update_custom_field_choice_data(field_id, old_value, new_value):
     """
-    Update the values for a custom field choice used in objects' custom_field_data for the given field.
+    Update the values for a custom field choice used in objects' _custom_field_data for the given field.
 
     Args:
         field_id (uuid4): The PK of the custom field to which this choice value relates
@@ -30,18 +30,18 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            for obj in model.objects.filter(**{f"custom_field_data__{field.name}": old_value}):
-                obj.custom_field_data[field.name] = new_value
+            for obj in model.objects.filter(**{f"_custom_field_data__{field.name}": old_value}):
+                obj._custom_field_data[field.name] = new_value
                 obj.save()
 
     elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            for obj in model.objects.filter(**{f"custom_field_data__{field.name}__contains": old_value}):
-                old_list = obj.custom_field_data[field.name]
+            for obj in model.objects.filter(**{f"_custom_field_data__{field.name}__contains": old_value}):
+                old_list = obj._custom_field_data[field.name]
                 new_list = [new_value if e == old_value else e for e in old_list]
-                obj.custom_field_data[field.name] = new_list
+                obj._custom_field_data[field.name] = new_list
                 obj.save()
 
     else:
@@ -60,8 +60,8 @@ def delete_custom_field_data(field_name, content_type_pk_set):
     """
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
-        for obj in model.objects.filter(**{f"custom_field_data__{field_name}__isnull": False}):
-            del obj.custom_field_data[field_name]
+        for obj in model.objects.filter(**{f"_custom_field_data__{field_name}__isnull": False}):
+            del obj._custom_field_data[field_name]
             obj.save()
 
 
@@ -85,5 +85,5 @@ def provision_field(field_id, content_type_pk_set):
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
         for obj in model.objects.all():
-            obj.custom_field_data[field.name] = field.default
+            obj._custom_field_data[field.name] = field.default
             obj.save()

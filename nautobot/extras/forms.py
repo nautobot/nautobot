@@ -70,7 +70,7 @@ class CustomFieldModelForm(forms.ModelForm):
             field_name = "cf_{}".format(cf.name)
             if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
-                self.fields[field_name].initial = self.instance.custom_field_data.get(cf.name)
+                self.fields[field_name].initial = self.instance.cf.get(cf.name)
             else:
                 self.fields[field_name] = cf.to_form_field()
 
@@ -81,7 +81,7 @@ class CustomFieldModelForm(forms.ModelForm):
 
         # Save custom field data on instance
         for cf_name in self.custom_fields:
-            self.instance.custom_field_data[cf_name[3:]] = self.cleaned_data.get(cf_name)
+            self.instance.cf[cf_name[3:]] = self.cleaned_data.get(cf_name)
 
         return super().clean()
 

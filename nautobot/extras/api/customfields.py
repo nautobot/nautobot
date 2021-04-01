@@ -51,9 +51,9 @@ class CustomFieldsDataField(Field):
         return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
-        # If updating an existing instance, start with existing custom_field_data
+        # If updating an existing instance, start with existing _custom_field_data
         if self.parent.instance:
-            data = {**self.parent.instance.custom_field_data, **data}
+            data = {**self.parent.instance._custom_field_data, **data}
 
         return data
 
@@ -64,7 +64,7 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
     """
 
     custom_fields = CustomFieldsDataField(
-        source="custom_field_data",
+        source="_custom_field_data",
         default=CreateOnlyDefault(CustomFieldDefaultValues()),
     )
 
