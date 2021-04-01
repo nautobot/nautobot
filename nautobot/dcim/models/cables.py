@@ -371,7 +371,11 @@ class CablePath(BaseModel):
         is_split = False
 
         node = origin
+        visited_nodes = set()
         while node.cable is not None:
+            if node.id in visited_nodes:
+                raise ValidationError("a loop is detected in the path")
+            visited_nodes.add(node.id)
             if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 
