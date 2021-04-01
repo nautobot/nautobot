@@ -170,7 +170,7 @@ def generate_list_resolver(schema_type, resolver_name):
             # the value cannot be inside a list. https://docs.djangoproject.com/en/3.1/ref/request-response/#querydict-objects
             for key, value in kwargs.items():
                 # Check if filter field has a method attached
-                if schema_type._meta.filterset_class.base_filters[key]._method:
+                if schema_type._meta.filterset_class.base_filters[key]._method is not None:
                     fsargs[key] = value
                 else:
                     # Put value inside of list if there is no method
