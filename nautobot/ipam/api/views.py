@@ -21,7 +21,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.constants import ADVISORY_LOCK_KEYS
 from nautobot.utilities.utils import count_related
 from . import serializers
 
@@ -131,8 +130,8 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         """
         A convenience method for returning available child prefixes within a parent.
 
-        The advisory lock decorator uses a PostgreSQL advisory lock to prevent this API from being
-        invoked in parallel, which results in a race condition where multiple insertions can occur.
+        The `@transaction.atomic()` decorator serializes access to this API which prevents a race condition where
+        multiple insertions can occur.
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
         available_prefixes = prefix.get_available_prefixes(select_for_update=True)
@@ -214,8 +213,8 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         returned will be equivalent to PAGINATE_COUNT. An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed,
         however results will not be paginated.
 
-        The advisory lock decorator uses a PostgreSQL advisory lock to prevent this API from being
-        invoked in parallel, which results in a race condition where multiple insertions can occur.
+        The `@transaction.atomic()` decorator serializes access to this API which prevents a race condition where
+        multiple insertions can occur.
         """
         prefix = get_object_or_404(Prefix.objects.restrict(request.user), pk=pk)
 
