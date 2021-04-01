@@ -277,7 +277,8 @@ SOCIAL_AUTH_SAML_ENABLED_IDPS = {
         "entity_id": GOOGLE_ENTITY_ID,
         "url": GOOGLE_SSO_URL,
         "x509cert": GOOGLE_CERTIFICATE,
-        # These are used to map Google attribute fields to User object fields in Nautobot
+        # These are used to map to User object fields in Nautobot using Google
+        # attribute fields we configured in step 8 of "Setup SAML in Google".
         "attr_user_permanent_id": "email",
         "attr_first_name": "first_name",
         "attr_last_name": "last_name",
