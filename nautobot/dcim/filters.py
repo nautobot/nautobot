@@ -1,5 +1,5 @@
 import django_filters
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
@@ -361,12 +361,12 @@ class RackReservationFilterSet(BaseFilterSet, TenancyFilterSet):
         label="Rack group (slug)",
     )
     user_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         label="User (ID)",
     )
     user = django_filters.ModelMultipleChoiceFilter(
         field_name="user__username",
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         to_field_name="username",
         label="User (name)",
     )

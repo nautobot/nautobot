@@ -154,12 +154,16 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 
 Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.
 
-Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings.
+Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
+
+* [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
+* [`DATABASES`](../../configuration/required-settings/#databases): PostgreSQL database connection parameters. If you installed PostgreSQL on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
-Save your changes to your `nautobot_config.py` and then return here.
+Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
 ## Optional Settings
 
@@ -259,8 +263,8 @@ $ nautobot-server runserver 0.0.0.0:8000 --insecure
 
 Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8000; for example, <http://127.0.0.1:8000/>. You should be greeted with the Nautobot home page.
 
-!!! warning
-    The development server is for development and testing purposes only. It is neither performant nor secure enough for production use. **Do not use it in production.**
+!!! danger
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 !!! warning
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected.

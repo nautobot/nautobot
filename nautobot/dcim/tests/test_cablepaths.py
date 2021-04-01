@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.circuits.models import *
@@ -44,6 +45,9 @@ class CablePathTestCase(TestCase):
         cls.statuses = Status.objects.get_for_model(Cable)
         cls.status = cls.statuses.get(slug="connected")
         cls.status_planned = cls.statuses.get(slug="planned")
+
+        # create a Cable that is not contained in any CablePath
+        cls.dneCable = Cable(status=cls.status)
 
     def assertPathExists(self, origin, destination, path=None, is_active=None, msg=None):
         """
@@ -105,6 +109,17 @@ class CablePathTestCase(TestCase):
             msg = f"Path #{origin._path_id} set as origin on {origin}; should be None!"
         self.assertIsNone(origin._path_id, msg=msg)
 
+    def assertContainedByPath(self, path_parts):
+        """
+        For each {part: count} in `path_parts`, assert that part is contained in
+        count number of CablePaths.
+
+        :param path_parts: A dictionary of CablePath parts mapped to their counts
+        """
+        for part, count in path_parts.items():
+            self.assertEqual(CablePath.objects.filter(path__contains=part).count(), count)
+        self.assertEqual(CablePath.objects.filter(path__contains=self.dneCable).count(), 0)
+
     def test_101_interface_to_interface(self):
         """
         [IF1] --C1-- [IF2]
@@ -122,6 +137,8 @@ class CablePathTestCase(TestCase):
         interface2.refresh_from_db()
         self.assertPathIsSet(interface1, path1)
         self.assertPathIsSet(interface2, path2)
+
+        self.assertContainedByPath({cable1: 2})
 
         # Delete cable 1
         cable1.delete()
@@ -161,6 +178,8 @@ class CablePathTestCase(TestCase):
         self.assertPathIsSet(consoleport1, path1)
         self.assertPathIsSet(consoleserverport1, path2)
 
+        self.assertContainedByPath({cable1: 2})
+
         # Delete cable 1
         cable1.delete()
 
@@ -185,6 +204,8 @@ class CablePathTestCase(TestCase):
         self.assertPathIsSet(powerport1, path1)
         self.assertPathIsSet(poweroutlet1, path2)
 
+        self.assertContainedByPath({cable1: 2})
+
         # Delete cable 1
         cable1.delete()
 
@@ -208,6 +229,8 @@ class CablePathTestCase(TestCase):
         powerfeed1.refresh_from_db()
         self.assertPathIsSet(powerport1, path1)
         self.assertPathIsSet(powerfeed1, path2)
+
+        self.assertContainedByPath({cable1: 2})
 
         # Delete cable 1
         cable1.delete()
@@ -246,6 +269,8 @@ class CablePathTestCase(TestCase):
         circuittermination1.refresh_from_db()
         self.assertPathIsSet(interface1, path1)
         self.assertPathIsSet(circuittermination1, path2)
+
+        self.assertContainedByPath({cable1: 2})
 
         # Delete cable 1
         cable1.delete()
@@ -294,6 +319,15 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
         self.assertEqual(CablePath.objects.count(), 2)
+
+        self.assertContainedByPath(
+            {
+                cable1: 2,
+                rearport1: 2,
+                frontport1: 2,
+                cable2: 2,
+            }
+        )
 
         # Delete cable 2
         cable2.delete()
@@ -443,6 +477,22 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
         self.assertEqual(CablePath.objects.count(), 4)
+
+        self.assertContainedByPath(
+            {
+                cable1: 2,
+                cable2: 2,
+                cable3: 4,
+                cable4: 2,
+                cable5: 2,
+                frontport1_1: 2,
+                frontport1_2: 2,
+                frontport2_1: 2,
+                frontport2_2: 2,
+                rearport1: 4,
+                rearport2: 4,
+            }
+        )
 
         # Delete cable 3
         cable3.delete()
@@ -611,6 +661,28 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
         self.assertEqual(CablePath.objects.count(), 4)
+
+        self.assertContainedByPath(
+            {
+                cable1: 2,
+                cable2: 2,
+                cable3: 4,
+                cable4: 4,
+                cable5: 4,
+                cable6: 2,
+                cable7: 2,
+                frontport1_1: 2,
+                frontport1_2: 2,
+                frontport2: 4,
+                frontport3: 4,
+                frontport4_1: 2,
+                frontport4_2: 2,
+                rearport1: 4,
+                rearport2: 4,
+                rearport3: 4,
+                rearport4: 4,
+            }
+        )
 
         # Delete cable 3
         cable3.delete()
@@ -783,6 +855,31 @@ class CablePathTestCase(TestCase):
         )
         self.assertEqual(CablePath.objects.count(), 4)
 
+        self.assertContainedByPath(
+            {
+                cable1: 2,
+                cable2: 2,
+                cable3: 4,
+                cable4: 2,
+                cable5: 2,
+                cable6: 4,
+                cable7: 2,
+                cable8: 2,
+                rearport1: 4,
+                rearport2: 4,
+                rearport3: 4,
+                rearport4: 4,
+                frontport1_1: 2,
+                frontport1_2: 2,
+                frontport2_1: 2,
+                frontport2_2: 2,
+                frontport3_1: 2,
+                frontport3_2: 2,
+                frontport4_1: 2,
+                frontport4_2: 2,
+            }
+        )
+
         # Delete cable 5
         cable5.delete()
 
@@ -919,6 +1016,25 @@ class CablePathTestCase(TestCase):
         )
         self.assertEqual(CablePath.objects.count(), 4)
 
+        self.assertContainedByPath(
+            {
+                cable1: 2,
+                cable2: 2,
+                cable3: 4,
+                cable4: 4,
+                cable5: 2,
+                cable6: 2,
+                rearport1: 4,
+                rearport2: 4,
+                rearport3: 4,
+                frontport1_1: 2,
+                frontport1_2: 2,
+                frontport2: 4,
+                frontport3_1: 2,
+                frontport3_2: 2,
+            }
+        )
+
         # Delete cable 3
         cable3.delete()
 
@@ -978,6 +1094,17 @@ class CablePathTestCase(TestCase):
         )
         self.assertEqual(CablePath.objects.count(), 3)
 
+        self.assertContainedByPath(
+            {
+                cable1: 3,
+                cable2: 1,
+                cable3: 1,
+                frontport1_1: 1,
+                frontport1_2: 1,
+                rearport1: 3,
+            }
+        )
+
         # Delete cable 1
         cable1.delete()
 
@@ -1022,6 +1149,16 @@ class CablePathTestCase(TestCase):
             is_active=False,
         )
         self.assertEqual(CablePath.objects.count(), 1)
+
+        self.assertContainedByPath(
+            {
+                cable1: 1,
+                cable2: 1,
+                frontport1: 1,
+                rearport1: 1,
+                rearport2: 1,
+            }
+        )
 
     def test_208_single_path_via_circuit(self):
         """
@@ -1068,6 +1205,15 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
         self.assertEqual(CablePath.objects.count(), 4)
+
+        self.assertContainedByPath(
+            {
+                cable1: 3,
+                cable2: 3,
+                circuittermination1: 2,
+                circuittermination2: 2,
+            }
+        )
 
         # Delete cable 2
         cable2.delete()
@@ -1137,6 +1283,15 @@ class CablePathTestCase(TestCase):
         )
         self.assertEqual(CablePath.objects.count(), 4)
 
+        self.assertContainedByPath(
+            {
+                cable1: 3,
+                cable2: 3,
+                circuittermination1: 2,
+                circuittermination2: 2,
+            }
+        )
+
         # Delete cable 2
         cable2.delete()
         path1 = self.assertPathExists(
@@ -1156,6 +1311,21 @@ class CablePathTestCase(TestCase):
 
         # Check that all CablePaths have been deleted
         self.assertEqual(CablePath.objects.count(), 0)
+
+    def test_210_single_path_via_circuit_add_circuit_termination(self):
+        """
+        Tests case for circuit termination loop.
+        [CT1A][CT1Z]
+        """
+        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
+        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+        cable1 = Cable(
+            termination_a=circuittermination1,
+            termination_b=circuittermination2,
+            status=self.status,
+        )
+        with self.assertRaises(ValidationError):
+            cable1.save()
 
     def test_301_create_path_via_existing_cable(self):
         """
@@ -1210,6 +1380,18 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
         self.assertEqual(CablePath.objects.count(), 2)
+
+        self.assertContainedByPath(
+            {
+                cable1: 2,
+                cable2: 2,
+                cable3: 2,
+                frontport1: 2,
+                frontport2: 2,
+                rearport1: 2,
+                rearport2: 2,
+            }
+        )
 
     def test_302_update_path_on_cable_status_change(self):
         """
@@ -1267,3 +1449,12 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
         self.assertEqual(CablePath.objects.count(), 2)
+
+        self.assertContainedByPath(
+            {
+                cable1: 2,
+                cable2: 2,
+                frontport1: 2,
+                rearport1: 2,
+            }
+        )

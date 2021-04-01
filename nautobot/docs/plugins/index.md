@@ -9,11 +9,12 @@ The Nautobot plugin architecture allows for the following:
 * **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.)
 * **Add custom validation logic to existing data models.** A plugin can provide additional logic to customize the rules for validating created/updated data records.
 * **Add new URLs and views.** Plugins can register URLs under the `/plugins` root path to provide browsable views for users.
-* **Provide jobs.** Plugins can serve as a convenient way to package and install [jobs](../additional-features/jobs.md).
+* **Provide Jobs.** Plugins can serve as a convenient way to package and install [Jobs](../additional-features/jobs.md).
 * **Add content to existing model templates.** A template content class can be used to inject custom HTML content within the view of a core Nautobot model. This content can appear in the left side, right side, or bottom of the page.
 * **Add navigation menu items.** Each plugin can register new links in the navigation menu. Each link may have a set of buttons for specific actions, similar to the built-in navigation items.
 * **Add new REST API endpoints.** Plugins can register URLs under the `/api/plugins/` root path to provide new REST API views.
 * **Add custom middleware.** Custom Django middleware can be registered by each plugin.
+* **Add additional dependencies.** Custom Django application dependencies can be registered by each plugin.
 * **Declare configuration parameters.** Each plugin can define required, optional, and default configuration parameters within its unique namespace. Plug configuration parameter are defined by the user under `PLUGINS_CONFIG` in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** A plugin can specify a minimum and/or maximum Nautobot version with which it is compatible.
 
@@ -31,16 +32,22 @@ Either by policy or by technical limitation, the interaction of plugins with Nau
 
 The instructions below detail the process for installing and enabling a Nautobot plugin.
 
+You must be **absolutely** sure to install the plugin within Nautobot's virtual environment.
+
+!!! note
+	If you installed Nautobot in a production environment, you'll want to sudo to the nautobot user first using `sudo -iu nautobot`.
+
 ### Install the Package
 
-Download and install the plugin package per its installation instructions. Plugins published via PyPI are typically installed using pip. Be sure to install the plugin within Nautobot's virtual environment.
+Download and install the plugin package per its installation instructions. Plugins published via PyPI are typically installed using `pip3`.
 
 ```no-highlight
-$ poetry shell
-$ pip install <package>
+$ pip3 install <package>
 ```
 
-Alternatively, you may wish to install the plugin manually by running `python setup.py install`. If you are developing a plugin and want to install it only temporarily, run `python setup.py develop` instead.
+Alternatively, if you're or installing a plugin from from a local source copy, you may wish to install the plugin manually by running `python setup.py install`.
+
+If you are developing a plugin and want to install it only temporarily, run `python setup.py develop` instead.
 
 ### Enable the Plugin
 
@@ -56,7 +63,7 @@ PLUGINS = [
 
 If the plugin requires any configuration, define it in `nautobot_config.py` under the `PLUGINS_CONFIG` parameter. The available configuration parameters should be detailed in the plugin's README file.
 
-```no-highlight
+```python
 PLUGINS_CONFIG = {
     'plugin_name': {
         'foo': 'bar',

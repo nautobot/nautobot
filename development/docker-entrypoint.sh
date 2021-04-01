@@ -43,11 +43,11 @@ if [ "$CREATE_SUPERUSER" == "true" ]; then
   fi
 
   nautobot-server shell --interface python << END
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from nautobot.users.models import Token
-u = User.objects.filter(username='${SUPERUSER_NAME}')
+u = get_user_model().objects.filter(username='${SUPERUSER_NAME}')
 if not u:
-    u=User.objects.create_superuser('${SUPERUSER_NAME}', '${SUPERUSER_EMAIL}', '${SUPERUSER_PASSWORD}')
+    u=get_user_model().objects.create_superuser('${SUPERUSER_NAME}', '${SUPERUSER_EMAIL}', '${SUPERUSER_PASSWORD}')
     Token.objects.create(user=u, key='${SUPERUSER_API_TOKEN}')
 else:
     u = u[0]
@@ -65,8 +65,6 @@ else:
 END
 
   echo "💡 Superuser Username: ${SUPERUSER_NAME}, E-Mail: ${SUPERUSER_EMAIL}"
-else
-  echo "↩️ Skip creating the superuser"
 fi
 
 

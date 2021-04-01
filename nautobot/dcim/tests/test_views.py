@@ -2,7 +2,8 @@ from decimal import Decimal
 
 import pytz
 import yaml
-from django.contrib.auth.models import User
+
+from django.contrib.auth import get_user_model
 
 # from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
@@ -15,6 +16,10 @@ from nautobot.dcim.models import *
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 def create_test_device(name):

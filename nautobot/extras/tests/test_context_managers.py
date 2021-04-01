@@ -1,12 +1,16 @@
 import django_rq
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User
 from django.test import TestCase
 
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import *
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ObjectChange, Webhook
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class web_request_contextTestCase(TestCase):
