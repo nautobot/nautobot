@@ -34,11 +34,6 @@ RUN apt-get update && \
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && \
     chmod +x /usr/bin/hadolint
 
-# Generate self signed ssl certificates
-RUN mkdir /opt/nautobot && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
-    '/C=US/ST=NY/L=NYC/O=Nautobot/CN=nautobot.local' \
-    -keyout /opt/nautobot/nautobot.key -out /opt/nautobot/nautobot.crt
-
 # Install Poetry manually from GitHub because otherwise it installs its own
 # dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/#osx-linux-bashonwindows-install-instructions
@@ -73,6 +68,11 @@ COPY . /source
 # Build the whl for use in the final container and install for the dev container
 RUN poetry build && \
     poetry install --no-ansi
+
+# Generate self signed ssl certificates
+RUN mkdir /opt/nautobot && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
+    '/C=US/ST=NY/L=NYC/O=Nautobot/CN=nautobot.local' \
+    -keyout /opt/nautobot/nautobot.key -out /opt/nautobot/nautobot.crt
 
 # Used if someone wants to override the entrypoint and provision a super user
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
