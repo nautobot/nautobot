@@ -22,6 +22,8 @@ DATABASES = {
     }
 }
 
+LOGGING = {}
+
 PLUGINS = [
     "nautobot.extras.tests.dummy_plugin",
 ]

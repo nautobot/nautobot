@@ -274,9 +274,89 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
 DATETIME_FORMAT = "N j, Y g:i a"
+DEBUG = False
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
-LOGGING = {}
+
+LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
+LOGDIR = "/var/log/nautobot"
+
+# Provide a basic logging framework make configuration less burdensome
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "normal": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
+        },
+        "verbose": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
+        },
+    },
+    "handlers": {
+        "nautbot_auth_log_file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": f"{LOGDIR}/nautbot_auth.log",
+            "when": "midnight",
+            "utc": True,
+            "interval": 1,
+            "backupCount": 5,
+            "formatter": "verbose" if DEBUG else "normal",
+        },
+        "nautbot_log_file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": f"{LOGDIR}/nautbot.log",
+            "when": "midnight",
+            "utc": True,
+            "interval": 1,
+            "backupCount": 5,
+            "formatter": "verbose" if DEBUG else "normal",
+        },
+        "worker_log_file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": f"{LOGDIR}/nautbot_worker.log",
+            "when": "midnight",
+            "utc": True,
+            "interval": 1,
+            "backupCount": 5,
+            "formatter": "verbose" if DEBUG else "normal",
+        },
+        "console": {
+            "level": "DEBUG",
+            "class": "rq.utils.ColorizingStreamHandler",
+            "formatter": "verbose" if DEBUG else "normal",
+        }
+    },
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO"},
+        "rq.worker": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django_auth_ldap": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "nautbot.auth": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "social": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_FILE_PATH = None
 SHORT_DATE_FORMAT = "Y-m-d"

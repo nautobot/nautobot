@@ -366,9 +366,31 @@ The value of this variable can also be customized by setting the environment var
 
 ## LOGGING
 
-Default: `{}` (Empty dictionary)
+Default: `{...}` (Basic configuration to get started)
 
-By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
+By default all messages of INFO (DEBUG if [`DEBUG`](#debug) is True) severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
+
+### Logging to Files
+
+With the default logging configuration if you would like to send your logs to files which will be automatically rotated daily for up to 5 days by default include the following in your config:
+
+```python
+LOGGING["loggers"]["django"]["handlers"] = ["nautbot_log_file"]
+LOGGING["loggers"]["rq.worker"]["handlers"] = ["worker_log_file"]
+LOGGING["loggers"]["django_auth_ldap"]["handlers"] = ["nautbot_auth_log_file"]
+LOGGING["loggers"]["nautbot.auth"]["handlers"] = ["nautbot_auth_log_file"]
+LOGGING["loggers"]["social"]["handlers"] = ["nautbot_auth_log_file"]
+```
+
+This will create logs by default in `/var/log/nautobot`, please make sure before starting nautobot to create the directory and give the nautobot write permissions to it (`mkdir -p /var/log/nautobot; chown nautobot:nautobot /var/log/nautobot`).  To change the default log directory (only if using the built in `LOGGING` configuration) set:
+
+```python
+LOGDIR = "/some/other/path"
+```
+
+Remember to allow the `nautobot` user write access to this directory.
+
+### Custom Logging Configuration
 
 The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself and from the RQ worker process to the console with added verbosity and colorization:
 
@@ -399,7 +421,7 @@ LOGGING = {
 }
 ```
 
-### Available Loggers
+#### Available Loggers
 
 * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
 * `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
@@ -410,6 +432,7 @@ LOGGING = {
 * `nautobot.plugins.*` - Plugin loading and activity
 * `nautobot.views.*` - Views which handle business logic for the web UI
 * `rq.worker` - Background task handling
+* `social` - SSO Authentication events
 
 ---
 
