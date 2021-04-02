@@ -7,29 +7,38 @@ from django.core.validators import URLValidator
 E001 = Error(
     "CACHEOPS_DEFAULTS['timeout'] value cannot be 0. To disable caching set CACHEOPS_ENABLED=False.",
     id="nautobot.core.E001",
+    obj=settings,
 )
 
 E002 = Error(
     "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",
     id="nautobot.core.E002",
+    obj=settings,
 )
 
 E003 = Error(
     "RELEASE_CHECK_TIMEOUT must be at least 3600 seconds (1 hour)",
     id="nautobot.core.E003",
+    obj=settings,
 )
 
 E004 = Error(
     "RELEASE_CHECK_URL must be a valid API URL. Example: https://api.github.com/repos/nautobot/nautobot",
     id="nautobot.core.E004",
+    obj=settings,
 )
 
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
+    obj=settings,
 )
 
-E006 = Error("RQ_QUEUES must define a valid queue named 'custom_fields'", id="nautobot.core.E006")
+
+class E006(Error):
+    msg = "RQ_QUEUES must define at least the minimum set of required queues"
+    id = "nautobot.core.E006"
+    obj = settings
 
 
 @register(Tags.caches)
@@ -72,7 +81,17 @@ def check_storage_config_and_backend(app_configs, **kwargs):
 
 
 @register(Tags.compatibility)
-def check_custom_fields_queue_defined(app_configs, **kwargs):
-    if settings.RQ_QUEUES and not settings.RQ_QUEUES.get("custom_fields"):
-        return [E006]
-    return []
+def check_minimum_rq_queues(app_configs, **kwargs):
+    errors = []
+    minimum_queues = ["default", "webhooks", "check_releases", "custom_fields"]
+    for queue in minimum_queues:
+        if settings.RQ_QUEUES and not settings.RQ_QUEUES.get(queue):
+            errors.append(
+                E006(
+                    E006.msg,
+                    hint=f"RQ_QUEUES is missing the required '{queue}' queue definition",
+                    obj=E006.obj,
+                    id=E006.id,
+                )
+            )
+    return errors

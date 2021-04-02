@@ -108,7 +108,7 @@ class CustomFieldForm(forms.ModelForm):
 
 class CustomFieldChoiceAdmin(admin.TabularInline):
     """
-    Defines the inline forset factory that handles choices for selection type custom field.
+    Defines the inline formset factory that handles choices for selection type custom fields.
     The `extra` defines the default number of inline rows that appear in the UI.
     """
 

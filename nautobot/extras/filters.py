@@ -87,7 +87,7 @@ class CustomFieldFilter(django_filters.Filter):
             if custom_field.filter_logic == CustomFieldFilterLogicChoices.FILTER_LOOSE:
                 self.lookup_expr = "icontains"
 
-        if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+        elif custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
             # Contains handles lists within the JSON data for multi select fields
             self.lookup_expr = "contains"
 

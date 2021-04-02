@@ -55,6 +55,14 @@ RQ_QUEUES = {
         "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
+    "webhooks": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300,
+    },
     "check_releases": {
         "HOST": os.getenv("REDIS_HOST", "localhost"),
         "PORT": int(os.environ.get("REDIS_PORT", 6379)),

@@ -88,11 +88,3 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         instance.custom_fields = {}
         for field in custom_fields:
             instance.custom_fields[field.name] = instance.cf.get(field.name)
-
-
-class CustomFieldChoiceSerializer(ValidatedModelSerializer):
-    field = NestedCustomFieldSerializer()
-
-    class Meta:
-        model = CustomFieldChoice
-        fields = ["id", "url", "field", "value", "weight"]
