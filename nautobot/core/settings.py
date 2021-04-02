@@ -353,6 +353,7 @@ TEMPLATES = [
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
                 "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.sso_auth",
             ],
         },
     },
