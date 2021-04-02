@@ -8,10 +8,11 @@ from rest_framework.test import APIClient
 
 from nautobot.users.models import ObjectPermission, Token
 from .utils import disable_warnings
-from .views import ModelTestMixin, TestCase
+from .views import ModelTestMixin, TestCase, TransactionTestCase
 
 __all__ = (
     "APITestCase",
+    "APITransactionTestCase",
     "APIViewTestCases",
 )
 
@@ -28,6 +29,39 @@ User = get_user_model()
 class APITestCase(TestCase, ModelTestMixin):
     """
     Base test case for API requests.
+
+    client_class: Test client class
+    view_namespace: Namespace for API views. If None, the model's app_label will be used.
+    """
+
+    client_class = APIClient
+    view_namespace = None
+
+    def setUp(self):
+        """
+        Create a superuser and token for API calls.
+        """
+        # Create the test user and assign permissions
+        self.user = User.objects.create_user(username="testuser")
+        self.add_permissions(*self.user_permissions)
+        self.token = Token.objects.create(user=self.user)
+        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+
+    def _get_view_namespace(self):
+        return f"{self.view_namespace or self.model._meta.app_label}-api"
+
+    def _get_detail_url(self, instance):
+        viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
+        return reverse(viewname, kwargs={"pk": instance.pk})
+
+    def _get_list_url(self):
+        viewname = f"{self._get_view_namespace()}:{self.model._meta.model_name}-list"
+        return reverse(viewname)
+
+
+class APITransactionTestCase(TransactionTestCase, ModelTestMixin):
+    """
+    Base test case for Transactional API requests.
 
     client_class: Test client class
     view_namespace: Namespace for API views. If None, the model's app_label will be used.

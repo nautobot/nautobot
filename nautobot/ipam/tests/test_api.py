@@ -1,11 +1,14 @@
 import json
 
+from django.db import transaction, OperationalError
+from django.test import RequestFactory
 from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
+from nautobot.ipam.api.views import PrefixViewSet
 from nautobot.ipam.choices import *
 from nautobot.ipam.models import (
     Aggregate,
@@ -19,7 +22,13 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
+from nautobot.utilities.testing import (
+    APITestCase,
+    APIViewTestCases,
+    disable_warnings,
+    TransactionTestCase,
+    APITransactionTestCase,
+)
 
 
 class AppTest(APITestCase):
@@ -391,6 +400,86 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 8)
+
+
+class PrefixTransactionTest(APITransactionTestCase):
+    databases = [
+        "default",
+        "test_alias",
+    ]
+
+    # see nautobot.core.settings: DATABASES
+    DB1 = "default"
+    DB2 = "test_alias"
+
+    brief_fields = ["family", "id", "prefix", "url"]
+
+    create_data = [
+        {
+            "prefix": "192.168.4.0/24",
+            "status": "active",
+        },
+        {
+            "prefix": "192.168.5.0/24",
+            "status": "active",
+        },
+        {
+            "prefix": "192.168.6.0/24",
+            "status": "active",
+        },
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.request_factory = RequestFactory()
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(Prefix)
+
+        Prefix.objects.create(prefix=IPNetwork("192.168.1.0/24"), status=statuses[0])
+        Prefix.objects.create(prefix=IPNetwork("192.168.2.0/24"), status=statuses[0])
+        Prefix.objects.create(prefix=IPNetwork("192.168.3.0/24"), status=statuses[0])
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]
+
+    def test_create_available_prefixes_twice_in_parallel(self):
+        """
+        Test the creation of available prefixes from multiple concurrent database connections. Borrowed from
+        https://medium.com/@alexandre.laplante/djangos-select-for-update-with-examples-and-tests-caff09414766
+        """
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
+        url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
+
+        # # four /30s are available
+        available = [
+            {"prefix_length": 30, "description": "Test Prefix 1", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 2", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 3", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 4", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 5", "status": "active"},
+        ]
+
+        with transaction.atomic(using=self.DB1):
+            # try creating two /30s
+            req = self.request_factory.post(url, format="json")
+            req.data = available[:2]
+            _ = PrefixViewSet().available_prefixes(req, pk=prefix.pk, db=self.DB1)
+
+            # The first transaction has NOT been committed
+            # before we begin the second, so the lock is still in effect.
+            with transaction.atomic(using=self.DB2):
+                with self.assertRaises(OperationalError):
+                    # Try to create two /30s in a single request
+                    req = self.request_factory.post(url, format="json")
+                    req.data = available[:2]
+                    _ = PrefixViewSet().available_prefixes(req, pk=prefix.pk, db=self.DB2)
 
 
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
