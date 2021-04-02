@@ -8,7 +8,7 @@ addons:
   postgresql: "9.6"
 language: python
 env:
-  - INVOKE_NAUTOBOT_INVOKE_LOCAL=True
+  - INVOKE_NAUTOBOT_LOCAL=True
 jobs:
   fast_finish: true
   include:

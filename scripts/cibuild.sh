@@ -11,7 +11,7 @@ START=$(date +%s)
 echo "$(info) starting build checks."
 
 # invoke defaults to running tests in a docker container for travis we want to execute them locally
-export INVOKE_NAUTOBOT_INVOKE_LOCAL=True
+export INVOKE_NAUTOBOT_LOCAL=True
 
 # Syntax check all python source files
 SYNTAX=$(find . -name "*.py" -type f -exec python -m py_compile {} \; 2>&1)

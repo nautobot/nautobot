@@ -32,7 +32,7 @@ def is_truthy(arg):
     return bool(strtobool(arg))
 
 
-default_python_ver = "3.7"
+DEFAULT_PYTHON_VER = "3.7"
 
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
@@ -40,8 +40,8 @@ namespace = Collection("nautobot")
 namespace.configure(
     {
         "nautobot": {
-            "python_ver": default_python_ver,
-            "invoke_local": False,
+            "python_ver": DEFAULT_PYTHON_VER,
+            "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_file": "docker-compose.yml",
             "compose_override_file": "docker-compose.override.yml",
@@ -50,13 +50,22 @@ namespace.configure(
 )
 
 
-def task(*args, **kwargs):
-    def task_wrapper(func):
+def task(function=None, *args, **kwargs):
+    """task decorator to overide the default invoke task decorator."""
+
+    def task_wrapper(function=None):
         """Wrapper around invoke.task to add the task to the namespace as well."""
-        task_func = invoke_task(*args, **kwargs)(func)
+        if args or kwargs:
+            task_func = invoke_task(*args, **kwargs)(function)
+        else:
+            task_func = invoke_task(function)
         namespace.add_task(task_func)
         return task_func
 
+    if function:
+        # The decorator was called with no arguments
+        return task_wrapper(function)
+    # The decorator was called with arguments
     return task_wrapper
 
 
@@ -109,42 +118,42 @@ def build(context, force_rm=False, cache=True, python_ver=None):
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
-@task()
+@task
 def debug(context):
     """Start Nautobot and its dependencies in debug mode."""
     print("Starting Nautobot in debug mode...")
     docker_compose(context, "up")
 
 
-@task()
+@task
 def start(context):
     """Start Nautobot and its dependencies in detached mode."""
     print("Starting Nautobot in detached mode...")
     docker_compose(context, "up --detach")
 
 
-@task()
+@task
 def restart(context):
     """Gracefully restart all containers."""
     print("Restarting Nautobot...")
     docker_compose(context, "restart")
 
 
-@task()
+@task
 def stop(context):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     docker_compose(context, "down")
 
 
-@task()
+@task
 def destroy(context):
     """Destroy all containers and volumes."""
     print("Destroying Nautobot...")
     docker_compose(context, "down --volumes")
 
 
-@task(help={"python-ver": f"The version of Python to build the container with (default: {default_python_ver})"})
+@task(help={"python-ver": f"The version of Python to build the container with (default: {DEFAULT_PYTHON_VER})"})
 def vscode(context, python_ver=None):
     """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
     command = "code nautobot.code-workspace"
@@ -164,14 +173,14 @@ def nbshell(context, local=None):
     command = "nautobot-server nbshell"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if is_truthy(local):
         context.run(command)
     else:
         docker_compose(context, f"run nautobot {command}", pty=True)
 
 
-@task()
+@task
 def cli(context):
     """Launch a bash shell inside the running Nautobot container."""
     docker_compose(context, "exec nautobot bash", pty=True)
@@ -188,7 +197,7 @@ def createsuperuser(context, user="admin", local=None):
     command = f"nautobot-server createsuperuser --username {user}"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if is_truthy(local):
         context.run(command)
     else:
@@ -206,7 +215,7 @@ def makemigrations(context, name="", local=None):
     command = "run nautobot nautobot-server makemigrations"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if name:
         command += f" --name {name}"
     if is_truthy(local):
@@ -221,7 +230,7 @@ def migrate(context, local=None):
     command = "nautobot-server migrate"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if is_truthy(local):
         context.run(command)
     else:
@@ -240,7 +249,7 @@ def migrate(context, local=None):
 def black(context, autoformat=False, local=None):
     """Check Python code style with Black."""
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if autoformat:
         black_command = "black"
     else:
@@ -264,7 +273,7 @@ def flake8(context, local=None):
     command = "flake8 development/ nautobot/ tasks.py"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if is_truthy(local):
         context.run(command)
     else:
@@ -277,7 +286,7 @@ def check_migrations(context, local=None):
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if is_truthy(local):
         context.run(command)
     else:
@@ -297,7 +306,7 @@ def unittest(context, keepdb=False, label="nautobot", failfast=False, local=None
     command = f"coverage run -m nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if keepdb:
         command += " --keepdb"
     if failfast:
@@ -314,7 +323,7 @@ def unittest_coverage(context, local=None):
     command = "coverage report --skip-covered --omit *migrations*"
 
     if local is None:
-        local = context.nautobot.invoke_local
+        local = context.nautobot.local
     if is_truthy(local):
         context.run(command)
     else:

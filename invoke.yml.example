@@ -1,6 +1,6 @@
 ---
 nautobot:
-  invoke_local: False
+  local: False
   python_ver: "3.7"
   compose_dir: "/full/path/to/nautobot/development"
   compose_file": "docker-compose.yml"

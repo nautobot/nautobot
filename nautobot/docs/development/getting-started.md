@@ -184,7 +184,7 @@ Additional useful commands for the development environment:
 The invoke tasks have some default configuration set via Invoke's [Configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html#environment-variables) which you may want to override, these include:
 
 - `python_ver`: the python version which is used to build the docker container (default: 3.7)
-- `invoke_local`: run the commands in the local environment vs the Docker container (default: False)
+- `local`: run the commands in the local environment vs the Docker container (default: False)
 - `compose_dir`: the full path to the directory containing the docker-compose yaml files (default: "/full/path/to/nautobot/development")
 - `compose_file`: the docker-compose yaml tile to use (default: "docker-compose.yml")
 - `compose_override_file`: the default docker-compose override file to use if it exists (default: "docker-compose.override.yml")
@@ -453,7 +453,7 @@ Throughout the course of development, it's a good idea to occasionally run Nauto
 | `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
 
 !!! info
-    By default `invoke unittest` will start and run the unit tests inside the docker development container, this ensures a postgres and redis server are available during the test. However, if you have these configured such that `nautobot-server` can run locally, outside of the docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_INVOKE_LOCAL=True` to execute these tests in your local environment instead.  See the [invoke configuration](#invoke-configuration) for more information.
+    By default `invoke unittest` will start and run the unit tests inside the docker development container, this ensures a postgres and redis server are available during the test. However, if you have these configured such that `nautobot-server` can run locally, outside of the docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.  See the [invoke configuration](#invoke-configuration) for more information.
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
