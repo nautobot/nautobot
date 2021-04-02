@@ -330,7 +330,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "rq.utils.ColorizingStreamHandler",
             "formatter": "verbose" if DEBUG else "normal",
-        }
+        },
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO"},
