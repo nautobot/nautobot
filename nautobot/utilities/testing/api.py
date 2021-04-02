@@ -8,8 +8,7 @@ from rest_framework.test import APIClient
 
 from nautobot.users.models import ObjectPermission, Token
 from .utils import disable_warnings
-from .views import ModelTestCase
-
+from .views import ModelTestMixin, TestCase
 
 __all__ = (
     "APITestCase",
@@ -26,7 +25,7 @@ User = get_user_model()
 #
 
 
-class APITestCase(ModelTestCase):
+class APITestCase(TestCase, ModelTestMixin):
     """
     Base test case for API requests.
 

@@ -6,7 +6,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
-from django.test import Client, TestCase as _TestCase, override_settings
+from django.test import (
+    Client,
+    SimpleTestCase,
+    TestCase as _TestCase,
+    TransactionTestCase as _TransactionTestCase,
+    override_settings,
+)
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from netaddr import IPNetwork
@@ -21,8 +27,9 @@ from .utils import disable_warnings, extract_form_failures, post_data
 
 __all__ = (
     "TestCase",
-    "ModelTestCase",
-    "ModelViewTestCase",
+    "TransactionTestCase",
+    "ModelTestMixin",
+    "ModelViewTestMixin",
     "ViewTestCases",
 )
 
@@ -31,7 +38,11 @@ __all__ = (
 User = get_user_model()
 
 
-class TestCase(_TestCase):
+class BaseTestCase(SimpleTestCase):
+    """
+    Parent class for all TestCases. Provides functionality to manage Clients, permissions, and assertions.
+    """
+
     user_permissions = ()
 
     def setUp(self):
@@ -190,9 +201,25 @@ class TestCase(_TestCase):
         return [Tag.objects.create(name=name, slug=slugify(name)) for name in names]
 
 
-class ModelTestCase(TestCase):
+class TestCase(_TestCase, BaseTestCase):
     """
-    Parent class for TestCases which deal with models.
+    Parent class for most Nautobot TestCases.
+    """
+
+    pass
+
+
+class TransactionTestCase(_TransactionTestCase, BaseTestCase):
+    """
+    Parent class for Nautobot TestCases dealing with transactional tests.
+    """
+
+    pass
+
+
+class ModelTestMixin:
+    """
+    Mixin class for TestCases which deal with models.
     """
 
     model = None
@@ -209,9 +236,9 @@ class ModelTestCase(TestCase):
 #
 
 
-class ModelViewTestCase(ModelTestCase):
+class ModelViewTestMixin(ModelTestMixin):
     """
-    Base TestCase for model views. Subclass to test individual views.
+    Mixin TestCase for model views. Subclass to test individual views.
     """
 
     def _get_base_url(self):
@@ -247,7 +274,7 @@ class ViewTestCases:
     We keep any TestCases with test_* methods inside a class to prevent unittest from trying to run them.
     """
 
-    class GetObjectViewTestCase(ModelViewTestCase):
+    class GetObjectViewTestCase(TestCase, ModelViewTestMixin):
         """
         Retrieve a single instance.
         """
@@ -300,7 +327,7 @@ class ViewTestCases:
             # Try GET to non-permitted object
             self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
 
-    class GetObjectChangelogViewTestCase(ModelViewTestCase):
+    class GetObjectChangelogViewTestCase(TestCase, ModelViewTestMixin):
         """
         View the changelog for an instance.
         """
@@ -311,7 +338,7 @@ class ViewTestCases:
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
 
-    class CreateObjectViewTestCase(ModelViewTestCase):
+    class CreateObjectViewTestCase(TestCase, ModelViewTestMixin):
         """
         Create a single new instance.
 
@@ -401,7 +428,7 @@ class ViewTestCases:
             else:
                 self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
 
-    class EditObjectViewTestCase(ModelViewTestCase):
+    class EditObjectViewTestCase(TestCase, ModelViewTestMixin):
         """
         Edit a single existing instance.
 
@@ -481,7 +508,7 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 404)
 
-    class DeleteObjectViewTestCase(ModelViewTestCase):
+    class DeleteObjectViewTestCase(TestCase, ModelViewTestMixin):
         """
         Delete a single instance.
         """
@@ -560,7 +587,7 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 404)
             self.assertTrue(self._get_queryset().filter(pk=instance2.pk).exists())
 
-    class ListObjectsViewTestCase(ModelViewTestCase):
+    class ListObjectsViewTestCase(TestCase, ModelViewTestMixin):
         """
         Retrieve multiple instances.
         """
@@ -622,7 +649,7 @@ class ViewTestCases:
                 self.assertIn(instance1.get_absolute_url(), content)
                 self.assertNotIn(instance2.get_absolute_url(), content)
 
-    class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
+    class CreateMultipleObjectsViewTestCase(TestCase, ModelViewTestMixin):
         """
         Create multiple instances using a single form. Expects the creation of three new instances by default.
 
@@ -713,7 +740,7 @@ class ViewTestCases:
                     pass
             self.assertEqual(matching_count, self.bulk_create_count)
 
-    class BulkImportObjectsViewTestCase(ModelViewTestCase):
+    class BulkImportObjectsViewTestCase(TestCase, ModelViewTestMixin):
         """
         Create multiple instances from imported data.
 
@@ -788,7 +815,7 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
             self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1)
 
-    class BulkEditObjectsViewTestCase(ModelViewTestCase):
+    class BulkEditObjectsViewTestCase(TestCase, ModelViewTestMixin):
         """
         Edit multiple instances.
 
@@ -874,7 +901,7 @@ class ViewTestCases:
             for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
-    class BulkDeleteObjectsViewTestCase(ModelViewTestCase):
+    class BulkDeleteObjectsViewTestCase(TestCase, ModelViewTestMixin):
         """
         Delete multiple instances.
         """
@@ -947,7 +974,7 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
             self.assertEqual(self._get_queryset().count(), 0)
 
-    class BulkRenameObjectsViewTestCase(ModelViewTestCase):
+    class BulkRenameObjectsViewTestCase(TestCase, ModelViewTestMixin):
         """
         Rename multiple instances.
         """
