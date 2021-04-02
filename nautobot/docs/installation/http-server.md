@@ -138,6 +138,9 @@ Finally, restart the `nginx` service to use the new configuration.
 $ sudo systemctl restart nginx
 ```
 
+!!! info
+    If the restart fails, and you changed the default key location, check to make sure the `nautobot.conf` file you pasted has the updated key location. For example, CentOS 8.2.2 requires keys to be in `/etc/pki/tls/` instead of `/etc/ssl/`.
+
 ## Confirm Connectivity
 
 At this point, you should be able to connect to the HTTPS service at the server name or IP address you provided.
@@ -147,6 +150,9 @@ At this point, you should be able to connect to the HTTPS service at the server 
 
 !!! warning
     Certain components of Nautobot (such as the display of rack elevation diagrams) rely on the use of embedded objects. Ensure that your HTTP server configuration does not override the `X-Frame-Options` response header set by Nautobot.
+
+!!! important
+    If you used a self-signed certificate, you will likely need to explicitly allow connectivity in your browser.
 
 ## Troubleshooting
 
