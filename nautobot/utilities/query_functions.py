@@ -7,7 +7,7 @@ class JSONBAgg(Aggregate):
     function = None
     output_field = JSONField()
 
-    # borrowed from django.contrib.postrgres.aggregats.JSONBagg
+    # Borrowed from `django.contrib.postrgres.aggregates.JSONBagg`.
     def convert_value(self, value, expression, connection):
         if not value:
             return "[]"
