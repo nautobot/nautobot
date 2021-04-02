@@ -21,7 +21,7 @@ Custom fields must be created through the admin UI under Extras > Custom Fields.
 Each custom field must have a name; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
 
 !!! note
-    The name and type of a custom field cannot be modified once created, so take care in defining the name and type. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom fields.
+    The name and type of a custom field cannot be modified once created, so take care in defining the name and type. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
 
 Marking a field as required will force the user to provide a value for the field when creating a new object or when saving an existing object. A default value for the field may also be provided. Use "true" or "false" for boolean fields, or the exact value of a choice for selection fields.
 
