@@ -85,6 +85,9 @@ $ echo $NAUTOBOT_ROOT
 
 ## Understanding the Virtual Environment
 
+!!! important
+    You may need to start a new terminal session to see the expected environment results below.
+
 Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
 
 ```no-highlight
@@ -271,6 +274,9 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 
 !!! important
     Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server rqworker` separately. For production use, both Nautobot and the worker should be managed by systemd rather than started manually, as described in the next section of this documentation.
+
+!!! important
+    Some unix implementations (such as CentOS 8.2.2) have a firewall enabled by default.  If you are unable to connect to the server url on port 8000, verify the firewall status and configure to allow the appropriate connections.
 
 Note that the initial user interface will be locked down for non-authenticated users.
 
