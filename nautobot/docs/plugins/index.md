@@ -96,5 +96,5 @@ $ nautobot-server collectstatic
 Restart the WSGI service to load the new plugin:
 
 ```no-highlight
-# sudo systemctl restart nautobot
+# sudo systemctl restart nautobot nautobot-worker
 ```
