@@ -51,7 +51,7 @@ plugin_name/
 
 The top level is the project root. Immediately within the root should exist several items:
 
-* `pyproject.toml` - This is the PEP518 standard for the method to projects to specify their build.
+* `pyproject.toml` - This is the PEP 517 standard for the method to projects to specify their build.
 * `README.md` - A brief introduction to your plugin, how to install and configure it, where to find help, and any other pertinent information. It is recommended to write README files using a markup language such as Markdown.
 * The plugin source directory, with the same name as your plugin.
 
@@ -177,6 +177,12 @@ To ease development, it is recommended with the virtual environment activated to
 
 ```no-highlight
 $ poetry install
+```
+
+Once the Python package being developed is installed, add the plugin to the plugin configuration for Nautobot:
+
+```python
+PLUGINS = ["animal_sounds"]
 ```
 
 ## Database Models
