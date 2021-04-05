@@ -20,6 +20,16 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 ### Changed
 
+Major backwards-incompatible database changes were included in this beta release that are intended are to pave the way for us to support MySQL as a database backend in a future update. Of those changes, these are the most notable:
+
+- All IPAM objects with network field types (`ipam.Aggregate`, `ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types
+- The `users.User` model has been completely replaced with a custom implementation that no longer requires the use of a secondary database table for storing user configuration.
+- Custom Fields have been overhauled for asserting data integrity and improving user experience
+    - Custom Fields can no longer be renamed or have their type changed after they have been created.
+    - Choices for Custom Fields are now stored as discrete database objects. Choices that are in active use will block the deletion of their associated custom field.
+
+Other changes:
+
 - [#78](https://github.com/nautobot/nautobot/pull/78) - Replaced PostgreSQL-specific IP network/address fields with more generic field types
 - [#83](https://github.com/nautobot/nautobot/issues/83) - Custom user model added; UserConfig model merged into User model
 - [#84](https://github.com/nautobot/nautobot/issues/84) - Revised developer documentation for clarity and current workflows
