@@ -906,9 +906,10 @@ As an example. We can query devices by their site location. This is done by adde
 }
 ```
 
-Graph*i*QL will allos you to add multiple attributes to the filter criteria. You can use the `Documentation Explorer` to assist you in finding criteria attributes to filte on. In this example, I add the `manufacturer` attribute in addition to `site`. 
+Graph*i*QL allows you to add multiple attributes to the filter criteria. You can use the `Documentation Explorer` to assist you in finding criteria attributes to filte on. In this example, I add the `manufacturer` attribute in addition to `site`. 
 
-```query {
+```
+query {
   devices(site:"ams", manufacturer: "Arista") {
     name
   }
