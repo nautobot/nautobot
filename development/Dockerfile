@@ -24,15 +24,26 @@ ENV PATH="${PATH}:/root/.poetry/bin"
 
 # Poetry shouldn't create a venv as we want global install
 RUN poetry config virtualenvs.create false
+# Poetry 1.1.0 added parallel installation as an option;
+# unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
+# while simultaneously atttempting to *use* those packages to install other packages.
+# For now we disable it.
+RUN poetry config installer.parallel false
 
 # Used if someone wants to override the entrypoint and provision a super user
 COPY development/docker-entrypoint.sh /tmp/nautobot/docker-entrypoint.sh
 
-COPY . /opt/nautobot
+COPY pyproject.toml poetry.lock /opt/nautobot/
 WORKDIR /opt/nautobot
+
+RUN poetry install --no-root
+
+COPY . /opt/nautobot
 
 RUN poetry install
 
-WORKDIR /opt/nautobot
+# Install additional requirements from local_requirements.txt
+RUN if [ -f local_requirements.txt ] ; then cat local_requirements.txt | grep -E '^[^# ]' | cut -d= -f1 | xargs -n 1 poetry add ; fi
+
 
 ENTRYPOINT ["/tmp/nautobot/docker-entrypoint.sh"]

@@ -6,31 +6,39 @@ This guide explains how to implement LDAP authentication using an external serve
 
 ### Install System Packages
 
+!!! danger
+    FIXME(jathan): With `wheel` packages asserted, let's make doubly sure these development libraries even need to be installed anymore.
+
 On Ubuntu:
 
 ```no-highlight
-sudo apt install -y libldap2-dev libsasl2-dev libssl-dev
+$ sudo apt install -y libldap2-dev libsasl2-dev libssl-dev
 ```
 
 On CentOS:
 
 ```no-highlight
-sudo yum install -y openldap-devel
+$ sudo dnf install -y openldap-devel
 ```
 
 ### Install django-auth-ldap
 
+!!! warning
+    This and all remaining steps in this document should all be performed as the `nautobot` user!
+
+    Hint: Use `sudo -iu nautobot`
+
 Activate the Python virtual environment and install the `django-auth-ldap` package using pip:
 
 ```no-highlight
-source /opt/nautobot/venv/bin/activate
-pip3 install django-auth-ldap
+$ source /opt/nautobot/bin/activate
+(nautobot) $ pip3 install django-auth-ldap
 ```
 
 Once installed, add the package to `local_requirements.txt` to ensure it is re-installed during future rebuilds of the virtual environment:
 
 ```no-highlight
-sudo echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
+(nautobot) $ echo django-auth-ldap >> /opt/nautobot/local_requirements.txt
 ```
 
 ## Configuration
@@ -44,7 +52,7 @@ Enable the LDAP authentication backend by adding the following to your `nautobot
 ```python
 AUTHENTICATION_BACKENDS = [
     'django_auth_ldap.backend.LDAPBackend',
-    'nautobot.authentication.ObjectPermissionBackend',
+    'nautobot.core.authentication.ObjectPermissionBackend',
 ]
 ```
 
@@ -120,9 +128,6 @@ AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
 # Define a group required to login.
 AUTH_LDAP_REQUIRE_GROUP = "CN=NAUTOBOT_USERS,DC=example,DC=com"
 
-# Mirror LDAP group assignments.
-AUTH_LDAP_MIRROR_GROUPS = True
-
 # Define special user types using groups. Exercise great caution when assigning superuser status.
 AUTH_LDAP_USER_FLAGS_BY_GROUP = {
     "is_active": "cn=active,ou=groups,dc=example,dc=com",
@@ -149,7 +154,7 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 `systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `nautobot_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
 
-For troubleshooting LDAP user/group queries, add or merge the following [logging](/configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
+For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
 
 ```python
 LOGGING = {
@@ -174,3 +179,7 @@ LOGGING = {
 ```
 
 Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the nautobot service and attempt to log into the site to trigger log entries to this file.
+
+---
+
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.

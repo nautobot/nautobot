@@ -1,6 +1,6 @@
+# Used to integrate with Microsoft VS Code dev containers feature.
 ---
-version: '3'
+version: "3"
 services:
   nautobot:
-    command: >
-      /bin/sh -c "while sleep 1000; do :; done"
+    command: "sleep infinity"

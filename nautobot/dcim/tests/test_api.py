@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 
@@ -42,6 +42,10 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class AppTest(APITestCase):
@@ -357,6 +361,19 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["count"], 11)
         response = self.client.get(f"{url}?q=U10", **self.header)
         self.assertEqual(response.data["count"], 1)
+
+    def test_filter_rack_elevation(self):
+        """
+        Test filtering the list of rack elevations.
+
+        See: https://github.com/nautobot/nautobot/issues/81
+        """
+        rack = Rack.objects.first()
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        params = {"brief": "true", "face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
+        response = self.client.get(url, params, **self.header)
+        self.assertHttpStatus(response, 200)
 
     def test_get_rack_elevation_svg(self):
         """

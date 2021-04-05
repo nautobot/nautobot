@@ -1,11 +1,12 @@
 import re
 
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.safestring import mark_safe
+import netaddr
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
@@ -25,7 +26,7 @@ from nautobot.extras.forms import (
     StatusFilterFormMixin,
 )
 from nautobot.extras.models import Tag
-from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
+from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN, IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -696,7 +697,7 @@ class RackReservationForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rel
         base_field=forms.IntegerField(),
         help_text="Comma-separated list of numeric unit IDs. A range may be specified using a hyphen.",
     )
-    user = forms.ModelChoiceField(queryset=User.objects.order_by("username"), widget=StaticSelect2())
+    user = forms.ModelChoiceField(queryset=get_user_model().objects.order_by("username"), widget=StaticSelect2())
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -757,7 +758,7 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
 class RackReservationBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackReservation.objects.all(), widget=forms.MultipleHiddenInput())
     user = forms.ModelChoiceField(
-        queryset=User.objects.order_by("username"),
+        queryset=get_user_model().objects.order_by("username"),
         required=False,
         widget=StaticSelect2(),
     )
@@ -794,7 +795,7 @@ class RackReservationFilterForm(BootstrapMixin, TenancyFilterForm):
         null_option="None",
     )
     user_id = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",
@@ -1726,7 +1727,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not self.instance._state.adding:
+        if self.instance.present_in_database:
 
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:
@@ -1736,19 +1737,22 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                interface_ips = IPAddress.objects.filter(
-                    address__family=family,
-                    assigned_object_type=ContentType.objects.get_for_model(Interface),
-                    assigned_object_id__in=interface_ids,
-                ).prefetch_related("assigned_object")
+                interface_ips = (
+                    IPAddress.objects.ip_family(family)
+                    .filter(
+                        assigned_object_type=ContentType.objects.get_for_model(Interface),
+                        assigned_object_id__in=interface_ids,
+                    )
+                    .prefetch_related("assigned_object")
+                )
                 if interface_ips:
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
                 nat_ips = (
                     IPAddress.objects.prefetch_related("nat_inside")
+                    .ip_family(family)
                     .filter(
-                        address__family=family,
                         nat_inside__assigned_object_type=ContentType.objects.get_for_model(Interface),
                         nat_inside__assigned_object_id__in=interface_ids,
                     )
@@ -1787,6 +1791,18 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         position = self.data.get("position") or self.initial.get("position")
         if position:
             self.fields["position"].widget.choices = [(position, f"U{position}")]
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, commit=False, **kwargs)
+        # call IPAddress setter method to deconstruct netaddr.IPNetwork
+        # into host, broadcast, and prefix_length model fields
+        if instance.primary_ip4:
+            instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
+        if instance.primary_ip6:
+            instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
+        instance.save()
+        self.save_m2m()
+        return instance
 
 
 class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -1836,6 +1852,18 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             # Limit device type queryset by manufacturer
             params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, commit=False, **kwargs)
+        # call IPAddress setter method to deconstruct netaddr.IPNetwork
+        # into host, broadcast, and prefix_length model fields
+        if instance.primary_ip4:
+            instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
+        if instance.primary_ip6:
+            instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
+        instance.save()
+        self.save_m2m()
+        return instance
 
 
 class DeviceCSVForm(BaseDeviceCSVForm):
@@ -3795,7 +3823,7 @@ class VirtualChassisCreateForm(BootstrapMixin, CustomFieldModelForm, Relationshi
         instance = super().save(*args, **kwargs)
 
         # Assign VC members
-        if not instance._state.adding:
+        if instance.present_in_database:
             initial_position = self.cleaned_data.get("initial_position") or 1
             for i, member in enumerate(self.cleaned_data["members"], start=initial_position):
                 member.virtual_chassis = instance

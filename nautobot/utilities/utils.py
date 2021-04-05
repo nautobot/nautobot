@@ -2,7 +2,7 @@ import datetime
 import json
 import inspect
 from importlib import import_module
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from distutils.util import strtobool
 
@@ -116,8 +116,8 @@ def serialize_object(obj, extra=None, exclude=None):
     data = json.loads(json_str)[0]["fields"]
 
     # Include custom_field_data as "custom_fields"
-    if hasattr(obj, "custom_field_data"):
-        data["custom_fields"] = data.pop("custom_field_data")
+    if hasattr(obj, "_custom_field_data"):
+        data["custom_fields"] = data.pop("_custom_field_data")
 
     # Include any tags. Check for tags cached on the instance; fall back to using the manager.
     if is_taggable(obj):
@@ -399,3 +399,7 @@ def is_truthy(arg):
     if isinstance(arg, bool):
         return arg
     return bool(strtobool(str(arg)))
+
+
+# Setup UtilizationData named tuple for use by multiple methods
+UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])

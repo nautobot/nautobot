@@ -28,8 +28,8 @@
                 iteration of each static file into the static root path.
             </li>
             <li class="tip">
-                The HTTP service (e.g. nginx or Apache) is configured to serve files from the <code>STATIC_ROOT</code> path.
-                Refer to <a href="https://nautobot.readthedocs.io/en/stable/installation/">the installation
+                The HTTP service (e.g. NGINX) is configured to serve files from the <code>STATIC_ROOT</code> path.
+                Refer to <a href="https://nautobot.readthedocs.io/en/v{{ settings.VERSION }}/installation/">the installation
                 documentation</a> for further guidance.
                     <ul>
                         {% if request.user.is_staff or request.user.is_superuser %}

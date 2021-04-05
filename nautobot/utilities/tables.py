@@ -37,7 +37,7 @@ class BaseTable(tables.Table):
 
         # Apply custom column ordering for user
         if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.config.get(f"tables.{self.__class__.__name__}.columns")
+            columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
             if columns:
                 pk = self.base_columns.pop("pk", None)
                 actions = self.base_columns.pop("actions", None)

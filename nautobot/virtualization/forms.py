@@ -310,7 +310,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not self.instance._state.adding:
+        if self.instance.present_in_database:
 
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:
@@ -320,8 +320,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
                 interface_ids = self.instance.interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                interface_ips = IPAddress.objects.filter(
-                    address__family=family,
+                interface_ips = IPAddress.objects.ip_family(family).filter(
                     assigned_object_type=ContentType.objects.get_for_model(VMInterface),
                     assigned_object_id__in=interface_ids,
                 )
@@ -329,10 +328,13 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
-                nat_ips = IPAddress.objects.prefetch_related("nat_inside").filter(
-                    address__family=family,
-                    nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
-                    nat_inside__assigned_object_id__in=interface_ids,
+                nat_ips = (
+                    IPAddress.objects.prefetch_related("nat_inside")
+                    .ip_family(family)
+                    .filter(
+                        nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
+                        nat_inside__assigned_object_id__in=interface_ids,
+                    )
                 )
                 if nat_ips:
                     ip_list = [(ip.id, f"{ip.address} (NAT)") for ip in nat_ips]

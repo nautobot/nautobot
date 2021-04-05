@@ -54,9 +54,7 @@ def create_module(name, install=True):
     return mod
 
 
-def load_settings(
-    mod_or_filename, silent=False, allow_extras=True, settings=django_settings
-):
+def load_settings(mod_or_filename, silent=False, allow_extras=True, settings=django_settings):
     if isinstance(mod_or_filename, basestring):
         conf = create_module("temp_config", install=False)
         conf.__file__ = mod_or_filename

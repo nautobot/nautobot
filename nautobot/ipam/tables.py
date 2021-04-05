@@ -32,7 +32,7 @@ AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>'
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
-{% if record.pk %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
+{% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
 """
 
 PREFIX_LINK = """
@@ -40,7 +40,7 @@ PREFIX_LINK = """
 {% for i in record.parents|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
-<a href="{% if record.pk %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if parent.vrf %}&vrf={{ parent.vrf.pk }}{% endif %}{% if parent.site %}&site={{ parent.site.pk }}{% endif %}{% if parent.tenant %}&tenant_group={{ parent.tenant.group.pk }}&tenant={{ parent.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
+<a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if parent.vrf %}&vrf={{ parent.vrf.pk }}{% endif %}{% if parent.site %}&site={{ parent.site.pk }}{% endif %}{% if parent.tenant %}&tenant_group={{ parent.tenant.group.pk }}&tenant={{ parent.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
 """
 
 PREFIX_ROLE_LINK = """
@@ -52,7 +52,7 @@ PREFIX_ROLE_LINK = """
 """
 
 IPADDRESS_LINK = """
-{% if record.pk %}
+{% if record.present_in_database %}
     <a href="{{ record.get_absolute_url }}">{{ record.address }}</a>
 {% elif perms.ipam.add_ipaddress %}
     <a href="{% url 'ipam:ipaddress_add' %}?address={{ record.1 }}{% if prefix.vrf %}&vrf={{ prefix.vrf.pk }}{% endif %}{% if prefix.tenant %}&tenant={{ prefix.tenant.pk }}{% endif %}" class="btn btn-xs btn-success">{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
@@ -84,7 +84,7 @@ VRF_TARGETS = """
 """
 
 VLAN_LINK = """
-{% if record.pk %}
+{% if record.present_in_database %}
     <a href="{{ record.get_absolute_url }}">{{ record.vid }}</a>
 {% elif perms.ipam.add_vlan %}
     <a href="{% url 'ipam:vlan_add' %}?vid={{ record.vid }}&group={{ vlan_group.pk }}{% if vlan_group.site %}&site={{ vlan_group.site.pk }}{% endif %}" class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available</a>
@@ -348,7 +348,7 @@ class PrefixTable(StatusTableMixin, BaseTable):
             "description",
         )
         row_attrs = {
-            "class": lambda record: "success" if not record.pk else "",
+            "class": lambda record: "success" if not record.present_in_database else "",
         }
 
 

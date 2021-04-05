@@ -62,7 +62,7 @@
 
 {% block content %}
 <div class="row">
-	<div class="col-md-6">
+    <div class="col-md-6">
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Power Feed</strong>
@@ -113,7 +113,7 @@
                             <td>
                                 {{ utilization.allocated }}VA / {{ object.available_power }}VA
                                 {% if object.available_power > 0 %}
-                                    {% utilization_graph utilization.allocated|percentage:object.available_power %}
+                                    {% utilization_graph_raw_data utilization.allocated object.available_power %}
                                 {% endif %}
                             </td>
                         {% else %}

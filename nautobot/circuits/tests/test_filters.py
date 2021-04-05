@@ -3,7 +3,7 @@ from django.test import TestCase
 from nautobot.circuits.choices import *
 from nautobot.circuits.filters import *
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.dcim.models import Cable, Region, Site
+from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant, TenantGroup
 
@@ -285,6 +285,30 @@ class CircuitTerminationTestCase(TestCase):
             Site.objects.create(name="Test Site 2", slug="test-site-2"),
             Site.objects.create(name="Test Site 3", slug="test-site-3"),
         )
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type 1",
+            slug="test-device-type-1",
+        )
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        device1 = Device.objects.create(
+            device_type=devicetype,
+            device_role=devicerole,
+            name="TestDevice1",
+            site=sites[0],
+            status=device_status,
+        )
+        device2 = Device.objects.create(
+            device_type=devicetype,
+            device_role=devicerole,
+            name="TestDevice2",
+            site=sites[1],
+            status=device_status,
+        )
+        interface1 = Interface.objects.create(device=device1, name="eth0")
+        interface2 = Interface.objects.create(device=device2, name="eth0")
 
         circuit_types = (CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1"),)
 
@@ -352,7 +376,12 @@ class CircuitTerminationTestCase(TestCase):
 
         Cable.objects.create(
             termination_a=circuit_terminations[0],
-            termination_b=circuit_terminations[1],
+            termination_b=interface1,
+            status=status_connected,
+        )
+        Cable.objects.create(
+            termination_a=circuit_terminations[1],
+            termination_b=interface2,
             status=status_connected,
         )
 

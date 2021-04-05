@@ -1,10 +1,10 @@
+import json
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
-from django.db.models import ManyToManyField
+from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
 from django.test import Client, TestCase as _TestCase, override_settings
 from django.urls import reverse, NoReverseMatch
@@ -15,6 +15,7 @@ from taggit.managers import TaggableManager
 from nautobot.extras.models import Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
+from nautobot.utilities.fields import JSONArrayField
 from .utils import disable_warnings, extract_form_failures, post_data
 
 
@@ -24,6 +25,10 @@ __all__ = (
     "ModelViewTestCase",
     "ViewTestCases",
 )
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class TestCase(_TestCase):
@@ -80,7 +85,7 @@ class TestCase(_TestCase):
 
             if api:
 
-                # Replace ContentType numeric IDs with <app_label>.<model>
+                # Replace ContentType primary keys with <app_label>.<model>
                 if type(getattr(instance, key)) is ContentType:
                     ct = ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
@@ -92,8 +97,12 @@ class TestCase(_TestCase):
             else:
 
                 # Convert ArrayFields to CSV strings
-                if type(instance._meta.get_field(key)) is ArrayField:
+                if type(field) is JSONArrayField:
                     model_dict[key] = ",".join([str(v) for v in value])
+
+                # Convert JSONField dict values to JSON strings
+                if type(field) is JSONField and isinstance(value, dict):
+                    model_dict[key] = json.dumps(value)
 
         return model_dict
 
@@ -609,7 +618,7 @@ class ViewTestCases:
             if hasattr(self.model, "name"):
                 self.assertIn(instance1.name, content)
                 self.assertNotIn(instance2.name, content)
-            else:
+            elif hasattr(self.model, "get_absolute_url"):
                 self.assertIn(instance1.get_absolute_url(), content)
                 self.assertNotIn(instance2.get_absolute_url(), content)
 

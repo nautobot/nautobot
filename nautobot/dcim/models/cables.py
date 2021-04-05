@@ -10,7 +10,7 @@ from django.utils.functional import classproperty
 
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
-from nautobot.dcim.fields import PathField
+from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import (
     decompile_path_node,
     object_to_path_node,
@@ -169,7 +169,7 @@ class Cable(PrimaryModel, StatusModel):
             raise ValidationError({"termination_b": "Invalid ID for type {}".format(self.termination_b_type)})
 
         # If editing an existing Cable instance, check that neither termination has been modified.
-        if not self._state.adding:
+        if self.present_in_database:
             err_msg = "Cable termination points may not be modified. Delete and recreate the cable instead."
             if (
                 self.termination_a_type_id != self._orig_termination_a_type_id
@@ -330,7 +330,7 @@ class CablePath(BaseModel):
     )
     destination_id = models.UUIDField(blank=True, null=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
-    path = PathField()
+    path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
 
@@ -361,6 +361,9 @@ class CablePath(BaseModel):
         if origin is None or origin.cable is None:
             return None
 
+        # Import added here to avoid circular imports with Cable.
+        from nautobot.circuits.models import CircuitTermination
+
         destination = None
         path = []
         position_stack = []
@@ -368,7 +371,11 @@ class CablePath(BaseModel):
         is_split = False
 
         node = origin
+        visited_nodes = set()
         while node.cable is not None:
+            if node.id in visited_nodes:
+                raise ValidationError("a loop is detected in the path")
+            visited_nodes.add(node.id)
             if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 
@@ -404,6 +411,17 @@ class CablePath(BaseModel):
                 except ObjectDoesNotExist:
                     # No corresponding FrontPort found for the RearPort
                     break
+
+            # Follow a Circuit Termination if there is a corresponding Circuit Termination
+            # Side A and Side Z exist
+            elif isinstance(peer_termination, CircuitTermination):
+                node = peer_termination.get_peer_termination()
+                # A Circuit Termination does not require a peer.
+                if node is None:
+                    destination = peer_termination
+                    break
+                path.append(object_to_path_node(peer_termination))
+                path.append(object_to_path_node(node))
 
             # Anything else marks the end of the path
             else:

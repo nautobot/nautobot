@@ -19,13 +19,20 @@ class BaseModel(models.Model):
     means the canonical pattern in Django of checking `self.pk is None` to tell
     if an object has been created in the actual database does not work because
     the object will always have the value populated prior to being saved to the
-    database for the first time. An alternate pattern of checking `self._state.adding`
+    database for the first time. An alternate pattern of checking `not self.present_in_database`
     can be used for the same purpose in most cases.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
     objects = RestrictedQuerySet.as_manager()
+
+    @property
+    def present_in_database(self):
+        """
+        True if the record exists in the database, False if it does not.
+        """
+        return not self._state.adding
 
     class Meta:
         abstract = True

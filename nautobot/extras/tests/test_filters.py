@@ -1,10 +1,10 @@
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import *
 from nautobot.extras.filters import *
@@ -14,14 +14,20 @@ from nautobot.extras.models import (
     ExportTemplate,
     ImageAttachment,
     ObjectChange,
+    Relationship,
+    RelationshipAssociation,
     Tag,
     Status,
     Webhook,
 )
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class ExportTemplateTestCase(TestCase):
@@ -280,6 +286,152 @@ class ConfigContextTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
+class RelationshipTestCase(TestCase):
+    queryset = Relationship.objects.all()
+    filterset = RelationshipFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device_type = ContentType.objects.get_for_model(Device)
+        interface_type = ContentType.objects.get_for_model(Interface)
+        vlan_type = ContentType.objects.get_for_model(VLAN)
+
+        Relationship.objects.create(
+            name="Device VLANs",
+            slug="device-vlans",
+            type="many-to-many",
+            source_type=device_type,
+            destination_type=vlan_type,
+        )
+        Relationship.objects.create(
+            name="Primary VLAN",
+            slug="primary-vlan",
+            type="one-to-many",
+            source_type=vlan_type,
+            destination_type=device_type,
+        )
+        Relationship.objects.create(
+            name="Primary Interface",
+            slug="primary-interface",
+            type="one-to-one",
+            source_type=device_type,
+            destination_type=interface_type,
+        )
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_name(self):
+        params = {"name": ["Primary VLAN", "Primary Interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_type(self):
+        params = {"type": "one-to-many"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_source_type(self):
+        params = {"source_type": ["dcim.device"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_destination_type(self):
+        params = {"destination_type": ["ipam.vlan", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class RelationshipAssociationTestCase(TestCase):
+    queryset = RelationshipAssociation.objects.all()
+    filterset = RelationshipAssociationFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_type = ContentType.objects.get_for_model(Device)
+        cls.vlan_type = ContentType.objects.get_for_model(VLAN)
+
+        cls.relationships = (
+            Relationship.objects.create(
+                name="Device VLANs",
+                slug="device-vlans",
+                type="many-to-many",
+                source_type=cls.device_type,
+                destination_type=cls.vlan_type,
+            ),
+            Relationship.objects.create(
+                name="Primary VLAN",
+                slug="primary-vlan",
+                type="one-to-many",
+                source_type=cls.vlan_type,
+                destination_type=cls.device_type,
+            ),
+        )
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.devices = (
+            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
+        )
+        cls.vlans = (
+            VLAN.objects.create(vid=1, name="VLAN 1"),
+            VLAN.objects.create(vid=2, name="VLAN 2"),
+        )
+
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationships[0],
+            source_type=cls.device_type,
+            source_id=cls.devices[0].pk,
+            destination_type=cls.vlan_type,
+            destination_id=cls.vlans[0].pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationships[0],
+            source_type=cls.device_type,
+            source_id=cls.devices[1].pk,
+            destination_type=cls.vlan_type,
+            destination_id=cls.vlans[1].pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationships[1],
+            source_type=cls.vlan_type,
+            source_id=cls.vlans[0].pk,
+            destination_type=cls.device_type,
+            destination_id=cls.devices[0].pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationships[1],
+            source_type=cls.vlan_type,
+            source_id=cls.vlans[1].pk,
+            destination_type=cls.device_type,
+            destination_id=cls.devices[1].pk,
+        )
+
+    def test_id(self):
+        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_relationship(self):
+        params = {"relationship": [self.relationships[0].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_source_type(self):
+        params = {"source_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_source_id(self):
+        params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_destination_type(self):
+        params = {"destination_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_destination_id(self):
+        params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
 class TagTestCase(TestCase):
     queryset = Tag.objects.all()
     filterset = TagFilterSet
@@ -357,7 +509,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -366,7 +518,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -375,7 +527,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
 
     def test_id(self):

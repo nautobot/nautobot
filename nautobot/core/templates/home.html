@@ -8,7 +8,7 @@
         <div class="alert alert-info text-center" role="alert">
             <i class="mdi mdi-information-outline"></i>
             A new release is available: <a href="{{ new_release.url }}">Nautobot v{{ new_release.version }}</a> |
-            <a href="https://nautobot.readthedocs.io/en/stable/installation/upgrading/">Upgrade instructions</a>
+            <a href="https://nautobot.readthedocs.io/en/v{{ new_release.version }}/installation/upgrading/">Upgrade instructions</a>
         </div>
     {% endif %}
 {% endblock %}

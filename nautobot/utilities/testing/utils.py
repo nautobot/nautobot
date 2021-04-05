@@ -2,7 +2,12 @@ import logging
 import re
 from contextlib import contextmanager
 
-from django.contrib.auth.models import Permission, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 def post_data(data):

@@ -32,6 +32,8 @@ from nautobot.extras.models import (
     GitRepository,
     ImageAttachment,
     JobResult,
+    Relationship,
+    RelationshipAssociation,
     Status,
     Tag,
     Webhook,
@@ -76,6 +78,11 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             "type": "select",
         },
     ]
+    update_data = {
+        "content_types": ["dcim.site"],
+        "name": "cf1",
+        "label": "foo",
+    }
     bulk_update_data = {
         "description": "New description",
     }
@@ -722,3 +729,142 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
         See `extras.management.create_custom_statuses` for context.
         """
+
+
+class RelationshipTest(APIViewTestCases.APIViewTestCase):
+    model = Relationship
+    brief_fields = ["id", "name", "slug", "url"]
+
+    create_data = [
+        {
+            "name": "Device VLANs",
+            "slug": "device-vlans",
+            "type": "many-to-many",
+            "source_type": "ipam.vlan",
+            "destination_type": "dcim.device",
+        },
+        {
+            "name": "Primary VLAN",
+            "slug": "primary-vlan",
+            "type": "one-to-many",
+            "source_type": "ipam.vlan",
+            "destination_type": "dcim.device",
+        },
+        {
+            "name": "Primary Interface",
+            "slug": "primary-interface",
+            "type": "one-to-one",
+            "source_type": "dcim.device",
+            "source_label": "primary interface",
+            "destination_type": "dcim.interface",
+            "destination_hidden": True,
+        },
+    ]
+
+    bulk_update_data = {
+        "destination_filter": {"role": {"slug": "controller"}},
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        site_type = ContentType.objects.get_for_model(Site)
+        device_type = ContentType.objects.get_for_model(Device)
+
+        Relationship.objects.create(
+            name="Related Sites",
+            slug="related-sites",
+            type="many-to-many",
+            source_type=site_type,
+            destination_type=site_type,
+        )
+        Relationship.objects.create(
+            name="Unrelated Sites",
+            slug="unrelated-sites",
+            type="many-to-many",
+            source_type=site_type,
+            destination_type=site_type,
+        )
+        Relationship.objects.create(
+            name="Devices found elsewhere",
+            slug="devices-elsewhere",
+            type="many-to-many",
+            source_type=site_type,
+            destination_type=device_type,
+        )
+
+
+class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = RelationshipAssociation
+    brief_fields = ["destination_id", "id", "relationship", "source_id", "url"]
+
+    @classmethod
+    def setUpTestData(cls):
+        site_type = ContentType.objects.get_for_model(Site)
+        device_type = ContentType.objects.get_for_model(Device)
+
+        cls.relationship = Relationship.objects.create(
+            name="Devices found elsewhere",
+            slug="elsewhere-devices",
+            type="many-to-many",
+            source_type=site_type,
+            destination_type=device_type,
+        )
+        cls.sites = (
+            Site.objects.create(name="Empty Site", slug="empty"),
+            Site.objects.create(name="Occupied Site", slug="occupied"),
+            Site.objects.create(name="Another Empty Site", slug="another-empty"),
+        )
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        cls.devices = (
+            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
+            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
+            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
+        )
+
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationship,
+            source_type=site_type,
+            source_id=cls.sites[0].pk,
+            destination_type=device_type,
+            destination_id=cls.devices[0].pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationship,
+            source_type=site_type,
+            source_id=cls.sites[0].pk,
+            destination_type=device_type,
+            destination_id=cls.devices[1].pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationship,
+            source_type=site_type,
+            source_id=cls.sites[0].pk,
+            destination_type=device_type,
+            destination_id=cls.devices[2].pk,
+        )
+
+        cls.create_data = [
+            {
+                "relationship": cls.relationship.pk,
+                "source_type": "dcim.site",
+                "source_id": cls.sites[2].pk,
+                "destination_type": "dcim.device",
+                "destination_id": cls.devices[0].pk,
+            },
+            {
+                "relationship": cls.relationship.pk,
+                "source_type": "dcim.site",
+                "source_id": cls.sites[2].pk,
+                "destination_type": "dcim.device",
+                "destination_id": cls.devices[1].pk,
+            },
+            {
+                "relationship": cls.relationship.pk,
+                "source_type": "dcim.site",
+                "source_id": cls.sites[2].pk,
+                "destination_type": "dcim.device",
+                "destination_id": cls.devices[2].pk,
+            },
+        ]

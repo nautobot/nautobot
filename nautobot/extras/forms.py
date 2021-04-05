@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
@@ -19,6 +19,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
+    MultipleContentTypeField,
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -67,9 +68,9 @@ class CustomFieldModelForm(forms.ModelForm):
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
             field_name = "cf_{}".format(cf.name)
-            if not self.instance._state.adding:
+            if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
-                self.fields[field_name].initial = self.instance.custom_field_data.get(cf.name)
+                self.fields[field_name].initial = self.instance.cf.get(cf.name)
             else:
                 self.fields[field_name] = cf.to_form_field()
 
@@ -80,7 +81,7 @@ class CustomFieldModelForm(forms.ModelForm):
 
         # Save custom field data on instance
         for cf_name in self.custom_fields:
-            self.instance.custom_field_data[cf_name[3:]] = self.cleaned_data.get(cf_name)
+            self.instance.cf[cf_name[3:]] = self.cleaned_data.get(cf_name)
 
         return super().clean()
 
@@ -156,6 +157,20 @@ class CustomFieldFilterForm(forms.Form):
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
     slug = SlugField()
+    source_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+    )
+    source_filter = JSONField(
+        required=False,
+        help_text='Enter any filters for the source object in <a href="https://json.org/">JSON</a> format.',
+    )
+    destination_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+    )
+    destination_filter = JSONField(
+        required=False,
+        help_text='Enter any filters for the destination object in <a href="https://json.org/">JSON</a> format.',
+    )
 
     class Meta:
         model = Relationship
@@ -187,24 +202,12 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
 
     type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
-    source_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Source Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
     )
 
-    destination_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Destination Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
 
@@ -230,7 +233,7 @@ class RelationshipModelForm(forms.ModelForm):
                 self.fields[field_name] = cr.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
-                if not self.instance._state.adding:
+                if self.instance.present_in_database:
                     if cr.has_many(peer_side):
                         initial = [getattr(cra, peer_side) for cra in queryset.all()]
                         self.fields[field_name].initial = initial
@@ -310,24 +313,12 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
 
-    source_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Source Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+    source_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
     )
 
-    destination_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        display_field="display_name",
-        label="Destination Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+    destination_type = MultipleContentTypeField(
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
 
@@ -584,7 +575,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(),
     )
     user_id = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",
@@ -637,7 +628,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",
@@ -717,11 +708,7 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
-    )
+    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
 
     class Meta:
         model = Webhook
@@ -746,10 +733,8 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
 class WebhookFilterForm(BootstrapMixin, forms.Form):
     model = Webhook
     q = forms.CharField(required=False, label="Search")
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
+    content_types = MultipleContentTypeField(
+        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -766,10 +751,7 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        label="Content type(s)",
-    )
+    content_types = MultipleContentTypeField(feature="statuses", label="Content Type(s)")
 
     class Meta:
         model = Status
@@ -782,7 +764,8 @@ class StatusCSVForm(CustomFieldModelCSVForm):
 
     slug = SlugField()
     content_types = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
+        feature="statuses",
+        choices_as_strings=True,
         help_text=mark_safe(
             "The object types to which this status applies. Multiple values "
             "must be comma-separated and wrapped in double quotes. (e.g. "
@@ -804,12 +787,8 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
 
     model = Status
     q = forms.CharField(required=False, label="Search")
-    # "CSV" field is being used here because it is using the slug-form input for
-    # content-types, which improves UX.
-    content_types = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content type(s)",
+    content_types = MultipleContentTypeField(
+        feature="statuses", choices_as_strings=True, required=False, label="Content Type(s)"
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
@@ -819,11 +798,7 @@ class StatusBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        label="Content type(s)",
-        required=False,
-    )
+    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
 
     class Meta:
         nullable_fields = []
