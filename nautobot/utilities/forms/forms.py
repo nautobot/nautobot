@@ -130,6 +130,20 @@ class PrefixFieldMixin(forms.ModelForm):
 
     prefix = IPNetworkFormField()
 
+    def __init__(self, *args, **kwargs):
+
+        instance = kwargs.get("instance")
+        initial = kwargs.get("initial", {}).copy()
+
+        # If we're editing an object with a `prefix` field, we need to patch initial to include
+        # `prefix` because it is a computed field.
+        if instance is not None:
+            initial["prefix"] = instance.prefix
+
+        kwargs["initial"] = initial
+
+        super().__init__(*args, **kwargs)
+
     def save(self, *args, **kwargs):
         instance = super().save(commit=False)
         # call the model's prefix.setter method
