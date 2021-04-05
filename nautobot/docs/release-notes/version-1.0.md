@@ -72,7 +72,7 @@ Other changes:
 - [#155](https://github.com/nautobot/nautobot/issues/155) - NAPALM driver string not displayed in Platform detail view
 - [#166](https://github.com/nautobot/nautobot/issues/166) - Contrib directory is missing (including the apache.conf)
 - [#168](https://github.com/nautobot/nautobot/issues/168) - Incorrect `AUTHENTICATION_BACKENDS` example in remote authentication documentation
-- [#170](https://github.com/nautobot/nautobot/issues/170) - GraphQL: Filter devices by status
+- [#170](https://github.com/nautobot/nautobot/issues/170) - GraphQL filtering failure returned all objects instead of none
 - [#172](https://github.com/nautobot/nautobot/issues/172) - Incorrect whitespace in some HTML template tags
 - [#181](https://github.com/nautobot/nautobot/pull/181) - Incorrect UI reference in Webhook documentation
 - [#185](https://github.com/nautobot/nautobot/issues/185) - Possible infinite loop in cable tracing algorithm
