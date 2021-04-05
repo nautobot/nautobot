@@ -153,7 +153,6 @@ Simply querying the `/api/dcim/devices/` API route provides:
 </div>
 
 <br />
-
 There is a lot of useful information in that API call, but there is also a lot of information that is missing; such as interfaces and ip addresses associated with the devices. There is also potentially a lot of information that isn't needed for the specific task. To retrieve the missing information, subsequent API calls would need to be performed; and those API results would need to be correlated to the correct device.
 
 GraphQL reduces the complexity of performing multiple API calls and correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
@@ -832,8 +831,6 @@ This query will retrieve a list of all devices by their hostname.
 </div>
 
 <br />
-
-
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
 ![GraphiQL - Autocompletion](/guides/images/graphql/graphiql-autocomplete.png)
@@ -23385,7 +23382,6 @@ The result is a list of all the devices by their hostname and associated interfa
 </div>
 
 <br />
-
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
 ```
@@ -72518,7 +72514,7 @@ As an example. We can query devices by their site location. This is done by adde
   </details>
 </div>
 
-
+<br />
 GraphiQL allows you to add multiple attributes to the filter criteria. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`. 
 
 ```
@@ -72549,7 +72545,6 @@ query {
 </div>
 
 <br />
-
 ## Using the GraphQL API in Nautobot
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.
