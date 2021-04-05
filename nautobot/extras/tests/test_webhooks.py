@@ -22,7 +22,7 @@ class WebhookTest(APITestCase):
 
         super().setUp()
 
-        self.queue = django_rq.get_queue("default")
+        self.queue = django_rq.get_queue("webhooks")
         self.queue.empty()  # Begin each test with an empty queue
 
     @classmethod
