@@ -12,11 +12,7 @@ env:
 jobs:
   fast_finish: true
   include:
-    - stage: Linting
-      python: "3.6"
-      script:
-        - "poetry run invoke tests --lint-only"
-    - stage: Unit Tests
+    - stage: Tests
       python: "3.6"
     - python: "3.7"
     - python: "3.8"

@@ -21,6 +21,22 @@ if [[ ! -z $SYNTAX ]]; then
 	exit 1
 fi
 
+# Check all built-in python source files for PEP 8 compliance
+invoke flake8
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) one or more PEP 8 errors detected; failing build."
+	exit 1
+fi
+
+# Check that all files conform to Black.
+invoke black
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) one or more Black errors detected; failing build."
+	exit 1
+fi
+
 # Run Nautobot tests
 invoke unittest --failfast
 RC=$?
