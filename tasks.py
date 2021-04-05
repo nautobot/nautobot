@@ -237,6 +237,23 @@ def migrate(context, local=None):
         docker_compose(context, f"run nautobot {command}")
 
 
+@task
+def post_upgrade(context):
+    """
+    Performs Nautobot common post-upgrade operations using a single entrypoint.
+
+    This will run the following management commands with default settings, in order:
+
+    - migrate
+    - trace_paths
+    - collectstatic
+    - remove_stale_contenttypes
+    - clearsessions
+    - invalidate all
+    """
+    docker_compose(context, "run nautobot nautobot-server post_upgrade")
+
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------

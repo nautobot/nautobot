@@ -1,8 +1,12 @@
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.db import transaction
+from django.db.models import ProtectedError
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 
 from nautobot.utilities.forms import LaxURLField
-from .models import CustomField, CustomLink, ExportTemplate, JobResult, Webhook
+from .models import CustomField, CustomFieldChoice, CustomLink, ExportTemplate, JobResult, Webhook
 
 
 def order_content_types(field):
@@ -102,10 +106,25 @@ class CustomFieldForm(forms.ModelForm):
         order_content_types(self.fields["content_types"])
 
 
+class CustomFieldChoiceAdmin(admin.TabularInline):
+    """
+    Defines the inline formset factory that handles choices for selection type custom fields.
+    The `extra` defines the default number of inline rows that appear in the UI.
+    """
+
+    model = CustomFieldChoice
+    extra = 5
+
+
 @admin.register(CustomField)
 class CustomFieldAdmin(admin.ModelAdmin):
+    """
+    Define the structure and composition of the custom field form in the admin panel.
+    """
+
     actions = None
     form = CustomFieldForm
+    inlines = [CustomFieldChoiceAdmin]
     list_display = [
         "name",
         "models",
@@ -155,17 +174,26 @@ class CustomFieldAdmin(admin.ModelAdmin):
                 "classes": ("monospace",),
             },
         ),
-        (
-            "Choices",
-            {
-                "description": "A selection field must have two or more choices assigned to it.",
-                "fields": ("choices",),
-            },
-        ),
     )
 
     def models(self, obj):
         return ", ".join([ct.name for ct in obj.content_types.all()])
+
+    @transaction.atomic
+    def save_formset(self, request, form, formset, change):
+        # TODO(John): revisit this when custom fields are moved out of admin... there is a better way...
+        if formset.model != CustomFieldChoice:
+            return super().save_formset(request, form, formset, change)
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.save()
+        formset.save_m2m()
+        for obj in formset.deleted_objects:
+            try:
+                obj.delete()
+            except ProtectedError as e:
+                self.message_user(request, e, level=messages.ERROR)
+                raise e
 
 
 #
