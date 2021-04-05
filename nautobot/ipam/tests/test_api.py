@@ -399,6 +399,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
 
 
 class ParallelPrefixTest(APITransactionTestCase):
+    '''
+    Adapted from https://github.com/netbox-community/netbox/pull/3726
+    '''
 
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
