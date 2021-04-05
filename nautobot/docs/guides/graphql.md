@@ -151,6 +151,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
 </details>
 There is a lot of useful information in that API call, but there is also a lot of information that is missing; such as interfaces and ip addresses associated with the devices. There is also potentially a lot of information that isn't needed for the specific task. To retrieve the missing information, subsequent API calls would need to be performed; and those API results would need to be correlated to the correct device.
 
+
 GraphQL reduces the complexity of performing multiple API calls and correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
 
 ### Exploring GraphQL in Nautobot
@@ -188,7 +189,6 @@ query {
 ```
 
 This query will retrieve a list of all devices by their hostname.
-
 <details>
   <summary>View GraphQL Query Results</summary>
 ```
@@ -825,6 +825,7 @@ This query will retrieve a list of all devices by their hostname.
 ```
 </details>
 
+
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
 ![GraphiQL - Autocompletion](/guides/images/graphql/graphiql-autocomplete.png)
@@ -841,7 +842,6 @@ query {
 ```
 
 The result is a list of all the devices by their hostname and associated interfaces by their names.
-
 <details>
   <summary>View GraphQL Query Results</summary>
 ```
@@ -23374,6 +23374,7 @@ The result is a list of all the devices by their hostname and associated interfa
 ```
 </details>
 
+
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
 ```
@@ -23393,7 +23394,6 @@ query {
 ```
 
 The results of the query look like:
-
 <details>
   <summary>View GraphQL Query Results</summary>
 ```
@@ -72454,12 +72454,12 @@ The results of the query look like:
 ```
 </details>
 
+
 ### Filtering Queries
 
 These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Currently, Nautobot allows users to filter queries at the top level of the query. In our previous examples, the top level would be the `devices` query.
 
 As an example. We can query devices by their site location. This is done by added `(site: "<site name>")` after devices. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
-
 <details>
   <summary>View GraphQL Query Results</summary>
 ```
@@ -72502,6 +72502,7 @@ As an example. We can query devices by their site location. This is done by adde
 ```
 </details>
 
+
 GraphiQL allows you to add multiple attributes to the filter criteria. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`. 
 
 ```
@@ -72511,7 +72512,6 @@ query {
   }
 }
 ```
-
 <details>
   <summary>View GraphQL Query Results</summary>
 ```
@@ -72529,6 +72529,7 @@ query {
 }
 ```
 </details>
+
 
 ## Using the GraphQL API in Nautobot
 
