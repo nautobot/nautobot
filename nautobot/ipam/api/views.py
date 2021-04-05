@@ -1,6 +1,7 @@
+import time
+
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-from django_pglocks import advisory_lock
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import action
@@ -21,7 +22,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.constants import ADVISORY_LOCK_KEYS
 from nautobot.utilities.utils import count_related
 from . import serializers
 
@@ -126,7 +126,6 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     @swagger_auto_schema(method="get", responses={200: serializers.AvailablePrefixSerializer(many=True)})
     @swagger_auto_schema(method="post", responses={201: serializers.PrefixSerializer(many=False)})
     @action(detail=True, url_path="available-prefixes", methods=["get", "post"])
-    @advisory_lock(ADVISORY_LOCK_KEYS["available-prefixes"])
     def available_prefixes(self, request, pk=None):
         """
         A convenience method for returning available child prefixes within a parent.
@@ -138,10 +137,15 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         available_prefixes = prefix.get_available_prefixes()
 
         if request.method == "POST":
+            data = request.data if isinstance(request.data, list) else [request.data]
+
+            # test code
+            # for elem in data:
+            #     time.sleep(elem.pop("sleep", 0))
 
             # Validate Requested Prefixes' length
             serializer = serializers.PrefixLengthSerializer(
-                data=request.data if isinstance(request.data, list) else [request.data],
+                data=data,
                 many=True,
                 context={
                     "request": request,
@@ -207,7 +211,6 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         methods=["get", "post"],
         queryset=IPAddress.objects.all(),
     )
-    @advisory_lock(ADVISORY_LOCK_KEYS["available-ips"])
     def available_ips(self, request, pk=None):
         """
         A convenience method for returning available IP addresses within a prefix. By default, the number of IPs

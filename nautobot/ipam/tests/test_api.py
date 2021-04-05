@@ -1,5 +1,9 @@
 import json
+from collections import namedtuple
+from concurrent.futures._base import as_completed
+from concurrent.futures.thread import ThreadPoolExecutor
 
+from django.db import connection
 from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
@@ -20,6 +24,7 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
+from nautobot.utilities.testing.api import APITransactionTestCase
 
 
 class AppTest(APITestCase):
@@ -391,6 +396,49 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 8)
+
+
+class ParallelPrefixTest(APITransactionTestCase):
+
+    def test_create_multiple_available_prefixes_parallel(self):
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
+
+        requests = [
+            {"prefix_length": 30, "description": "Test Prefix 1", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 2", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 3", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 4", "status": "active"},
+            {"prefix_length": 30, "description": "Test Prefix 5", "status": "active"},
+            # Note: fails with or without sleep cases
+            # {"prefix_length": 30, "description": "Sleep Prefix 1", "status": "active", "sleep": 2},
+            # {"prefix_length": 30, "description": "Sleep Prefix 2", "status": "active", "sleep": 2},
+            # {"prefix_length": 30, "description": "Sleep Prefix 3", "status": "active", "sleep": 2},
+            # {"prefix_length": 30, "description": "Sleep Prefix 4", "status": "active", "sleep": 2},
+            # {"prefix_length": 30, "description": "Sleep Prefix 5", "status": "active", "sleep": 2},
+        ]
+        url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
+
+        self._do_parallel_requests(url, requests)
+
+        prefixes = [o.prefix for o in Prefix.objects.filter(prefix_length=30).all()]
+        self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
+
+    def _do_parallel_requests(self, url, requests):
+        # Randomize request order, such that test run more closely simulates
+        # a real calling pattern.
+        # shuffle(requests)
+        with ThreadPoolExecutor(max_workers=len(requests)) as executor:
+            futures = []
+            for req in requests:
+                futures.append(executor.submit(self._threaded_post, url, req))
+
+    def _threaded_post(self, url, data):
+        try:
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        finally:
+            # Django will use a separate DB connection for each thread, but will not
+            # automatically close connections, it must be done here.
+            connection.close()
 
 
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
