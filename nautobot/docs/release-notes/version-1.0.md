@@ -45,7 +45,7 @@ Other changes:
 - [#159](https://github.com/nautobot/nautobot/issues/159) - Update documentation for external authentication SSO Backend to get a proper install
 - [#180](https://github.com/nautobot/nautobot/pull/180) - Revised available Invoke tasks for simplicity and maintainability
 - [#208](https://github.com/nautobot/nautobot/pull/208) - Custom fields model refactor
-- [#216](https://github.com/nautobot/nautobot/pull/216) - Update install docs to address inconsitent experience w/ `$PATH`
+- [#216](https://github.com/nautobot/nautobot/pull/216) - Update install docs to address inconsistent experience w/ `$PATH`
 - [#235](https://github.com/nautobot/nautobot/pull/235) - Update restart docs to include worker
 
 ### Removed
