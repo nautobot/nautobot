@@ -26,7 +26,7 @@ invoke flake8
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more PEP 8 errors detected; failing build."
-	exit 1
+	exit $RC
 fi
 
 # Check that all files conform to Black.
@@ -34,7 +34,7 @@ invoke black
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more Black errors detected; failing build."
-	exit 1
+	exit $RC
 fi
 
 # Run Nautobot tests
