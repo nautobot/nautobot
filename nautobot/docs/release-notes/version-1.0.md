@@ -40,6 +40,7 @@ Other changes:
 - [#128](https://github.com/nautobot/nautobot/pull/128) - Overview of usage for the `nautobot-netbox-importer` plugin could be mistaken for full instructions
 - [#122](https://github.com/nautobot/nautobot/pull/122) - Improved installation flow for creating nautobot user and virtualenv
 - [#131](https://github.com/nautobot/nautobot/pull/131) - Replaced PostgreSQL-specific ArrayField with a more generic JSONArrayField
+- [#137](https://github.com/nautobot/nautobot/issues/137) - Explicitly disallow Custom Field Name Changes
 - [#142](https://github.com/nautobot/nautobot/pull/142) - Converted various config validation checks into proper Django checks
 - [#149](https://github.com/nautobot/nautobot/issues/149) - Unify optional settings documentation for `REMOTE_AUTH*/SOCIAL_AUTH*`
 - [#159](https://github.com/nautobot/nautobot/issues/159) - Update documentation for external authentication SSO Backend to get a proper install
@@ -65,7 +66,6 @@ Other changes:
 - [#132](https://github.com/nautobot/nautobot/issues/132) - Generated `nautobot_config.py` did not include a trailing newline
 - [#134](https://github.com/nautobot/nautobot/issues/134) - Missing venv activation step in install guide
 - [#135](https://github.com/nautobot/nautobot/issues/135) - Custom field Selection value name change causes data inconsistency
-- [#137](https://github.com/nautobot/nautobot/issues/137) - Explicitly disallow Custom Field Name Changes
 - [#147](https://github.com/nautobot/nautobot/issues/147) - Login failed when BASE_PATH is set
 - [#153](https://github.com/nautobot/nautobot/issues/153) - Editing an existing user token shows "create" buttons instead of "update"
 - [#154](https://github.com/nautobot/nautobot/issues/154) - Some tests were failing when run in the development Docker container
