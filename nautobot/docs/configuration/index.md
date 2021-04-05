@@ -88,7 +88,7 @@ While Nautobot has many configuration settings, only a few of them must be defin
 Configuration settings may be changed at any time. However, the WSGI service (e.g. uWSGI) must be restarted before the changes will take effect. For example, if you're running Nautobot using `systemd:`
 
 ```no-highlight
-$ sudo systemctl restart nautobot
+$ sudo systemctl restart nautobot nautobot-worker
 ```
 
 ## Advanced Configuration

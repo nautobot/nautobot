@@ -55,6 +55,14 @@ RQ_QUEUES = {
         "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
+    "webhooks": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300,
+    },
     "check_releases": {
         "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
         "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
@@ -62,5 +70,13 @@ RQ_QUEUES = {
         "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
         "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
+    },
+    "custom_fields": {
+        "HOST": os.getenv("REDIS_HOST", "localhost"),
+        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "DB": 2,
+        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
+        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "DEFAULT_TIMEOUT": 900,
     },
 }
