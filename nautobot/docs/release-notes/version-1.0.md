@@ -55,7 +55,7 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 - [#132](https://github.com/nautobot/nautobot/issues/132) - Generated `nautobot_config.py` did not include a trailing newline
 - [#134](https://github.com/nautobot/nautobot/issues/134) - Missing venv activation step in install guide
 - [#135](https://github.com/nautobot/nautobot/issues/135) - Custom field Selection value name change causes data inconsistency
-- [#137](https://github.com/nautobot/nautobot/issues/137) - Support Custom Field Name Changes
+- [#137](https://github.com/nautobot/nautobot/issues/137) - Explicitly disallow Custom Field Name Changes
 - [#147](https://github.com/nautobot/nautobot/issues/147) - Login failed when BASE_PATH is set
 - [#153](https://github.com/nautobot/nautobot/issues/153) - Editing an existing user token shows "create" buttons instead of "update"
 - [#154](https://github.com/nautobot/nautobot/issues/154) - Some tests were failing when run in the development Docker container
