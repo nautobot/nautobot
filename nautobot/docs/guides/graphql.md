@@ -1031,7 +1031,10 @@ The result is a list of all the devices by their hostname and associated interfa
           }
         ]
       },
-      **OMITTED FOR BREVITY**
+    ]
+  }
+}
+**OMITTED FOR BREVITY**
 ```
 
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
@@ -1071,7 +1074,12 @@ The results of the query look like:
               }
             ]
           },
-          **OMITTED FOR BREVITY**
+        ]
+      }
+    ]
+  }
+}
+**OMITTED FOR BREVITY**
 ```
 
 ### Filtering Queries
