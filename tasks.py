@@ -237,8 +237,12 @@ def migrate(context, local=None):
         docker_compose(context, f"run nautobot {command}")
 
 
-@task
-def post_upgrade(context):
+@task(
+    help={
+        "local": "run this task locally vs inside the docker container (default: False)",
+    }
+)
+def post_upgrade(context, local=None):
     """
     Performs Nautobot common post-upgrade operations using a single entrypoint.
 
@@ -251,7 +255,13 @@ def post_upgrade(context):
     - clearsessions
     - invalidate all
     """
-    docker_compose(context, "run nautobot nautobot-server post_upgrade")
+    command = "nautobot-server post_upgrade"
+
+    if local is None:
+        local = context.nautobot.local
+    if is_truthy(local):
+        context.run(command)
+    docker_compose(context, f"run nautobot {command}")
 
 
 # ------------------------------------------------------------------------------
