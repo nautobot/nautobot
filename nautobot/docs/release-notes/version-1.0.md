@@ -17,6 +17,7 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 - [#121](https://github.com/nautobot/nautobot/pull/121) - Added "Data Model Changes" section to the "Migrating from NetBox" documentation
 - [#141](https://github.com/nautobot/nautobot/pull/141) - Custom Link UI now includes example usage hints
 - [#227](https://github.com/nautobot/nautobot/pull/227) - Add QFSP+ (64GFC) FiberChannel interface type
+- [#236](https://github.com/nautobot/nautobot/pull/236) - Add `post_upgrade` to developer docs and add `invoke post-upgrade`
 
 ### Changed
 
@@ -46,7 +47,6 @@ Other changes:
 - [#208](https://github.com/nautobot/nautobot/pull/208) - Custom fields model refactor
 - [#216](https://github.com/nautobot/nautobot/pull/216) - Update install docs to address inconsitent experience w/ `$PATH`
 - [#235](https://github.com/nautobot/nautobot/pull/235) - Update restart docs to include worker
-- [#236](https://github.com/nautobot/nautobot/pull/236) - Add `post_upgrade` to developer docs and add `invoke post-upgrade`
 
 ### Removed
 
