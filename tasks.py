@@ -320,7 +320,7 @@ def unittest(context, keepdb=False, label="nautobot", failfast=False, local=None
 @task(help={"local": "run this task locally vs inside the docker container (default: False)"})
 def unittest_coverage(context, local=None):
     """Report on code test coverage as measured by 'invoke unittest'."""
-    command = "coverage report --skip-covered --omit *migrations*"
+    command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
 
     if local is None:
         local = context.nautobot.local
