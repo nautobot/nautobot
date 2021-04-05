@@ -8,7 +8,7 @@ GraphQL is a query language for your APIs and a runtime for fulfilling those que
 
 ### How GraphQL simplifies API Interactions
 
-When interacting with APIs, It's often necessary to build relationships between multiple models to achieve the result that is desired. Doing this typically requires multiple API calls to create the relationships that are desired. For example, lets assume that there are two devices in Nautobot. Each are assigned a site, region, roles, interfaces, and IP Addresses.
+When interacting with APIs, It's often necessary to build relationships between multiple models to achieve the result that is desired. Doing this typically requires multiple API calls to create the relationships. For example, lets assume that there are two devices in Nautobot. Each are assigned a site, region, roles, interfaces, and IP Addresses.
 
 Simply querying the `/api/dcim/devices/` API route provides:
 <div>
@@ -72469,7 +72469,7 @@ The results of the query look like:
 
 These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Currently, Nautobot allows users to filter queries at the top level of the query. In our previous examples, the top level would be the `devices` query.
 
-As an example. We can query devices by their site location. This is done by added `(site: "<site name>")` after devices. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
+As an example. We can query devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
@@ -72619,7 +72619,7 @@ gql = nb.graphql.query(query=query, variables=variables)
 print(json.dumps(gql.json, indent=2))
 ```
 
-In the updated script, we add the `variables = {"site_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `site`. The updated output is still a JSON object. instead of fetching all devices, we are filtering by devices in the `ams` site. The `PyNautobot SDK` has some excellent GraphQL [examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
+In the updated script, we add the `variables = {"site_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `site`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` site. The `PyNautobot SDK` has some excellent GraphQL [examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
 
 ## Closing
 
