@@ -1,3 +1,5 @@
+import time
+
 from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -137,10 +139,15 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         available_prefixes = prefix.get_available_prefixes(select_for_update=True)
 
         if request.method == "POST":
+            data = request.data if isinstance(request.data, list) else [request.data]
+
+            # test code
+            # for elem in data:
+            #     time.sleep(elem.pop("sleep", 0))
 
             # Validate Requested Prefixes' length
             serializer = serializers.PrefixLengthSerializer(
-                data=request.data if isinstance(request.data, list) else [request.data],
+                data=data,
                 many=True,
                 context={
                     "request": request,

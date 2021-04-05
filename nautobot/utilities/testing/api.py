@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.users.models import ObjectPermission, Token
 from .utils import disable_warnings
@@ -398,3 +398,24 @@ class APIViewTestCases:
         DeleteObjectViewTestCase,
     ):
         pass
+
+
+class APITransactionTestCase(_APITransactionTestCase):
+    def setUp(self):
+        """
+        Create a superuser and token for API calls.
+        """
+        self.user = User.objects.create(username="testuser", is_superuser=True)
+        self.token = Token.objects.create(user=self.user)
+        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+
+    def assertHttpStatus(self, response, expected_status):
+        """
+        Provide more detail in the event of an unexpected HTTP response.
+        """
+        err_message = "Expected HTTP status {}; received {}: {}"
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+            err_message.format(expected_status, response.status_code, response.data),
+        )
