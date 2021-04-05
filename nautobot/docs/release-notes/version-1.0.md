@@ -27,7 +27,7 @@ Major backwards-incompatible database changes were included in this beta release
 - The `users.User` model has been completely replaced with a custom implementation that no longer requires the use of a secondary database table for storing user configuration.
 - Custom Fields have been overhauled for asserting data integrity and improving user experience
     - Custom Fields can no longer be renamed or have their type changed after they have been created.
-    - Choices for Custom Fields are now stored as discrete database objects. Choices that are in active use will block the deletion of their associated custom field.
+    - Choices for Custom Fields are now stored as discrete database objects. Choices that are in active use cannot be deleted.
 
 Other changes:
 
