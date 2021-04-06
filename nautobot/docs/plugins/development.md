@@ -112,7 +112,7 @@ build-backend = "setuptools.build_meta"
 name = "nautobot-animal-sounds"
 version = "0.1.0"
 description = "An example Nautobot plugin"
-authors = ["Jeremy Stretch"]
+authors = ["Josh VanDeraa"]
 license = "Apache 2.0"
 
 [options]
