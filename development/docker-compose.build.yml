@@ -1,0 +1,13 @@
+# Used to run the final container images vs the dev containers
+---
+version: "3"
+services:
+  nautobot:
+    build:
+      target: final
+    image: "networktocode/nautobot:local"
+    ports:
+      - 80:80
+      - 443:443
+  worker:
+    image: "networktocode/nautobot:local"
