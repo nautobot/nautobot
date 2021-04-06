@@ -1,7 +1,6 @@
 ---
 # Linting available at https://config.travis-ci.com/explore
-_unit_test: &unit_test
-  python: "3.9"
+_setup_docker: &setup_docker
   before_install:
     - sudo rm -rf /var/lib/apt/lists/*
     - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
@@ -14,6 +13,10 @@ _unit_test: &unit_test
     - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
     - sudo service docker restart
     - docker buildx create --use
+
+_unit_test: &unit_test
+  python: "3.9"
+  <<: *setup_docker
   before_script:
     - invoke buildx
   script:
@@ -24,18 +27,7 @@ _unit_test: &unit_test
 
 _integration_test: &integration_test
   python: "3.9"
-  before_install:
-    - sudo rm -rf /var/lib/apt/lists/*
-    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-    - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) edge"
-    - sudo apt-get update
-    - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-    - docker version
-    - ls -al /home/travis/.cache/docker
-    - pip install invoke docker-compose requests
-    - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
-    - sudo service docker restart
-    - docker buildx create --use
+  <<: *setup_docker
   before_script:
     - invoke buildx
   script:
@@ -61,6 +53,7 @@ jobs:
         - invoke flake8 --local
         - invoke hadolint --local
 
+    # Unfortunately we can't do travis matrix builds in multiple stages so we get to define each build here
     - stage: Unit Test
       name: Python 3.6 Unit Test
       env:
