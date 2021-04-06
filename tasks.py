@@ -270,7 +270,7 @@ def integration_tests(context):
     start(context)
     while retries < max_retries:
         try:
-            request = session.get("http://localhost:8000", timeout=300)
+            request = session.get("http://localhost:8080", timeout=300)
         except requests.exceptions.ConnectionError:
             print("Nautobot not ready yet sleeping for 5 seconds...")
             sleep(5)

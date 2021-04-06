@@ -75,7 +75,7 @@ COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Common docker entrypoint for migrations, superuser creations, etc.
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["nautobot-server", "runserver", "0.0.0.0:8000", "--insecure"]
+CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
 
 # Copy nautobot source and poetry info to container to reduce cache invalidations
 COPY poetry.lock pyproject.toml README.md /source/

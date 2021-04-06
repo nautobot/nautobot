@@ -260,10 +260,10 @@ At this point, we should be able to run Nautobot's development server for testin
 development instance:
 
 ```no-highlight
-$ nautobot-server runserver 0.0.0.0:8000 --insecure
+$ nautobot-server runserver 0.0.0.0:8080 --insecure
 ```
 
-Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8000; for example, <http://127.0.0.1:8000/>. You should be greeted with the Nautobot home page.
+Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8000; for example, <http://127.0.0.1:8080/>. You should be greeted with the Nautobot home page.
 
 !!! danger
     **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
