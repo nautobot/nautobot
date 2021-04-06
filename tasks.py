@@ -51,7 +51,7 @@ namespace.configure(
 
 
 def task(function=None, *args, **kwargs):
-    """task decorator to overide the default invoke task decorator."""
+    """Task decorator to override the default Invoke task decorator."""
 
     def task_wrapper(function=None):
         """Wrapper around invoke.task to add the task to the namespace as well."""

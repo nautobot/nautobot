@@ -55,6 +55,6 @@ fi
 
 # Show build duration
 END=$(date +%s)
-echo "$(info) exiting after $(($END - $START)) seconds."
+echo "$(info) all checks passed after $(($END - $START)) seconds."
 
 exit 0
