@@ -47,9 +47,9 @@ jobs:
         - chmod +x /home/travis/bin/hadolint
         - mkdir -p /home/travis/.cache/docker
       script:
-        - invoke black
-        - invoke flake8
-        - invoke hadolint
+        - invoke black --local
+        - invoke flake8 --local
+        - invoke hadolint --local
 
     - stage: Unit Test
       name: Python 3.6 Unit Test

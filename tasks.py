@@ -74,7 +74,6 @@ def build(context, force_rm=False, cache=True):
 )
 def buildx(
     context,
-    force_rm=False,
     cache=True,
     cache_dir="/home/travis/.cache/docker",
     platforms="linux/amd64",
@@ -199,29 +198,41 @@ def post_upgrade(context):
         "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect."
     }
 )
-def black(context, autoformat=False):
+def black(context, autoformat=False, local=False):
     """Check Python code style with Black."""
     if autoformat:
         black_command = "black"
     else:
         black_command = "black --check --diff"
-    docker_compose(
-        context,
-        f"run --entrypoint '{black_command} development/ nautobot/ tasks.py' nautobot",
-        pty=True,
-    )
+    command = f"{black_command} development/ nautobot/ tasks.py"
+    if local:
+        context.run(command)
+    else:
+        docker_compose(
+            context,
+            f"run --entrypoint '{command}' nautobot",
+            pty=True,
+        )
 
 
 @task
-def flake8(context):
+def flake8(context, local=False):
     """Check for PEP8 compliance and other style issues."""
-    docker_compose(context, "run --entrypoint 'flake8 development/ nautobot/ tasks.py' nautobot", pty=True)
+    command = "flake8 development/ nautobot/ tasks.py"
+    if local:
+        context.run(command)
+    else:
+        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
 
 
 @task
-def hadolint(context):
+def hadolint(context, local=False):
     """Check Dockerfile for hadolint compliance and other style issues."""
-    docker_compose(context, "run --entrypoint 'hadolint docker/Dockerfile' nautobot", pty=True)
+    command = "hadolint docker/Dockerfile"
+    if local:
+        context.run(command)
+    else:
+        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
 
 
 @task(
