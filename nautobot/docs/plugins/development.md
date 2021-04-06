@@ -181,7 +181,7 @@ To ease development, it is recommended with the virtual environment activated to
 $ poetry install
 ```
 
-Once the Python package being developed is installed, add the plugin to the plugin configuration for Nautobot:
+Once the plugin has been installed, add it to the plugin configuration for Nautobot:
 
 ```python
 PLUGINS = ["animal_sounds"]
