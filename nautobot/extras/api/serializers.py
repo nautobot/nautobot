@@ -24,6 +24,7 @@ from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ConfigContext,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -86,8 +87,16 @@ class CustomFieldSerializer(ValidatedModelSerializer):
             "validation_minimum",
             "validation_maximum",
             "validation_regex",
-            "choices",
         ]
+
+
+class CustomFieldChoiceSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfieldchoice-detail")
+    field = NestedCustomFieldSerializer()
+
+    class Meta:
+        model = CustomFieldChoice
+        fields = ["id", "url", "field", "value", "weight"]
 
 
 #

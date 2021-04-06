@@ -24,6 +24,7 @@ __all__ = (
     "CommentField",
     "CSVChoiceField",
     "CSVContentTypeField",
+    "CSVMultipleChoiceField",
     "CSVDataField",
     "CSVModelChoiceField",
     "CSVMultipleContentTypeField",
@@ -128,6 +129,23 @@ class CSVChoiceField(forms.ChoiceField):
     def __init__(self, *, choices=(), **kwargs):
         super().__init__(choices=choices, **kwargs)
         self.choices = unpack_grouped_choices(choices)
+
+
+class CSVMultipleChoiceField(CSVChoiceField):
+    """
+    A version of CSVChoiceField that supports and emits a list of choice values
+    """
+
+    def to_python(self, value):
+        """Return a list of strings."""
+        if value in self.empty_values:
+            return ""
+        return [v.strip() for v in str(value).split(",")]
+
+    def validate(self, value):
+        """Validate that each of the input values is in self.choices."""
+        for v in value:
+            super().validate(v)
 
 
 class CSVModelChoiceField(forms.ModelChoiceField):

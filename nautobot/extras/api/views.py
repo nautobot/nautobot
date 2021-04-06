@@ -29,7 +29,7 @@ from nautobot.extras.models import (
     TaggedItem,
     Webhook,
 )
-from nautobot.extras.models import CustomField
+from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, get_jobs, run_job
 from nautobot.utilities.exceptions import RQWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
@@ -78,6 +78,12 @@ class CustomFieldViewSet(ModelViewSet):
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
+
+
+class CustomFieldChoiceViewSet(ModelViewSet):
+    queryset = CustomFieldChoice.objects.all()
+    serializer_class = serializers.CustomFieldChoiceSerializer
+    filterset_class = filters.CustomFieldChoiceFilterSet
 
 
 class CustomFieldModelViewSet(ModelViewSet):

@@ -11,7 +11,7 @@ from .webhooks import generate_signature
 logger = logging.getLogger("nautobot.webhooks_worker")
 
 
-@job("default")
+@job("webhooks")
 def process_webhook(webhook, data, model_name, event, timestamp, username, request_id):
     """
     Make a POST request to the defined Webhook

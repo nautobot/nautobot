@@ -389,6 +389,7 @@ class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModel
         ]
 
     def __init__(self, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
 
         self.fields["vrf"].empty_label = "Global"
@@ -691,6 +692,8 @@ class IPAddressForm(
                 elif type(nat_inside_parent) is VMInterface:
                     initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
                     initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
+            # Address is a computed field, so it must be added to initial.
+            initial["address"] = instance.address
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)

@@ -14,6 +14,7 @@ from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 from prometheus_client import Counter
 
+from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
@@ -104,18 +105,15 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     Handle the cleanup of old custom field data when a CustomField is removed from one or more ContentTypes.
     """
     if action == "post_remove":
-        instance.remove_stale_data(ContentType.objects.filter(pk__in=pk_set))
+        # Existing content types have been removed from the custom field, delete their data
+        delete_custom_field_data.delay(instance.name, pk_set)
 
-
-def handle_cf_deleted(instance, **kwargs):
-    """
-    Handle the cleanup of old custom field data when a CustomField is deleted.
-    """
-    instance.remove_stale_data(instance.content_types.all())
+    elif action == "post_add":
+        # New content types have been added to the custom field, provision them
+        provision_field.delay(instance.pk, pk_set)
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
-pre_delete.connect(handle_cf_deleted, sender=CustomField)
 
 
 #
