@@ -28,11 +28,7 @@ class NetworkQuerySet(QuerySet):
     def net_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
         broadcast = self._get_broadcast(prefix)
-        return self.filter(
-            prefix_length=prefix.prefixlen,
-            network=prefix.network,
-            broadcast=broadcast
-        )
+        return self.filter(prefix_length=prefix.prefixlen, network=prefix.network, broadcast=broadcast)
 
     def net_contained(self, prefix):
         prefix = netaddr.IPNetwork(prefix)

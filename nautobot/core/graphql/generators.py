@@ -112,9 +112,15 @@ def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
     search_params = {}
-    if schema_type._meta.filterset_class:
+    if schema_type._meta.filterset_class is not None:
+        # We need an instance for custom fields generation to happen for the
+        # filterset_class or the `cf_*` fields won't be detected.
+        filterset = schema_type._meta.filterset_class()
+        # Patch base_filters because `get_filtering_args_from_filterset` looks there
+        filterset.base_filters = filterset.filters
+
         search_params = get_filtering_args_from_filterset(
-            schema_type._meta.filterset_class,
+            filterset,
             schema_type,
         )
 
