@@ -176,30 +176,22 @@ def generate_list_resolver(schema_type, resolver_name):
     def list_resolver(self, info, **kwargs):
         filterset_class = schema_type._meta.filterset_class
         if filterset_class is not None:
-            # Used to store django filter passed to the filterset.
-            fsargs = {}
-
-            # Put the value inside of list if it's for a list field type, otherwise just pass it
-            # through unchanged.
-            for key, value in kwargs.items():
-                if filterset_class.base_filters[key].field_class in LIST_FIELDS:
-                    fsargs[key] = [value]
-                else:
-                    fsargs[key] = value
-
             resolved_obj = filterset_class(
-                fsargs, model.objects.restrict(info.context.user, "view").all()
+                kwargs, model.objects.restrict(info.context.user, "view").all()
             )
 
             # Check result filter for errors.
             if resolved_obj.errors:
                 errors = {}
+
                 # Build error message from results
                 # Error messages are collected from each filter object
                 for key in resolved_obj.errors:
                     errors[key] = resolved_obj.errors[key]
+
                 # Raising this exception will send the error message in the response of the GraphQL request
                 raise GraphQLError(errors)
+
             return resolved_obj.qs.all()
 
         return model.objects.restrict(info.context.user, "view").all()
