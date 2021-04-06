@@ -399,32 +399,33 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
 
 
 class ParallelPrefixTest(APITransactionTestCase):
-    '''
+    """
     Adapted from https://github.com/netbox-community/netbox/pull/3726
-    '''
+    """
 
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
 
-        requests = [
-            {"prefix_length": 30, "description": "Test Prefix 1", "status": "active"},
-            {"prefix_length": 30, "description": "Test Prefix 2", "status": "active"},
-            {"prefix_length": 30, "description": "Test Prefix 3", "status": "active"},
-            {"prefix_length": 30, "description": "Test Prefix 4", "status": "active"},
-            {"prefix_length": 30, "description": "Test Prefix 5", "status": "active"},
-            # Note: fails with or without sleep cases
-            # {"prefix_length": 30, "description": "Sleep Prefix 1", "status": "active", "sleep": 2},
-            # {"prefix_length": 30, "description": "Sleep Prefix 2", "status": "active", "sleep": 2},
-            # {"prefix_length": 30, "description": "Sleep Prefix 3", "status": "active", "sleep": 2},
-            # {"prefix_length": 30, "description": "Sleep Prefix 4", "status": "active", "sleep": 2},
-            # {"prefix_length": 30, "description": "Sleep Prefix 5", "status": "active", "sleep": 2},
-        ]
+        # 5 Prefixes
+        requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": "active"} for i in range(1, 6)]
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
 
         self._do_parallel_requests(url, requests)
 
         prefixes = [o.prefix for o in Prefix.objects.filter(prefix_length=30).all()]
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
+
+    def test_create_multiple_available_ips_parallel(self):
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), is_pool=True)
+
+        # 8 IPs
+        requests = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 9)]
+        url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
+
+        self._do_parallel_requests(url, requests)
+
+        ips = [o.address for o in IPAddress.objects.filter().all()]
+        self.assertEqual(len(ips), len(set(ips)), "Duplicate IPs should not exist")
 
     def _do_parallel_requests(self, url, requests):
         # Randomize request order, such that test run more closely simulates

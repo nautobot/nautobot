@@ -1,6 +1,5 @@
-import time
-
 from django.conf import settings
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -22,6 +21,7 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
+from nautobot.utilities.constants import ADVISORY_LOCK_KEYS
 from nautobot.utilities.utils import count_related
 from . import serializers
 
@@ -134,60 +134,58 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         invoked in parallel, which results in a race condition where multiple insertions can occur.
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
-        available_prefixes = prefix.get_available_prefixes()
-
         if request.method == "POST":
-            data = request.data if isinstance(request.data, list) else [request.data]
 
-            # test code
-            # for elem in data:
-            #     time.sleep(elem.pop("sleep", 0))
+            with cache.lock("available-prefixes", blocking_timeout=5):
+                available_prefixes = prefix.get_available_prefixes()
 
-            # Validate Requested Prefixes' length
-            serializer = serializers.PrefixLengthSerializer(
-                data=data,
-                many=True,
-                context={
-                    "request": request,
-                    "prefix": prefix,
-                },
-            )
-            serializer.is_valid(raise_exception=True)
+                # Validate Requested Prefixes' length
+                serializer = serializers.PrefixLengthSerializer(
+                    data=request.data if isinstance(request.data, list) else [request.data],
+                    many=True,
+                    context={
+                        "request": request,
+                        "prefix": prefix,
+                    },
+                )
+                serializer.is_valid(raise_exception=True)
 
-            requested_prefixes = serializer.validated_data
-            # Allocate prefixes to the requested objects based on availability within the parent
-            for i, requested_prefix in enumerate(requested_prefixes):
+                requested_prefixes = serializer.validated_data
+                # Allocate prefixes to the requested objects based on availability within the parent
+                for i, requested_prefix in enumerate(requested_prefixes):
 
-                # Find the first available prefix equal to or larger than the requested size
-                for available_prefix in available_prefixes.iter_cidrs():
-                    if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
-                        allocated_prefix = "{}/{}".format(available_prefix.network, requested_prefix["prefix_length"])
-                        requested_prefix["prefix"] = allocated_prefix
-                        requested_prefix["vrf"] = prefix.vrf.pk if prefix.vrf else None
-                        break
+                    # Find the first available prefix equal to or larger than the requested size
+                    for available_prefix in available_prefixes.iter_cidrs():
+                        if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
+                            allocated_prefix = "{}/{}".format(
+                                available_prefix.network, requested_prefix["prefix_length"]
+                            )
+                            requested_prefix["prefix"] = allocated_prefix
+                            requested_prefix["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                            break
+                    else:
+                        return Response(
+                            {"detail": "Insufficient space is available to accommodate the requested prefix size(s)"},
+                            status=status.HTTP_204_NO_CONTENT,
+                        )
+
+                    # Remove the allocated prefix from the list of available prefixes
+                    available_prefixes.remove(allocated_prefix)
+
+                # Initialize the serializer with a list or a single object depending on what was requested
+                context = {"request": request}
+                if isinstance(request.data, list):
+                    serializer = serializers.PrefixSerializer(data=requested_prefixes, many=True, context=context)
                 else:
-                    return Response(
-                        {"detail": "Insufficient space is available to accommodate the requested prefix size(s)"},
-                        status=status.HTTP_204_NO_CONTENT,
-                    )
+                    serializer = serializers.PrefixSerializer(data=requested_prefixes[0], context=context)
 
-                # Remove the allocated prefix from the list of available prefixes
-                available_prefixes.remove(allocated_prefix)
-
-            # Initialize the serializer with a list or a single object depending on what was requested
-            context = {"request": request}
-            if isinstance(request.data, list):
-                serializer = serializers.PrefixSerializer(data=requested_prefixes, many=True, context=context)
-            else:
-                serializer = serializers.PrefixSerializer(data=requested_prefixes[0], context=context)
-
-            # Create the new Prefix(es)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                # Create the new Prefix(es)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         else:
-
+            available_prefixes = prefix.get_available_prefixes()
             serializer = serializers.AvailablePrefixSerializer(
                 available_prefixes.iter_cidrs(),
                 many=True,
@@ -225,38 +223,40 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         # Create the next available IP within the prefix
         if request.method == "POST":
 
-            # Normalize to a list of objects
-            requested_ips = request.data if isinstance(request.data, list) else [request.data]
+            with cache.lock("available-ips", blocking_timeout=5):
 
-            # Determine if the requested number of IPs is available
-            available_ips = prefix.get_available_ips()
-            if available_ips.size < len(requested_ips):
-                return Response(
-                    {
-                        "detail": "An insufficient number of IP addresses are available within the prefix {} ({} "
-                        "requested, {} available)".format(prefix, len(requested_ips), len(available_ips))
-                    },
-                    status=status.HTTP_204_NO_CONTENT,
-                )
+                # Normalize to a list of objects
+                requested_ips = request.data if isinstance(request.data, list) else [request.data]
 
-            # Assign addresses from the list of available IPs and copy VRF assignment from the parent prefix
-            available_ips = iter(available_ips)
-            prefix_length = prefix.prefix.prefixlen
-            for requested_ip in requested_ips:
-                requested_ip["address"] = "{}/{}".format(next(available_ips), prefix_length)
-                requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                # Determine if the requested number of IPs is available
+                available_ips = prefix.get_available_ips()
+                if available_ips.size < len(requested_ips):
+                    return Response(
+                        {
+                            "detail": "An insufficient number of IP addresses are available within the prefix {} ({} "
+                            "requested, {} available)".format(prefix, len(requested_ips), len(available_ips))
+                        },
+                        status=status.HTTP_204_NO_CONTENT,
+                    )
 
-            # Initialize the serializer with a list or a single object depending on what was requested
-            context = {"request": request}
-            if isinstance(request.data, list):
-                serializer = serializers.IPAddressSerializer(data=requested_ips, many=True, context=context)
-            else:
-                serializer = serializers.IPAddressSerializer(data=requested_ips[0], context=context)
+                # Assign addresses from the list of available IPs and copy VRF assignment from the parent prefix
+                available_ips = iter(available_ips)
+                prefix_length = prefix.prefix.prefixlen
+                for requested_ip in requested_ips:
+                    requested_ip["address"] = "{}/{}".format(next(available_ips), prefix_length)
+                    requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
 
-            # Create the new IP address(es)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                # Initialize the serializer with a list or a single object depending on what was requested
+                context = {"request": request}
+                if isinstance(request.data, list):
+                    serializer = serializers.IPAddressSerializer(data=requested_ips, many=True, context=context)
+                else:
+                    serializer = serializers.IPAddressSerializer(data=requested_ips[0], context=context)
+
+                # Create the new IP address(es)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         # Determine the maximum number of IPs to return
         else:
