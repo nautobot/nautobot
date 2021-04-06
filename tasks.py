@@ -243,7 +243,7 @@ def hadolint(context, local=False):
 )
 def unittest(context, keepdb=False, label="nautobot"):
     """Run Nautobot unit tests."""
-    command = f"run --entrypoint 'coverage run -m nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
+    command = f"run --entrypoint 'coverage run -m nautobot.core.cli test {label} --failfast"
     if keepdb:
         command += " --keepdb"
     command += "' nautobot"
