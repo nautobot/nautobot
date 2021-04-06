@@ -43,8 +43,6 @@ django-cryptography = "~1.0"
 django-filter = "~2.4.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
-# PostgreSQL advisory lock handling
-django-pglocks = "~1.0.4"
 # Prometheus metrics for Django
 django-prometheus = "~2.1.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
