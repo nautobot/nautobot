@@ -2,9 +2,11 @@
 
 import logging
 
+import django_filters.fields
 import graphene
 from graphql import GraphQLError
 from graphene_django import DjangoObjectType
+from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.extras.choices import RelationshipSideChoices
@@ -13,6 +15,11 @@ from nautobot.utilities.utils import get_filterset_for_model
 
 logger = logging.getLogger("nautobot.graphql.generators")
 RESOLVER_PREFIX = "resolve_"
+
+# List field types
+LIST_FIELDS = [
+    django_filters.fields.ModelMultipleChoiceField,
+]
 
 
 def generate_restricted_queryset():
@@ -77,20 +84,22 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
     Example:
         For a model with a name of "Device", the following class definition is generated:
 
-        Class DeviceType(DjangoObjectType):
+        class DeviceType(DjangoObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
 
-        if a FilterSet exist for this model at '<app_name>.filters.<ModelName>FilterSet'
-        The filterset will be store in filterset_class as follow
+        If a FilterSet exists for this model at
+        '<app_name>.filters.<ModelName>FilterSet' the filterset will be store in
+        filterset_class as follows:
 
-        Class DeviceType(DjangoObjectType):
+        class DeviceType(DjangoObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
                 filterset_class = DeviceFilterSet
     """
+
     main_attrs = {}
     meta_attrs = {"model": model, "fields": "__all__"}
 
@@ -110,13 +119,16 @@ def generate_list_search_parameters(schema_type):
     search_params = {}
     exclude_filters = ["type"]
     if schema_type._meta.filterset_class:
-        for key in list(schema_type._meta.filterset_class.get_filters().keys()):
-            if key in exclude_filters:
-                continue
-            if key == "id":
-                search_params[key] = graphene.ID()
-            else:
-                search_params[key] = graphene.String()
+        search_params = get_filtering_args_from_filterset(
+            schema_type._meta.filterset_class,
+            schema_type,
+        )
+
+    # Hack to swap `type` fields to `type_` since they will conflict with
+    # `graphene.types.fields.Field.type`.
+    # FIXME(jathan): Once we upgrade to Graphene 3.x, remove this.
+    if "type" in search_params:
+        search_params["type_"] = search_params.pop("type")
 
     return search_params
 
@@ -162,22 +174,23 @@ def generate_list_resolver(schema_type, resolver_name):
     model = schema_type._meta.model
 
     def list_resolver(self, info, **kwargs):
-        if schema_type._meta.filterset_class:
+        filterset_class = schema_type._meta.filterset_class
+        if filterset_class is not None:
+            # Used to store django filter passed to the filterset.
             fsargs = {}
-            # fsargs used to store django filter values.
-            # In most cases these values need to be inside of a list per key.
-            # Except when a filter fields has a method attached. In this case
-            # the value cannot be inside a list. https://docs.djangoproject.com/en/3.1/ref/request-response/#querydict-objects
+
+            # Put the value inside of list if it's for a list field type, otherwise just pass it
+            # through unchanged.
             for key, value in kwargs.items():
-                # Check if filter field has a method attached
-                if schema_type._meta.filterset_class.base_filters[key]._method is not None:
-                    fsargs[key] = value
-                else:
-                    # Put value inside of list if there is no method
+                if filterset_class.base_filters[key].field_class in LIST_FIELDS:
                     fsargs[key] = [value]
-            resolved_obj = schema_type._meta.filterset_class(
+                else:
+                    fsargs[key] = value
+
+            resolved_obj = filterset_class(
                 fsargs, model.objects.restrict(info.context.user, "view").all()
             )
+
             # Check result filter for errors.
             if resolved_obj.errors:
                 errors = {}
