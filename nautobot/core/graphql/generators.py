@@ -16,11 +16,6 @@ from nautobot.utilities.utils import get_filterset_for_model
 logger = logging.getLogger("nautobot.graphql.generators")
 RESOLVER_PREFIX = "resolve_"
 
-# List field types
-LIST_FIELDS = [
-    django_filters.fields.ModelMultipleChoiceField,
-]
-
 
 def generate_restricted_queryset():
     """Generate a function to return a restricted queryset compatible with the internal permissions system."""
