@@ -210,7 +210,7 @@ class Animal(models.Model):
         return self.name
 ```
 
-Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the PostgreSQL database to support your new model, or to alter existing models. Creating migrations can usually be done automatically using Django's `nautobot-server makemigrations <plugin_name>` management command.
+Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the PostgreSQL database to support your new model, or to alter existing models. Creating migrations can usually be done automatically using the `nautobot-server makemigrations <plugin_name>` command.
 
 !!! note
     A plugin must be installed before it can be used with Django management commands. If you skipped this step above, run `poetry install` from the plugin's root directory.
