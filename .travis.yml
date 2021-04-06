@@ -42,7 +42,7 @@ jobs:
     - stage: Linting
       python: "3.9"  # 3.9 for performance gains over 3.6
       install:
-        - pip install docker-compose invoke black flake8 requests  # really should use poetry to install but there is no poetry install --dev-only (hopefully in 1.1.6 https://github.com/python-poetry/poetry/commit/d2485b8f849f0bbfd8f6933b625ea07f11f80615)
+        - pip install invoke black flake8 requests  # really should use poetry to install but there is no poetry install --dev-only (hopefully in 1.1.6 https://github.com/python-poetry/poetry/commit/d2485b8f849f0bbfd8f6933b625ea07f11f80615)
         - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
         - chmod +x /home/travis/bin/hadolint
         - mkdir -p /home/travis/.cache/docker
