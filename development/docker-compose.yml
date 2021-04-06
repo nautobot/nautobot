@@ -24,13 +24,13 @@ services:
       - ./dev.env
     tty: true
   postgres:
-    image: postgres:10
+    image: postgres:13
     env_file:
       - dev.env
     volumes:
       - pgdata_nautobot:/var/lib/postgresql/data
   redis:
-    image: redis:5-alpine
+    image: redis:6-alpine
     command:
       - sh
       - -c # this is to evaluate the $REDIS_PASSWORD from the env

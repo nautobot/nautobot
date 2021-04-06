@@ -10,7 +10,6 @@ _setup_docker: &setup_docker
     - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
     - chmod a+x ~/.docker/cli-plugins/docker-buildx
     - docker version
-    - ls -al /home/travis/.cache/docker
     - pip install invoke docker-compose requests
     - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
     - sudo service docker restart
@@ -24,16 +23,53 @@ _unit_test: &unit_test
   script:
     - invoke unittest || travis_terminate 1
     - invoke unittest-coverage
-  after_success:
-    - ls -al /home/travis/.cache/docker
 
 _integration_test: &integration_test
   python: "3.9"
   <<: *setup_docker
   before_script:
-    - invoke buildx
+    - invoke buildx --target final --tag networktocode/nautobot:local
   script:
     - invoke integration-tests
+
+_publish: &publish
+  python: "3.9"
+  <<: *setup_docker
+  before_script:
+    - invoke buildx --target final --tag networktocode/nautobot:local
+    - docker images
+    - echo Sign into docker hub
+    # - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
+    - echo Sign into Github Container Registry
+    # - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
+
+_publish_develop: &publish_develop
+  script:
+    - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
+    - 'echo Using tag: ${COMMIT_DATE_TAG}'
+    - docker tag networktocode/nautobot:local networktocode/nautobot:latest-dev
+    - docker tag networktocode/nautobot:local networktocode/nautobot:${COMMIT_DATE_TAG}
+    - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:latest-dev
+    - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+    - echo Pushing images
+    - echo docker push networktocode/nautobot:latest-dev
+    - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
+    - echo docker push ghcr.io/nautobot/nautobot:latest-dev
+    - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+    - docker images
+
+_publish_main: &publish_main
+  script:
+    - docker tag networktocode/nautobot:local networktocode/nautobot:latest
+    - docker tag networktocode/nautobot:local networktocode/nautobot:${COMMIT_DATE_TAG}
+    - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:latest-dev
+    - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+    - echo Pushing images
+    - echo docker push networktocode/nautobot:latest-dev
+    - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
+    - echo docker push ghcr.io/nautobot/nautobot:latest-dev
+    - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+    - docker images
 
 os: linux
 dist: focal
@@ -78,43 +114,40 @@ jobs:
     - stage: Integration Tests
       name: Python 3.6 Integration Tests
       env:
+        - OVERRIDE_FILENAME=docker-compose.build.yml
         - PYTHON_VER=3.6
       <<: *integration_test
     - name: Python 3.7 Integration Tests
       env:
+        - OVERRIDE_FILENAME=docker-compose.build.yml
         - PYTHON_VER=3.7
       <<: *integration_test
     - name: Python 3.8 Integration Tests
       env:
+        - OVERRIDE_FILENAME=docker-compose.build.yml
         - PYTHON_VER=3.8
       <<: *integration_test
     - name: Python 3.9 Integration Tests
       env:
+        - OVERRIDE_FILENAME=docker-compose.build.yml
         - PYTHON_VER=3.9
       <<: *integration_test
 
-    # - stage: Publish Docker Image (Develop)
-    #   if: branch = develop #AND type = push
-    #   before_script:
-    #     - docker load -i /home/travis/docker_images/images.tar || true
-    #   script:
-    #     - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
-    #     - 'echo Using tag: ${COMMIT_DATE_TAG}'
-    #     - docker tag networktocode/nautobot:local networktocode/nautobot:latest-dev
-    #     - docker tag networktocode/nautobot:local networktocode/nautobot:${COMMIT_DATE_TAG}
-    #     - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:latest-dev
-    #     - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
-    #     - echo Sign into docker hub
-    #     # - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
-    #     - echo Sign into Github Container Registry
-    #     # - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
-    #     - echo Pushing images
-    #     - echo docker push networktocode/nautobot:latest-dev
-    #     - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
-    #     - echo docker push ghcr.io/nautobot/nautobot:latest-dev
-    #     - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
-    #   before_cache:
-    #     - docker images
-    #     - rm -rf /home/travis/docker_images
+    - stage: Publish Docker Image (Develop)
+      if: branch = develop #AND type = push
+      env:
+        - OVERRIDE_FILENAME=docker-compose.build.yml
+        - PYTHON_VER=3.6
+      <<: *publish
+      <<: *publish_develop
+
+    - stage: Publish Docker Image (Main)
+      if: branch = develop #AND type = push  should be main but testing
+      env:
+        - OVERRIDE_FILENAME=docker-compose.build.yml
+        - PYTHON_VER=3.6
+      <<: *publish
+      <<: *publish_main
+
   allow_failures:
     - env: PYTHON_VER=3.9

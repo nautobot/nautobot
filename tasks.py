@@ -70,6 +70,10 @@ def build(context, force_rm=False, cache=True):
 @task(
     help={
         "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+        "cache_dir": "The directory to use for caching buildx output (defaults to /home/travis/.cache/docker for Travis)",
+        "platforms": "Comma separated list of strings for which to build (defaults to linux/amd64)",
+        "tag": "tags should be applied to the built image (defaults to networktocode/nautobot-dev:local)",
+        "target": "the target from the dockerfile to build (defaults to dev)",
     }
 )
 def buildx(
