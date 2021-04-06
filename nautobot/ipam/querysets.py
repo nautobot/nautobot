@@ -30,8 +30,8 @@ class NetworkQuerySet(QuerySet):
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length=prefix.prefixlen,
-            network=bytes(prefix.network),
-            broadcast=bytes(broadcast),
+            network=prefix.network,
+            broadcast=broadcast
         )
 
     def net_contained(self, prefix):
@@ -39,8 +39,8 @@ class NetworkQuerySet(QuerySet):
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__gt=prefix.prefixlen,
-            network__gte=bytes(prefix.network),
-            broadcast__lte=bytes(broadcast),
+            network__gte=prefix.network,
+            broadcast__lte=broadcast,
         )
 
     def net_contained_or_equal(self, prefix):
@@ -48,8 +48,8 @@ class NetworkQuerySet(QuerySet):
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__gte=prefix.prefixlen,
-            network__gte=bytes(prefix.network),
-            broadcast__lte=bytes(broadcast),
+            network__gte=prefix.network,
+            broadcast__lte=broadcast,
         )
 
     def net_contains(self, prefix):
@@ -57,8 +57,8 @@ class NetworkQuerySet(QuerySet):
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__lt=prefix.prefixlen,
-            network__lte=bytes(prefix.network),
-            broadcast__gte=bytes(broadcast),
+            network__lte=prefix.network,
+            broadcast__gte=broadcast,
         )
 
     def net_contains_or_equal(self, prefix):
@@ -66,8 +66,8 @@ class NetworkQuerySet(QuerySet):
         broadcast = self._get_broadcast(prefix)
         return self.filter(
             prefix_length__lte=prefix.prefixlen,
-            network__lte=bytes(prefix.network),
-            broadcast__gte=bytes(broadcast),
+            network__lte=prefix.network,
+            broadcast__gte=broadcast,
         )
 
     def get(self, *args, prefix=None, **kwargs):
@@ -80,8 +80,8 @@ class NetworkQuerySet(QuerySet):
                 raise self.model.DoesNotExist()
             broadcast = self._get_broadcast(_prefix)
             kwargs["prefix_length"] = _prefix.prefixlen
-            kwargs["network"] = bytes(_prefix.ip)  # Query based on the input, not the true network address
-            kwargs["broadcast"] = bytes(broadcast)
+            kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
+            kwargs["broadcast"] = broadcast
         return super().get(*args, **kwargs)
 
     def filter(self, *args, prefix=None, **kwargs):
@@ -92,8 +92,8 @@ class NetworkQuerySet(QuerySet):
             _prefix = netaddr.IPNetwork(prefix)
             broadcast = self._get_broadcast(_prefix)
             kwargs["prefix_length"] = _prefix.prefixlen
-            kwargs["network"] = bytes(_prefix.ip)  # Query based on the input, not the true network address
-            kwargs["broadcast"] = bytes(broadcast)
+            kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
+            kwargs["broadcast"] = broadcast
         return super().filter(*args, **kwargs)
 
 
@@ -202,8 +202,8 @@ class IPAddressQuerySet(RestrictedQuerySet):
         network = netaddr.IPNetwork(network)
         broadcast = self._get_broadcast(network)
         return self.filter(
-            host__lte=bytes(broadcast),
-            host__gte=bytes(network.network),
+            host__lte=broadcast,
+            host__gte=network.network,
         )
 
     def net_in(self, networks):
@@ -222,8 +222,8 @@ class IPAddressQuerySet(RestrictedQuerySet):
             address = netaddr.IPNetwork(address)
             broadcast = self._get_broadcast(address)
             kwargs["prefix_length"] = address.prefixlen
-            kwargs["host"] = bytes(address.ip)
-            kwargs["broadcast"] = bytes(broadcast)
+            kwargs["host"] = address.ip
+            kwargs["broadcast"] = broadcast
         return super().get(*args, **kwargs)
 
     def filter(self, *args, address=None, **kwargs):
@@ -234,6 +234,6 @@ class IPAddressQuerySet(RestrictedQuerySet):
             address = netaddr.IPNetwork(address)
             broadcast = self._get_broadcast(address)
             kwargs["prefix_length"] = address.prefixlen
-            kwargs["host"] = bytes(address.ip)
-            kwargs["broadcast"] = bytes(broadcast)
+            kwargs["host"] = address.ip
+            kwargs["broadcast"] = broadcast
         return super().filter(*args, **kwargs)

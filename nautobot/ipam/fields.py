@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.datastructures import DictWrapper
-from netaddr import AddrFormatError, IPNetwork, IPAddress
+import netaddr
 
 from .formfields import IPNetworkFormField
 
@@ -33,13 +33,47 @@ class VarbinaryIPField(models.BinaryField):
         value = self.value_from_object(obj)
         if not value:
             return value
+
+        return str(self._parse_ip_address(value))
+
+    def _parse_ip_address(self, value):
         try:
             value = int.from_bytes(value, "big")
-            return str(IPAddress(value))
-        except AddrFormatError:
+        except TypeError:
+            pass  # It's a string
+
+        try:
+            return netaddr.IPAddress(value)
+        except netaddr.AddrFormatError:
             raise ValidationError("Invalid IP address format: {}".format(value))
         except (TypeError, ValueError) as e:
             raise ValidationError(e)
+
+    def from_db_value(self, value, expression, connection):
+        return self.to_python(value)
+
+    def to_python(self, value):
+        if isinstance(value, netaddr.IPAddress):
+            return value
+
+        if value is None:
+            return value
+
+        return str(self._parse_ip_address(value))
+
+    def get_db_prep_value(self, value, connection, prepared=False):
+        if value is None:
+            return value
+
+        # Parse the address and then pack it to binary
+        value = self._parse_ip_address(value).packed
+
+        # Use defaults for Postgres
+        engine = connection.settings_dict["ENGINE"]
+        if "postgres" in engine:
+            return super().get_db_prep_value(value, connection, prepared)
+
+        return value
 
     def form_class(self):
         return IPNetworkFormField
