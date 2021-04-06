@@ -411,7 +411,7 @@ class ParallelPrefixTest(APITransactionTestCase):
 
         self._do_parallel_requests(url, requests)
 
-        prefixes = [o.prefix for o in Prefix.objects.filter(prefix_length=30).all()]
+        prefixes = [str(o) for o in Prefix.objects.filter(prefix_length=30).all()]
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
 
     def test_create_multiple_available_ips_parallel(self):
@@ -423,7 +423,7 @@ class ParallelPrefixTest(APITransactionTestCase):
 
         self._do_parallel_requests(url, requests)
 
-        ips = [o.address for o in IPAddress.objects.filter().all()]
+        ips = [str(o) for o in IPAddress.objects.filter().all()]
         self.assertEqual(len(ips), len(set(ips)), "Duplicate IPs should not exist")
 
     def _do_parallel_requests(self, url, requests):
