@@ -19,7 +19,7 @@ be installed on your Nautobot server in a secure location that is readable only 
 Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
 !!! info
-    Some Linux installations have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The
+    Some Linux installations, including CentOS 8.2.2004, have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The
     command below may need to be changed to reflect the certificate location.
 
     The following command will prompt you for additional details of the certificate; all of which are optional.
@@ -62,6 +62,9 @@ $ sudo dnf install -y nginx
 
 Once NGINX is installed, copy and paste the following NGINX configuration into
 `/etc/nginx/sites-available/nautobot.conf` for Ubuntu or `/etc/nginx/conf.d/nautobot.conf` for CentOS/RHEL: 
+
+!!! note 
+    If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
 ```
 server {
@@ -107,9 +110,6 @@ server {
 }
 ```
 
-!!! note
-    If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration you pasted.
-
 #### Enable Nautobot
 
 On Ubuntu:
@@ -141,9 +141,34 @@ $ sudo systemctl restart nginx
 !!! info
     If the restart fails, and you changed the default key location, check to make sure the `nautobot.conf` file you pasted has the updated key location. For example, CentOS 8.2.2 requires keys to be in `/etc/pki/tls/` instead of `/etc/ssl/`.
 
+## Confirm Permissions for /opt/nautobot
+
+Ensure that the `/opt/nautobot/` permissions are set to `755`.
+
+Example of correct permissions:
+```no-highlight
+[root@localhost ~]# ls -l /opt/
+total 4
+drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
+[root@localhost ~]# 
+```
+
+If the permissions are not correct, modify them accordingly.
+
+Example of modifying the permissions:
+```no-highlight
+[nautobot@localhost ~]$ ls -l /opt/
+total 4
+drwx------. 11 nautobot nautobot 4096 Apr  5 10:00 nautobot
+[nautobot@localhost ~]$ chmod 755 /opt/nautobot/
+[nautobot@localhost ~]$ ls -l /opt/
+total 4
+drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
+```
+
 ## Confirm Connectivity
 
-At this point, you should be able to connect to the HTTPS service at the server name or IP address you provided.
+At this point, you should be able to connect to the HTTPS service at the server name or IP address you provided. The port number is no longer necessary in the URL in the base config.
 
 !!! info
     Please keep in mind that the configurations provided here are bare minimums required to get Nautobot up and running. You may want to make adjustments to better suit your production environment.

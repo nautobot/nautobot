@@ -90,10 +90,20 @@ $ echo $NAUTOBOT_ROOT
 
 Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
 
+In Ubuntu 20.04:
 ```no-highlight
 $ echo $PATH
 /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 ```
+
+Due to differences between OS, in CentOS 8.2.2004 `$PATH` will appear as:
+```no-highlight
+$ echo $PATH
+/opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
+
+```
+
+
 
 Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
 
@@ -276,7 +286,7 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
     Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server rqworker` separately. For production use, both Nautobot and the worker should be managed by systemd rather than started manually, as described in the next section of this documentation.
 
 !!! important
-    Some unix implementations (such as CentOS 8.2.2) have a firewall enabled by default.  If you are unable to connect to the server url on port 8000, verify the firewall status and configure to allow the appropriate connections.
+    Some unix implementations (such as CentOS 8.2.2004) have a firewall enabled by default.  If you are unable to connect to the server url on port 8000, verify the firewall status and configure to allow the appropriate connections.
 
 Note that the initial user interface will be locked down for non-authenticated users.
 

@@ -17,7 +17,7 @@ $ nautobot-server start --help
 
 ## Configuration
 
-Copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
+As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 
 ```ini
 [uwsgi]
