@@ -1,5 +1,5 @@
+---
 # Linting available at https://config.travis-ci.com/explore
-
 _unit_test: &unit_test
   python: "3.9"
   before_install:
@@ -87,7 +87,7 @@ jobs:
       <<: *integration_test
 
     # - stage: Publish Docker Image (Develop)
-    #   if: branch = develop #AND type = push 
+    #   if: branch = develop #AND type = push
     #   before_script:
     #     - docker load -i /home/travis/docker_images/images.tar || true
     #   script:
