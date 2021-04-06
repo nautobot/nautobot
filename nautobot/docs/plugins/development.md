@@ -99,7 +99,9 @@ Do you confirm generation? (yes/no) [yes]
 
 #### Manual
 
-The `pyproject.toml` is the recommended Python packaging methodology specified by [PEP 517](https://www.python.org/dev/peps/pep-0517/). If not able to build via Python Poetry (recommended method), the ability to package in the legacy `setup.py` methodology is still available, but not the recommended (and thus not documented) method to setup the package. An example pyproject.toml for setuptools is below, with the documentation on how to build with setuptools can be found on the [setuptools documentation](https://setuptools.readthedocs.io/en/latest/build_meta.html).
+The `pyproject.toml` is the recommended Python packaging methodology specified by [PEP 517](https://www.python.org/dev/peps/pep-0517/) and [PEP 518](https://www.python.org/dev/peps/pep-0518/). While the legacy `setup.py` Python packaging methodology is still available, it is not the recommended method to set up a package, and so it is not documented here. 
+
+If for some reason you do not wish to use Poetry, `pyproject.toml` can be defined to use other packaging libraries. An example `pyproject.toml` for setuptools is below, and the documentation on how to build with setuptools can be found on the [setuptools documentation](https://setuptools.readthedocs.io/en/latest/build_meta.html).
 
 ```toml
 [build-system]
