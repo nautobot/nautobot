@@ -4,9 +4,10 @@ _unit_test: &unit_test
   python: "3.9"
   before_install:
     - ls -al /home/travis/.cache/docker
-    - pip install invoke docker-compose
+    - pip install invoke docker-compose requests
     - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
     - sudo service docker restart
+    - docker buildx create --use
   before_script:
     - invoke buildx
   script:
@@ -19,9 +20,10 @@ _integration_test: &integration_test
   python: "3.9"
   before_install:
     - ls -al /home/travis/.cache/docker
-    - pip install invoke docker-compose
+    - pip install invoke docker-compose requests
     - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
     - sudo service docker restart
+    - docker buildx create --use
   before_script:
     - invoke buildx
   script:
@@ -40,14 +42,14 @@ jobs:
     - stage: Linting
       python: "3.9"  # 3.9 for performance gains over 3.6
       install:
-        - pip install invoke black flake8  # really should use poetry to install but there is no poetry install --dev-only (hopefully in 1.1.6 https://github.com/python-poetry/poetry/commit/d2485b8f849f0bbfd8f6933b625ea07f11f80615)
+        - pip install invoke black flake8 requests  # really should use poetry to install but there is no poetry install --dev-only (hopefully in 1.1.6 https://github.com/python-poetry/poetry/commit/d2485b8f849f0bbfd8f6933b625ea07f11f80615)
         - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
         - chmod +x /home/travis/bin/hadolint
         - mkdir -p /home/travis/.cache/docker/${PYTHON_VER}
       script:
         - invoke black
-        - flake8
-        - hadolint
+        - invoke flake8
+        - invoke hadolint
 
     - stage: Unit Test
       name: Python 3.6 Unit Test
