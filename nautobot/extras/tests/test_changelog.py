@@ -7,10 +7,10 @@ from nautobot.extras.choices import *
 from nautobot.extras.models import CustomField, ObjectChange, Status, Tag
 from nautobot.utilities.testing import APITestCase
 from nautobot.utilities.testing.utils import post_data
-from nautobot.utilities.testing.views import ModelViewTestMixin, TestCase
+from nautobot.utilities.testing.views import ModelViewTestCase
 
 
-class ChangeLogViewTest(TestCase, ModelViewTestMixin):
+class ChangeLogViewTest(ModelViewTestCase):
     model = Site
 
     @classmethod
