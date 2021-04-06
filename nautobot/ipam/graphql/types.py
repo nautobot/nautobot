@@ -1,8 +1,13 @@
 import graphene
 from graphene_django import DjangoObjectType
+from graphene_django.converter import convert_django_field, convert_field_to_string
 
-from nautobot.ipam import models, filters
+from nautobot.ipam import models, filters, fields
 from nautobot.extras.graphql.types import TagType  # noqa: F401
+
+
+# Register VarbinaryIPField to be converted to a string type
+convert_django_field.register(fields.VarbinaryIPField)(convert_field_to_string)
 
 
 class AggregateType(DjangoObjectType):
