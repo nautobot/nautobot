@@ -1,7 +1,6 @@
-import json
-from collections import namedtuple
-from concurrent.futures._base import as_completed
 from concurrent.futures.thread import ThreadPoolExecutor
+import json
+from random import shuffle
 
 from django.db import connection
 from django.urls import reverse
@@ -430,7 +429,7 @@ class ParallelPrefixTest(APITransactionTestCase):
     def _do_parallel_requests(self, url, requests):
         # Randomize request order, such that test run more closely simulates
         # a real calling pattern.
-        # shuffle(requests)
+        shuffle(requests)
         with ThreadPoolExecutor(max_workers=len(requests)) as executor:
             futures = []
             for req in requests:
