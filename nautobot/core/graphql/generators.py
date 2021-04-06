@@ -117,7 +117,6 @@ def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
     search_params = {}
-    exclude_filters = ["type"]
     if schema_type._meta.filterset_class:
         search_params = get_filtering_args_from_filterset(
             schema_type._meta.filterset_class,
@@ -176,9 +175,7 @@ def generate_list_resolver(schema_type, resolver_name):
     def list_resolver(self, info, **kwargs):
         filterset_class = schema_type._meta.filterset_class
         if filterset_class is not None:
-            resolved_obj = filterset_class(
-                kwargs, model.objects.restrict(info.context.user, "view").all()
-            )
+            resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
 
             # Check result filter for errors.
             if resolved_obj.errors:
