@@ -69,7 +69,7 @@ This command will guide you through creating your pyproject.toml config.
 Package name [tmp]:  nautobot-animal-sounds
 Version [0.1.0]:
 Description []:  An example Nautobot plugin
-Author [, n to skip]:  Jeremy Stretch
+Author [, n to skip]:  Josh VanDeraa
 License []:  Apache 2.0
 Compatible Python versions [^3.8]:  ^3.6
 
