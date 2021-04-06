@@ -3,6 +3,12 @@
 _unit_test: &unit_test
   python: "3.9"
   before_install:
+    - sudo rm -rf /var/lib/apt/lists/*
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) edge"
+    - sudo apt-get update
+    - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+    - docker version
     - ls -al /home/travis/.cache/docker
     - pip install invoke docker-compose requests
     - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
@@ -19,6 +25,12 @@ _unit_test: &unit_test
 _integration_test: &integration_test
   python: "3.9"
   before_install:
+    - sudo rm -rf /var/lib/apt/lists/*
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) edge"
+    - sudo apt-get update
+    - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+    - docker version
     - ls -al /home/travis/.cache/docker
     - pip install invoke docker-compose requests
     - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
@@ -32,8 +44,6 @@ _integration_test: &integration_test
 os: linux
 dist: focal
 language: python
-services:
-  - docker
 cache:
   directories:
     - /home/travis/.cache/docker
