@@ -177,9 +177,6 @@ Additional useful commands for the development environment:
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
 - `invoke stop` - Stops all containers created by `invoke start`
 
-!!! info
-    By default the Nautobot docker images for development are built with Python 3.7. If you wish to build them with a different Python version, stop any running containers, then set the environment variable `INVOKE_NAUTOBOT_PYTHON_VER` to the desired version (for example, `export INVOKE_NAUTOBOT_PYTHON_VER=3.8`) and rerun the `invoke build` command. As long as `INVOKE_NAUTOBOT_PYTHON_VER` remains set, all other `invoke` tasks will use the containers built for this version instead of the default. See the [invoke configuration](#invoke-configuration) for more information.
-
 #### Invoke Configuration
 
 The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html) which you may want to override. Configuration properties include:

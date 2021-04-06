@@ -87,6 +87,16 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
 
 
+def run_command(context, command, local=None):
+    """Wrapper to run a command locally or inside the nautobot container."""
+    if local is None:
+        local = context.nautobot.local
+    if is_truthy(local):
+        context.run(command)
+    else:
+        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
+
+
 # ------------------------------------------------------------------------------
 # BUILD
 # ------------------------------------------------------------------------------
@@ -172,12 +182,7 @@ def nbshell(context, local=None):
     """Launch an interactive nbshell session."""
     command = "nautobot-server nbshell"
 
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, f"run nautobot {command}", pty=True)
+    run_command(context, command, local)
 
 
 @task
@@ -196,12 +201,7 @@ def createsuperuser(context, user="admin", local=None):
     """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
     command = f"nautobot-server createsuperuser --username {user}"
 
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, f"run nautobot {command}", pty=True)
+    run_command(context, command, local)
 
 
 @task(
@@ -212,16 +212,12 @@ def createsuperuser(context, user="admin", local=None):
 )
 def makemigrations(context, name="", local=None):
     """Perform makemigrations operation in Django."""
-    command = "run nautobot nautobot-server makemigrations"
+    command = "nautobot-server makemigrations"
 
-    if local is None:
-        local = context.nautobot.local
     if name:
         command += f" --name {name}"
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, command)
+
+    run_command(context, command, local)
 
 
 @task(help={"local": "run this task locally vs inside the docker container (default: False)"})
@@ -229,12 +225,7 @@ def migrate(context, local=None):
     """Perform migrate operation in Django."""
     command = "nautobot-server migrate"
 
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, f"run nautobot {command}")
+    run_command(context, command, local)
 
 
 @task(
@@ -257,11 +248,7 @@ def post_upgrade(context, local=None):
     """
     command = "nautobot-server post_upgrade"
 
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
-        context.run(command)
-    docker_compose(context, f"run nautobot {command}")
+    run_command(context, command, local)
 
 
 # ------------------------------------------------------------------------------
@@ -275,8 +262,6 @@ def post_upgrade(context, local=None):
 )
 def black(context, autoformat=False, local=None):
     """Check Python code style with Black."""
-    if local is None:
-        local = context.nautobot.local
     if autoformat:
         black_command = "black"
     else:
@@ -284,14 +269,7 @@ def black(context, autoformat=False, local=None):
 
     command = f"{black_command} development/ nautobot/ tasks.py"
 
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(
-            context,
-            f"run --entrypoint '{command}' nautobot",
-            pty=True,
-        )
+    run_command(context, command, local)
 
 
 @task(help={"local": "run this task locally vs inside the docker container (default: False)"})
@@ -299,12 +277,7 @@ def flake8(context, local=None):
     """Check for PEP8 compliance and other style issues."""
     command = "flake8 development/ nautobot/ tasks.py"
 
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
+    run_command(context, command, local)
 
 
 @task(help={"local": "run this task locally vs inside the docker container (default: False)"})
@@ -312,12 +285,7 @@ def check_migrations(context, local=None):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
 
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
+    run_command(context, command, local)
 
 
 @task(
@@ -332,16 +300,11 @@ def unittest(context, keepdb=False, label="nautobot", failfast=False, local=None
     """Run Nautobot unit tests."""
     command = f"coverage run -m nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
 
-    if local is None:
-        local = context.nautobot.local
     if keepdb:
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
+    run_command(context, command, local)
 
 
 @task(help={"local": "run this task locally vs inside the docker container (default: False)"})
@@ -349,12 +312,7 @@ def unittest_coverage(context, local=None):
     """Report on code test coverage as measured by 'invoke unittest'."""
     command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
 
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
-        context.run(command)
-    else:
-        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
+    run_command(context, command, local)
 
 
 @task(help={"lint-only": "only run linters, unit tests will be excluded"})
