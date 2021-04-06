@@ -40,6 +40,7 @@ from .template_code import (
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
     INTERFACE_TAGGED_VLANS,
+    PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
@@ -277,8 +278,8 @@ class CableTerminationTable(BaseTable):
 
 class PathEndpointTable(CableTerminationTable):
     connection = tables.TemplateColumn(
-        accessor="_path.destination",
-        template_code=CABLETERMINATION,
+        accessor="_path",
+        template_code=PATHENDPOINT,
         verbose_name="Connection",
         orderable=False,
     )

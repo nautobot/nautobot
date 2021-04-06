@@ -5,7 +5,6 @@ from django.contrib.messages import constants as messages
 
 from nautobot import __version__
 
-
 #
 # Environment setup
 #
@@ -19,6 +18,9 @@ HOSTNAME = platform.node()
 
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Set the swapable User model to the Nautobot custom User model
+AUTH_USER_MODEL = "users.User"
 
 
 ###############################################################
@@ -47,14 +49,9 @@ ALLOWED_URL_SCHEMES = (
 BANNER_BOTTOM = ""
 BANNER_LOGIN = ""
 BANNER_TOP = ""
-BASE_PATH = ""
-if BASE_PATH:
-    BASE_PATH = BASE_PATH.strip("/") + "/"  # Enforce trailing slash only
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.environ.get(
-    "NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot")
-)
+NAUTOBOT_ROOT = os.environ.get("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
 CHANGELOG_RETENTION = 90
 DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), "docs")
@@ -69,18 +66,14 @@ ENFORCE_GLOBAL_UNIQUE = False
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
     ("auth", "group"),
-    ("auth", "user"),
+    ("users", "user"),
     ("users", "objectpermission"),
 )
 
 EXEMPT_VIEW_PERMISSIONS = []
-GIT_ROOT = os.environ.get(
-    "NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/")
-)
+GIT_ROOT = os.environ.get("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
-JOBS_ROOT = os.environ.get(
-    "NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/")
-)
+JOBS_ROOT = os.environ.get("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000
 
@@ -108,29 +101,20 @@ PREFER_IPV4 = False
 RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
 RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
-# Remote auth
+# Global 3rd-party authentication settings
+EXTERNAL_AUTH_DEFAULT_GROUPS = []
+EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+
+# Remote auth backend settings
 REMOTE_AUTH_AUTO_CREATE_USER = False
-REMOTE_AUTH_DEFAULT_GROUPS = []
-REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
-REMOTE_AUTH_ENABLED = True  # FIXME(jathan): Deprecated in Nautobot
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 
 # Releases
 RELEASE_CHECK_URL = None
 RELEASE_CHECK_TIMEOUT = 24 * 3600
 
-# RQ
-RQ_DEFAULT_TIMEOUT = 300
-
-# SSO
-SOCIAL_AUTH_ENABLED = False
-SOCIAL_AUTH_MODULE = ""
-SOCIAL_AUTH_DEFAULT_GROUPS = []
-SOCIAL_AUTH_DEFAULT_PERMISSIONS = {}
-SOCIAL_AUTH_DEFAULT_STAFF = False
-SOCIAL_AUTH_DEFAULT_SUPERUSER = False
+# SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
-SOCIAL_AUTH_URL_NAMESPACE = "sso"
 
 # Storage
 STORAGE_BACKEND = None
@@ -176,9 +160,7 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
-    "DEFAULT_PERMISSION_CLASSES": (
-        "nautobot.core.api.authentication.TokenPermissions",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
@@ -290,8 +272,10 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # Default overrides
 ALLOWED_HOSTS = []
+CSRF_TRUSTED_ORIGINS = []
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
+FORCE_SCRIPT_NAME = None
 LOGGING = {}
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_FILE_PATH = None
@@ -316,6 +300,7 @@ INSTALLED_APPS = [
     "django_prometheus",
     "mptt",
     "rest_framework",
+    "social_django",
     "taggit",
     "timezone_field",
     "nautobot.core",
@@ -345,6 +330,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
+    "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.APIVersionMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
@@ -364,6 +350,8 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
                 "nautobot.core.context_processors.settings_and_registry",
             ],
         },
@@ -389,11 +377,11 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
-STATIC_URL = "/{}static/".format(BASE_PATH)
+STATIC_URL = "static/"
 STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
 
 # Media
-MEDIA_URL = "/{}media/".format(BASE_PATH)
+MEDIA_URL = "media/"
 
 # Disable default limit of 1000 fields per request. Needed for bulk deletion of objects. (Added in Django 1.10.)
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
@@ -404,10 +392,11 @@ MESSAGE_TAGS = {
 }
 
 # Authentication URLs
-LOGIN_URL = "/{}login/".format(BASE_PATH)
-LOGIN_REDIRECT_URL = "/"
+# This is the URL route name for the login view.
+LOGIN_URL = "login"
 
-CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
+# This is the URL route name for the home page (index) view.
+LOGIN_REDIRECT_URL = "home"
 
 #
 # From django-cors-headers

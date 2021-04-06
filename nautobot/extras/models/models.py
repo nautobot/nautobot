@@ -4,7 +4,7 @@ import re
 import uuid
 from collections import OrderedDict
 
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -170,11 +170,14 @@ class CustomLink(BaseModel, ChangeLoggedModel):
         limit_choices_to=FeatureQuery("custom_links"),
     )
     name = models.CharField(max_length=100, unique=True)
-    text = models.CharField(max_length=500, help_text="Jinja2 template code for link text")
+    text = models.CharField(
+        max_length=500,
+        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
+    )
     target_url = models.CharField(
         max_length=500,
         verbose_name="URL",
-        help_text="Jinja2 template code for link URL",
+        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
@@ -520,7 +523,9 @@ class JobResult(BaseModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     completed = models.DateTimeField(null=True, blank=True)
-    user = models.ForeignKey(to=User, on_delete=models.SET_NULL, related_name="+", blank=True, null=True)
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
+    )
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,

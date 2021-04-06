@@ -1,13 +1,13 @@
 # Plugin Development
 
-This documentation covers the development of custom plugins for Nautobot. Plugins are essentially self-contained [Django apps](https://docs.djangoproject.com/en/stable/) which integrate with Nautobot to provide custom functionality. Since the development of Django apps is already very well-documented, we'll only be covering the aspects that are specific to Nautobot.
+This documentation covers the development of custom plugins for Nautobot. Plugins are essentially self-contained [Django applications](https://docs.djangoproject.com/en/stable/ref/applications/) which integrate with Nautobot to provide custom functionality. Since the development of Django applications is already very well-documented, we'll only be covering the aspects that are specific to Nautobot.
 
 Plugins can do a lot, including:
 
 * Create Django models to store data in the database
 * Add custom validation logic to apply to existing data models
 * Provide their own "pages" (views) in the web user interface
-* Provide [jobs](../additional-features/jobs.md)
+* Provide [Jobs](../additional-features/jobs.md)
 * Inject template content and navigation links
 * Establish their own REST API endpoints
 * Add custom request/response middleware
@@ -59,7 +59,9 @@ The plugin source directory contains all of the actual Python code and other res
 
 ### Create setup.py
 
-`setup.py` is the [setup script](https://docs.python.org/3.6/distutils/setupscript.html) we'll use to install our plugin once it's finished. The primary function of this script is to call the setuptools library's `setup()` function to create a Python distribution package. We can pass a number of keyword arguments to inform the package creation as well as to provide metadata about the plugin. An example `setup.py` is below:
+The`setup.py` script is the [setup script](https://docs.python.org/3.6/distutils/setupscript.html) we'll use to install our plugin once it's finished. The primary function of this script is to call the setuptools library's `setup()` function to create a Python distribution package. We can pass a number of keyword arguments to inform the package creation as well as to provide metadata about the plugin.
+
+An example `setup.py` is below:
 
 ```python
 from setuptools import find_packages, setup
@@ -106,31 +108,34 @@ class AnimalSoundsConfig(PluginConfig):
 config = AnimalSoundsConfig
 ```
 
-Nautobot looks for the `config` variable within a plugin's `__init__.py` to load its configuration. Typically, this will be set to the PluginConfig subclass, but you may wish to dynamically generate a PluginConfig class based on environment variables or other factors.
+Nautobot looks for the `config` variable within a plugin's `__init__.py` to load its configuration. Typically, this will be set to the `PluginConfig` subclass, but you may wish to dynamically generate a `PluginConfig` class based on environment variables or other factors.
 
 #### PluginConfig Attributes
 
+The configurable attributes for a `PluginConfig` are listed below in alphabetical order.
+
 | Name | Description |
 | ---- | ----------- |
-| `name` | Raw plugin name; same as the plugin's source directory |
-| `verbose_name` | Human-friendly name for the plugin |
-| `version` | Current release ([semantic versioning](https://semver.org/) is encouraged) |
-| `description` | Brief description of the plugin's purpose |
 | `author` | Name of plugin's author |
 | `author_email` | Author's public email address |
-| `base_url` | Base path to use for plugin URLs (optional). If not specified, the project's `name` will be used. |
-| `required_settings` | A list of any configuration parameters that **must** be defined by the user |
-| `default_settings` | A dictionary of configuration parameters and their default values |
-| `min_version` | Minimum version of Nautobot with which the plugin is compatible |
-| `max_version` | Maximum version of Nautobot with which the plugin is compatible |
-| `middleware` | A list of middleware classes to append after Nautobot's build-in middleware |
-| `caching_config` | Plugin-specific cache configuration
+| `base_url` | (Optional) Base path to use for plugin URLs. If not specified, the project's `name` will be used. |
+| `caching_config` | Plugin-specific cache configuration |
 | `custom_validators` | The dotted path to the list of custom validator classes (default: `custom_validators.custom_validators`) |
-| `datasource_contents` | The dotted path to the list of datasource (Git, etc.) content types to register (default: `datasources.datasource_contents` |
-| `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types` |
-| `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs` |
+| `datasource_contents` | The dotted path to the list of datasource (Git, etc.) content types to register (default: `datasources.datasource_contents`) |
+| `default_settings` | A dictionary of configuration parameters and their default values |
+| `description` | Brief description of the plugin's purpose |
+| `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types)` |
+| `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
+| `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
+| `max_version` | Maximum version of Nautobot with which the plugin is compatible |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
+| `middleware` | A list of middleware classes to append after Nautobot's built-in middleware |
+| `min_version` | Minimum version of Nautobot with which the plugin is compatible |
+| `name` | Raw plugin name; same as the plugin's source directory |
+| `required_settings` | A list of any configuration parameters that **must** be defined by the user |
 | `template_extensions` | The dotted path to the list of template extension classes (default: `template_content.template_extensions`) |
+| `verbose_name` | Human-friendly name for the plugin |
+| `version` | Current release ([semantic versioning](https://semver.org/) is encouraged) |
 
 All required settings must be configured by the user. If a configuration parameter is listed in both `required_settings` and `default_settings`, the default setting will be ignored.
 
@@ -151,9 +156,13 @@ It is highly recommended to have plugin models inherit from at least `nautobot.c
 Below is an example `models.py` file containing a model with two character fields:
 
 ```python
+# models.py
 from django.db import models
 
+
 class Animal(models.Model):
+    """Base model for animals."""
+
     name = models.CharField(max_length=50)
     sound = models.CharField(max_length=50)
 
@@ -190,8 +199,11 @@ For more background on schema migrations, see the [Django documentation](https:/
 Plugins can optionally expose their models via Django's built-in [administrative interface](https://docs.djangoproject.com/en/stable/ref/contrib/admin/). This can greatly improve troubleshooting ability, particularly during development. To expose a model, simply register it using Django's `admin.register()` function. An example `admin.py` file for the above model is shown below:
 
 ```python
+# admin.py
 from django.contrib import admin
+
 from .models import Animal
+
 
 @admin.register(Animal)
 class AnimalAdmin(admin.ModelAdmin):
@@ -208,17 +220,21 @@ Plugins can optionally expose their models via the GraphQL interface to allow th
 * By using the `extras_features` decorator
 * By creating your own GraphQL Type object and registering it within `graphql/types.py` of your plugin (decorator is not needed)
 
-#### extras_features decorator for "graphql"
+#### Using the `extras_features` decorator for "graphql"
 
-To expose a model, simply register it using the `extras_features("graphql")` decorator. Nautobot will automatically create a GraphQL Type object and try to convert the model automatically to GraphQL. If a FilterSet is available at `<app_name>.filters.<ModelName>FilterSet` Nautobot will automatically use the filterset to generate search parameters for the list views.
+To expose a model, simply register it using the `extras_features("graphql")` decorator. Nautobot will automatically create a GraphQL `Type` object and try to convert the model automatically to GraphQL. If a `FilterSet` is available at `<app_name>.filters.<ModelName>FilterSet` Nautobot will automatically use the filterset to generate search parameters for the list views.
 
 ```python
 # models.py
 from django.db import models
+
 from nautobot.extras.utils import extras_features
+
 
 @extras_features("graphql")
 class Animal(models.Model):
+    """Base model for animals."""
+
     name = models.CharField(max_length=50)
     sound = models.CharField(max_length=50)
 
@@ -228,24 +244,29 @@ class Animal(models.Model):
 
 #### Create your own GraphQL Type object
 
-In some cases, usually when an object is using some Generic Relationship, the default GraphQL Type object generated by the `extras_features` decorator is not working at the developer intends, and it is preferable to provide custom GraphQL types. A GraphQL Type object can be created and registered to the GraphQL interface by defining the type in the `graphql_types` variables in `graphql/types.py` file within the plugin. The object must inherit from `DjangoObjectType` and must follow the [standard defined by graphene-django](https://docs.graphene-python.org/projects/django/en/latest/queries/).
+In some cases, usually when an object is using some Generic Relationship, the default GraphQL `Type` object generated by the `extras_features` decorator may not work as the developer intends, and it will be preferable to provide custom GraphQL types. A GraphQL `Type` object can be created and registered to the GraphQL interface by defining the type in the `graphql_types` variables in `graphql/types.py` file within the plugin. The object must inherit from `DjangoObjectType` and must follow the [standard defined by graphene-django](https://docs.graphene-python.org/projects/django/en/latest/queries/).
 
-All GraphQL Type objects registered will be automatically modify to support some built-in features:
-- Add support for Permissions
+All GraphQL `Type` objects registered will be automatically modify to support some built-in features:
+- Add support for permissions
 - Add support for tags
 - Add support for custom fields
 
 ```python
 # graphql/types.py
 from graphene_django import DjangoObjectType
-from nautobot.extras.tests.dummy_plugin.models import AnotherDummyModel
 
-class AnotherDummyType(DjangoObjectType):
+from nautobot_animal_sounds.models import Animal
+
+
+class AnimalType(DjangoObjectType):
+    """GraphQL Type for Animal"""
+
     class Meta:
-        model = AnotherDummyModel
-        exclude = ["number"]
+        model = Animal
+        exclude = ["sound"]
 
-graphql_types = [AnotherDummyType]
+
+graphql_types = [AnimalType]
 ```
 
 #### Using GraphQL ORM Utility
@@ -301,14 +322,16 @@ class GraphQLModelView(ModelViewSet):
 If your plugin needs its own page or pages in the Nautobot web UI, you'll need to define views. A view is a particular page tied to a URL within Nautobot, which renders content using a template. Views are typically defined in `views.py`, and URL patterns in `urls.py`. As an example, let's write a view which displays a random animal and the sound it makes. First, we'll create the view in `views.py`:
 
 ```python
+# views.py
 from django.shortcuts import render
 from django.views.generic import View
+
 from .models import Animal
 
+
 class RandomAnimalView(View):
-    """
-    Display a randomly-selected animal.
-    """
+    """Display a randomly-selected Animal."""
+
     def get(self, request):
         animal = Animal.objects.order_by('?').first()
         return render(request, 'nautobot_animal_sounds/animal.html', {
@@ -330,6 +353,7 @@ Nautobot provides a base template to ensure a consistent user experience, which 
 For more information on how template blocks work, consult the [Django documentation](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#block).
 
 ```jinja2
+{# templates/nautobot_animal_sounds/animal.html #}
 {% extends 'base.html' %}
 
 {% block content %}
@@ -354,13 +378,16 @@ For more information on how template blocks work, consult the [Django documentat
 The first line of the template instructs Django to extend the Nautobot base template and inject our custom content within its `content` block.
 
 !!! note
-    Django renders templates with its own custom [template language](https://docs.djangoproject.com/en/stable/topics/templates/#the-django-template-language). This is very similar to Jinja2, however there are some important differences to be aware of.
+    Django renders templates with its own custom [template language](https://docs.djangoproject.com/en/stable/topics/templates/#the-django-template-language). This template language is very similar to Jinja2, however there are some important differences to keep in mind.
 
 Finally, to make the view accessible to users, we need to register a URL for it. We do this in `urls.py` by defining a `urlpatterns` variable containing a list of paths.
 
 ```python
+# urls.py
 from django.urls import path
+
 from . import views
+
 
 urlpatterns = [
     path('random/', views.RandomAnimalView.as_view(), name='random_animal'),
@@ -382,10 +409,14 @@ Plugins can declare custom endpoints on Nautobot's REST API to retrieve or manip
 First, we'll create a serializer for our `Animal` model, in `api/serializers.py`:
 
 ```python
+# api/serializers.py
 from rest_framework.serializers import ModelSerializer
+
 from nautobot_animal_sounds.models import Animal
 
+
 class AnimalSerializer(ModelSerializer):
+    """API serializer for interacting with Animal objects."""
 
     class Meta:
         model = Animal
@@ -395,11 +426,16 @@ class AnimalSerializer(ModelSerializer):
 Next, we'll create a generic API view set that allows basic CRUD (create, read, update, and delete) operations for Animal instances. This is defined in `api/views.py`:
 
 ```python
+# api/views.py
 from rest_framework.viewsets import ModelViewSet
+
 from nautobot_animal_sounds.models import Animal
 from .serializers import AnimalSerializer
 
+
 class AnimalViewSet(ModelViewSet):
+    ""API viewset for interacting with Animal objects."""
+
     queryset = Animal.objects.all()
     serializer_class = AnimalSerializer
 ```
@@ -407,8 +443,11 @@ class AnimalViewSet(ModelViewSet):
 Finally, we'll register a URL for our endpoint in `api/urls.py`. This file **must** define a variable named `urlpatterns`.
 
 ```python
+# api/urls.py
 from rest_framework import routers
+
 from .views import AnimalViewSet
+
 
 router = routers.DefaultRouter()
 router.register('animals', AnimalViewSet)
@@ -420,15 +459,17 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 ![Nautobot REST API plugin endpoint](../media/plugins/plugin_rest_api_endpoint.png)
 
 !!! warning
-    This example is provided as a minimal reference implementation only. It does not address authentication, performance, or myriad other concerns that plugin authors should have.
+    This example is provided as a minimal reference implementation only. It does not address authentication, performance, or the myriad of other concerns that plugin authors should have.
 
 ## Navigation Menu Items
 
 To make its views easily accessible to users, a plugin can inject items in Nautobot's navigation menu under the "Plugins" header. Menu items are added by defining a list of PluginMenuItem instances. By default, this should be a variable named `menu_items` in the file `navigation.py`. An example is shown below.
 
 ```python
+# navigation.py
 from nautobot.extras.plugins import PluginMenuButton, PluginMenuItem
 from nautobot.utilities.choices import ButtonColorChoices
+
 
 menu_items = (
     PluginMenuItem(
@@ -480,19 +521,25 @@ When a PluginTemplateExtension is instantiated, context data is assigned to `sel
 
 For example, accessing `{{ request.user }}` within a template will return the current user.
 
-Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the plugin's PluginConfig.) An example is below.
+Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the plugin's `PluginConfig`.) An example is below.
 
 ```python
+# template_content.py
 from nautobot.extras.plugins import PluginTemplateExtension
+
 from .models import Animal
 
+
 class SiteAnimalCount(PluginTemplateExtension):
+    """Template extension to display animal count on the right side of the page."""
+
     model = 'dcim.site'
 
     def right_page(self):
         return self.render('nautobot_animal_sounds/inc/animal_count.html', extra_context={
             'animal_count': Animal.objects.count(),
         })
+
 
 template_extensions = [SiteAnimalCount]
 ```
@@ -501,20 +548,24 @@ template_extensions = [SiteAnimalCount]
 
 Plugins can provide [jobs](../additional-features/jobs.md) to take advantage of all the built-in functionality provided by that feature (user input forms, background execution, results logging and reporting, etc.). This plugin feature is provided for convenience; it remains possible to instead install jobs manually into [`JOBS_ROOT`](../configuration/optional-settings.md#jobs_root) or provide them as part of a [Git repository](../models/extras/gitrepository.md) if desired.
 
-By default, for each plugin, Nautobot looks for an iterable named `jobs` within a `jobs.py` file. (This can be overridden by setting `jobs` to a custom value on the plugin's PluginConfig.) A brief example is below; for more details on job design and implementation, refer to the jobs feature documentation.
+By default, for each plugin, Nautobot looks for an iterable named `jobs` within a `jobs.py` file. (This can be overridden by setting `jobs` to a custom value on the plugin's `PluginConfig`.) A brief example is below; for more details on job design and implementation, refer to the jobs feature documentation.
 
 ```python
 # jobs.py
 from nautobot.extras.jobs import Job
 
+
 class CreateDevices(Job):
     ...
+
 
 class DeviceConnectionsReport(Job):
     ...
 
+
 class DeviceIPsReport(Job):
     ...
+
 
 jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]
 ```
@@ -527,12 +578,16 @@ Plugin authors must raise `django.core.exceptions.ValidationError` within the `c
 
 When a PluginCustomValidator is instantiated, the model instance is assigned to context dictionary using the `object` key, much like PluginTemplateExtensions. E.g. `self.context['object']`.
 
-Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `custom_validators` within a `custom_validators.py` file. (This can be overridden by setting `custom_validators` to a custom value on the plugin's PluginConfig.) An example is below.
+Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `custom_validators` within a `custom_validators.py` file. (This can be overridden by setting `custom_validators` to a custom value on the plugin's `PluginConfig`.) An example is below.
 
 ```python
+# custom_validators.py
 from nautobot.extras.plugins import PluginCustomValidator
 
+
 class SiteValidator(PluginCustomValidator):
+    """Custom validator for Sites to enforce that they must have a Region."""
+
     model = 'dcim.site'
 
     def clean(self):
@@ -542,12 +597,13 @@ class SiteValidator(PluginCustomValidator):
                 "region": "All sites must be assigned to a region"
             })
 
+
 custom_validators = [SiteValidator]
 ```
 
 ## Caching Configuration
 
-By default, all query operations within a plugin are cached. To change this, define a caching configuration under the PluginConfig class' `caching_config` attribute. All configuration keys will be applied within the context of the plugin; there is no need to include the plugin name. An example configuration is below:
+By default, all query operations within a plugin are cached. To change this, define a caching configuration under the `PluginConfig` class' `caching_config` attribute. All configuration keys will be applied within the context of the plugin; there is no need to include the plugin name. An example configuration is below:
 
 ```python
 class MyPluginConfig(PluginConfig):
@@ -575,9 +631,10 @@ See the [django-cacheops](https://github.com/Suor/django-cacheops) documentation
 
 ## Loading Data from a Git Repository
 
-It's possible for a plugin to register additional types of data that can be provided by a [Git repository](../models/extras/gitrepository.md) and be automatically notified when such a repository is refreshed with new data. By default, Nautobot looks for an iterable named `datasource_contents` within a `datasources.py` file. (This can be overridden by setting `datasource_contents` to a custom value on the plugin's PluginConfig.) An example is below.
+It's possible for a plugin to register additional types of data that can be provided by a [Git repository](../models/extras/gitrepository.md) and be automatically notified when such a repository is refreshed with new data. By default, Nautobot looks for an iterable named `datasource_contents` within a `datasources.py` file. (This can be overridden by setting `datasource_contents` to a custom value on the plugin's `PluginConfig`.) An example is below.
 
 ```python
+# datasources.py
 import yaml
 import os
 
@@ -585,6 +642,7 @@ from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.registry import DatasourceContent
 
 from .models import Animal
+
 
 def refresh_git_animals(repository_record, job_result):
     """Callback for GitRepository updates - refresh Animals managed by it."""

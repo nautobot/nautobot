@@ -1,6 +1,6 @@
 # Webhooks
 
-A webhook is a mechanism for conveying to some external system a change that took place in Nautobot. For example, you may want to notify a monitoring system whenever the status of a device is updated in Nautobot. This can be done by creating a webhook for the device model in Nautobot and identifying the webhook receiver. When Nautobot detects a change to a device, an HTTP request containing the details of the change and who made it be sent to the specified receiver. Webhooks are configured in the web UI under Other > Miscellaneous > Webhooks.
+A webhook is a mechanism for conveying to some external system a change that took place in Nautobot. For example, you may want to notify a monitoring system whenever the status of a device is updated in Nautobot. This can be done by creating a webhook for the device model in Nautobot and identifying the webhook receiver. When Nautobot detects a change to a device, an HTTP request containing the details of the change and who made it be sent to the specified receiver. Webhooks are configured in the web UI under Extensibility > Webhooks.
 
 ## Configuration
 

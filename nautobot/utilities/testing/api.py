@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings
@@ -15,6 +15,10 @@ __all__ = (
     "APITestCase",
     "APIViewTestCases",
 )
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 #
@@ -354,7 +358,7 @@ class APIViewTestCases:
 
         def test_delete_object(self):
             """
-            DELETE a single object identified by its numeric ID.
+            DELETE a single object identified by its primary key.
             """
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)

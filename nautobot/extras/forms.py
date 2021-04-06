@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import TextField
 from django.urls.base import reverse
@@ -206,17 +206,11 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
     type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
     source_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Source Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
     )
 
     destination_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Destination Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
 
@@ -323,17 +317,11 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     )
 
     source_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Source Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
     )
 
     destination_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Destination Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
 
@@ -590,7 +578,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(),
     )
     user_id = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",
@@ -643,7 +631,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
         display_field="username",
         label="User",
@@ -723,11 +711,7 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
-    )
+    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
 
     class Meta:
         model = Webhook
@@ -752,10 +736,8 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
 class WebhookFilterForm(BootstrapMixin, forms.Form):
     model = Webhook
     q = forms.CharField(required=False, label="Search")
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
+    content_types = MultipleContentTypeField(
+        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -772,10 +754,7 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        label="Content type(s)",
-    )
+    content_types = MultipleContentTypeField(feature="statuses", label="Content Type(s)")
 
     class Meta:
         model = Status
@@ -788,7 +767,8 @@ class StatusCSVForm(CustomFieldModelCSVForm):
 
     slug = SlugField()
     content_types = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
+        feature="statuses",
+        choices_as_strings=True,
         help_text=mark_safe(
             "The object types to which this status applies. Multiple values "
             "must be comma-separated and wrapped in double quotes. (e.g. "
@@ -811,10 +791,7 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Status
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content type(s)",
-        widget=StaticSelect2Multiple(),
+        feature="statuses", choices_as_strings=True, required=False, label="Content Type(s)"
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
@@ -824,11 +801,7 @@ class StatusBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        label="Content type(s)",
-        required=False,
-    )
+    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
 
     class Meta:
         nullable_fields = []
