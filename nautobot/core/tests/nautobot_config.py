@@ -4,7 +4,7 @@
 ###################################################################
 
 from nautobot.core.settings import *  # noqa: F401,F403
-from distutils.util import strtobool
+from nautobot.core.settings_funcs import is_truthy
 
 import os
 
@@ -27,20 +27,6 @@ PLUGINS = [
 ]
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-
-def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
-    Examples:
-        >>> is_truthy('yes')
-        True
-    Args:
-        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
-        f, false, off and 0. Raises ValueError if val is anything else.
-    """
-    if isinstance(arg, bool):
-        return arg
-    return bool(strtobool(str(arg)))
 
 
 # Here we are setting up a separate DB for the tests to use.

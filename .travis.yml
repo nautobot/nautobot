@@ -1,81 +1,113 @@
 # Linting available at https://config.travis-ci.com/explore
+
+_unit_test: &unit_test
+  python: "3.9"
+  before_install:
+    - ls -al /home/travis/.cache/docker
+    - pip install invoke docker-compose
+    - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
+    - sudo service docker restart
+  before_script:
+    - invoke buildx
+  script:
+    - invoke unittest || travis_terminate 1
+    - invoke unittest-coverage
+  after_success:
+    - ls -al /home/travis/.cache/docker
+
+_integration_test: &integration_test
+  python: "3.9"
+  before_install:
+    - ls -al /home/travis/.cache/docker
+    - pip install invoke docker-compose
+    - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
+    - sudo service docker restart
+  before_script:
+    - invoke buildx
+  script:
+    - invoke integration-tests
+
 os: linux
-dist: xenial
+dist: focal
+language: python
+services:
+  - docker
 cache:
   directories:
-    - /home/travis/docker_images
-    - /home/travis/virtualenv
-    - /home/travis/.cache/pip
-services:
-  - postgresql
-  - redis
-  - docker
-addons:
-  postgresql: "9.6"
-language: python
+    - /home/travis/.cache/docker
 jobs:
   include:
-    # - python: "3.6"
-    # - python: "3.7"
-    # - python: "3.8"
-    # - python: "3.9"
-    - stage: Docker Build
-      python: "3.6"
+    - stage: Linting
+      python: "3.9"  # 3.9 for performance gains over 3.6
+      install:
+        - pip install invoke black flake8  # really should use poetry to install but there is no poetry install --dev-only (hopefully in 1.1.6 https://github.com/python-poetry/poetry/commit/d2485b8f849f0bbfd8f6933b625ea07f11f80615)
+        - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+        - chmod +x /home/travis/bin/hadolint
+        - mkdir -p /home/travis/.cache/docker/${PYTHON_VER}
+      script:
+        - invoke black
+        - flake8
+        - hadolint
+
+    - stage: Unit Test
+      name: Python 3.6 Unit Test
       env:
         - PYTHON_VER=3.6
-        - OVERRIDE_FILENAME=docker-compose.test.yml
-      before_install:
-        - pip install poetry docker-compose
-        - rm -rf /home/travis/docker_images
-      script:
-        - invoke build
-      before_cache:
-        - mkdir /home/travis/docker_images
-        - docker save -o /home/travis/docker_images/images.tar $(docker images -a -q)
-    - stage: Docker Integration Tests
-      script:
-        - invoke integration-tests
-    - stage: Publish Docker Image (Develop)
-      if: branch = develop #AND type = push 
-      before_script:
-        - docker load -i /home/travis/docker_images/images.tar || true
-      script:
-        - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
-        - 'echo Using tag: ${COMMIT_DATE_TAG}'
-        - docker tag networktocode/nautobot:local networktocode/nautobot:latest-dev
-        - docker tag networktocode/nautobot:local networktocode/nautobot:${COMMIT_DATE_TAG}
-        - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:latest-dev
-        - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
-        - echo Sign into docker hub
-        # - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
-        - echo Sign into Github Container Registry
-        # - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
-        - echo Pushing images
-        - echo docker push networktocode/nautobot:latest-dev
-        - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
-        - echo docker push ghcr.io/nautobot/nautobot:latest-dev
-        - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
-      before_cache:
-        - docker images
-        - rm -rf /home/travis/docker_images
+      <<: *unit_test
+    - name: Python 3.7 Unit Test
+      env:
+        - PYTHON_VER=3.7
+      <<: *unit_test
+    - name: Python 3.8 Unit Test
+      env:
+        - PYTHON_VER=3.8
+      <<: *unit_test
+    - name: Python 3.9 Unit Test
+      env:
+        - PYTHON_VER=3.9
+      <<: *unit_test
+
+
+    - stage: Integration Tests
+      name: Python 3.6 Integration Tests
+      env:
+        - PYTHON_VER=3.6
+      <<: *integration_test
+    - name: Python 3.7 Integration Tests
+      env:
+        - PYTHON_VER=3.7
+      <<: *integration_test
+    - name: Python 3.8 Integration Tests
+      env:
+        - PYTHON_VER=3.8
+      <<: *integration_test
+    - name: Python 3.9 Integration Tests
+      env:
+        - PYTHON_VER=3.9
+      <<: *integration_test
+
+    # - stage: Publish Docker Image (Develop)
+    #   if: branch = develop #AND type = push 
+    #   before_script:
+    #     - docker load -i /home/travis/docker_images/images.tar || true
+    #   script:
+    #     - export COMMIT_DATE_TAG=develop-${TRAVIS_COMMIT:0:7}-$(date +%s)
+    #     - 'echo Using tag: ${COMMIT_DATE_TAG}'
+    #     - docker tag networktocode/nautobot:local networktocode/nautobot:latest-dev
+    #     - docker tag networktocode/nautobot:local networktocode/nautobot:${COMMIT_DATE_TAG}
+    #     - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:latest-dev
+    #     - docker tag networktocode/nautobot:local ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+    #     - echo Sign into docker hub
+    #     # - echo echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
+    #     - echo Sign into Github Container Registry
+    #     # - echo echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
+    #     - echo Pushing images
+    #     - echo docker push networktocode/nautobot:latest-dev
+    #     - echo docker push networktocode/nautobot:${COMMIT_DATE_TAG}
+    #     - echo docker push ghcr.io/nautobot/nautobot:latest-dev
+    #     - echo docker push ghcr.io/nautobot/nautobot:${COMMIT_DATE_TAG}
+    #   before_cache:
+    #     - docker images
+    #     - rm -rf /home/travis/docker_images
   allow_failures:
-    - python: "3.9"
-before_install:
-  - pip install poetry
-  - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
-  - chmod +x /home/travis/bin/hadolint
-install:
-  - poetry config virtualenvs.create false
-  # Poetry 1.1.0 added parallel installation as an option;
-  # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
-  # while simultaneously atttempting to *use* those packages to install other packages.
-  # For now we disable it.
-  - poetry config installer.parallel false
-  - poetry install --no-ansi
-before_script:
-  - psql --version
-  - psql -U postgres -c 'SELECT version();'
-  - psql -U postgres -c 'create database nautobot;'
-  - docker pull ghcr.io/hadolint/hadolint
-script:
-  - poetry run ./scripts/cibuild.sh
+    - env: PYTHON_VER=3.9

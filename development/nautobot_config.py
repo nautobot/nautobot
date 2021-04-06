@@ -1,9 +1,9 @@
 """Nautobot configuration file."""
-from distutils.util import strtobool
 import os
 import sys
 
 from nautobot.core.settings import *
+from nautobot.core.settings_funcs import is_truthy
 
 ALLOWED_HOSTS = os.environ.get("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
@@ -66,20 +66,6 @@ if not TESTING:
     }
 
 
-def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
-    Examples:
-        >>> is_truthy('yes')
-        True
-    Args:
-        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
-        f, false, off and 0. Raises ValueError if val is anything else.
-    """
-    if isinstance(arg, bool):
-        return arg
-    return bool(strtobool(str(arg)))
-
-
 RQ_QUEUES = {
     "default": {
         "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
@@ -90,11 +76,11 @@ RQ_QUEUES = {
         "DEFAULT_TIMEOUT": 300,
     },
     "webhooks": {
-        "HOST": os.environ["REDIS_HOST"],
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 0,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.environ["NAUTOBOT_REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "check_releases": {
@@ -106,11 +92,11 @@ RQ_QUEUES = {
         "DEFAULT_TIMEOUT": 300,
     },
     "custom_fields": {
-        "HOST": os.environ["REDIS_HOST"],
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 0,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.environ["NAUTOBOT_REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 900,
     },
 }

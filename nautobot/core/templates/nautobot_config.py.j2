@@ -1,23 +1,8 @@
-from distutils.util import strtobool
 import os
 import sys
 
 from nautobot.core.settings import *  # noqa F401,F403
-
-
-def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
-    Examples:
-        >>> is_truthy('yes')
-        True
-    Args:
-        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
-        f, false, off and 0. Raises ValueError if val is anything else.
-    """
-    if isinstance(arg, bool):
-        return arg
-    return bool(strtobool(str(arg)))
-
+from nautobot.core.settings_funcs import is_truthy
 
 #########################
 #                       #
@@ -70,12 +55,12 @@ RQ_QUEUES = {
     #     },
     # },
     "webhooks": {
-        "HOST": "localhost",
-        "PORT": 6379,
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+        "PORT": int(os.getenv("NAUTOBOT_REDIS_PORT", "6379")),
         "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+        "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
+        "SSL": is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)),
+        "DEFAULT_TIMEOUT": int(os.getenv("NAUTOBOT_REDIS_TIMEOUT", "300")),
     },
     "check_releases": {
         "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
@@ -86,12 +71,12 @@ RQ_QUEUES = {
         "DEFAULT_TIMEOUT": int(os.getenv("NAUTOBOT_REDIS_TIMEOUT", "300")),
     },
     "custom_fields": {
-        "HOST": "localhost",
-        "PORT": 6379,
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+        "PORT": int(os.getenv("NAUTOBOT_REDIS_PORT", "6379")),
         "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 900,
+        "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
+        "SSL": is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)),
+        "DEFAULT_TIMEOUT": int(os.getenv("NAUTOBOT_REDIS_TIMEOUT", "900")),
     },
 }
 

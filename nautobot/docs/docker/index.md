@@ -49,7 +49,7 @@ networktocode/nautobot-dev                                                local 
 If you need to build/test the final image set the `OVERRIDE_FILENAME`:
 
 ```
-$ export OVERRIDE_FILENAME=docker-compose.test.yml
+$ export OVERRIDE_FILENAME=docker-compose.build.yml
 $ invoke build
 ...
 $ docker images

@@ -62,13 +62,6 @@ WORKDIR /source
 # -------------------------------------------------------------------------------------
 RUN poetry install --no-root --no-ansi
 
-# Copy source to container
-COPY . /source
-
-# Build the whl for use in the final container and install for the dev container
-RUN poetry build && \
-    poetry install --no-ansi
-
 # Generate self signed ssl certificates
 RUN mkdir /opt/nautobot && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
     '/C=US/ST=NY/L=NYC/O=Nautobot/CN=nautobot.local' \
@@ -83,6 +76,14 @@ COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 # Common docker entrypoint for migrations, superuser creations, etc.
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nautobot-server", "runserver", "0.0.0.0:8000", "--insecure"]
+
+# Copy nautobot source and poetry info to container to reduce cache invalidations
+COPY poetry.lock pyproject.toml README.md /source/
+COPY nautobot /source/nautobot
+
+# Build the whl for use in the final container and install for the dev container
+RUN poetry build && \
+    poetry install --no-ansi
 
 ################################ Stage: cleaninstall
 # Build an image with required dependencies to pull the installation from

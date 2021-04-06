@@ -12,8 +12,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import sys
 import os
 from invoke import task
+from invoke.exceptions import Exit
+from time import sleep
+import requests
 
 
 PYTHON_VER = os.getenv("PYTHON_VER", "3.6")
@@ -61,6 +65,33 @@ def build(context, force_rm=False, cache=True):
     if force_rm:
         command += " --force-rm"
     docker_compose(context, command)
+
+
+@task(
+    help={
+        "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+    }
+)
+def buildx(
+    context,
+    force_rm=False,
+    cache=True,
+    cache_dir="/home/travis/.cache/docker",
+    platforms="linux/amd64",
+    tag="networktocode/nautobot-dev:local",
+    target="dev",
+):
+    """Build Nautobot docker image."""
+    print("Building Nautobot .. ")
+    command = f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile --build-arg PYTHON_VER={PYTHON_VER} ."
+    if not cache:
+        command += " --no-cache"
+    else:
+        command += (
+            f" --cache-to type=local,dest={cache_dir}/{PYTHON_VER} --cache-from type=local,src={cache_dir}/{PYTHON_VER}"
+        )
+
+    context.run(command, env={"PYTHON_VER": PYTHON_VER})
 
 
 # ------------------------------------------------------------------------------
@@ -217,7 +248,26 @@ def unittest_coverage(context):
 @task
 def integration_tests(context):
     """Some very generic high level integration tests."""
-    print("Not Implemented")
+    session = requests.Session()
+    retries = 1
+    max_retries = 60
+
+    start(context)
+    while retries < max_retries:
+        try:
+            request = session.get("http://localhost:8000", timeout=300)
+        except requests.exceptions.ConnectionError:
+            print("Nautobot not ready yet sleeping for 5 seconds...")
+            sleep(5)
+            retries += 1
+            continue
+        if request.status_code == 200:
+            print("Nautobot is ready...")
+            break
+        else:
+            raise Exit(f"Nautobot returned and invalid status {request.status_code}", request.status_code)
+    if retries >= max_retries:
+        raise Exit("Timed Out waiting for Nautobot", 1)
 
 
 @task
