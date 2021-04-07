@@ -32,15 +32,13 @@ def is_truthy(arg):
     return bool(strtobool(arg))
 
 
-DEFAULT_PYTHON_VER = "3.7"
-
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
 namespace = Collection("nautobot")
 namespace.configure(
     {
         "nautobot": {
-            "python_ver": DEFAULT_PYTHON_VER,
+            "python_ver": "3.7",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_file": "docker-compose.yml",
@@ -87,11 +85,9 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
 
 
-def run_command(context, command, local=None):
+def run_command(context, command):
     """Wrapper to run a command locally or inside the nautobot container."""
-    if local is None:
-        local = context.nautobot.local
-    if is_truthy(local):
+    if is_truthy(context.nautobot.local):
         context.run(command)
     else:
         docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
@@ -168,12 +164,12 @@ def vscode(context):
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
-@task(help={"local": "run this task locally vs inside the docker container (default: False)"}, optional=["local"])
-def nbshell(context, local=None):
+@task
+def nbshell(context):
     """Launch an interactive nbshell session."""
     command = "nautobot-server nbshell"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
 @task
@@ -185,49 +181,40 @@ def cli(context):
 @task(
     help={
         "user": "name of the superuser to create (default: admin)",
-        "local": "run this task locally vs inside the docker container (default: False)",
-    },
-    optional=["local"],
+    }
 )
-def createsuperuser(context, user="admin", local=None):
+def createsuperuser(context, user="admin"):
     """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
     command = f"nautobot-server createsuperuser --username {user}"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
 @task(
     help={
         "name": "name of the migration to be created; if unspecified, will autogenerate a name",
-        "local": "run this task locally vs inside the docker container (default: False)",
-    },
-    optional=["local"],
+    }
 )
-def makemigrations(context, name="", local=None):
+def makemigrations(context, name=""):
     """Perform makemigrations operation in Django."""
     command = "nautobot-server makemigrations"
 
     if name:
         command += f" --name {name}"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
-@task(help={"local": "run this task locally vs inside the docker container (default: False)"}, optional=["local"])
-def migrate(context, local=None):
+@task
+def migrate(context):
     """Perform migrate operation in Django."""
     command = "nautobot-server migrate"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
-@task(
-    help={
-        "local": "run this task locally vs inside the docker container (default: False)",
-    },
-    optional=["local"],
-)
-def post_upgrade(context, local=None):
+@task(help={})
+def post_upgrade(context):
     """
     Performs Nautobot common post-upgrade operations using a single entrypoint.
 
@@ -242,7 +229,7 @@ def post_upgrade(context, local=None):
     """
     command = "nautobot-server post_upgrade"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
 # ------------------------------------------------------------------------------
@@ -251,11 +238,9 @@ def post_upgrade(context, local=None):
 @task(
     help={
         "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
-        "local": "run this task locally vs inside the docker container (default: False)",
-    },
-    optional=["local"],
+    }
 )
-def black(context, autoformat=False, local=None):
+def black(context, autoformat=False):
     """Check Python code style with Black."""
     if autoformat:
         black_command = "black"
@@ -264,23 +249,23 @@ def black(context, autoformat=False, local=None):
 
     command = f"{black_command} development/ nautobot/ tasks.py"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
-@task(help={"local": "run this task locally vs inside the docker container (default: False)"}, optional=["local"])
-def flake8(context, local=None):
+@task
+def flake8(context):
     """Check for PEP8 compliance and other style issues."""
     command = "flake8 development/ nautobot/ tasks.py"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
-@task(help={"local": "run this task locally vs inside the docker container (default: False)"}, optional=["local"])
-def check_migrations(context, local=None):
+@task
+def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
 @task(
@@ -288,11 +273,9 @@ def check_migrations(context, local=None):
         "keepdb": "save and re-use test database between test runs for faster re-testing.",
         "label": "specify a directory or module to test instead of running all Nautobot tests",
         "failfast": "fail as soon as a single test fails don't run the entire test suite",
-        "local": "run this task locally vs inside the docker container (default: False)",
-    },
-    optional=["local"],
+    }
 )
-def unittest(context, keepdb=False, label="nautobot", failfast=False, local=None):
+def unittest(context, keepdb=False, label="nautobot", failfast=False):
     """Run Nautobot unit tests."""
     command = f"coverage run -m nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
 
@@ -300,28 +283,26 @@ def unittest(context, keepdb=False, label="nautobot", failfast=False, local=None
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    run_command(context, command, local)
+    run_command(context, command)
 
 
-@task(help={"local": "run this task locally vs inside the docker container (default: False)"}, optional=["local"])
-def unittest_coverage(context, local=None):
+@task
+def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
     command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
 
-    run_command(context, command, local)
+    run_command(context, command)
 
 
 @task(
     help={
         "lint-only": "only run linters, unit tests will be excluded",
-        "local": "run tests locally vs inside the docker container (default: False)",
-    },
-    optional=["local"],
+    }
 )
-def tests(context, lint_only=False, local=None):
+def tests(context, lint_only=False):
     """Run all tests and linters."""
-    black(context, local=local)
-    flake8(context, local)
-    check_migrations(context, local)
+    black(context)
+    flake8(context)
+    check_migrations(context)
     if not lint_only:
-        unittest(context, local=local)
+        unittest(context)
