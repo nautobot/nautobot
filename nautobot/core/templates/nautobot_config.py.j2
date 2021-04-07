@@ -193,6 +193,9 @@ EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 # If hosting Nautobot in a subdirectory, you must set this value to match the base URL prefix configured in your HTTP server (e.g. `/nautobot/`). When not set, URLs will default to being prefixed by `/`.
 FORCE_SCRIPT_NAME = None
 
+# When set to `True`, users with limited permissions will only be able to see items in the UI they have access too.
+HIDE_RESTRICTED_UI = is_truthy(os.getenv("NAUTOBOT_HIDE_RESTRICTED_UI", False))
+
 # HTTP proxies Nautobot should use when sending outbound HTTP requests (e.g. for webhooks).
 # HTTP_PROXIES = {
 #     'http': 'http://10.10.1.10:3128',

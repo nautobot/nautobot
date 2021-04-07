@@ -134,7 +134,7 @@ def push(context, branch, commit="", datestamp=""):
             print(f"Tagging networktocode/nautobot-py{PYTHON_VER}:local as {new_image}")
             context.run(tag_command)
             print(f"Pushing {new_image}")
-            print(push_command)
+            context.run(push_command)
 
 
 # ------------------------------------------------------------------------------
