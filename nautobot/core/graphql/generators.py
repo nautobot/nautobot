@@ -85,7 +85,7 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
                 fields = ["__all__"]
 
         If a FilterSet exists for this model at
-        '<app_name>.filters.<ModelName>FilterSet' the filterset will be store in
+        '<app_name>.filters.<ModelName>FilterSet' the filterset will be stored in
         filterset_class as follows:
 
         class DeviceType(DjangoObjectType):
