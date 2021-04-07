@@ -1,4 +1,5 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
@@ -24,7 +25,7 @@ class NestedUserSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="users-api:user-detail")
 
     class Meta:
-        model = User
+        model = get_user_model()
         fields = ["id", "url", "username"]
 
 

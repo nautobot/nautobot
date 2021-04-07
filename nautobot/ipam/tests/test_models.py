@@ -22,15 +22,15 @@ class TestAggregate(TestCase):
                 Prefix(prefix=netaddr.IPNetwork("10.48.0.0/12")),
             )
         )
-        self.assertEqual(aggregate.get_utilization(), 25)
+        self.assertEqual(aggregate.get_utilization(), (4194304, 16777216))
 
         # 50% utilization
         Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("10.64.0.0/10")),))
-        self.assertEqual(aggregate.get_utilization(), 50)
+        self.assertEqual(aggregate.get_utilization(), (8388608, 16777216))
 
         # 100% utilization
         Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("10.128.0.0/9")),))
-        self.assertEqual(aggregate.get_utilization(), 100)
+        self.assertEqual(aggregate.get_utilization(), (16777216, 16777216))
 
 
 class TestPrefix(TestCase):
@@ -192,7 +192,7 @@ class TestPrefix(TestCase):
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.128/26")),
             )
         )
-        self.assertEqual(prefix.get_utilization(), 50)
+        self.assertEqual(prefix.get_utilization(), (128, 256))
 
         # Non-container Prefix
         prefix.status = self.statuses.get(slug="active")
@@ -201,7 +201,7 @@ class TestPrefix(TestCase):
             # Create 32 IPAddresses within the Prefix
             [IPAddress(address=netaddr.IPNetwork("10.0.0.{}/24".format(i))) for i in range(1, 33)]
         )
-        self.assertEqual(prefix.get_utilization(), 12)  # ~= 12%
+        self.assertEqual(prefix.get_utilization(), (32, 254))
 
     #
     # Uniqueness enforcement tests

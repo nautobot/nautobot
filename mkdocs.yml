@@ -1,4 +1,5 @@
 dev_addr: '127.0.0.1:8001'
+edit_uri: edit/main/nautobot/docs
 site_name: Nautobot Documentation
 site_url: https://nautobot.readthedocs.io/
 repo_url: https://github.com/nautobot/nautobot
@@ -7,7 +8,9 @@ python:
         - requirements: docs/requirements.txt
 theme:
     name: readthedocs
-    navigation_depth: 3
+    navigation_depth: 4
+    hljs_languages:
+        - yaml
 extra_css:
     - extra.css
 markdown_extensions:
@@ -19,18 +22,22 @@ markdown_extensions:
 nav:
     - Introduction: 'index.md'
     - Installation:
-        - Install Nautobot: 'installation/index.md'
-        - Deploy Nautobot: 'installation/nautobot.md'
-        - Configure Web Services: 'installation/wsgi.md'
-        - Configure HTTP Server: 'installation/http-server.md'
-        - Configure External Authentication (Optional): 'installation/external-authentication.md'
-    - Administration:
+        - Installing Prerequisites: 'installation/index.md'
+        - Installing Nautobot: 'installation/nautobot.md'
+        - Deploying Nautobot: 'installation/wsgi.md'
+        - Configuring an HTTP Server: 'installation/http-server.md'
+        - External Authentication (Optional): 'installation/external-authentication.md'
+    - Migration:
         - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'
     - Configuration:
         - Configuring Nautobot: 'configuration/index.md'
         - Required Settings: 'configuration/required-settings.md'
         - Optional Settings: 'configuration/optional-settings.md'
+    - External Authentication:
+        - LDAP: 'configuration/authentication/ldap.md'
+        - SSO: 'configuration/authentication/sso.md'
+        - Remote Header: 'configuration/authentication/remote.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'
@@ -62,9 +69,10 @@ nav:
         - Developing Plugins: 'plugins/development.md'
         - Porting NetBox Plugins to Nautobot: 'plugins/porting-from-netbox.md'
     - Administration:
+        - Nautobot Server: 'administration/nautobot-server.md'
+        - Nautobot Shell: 'administration/nautobot-shell.md'
         - Permissions: 'administration/permissions.md'
         - Replicating Nautobot: 'administration/replicating-nautobot.md'
-        - Nautobot Shell: 'administration/nautobot-shell.md'
     - REST API:
         - Overview: 'rest-api/overview.md'
         - Filtering: 'rest-api/filtering.md'

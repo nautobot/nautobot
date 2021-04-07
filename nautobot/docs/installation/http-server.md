@@ -1,10 +1,9 @@
-# Configure HTTP Server
+# Configuring an HTTP Server
 
 !!! warning
-    As of Nautobot v1.0.0b1 these instructions are in a pre-release state and will be evolving rapidly!
+    As of Nautobot v1.0.0b3 these instructions are in a pre-release state and will be evolving rapidly!
 
-This documentation provides example configurations for both [NGINX](https://www.nginx.com/resources/wiki/) and
-[Apache](https://httpd.apache.org/docs/current/), though any HTTP server which supports WSGI should be compatible.
+This documentation provides example configurations for [NGINX](https://www.nginx.com/resources/wiki/) though any HTTP server which supports WSGI should be compatible.
 
 ## Obtain an SSL Certificate
 
@@ -20,7 +19,7 @@ be installed on your Nautobot server in a secure location that is readable only 
 Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
 !!! info
-    Some Linux installations have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tli/`. The
+    Some Linux installations have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The
     command below may need to be changed to reflect the certificate location.
 
     The following command will prompt you for additional details of the certificate; all of which are optional.
@@ -33,8 +32,7 @@ $ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 ## HTTP Server Installation
 
-Any HTTP server of your choosing is supported. For your convenience, setup guides for the most common options are
-provided here.
+Any HTTP server of your choosing is supported. For your convenience, setup instructions for NGINX are provided here.
 
 !!! warning
     The following steps must be performed with root permissions.
@@ -48,46 +46,29 @@ and is by far the most popular choice.
 
 Begin by installing NGINX:
 
+On Ubuntu:
+
 ```no-highlight
 $ sudo apt install -y nginx
 ```
 
-#### For CentOS or RHEL users
-
-!!! note
-    If you are installing on Ubuntu, please continue [Configure NGINX](#configure-nginx) step below.
-
-Red Hat-based (CentOS & RHEL) systems running NGINX will need to create the directory structure and perform a
-minor update the default `nginx.conf` file to get it to read included configurations.
-
-##### Create the include directories
-
-To do this, create the `sites-available` and `sites-enabled` directories.
+On CentOS/RHEL:
 
 ```no-highlight
-$ sudo mkdir -p /etc/nginx/{sites-available,sites-enabled}
-```
-
-##### Edit `nginx.conf`
-
-As root, edit file `/etc/nginx/nginx.conf`. In the `http` section, add:
-
-```no-highlight
-    include /etc/nginx/sites-enabled/*.conf;
-    server_names_hash_bucket_size 64;
+$ sudo dnf install -y nginx
 ```
 
 #### Configure NGINX
 
 Once NGINX is installed, copy and paste the following NGINX configuration into
-`/etc/nginx/sites-available/nautobot.conf`: 
+`/etc/nginx/sites-available/nautobot.conf` for Ubuntu or `/etc/nginx/conf.d/nautobot.conf` for CentOS/RHEL: 
 
 ```
 server {
-    listen 443 ssl;
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
 
-    # CHANGE THIS TO YOUR SERVER'S NAME
-    server_name nautobot.example.com;
+    server_name _;
 
     ssl_certificate /etc/ssl/certs/nautobot.crt;
     ssl_certificate_key /etc/ssl/private/nautobot.key;
@@ -98,29 +79,40 @@ server {
         alias /opt/nautobot/static/;
     }
 
+    # For subdirectory hosting, you'll want to toggle this (e.g. `/nautobot/`).
+    # Don't forget to set `FORCE_SCRIPT_NAME` in your `nautobot_config.py` to match.
+    # location /nautobot/ {
     location / {
-        proxy_pass http://127.0.0.1:8001;
-        proxy_set_header X-Forwarded-Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        include uwsgi_params;
+        uwsgi_pass  127.0.0.1:8001;
+        uwsgi_param Host $host;
+        uwsgi_param X-Real-IP $remote_addr;
+        uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
+        uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
+
+        # If you want subdirectory hosting, uncomment this. The path must match
+        # the path of this location block (e.g. `/nautobot`). For NGINX the path
+        # MUST NOT end with a trailing "/".
+        # uwsgi_param SCRIPT_NAME /nautobot;
     }
+
 }
 
 server {
     # Redirect HTTP traffic to HTTPS
-    listen 80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     server_name _;
     return 301 https://$host$request_uri;
 }
 ```
 
-- Be sure to replace `nautobot.example.com` with the domain name or IP address of your installation. This should match
-the value configured for `ALLOWED_HOSTS` in `nautobot_config.py`.
-- If the file location of SSL certificates had to be changed in the [Obtain an SSL
-  Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX
-  configuration you pasted.
+!!! note
+    If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration you pasted.
 
-#### Enable Nautobot 
+#### Enable Nautobot
+
+On Ubuntu:
 
 To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/default` and create a symbolic link in the
 `sites-enabled` directory to the configuration file you just created:
@@ -130,39 +122,20 @@ $ sudo rm -f /etc/nginx/sites-enabled/default
 $ sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
 ```
 
+On CentOS:
+
+Run the following command to disable the default site that comes with the `nginx` package:
+
+```no-highlight
+$ sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
+```
+
 #### Restart NGINX
 
 Finally, restart the `nginx` service to use the new configuration.
 
 ```no-highlight
 $ sudo systemctl restart nginx
-```
-
-### Apache
-
-[Apache](https://httpd.apache.org/docs/current/) is a tried and true secure, efficient and extensible HTTP server that
-has been around since 1995.
-
-Begin by installing Apache:
-
-```no-highlight
-$ sudo apt install -y apache2
-```
-
-Next, copy the default configuration file to `/etc/apache2/sites-available/`. Be sure to modify the `ServerName` parameter appropriately.
-
-If the location of SSL certificates had to be changed in `Obtain an SSL Certificate` step, then the location will need to be changed in the `apache.conf` file as well.
-
-```no-highlight
-$ sudo cp /opt/nautobot/contrib/apache.conf /etc/apache2/sites-available/nautobot.conf
-```
-
-Finally, ensure that the required Apache modules are enabled, enable the `nautobot` site, and reload Apache:
-
-```no-highlight
-$ sudo a2enmod ssl proxy proxy_http headers
-$ sudo a2ensite nautobot
-$ sudo systemctl restart apache2
 ```
 
 ## Confirm Connectivity
@@ -178,9 +151,10 @@ At this point, you should be able to connect to the HTTPS service at the server 
 ## Troubleshooting
 
 ### Unable to Connect
+
 If you are unable to connect to the HTTP server, check that:
 
-- NGINX/Apache is running and configured to listen on the correct port.
+- NGINX is running and configured to listen on the correct port.
 - Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
 
 ### 502 Bad Gateway
@@ -188,7 +162,7 @@ If you are unable to connect to the HTTP server, check that:
 If you are able to connect but receive a 502 (bad gateway) error, check the following:
 
 - The uWSGI worker processes are running (`systemctl status nautobot` should show a status of `active (running)`)
-- NGINX/Apache is configured to connect to the port on which uWSGI is listening (default is `8001`).
+- NGINX is configured to connect to the port on which uWSGI is listening (default is `8001`).
 - SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the
   command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux
   troubleshooting](selinux-troubleshooting.md) guide.

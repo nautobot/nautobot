@@ -49,11 +49,11 @@ def get_paginate_count(request):
         try:
             per_page = int(request.GET.get("per_page"))
             if request.user.is_authenticated:
-                request.user.config.set("pagination.per_page", per_page, commit=True)
+                request.user.set_config("pagination.per_page", per_page, commit=True)
             return per_page
         except ValueError:
             pass
 
     if request.user.is_authenticated:
-        return request.user.config.get("pagination.per_page", settings.PAGINATE_COUNT)
+        return request.user.get_config("pagination.per_page", settings.PAGINATE_COUNT)
     return settings.PAGINATE_COUNT

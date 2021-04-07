@@ -310,25 +310,13 @@ class LoadPluginTest(TestCase):
         """Test `load_plugin`."""
 
         plugin_name = "bad.plugin"  # Start with a bogus plugin name
-        installed_apps = settings.INSTALLED_APPS
-        plugins_config = settings.PLUGINS_CONFIG
-        version = settings.VERSION
-        middleware = settings.MIDDLEWARE
-        cacheops = settings.CACHEOPS
 
         # FIXME(jathan): We're expecting a PluginNotFound to be raised, but
         # unittest doesn't appear to let that happen and we only see the
         # original ModuleNotFoundError, so this will have to do for now.
         with self.assertRaises(ModuleNotFoundError):
-            load_plugin(
-                plugin_name,
-                installed_apps,
-                plugins_config,
-                version,
-                middleware,
-                cacheops,
-            )
+            load_plugin(plugin_name, settings)
 
         # Move to the dummy plugin. No errors should be raised (which is good).
         plugin_name = "nautobot.extras.tests.dummy_plugin"
-        load_plugin(plugin_name, installed_apps, plugins_config, version, middleware, cacheops)
+        load_plugin(plugin_name, settings)

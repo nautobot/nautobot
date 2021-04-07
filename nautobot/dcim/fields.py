@@ -1,10 +1,10 @@
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
 
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
+from nautobot.utilities.fields import JSONArrayField
 from .lookups import PathContains
 
 
@@ -93,7 +93,7 @@ class MACAddressCharField(models.CharField):
         return str(self.to_python(value))
 
 
-class PathField(ArrayField):
+class JSONPathField(JSONArrayField):
     """
     An ArrayField which holds a set of objects, each identified by a (type, ID) tuple.
     """
@@ -103,4 +103,4 @@ class PathField(ArrayField):
         super().__init__(**kwargs)
 
 
-PathField.register_lookup(PathContains)
+JSONPathField.register_lookup(PathContains)

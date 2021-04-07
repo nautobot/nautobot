@@ -1,7 +1,7 @@
 import urllib.parse
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
@@ -22,6 +22,10 @@ from nautobot.extras.models import (
 )
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, TestCase
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

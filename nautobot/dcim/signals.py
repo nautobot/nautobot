@@ -18,9 +18,11 @@ from .models import (
 )
 
 
-def create_cablepath(node):
+def create_cablepath(node, rebuild=True):
     """
     Create CablePaths for all paths originating from the specified node.
+
+    rebuild (bool) - Used to refresh paths where this node is not an endpoint.
     """
     cp = CablePath.from_origin(node)
     if cp:
@@ -29,6 +31,8 @@ def create_cablepath(node):
         except Exception as e:
             print(node, node.pk)
             raise e
+    if rebuild:
+        rebuild_paths(node)
 
 
 def rebuild_paths(obj):
@@ -41,7 +45,8 @@ def rebuild_paths(obj):
         for cp in cable_paths:
             invalidate_obj(cp.origin)
             cp.delete()
-            create_cablepath(cp.origin)
+            # Prevent looping back to rebuild_paths during the atomic transaction.
+            create_cablepath(cp.origin, rebuild=False)
 
 
 #
