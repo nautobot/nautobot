@@ -83,7 +83,7 @@ def buildx(
     cache=True,
     cache_dir="/home/travis/.cache/docker",
     platforms="linux/amd64",
-    tag="networktocode/nautobot-dev-py${PYTHON_VER}:local",
+    tag=f"networktocode/nautobot-dev-py{PYTHON_VER}:local",
     target="dev",
 ):
     """Build Nautobot docker image."""
