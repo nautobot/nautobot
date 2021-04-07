@@ -21,7 +21,7 @@ from time import sleep
 import requests
 
 
-DEFAULT_PYTHON_VERSION = "3.7"
+DEFAULT_PYTHON_VERSION = "3.6"
 PYTHON_VER = os.getenv("PYTHON_VER", DEFAULT_PYTHON_VERSION)
 
 PROJECT_NAME = "nautobot_dev"

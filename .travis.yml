@@ -97,21 +97,21 @@ jobs:
         - OVERRIDE_FILENAME=docker-compose.build.yml
         - PYTHON_VER=3.6
       <<: *integration_test
-    - name: Python 3.7 Integration Tests
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.7
-      <<: *integration_test
-    - name: Python 3.8 Integration Tests
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.8
-      <<: *integration_test
-    - name: Python 3.9 Integration Tests
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.9
-      <<: *integration_test
+    # - name: Python 3.7 Integration Tests
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.7
+    #   <<: *integration_test
+    # - name: Python 3.8 Integration Tests
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.8
+    #   <<: *integration_test
+    # - name: Python 3.9 Integration Tests
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.9
+    #   <<: *integration_test
 
     - stage: Publish Docker Image (Develop)
       name: Publish Python 3.6 Images
@@ -121,27 +121,27 @@ jobs:
         - PYTHON_VER=3.6
       <<: *publish
       <<: *publish_develop
-    - name: Publish Python 3.7 Images
-      if: branch = develop #AND type = push
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.7
-      <<: *publish
-      <<: *publish_develop
-    - name: Publish Python 3.8 Images
-      if: branch = develop #AND type = push
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.8
-      <<: *publish
-      <<: *publish_develop
-    - name: Publish Python 3.9 Images
-      if: branch = develop #AND type = push
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.9
-      <<: *publish
-      <<: *publish_develop
+    # - name: Publish Python 3.7 Images
+    #   if: branch = develop #AND type = push
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.7
+    #   <<: *publish
+    #   <<: *publish_develop
+    # - name: Publish Python 3.8 Images
+    #   if: branch = develop #AND type = push
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.8
+    #   <<: *publish
+    #   <<: *publish_develop
+    # - name: Publish Python 3.9 Images
+    #   if: branch = develop #AND type = push
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.9
+    #   <<: *publish
+    #   <<: *publish_develop
 
     - stage: Publish Docker Image (Main)
       name: Publish Python 3.6 Images
@@ -151,27 +151,27 @@ jobs:
         - PYTHON_VER=3.6
       <<: *publish
       <<: *publish_main
-    - name: Publish Python 3.7 Images
-      if: branch = develop #AND type = push  should be main but testing
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.7
-      <<: *publish
-      <<: *publish_main
-    - name: Publish Python 3.8 Images
-      if: branch = develop #AND type = push  should be main but testing
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.8
-      <<: *publish
-      <<: *publish_main
-    - name: Publish Python 3.9 Images
-      if: branch = develop #AND type = push  should be main but testing
-      env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.9
-      <<: *publish
-      <<: *publish_main
+    # - name: Publish Python 3.7 Images
+    #   if: branch = develop #AND type = push  should be main but testing
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.7
+    #   <<: *publish
+    #   <<: *publish_main
+    # - name: Publish Python 3.8 Images
+    #   if: branch = develop #AND type = push  should be main but testing
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.8
+    #   <<: *publish
+    #   <<: *publish_main
+    # - name: Publish Python 3.9 Images
+    #   if: branch = develop #AND type = push  should be main but testing
+    #   env:
+    #     - OVERRIDE_FILENAME=docker-compose.build.yml
+    #     - PYTHON_VER=3.9
+    #   <<: *publish
+    #   <<: *publish_main
 
   allow_failures:
     - env: PYTHON_VER=3.9
