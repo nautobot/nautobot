@@ -183,7 +183,7 @@ Now that you have a basic understanding of how to obtain information to query fr
 
 GraphQL queries are encapsulated in `query { }` flags. In recent iterations of GraphQL, `{ }` is also acceptable. With that in mind, lets craft our query. From the GraphiQL interfaces, lets query for all devices and display their device names. To do this, let's execute:
 
-```
+```graphql
 query {
   devices {
     name
@@ -204,7 +204,7 @@ Now, let's modify the query to provide interface names for each device. We can d
 
 ![GraphiQL - Autocompletion](/guides/images/graphql/graphiql-autocomplete.png)
 
-```
+```graphql
 query {
   devices {
     name
@@ -226,7 +226,7 @@ The result is a list of all the devices by their hostname and associated interfa
 <br />
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
-```
+```graphql
 query {
   devices {
     name
@@ -267,7 +267,7 @@ As an example. We can query devices by their site location. This is done by addi
 <br />
 GraphiQL allows you to add multiple attributes to the filter criteria. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`. 
 
-```
+```graphql
 query {
   devices(site:"ams", role: "edge") {
     name
@@ -292,7 +292,7 @@ From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), 
 
 To simplify the process even more, we'll utilize the [PyNautobot SDK](https://pynautobot.readthedocs.io/en/latest/index.html).
 
-Here is an example Python script using the `PyNautobot SDK` to query GraphQL:
+Here is an example Python script using the PyNautobot SDK to query GraphQL:
 
 ```python
 #!/usr/bin/env python3
@@ -356,7 +356,7 @@ gql = nb.graphql.query(query=query, variables=variables)
 print(json.dumps(gql.json, indent=2))
 ```
 
-In the updated script, we add the `variables = {"site_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `site`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` site. The `PyNautobot SDK` has some excellent GraphQL [examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
+In the updated script, we add the `variables = {"site_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `site`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` site. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
 
 ## Closing
 
