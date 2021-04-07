@@ -5,8 +5,8 @@ services:
   nautobot:
     build:
       target: final
-    image: "networktocode/nautobot:local"
+    image: "networktocode/nautobot-py${PYTHON_VER}:local"
     ports:
       - 8443:8443
   worker:
-    image: "networktocode/nautobot:local"
+    image: "networktocode/nautobot-py${PYTHON_VER}:local"

@@ -13,10 +13,14 @@ docker image pull ghcr.io/nautobot/nautobot
 
 The following tags are available:
 
-* `vX.Y.Z` these images are built with the same baseline as the released Python packages
-* `latest` these images are built from the latest code in the main branch (should be the latest released version)
-* `latest-dev` these images are built from the latest code in the develop branch on each commit
-* `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch
+* `vX.Y.Z` these images are built with the same baseline as the released Python packages based on the default python version (3.7) docker container
+* `latest` these images are built from the latest code in the main branch (should be the latest released version) based on the default python version (3.7) docker container
+* `vX.Y.Z-py${PYTHON_VER}` these images are built with the same baseline as the released Python packages based on the python version ($PYTHON_VER) docker container
+* `latest-py${PYTHON_VER}` these images are built from the latest code in the main branch (should be the latest released version) based on the python version ($PYTHON_VER) docker container
+* `develop-latest` these images are built from the latest code in the develop branch on each commit based on the default python version (3.7) docker container
+* `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch based on the default python version (3.7) docker container
+* `develop-latest-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
+* `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the develop branch based on the python version ($PYTHON_VER) docker container
 
 ## Getting Started
 

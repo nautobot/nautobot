@@ -13,6 +13,7 @@ limitations under the License.
 """
 
 import sys
+import toml
 import os
 from invoke import task
 from invoke.exceptions import Exit
@@ -20,7 +21,8 @@ from time import sleep
 import requests
 
 
-PYTHON_VER = os.getenv("PYTHON_VER", "3.6")
+DEFAULT_PYTHON_VERSION = "3.7"
+PYTHON_VER = os.getenv("PYTHON_VER", DEFAULT_PYTHON_VERSION)
 
 PROJECT_NAME = "nautobot_dev"
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "development/")
@@ -95,6 +97,44 @@ def buildx(
         )
 
     context.run(command, env={"PYTHON_VER": PYTHON_VER})
+
+
+@task(
+    help={
+        "branch": "Which branch we are pushing from",
+        "commit": "The commit hash to tag the develop image with",
+        "datestamp": "The datestamp to tag the develop image with",
+    }
+)
+def push(context, branch, commit="", datestamp=""):
+    """Tags and pushes docker images to the appropriate repos, intended for CI use only."""
+    with open("pyproject.toml", "r") as pyproject:
+        parsed_toml = toml.load(pyproject)
+
+    nautobot_version = parsed_toml["tool"]["poetry"]["version"]
+    docker_image_names = ["networktocode/nautobot", "ghcr.io/nautobot/nautobot"]
+    docker_image_tags_main = [f"latest-py{PYTHON_VER}", f"v{nautobot_version}-py{PYTHON_VER}"]
+    docker_image_tags_develop = [f"develop-latest-py{PYTHON_VER}", f"develop-py{PYTHON_VER}-{commit}-{datestamp}"]
+
+    if PYTHON_VER == DEFAULT_PYTHON_VERSION:
+        docker_image_tags_main += ["latest", f"v{nautobot_version}"]
+        docker_image_tags_develop += ["develop-latest", f"develop-{commit}-{datestamp}"]
+    if branch == "main":
+        docker_image_tags = docker_image_tags_main
+    elif branch == "develop":
+        docker_image_tags = docker_image_tags_develop
+    else:
+        raise Exit(f"Unknown Branch ({branch}) Specified", 1)
+
+    for image_name in docker_image_names:
+        for image_tag in docker_image_tags:
+            new_image = f"{image_name}:{image_tag}"
+            tag_command = f"docker tag networktocode/nautobot-py{PYTHON_VER}:local {new_image}"
+            push_command = f"docker push {new_image}"
+            print(f"Tagging networktocode/nautobot-py{PYTHON_VER}:local as {new_image}")
+            context.run(tag_command)
+            print(f"Pushing {new_image}")
+            print(push_command)
 
 
 # ------------------------------------------------------------------------------
