@@ -158,7 +158,7 @@ RQ_QUEUES = {
         "PASSWORD": "",
         "SSL": False,
         "DEFAULT_TIMEOUT": 300
-    }
+    },
     "check_releases": {
         "HOST": "localhost",
         "PORT": 6379,
@@ -166,7 +166,7 @@ RQ_QUEUES = {
         "PASSWORD": "",
         "SSL": False,
         "DEFAULT_TIMEOUT": 300
-    }
+    },
     "custom_fields": {
         "HOST": "localhost",
         "PORT": 6379,
