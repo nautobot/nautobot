@@ -104,24 +104,18 @@ def run_command(context, command, local=None):
     help={
         "force_rm": "Always remove intermediate containers",
         "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
-        "python-ver": "The version of Python to build the container with (default: 3.7)",
     }
 )
-def build(context, force_rm=False, cache=True, python_ver=None):
+def build(context, force_rm=False, cache=True):
     """Build Nautobot docker image."""
-    if python_ver is None:
-        python_ver = context.nautobot.python_ver
-    else:
-        context.nautobot.python_ver = python_ver
-
-    command = f"build --build-arg PYTHON_VER={python_ver}"
+    command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
     if not cache:
         command += " --no-cache"
     if force_rm:
         command += " --force-rm"
 
-    print(f"Building Nautobot with Python {python_ver}...")
+    print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
     docker_compose(context, command)
 
 
