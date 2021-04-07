@@ -48,6 +48,7 @@ Other changes:
 - [#208](https://github.com/nautobot/nautobot/pull/208) - Custom fields model refactor
 - [#216](https://github.com/nautobot/nautobot/pull/216) - Update install docs to address inconsistent experience w/ `$PATH`
 - [#235](https://github.com/nautobot/nautobot/pull/235) - Update restart docs to include worker
+- [#241](https://github.com/nautobot/nautobot/pull/241) - Swap `contrib.postgres.fields.JSONField` for `db.models.JSONField`
 
 ### Removed
 
@@ -81,6 +82,7 @@ Other changes:
 - [#205](https://github.com/nautobot/nautobot/issues/205) - API Documentation shows numeric id instead of UUID
 - [#213](https://github.com/nautobot/nautobot/issues/213) - Programming Error Exception Value: relation "social_auth_usersocialauth" does not exist
 - [#224](https://github.com/nautobot/nautobot/issues/224) - Edit view for IPAM network objects does not emit the current network address value
+- [#255](https://github.com/nautobot/nautobot/issues/255) - Update docs `edit_uri` to point to correct path
 
 ## v1.0.0b2 (2021-03-08)
 
