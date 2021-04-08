@@ -18,6 +18,7 @@ class VarbinaryIPField(models.BinaryField):
         super().__init__(**kwargs)
 
     def db_type(self, connection):
+        """Returns the correct field type for a given database engine."""
         engine = connection.settings_dict["ENGINE"]
 
         # Use 'bytea' type for Postgres.
@@ -34,9 +35,12 @@ class VarbinaryIPField(models.BinaryField):
         if not value:
             return value
 
-        return str(self._parse_ip_address(value))
+        return str(self._parse_address(value))
 
-    def _parse_ip_address(self, value):
+    def _parse_address(self, value):
+        """
+        Parse `str`, `bytes` (varbinary), or `netaddr.IPAddress to `netaddr.IPAddress`.
+        """
         try:
             value = int.from_bytes(value, "big")
         except TypeError:
@@ -50,23 +54,26 @@ class VarbinaryIPField(models.BinaryField):
             raise ValidationError(e)
 
     def from_db_value(self, value, expression, connection):
+        """Converts DB (varbinary) to Python (str)."""
         return self.to_python(value)
 
     def to_python(self, value):
+        """Converts `value` to Python (str)."""
         if isinstance(value, netaddr.IPAddress):
-            return value
+            return str(value)
 
         if value is None:
             return value
 
-        return str(self._parse_ip_address(value))
+        return str(self._parse_address(value))
 
     def get_db_prep_value(self, value, connection, prepared=False):
+        """Converts Python (str) to DB (varbinary)."""
         if value is None:
             return value
 
         # Parse the address and then pack it to binary
-        value = self._parse_ip_address(value).packed
+        value = self._parse_address(value).packed
 
         # Use defaults for Postgres
         engine = connection.settings_dict["ENGINE"]
