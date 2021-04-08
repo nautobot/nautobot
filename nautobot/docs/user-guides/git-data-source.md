@@ -154,7 +154,7 @@ For technical details on jobs, please see the [documentation on jobs](../additio
 
 Jobs allow a user to write scripts in Python.  By integrating the scripts with Git, a user can utilize Git workflows to manage source control, versioning, and pipelines.
 
-Setting up the repository can be done following the same steps from [Export Templates](#Export-Templates).  The only differences is the `provides` selection changes to `jobs`.
+Setting up the repository can be done following the same steps from [Export Templates](#export-templates).  The only differences is the `provides` selection changes to `jobs`.
 
 Jobs need to be defined in `/jobs/` directory at the root of a Git repository.
 
@@ -246,7 +246,7 @@ There is a huge benefit to having `config contexts` managed by a Git workflow.  
 
 ## Additional Git Data Sources
 
-As seen in [Fill out Repository Details](#Fill-out-Repository-Details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot plugin system.  For example, the [nautobot-plugin-golden-config](https://github.com/nautobot/nautobot-plugin-golden-config) plugin implements four additional data sources.
+As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot plugin system.  For example, the [nautobot-plugin-golden-config](https://github.com/nautobot/nautobot-plugin-golden-config) plugin implements four additional data sources.
 
 - Config Contexts
 - Backup Configs
