@@ -44,7 +44,7 @@ This table defines repository parameters that are required to establish a reposi
 
 
 ## Using Git Data Sources
-This section will focus on examples and use the `user-guide` branch on the `demo-git-datasources` repo: `https://github.com/nautobot/demo-git-datasource`.
+This section will focus on examples and use the `user-guide` branch on the `demo-git-datasources` repo: `https://github.com/nautobot/demo-git-datasource/tree/user-guide`.
 
 ### Export Templates
 
@@ -55,7 +55,8 @@ A template can be used to put objects into a specific format for ingestion into 
 #### Add a Repository
 Navigate to the Data Sources Git integration. **Extensibility -> Git Repositories**.
 
-![Menu showing "Git Repositories" Item](./images/git-as-data-source/00-git-data-source_1.png)
+![](<img>)
+<img src="./images/git-as-data-source/00-git-data-source_1.png" width="200" height="200" alt="Menu showing 'Git Repositories' Item" />
 
 Click [+] or [Add]
 
@@ -149,7 +150,7 @@ Now that the Git repository is linked for export templates it can be controlled 
 ### Jobs
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
-For technical details on jobs, please see the documentation on [jobs](../additional-features/jobs.md#jobs).
+For technical details on jobs, please see the [documentation on jobs](../additional-features/jobs.md#jobs).
 
 Jobs allow a user to write scripts in Python.  By integrating the scripts with Git, a user can utilize Git workflows to manage source control, versioning, and pipelines.
 
@@ -192,16 +193,17 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 Config contexts can be used to provide additional details to different automation tooling.  For example Ansible variables, or any other data that you can't natively store in Nautobot.  It can also be used in the Golden Configuration Nautobot plugin to provide extra details to generate configuration templates.
 
 A few simple examples of Configuration Context data might be:
- - DNS Servers
- - NTP Servers
- - ACL Data
- - Routing Information such as BGP ASNs etc.
+
+- DNS Servers
+- NTP Servers
+- ACL Data
+- Routing Information such as BGP ASNs etc.
 
 Similar to the other data sources, the repository can be added by navigating to **Extensibility -> Git repositories**. Click on **Add**, and fill out the repository details.
 
 ![Example Details Config Contexts](./images/git-as-data-source/00-git-data-source_13.png)
 
-Once the repository syncs the details can be found in the **Synchronization Status** tab.  For example the platform specifics were synced.
+Once the repository syncs the details can be found in the **Synchronization Status** tab.  For example, the platform specifics were synced:
 
 ![Syncronization Menu With Loaded Contexts](./images/git-as-data-source/00-git-data-source_14.png)
 
@@ -231,6 +233,7 @@ config_contexts
 ```
 
 Configuration Context details:
+
 - Follows an inheritance methodology similar to what Ansible implements.  Global contexts can be overwritten by local contexts at both a group level, as well as at a device specific level.
 - Nautobot UI provides a simple view to see merged config contexts.  It can be visualized by navigating to a device and clicking on the **config contexts** tab.
 
