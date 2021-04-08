@@ -113,27 +113,6 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(prepped, manual)
 
 
-class TestOtherShit(TestCase):
-    def setUp(self):
-        super().setUp()
-        self.statuses = Status.objects.get_for_model(Prefix)
-        self.network = "10.20.30.0/24"
-        self.address = "10.20.30.1/32"
-
-    def test_create(self):
-        """Test network object creation."""
-        Prefix.objects.create
-
-    def test_update(self):
-        """Test network object update."""
-
-    def test_get(self):
-        """Test retrieve of single network object."""
-
-    def test_filter(self):
-        """Test filtering list of network objects."""
-
-
 class TestAggregate(TestCase):
     def test_get_utilization(self):
         rir = RIR.objects.create(name="RIR 1", slug="rir-1")
