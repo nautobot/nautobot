@@ -153,7 +153,13 @@ All required settings must be configured by the user. If a configuration paramet
 
 ### Install the Plugin for Development
 
-To ease development, it is recommended with the Nautobot virtual environment activated (`/opt/nautobot/bin/activate` if using official doc). Then while in the location of the `pyproject.toml` file execute the command `poetry install` to install the local package. Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
+To install the plugin for development the following steps should be taken:
+
+* Activate the Nautobot virtual environment (`/opt/nautobot/bin/activate` if using official doc)
+* Navigate to the project root, where the `pyproject.toml` file exists for the plugin
+* Execute the command `poetry install` to install the local package into the Nautobot virtual environment
+ 
+>  Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
 
 ```no-highlight
 $ poetry install
