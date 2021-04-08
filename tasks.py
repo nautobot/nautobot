@@ -85,10 +85,10 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
 
 
-def run_command(context, command):
+def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
-        context.run(command)
+        context.run(command, **kwargs)
     else:
         docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
 
@@ -169,7 +169,7 @@ def nbshell(context):
     """Launch an interactive nbshell session."""
     command = "nautobot-server nbshell"
 
-    run_command(context, command)
+    run_command(context, command, pty=True)
 
 
 @task
