@@ -14,12 +14,14 @@ A rack must be designated as one of the following types:
 * Wall-mounted frame
 * Wall-mounted cabinet
 
-Similarly, each rack must be assigned an operational status, which is one of the following:
+Similarly, each rack must be assigned an operational [`statuses`](https://nautobot.readthedocs.io/en/latest/models/extras/status/):
 
 * Reserved
 * Available
 * Planned
 * Active
 * Deprecated
+
+Status fields can now be customized via the new [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/) model.
 
 Each rack has two faces (front and rear) on which devices can be mounted. Rail-to-rail width may be 10, 19, 21, or 23 inches. The outer width and depth of a rack or cabinet can also be annotated in millimeters or inches.
