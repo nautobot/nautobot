@@ -124,11 +124,13 @@ def generate_list_search_parameters(schema_type):
             schema_type,
         )
 
-    # Hack to swap `type` fields to `type_` since they will conflict with
-    # `graphene.types.fields.Field.type`.
-    # FIXME(jathan): Once we upgrade to Graphene 3.x, remove this.
+    # Hack to swap `type` fields to `_type` since they will conflict with
+    # `graphene.types.fields.Field.type` in Graphene 2.x.
+    # TODO(jathan): Once we upgrade to Graphene 3.x we can remove this, but we
+    # will still need to do an API migration to deprecate it. This argument was
+    # validated to be safe to keep even in Graphene 3.
     if "type" in search_params:
-        search_params["type_"] = search_params.pop("type")
+        search_params["_type"] = search_params.pop("type")
 
     return search_params
 
