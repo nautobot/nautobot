@@ -13,7 +13,7 @@ from nautobot.extras.models import ObjectChange, Webhook
 User = get_user_model()
 
 
-class web_request_contextTestCase(TestCase):
+class WebRequestContextTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="jacob", email="jacob@example.com", password="top_secret")
 
@@ -34,7 +34,7 @@ class web_request_contextTestCase(TestCase):
         for webhook in webhooks:
             webhook.content_types.set([site_ct])
 
-        self.queue = django_rq.get_queue("default")
+        self.queue = django_rq.get_queue("webhooks")
         self.queue.empty()  # Begin each test with an empty queue
 
     def test_user_object_type_error(self):

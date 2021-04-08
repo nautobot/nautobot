@@ -13,7 +13,7 @@ def decompile_path_node(repr):
     ct_id, object_id = repr.split(":")
     # The value is stored as a string, but the lookup later uses UUID objects as keys so we convert it now.
     # Note that the content type ID is still an integer because we have no control over that model.
-    return int(ct_id), uuid.UUID(object_id, version=4)
+    return int(ct_id), uuid.UUID(object_id)
 
 
 def object_to_path_node(obj):

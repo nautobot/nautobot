@@ -1,3 +1,4 @@
+from unittest import mock
 import uuid
 
 from django.conf import settings
@@ -10,6 +11,7 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework.test import APIClient
 
+from nautobot.core.middleware import ExternalAuthMiddleware
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
@@ -36,7 +38,6 @@ class ExternalAuthenticationTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
-    @override_settings(REMOTE_AUTH_ENABLED=False)
     def test_remote_auth_disabled(self):
         """
         Test enabling remote authentication with the default configuration.
@@ -45,14 +46,14 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser1",
         }
 
-        self.assertFalse(settings.REMOTE_AUTH_ENABLED)
+        self.assertFalse("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         # Client should not be authenticated
         response = self.client.get(reverse("home"), follow=True, **headers)  # noqa
         self.assertNotIn("_auth_user_id", self.client.session)
 
-    @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS, REMOTE_AUTH_ENABLED=True)
+    @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS)
     def test_remote_auth_enabled(self):
         """
         Test enabling remote authentication with the default configuration.
@@ -61,7 +62,7 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser1",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         response = self.client.get(reverse("home"), follow=True, **headers)
@@ -72,9 +73,7 @@ class ExternalAuthenticationTestCase(TestCase):
             msg="Authentication failed",
         )
 
-    @override_settings(
-        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS, REMOTE_AUTH_HEADER="HTTP_FOO", REMOTE_AUTH_ENABLED=True
-    )
+    @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS, REMOTE_AUTH_HEADER="HTTP_FOO")
     def test_remote_auth_custom_header(self):
         """
         Test enabling remote authentication with a custom HTTP header.
@@ -83,7 +82,7 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_FOO": "remoteuser1",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_FOO")
 
         response = self.client.get(reverse("home"), follow=True, **headers)
@@ -97,7 +96,6 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
-        REMOTE_AUTH_ENABLED=True,
     )
     def test_remote_auth_auto_create(self):
         """
@@ -107,7 +105,7 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser2",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
@@ -125,10 +123,9 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
-        REMOTE_AUTH_DEFAULT_GROUPS=["Group 1", "Group 2"],
-        REMOTE_AUTH_ENABLED=True,
+        EXTERNAL_AUTH_DEFAULT_GROUPS=["Group 1", "Group 2"],
     )
-    def test_remote_auth_default_groups(self):
+    def test_EXTERNAL_AUTH_DEFAULT_groups(self):
         """
         Test enabling remote authentication with the default configuration.
         """
@@ -136,10 +133,10 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser2",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
-        self.assertEqual(settings.REMOTE_AUTH_DEFAULT_GROUPS, ["Group 1", "Group 2"])
+        self.assertEqual(settings.EXTERNAL_AUTH_DEFAULT_GROUPS, ["Group 1", "Group 2"])
 
         # Create required groups
         groups = (
@@ -162,13 +159,12 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
-        REMOTE_AUTH_DEFAULT_PERMISSIONS={
+        EXTERNAL_AUTH_DEFAULT_PERMISSIONS={
             "dcim.add_site": None,
             "dcim.change_site": None,
         },
-        REMOTE_AUTH_ENABLED=True,
     )
-    def test_remote_auth_default_permissions(self):
+    def test_external_auth_default_permissions(self):
         """
         Test enabling remote authentication with the default configuration.
         """
@@ -176,11 +172,11 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser2",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
         self.assertEqual(
-            settings.REMOTE_AUTH_DEFAULT_PERMISSIONS,
+            settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS,
             {"dcim.add_site": None, "dcim.change_site": None},
         )
 

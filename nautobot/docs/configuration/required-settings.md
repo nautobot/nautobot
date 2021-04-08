@@ -4,16 +4,19 @@
 
 This is a list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the Nautobot service. Usually this is the same as the hostname for the Nautobot server, but can also be different; for example, when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the Nautobot server. To help guard against [HTTP Host header attacks](https://docs.djangoproject.com/en/stable/topics/security/#host-headers-virtual-hosting), Nautobot will not permit access to the server via any other hostnames (or IPs).
 
+Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs.djangoproject.com/en/stable/ref/settings/#use-x-forwarded-host) to `True`, which means that if you're using a reverse proxy, the FQDN used to reach that reverse proxy needs to be in this list.
+
 !!! note
     This parameter must always be defined as a list or tuple, even if only a single value is provided.
-
-The value of this option is also used to set [`CSRF_TRUSTED_ORIGINS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-CSRF_TRUSTED_ORIGINS), which restricts POST requests to the same set of hosts. Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs.djangoproject.com/en/stable/ref/settings/#use-x-forwarded-host) to `True`, which means that if you're using a reverse proxy, the FQDN used to reach that reverse proxy needs to be in this list.
 
 Example:
 
 ```
 ALLOWED_HOSTS = ['nautobot.example.com', '192.0.2.123']
 ```
+
+!!! tip
+    If there is more than one hostname in this list, you *may* also need to set [`CSRF_TRUSTED_ORIGINS`](optional-settings.md#csrf_trusted_origins) as well.
 
 If you are not yet sure what the domain name and/or IP address of the Nautobot installation will be, and are comfortable accepting the risks in doing so, you can set this to a wildcard (asterisk) to allow all host values:
 
@@ -132,9 +135,7 @@ setup](https://github.com/Suor/django-cacheops#setup).
 
 ### Task Queuing
 
-Task queues are configured by defining the `RQ_QUEUES` setting. Tasks settings utilize the `default` settings, where
-webhooks utilize the `check_releases` settings. By default, these are identical. It is up to you to modify them for your
-environment.
+Task queues are configured by defining the `RQ_QUEUES` setting. Nautobot's core functionality relies on four distinct queues and these represent the minimum required set of queues that must be defined. By default, these are identical. It is up to you to modify them for your environment and know that other use cases like specific plugins may require additional queues to be defined.
 
 #### RQ_QUEUES
 
@@ -150,7 +151,23 @@ RQ_QUEUES = {
         "SSL": False,
         "DEFAULT_TIMEOUT": 300
     },
+    "webhooks": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
+    },
     "check_releases": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
+    },
+    "custom_fields": {
         "HOST": "localhost",
         "PORT": 6379,
         "DB": 0,

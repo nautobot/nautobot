@@ -8,7 +8,7 @@ Within the database, custom fields are stored as JSON data directly alongside ea
 
 ## Creating Custom Fields
 
-Custom fields must be created through the admin UI under Extras > Custom Fields. Nautobot supports six types of custom field:
+Custom fields must be created through the admin UI under Extras > Custom Fields. Nautobot supports these custom field types:
 
 * Text: Free-form text (up to 255 characters)
 * Integer: A whole number (positive or negative)
@@ -16,14 +16,18 @@ Custom fields must be created through the admin UI under Extras > Custom Fields.
 * Date: A date in ISO 8601 format (YYYY-MM-DD)
 * URL: This will be presented as a link in the web UI
 * Selection: A selection of one of several pre-defined custom choices
+* Multiple selection: A selection field which supports the assignment of multiple values
 
 Each custom field must have a name; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
+
+!!! note
+    The name and type of a custom field cannot be modified once created, so take care in defining the name and type. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
 
 Marking a field as required will force the user to provide a value for the field when creating a new object or when saving an existing object. A default value for the field may also be provided. Use "true" or "false" for boolean fields, or the exact value of a choice for selection fields.
 
 The filter logic controls how values are matched when filtering objects by the custom field. Loose filtering (the default) matches on a partial value, whereas exact matching requires a complete match of the given string to a field's value. For example, exact filtering with the string "red" will only match the exact value "red", whereas loose filtering will match on the values "red", "red-orange", or "bored". Setting the filter logic to "disabled" disables filtering by the field entirely.
 
-A custom field must be assigned to one or object types, or models, in Nautobot. Once created, custom fields will automatically appear as part of these models in the web UI and REST API. Note that not all models support custom fields.
+A custom field must be assigned to one or object types, or models, in Nautobot. Once created, custom fields will automatically appear as part of these models in the web UI and REST API.
 
 ### Custom Field Validation
 
@@ -35,9 +39,11 @@ Nautobot supports limited custom validation for custom field values. Following a
 
 ### Custom Selection Fields
 
-Each custom selection field must have at least two choices. These are specified as a comma-separated list. Choices appear in forms in the order they are listed. Note that choice values are saved exactly as they appear, so it's best to avoid superfluous punctuation or symbols where possible.
+Choices are stored as independent values and are assigned a numeric weight which affects their ordering in selection lists and dropdowns. Note that choice values are saved exactly as they appear, so it's best to avoid superfluous punctuation or symbols where possible.
 
-If a default value is specified for a selection field, it must exactly match one of the provided choices.
+If a default value is specified for a selection field, it must exactly match one of the provided choices. Note that the default value can only be set on the custom field after its corresponding choice has been added.
+
+The value of a multiple selection field will always return a list, even if only one value is selected.
 
 ## Custom Fields and the REST API
 

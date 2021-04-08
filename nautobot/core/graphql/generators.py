@@ -2,8 +2,11 @@
 
 import logging
 
+import django_filters.fields
 import graphene
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
+from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.extras.choices import RelationshipSideChoices
@@ -76,20 +79,22 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
     Example:
         For a model with a name of "Device", the following class definition is generated:
 
-        Class DeviceType(DjangoObjectType):
+        class DeviceType(DjangoObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
 
-        if a FilterSet exist for this model at '<app_name>.filters.<ModelName>FilterSet'
-        The filterset will be store in filterset_class as follow
+        If a FilterSet exists for this model at
+        '<app_name>.filters.<ModelName>FilterSet' the filterset will be stored in
+        filterset_class as follows:
 
-        Class DeviceType(DjangoObjectType):
+        class DeviceType(DjangoObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
                 filterset_class = DeviceFilterSet
     """
+
     main_attrs = {}
     meta_attrs = {"model": model, "fields": "__all__"}
 
@@ -107,15 +112,25 @@ def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
     search_params = {}
-    exclude_filters = ["type"]
-    if schema_type._meta.filterset_class:
-        for key in list(schema_type._meta.filterset_class.get_filters().keys()):
-            if key in exclude_filters:
-                continue
-            if key == "id":
-                search_params[key] = graphene.ID()
-            else:
-                search_params[key] = graphene.String()
+    if schema_type._meta.filterset_class is not None:
+        # We need an instance for custom fields generation to happen for the
+        # filterset_class or the `cf_*` fields won't be detected.
+        filterset = schema_type._meta.filterset_class()
+        # Patch base_filters because `get_filtering_args_from_filterset` looks there
+        filterset.base_filters = filterset.filters
+
+        search_params = get_filtering_args_from_filterset(
+            filterset,
+            schema_type,
+        )
+
+    # Hack to swap `type` fields to `_type` since they will conflict with
+    # `graphene.types.fields.Field.type` in Graphene 2.x.
+    # TODO(jathan): Once we upgrade to Graphene 3.x we can remove this, but we
+    # will still need to do an API migration to deprecate it. This argument was
+    # validated to be safe to keep even in Graphene 3.
+    if "type" in search_params:
+        search_params["_type"] = search_params.pop("type")
 
     return search_params
 
@@ -161,11 +176,23 @@ def generate_list_resolver(schema_type, resolver_name):
     model = schema_type._meta.model
 
     def list_resolver(self, info, **kwargs):
-        if schema_type._meta.filterset_class:
-            fsargs = {key: [value] for key, value in kwargs.items()}
-            return schema_type._meta.filterset_class(
-                fsargs, model.objects.restrict(info.context.user, "view").all()
-            ).qs.all()
+        filterset_class = schema_type._meta.filterset_class
+        if filterset_class is not None:
+            resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
+
+            # Check result filter for errors.
+            if resolved_obj.errors:
+                errors = {}
+
+                # Build error message from results
+                # Error messages are collected from each filter object
+                for key in resolved_obj.errors:
+                    errors[key] = resolved_obj.errors[key]
+
+                # Raising this exception will send the error message in the response of the GraphQL request
+                raise GraphQLError(errors)
+
+            return resolved_obj.qs.all()
 
         return model.objects.restrict(info.context.user, "view").all()
 

@@ -1,7 +1,7 @@
 # Deploying Nautobot: Web Service and Worker
 
 !!! warning
-    As of Nautobot v1.0.0b2 these instructions are in a pre-release state and will be evolving rapidly!
+    As of Nautobot v1.0.0b3 these instructions are in a pre-release state and will be evolving rapidly!
 
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
@@ -22,7 +22,7 @@ Copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 ```ini
 [uwsgi]
 ; The IP address (typically localhost) and port that the WSGI process should listen on
-http-socket = 127.0.0.1:8001
+socket = 127.0.0.1:8001
 
 ; Fail to start if any parameter in the configuration file isn’t explicitly understood by uWSGI
 strict = true
@@ -60,6 +60,10 @@ log-5xx = true
 
 ; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
 ; processes = 5
+
+; If using subdirectory hosting e.g. example.com/nautobot, you must uncomment this line. Otherwise you'll get double paths e.g. example.com/nautobot/nautobot/.
+; See: https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.11.html#fixpathinfo-routing-action
+; route-run = fixpathinfo:
 ```
 
 This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
@@ -173,3 +177,13 @@ You can use the command `systemctl status nautobot.service` to verify that the W
     may indicate the problem.
 
 Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](../http-server).
+
+## Troubleshooting
+
+### SSL Error
+
+If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI configuration and Nautobot's database settings.
+See [this conversation](https://github.com/nautobot/nautobot/issues/127) for more details.
+
+- Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
+

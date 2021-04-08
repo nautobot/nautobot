@@ -49,7 +49,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python framework a
 
 | Function           | Component         |
 |--------------------|-------------------|
-| HTTP service       | NGINX or Apache   |
+| HTTP service       | NGINX             |
 | WSGI service       | uWSGI or Gunicorn |
 | Application        | Django/Python     |
 | Database           | PostgreSQL 9.6+   |
