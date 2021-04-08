@@ -4,7 +4,7 @@
 
 ### What is GraphQL?
 
-GraphQL is a query language for your APIs and a runtime for fulfilling those queries with your existing data.<sup>(1)</sup>
+[GraphQL](https://graphql.org/) is a query language for your APIs and a runtime for fulfilling those queries with your existing data.
 
 ### How GraphQL simplifies API Interactions
 
@@ -161,21 +161,21 @@ GraphQL reduces the complexity of performing multiple API calls and correlating 
 
 In Nautobot, there is a link to the GraphQL web interface at the bottom right-hand side of the page. The GraphQL web interface is called GraphiQL. Navigating to the URI (`/graphql`), brings up the GraphiQL tool for creating queries. This interface is useful for exploring the possibilities of GraphQL and validating that written queries execute successfully.
 
-![GraphiQL Interface](/guides/images/graphql/graphiql.png)
+![GraphiQL Interface](/user-guides/images/graphql/graphiql.png)
 
 ### Documentation Explorer
 
 If you're new to GraphQL, take a little bit of time to explore the *Documentation Explorer*. This can be accomplished by clicking the `< Docs` link in the GraphiQL interface. The information within *Documentation Explorer* is specific to creating queries in Nautobot.
 
-![Documentation Explorer](/guides/images/graphql/graphiql-explorer.png)
+<img src="/user-guides/images/graphql/graphiql-explorer.png" alt="Documentation Explorer" width="400">
 
 In the *Documentation Explorer*, search for `devices`. The results are all of the models that utilize the `devices` model.
 
-![Documentation Explorer - devices](/guides/images/graphql/graphiql-explorer-device-query.png)
+<img src="/user-guides/images/graphql/graphiql-explorer-device-query.png" alt="Documentation Explorer: Devices" width="400">
 
 From the `devices` query, select `devices` from `Query.devices`. This will display all of the potential query fields from devices.
 
-![Documentation Explorer - device fields](/guides/images/graphql/graphiql-explorer-device-attributes.png)
+<img src="/user-guides/images/graphql/graphiql-explorer-device-attributes.png" alt="Documentation Explorer: Devices Attributes" width="400">
 
 ### First Query
 
@@ -195,14 +195,14 @@ This query will retrieve a list of all devices by their hostname.
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/guides/images/graphql/graphql-query-01.png">
+    <img src="/user-guides/images/graphql/graphql-query-01.png">
   </details>
 </div>
 
 <br />
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
-![GraphiQL - Autocompletion](/guides/images/graphql/graphiql-autocomplete.png)
+<img src="/user-guides/images/graphql/graphiql-autocomplete.png" alt="GraphQL: Autocompletion" width="400">
 
 ```graphql
 query {
@@ -219,7 +219,7 @@ The result is a list of all the devices by their hostname and associated interfa
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/guides/images/graphql/graphql-query-02.png">
+    <img src="/user-guides/images/graphql/graphql-query-02.png">
   </details>
 </div>
 
@@ -246,7 +246,7 @@ The results of the query look like:
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/guides/images/graphql/graphql-query-03.png">
+    <img src="/user-guides/images/graphql/graphql-query-03.png">
   </details>
 </div>
 
@@ -260,7 +260,7 @@ As an example. We can query devices by their site location. This is done by addi
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/guides/images/graphql/graphql-query-04.png">
+    <img src="/user-guides/images/graphql/graphql-query-04.png">
   </details>
 </div>
 
@@ -269,7 +269,7 @@ GraphiQL allows you to add multiple attributes to the filter criteria. You can u
 
 ```graphql
 query {
-  devices(site:"ams", role: "edge") {
+  devices(site: "ams", role: "edge") {
     name
   }
 }
@@ -277,7 +277,7 @@ query {
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/guides/images/graphql/graphql-query-05.png">
+    <img src="/user-guides/images/graphql/graphql-query-05.png">
   </details>
 </div>
 
@@ -286,7 +286,7 @@ query {
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.
 
-![Swagger - GraphQL](/guides/images/graphql/graphql-swagger.png)
+<img src="/user-guides/images/graphql/graphql-swagger.png" alt="GraphQL: Swagger" width="400">
 
 From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is a required. The `query` field is where we put the GraphQL query. The `variables` field is optional. It's where we define filters, if we choose to do so. 
 
@@ -334,7 +334,7 @@ import json
 
 variables = {"site_name": "ams"}
 query = """
-query ($site_name:String!) {
+query ($site_name: String!) {
   devices (site: $site_name) {
     name
     interfaces {
@@ -361,6 +361,3 @@ In the updated script, we add the `variables = {"site_name": "ams"}` variable. W
 ## Closing
 
 GraphQL is a powerful, yet simple, tool for querying the exact information that is necessary for the task at hand. For further information about GraphQL, be sure to check out the [GraphQL Docs](https://graphql.org/learn/)!
-
-## Citations
-> 1. *Article Title: GraphQL, URL: https://graphql.org/, Website Title: GraphQL, Date Accessed: March 8, 2021*
