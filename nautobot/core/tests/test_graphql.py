@@ -8,7 +8,6 @@ from django.test import override_settings
 from django.urls import reverse
 from graphql import GraphQLError
 from graphene_django import DjangoObjectType
-from graphql.error import GraphQLLocatedError
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -58,24 +57,32 @@ class GraphQLTestCase(TestCase):
         GraphQLQuery.objects.create(
             name="GQL 2", slug="gql-2", query="query ($name: String!) { sites(name:$name) {name} }"
         )
+        self.region = Region.objects.create(name="Region")
+        self.sites = (
+            Site.objects.create(name="Site-1", slug="site-1", region=self.region),
+            Site.objects.create(name="Site-2", slug="site-2", region=self.region),
+            Site.objects.create(name="Site-3", slug="site-3", region=self.region),
+        )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query(self):
         query = "{ query: sites {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
+        self.assertEquals(len(resp["data"]["query"]), 3)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: String!) { sites(name:$name) {name} }"
-        resp = execute_query(query, user=self.user, variables={"name": "site-1"}).to_dict()
+        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
         self.assertFalse(resp["data"].get("error"))
+        self.assertEquals(len(resp["data"]["sites"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"
-        try:
+        with self.assertRaises(GraphQLError):
             execute_query(query, user=self.user).to_dict()
             self.assertTrue("Exception was not raised.")
-        except GraphQLError:
-            pass
 
     def test_execute_saved_query(self):
         resp = execute_saved_query("gql-1", user=self.user).to_dict()

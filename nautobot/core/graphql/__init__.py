@@ -1,10 +1,7 @@
 import graphene
-import uuid
 
-from django.contrib.auth.models import User
 from django.db.models import JSONField
 from django.db.models.fields import BinaryField
-from django.shortcuts import get_object_or_404
 from django.test.client import RequestFactory
 
 from nautobot.extras.context_managers import web_request_context
@@ -41,9 +38,10 @@ def execute_query(query, variables=None, request=None, user=None):
         GraphQL Object: Result for query
     """
     if not request and not user:
-        raise Exception("either request or username should be provided")
+        raise ValueError("Either request or username should be provided")
     if not request:
-        request = web_request_context(user)
+        request = RequestFactory().post("/graphql/")
+        request.user = user
     backend = get_default_backend()
     schema = graphene_settings.SCHEMA
     document = backend.document_from_string(schema, query)
@@ -65,5 +63,5 @@ def execute_saved_query(saved_query_slug, **kwargs):
     Returns:
         GraphQL Object: Result for query
     """
-    query = get_object_or_404(GraphQLQuery, slug=saved_query_slug)
+    query = GraphQLQuery.objects.get(slug=saved_query_slug)
     return execute_query(query=query.query, **kwargs)

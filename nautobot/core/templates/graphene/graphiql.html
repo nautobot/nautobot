@@ -131,6 +131,10 @@ add "&raw" to the end of the URL within a browser.
     }
 
     function getHashParams() {
+      // Retrieve fragments (# params) from URL
+      // All fragments are converted into a JSON object
+      // To modify the GraphiQL termial, hash fragments in the URL need to be set,
+      // this then adds text to the query, vairable and output text boxes in the UI.
       var hashParams = {};
       var e,
           a = /\+/g,  // Regex for replacing addition symbol with a space
@@ -146,7 +150,8 @@ add "&raw" to the end of the URL within a browser.
 
     function save() {
       graphql_data = getHashParams();
-      var id = location.search.split('id=')[1];
+      var url = new URL(window.location.href);
+      var id = url.searchParams.get("id");
       var result_window = $(".result-window").find(".CodeMirror-code");
       if (!id) {
         var html = `

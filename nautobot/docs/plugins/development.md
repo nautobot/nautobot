@@ -307,8 +307,7 @@ class GraphQLModelView(ModelViewSet):
     @action(detail=True, methods=["post"])
     def run(self, request, pk):
         try:
-            query_object = get_object_or_404(self.queryset, slug=pk)
-            result = execute_saved_query(query_object.query, variable=request.data, request=request).to_dict()
+            result = execute_saved_query(pk, variable=request.data, request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(
