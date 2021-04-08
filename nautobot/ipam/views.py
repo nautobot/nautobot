@@ -413,7 +413,7 @@ class PrefixView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         try:
-            aggregate = Aggregate.objects.restrict(request.user, "view").net_contains_or_equal(instance.prefix).first()
+            aggregate = Aggregate.objects.restrict(request.user, "view").net_contains_or_equals(instance.prefix).first()
         except Aggregate.DoesNotExist:
             aggregate = None
 

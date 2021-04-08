@@ -57,7 +57,7 @@ class NetworkQuerySet(QuerySet):
             broadcast__gte=broadcast,
         )
 
-    def net_contains_or_equal(self, prefix):
+    def net_contains_or_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
         broadcast = self._get_broadcast(prefix)
         return self.filter(
