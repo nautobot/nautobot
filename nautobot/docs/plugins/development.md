@@ -45,7 +45,7 @@ plugin_name/
         - *.html            # UI content templates
     - urls.py               # UI URL Patterns
     - views.py              # UI Views
-  - pyproject.toml          # required
+  - pyproject.toml          # *** REQUIRED *** - Project package definition
   - README.md
 ```
 
@@ -69,7 +69,7 @@ This command will guide you through creating your pyproject.toml config.
 Package name [tmp]:  nautobot-animal-sounds
 Version [0.1.0]:
 Description []:  An example Nautobot plugin
-Author [, n to skip]:  Josh VanDeraa
+Author [, n to skip]:  Bob Jones
 License []:  Apache 2.0
 Compatible Python versions [^3.8]:  ^3.6
 
@@ -81,7 +81,7 @@ Generated file
 name = "nautobot-animal-sounds"
 version = "0.1.0"
 description = "An example Nautobot plugin"
-authors = ["Josh VanDeraa"]
+authors = ["Bob Jones"]
 license = "Apache 2.0"
 
 [tool.poetry.dependencies]
@@ -97,28 +97,6 @@ build-backend = "poetry.core.masonry.api"
 Do you confirm generation? (yes/no) [yes]
 ```
 
-#### Manual
-
-The `pyproject.toml` is the recommended Python packaging methodology specified by [PEP 517](https://www.python.org/dev/peps/pep-0517/) and [PEP 518](https://www.python.org/dev/peps/pep-0518/). While the legacy `setup.py` Python packaging methodology is still available, it is not the recommended method to set up a package, and so it is not documented here. 
-
-If for some reason you do not wish to use Poetry, `pyproject.toml` can be defined to use other packaging libraries. An example `pyproject.toml` for setuptools is below, and the documentation on how to build with setuptools can be found on the [setuptools documentation](https://setuptools.readthedocs.io/en/latest/build_meta.html).
-
-```toml
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[metadata]
-name = "nautobot-animal-sounds"
-version = "0.1.0"
-description = "An example Nautobot plugin"
-authors = ["Josh VanDeraa"]
-license = "Apache 2.0"
-
-[options]
-packages = find:
-```
-
 ### Define a PluginConfig
 
 The `PluginConfig` class is a Nautobot-specific wrapper around Django's built-in [`AppConfig`](https://docs.djangoproject.com/en/stable/ref/applications/) class. It is used to declare Nautobot plugin functionality within a Python package. Each plugin should provide its own subclass, defining its name, metadata, and default and required configuration parameters. An example is below:
@@ -131,8 +109,8 @@ class AnimalSoundsConfig(PluginConfig):
     verbose_name = 'Animal Sounds'
     description = 'An example plugin for development purposes'
     version = '0.1'
-    author = 'Jeremy Stretch'
-    author_email = 'author@example.com'
+    author = 'Bob Jones'
+    author_email = 'bob@example.com'
     base_url = 'animal-sounds'
     required_settings = []
     default_settings = {
@@ -148,34 +126,34 @@ Nautobot looks for the `config` variable within a plugin's `__init__.py` to load
 
 The configurable attributes for a `PluginConfig` are listed below in alphabetical order.
 
-| Name                  | Description                                                                                                                                                                             |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `author`              | Name of plugin's author                                                                                                                                                                 |
-| `author_email`        | Author's public email address                                                                                                                                                           |
-| `base_url`            | (Optional) Base path to use for plugin URLs. If not specified, the project's `name` will be used.                                                                                       |
-| `caching_config`      | Plugin-specific cache configuration                                                                                                                                                     |
-| `custom_validators`   | The dotted path to the list of custom validator classes (default: `custom_validators.custom_validators`)                                                                                |
-| `datasource_contents` | The dotted path to the list of datasource (Git, etc.) content types to register (default: `datasources.datasource_contents`)                                                            |
-| `default_settings`    | A dictionary of configuration parameters and their default values                                                                                                                       |
-| `description`         | Brief description of the plugin's purpose                                                                                                                                               |
-| `graphql_types`       | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types)`                                                                                                  |
-| `installed_apps`      | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
-| `jobs`                | The dotted path to the list of Job classes (default: `jobs.jobs`)                                                                                                                       |
-| `max_version`         | Maximum version of Nautobot with which the plugin is compatible                                                                                                                         |
-| `menu_items`          | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`)                                                                                     |
-| `middleware`          | A list of middleware classes to append after Nautobot's built-in middleware                                                                                                             |
-| `min_version`         | Minimum version of Nautobot with which the plugin is compatible                                                                                                                         |
-| `name`                | Raw plugin name; same as the plugin's source directory                                                                                                                                  |
-| `required_settings`   | A list of any configuration parameters that **must** be defined by the user                                                                                                             |
-| `template_extensions` | The dotted path to the list of template extension classes (default: `template_content.template_extensions`)                                                                             |
-| `verbose_name`        | Human-friendly name for the plugin                                                                                                                                                      |
-| `version`             | Current release ([semantic versioning](https://semver.org/) is encouraged)                                                                                                              |
+| Name | Description |
+| ---- | ----------- |
+| `author` | Name of plugin's author |
+| `author_email` | Author's public email address |
+| `base_url` | (Optional) Base path to use for plugin URLs. If not specified, the project's `name` will be used. |
+| `caching_config` | Plugin-specific cache configuration |
+| `custom_validators` | The dotted path to the list of custom validator classes (default: `custom_validators.custom_validators`) |
+| `datasource_contents` | The dotted path to the list of datasource (Git, etc.) content types to register (default: `datasources.datasource_contents`) |
+| `default_settings` | A dictionary of configuration parameters and their default values |
+| `description` | Brief description of the plugin's purpose |
+| `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types)` |
+| `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
+| `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
+| `max_version` | Maximum version of Nautobot with which the plugin is compatible |
+| `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
+| `middleware` | A list of middleware classes to append after Nautobot's built-in middleware |
+| `min_version` | Minimum version of Nautobot with which the plugin is compatible |
+| `name` | Raw plugin name; same as the plugin's source directory |
+| `required_settings` | A list of any configuration parameters that **must** be defined by the user |
+| `template_extensions` | The dotted path to the list of template extension classes (default: `template_content.template_extensions`) |
+| `verbose_name` | Human-friendly name for the plugin |
+| `version` | Current release ([semantic versioning](https://semver.org/) is encouraged) |
 
 All required settings must be configured by the user. If a configuration parameter is listed in both `required_settings` and `default_settings`, the default setting will be ignored.
 
 ### Install the Plugin for Development
 
-To ease development, it is recommended with the virtual environment activated to use `poetry install` command from the location of the `pyproject.toml` file. By default Poetry installs the current project as editable and the dependencies as well.
+To ease development, it is recommended with the Nautobot virtual environment activated (`/opt/nautobot/bin/activate` if using official doc). Then while in the location of the `pyproject.toml` file execute the command `poetry install` to install the local package. By default Poetry installs the current project as editable and the dependencies as well.
 
 ```no-highlight
 $ poetry install
@@ -210,7 +188,13 @@ class Animal(models.Model):
         return self.name
 ```
 
-Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the PostgreSQL database to support your new model, or to alter existing models. Creating migrations can usually be done automatically using the `nautobot-server makemigrations <plugin_name>` command.
+Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.  
+
+Creating migrations ca be done automatically using the `nautobot-server makemigrations <plugin_name>` management command, where `<plugin_name>` is the name of the Python package for your plugin (e.g. `animal_sounds`):
+
+```no-highlight
+$ nautobot-server makemigrations animal_sounds
+```
 
 !!! note
     A plugin must be installed before it can be used with Django management commands. If you skipped this step above, run `poetry install` from the plugin's root directory.
@@ -218,7 +202,7 @@ Once you have defined the model(s) for your plugin, you'll need to create the da
 ```no-highlight
 $ nautobot-server makemigrations nautobot_animal_sounds
 Migrations for 'nautobot_animal_sounds':
-  /home/jstretch/animal_sounds/nautobot_animal_sounds/migrations/0001_initial.py
+  /home/bjones/animal_sounds/nautobot_animal_sounds/migrations/0001_initial.py
     - Create model Animal
 ```
 
