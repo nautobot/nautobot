@@ -609,7 +609,7 @@ def refresh_git_animals(repository_record, job_result):
     # /animals/ directory at the repository root.
     animal_path = os.path.join(repository_record.filesystem_path, 'animals')
     for filename in os.listdir(animal_path):
-        with open(os.path.join(animal_path, filename) as fd:
+        with open(os.path.join(animal_path, filename)) as fd:
             animal_data = yaml.safe_load(fd)
 
         # Create or update an Animal record based on the provided data
