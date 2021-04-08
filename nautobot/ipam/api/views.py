@@ -21,7 +21,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.constants import ADVISORY_LOCK_KEYS
 from nautobot.utilities.utils import count_related
 from . import serializers
 
