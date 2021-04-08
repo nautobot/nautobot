@@ -55,8 +55,8 @@ A template can be used to put objects into a specific format for ingestion into 
 #### Add a Repository
 Navigate to the Data Sources Git integration. **Extensibility -> Git Repositories**.
 
-![](<img>)
-<img src="./images/git-as-data-source/00-git-data-source_1.png" width="200" height="200" alt="Menu showing 'Git Repositories' Item" />
+![Menu showing "Git Repositories" Item](./images/git-as-data-source/00-git-data-source_1.png)
+
 
 Click [+] or [Add]
 
