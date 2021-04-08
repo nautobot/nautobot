@@ -190,7 +190,7 @@ class Animal(models.Model):
 
 Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.  
 
-Creating migrations ca be done automatically using the `nautobot-server makemigrations <plugin_name>` management command, where `<plugin_name>` is the name of the Python package for your plugin (e.g. `animal_sounds`):
+Creating migrations can be done automatically using the `nautobot-server makemigrations <plugin_name>` management command, where `<plugin_name>` is the name of the Python package for your plugin (e.g. `animal_sounds`):
 
 ```no-highlight
 $ nautobot-server makemigrations animal_sounds
