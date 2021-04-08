@@ -51,7 +51,7 @@ plugin_name/
 
 The top level is the project root. Immediately within the root should exist several items:
 
-* `pyproject.toml` - This is the PEP 517 standard for the method to projects to specify their build.
+* `pyproject.toml` - This is the new [unified Python project settings file](https://www.python.org/dev/peps/pep-0518/) that replaces `setup.py`, `requirements.txt`, and various other setup files (like `setup.cfg`, `MANIFEST.in`, among others).
 * `README.md` - A brief introduction to your plugin, how to install and configure it, where to find help, and any other pertinent information. It is recommended to write README files using a markup language such as Markdown.
 * The plugin source directory, with the same name as your plugin.
 
