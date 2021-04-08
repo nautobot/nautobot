@@ -159,7 +159,7 @@ To install the plugin for development the following steps should be taken:
 * Navigate to the project root, where the `pyproject.toml` file exists for the plugin
 * Execute the command `poetry install` to install the local package into the Nautobot virtual environment
  
->  Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
+> Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
 
 ```no-highlight
 $ poetry install
