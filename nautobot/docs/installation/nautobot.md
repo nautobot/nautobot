@@ -36,16 +36,6 @@ The following command also creates the `/opt/nautobot` directory and sets it as 
 $ sudo useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
 ```
 
-## Sudo to nautobot
-
-It is critical to create the virtualenv and install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
-
-```no-highlight
-$ sudo -iu nautobot
-```
-!!! warning
-    Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
-
 ## Setup the Virtual Environment
 
 A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
@@ -59,29 +49,41 @@ In the following steps, we will have you create the virtualenv within the `NAUTO
 
 ### Create the Virtual Environment
 
-We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libaries.
+As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libaries.
 
 ```no-highlight
-$ python3 -m venv /opt/nautobot
+$ sudo -u nautobot python3 -m venv /opt/nautobot
 ```
 
 ### Update the Nautobot `.bashrc`
 
 So what about the `NAUTOBOT_ROOT`? We've referenced this environment variable several times. Here is where it finally gets set.
 
-We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user and make sure that it always set without having to do it manually. Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
+We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user and make sure that it always set without having to do it manually.
+
+Run this command to update `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
 ```no-highlight
-$ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
+$ echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
 ```
 
-Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` gets set and then echo its value to verify it worked:
+## Sudo to nautobot
+
+It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
 ```no-highlight
-$ source ~/.bashrc
+$ sudo -iu nautobot
+```
+
+Observe also that you can now echo the value of the `NAUTOBOT_ROOT` environment variable that is automatically set because we added to `.bashrc`:
+
+```no-highlight
 $ echo $NAUTOBOT_ROOT
 /opt/nautobot
 ```
+
+!!! warning
+    Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
 ## Understanding the Virtual Environment
 
@@ -94,7 +96,7 @@ $ echo $PATH
 
 Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
 
-Because `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically prefer the virtualenv's commands because they come first in the `$PATH`.
+Since `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically prefer the virtualenv's commands because they come first in the `$PATH`.
 
 As the `nautobot` user, you may use `which pip3` to confirm that you are using the correct version of `pip3`. The path should match that of `$NAUTOBOT_ROOT/bin`. For example:
 
@@ -263,8 +265,8 @@ $ nautobot-server runserver 0.0.0.0:8000 --insecure
 
 Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8000; for example, <http://127.0.0.1:8000/>. You should be greeted with the Nautobot home page.
 
-!!! warning
-    The development server is for development and testing purposes only. It is neither performant nor secure enough for production use. **Do not use it in production.**
+!!! danger
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 !!! warning
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected.

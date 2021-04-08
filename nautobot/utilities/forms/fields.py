@@ -6,12 +6,14 @@ from io import StringIO
 import django_filters
 from django import forms
 from django.apps import apps
+from django.contrib.contenttypes.models import ContentType
 from django.forms.fields import JSONField as _JSONField, InvalidJSONInput
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Count
 from django.forms import BoundField
 from django.urls import reverse
 
+from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
@@ -22,6 +24,7 @@ __all__ = (
     "CommentField",
     "CSVChoiceField",
     "CSVContentTypeField",
+    "CSVMultipleChoiceField",
     "CSVDataField",
     "CSVModelChoiceField",
     "CSVMultipleContentTypeField",
@@ -30,6 +33,7 @@ __all__ = (
     "ExpandableIPAddressField",
     "ExpandableNameField",
     "JSONField",
+    "JSONArrayFormField",
     "MultipleContentTypeField",
     "LaxURLField",
     "SlugField",
@@ -127,6 +131,23 @@ class CSVChoiceField(forms.ChoiceField):
         self.choices = unpack_grouped_choices(choices)
 
 
+class CSVMultipleChoiceField(CSVChoiceField):
+    """
+    A version of CSVChoiceField that supports and emits a list of choice values
+    """
+
+    def to_python(self, value):
+        """Return a list of strings."""
+        if value in self.empty_values:
+            return ""
+        return [v.strip() for v in str(value).split(",")]
+
+    def validate(self, value):
+        """Validate that each of the input values is in self.choices."""
+        for v in value:
+            super().validate(v)
+
+
 class CSVModelChoiceField(forms.ModelChoiceField):
     """
     Provides additional validation for model choices entered as CSV data.
@@ -166,19 +187,39 @@ class CSVContentTypeField(CSVModelChoiceField):
 
 class MultipleContentTypeField(forms.ModelMultipleChoiceField):
     """
-    Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
+    Field for choosing any number of `ContentType` objects.
+
+    Optionally can restrict the available ContentTypes to those supporting a particular feature only.
+    Optionally can pass the selection through as a list of "`{app_label}.{model}`" strings intead of PK values.
     """
 
     STATIC_CHOICES = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, feature=None, choices_as_strings=False, **kwargs):
+        """
+        Construct a MultipleContentTypeField.
+
+        Args:
+            feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
+            choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
+        """
+        if "queryset" not in kwargs:
+            if feature is not None:
+                kwargs["queryset"] = ContentType.objects.filter(FeatureQuery(feature).get_query()).order_by(
+                    "app_label", "model"
+                )
+            else:
+                kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
+        if "widget" not in kwargs:
+            kwargs["widget"] = widgets.StaticSelect2Multiple()
+
         super().__init__(*args, **kwargs)
 
-        # Generate choices from queryset each time form is initialized.
-        self.choices = self._generate_choices_from_queryset
+        if choices_as_strings:
+            self.choices = self._string_choices_from_queryset
 
-    def _generate_choices_from_queryset(self):
-        """Overload choices to return "<app>.<model>" for CSV import help text."""
+    def _string_choices_from_queryset(self):
+        """Overload choices to return "<app>.<model>" instead of PKs."""
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
 
 
@@ -458,3 +499,96 @@ class JSONField(_JSONField):
         if value is None:
             return ""
         return json.dumps(value, sort_keys=True, indent=4)
+
+
+class JSONArrayFormField(forms.JSONField):
+    """
+    A FormField counterpart to JSONArrayField.
+    Replicates ArrayFormField's base field validation: Field values are validated as JSON Arrays,
+    and each Array element is validated by `base_field` validators.
+    """
+
+    def __init__(self, base_field, *, delimiter=",", **kwargs):
+        self.base_field = base_field
+        self.delimiter = delimiter
+        super().__init__(**kwargs)
+
+    def clean(self, value):
+        """
+        Validate `value` and return its "cleaned" value as an appropriate
+        Python object. Raise ValidationError for any errors.
+        """
+        value = super().clean(value)
+        return [self.base_field.clean(val) for val in value]
+
+    def prepare_value(self, value):
+        """
+        Return a string of this value.
+        """
+        if isinstance(value, list):
+            return self.delimiter.join(str(self.base_field.prepare_value(v)) for v in value)
+        return value
+
+    def to_python(self, value):
+        """
+        Convert `value` into JSON, raising django.core.exceptions.ValidationError
+        if the data can't be converted. Return the converted value.
+        """
+        if isinstance(value, list):
+            items = value
+        elif value:
+            try:
+                items = value.split(self.delimiter)
+            except Exception as e:
+                raise ValidationError(e)
+        else:
+            items = []
+
+        errors = []
+        values = []
+        for item in items:
+            try:
+                values.append(self.base_field.to_python(item))
+            except ValidationError as error:
+                errors.append(error)
+        if errors:
+            raise ValidationError(errors)
+        return values
+
+    def validate(self, value):
+        """
+        Validate `value` and raise ValidationError if necessary.
+        """
+        super().validate(value)
+        errors = []
+        for item in value:
+            try:
+                self.base_field.validate(item)
+            except ValidationError as error:
+                errors.append(error)
+        if errors:
+            raise ValidationError(errors)
+
+    def run_validators(self, value):
+        """
+        Runs all validators against `value` and raise ValidationError if necessary.
+        Some validators can't be created at field initialization time.
+        """
+        super().run_validators(value)
+        errors = []
+        for item in value:
+            try:
+                self.base_field.run_validators(item)
+            except ValidationError as error:
+                errors.append(error)
+        if errors:
+            raise ValidationError(errors)
+
+    def has_changed(self, initial, data):
+        """
+        Return True if `data` differs from `initial`.
+        """
+        value = self.to_python(data)
+        if initial in self.empty_values and value in self.empty_values:
+            return False
+        return super().has_changed(initial, data)

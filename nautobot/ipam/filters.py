@@ -1,7 +1,8 @@
 import django_filters
 import netaddr
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, F
+from django.db.models.functions import Length
 from netaddr.core import AddrFormatError
 
 from nautobot.dcim.models import Device, Interface, Region, Site
@@ -22,6 +23,7 @@ from nautobot.utilities.filters import (
 )
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .choices import *
+from .constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from .models import (
     Aggregate,
     IPAddress,
@@ -144,7 +146,10 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(field_name="prefix", lookup_expr="family")
+    family = django_filters.NumberFilter(
+        method="filter_ip_family",
+        label="Family",
+    )
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -170,8 +175,13 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             return queryset
         qs_filter = Q(description__icontains=value)
         try:
-            prefix = str(netaddr.IPNetwork(value.strip()).cidr)
-            qs_filter |= Q(prefix__net_contains_or_equals=prefix)
+            # filter for Aggregates containing |value|
+            query = netaddr.IPNetwork(value.strip())
+            qs_filter |= Q(
+                prefix_length__lte=query.prefixlen,
+                network__lte=bytes(query.network),
+                broadcast__gte=bytes(query.broadcast),
+            )
         except (AddrFormatError, ValueError):
             pass
         return queryset.filter(qs_filter)
@@ -180,10 +190,20 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         if not value.strip():
             return queryset
         try:
-            query = str(netaddr.IPNetwork(value).cidr)
-            return queryset.filter(prefix=query)
+            return queryset.net_equals(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
+
+    def filter_ip_family(self, queryset, name, value):
+        if value == 4:
+            length = IPV4_BYTE_LENGTH
+        elif value == 6:
+            length = IPV6_BYTE_LENGTH
+        else:
+            raise ValueError("invalid IP family {}".format(value))
+        return queryset.annotate(network_len=Length(F("network"))).filter(
+            network_len=length,
+        )
 
 
 class RoleFilterSet(
@@ -213,7 +233,10 @@ class PrefixFilterSet(
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(field_name="prefix", lookup_expr="family")
+    family = django_filters.NumberFilter(
+        method="filter_ip_family",
+        label="Family",
+    )
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -230,9 +253,9 @@ class PrefixFilterSet(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
-    mask_length = django_filters.NumberFilter(field_name="prefix", lookup_expr="net_mask_length")
-    mask_length__gte = django_filters.NumberFilter(field_name="prefix", lookup_expr="net_mask_length__gte")
-    mask_length__lte = django_filters.NumberFilter(field_name="prefix", lookup_expr="net_mask_length__lte")
+    mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
+    mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
+    mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         label="VRF",
@@ -297,35 +320,50 @@ class PrefixFilterSet(
 
     class Meta:
         model = Prefix
-        fields = ["id", "is_pool"]
+        fields = ["id", "is_pool", "prefix"]
 
     def search(self, queryset, name, value):
-        if not value.strip():
+        value = value.strip()
+        if not value:
             return queryset
         qs_filter = Q(description__icontains=value)
         try:
-            prefix = str(netaddr.IPNetwork(value.strip()).cidr)
-            qs_filter |= Q(prefix__net_contains_or_equals=prefix)
+            # filter for Prefixes containing |value|
+            query = netaddr.IPNetwork(value)
+            qs_filter |= Q(
+                prefix_length__lte=query.prefixlen,
+                network__lte=bytes(query.network),
+                broadcast__gte=bytes(query.broadcast),
+            )
         except (AddrFormatError, ValueError):
             pass
         return queryset.filter(qs_filter)
 
     def filter_prefix(self, queryset, name, value):
-        if not value.strip():
+        value = value.strip()
+        if not value:
             return queryset
+        # filter for Prefix models equal to |value|
         try:
-            query = str(netaddr.IPNetwork(value).cidr)
-            return queryset.filter(prefix=query)
+            return queryset.net_equals(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
+
+    def filter_prefix_length_eq(self, queryset, name, value):
+        return queryset.filter(prefix_length__exact=value)
+
+    def filter_prefix_length_lte(self, queryset, name, value):
+        return queryset.filter(prefix_length__lte=value)
+
+    def filter_prefix_length_gte(self, queryset, name, value):
+        return queryset.filter(prefix_length__gte=value)
 
     def search_within(self, queryset, name, value):
         value = value.strip()
         if not value:
             return queryset
         try:
-            query = str(netaddr.IPNetwork(value).cidr)
-            return queryset.filter(prefix__net_contained=query)
+            return queryset.net_contained(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
 
@@ -334,8 +372,7 @@ class PrefixFilterSet(
         if not value:
             return queryset
         try:
-            query = str(netaddr.IPNetwork(value).cidr)
-            return queryset.filter(prefix__net_contained_or_equal=query)
+            return queryset.net_contained_or_equal(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
 
@@ -346,10 +383,17 @@ class PrefixFilterSet(
         try:
             # Searching by prefix
             if "/" in value:
-                return queryset.filter(prefix__net_contains_or_equals=str(netaddr.IPNetwork(value).cidr))
+                return queryset.net_contains_or_equal(netaddr.IPNetwork(value).cidr)
             # Searching by IP address
             else:
-                return queryset.filter(prefix__net_contains=str(netaddr.IPAddress(value)))
+                # filter for Prefixes containing |value|
+                # netaddr.IPAddress objects have no netmask
+                # so prefix_length is not considered
+                query = netaddr.IPAddress(value)
+                return queryset.filter(
+                    network__lte=bytes(query),
+                    broadcast__gte=bytes(query),
+                )
         except (AddrFormatError, ValueError):
             return queryset.none()
 
@@ -357,6 +401,17 @@ class PrefixFilterSet(
         if vrf is None:
             return queryset.none
         return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+
+    def filter_ip_family(self, queryset, name, value):
+        if value == 4:
+            length = IPV4_BYTE_LENGTH
+        elif value == 6:
+            length = IPV6_BYTE_LENGTH
+        else:
+            raise ValueError("invalid IP family {}".format(value))
+        return queryset.annotate(network_len=Length(F("network"))).filter(
+            network_len=length,
+        )
 
 
 class IPAddressFilterSet(
@@ -370,7 +425,10 @@ class IPAddressFilterSet(
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(field_name="address", lookup_expr="family")
+    family = django_filters.NumberFilter(
+        method="filter_ip_family",
+        label="Family",
+    )
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -458,7 +516,7 @@ class IPAddressFilterSet(
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        qs_filter = Q(dns_name__icontains=value) | Q(description__icontains=value) | Q(address__istartswith=value)
+        qs_filter = Q(dns_name__icontains=value) | Q(description__icontains=value)
         return queryset.filter(qs_filter)
 
     def search_by_parent(self, queryset, name, value):
@@ -466,26 +524,29 @@ class IPAddressFilterSet(
         if not value:
             return queryset
         try:
-            query = str(netaddr.IPNetwork(value.strip()).cidr)
-            return queryset.filter(address__net_host_contained=query)
+            query = netaddr.IPNetwork(value.strip()).cidr
+            return queryset.net_host_contained(query)
         except (AddrFormatError, ValueError):
             return queryset.none()
 
     def filter_address(self, queryset, name, value):
         try:
-            return queryset.filter(address__net_in=value)
+            return queryset.net_in(value)
         except ValidationError:
             return queryset.none()
 
     def filter_mask_length(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.filter(address__net_mask_length=value)
+        return queryset.filter(prefix_length=value)
 
     def filter_present_in_vrf(self, queryset, name, vrf):
         if vrf is None:
             return queryset.none
         return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
+
+    def filter_ip_family(self, queryset, name, value):
+        return queryset.ip_family(value)
 
     def filter_device(self, queryset, name, value):
         devices = Device.objects.filter(**{"{}__in".format(name): value})

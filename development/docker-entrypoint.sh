@@ -65,8 +65,6 @@ else:
 END
 
   echo "💡 Superuser Username: ${SUPERUSER_NAME}, E-Mail: ${SUPERUSER_EMAIL}"
-else
-  echo "↩️ Skip creating the superuser"
 fi
 
 

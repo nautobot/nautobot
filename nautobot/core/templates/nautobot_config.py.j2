@@ -45,6 +45,14 @@ RQ_QUEUES = {
     #         'socket_connect_timeout': 10,
     #     },
     # },
+    "webhooks": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300,
+    },
     "check_releases": {
         "HOST": "localhost",
         "PORT": 6379,
@@ -52,6 +60,14 @@ RQ_QUEUES = {
         "PASSWORD": "",
         "SSL": False,
         "DEFAULT_TIMEOUT": 300,
+    },
+    "custom_fields": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 900,
     },
 }
 
@@ -104,10 +120,6 @@ BANNER_BOTTOM = ""
 # Text to include on the login page above the login form. HTML is allowed.
 BANNER_LOGIN = ""
 
-# Base URL path if accessing Nautobot within a directory. For example, if installed at https://example.com/nautobot/, set:
-# BASE_PATH = 'nautobot/'
-BASE_PATH = ""
-
 # Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
 CACHEOPS_DEFAULTS = {"timeout": 900}
 
@@ -134,9 +146,11 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     # r'^(https?://)?(\w+\.)?example\.com$',
 ]
 
-# The file path where jobs will be stored. A trailing slash is not needed. Note that the default value of
-# this setting is inside the invoking user's home directory.
-# JOBS_ROOT = os.path.expanduser('~/.nautobot/jobs')
+# FQDNs that are considered trusted origins for secure, cross-domain, requests such as HTTPS POST.
+# If running Nautobot under a single domain, you may not need to set this variable;
+# if running on multiple domains, you *may* need to set this variable to more or less the same as ALLOWED_HOSTS above.
+# https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins
+CSRF_TRUSTED_ORIGINS = []
 
 # Set to True to enable server debugging. WARNING: Debugging introduces a substantial performance penalty and may reveal
 # sensitive information about your installation. Only enable debugging while performing testing. Never enable debugging
@@ -155,6 +169,13 @@ EXEMPT_VIEW_PERMISSIONS = [
     # 'dcim.region',
     # 'ipam.prefix',
 ]
+
+# Global 3rd-party authentication settings
+EXTERNAL_AUTH_DEFAULT_GROUPS = []
+EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+
+# If hosting Nautobot in a subdirectory, you must set this value to match the base URL prefix configured in your HTTP server (e.g. `/nautobot/`). When not set, URLs will default to being prefixed by `/`.
+FORCE_SCRIPT_NAME = None
 
 # HTTP proxies Nautobot should use when sending outbound HTTP requests (e.g. for webhooks).
 # HTTP_PROXIES = {
@@ -229,13 +250,9 @@ PREFER_IPV4 = False
 RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
 RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
-# Remote authentication support
-REMOTE_AUTH_ENABLED = False
-REMOTE_AUTH_BACKEND = "nautobot.core.authentication.RemoteUserBackend"
+# Remote auth backend settings
+REMOTE_AUTH_AUTO_CREATE_USER = False
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
-REMOTE_AUTH_AUTO_CREATE_USER = True
-REMOTE_AUTH_DEFAULT_GROUPS = []
-REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
 
 # This determines how often the GitHub API is called to check the latest release of Nautobot. Must be at least 1 hour.
 RELEASE_CHECK_TIMEOUT = 24 * 3600
@@ -255,7 +272,7 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks, in seconds
 SESSION_FILE_PATH = None
 
 # Configure SSO, for more information see docs/configuration/authentication/sso.md
-SOCIAL_AUTH_ENABLED = False
+SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 
 # Time zone (default: UTC)
 TIME_ZONE = "UTC"

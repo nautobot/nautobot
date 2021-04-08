@@ -1,4 +1,5 @@
 dev_addr: '127.0.0.1:8001'
+edit_uri: edit/main/nautobot/docs
 site_name: Nautobot Documentation
 site_url: https://nautobot.readthedocs.io/
 repo_url: https://github.com/nautobot/nautobot
@@ -33,6 +34,10 @@ nav:
         - Configuring Nautobot: 'configuration/index.md'
         - Required Settings: 'configuration/required-settings.md'
         - Optional Settings: 'configuration/optional-settings.md'
+    - External Authentication:
+        - LDAP: 'configuration/authentication/ldap.md'
+        - SSO: 'configuration/authentication/sso.md'
+        - Remote Header: 'configuration/authentication/remote.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'

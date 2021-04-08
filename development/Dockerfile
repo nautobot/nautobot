@@ -42,4 +42,8 @@ COPY . /opt/nautobot
 
 RUN poetry install
 
+# Install additional requirements from local_requirements.txt
+RUN if [ -f local_requirements.txt ] ; then cat local_requirements.txt | grep -E '^[^# ]' | cut -d= -f1 | xargs -n 1 poetry add ; fi
+
+
 ENTRYPOINT ["/tmp/nautobot/docker-entrypoint.sh"]

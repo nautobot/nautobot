@@ -9,7 +9,7 @@ from netaddr import IPAddress, IPNetwork, AddrFormatError
 #
 
 
-class IPAddressFormField(forms.Field):
+class IPAddressFormField(forms.CharField):
     default_error_messages = {
         "invalid": "Enter a valid IPv4 or IPv6 address (without a mask).",
     }

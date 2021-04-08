@@ -98,7 +98,7 @@ add "&raw" to the end of the URL within a browser.
   <script src="{% static 'js/forms.js' %}?v{{ settings.VERSION }}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
   <script type="text/javascript">
-    var nautobot_api_path = "/{{ settings.BASE_PATH }}api/";
+    var nautobot_api_path = "{% url 'api-root' %}";
     var nautobot_csrf_token = "{{ csrf_token }}";
     var loading = $(".loading");
     $(document).ajaxStart(function() {

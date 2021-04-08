@@ -66,18 +66,6 @@ This defines custom content to be displayed on the login page above the login fo
 
 ---
 
-## BASE_PATH
-
-Default: `None`
-
-The base URL path to use when accessing Nautobot. Do not include the scheme or domain name. For example, if installed at https://example.com/nautobot/, set:
-
-```python
-BASE_PATH = 'nautobot/'
-```
-
----
-
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
@@ -159,7 +147,7 @@ Previously this setting was called `CORS_ORIGIN_WHITELIST`, which still works as
 
 Default: `[]`
 
-A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests. Useful when [`CORS_ALLOWED_ORIGINS`](#cores_allowed_origins) is impractical, such as when you have a large number of subdomains.
+A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests. Useful when [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) is impractical, such as when you have a large number of subdomains.
 
 Example:
 
@@ -170,6 +158,16 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ```
 
 Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still works as an alias, with the new name taking precedence.
+
+---
+
+## CSRF_TRUSTED_ORIGINS
+
+Default: `[]`
+
+A list of hosts (fully-qualified domain names (FQDNs) or subdomains) that are considered trusted origins for cross-site secure requests such as HTTPS POST.
+
+For more information, please see the [official Django documentation on `CSRF_TRUSTED_ORIGINS`](https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins) and more generally the [official Django documentation on CSRF protection](https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works)
 
 ---
 
@@ -231,6 +229,73 @@ EXEMPT_VIEW_PERMISSIONS = ['*']
 
 !!! note
     Using a wildcard will not affect certain potentially sensitive models, such as user permissions. If there is a need to exempt these models, they must be specified individually.
+
+---
+
+## EXTERNAL_AUTH_DEFAULT_GROUPS
+
+Default: `[]` (Empty list)
+
+The list of group names to assign a new user account when created using 3rd-party authentication.
+
+---
+
+## EXTERNAL_AUTH_DEFAULT_PERMISSIONS
+
+Default: `{}` (Empty dictionary)
+
+A mapping of permissions to assign a new user account when created using SSO authentication. Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`, and the value should be set to the permission [constraints](../administration/permissions.md#constraints), or `None` to allow all objects.
+
+### Example Permissions
+
+| Permission | Description |
+|---|---|
+| `{'dcim.view_device': {}}` or `{'dcim.view_device': None}` | Users can view all devices |
+| `{'dcim.add_device': {}}` | Users can add devices, see note below |
+| `{'dcim.view_device': {"site__name__in":  ["HQ"]}}` | Users can view all devices in the HQ site |
+
+!!! warning
+    Permissions can be complicated! Be careful when restricting permissions to also add any required prerequisite permissions.
+
+    For example, when adding Devices the Device Role, Device Type, Site, and Status fields are all required fields in order for the UI to function properly. Users will also need view permissions for those fields or the corresponding field selections in the UI will be unavailable and potentially prevent objects from being able to be created or edited.
+
+The following example gives a user a reasonable amount of access to add devices to a single site (HQ in this case):
+
+```python
+{
+    'dcim.add_device': {"site__name__in":  ["HQ"]},
+    'dcim.view_device': {"site__name__in":  ["HQ"]},
+    'dcim.view_devicerole': None,
+    'dcim.view_devicetype': None,
+    'extras.view_status': None,
+    'dcim.view_site': {"name__in":  ["HQ"]},
+    'dcim.view_manufacturer': None,
+    'dcim.view_region': None,
+    'dcim.view_rack': None,
+    'dcim.view_rackgroup': None,
+    'dcim.view_platform': None,
+    'virtualization.view_cluster': None,
+    'virtualization.view_clustergroup': None,
+    'tenancy.view_tenant': None,
+    'tenancy.view_tenantgroup': None,
+}
+```
+
+Please see [the object permissions page](../administration/permissions.md) for more information.
+
+---
+
+
+## FORCE_SCRIPT_NAME
+
+Default: `None`
+
+If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. *example.com/nautobot/*).
+
+!!! important
+    To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot/`, you must set `FORCE_SCRIPT_NAME = "/nautobot/"`.
+
+Please see the [official Django documentation on `FORCE_SCRIPT_NAME`](https://docs.djangoproject.com/en/stable/ref/settings/#force-script-name) for more information.
 
 ---
 
@@ -557,16 +622,6 @@ HTTP session data is used to track authenticated users when they access Nautobot
 When the default value (`None`) is used, Nautobot will use the standard temporary directory for the system.
 
 If you set this value, you must also enable file-based sessions as explained above using [`SESSION_ENGINE`](#session_engine).
-
----
-
-## SOCIAL_AUTH_ENABLED
-
-Default: `False`
-
-Enables the social authentication backend to facilifate single-sign on (SSO) for common services like SAML, OAuth2, etc. This setting is required to be enabled to use the SSO for authentication.
-
-See the guide on [Single Sign On Authentication](../authentication/sso) for more details.
 
 ---
 
