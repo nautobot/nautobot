@@ -222,7 +222,7 @@ For example, if you have multiple `IPAddress` objects with the same `host` value
 <IPAddressQuerySet [<IPAddress: 1.1.1.1/30>]>
 ```
 
-##### `broadcast`  contains the broadcast/netmask address
+##### `broadcast`  contains the broadcast address
 
 If the prefix length is that of a host prefix (e.g. `/32`), `broadcast` will be the same as the `host` :
 
@@ -259,7 +259,7 @@ It can be used to create objects:
 >>> net = Prefix.objects.create(prefix="1.1.1.0/24")
 ```
 
-It can be used in `.get()` and `.filter()` lookups where `address` is the primary argument:
+It can be used in `.get()` and `.filter()` lookups where `prefix` is the primary argument:
 
 ```python
 >>> Prefix.objects.get(prefix="1.1.1.0/24")
@@ -307,7 +307,7 @@ For example, if you have multiple `Prefix` objects with the same `network` value
 <PrefixQuerySet [<Prefix: 1.1.1.0/25>]>
 ```
 
-##### `broadcast`  contains the broadcast/netmask address
+##### `broadcast`  contains the broadcast address
 
 The `broadcast` will be derived from the `prefix_length` and will be that of the last network address for that prefix length (e.g. `1.1.1.255`):
 
@@ -321,9 +321,11 @@ The `broadcast` will be derived from the `prefix_length` and will be that of the
 
 #### Membership Lookups
 
-Testing network member IPAM objects can no longer be filtered using filter expressions. ORM manager methods must be used instead.
+Network membership queries of IPAM objects can no longer be filtered using nested filter expressions. In most cases, where filter expressions were used before (such as `prefix__net_contained`), model manager methods must be used instead. In a few cases, nested model field lookups may be used with one of the newly-added database fields (such as `prefix_length`).
 
-Each filter lookup that has been replaced with a model manager method will be enumerated here.
+Each custom filter lookup from NetBox that will be enumerated here with how it was before, and how it is now done within Nautobot.
+
+---
 
 !!! important
 	The following lookups only apply to `Aggregate` and `Prefix` objects
@@ -332,13 +334,13 @@ Each filter lookup that has been replaced with a model manager method will be en
 
 *Returns target networks that are contained by the source network.*
 
-Before:
+NetBox:
 
 ```python
 Prefix.objects.filter(prefix__net_contained=str(instance.prefix))
 ```
 
-After:
+Nautobot:
 
 ```python
 Prefix.objects.net_contained(instance.prefix)
@@ -348,13 +350,13 @@ Prefix.objects.net_contained(instance.prefix)
 
 *Returns target networks that are contained or equal to the source network.*
 
-Before:
+NetBox:
 
 ```python
 Aggregate.objects.filter(prefix__net_contained=str(self.prefix))
 ```
 
-After:
+Nautobot:
 
 ```python
 Aggregate.objects.net_contained(self.prefix)
@@ -364,13 +366,13 @@ Aggregate.objects.net_contained(self.prefix)
 
 *Returns target networks that contain the source network.*
 
-Before:
+NetBox:
 
 ```python
 Prefix.objects.filter(prefix__net_contains=str(instance.prefix))
 ```
 
-After:
+Nautobot:
 
 ```python
 Prefix.objects.net_contains(instance.prefix)
@@ -380,13 +382,13 @@ Prefix.objects.net_contains(instance.prefix)
 
 *Returns target networks that contain or equal the source network.*
 
-Before:
+NetBox:
 
 ```python
  Aggregate.objects.filter(prefix__net_contains_or_equals=str(self.prefix))
 ```
 
-After:
+Nautobot:
 
 ```python
 Aggregate.objects.net_contains_or_equals(self.prefix)
@@ -396,13 +398,13 @@ Aggregate.objects.net_contains_or_equals(self.prefix)
 
 *Returns target networks that equal the source network.*
 
-Before:
+NetBox:
 
 ```python
 Prefix.objects.filter(prefix=str(self.prefix))
 ```
 
- After:
+ Nautobot:
 
 ```python
 Prefix.objects.net_equals(self.prefix)
@@ -420,13 +422,13 @@ Prefix.objects.net_equals(self.prefix)
 !!! note
 	This filter expression does not have a manager method equivalent. This pattern should use the `IPAddress.host` field for filtering.
 
-Before:
+NetBox:
 
 ```python
 IPAddress.objects.filter(vrf=self.vrf, address__net_host=str(self.address.ip))
 ```
 
-After:
+Nautobot:
 
 ```python
 IPAddress.objects.filter(vrf=self.vrf, host=self.host)
@@ -436,13 +438,13 @@ IPAddress.objects.filter(vrf=self.vrf, host=self.host)
 
 *Returns target IP addresses that are contained by the source prefix.*
 
-Before:
+NetBox:
 
 ```python
 IPAddress.objects.filter(address__net_host_contained=str(self.prefix))
 ```
 
-After:
+Nautobot:
 
 ```python
 IPAddress.objects.net_host_contained(self.prefix)
@@ -452,13 +454,13 @@ IPAddress.objects.net_host_contained(self.prefix)
 
 *Returns target IP addresses that are members of any of the provided source prefixes.*
 
-Before:
+NetBox:
 
 ```python
 IPAddress.objects.filter(address__net_in=[n1, n2, n3])
 ```
 
-After:
+Nautobot:
 
 ```python
 IPAddress.objects.net_in([n1, n2, n3])
@@ -468,13 +470,13 @@ IPAddress.objects.net_in([n1, n2, n3])
 
 *Returns target addresses matching the source addresses family.*
 
-Before:
+NetBox:
 
 ```python
 IPAddress.objects.filter(address__family=family)
 ```
 
-After:
+Nautobot:
 
 ```python
 IPAddress.objects.ip_family(family)
@@ -492,7 +494,7 @@ IPAddress.objects.ip_family(family)
 !!! note
 	This filter expression does not have a manager method equivalent. This pattern should use the `prefix_length` field for filtering.
 
-Before:
+NetBox:
 
 ```python
 IPAddress.objects.filter(address__net_mask_length=value)
@@ -500,7 +502,7 @@ IPAddress.objects.filter(address__net_mask_length=value)
 Prefix.objects.filter(prefix__net_mask_length=value)
 ```
 
-After:
+Nautobot:
 
 ```python
 IPAddress.objects.filter(prefix_length=value)
