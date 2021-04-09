@@ -3,6 +3,10 @@ ARG PYTHON_VER
 # Install all OS package upgrades and dependencies once from which we will base other containers
 FROM python:${PYTHON_VER}-slim as base
 
+ENV PYTHONUNBUFFERED=1 \
+    NAUTOBOT_ROOT=/opt/nautobot \
+    prometheus_multiproc_dir=/prom_cache
+
 # Install all OS package upgrades and dependencies
 # hadolint ignore=DL3005,DL3008,DL3013
 RUN apt-get update && \
@@ -18,9 +22,7 @@ RUN apt-get update && \
 FROM base as dev
 
 # Modify the PATH here because otherwise poetry fails 100% of the time. WAT??
-ENV PYTHONUNBUFFERED=1 \
-    NAUTOBOT_ROOT=/opt/nautobot \
-    PATH="${PATH}:/root/.poetry/bin"
+ENV PATH="${PATH}:/root/.poetry/bin"
 
 # Install development OS dependencies
 # hadolint ignore=DL3008
@@ -62,8 +64,8 @@ WORKDIR /source
 # -------------------------------------------------------------------------------------
 RUN poetry install --no-root --no-ansi
 
-# Generate self signed ssl certificates
-RUN mkdir /opt/nautobot && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
+# Generate required dirs and self signed ssl certificates
+RUN mkdir /opt/nautobot /prom_cache && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
     '/C=US/ST=NY/L=NYC/O=Nautobot/CN=nautobot.local' \
     -keyout /opt/nautobot/nautobot.key -out /opt/nautobot/nautobot.crt
 
@@ -105,9 +107,6 @@ RUN pip install --no-cache-dir /tmp/nautobot*.whl
 FROM base as final
 ARG PYTHON_VER
 
-ENV PYTHONUNBUFFERED=1 \
-    NAUTOBOT_ROOT=/opt/nautobot
-
 # Make sure we don't run as a root user
 RUN useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
 
@@ -126,7 +125,7 @@ COPY docker/uwsgi.ini /opt/nautobot
 COPY docker/nautobot_config.append.py /opt/nautobot
 
 # Make sure everything under /opt/nautobot is owned by nautobot
-RUN chown -R nautobot:nautobot /opt/nautobot
+RUN mkdir /prom_cache && chown -R nautobot:nautobot /opt/nautobot /prom_cache
 
 USER nautobot
 
