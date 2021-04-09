@@ -470,7 +470,7 @@ IPAddress.objects.net_in([n1, n2, n3])
 
 ##### ip_family
 
-*Returns target addresses matching the source addresses family.*
+*Returns target addresses matching the specified family.*
 
 NetBox:
 
