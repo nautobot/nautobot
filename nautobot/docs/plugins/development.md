@@ -17,7 +17,7 @@ Keep in mind that each piece of functionality is entirely optional. For example,
 ## Initial Setup
 
 !!! important "Use a Development Environment, Not Production For Plugin Development"
-    The development environment should not be your production environment. For information on getting started with a development environment, check out [https://nautobot.readthedocs.io/en/latest/development/getting-started/](https://nautobot.readthedocs.io/en/latest/development/getting-started/).
+    You should not use your production environment for plugin development. For information on getting started with a development environment, check out [https://nautobot.readthedocs.io/en/latest/development/getting-started/](https://nautobot.readthedocs.io/en/latest/development/getting-started/).
 
 ### Plugin Structure
 
