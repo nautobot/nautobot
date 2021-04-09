@@ -140,7 +140,7 @@ Below is a summary of the underlying technical changes to network fields. These 
 
 - For `IPAddress`, the `address` field was exploded out to `host`, `broadcast`, and `prefix_length` fields; `address` was converted into a computed field.
 - For `Aggregate` and `Prefix` objects, the `prefix` field was exploded out to `network`, `broadcast`, and `prefix_length` fields; `prefix` was converted into a computed field.
-- The `host`, `network`, and `broadcast` fields are now of a `varbinary` database type, which is represented as a packed binary integer (for example, the string value`"1.1.1.1"` is packed as `b"\x01\x01\x01\x01"`)
+- The `host`, `network`, and `broadcast` fields are now of a `varbinary` database type, which is represented as a packed binary integer (for example, the host `1.1.1.1` is packed as `b"\x01\x01\x01\x01"`)
 - Network membership queries are accomplished by triangulating the "position" of an address using the IP, broadcast, and prefix length of the source and target addresses.
 
 !!! note
@@ -511,4 +511,3 @@ IPAddress.objects.filter(prefix_length=value)
 # or
 Prefix.objects.filter(prefix_length=value)
 ```
-
