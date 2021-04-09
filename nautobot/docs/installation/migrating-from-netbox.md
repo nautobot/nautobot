@@ -82,11 +82,11 @@ For example, the built-in **Active** status has a slug of `active`, so the `acti
 Because `status` fields are now stored in the database, they cannot have a default value, just like other similar objects like Device Roles or Device Types. In cases where `status` was not required to be set because it would use the default value, you must now provide a `status` yourself.  
 
 !!! note
-	For convenience in the API, the `slug` value of a `status` is used when creating or updating an object.
+	For consistency in the API, the `slug` value of a `status` is used when creating or updating an object.
 
 #### Choices in Code
 
-All `choices` enums used for populated `status` field choices (such as `nautobot.dcim.choices.DeviceStatusChoices`) are deprecated. Any code you have that is leveraging these will now result in an error when performing lookups.
+All `*StatusChoices` enums used for populated `status` field choices (such as `nautobot.dcim.choices.DeviceStatusChoices`) are deprecated. Any code you have that is leveraging these will now result in an error when performing lookups on objects with `status` fields.
 
 Anywhere you have code like this:
 
@@ -117,7 +117,7 @@ Database keys are now defined as randomly-generated [Universally Unique Identifi
 
 There is no longer a distinct `UserConfig` model; instead, user configuration and preferences are stored directly on the `User` model under the key `config_data`.
 
-### Custom Field Choices
+### Custom Fields
 
 !!! tip
 	You can no longer rename or change the type of a custom field.
@@ -125,24 +125,26 @@ There is no longer a distinct `UserConfig` model; instead, user configuration an
 Custom Fields have been overhauled for asserting data integrity and improving user experience.
 
 - Custom Fields can no longer be renamed or have their type changed after they have been created.
-- Choices for Custom Fields are now stored as discrete database objects. Choices that are in active use cannot be deleted.
+- Choices for Custom Fields are now stored as discrete `CustomFieldChoice` database objects. Choices that are in active use cannot be deleted.
 
 ### IPAM Network Field Types
 
 !!! tip
-	IPAM network objects have been overhauled and network membership queries using nested filter expressions will need to be updated in your code.
+	IPAM network objects have been overhauled and network membership queries using nested filter expressions and custom lookups will need to be updated in your code.
 
 All IPAM objects with network field types (`ipam.Aggregate`, `ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types.
 
 #### Technical Details
 
-- For `IPAddress`, the `address` field was exploded out to `host`, `broadcast`, and `prefix_length` fields
-- For `Aggregate` and `Prefix` objects, the `prefix` field was exploded out to `network`, `broadcast`, and `prefix_length`
+Below is a summary of the underlying technical changes to network fields. These will be explained in more detail in the following sections.
+
+- For `IPAddress`, the `address` field was exploded out to `host`, `broadcast`, and `prefix_length` fields; `address` was converted into a computed field.
+- For `Aggregate` and `Prefix` objects, the `prefix` field was exploded out to `network`, `broadcast`, and `prefix_length` fields; `prefix` was converted into a computed field.
 - The `host`, `network`, and `broadcast` fields are now of a `varbinary` database type, which is represented as a packed binary integer (for example, the string value`"1.1.1.1"` is packed as `b"\x01\x01\x01\x01"`)
 - Network membership queries are accomplished by triangulating the "position" of an address using the IP, broadcast, and prefix length of the source and target addresses.
 
 !!! note
-	You should never have to worry about the binary nature of how the network fields are stored in the database! The ORM takes care of it all!
+	You should never have to worry about the binary nature of how the network fields are stored in the database! The Django database ORM takes care of it all!
 
 #### Changes to `IPAddress`
 
@@ -222,7 +224,7 @@ For example, if you have multiple `IPAddress` objects with the same `host` value
 <IPAddressQuerySet [<IPAddress: 1.1.1.1/30>]>
 ```
 
-##### `broadcast`  contains the broadcast address
+##### `broadcast` contains the broadcast address
 
 If the prefix length is that of a host prefix (e.g. `/32`), `broadcast` will be the same as the `host` :
 
@@ -294,7 +296,7 @@ This is an integer, such as `24` for `/24`.
 24
 ```
 
-It's highly likely that you will might have multiple objects with the same `network` address but varying prefix lengths, so you will need to filter using `network` and `prefix_length` fields for greater accuracy.
+It's highly likely that you will have multiple objects with the same `network` address but varying prefix lengths, so you will need to filter using `network` and `prefix_length` fields for greater accuracy.
 
 For example, if you have multiple `Prefix` objects with the same `network` value but different `prefix_length`:
 
@@ -307,7 +309,7 @@ For example, if you have multiple `Prefix` objects with the same `network` value
 <PrefixQuerySet [<Prefix: 1.1.1.0/25>]>
 ```
 
-##### `broadcast`  contains the broadcast address
+##### `broadcast` contains the broadcast address
 
 The `broadcast` will be derived from the `prefix_length` and will be that of the last network address for that prefix length (e.g. `1.1.1.255`):
 
@@ -321,9 +323,9 @@ The `broadcast` will be derived from the `prefix_length` and will be that of the
 
 #### Membership Lookups
 
-Network membership queries of IPAM objects can no longer be filtered using nested filter expressions. In most cases, where filter expressions were used before (such as `prefix__net_contained`), model manager methods must be used instead. In a few cases, nested model field lookups may be used with one of the newly-added database fields (such as `prefix_length`).
+Network membership queries of IPAM objects can no longer be performed using nested filter expressions. In most cases, where custom lookups were used before (such as `prefix__net_contained`), model manager methods must be used instead. In a few cases, nested model field lookups may be used with one of the newly-added database fields (such as `prefix_length`).
 
-Each custom filter lookup from NetBox that will be enumerated here with how it was before, and how it is now done within Nautobot.
+Each custom filter lookup from NetBox will be enumerated here illustrating how it was done before, and how it is now done within Nautobot.
 
 ---
 
@@ -353,13 +355,13 @@ Prefix.objects.net_contained(instance.prefix)
 NetBox:
 
 ```python
-Aggregate.objects.filter(prefix__net_contained=str(self.prefix))
+Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
 ```
 
 Nautobot:
 
 ```python
-Aggregate.objects.net_contained(self.prefix)
+Prefix.objects.net_contained_or_equal(self.prefix)
 ```
 
 ##### net_contains
@@ -420,7 +422,7 @@ Prefix.objects.net_equals(self.prefix)
 *Returns target IP addresses that match the host of the source IP address.*
 
 !!! note
-	This filter expression does not have a manager method equivalent. This pattern should use the `IPAddress.host` field for filtering.
+	This custom lookup does not have a manager method equivalent. This pattern should use the `host` field for filtering.
 
 NetBox:
 
@@ -492,7 +494,7 @@ IPAddress.objects.ip_family(family)
 *Returns target addresses matching the source address prefix length.*
 
 !!! note
-	This filter expression does not have a manager method equivalent. This pattern should use the `prefix_length` field for filtering.
+	This custom lookup does not have a manager method equivalent. This pattern should use the `prefix_length` field for filtering.
 
 NetBox:
 
