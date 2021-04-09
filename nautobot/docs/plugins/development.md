@@ -206,7 +206,7 @@ Once you have defined the model(s) for your plugin, you'll need to create the da
 Creating migrations can be done automatically using the `nautobot-server makemigrations <plugin_name>` management command, where `<plugin_name>` is the name of the Python package for your plugin (e.g. `animal_sounds`):
 
 ```no-highlight
-$ nautobot-server makemigrations animal_sounds
+$ nautobot-server makemigrations nautobot_animal_sounds
 ```
 
 !!! note
