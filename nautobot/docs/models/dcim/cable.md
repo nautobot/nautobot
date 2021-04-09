@@ -13,13 +13,11 @@ Each cable must have two endpoints defined. These endpoints are sometimes refere
 * Power outlets
 * Power ports
 
-Each cable may be assigned a type, label, length, and color. Each cable must also assigned one of three operational [`statuses`](https://nautobot.readthedocs.io/en/latest/models/extras/status/):
+Each cable may be assigned a type, label, length, and color. Each cable must also assigned to an operational [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/). The following statuses are available by default:
 
 * Active 
 * Planned
 * Decommissioning
-
-Status fields can now be customized via the new [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/) model.
 
 ## Tracing Cables
 

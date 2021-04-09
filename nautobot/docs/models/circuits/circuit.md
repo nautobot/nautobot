@@ -4,7 +4,7 @@ A communications circuit represents a single _physical_ link connecting exactly 
 
 Each circuit is associated with a provider and a user-defined type. For example, you might have Internet access circuits delivered to each site by one provider, and private MPLS circuits delivered by another. Each circuit must be assigned a circuit ID, each of which must be unique per provider.
 
-Each circuit must be assigned to a [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/) the following statuses are available by default:
+Each circuit must be assigned to a [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/). The following statuses are available by default:
 
 * Planned
 * Provisioning
@@ -12,8 +12,6 @@ Each circuit must be assigned to a [`status`](https://nautobot.readthedocs.io/en
 * Offline
 * Deprovisioning
 * Decommissioned
-
-Status fields can now be customized via the new [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/) model. 
 
 Circuits also have optional fields for annotating their installation date and commit rate, and may be assigned to Nautobot tenants.
 

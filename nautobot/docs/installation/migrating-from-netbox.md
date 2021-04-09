@@ -65,7 +65,7 @@ The following backwards-incompatible changes have been made to the data model in
 !!! tip
     Status names are now lower-cased when setting the `status` field on CSV imports.
 
-A new [`Status`](../models/extras/status.md) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), and a `slug` field (e.g. `active`).
+A new [`Status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), and a `slug` field (e.g. `active`).
 
 When using CSV import to define a `status` field on imported objects, such as when importing Devices or Prefixes, the `Status.slug` field is used.
 
