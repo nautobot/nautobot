@@ -609,22 +609,25 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
 
         Ref: https://github.com/nautobot/nautobot/issues/265
         """
+        self.add_permissions("ipam.add_service")
+        url = reverse("ipam-api:service-list")
         device = self.devices[0]
 
-        # Ports as string should be good.
         data = {
             "name": "http",
             "protocol": "tcp",
             "device": str(device.id),
             "ports": ["80"],
         }
+        expected = [80]  # We'll test w/ this
 
-        self.add_permissions("ipam.add_service")
-        url = reverse("ipam-api:service-list")
+        # Ports as string should be good.
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["ports"], expected)
 
-        # And do it again, but with ports as int
-        data["ports"] = [80]
+        # And do it again, but with ports as int.
+        data["ports"] = expected
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["ports"], expected)
