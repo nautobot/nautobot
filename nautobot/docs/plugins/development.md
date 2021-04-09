@@ -16,6 +16,9 @@ However, keep in mind that each piece of functionality is entirely optional. For
 
 ## Initial Setup
 
+!!! important "Use a Development Environment, Not Production For Plugin Development"
+    The development environment should not be your production environment. For information on getting started with a development environment, check out https://nautobot.readthedocs.io/en/latest/development/getting-started/.
+
 ### Plugin Structure
 
 Although the specific structure of a plugin is largely left to the discretion of its authors, a Nautobot plugin that makes use of all available plugin features described in this document would look something like this:
@@ -158,8 +161,12 @@ To install the plugin for development the following steps should be taken:
 * Activate the Nautobot virtual environment (`/opt/nautobot/bin/activate` if using official doc)
 * Navigate to the project root, where the `pyproject.toml` file exists for the plugin
 * Execute the command `poetry install` to install the local package into the Nautobot virtual environment
- 
-> Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
+
+!!! note
+    Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
+
+!!! important "This should be done in development environment"
+    The development environment should not be your production environment. For information on getting started with a development environment, check out https://nautobot.readthedocs.io/en/latest/development/getting-started/.
 
 ```no-highlight
 $ poetry install
