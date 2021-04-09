@@ -166,7 +166,7 @@ To install the plugin for development the following steps should be taken:
     Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
 
 !!! important "This should be done in development environment"
-    The development environment should not be your production environment. For information on getting started with a development environment, check out [https://nautobot.readthedocs.io/en/latest/development/getting-started/](https://nautobot.readthedocs.io/en/latest/development/getting-started/).
+    You should not use your production environment for plugin development. For information on getting started with a development environment, check out [https://nautobot.readthedocs.io/en/latest/development/getting-started/](https://nautobot.readthedocs.io/en/latest/development/getting-started/).
 
 ```no-highlight
 $ poetry install
