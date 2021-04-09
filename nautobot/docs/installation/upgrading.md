@@ -40,7 +40,7 @@ Once the new code is in place, verify that any optional Python packages required
 Then, upgrade your dependencies using `pip3`:
 
 ```no-highlight
-$ pip3 install --upgrade $NAUTOBOT_ROOT/local_requirements.txt
+$ pip3 install --upgrade -r $NAUTOBOT_ROOT/local_requirements.txt
 ```
 
 ## Run the Post Upgrade Operations
