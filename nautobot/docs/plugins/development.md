@@ -12,7 +12,7 @@ Plugins can do a lot, including:
 * Establish their own REST API endpoints
 * Add custom request/response middleware
 
-However, keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
+Keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
 ## Initial Setup
 
