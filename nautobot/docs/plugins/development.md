@@ -386,7 +386,7 @@ from .serializers import AnimalSerializer
 
 
 class AnimalViewSet(ModelViewSet):
-    ""API viewset for interacting with Animal objects."""
+    """API viewset for interacting with Animal objects."""
 
     queryset = Animal.objects.all()
     serializer_class = AnimalSerializer
@@ -596,9 +596,9 @@ from nautobot.extras.registry import DatasourceContent
 from .models import Animal
 
 
-def refresh_git_animals(repository_record, job_result):
+def refresh_git_animals(repository_record, job_result, delete=False):
     """Callback for GitRepository updates - refresh Animals managed by it."""
-    if 'nautobot_animal_sounds.Animal' not in repository_record.provided_contents:
+    if 'nautobot_animal_sounds.Animal' not in repository_record.provided_contents or delete:
         # This repository is defined not to provide Animal records.
         # In a more complete worked example, we might want to iterate over any
         # Animals that might have been previously created by this GitRepository
@@ -609,7 +609,7 @@ def refresh_git_animals(repository_record, job_result):
     # /animals/ directory at the repository root.
     animal_path = os.path.join(repository_record.filesystem_path, 'animals')
     for filename in os.listdir(animal_path):
-        with open(os.path.join(animal_path, filename) as fd:
+        with open(os.path.join(animal_path, filename)) as fd:
             animal_data = yaml.safe_load(fd)
 
         # Create or update an Animal record based on the provided data

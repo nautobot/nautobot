@@ -1,7 +1,7 @@
 # Configuring an HTTP Server
 
 !!! warning
-    As of Nautobot v1.0.0b2 these instructions are in a pre-release state and will be evolving rapidly!
+    As of Nautobot v1.0.0b3 these instructions are in a pre-release state and will be evolving rapidly!
 
 This documentation provides example configurations for [NGINX](https://www.nginx.com/resources/wiki/) though any HTTP server which supports WSGI should be compatible.
 

@@ -352,7 +352,7 @@ class GraphQLAPIPermissionTest(TestCase):
         """
 
         self.get_racks_var_query = """
-        query ($site: String!) {
+        query ($site: [ID]!) {
             racks(site: $site) {
                 name
             }

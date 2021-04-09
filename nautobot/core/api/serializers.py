@@ -84,7 +84,7 @@ class WritableNestedSerializer(serializers.ModelSerializer):
             # PK of related object
             try:
                 # Ensure the pk is a valid UUID
-                pk = uuid.UUID(str(data), version=4)
+                pk = uuid.UUID(str(data))
             except (TypeError, ValueError):
                 raise ValidationError(
                     "Related objects must be referenced by ID or by dictionary of attributes. Received an "
