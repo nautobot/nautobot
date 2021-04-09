@@ -141,10 +141,13 @@ $ sudo systemctl restart nginx
 !!! info
     If the restart fails, and you changed the default key location, check to make sure the `nautobot.conf` file you pasted has the updated key location. For example, CentOS requires keys to be in `/etc/pki/tls/` instead of `/etc/ssl/`.
 
-## Confirm Permissions for /opt/nautobot
+## Confirm Permissions for NAUTOBOT_ROOT
 
-Ensure that the `/opt/nautobot/` permissions are set to `755`.
-If permissions need to be changed, as the `nautobot` user run: `$ chmod 755 /opt/nautobot/`
+Ensure that the `NAUTOBOT_ROOT` permissions are set to `755`.
+If permissions need to be changed, as the `nautobot` user run: 
+```no-highlight
+$ chmod 755 $NAUTOBOT_ROOT
+```
 
 ## Confirm Connectivity
 
@@ -166,7 +169,7 @@ If you are unable to connect to the HTTP server, check that:
 - Access is not being blocked by a firewall somewhere along the path. (Try connecting locally from the server itself.)
 
 ### Static Media Failure
-If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify the permissions on the `/opt/nautobot/` directory are `755`.
+If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify the permissions on the `$NAUTOBOT_ROOT` directory are `755`.
 
 Example of correct permissions:
 ```no-highlight
@@ -183,7 +186,7 @@ Example of modifying the permissions:
 [nautobot@localhost ~]$ ls -l /opt/
 total 4
 drwx------. 11 nautobot nautobot 4096 Apr  5 10:00 nautobot
-[nautobot@localhost ~]$ chmod 755 /opt/nautobot/
+[nautobot@localhost ~]$ chmod 755 $NAUTOBOT
 [nautobot@localhost ~]$ ls -l /opt/
 total 4
 drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
