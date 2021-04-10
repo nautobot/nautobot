@@ -1,5 +1,6 @@
 from django.contrib.postgres.aggregates import JSONBAgg
 from django.contrib.postgres.aggregates.mixins import OrderableAggMixin
+from django.db import NotSupportedError
 from django.db.models import Func
 
 
@@ -8,8 +9,19 @@ class CollateAsChar(Func):
     Disregard localization by collating a field as a plain character string. Helpful for ensuring predictable ordering.
     """
 
-    function = "C"
-    template = '(%(expressions)s) COLLATE "%(function)s"'
+    function = None
+    template = "(%(expressions)s) COLLATE %(function)s"
+
+    def as_sql(self, compiler, connection, function=None, template=None, arg_joiner=None, **extra_context):
+        engine = connection.settings_dict["ENGINE"]
+        if "postgres" in engine:
+            function = '"C"'
+        elif "mysql" in engine:
+            function = "utf8mb4_bin"
+        else:
+            raise NotSupportedError(f"CollateAsChar is not supported for database {engine}")
+
+        return super().as_sql(compiler, connection, function, template, arg_joiner, **extra_context)
 
 
 class OrderableJSONBAgg(OrderableAggMixin, JSONBAgg):
