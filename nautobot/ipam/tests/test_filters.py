@@ -250,6 +250,7 @@ class AggregateTestCase(TestCase):
             RIR.objects.create(name="RIR 2", slug="rir-2"),
             RIR.objects.create(name="RIR 3", slug="rir-3"),
         )
+        cls.rirs = rirs
 
         tenant_groups = (
             TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
@@ -268,37 +269,43 @@ class AggregateTestCase(TestCase):
             rir=rirs[0],
             tenant=tenants[0],
             date_added="2020-01-01",
-        ),
+        )
         Aggregate.objects.create(
             prefix="10.2.0.0/16",
             rir=rirs[0],
             tenant=tenants[1],
             date_added="2020-01-02",
-        ),
+        )
         Aggregate.objects.create(
             prefix="10.3.0.0/16",
             rir=rirs[1],
             tenant=tenants[2],
             date_added="2020-01-03",
-        ),
+        )
         Aggregate.objects.create(
             prefix="2001:db8:1::/48",
             rir=rirs[1],
             tenant=tenants[0],
             date_added="2020-01-04",
-        ),
+        )
         Aggregate.objects.create(
             prefix="2001:db8:3::/48",
             rir=rirs[2],
             tenant=tenants[2],
             date_added="2020-01-06",
-        ),
+        )
         Aggregate.objects.create(
             prefix="2001:db8:2::/48",
             rir=rirs[2],
             tenant=tenants[1],
             date_added="2020-01-05",
-        ),
+        )
+
+    def test_search(self):
+        Aggregate.objects.create(prefix="10.150.255.0/31", rir=self.rirs[0])
+        Aggregate.objects.create(prefix="10.150.255.2/31", rir=self.rirs[0])
+        params = {"q": "10.150.255.2/31"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -442,7 +449,7 @@ class PrefixTestCase(TestCase):
             vlan=vlans[0],
             role=roles[0],
             status=status_map["active"],
-        ),
+        )
         Prefix.objects.create(
             prefix="10.0.2.0/24",
             tenant=tenants[1],
@@ -451,7 +458,7 @@ class PrefixTestCase(TestCase):
             vlan=vlans[1],
             role=roles[1],
             status=status_map["deprecated"],
-        ),
+        )
         Prefix.objects.create(
             prefix="10.0.3.0/24",
             tenant=tenants[2],
@@ -460,7 +467,7 @@ class PrefixTestCase(TestCase):
             vlan=vlans[2],
             role=roles[2],
             status=status_map["reserved"],
-        ),
+        )
         Prefix.objects.create(
             prefix="2001:db8::/64",
             tenant=None,
@@ -470,7 +477,7 @@ class PrefixTestCase(TestCase):
             role=None,
             is_pool=True,
             status=status_map["active"],
-        ),
+        )
         Prefix.objects.create(
             prefix="2001:db8:0:1::/64",
             tenant=tenants[0],
@@ -479,7 +486,7 @@ class PrefixTestCase(TestCase):
             vlan=vlans[0],
             role=roles[0],
             status=status_map["active"],
-        ),
+        )
         Prefix.objects.create(
             prefix="2001:db8:0:2::/64",
             tenant=tenants[1],
@@ -488,7 +495,7 @@ class PrefixTestCase(TestCase):
             vlan=vlans[1],
             role=roles[1],
             status=status_map["deprecated"],
-        ),
+        )
         Prefix.objects.create(
             prefix="2001:db8:0:3::/64",
             tenant=tenants[2],
@@ -497,9 +504,15 @@ class PrefixTestCase(TestCase):
             vlan=vlans[2],
             role=roles[2],
             status=status_map["reserved"],
-        ),
+        )
         Prefix.objects.create(prefix="10.0.0.0/16", status=status_map["active"]),
         Prefix.objects.create(prefix="2001:db8::/32", status=status_map["active"]),
+
+    def test_search(self):
+        Prefix.objects.create(prefix="10.150.255.0/31")
+        Prefix.objects.create(prefix="10.150.255.2/31")
+        params = {"q": "10.150.255.2/31"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
