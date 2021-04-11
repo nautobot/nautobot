@@ -1,18 +1,22 @@
 import types
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
-from django.test import override_settings
+from django.test import TestCase, override_settings
+from django.test.client import RequestFactory
 from django.urls import reverse
 from graphene_django import DjangoObjectType
-from graphql.error import GraphQLLocatedError
+from graphene_django.settings import graphene_settings
+from graphql.error.located_error import GraphQLLocatedError
+from graphql import get_default_backend
 from rest_framework import status
 from rest_framework.test import APIClient
 
+
 from nautobot.utilities.testing import APITestCase
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission, Token, User
 from nautobot.dcim.models import (
     Device,
     Site,
@@ -352,7 +356,7 @@ class GraphQLAPIPermissionTest(TestCase):
         """
 
         self.get_racks_var_query = """
-        query ($site: [ID]!) {
+        query ($site: [String]) {
             racks(site: $site) {
                 name
             }
@@ -486,36 +490,65 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(site_names, ["Site 1", "Site 2"])
 
 
-class GraphQLQuery(APITestCase):
+class GraphQLQuery(TestCase):
     def setUp(self):
         """Initialize the Database with some datas."""
         super().setUp()
+        self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
-        self.api_url = reverse("graphql-api")
+        # Initialize fake request that will be required to execute GraphQL query
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        self.backend = get_default_backend()
+        self.schema = graphene_settings.SCHEMA
 
         # Populate Data
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        self.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        self.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         self.region = Region.objects.create(name="Region")
-        self.site = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
+        self.site1 = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
+        self.site2 = Site.objects.create(name="Site-2", slug="site-2", region=self.region)
 
-        self.device = Device.objects.create(
+        self.device1 = Device.objects.create(
             name="Device 1",
             device_type=self.devicetype,
-            device_role=self.devicerole,
-            site=self.site,
+            device_role=self.devicerole1,
+            site=self.site1,
+        )
+        self.device2 = Device.objects.create(
+            name="Device 2",
+            device_type=self.devicetype,
+            device_role=self.devicerole2,
+            site=self.site1,
+        )
+        self.device3 = Device.objects.create(
+            name="Device 3",
+            device_type=self.devicetype,
+            device_role=self.devicerole1,
+            site=self.site2,
         )
 
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
         context1.regions.add(self.region)
 
+    def execute_query(self, query, variables=None):
+
+        document = self.backend.document_from_string(self.schema, query)
+        if variables:
+            return document.execute(context_value=self.request, variable_values=variables)
+        else:
+            return document.execute(context_value=self.request)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context(self):
 
-        get_device_config_context = """
+        query = """
         query {
             devices {
                 name
@@ -526,24 +559,20 @@ class GraphQLQuery(APITestCase):
 
         expected_data = {"a": 123, "b": 456, "c": 777}
 
-        response = self.client.post(
-            self.api_url,
-            data=get_device_config_context,
-            content_type="application/graphql",
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data["data"]["devices"], list)
-        device_names = [item["name"] for item in response.data["data"]["devices"]]
-        self.assertEqual(device_names, ["Device 1"])
+        result = self.execute_query(query)
 
-        config_context = [item["config_context"] for item in response.data["data"]["devices"]]
+        self.assertIsInstance(result.data["devices"], list)
+        device_names = [item["name"] for item in result.data["devices"]]
+        self.assertEqual(device_names, ["Device 1", "Device 2", "Device 3"])
+
+        config_context = [item["config_context"] for item in result.data["devices"]]
         self.assertIsInstance(config_context[0], dict)
         self.assertDictEqual(config_context[0], expected_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_with_filter(self):
+    def test_query_device_role_filter(self):
 
-        get_device_with_filter = """
+        query = """
             query {
                 devices(role: "device-role-1") {
                     id
@@ -551,18 +580,31 @@ class GraphQLQuery(APITestCase):
                 }
             }
         """
-        response = self.client.post(
-            self.api_url,
-            data=get_device_with_filter,
-            content_type="application/graphql",
-        )
+        result = self.execute_query(query)
 
-        self.assertEqual(len(response.data["data"]["devices"]), 1)
+        self.assertEqual(len(result.data["devices"]), 2)
+        device_names = [item["name"] for item in result.data["devices"]]
+        self.assertEqual(device_names, ["Device 1", "Device 3"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_device_name_filter(self):
+
+        query = """
+            query {
+                devices(name: "Device 1") {
+                    id
+                    name
+                }
+            }
+        """
+        result = self.execute_query(query)
+
+        self.assertEqual(len(result.data["devices"]), 1)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_with_bad_filter(self):
 
-        get_device_with_filter = """
+        query = """
             query {
                 devices(role: "EXPECT NO ENTRIES") {
                     id
@@ -570,21 +612,7 @@ class GraphQLQuery(APITestCase):
                 }
             }
         """
-        response = self.client.post(
-            self.api_url,
-            data=get_device_with_filter,
-            content_type="application/graphql",
-        )
-        self.assertEqual(
-            response.data,
-            {
-                "errors": [
-                    {
-                        "message": "{'role': ['Select a valid choice. EXPECT NO ENTRIES is not one of the available choices.']}",
-                        "locations": [{"line": 3, "column": 17}],
-                        "path": ["devices"],
-                    },
-                ],
-                "data": {"devices": None},
-            },
-        )
+
+        response = self.execute_query(query)
+        self.assertEqual(len(response.errors), 1)
+        self.assertIsInstance(response.errors[0], GraphQLLocatedError)
