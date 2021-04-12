@@ -14,6 +14,7 @@ from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import ModelViewSet
 from nautobot.extras import filters
 from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
     ConfigContext,
     CustomLink,
@@ -142,6 +143,19 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
     queryset = GitRepository.objects.all()
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
+
+    @swagger_auto_schema(method="post", request_body=serializers.GitRepositorySerializer)
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        """
+        Enqueue pull git repository and refresh data.
+        """
+        if not Worker.count(get_connection("default")):
+            raise RQWorkerNotRunningException()
+
+        repository = GitRepository.objects.get(id=pk)
+        enqueue_pull_git_repository_and_refresh_data(repository, request)
+        return Response(f"Repository {repository} sync job started.")
 
 
 #
