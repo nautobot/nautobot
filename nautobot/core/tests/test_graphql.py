@@ -598,7 +598,7 @@ class GraphQLQuery(TestCase):
 
         self.assertIsInstance(result.data["devices"], list)
         device_names = [item["name"] for item in result.data["devices"]]
-        self.assertEqual(device_names, ["Device 1", "Device 2", "Device 3"])
+        self.assertEqual(sorted(device_names), ["Device 1", "Device 2", "Device 3"])
 
         config_context = [item["config_context"] for item in result.data["devices"]]
         self.assertIsInstance(config_context[0], dict)
@@ -619,7 +619,7 @@ class GraphQLQuery(TestCase):
 
         self.assertEqual(len(result.data["devices"]), 2)
         device_names = [item["name"] for item in result.data["devices"]]
-        self.assertEqual(device_names, ["Device 1", "Device 3"])
+        self.assertEqual(sorted(device_names), ["Device 1", "Device 3"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_with_bad_filter(self):
