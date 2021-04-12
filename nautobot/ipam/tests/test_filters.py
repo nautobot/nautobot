@@ -511,7 +511,7 @@ class PrefixTestCase(TestCase):
     def test_search(self):
         Prefix.objects.create(prefix="10.150.255.0/31")
         Prefix.objects.create(prefix="10.150.255.2/31")
-        params = {"q": "10.150.255.2/31"}
+        params = {"q": "10.150.255.0/31"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_id(self):
