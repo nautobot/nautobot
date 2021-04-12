@@ -181,7 +181,7 @@ From the `devices` query, select `devices` from `Query.devices`. This will displ
 
 Now that you have a basic understanding of how to obtain information to query from the *Documentation Explorer*, let's craft a query. Earlier in the guide, a sample REST API call was performed to obtain device information. While the query had a lot of important information, it also lacked a lot of information. In this section, lets explore how to craft a GraphQL query that displays all of the information that we want.
 
-GraphQL queries are encapsulated in `query { }` flags. In recent iterations of GraphQL, `{ }` is also acceptable. With that in mind, lets craft our query. From the GraphiQL interfaces, lets query for all devices and display their device names. To do this, let's execute:
+GraphQL queries are encapsulated in `query { }` flags (simply `{ }` is also acceptable). With that in mind, let's craft our query from the GraphiQL interface to inspect all devices and display their device names. To do this, let's execute:
 
 ```graphql
 query {
