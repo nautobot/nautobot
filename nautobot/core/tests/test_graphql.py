@@ -1,8 +1,6 @@
 import types
 import uuid
 
-# from parameterized import parameterized
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -18,7 +16,7 @@ from rest_framework.test import APIClient
 
 
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.dcim.models import Device, Site, Region, Rack, Manufacturer, DeviceType, DeviceRole, Interface
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.choices import InterfaceTypeChoices
