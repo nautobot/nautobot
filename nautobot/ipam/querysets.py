@@ -185,16 +185,40 @@ class IPAddressQuerySet(RestrictedQuerySet):
 
     def string_search(self, search):
         """
-        Attempt to interpret a search string and return useful results
+        Interpret a search string and return useful results.
         """
-        string_filters = Q(dns_name__icontains=search) | Q(description__icontains=search)
-
-        network = netaddr.IPNetwork(search)
+        network = self._parse_as_network_string(search)
         broadcast = self._get_broadcast(network)
-
+        # breakpoint()
         return self.filter(
-            string_filters | Q(host__lte=broadcast, host__gte=network.network)  # same as `net_host_contained()`
+            Q(dns_name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(host__lte=broadcast, host__gte=network.network)  # same as `net_host_contained()`
         )
+
+    def _parse_as_network_string(self, search):
+        """
+        Attempts to parse a (potentially incomplete) IPAddress and return an IPNetwork.
+        eg: '10.10' should be interpreted as netaddr.IPNetwork('10.10.0.0/16')
+        """
+        if not search:
+            netaddr.IPNetwork("0/32")
+        try:
+            # disregard netmask
+            search = search.split("/")[0]
+
+            # get non-empty octets from search string
+            octets = search.split(".")
+            octets = list(filter(lambda o: o, octets))
+            prefix_len = 8 * len(octets)
+
+            # create an netaddr.IPNetwork to search within
+            octets.extend(["0" for _ in range(len(octets), 4)])
+            ip = f"{octets[0]}.{octets[1]}.{octets[2]}.{octets[3]}/{prefix_len}"
+            return netaddr.IPNetwork(ip)
+
+        except netaddr.core.AddrFormatError:
+            return netaddr.IPNetwork("0/32")
 
     def ip_family(self, family):
         try:

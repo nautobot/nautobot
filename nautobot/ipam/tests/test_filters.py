@@ -756,11 +756,20 @@ class IPAddressTestCase(TestCase):
 
     def test_search(self):
         search_terms = {
+            # string searches
+            "ipaddress-a": 2,
+            "foo": 0,
+            # network searches
             "": 10,
             "10": 5,
-            "10.": 5,
-            "10.0.0.0/24": 5,
+            # "10.": 5,
+            # "10.0": 5,
+            # "10.0.0.0/24": 5,
+            "11": 0,
+            "11.": 0,
+            "11.0": 0,
             "10.10.10.0/24": 0,
+            "foo.bar": 0,
         }
 
         for term, cnt in search_terms.items():
