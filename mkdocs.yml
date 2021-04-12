@@ -10,6 +10,7 @@ theme:
     name: readthedocs
     navigation_depth: 4
     hljs_languages:
+        - django
         - yaml
 extra_css:
     - extra.css
@@ -38,6 +39,8 @@ nav:
         - LDAP: 'configuration/authentication/ldap.md'
         - SSO: 'configuration/authentication/sso.md'
         - Remote Header: 'configuration/authentication/remote.md'
+    - User Guides:
+        - Git as a Data Source: 'user-guides/git-data-source.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'

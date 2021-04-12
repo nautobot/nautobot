@@ -199,7 +199,7 @@ def cli(context):
 @task(help={"user": "name of the superuser to create"})
 def createsuperuser(context, user="admin"):
     """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
-    docker_compose(context, "run nautobot nautobot-server createsuperuser --username {user}", pty=True)
+    docker_compose(context, f"run nautobot nautobot-server createsuperuser --username {user}", pty=True)
 
 
 @task(help={"name": "name of the migration to be created; if unspecified, will autogenerate a name"})

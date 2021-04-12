@@ -20,7 +20,7 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.ipam.choices import *
-from nautobot.ipam.constants import IPADDRESS_ASSIGNMENT_MODELS
+from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
@@ -364,7 +364,7 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     role = ChoiceField(choices=IPAddressRoleChoices, allow_blank=True, required=False)
     assigned_object_type = ContentTypeField(
-        queryset=ContentType.objects.filter(IPADDRESS_ASSIGNMENT_MODELS),
+        queryset=ContentType.objects.filter(constants.IPADDRESS_ASSIGNMENT_MODELS),
         required=False,
         allow_null=True,
     )
@@ -444,6 +444,12 @@ class ServiceSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
         serializer=NestedIPAddressSerializer,
         required=False,
         many=True,
+    )
+    ports = serializers.ListField(
+        child=serializers.IntegerField(
+            min_value=constants.SERVICE_PORT_MIN,
+            max_value=constants.SERVICE_PORT_MAX,
+        )
     )
 
     class Meta:

@@ -596,7 +596,7 @@ class IPAddressView(generic.ObjectView):
         # Duplicate IPs table
         duplicate_ips = (
             IPAddress.objects.restrict(request.user, "view")
-            .filter(vrf=instance.vrf, host=bytes(instance.host))
+            .filter(vrf=instance.vrf, host=instance.host)
             .exclude(pk=instance.pk)
             .prefetch_related("nat_inside")
         )
@@ -610,7 +610,7 @@ class IPAddressView(generic.ObjectView):
         related_ips = (
             IPAddress.objects.restrict(request.user, "view")
             .net_host_contained(instance.address)
-            .exclude(host=bytes(instance.host))
+            .exclude(host=instance.host)
             .filter(vrf=instance.vrf)
         )
         related_ips_table = tables.IPAddressTable(related_ips, orderable=False)
