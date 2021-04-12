@@ -754,6 +754,19 @@ class IPAddressTestCase(TestCase):
             status=status_map["active"],
         ),
 
+    def test_search(self):
+        search_terms = {
+            "": 10,
+            "10": 5,
+            "10.": 5,
+            "10.0.0.0/24": 5,
+            "10.10.10.0/24": 0,
+        }
+
+        for term, cnt in search_terms.items():
+            params = {"q": term}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
+
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)

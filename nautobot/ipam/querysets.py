@@ -13,7 +13,6 @@ from django.db.models import (
     UUIDField,
     Value,
 )
-from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce, Length
 
 from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
@@ -183,6 +182,19 @@ class IPAddressQuerySet(RestrictedQuerySet):
         IP address as a /32 or /128.
         """
         return super().order_by("host")
+
+    def string_search(self, search):
+        """
+        Attempt to interpret a search string and return useful results
+        """
+        string_filters = Q(dns_name__icontains=search) | Q(description__icontains=search)
+
+        network = netaddr.IPNetwork(search)
+        broadcast = self._get_broadcast(network)
+
+        return self.filter(
+            string_filters | Q(host__lte=broadcast, host__gte=network.network)  # same as `net_host_contained()`
+        )
 
     def ip_family(self, family):
         try:
