@@ -51,13 +51,13 @@ class AggregateQuerysetTestCase(TestCase):
         self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
         self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
 
-    def test_net_contains_or_equal(self):
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.0.0/8")).count(), 0)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.0/24")).count(), 2)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/28")).count(), 3)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
+    def test_net_contains_or_equals(self):
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.0.0/8")).count(), 0)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.0/24")).count(), 2)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/28")).count(), 3)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
 
     def test_get_by_prefix(self):
         prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
@@ -165,13 +165,13 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
         self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
 
-    def test_net_contains_or_equal(self):
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.0.0/8")).count(), 0)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.0/24")).count(), 2)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/28")).count(), 3)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
-        self.assertEqual(self.queryset.net_contains_or_equal(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
+    def test_net_contains_or_equals(self):
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.0.0/8")).count(), 0)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.0/24")).count(), 2)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/28")).count(), 3)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
+        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
 
     def test_annotate_tree(self):
         self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.0.0/16").parents, 0)
