@@ -18,6 +18,7 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
+from nautobot.utilities.query_functions import CollateAsChar
 from nautobot.utilities.utils import serialize_object
 from .choices import *
 
@@ -423,7 +424,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
 
     class Meta:
         verbose_name = "interface"
-        ordering = ("virtual_machine", "_name")
+        ordering = ("virtual_machine", CollateAsChar("_name"))
         unique_together = ("virtual_machine", "name")
 
     def __str__(self):

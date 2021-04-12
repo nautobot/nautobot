@@ -22,6 +22,7 @@ from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
+from nautobot.utilities.query_functions import CollateAsChar
 from nautobot.utilities.utils import serialize_object
 
 
@@ -551,7 +552,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     ]
 
     class Meta:
-        ordering = ("device", "_name")
+        ordering = ("device", CollateAsChar("_name"))
         unique_together = ("device", "name")
 
     def get_absolute_url(self):
