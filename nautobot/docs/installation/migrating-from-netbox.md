@@ -284,7 +284,7 @@ The network component of the address is now stored in the `network` field.
 This field *can* be used in nested filter expressions, for example:
 
 ```python
->>> Prefix.objects.filter(network="1.1.1.0")
+>>> Prefix.objects.filter(network__lte="1.1.1.0")
 ```
 
 ##### `prefix_length` contains the prefix length 
@@ -348,20 +348,20 @@ Nautobot:
 Prefix.objects.net_contained(instance.prefix)
 ```
 
-##### net_contained_or_equal
+##### net_contained_or_equals
 
 *Returns target networks that are contained or equal to the source network.*
 
 NetBox:
 
 ```python
-Prefix.objects.filter(prefix__net_contained_or_equal=str(self.prefix))
+Prefix.objects.filter(prefix__net_contained_or_equals=str(self.prefix))
 ```
 
 Nautobot:
 
 ```python
-Prefix.objects.net_contained_or_equal(self.prefix)
+Prefix.objects.net_contained_or_equals(self.prefix)
 ```
 
 ##### net_contains
