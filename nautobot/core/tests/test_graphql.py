@@ -17,8 +17,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 
-from nautobot.utilities.testing import APITestCase
-from nautobot.users.models import ObjectPermission, Token, User
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.dcim.models import Device, Site, Region, Rack, Manufacturer, DeviceType, DeviceRole, Interface
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
@@ -40,8 +39,8 @@ from nautobot.core.graphql.generators import (
 from nautobot.extras.choices import CustomFieldTypeChoices
 
 
-# # Use the proper swappable User model
-# User = get_user_model()
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class GraphQLUtilsTestCase(TestCase):
