@@ -514,8 +514,6 @@ class IPAddressFilterSet(
         fields = ["id", "dns_name"]
 
     def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
         return queryset.string_search(value)
 
     def search_by_parent(self, queryset, name, value):

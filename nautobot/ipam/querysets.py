@@ -187,9 +187,11 @@ class IPAddressQuerySet(RestrictedQuerySet):
         """
         Interpret a search string and return useful results.
         """
+        if not search:
+            return self.none()
+
         network = self._parse_as_network_string(search)
         broadcast = self._get_broadcast(network)
-        # breakpoint()
         return self.filter(
             Q(dns_name__icontains=search)
             | Q(description__icontains=search)
@@ -201,8 +203,6 @@ class IPAddressQuerySet(RestrictedQuerySet):
         Attempts to parse a (potentially incomplete) IPAddress and return an IPNetwork.
         eg: '10.10' should be interpreted as netaddr.IPNetwork('10.10.0.0/16')
         """
-        if not search:
-            netaddr.IPNetwork("0/32")
         try:
             # disregard netmask
             search = search.split("/")[0]
