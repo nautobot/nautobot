@@ -304,8 +304,14 @@ class AggregateTestCase(TestCase):
     def test_search(self):
         Aggregate.objects.create(prefix="10.150.255.0/31", rir=self.rirs[0])
         Aggregate.objects.create(prefix="10.150.255.2/31", rir=self.rirs[0])
-        params = {"q": "10.150.255.2/31"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        test_values = [
+            "10.150.255.0/31",
+            "10.150.255.0",
+            "10.150.255.2",
+        ]
+        for value in test_values:
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -511,8 +517,14 @@ class PrefixTestCase(TestCase):
     def test_search(self):
         Prefix.objects.create(prefix="10.150.255.0/31")
         Prefix.objects.create(prefix="10.150.255.2/31")
-        params = {"q": "10.150.255.0/31"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        test_values = [
+            "10.150.255.0/31",
+            "10.150.255.0",
+            "10.150.255.2",
+        ]
+        for value in test_values:
+            params = {"q": value}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
