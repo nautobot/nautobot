@@ -1,6 +1,8 @@
 import types
 import uuid
 
+# from parameterized import parameterized
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -29,12 +31,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.ipam.models import VLAN
-from nautobot.extras.models import (
-    ChangeLoggedModel,
-    CustomField,
-    ConfigContext,
-    Relationship,
-)
+from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
     extend_schema_type,
@@ -511,6 +508,8 @@ class GraphQLQuery(TestCase):
         )
         self.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         self.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
+        self.status1 = Status.objects.create(name="status1", slug="status1")
+        self.status2 = Status.objects.create(name="status2", slug="status2")
         self.region = Region.objects.create(name="Region")
         self.site1 = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
         self.site2 = Site.objects.create(name="Site-2", slug="site-2", region=self.region)
@@ -520,18 +519,23 @@ class GraphQLQuery(TestCase):
             device_type=self.devicetype,
             device_role=self.devicerole1,
             site=self.site1,
+            status=self.status1,
+            face="front",
         )
         self.device2 = Device.objects.create(
             name="Device 2",
             device_type=self.devicetype,
             device_role=self.devicerole2,
             site=self.site1,
+            status=self.status2,
+            face="rear",
         )
         self.device3 = Device.objects.create(
             name="Device 3",
             device_type=self.devicetype,
             device_role=self.devicerole1,
             site=self.site2,
+            status=self.status1,
         )
 
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
@@ -587,21 +591,6 @@ class GraphQLQuery(TestCase):
         self.assertEqual(device_names, ["Device 1", "Device 3"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_device_name_filter(self):
-
-        query = """
-            query {
-                devices(name: "Device 1") {
-                    id
-                    name
-                }
-            }
-        """
-        result = self.execute_query(query)
-
-        self.assertEqual(len(result.data["devices"]), 1)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_with_bad_filter(self):
 
         query = """
@@ -616,3 +605,41 @@ class GraphQLQuery(TestCase):
         response = self.execute_query(query)
         self.assertEqual(len(response.errors), 1)
         self.assertIsInstance(response.errors[0], GraphQLLocatedError)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_devices_filter(self):
+
+        filters = (
+            ('name: "Device 1"', 1),
+            ('name: ["Device 1"]', 1),
+            ('name: ["Device 1", "Device 2"]', 2),
+            ('name__ic: "Device"', 3),
+            ('name__ic: ["Device"]', 3),
+            ('name__nic: "Device"', 0),
+            ('name__nic: ["Device"]', 0),
+            (f'id: "{self.device1.pk}"', 1),
+            (f'id: ["{self.device1.pk}"]', 1),
+            (f'id: ["{self.device1.pk}", "{self.device2.pk}"]', 2),
+            ('role: "device-role-1"', 2),
+            ('role: ["device-role-1"]', 2),
+            ('role: ["device-role-1", "device-role-2"]', 3),
+            ('site: "site-1"', 2),
+            ('site: ["site-1"]', 2),
+            ('site: ["site-1", "site-2"]', 3),
+            ('face: "front"', 1),
+            ('face: "rear"', 1),
+            ('status: "status1"', 2),
+            ('status: ["status2"]', 1),
+            ('status: ["status1", "status2"]', 3),
+            ("is_full_depth: true", 3),
+            ("is_full_depth: false", 0),
+            ("has_primary_ip: true", 0),
+            ("has_primary_ip: false", 3),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query {devices(" + filter + "){ name }}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["devices"]), nbr_expected_results)

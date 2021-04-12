@@ -1,6 +1,8 @@
 import graphene
 
+
 from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
+from nautobot.utilities.filters import MultiValueNumberFilter
 
 
 def str_to_var_name(verbose_name):
@@ -42,7 +44,10 @@ def get_filtering_args_from_filterset(filterset):
         elif issubclass(filter_field_class, NumberFilter):
             field_type = graphene.Int
 
-        if issubclass(filter_field_class, MultipleChoiceFilter):
+        if issubclass(filter_field_class, MultiValueNumberFilter):
+            field_type = graphene.List(graphene.Int)
+
+        elif issubclass(filter_field_class, MultipleChoiceFilter):
             field_type = graphene.List(field_type)
 
         if field_type:
