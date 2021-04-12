@@ -383,7 +383,7 @@ class PrefixFilterSet(
         try:
             # Searching by prefix
             if "/" in value:
-                return queryset.net_contains_or_equal(netaddr.IPNetwork(value).cidr)
+                return queryset.net_contains_or_equals(netaddr.IPNetwork(value).cidr)
             # Searching by IP address
             else:
                 # filter for Prefixes containing |value|
