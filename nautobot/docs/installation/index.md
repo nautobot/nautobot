@@ -3,7 +3,7 @@
 This set of documents will help you get Nautobot up and running.
 
 !!! warning
-    As of Nautobot v1.0.0b2 these instructions are still in a pre-release state. We are working to revise them for the recent changes.
+    As of Nautobot v1.0.0b3 these instructions are still in a pre-release state. We are working to revise them for the recent changes.
 
 ## About Dependencies
 

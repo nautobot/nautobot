@@ -561,6 +561,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
                 device_role=devicerole,
             ),
         )
+        cls.devices = devices
 
         Service.objects.create(
             device=devices[0],
@@ -601,3 +602,32 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
                 "ports": [6],
             },
         ]
+
+    def test_ports_regression(self):
+        """
+        Test that ports can be provided as str or int.
+
+        Ref: https://github.com/nautobot/nautobot/issues/265
+        """
+        self.add_permissions("ipam.add_service")
+        url = reverse("ipam-api:service-list")
+        device = self.devices[0]
+
+        data = {
+            "name": "http",
+            "protocol": "tcp",
+            "device": str(device.id),
+            "ports": ["80"],
+        }
+        expected = [80]  # We'll test w/ this
+
+        # Ports as string should be good.
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["ports"], expected)
+
+        # And do it again, but with ports as int.
+        data["ports"] = expected
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["ports"], expected)

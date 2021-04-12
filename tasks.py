@@ -121,7 +121,7 @@ def cli(context):
 @task(help={"user": "name of the superuser to create"})
 def createsuperuser(context, user="admin"):
     """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
-    docker_compose(context, "run nautobot nautobot-server createsuperuser --username {user}", pty=True)
+    docker_compose(context, f"run nautobot nautobot-server createsuperuser --username {user}", pty=True)
 
 
 @task(help={"name": "name of the migration to be created; if unspecified, will autogenerate a name"})
@@ -137,6 +137,23 @@ def makemigrations(context, name=""):
 def migrate(context):
     """Perform migrate operation in Django."""
     docker_compose(context, "run nautobot nautobot-server migrate")
+
+
+@task
+def post_upgrade(context):
+    """
+    Performs Nautobot common post-upgrade operations using a single entrypoint.
+
+    This will run the following management commands with default settings, in order:
+
+    - migrate
+    - trace_paths
+    - collectstatic
+    - remove_stale_contenttypes
+    - clearsessions
+    - invalidate all
+    """
+    docker_compose(context, "run nautobot nautobot-server post_upgrade")
 
 
 # ------------------------------------------------------------------------------

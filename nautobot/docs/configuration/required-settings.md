@@ -135,9 +135,7 @@ setup](https://github.com/Suor/django-cacheops#setup).
 
 ### Task Queuing
 
-Task queues are configured by defining the `RQ_QUEUES` setting. Tasks settings utilize the `default` settings, where
-webhooks utilize the `check_releases` settings. By default, these are identical. It is up to you to modify them for your
-environment.
+Task queues are configured by defining the `RQ_QUEUES` setting. Nautobot's core functionality relies on four distinct queues and these represent the minimum required set of queues that must be defined. By default, these are identical. It is up to you to modify them for your environment and know that other use cases like specific plugins may require additional queues to be defined.
 
 #### RQ_QUEUES
 
@@ -153,7 +151,23 @@ RQ_QUEUES = {
         "SSL": False,
         "DEFAULT_TIMEOUT": 300
     },
+    "webhooks": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
+    },
     "check_releases": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 0,
+        "PASSWORD": "",
+        "SSL": False,
+        "DEFAULT_TIMEOUT": 300
+    },
+    "custom_fields": {
         "HOST": "localhost",
         "PORT": 6379,
         "DB": 0,
