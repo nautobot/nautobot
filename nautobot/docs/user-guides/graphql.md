@@ -16,7 +16,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
     <summary>View API Results</summary>
 ```
 {
-  "count": 208,
+  "count": 2,
   "next": "https://demo.nautobot.com/api/dcim/devices/?limit=1&offset=2",
   "previous": "https://demo.nautobot.com/api/dcim/devices/?limit=1",
   "results": [
