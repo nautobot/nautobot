@@ -33,6 +33,30 @@ Nautobot requires a Postgres database and Redis cache before it will start, beca
 
 Most configuration parameters are available via environment variables which can be passed to the container.  If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py`.
 
+### UWSGI
+
+The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uwsgi defaults:
+
+#### `NAUTOBOT_UWSGI_LISTEN`
+
+Default: `128`
+
+The socket listen queue size of uWSGI.  In production environments it is recommended to increase this value to 1024 or higher, however depending on your host OS, this may require additional kernel parameter settings, please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/articles/TheArtOfGracefulReloading.html#the-listen-queue) for more information.
+
+Please see the [official uWSGI documentation on `listen`](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=listen#listen) for more information.
+
+---
+
+#### `NAUTOBOT_UWSGI_PROCESSES`
+
+Default: `3`
+
+The number of workers/processes uWSGI will spawn.
+
+Please see the [official uWSGI documentation on `processes`](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=processes#processes) for more information.
+
+---
+
 ### SSL
 
 Self signed SSL certificates are included by default with the container.  For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime.  The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`.

@@ -77,6 +77,9 @@ if [ "$NAUTOBOT_UWSGI_PROCESSES" ]; then
   sed -i "s@.*processes = .*\$@processes = $NAUTOBOT_UWSGI_PROCESSES@" /opt/nautobot/uwsgi.ini
 fi
 
+if [ "$NAUTOBOT_UWSGI_LISTEN" ]; then
+  sed -i "s@.*listen = .*\$@listen = $NAUTOBOT_UWSGI_LISTEN@" /opt/nautobot/uwsgi.ini
+fi
 
 # Launch whatever is passed by docker
 # (i.e. the RUN instruction in the Dockerfile)
