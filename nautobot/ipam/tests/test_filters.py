@@ -505,8 +505,8 @@ class PrefixTestCase(TestCase):
             role=roles[2],
             status=status_map["reserved"],
         )
-        Prefix.objects.create(prefix="10.0.0.0/16", status=status_map["active"]),
-        Prefix.objects.create(prefix="2001:db8::/32", status=status_map["active"]),
+        Prefix.objects.create(prefix="10.0.0.0/16", status=status_map["active"])
+        Prefix.objects.create(prefix="2001:db8::/32", status=status_map["active"])
 
     def test_search(self):
         Prefix.objects.create(prefix="10.150.255.0/31")
