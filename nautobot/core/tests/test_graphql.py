@@ -38,7 +38,6 @@ from nautobot.core.graphql.generators import (
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 
-
 # Use the proper swappable User model
 User = get_user_model()
 
@@ -485,12 +484,6 @@ class GraphQLQuery(TestCase):
         super().setUp()
         self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
-        # Create Custom Fields
-        self.cf1 = CustomField.objects.create(name="cf1", label="cf1")
-        self.cf1.content_types.add(ContentType.objects.get_for_model(Device))
-        self.cf1.content_types.add(ContentType.objects.get_for_model(Interface))
-        self.cf1.save()
-
         # Initialize fake request that will be required to execute GraphQL query
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
@@ -526,8 +519,6 @@ class GraphQLQuery(TestCase):
             face="front",
             comments="First Device",
         )
-        self.device1.cf["cf1"] = "value1"
-        self.device1.save()
 
         self.interface11 = Interface.objects.create(
             name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device1, mac_address="00:11:11:11:11:11"
@@ -547,8 +538,6 @@ class GraphQLQuery(TestCase):
             status=self.status2,
             face="rear",
         )
-        self.device2.cf["cf1"] = "value2"
-        self.device2.save()
 
         self.interface21 = Interface.objects.create(
             name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device2
@@ -706,9 +695,6 @@ class GraphQLQuery(TestCase):
             ('mac_address: "99:11:11:11:11:11"', 0),
             ('q: "first"', 1),
             ('q: "notthere"', 0),
-            ('cf_cf1: "value1"', 1),
-            ('cf_cf1: "value2"', 1),
-            ('cf_cf1: "value3"', 0),
         )
 
         for filter, nbr_expected_results in filters:
