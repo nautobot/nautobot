@@ -17,7 +17,7 @@ Keep in mind that each piece of functionality is entirely optional. For example,
 ## Initial Setup
 
 !!! important "Use a Development Environment, Not Production For Plugin Development"
-    You should not use your production environment for plugin development. For information on getting started with a development environment, check out [https://nautobot.readthedocs.io/en/latest/development/getting-started/](https://nautobot.readthedocs.io/en/latest/development/getting-started/).
+    You should not use your production environment for plugin development. For information on getting started with a development environment, check out [Nautobot development guide](../development/getting-started.md).
 
 ### Plugin Structure
 
@@ -156,6 +156,12 @@ All required settings must be configured by the user. If a configuration paramet
 
 ### Install the Plugin for Development
 
+The plugin needs to be installed into the same python environment where Nautobot is, so that we can get access to `nautobot-server` command, and also so that the nautobot-server is aware of the new plugin.  
+
+If you installed Nautobot using poetry, then go to the Nautobot repo clone and run `poetry shell` there.  
+
+Otherwise, manually activate nautobot using `source /opt/nautobot/bin/activate`.
+
 To install the plugin for development the following steps should be taken:
 
 * Activate the Nautobot virtual environment (`/opt/nautobot/bin/activate` if using official doc)
@@ -166,7 +172,7 @@ To install the plugin for development the following steps should be taken:
     Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
 
 !!! important "This should be done in development environment"
-    You should not use your production environment for plugin development. For information on getting started with a development environment, check out [https://nautobot.readthedocs.io/en/latest/development/getting-started/](https://nautobot.readthedocs.io/en/latest/development/getting-started/).
+    You should not use your production environment for plugin development. For information on getting started with a development environment, check out [Nautobot development guide](../development/getting-started.md).
 
 ```no-highlight
 $ poetry install
