@@ -19,18 +19,11 @@ from rest_framework.test import APIClient
 
 from nautobot.utilities.testing import APITestCase
 from nautobot.users.models import ObjectPermission, Token, User
-from nautobot.dcim.models import (
-    Device,
-    Site,
-    Region,
-    Rack,
-    Manufacturer,
-    DeviceType,
-    DeviceRole,
-)
+from nautobot.dcim.models import Device, Site, Region, Rack, Manufacturer, DeviceType, DeviceRole, Interface
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
-from nautobot.ipam.models import VLAN
+from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
@@ -47,8 +40,8 @@ from nautobot.core.graphql.generators import (
 from nautobot.extras.choices import CustomFieldTypeChoices
 
 
-# Use the proper swappable User model
-User = get_user_model()
+# # Use the proper swappable User model
+# User = get_user_model()
 
 
 class GraphQLUtilsTestCase(TestCase):
@@ -510,9 +503,14 @@ class GraphQLQuery(TestCase):
         self.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         self.status1 = Status.objects.create(name="status1", slug="status1")
         self.status2 = Status.objects.create(name="status2", slug="status2")
-        self.region = Region.objects.create(name="Region")
-        self.site1 = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
-        self.site2 = Site.objects.create(name="Site-2", slug="site-2", region=self.region)
+        self.region1 = Region.objects.create(name="Region1", slug="region1")
+        self.region2 = Region.objects.create(name="Region2", slug="region2")
+        self.site1 = Site.objects.create(
+            name="Site-1", slug="site-1", asn=65000, status=self.status1, region=self.region1
+        )
+        self.site2 = Site.objects.create(
+            name="Site-2", slug="site-2", asn=65099, status=self.status2, region=self.region2
+        )
 
         self.device1 = Device.objects.create(
             name="Device 1",
@@ -521,7 +519,18 @@ class GraphQLQuery(TestCase):
             site=self.site1,
             status=self.status1,
             face="front",
+            comments="First Device",
         )
+        self.interface11 = Interface.objects.create(
+            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device1, mac_address="00:11:11:11:11:11"
+        )
+        self.interface12 = Interface.objects.create(
+            name="Int2", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device1
+        )
+        self.ipaddr1 = IPAddress.objects.create(
+            address="10.0.1.1/24", status=self.status1, assigned_object=self.interface11
+        )
+
         self.device2 = Device.objects.create(
             name="Device 2",
             device_type=self.devicetype,
@@ -530,6 +539,16 @@ class GraphQLQuery(TestCase):
             status=self.status2,
             face="rear",
         )
+        self.interface21 = Interface.objects.create(
+            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device2
+        )
+        self.interface22 = Interface.objects.create(
+            name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=self.device2, mac_address="00:12:12:12:12:12"
+        )
+        self.ipaddr2 = IPAddress.objects.create(
+            address="10.0.2.1/30", status=self.status2, assigned_object=self.interface12
+        )
+
         self.device3 = Device.objects.create(
             name="Device 3",
             device_type=self.devicetype,
@@ -539,7 +558,7 @@ class GraphQLQuery(TestCase):
         )
 
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        context1.regions.add(self.region)
+        context1.regions.add(self.region1)
 
     def execute_query(self, query, variables=None):
 
@@ -607,6 +626,38 @@ class GraphQLQuery(TestCase):
         self.assertIsInstance(response.errors[0], GraphQLLocatedError)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_sites_filter(self):
+
+        filters = (
+            ('name: "Site-1"', 1),
+            ('name: ["Site-1"]', 1),
+            ('name: ["Site-1", "Site-2"]', 2),
+            ('name__ic: "Site"', 2),
+            ('name__ic: ["Site"]', 2),
+            ('name__nic: "Site"', 0),
+            ('name__nic: ["Site"]', 0),
+            ('region: "region1"', 1),
+            ('region: ["region1"]', 1),
+            ('region: ["region1", "region2"]', 2),
+            ("asn: 65000", 1),
+            ("asn: [65099]", 1),
+            ("asn: [65000, 65099]", 2),
+            (f'id: "{self.site1.pk}"', 1),
+            (f'id: ["{self.site1.pk}"]', 1),
+            (f'id: ["{self.site1.pk}", "{self.site2.pk}"]', 2),
+            ('status: "status1"', 1),
+            ('status: ["status2"]', 1),
+            ('status: ["status1", "status2"]', 2),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { sites(" + filter + "){ name }}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["sites"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_devices_filter(self):
 
         filters = (
@@ -626,6 +677,9 @@ class GraphQLQuery(TestCase):
             ('site: "site-1"', 2),
             ('site: ["site-1"]', 2),
             ('site: ["site-1", "site-2"]', 3),
+            ('region: "region1"', 2),
+            ('region: ["region1"]', 2),
+            ('region: ["region1", "region2"]', 3),
             ('face: "front"', 1),
             ('face: "rear"', 1),
             ('status: "status1"', 2),
@@ -635,6 +689,10 @@ class GraphQLQuery(TestCase):
             ("is_full_depth: false", 0),
             ("has_primary_ip: true", 0),
             ("has_primary_ip: false", 3),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ('mac_address: ["00:12:12:12:12:12"]', 1),
+            ('mac_address: ["00:11:11:11:11:11", "00:12:12:12:12:12"]', 2),
+            ('q: "first"', 1),
         )
 
         for filter, nbr_expected_results in filters:
@@ -643,3 +701,26 @@ class GraphQLQuery(TestCase):
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_ip_addresses_filter(self):
+
+        filters = (
+            ('address: "10.0.1.1"', 1),
+            ("family: 4", 2),
+            ('status: "status1"', 1),
+            ('status: ["status2"]', 1),
+            ('status: ["status1", "status2"]', 2),
+            ("mask_length: 24", 1),
+            ("mask_length: 30", 1),
+            ("mask_length: 28", 0),
+            ('parent: "10.0.0.0/16"', 2),
+            ('parent: "10.0.2.0/24"', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { ip_addresses(" + filter + "){ address }}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
