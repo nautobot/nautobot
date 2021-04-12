@@ -14,14 +14,10 @@ from graphql import get_default_backend
 from rest_framework import status
 from rest_framework.test import APIClient
 
-
-from nautobot.users.models import ObjectPermission, Token
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
-from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
-from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
-from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status
+from nautobot.core.graphql.generators import (
+    generate_list_search_parameters,
+    generate_schema_type,
+)
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
     extend_schema_type,
@@ -30,11 +26,14 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_config_context,
     extend_schema_type_relationships,
 )
-from nautobot.core.graphql.generators import (
-    generate_list_search_parameters,
-    generate_schema_type,
-)
+from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
+from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status
+from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.users.models import ObjectPermission, Token
 
 # Use the proper swappable User model
 User = get_user_model()
