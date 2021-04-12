@@ -1,7 +1,6 @@
+from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
 import graphene
 
-
-from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
 from nautobot.utilities.filters import MultiValueNumberFilter
 
 
