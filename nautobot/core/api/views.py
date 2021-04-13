@@ -318,38 +318,41 @@ class StatusView(APIView):
     A lightweight read-only endpoint for conveying Nautobot's current operational status.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        # Gather the version numbers from all installed Django apps
-        installed_apps = {}
-        for app_config in apps.get_app_configs():
-            app = app_config.module
-            version = getattr(app, "VERSION", getattr(app, "__version__", None))
-            if version:
-                if type(version) is tuple:
-                    version = ".".join(str(n) for n in version)
-                installed_apps[app_config.name] = version
-        installed_apps = {k: v for k, v in sorted(installed_apps.items())}
+        if self.request.user.is_authenticated:
+            # Gather the version numbers from all installed Django apps
+            installed_apps = {}
+            for app_config in apps.get_app_configs():
+                app = app_config.module
+                version = getattr(app, "VERSION", getattr(app, "__version__", None))
+                if version:
+                    if type(version) is tuple:
+                        version = ".".join(str(n) for n in version)
+                    installed_apps[app_config.name] = version
+            installed_apps = {k: v for k, v in sorted(installed_apps.items())}
 
-        # Gather installed plugins
-        plugins = {}
-        for plugin_name in settings.PLUGINS:
-            plugin_name = plugin_name.rsplit(".", 1)[-1]
-            plugin_config = apps.get_app_config(plugin_name)
-            plugins[plugin_name] = getattr(plugin_config, "version", None)
-        plugins = {k: v for k, v in sorted(plugins.items())}
+            # Gather installed plugins
+            plugins = {}
+            for plugin_name in settings.PLUGINS:
+                plugin_name = plugin_name.rsplit(".", 1)[-1]
+                plugin_config = apps.get_app_config(plugin_name)
+                plugins[plugin_name] = getattr(plugin_config, "version", None)
+            plugins = {k: v for k, v in sorted(plugins.items())}
 
-        return Response(
-            {
-                "django-version": DJANGO_VERSION,
-                "installed-apps": installed_apps,
-                "nautobot-version": settings.VERSION,
-                "plugins": plugins,
-                "python-version": platform.python_version(),
-                "rq-workers-running": Worker.count(get_connection("default")),
-            }
-        )
+            return Response(
+                {
+                    "django-version": DJANGO_VERSION,
+                    "installed-apps": installed_apps,
+                    "nautobot-version": settings.VERSION,
+                    "plugins": plugins,
+                    "python-version": platform.python_version(),
+                    "rq-workers-running": Worker.count(get_connection("default")),
+                }
+            )
+        else:
+            return Response({})
 
 
 #
