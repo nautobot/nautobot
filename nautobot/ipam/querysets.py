@@ -1,3 +1,4 @@
+import re
 import uuid
 
 import netaddr
@@ -169,6 +170,12 @@ class IPAddressQuerySet(RestrictedQuerySet):
         6: IPV6_BYTE_LENGTH,
     }
 
+    # Match string with ending in "::"
+    RE_COLON = re.compile(".*::$")
+
+    # Match string from "0000" to "ffff" with no trailing ":"
+    RE_HEXTET = re.compile("^[a-f0-9]{4}$")
+
     @staticmethod
     def _get_broadcast(network):
         return network.broadcast if network.broadcast else network.network
@@ -203,22 +210,76 @@ class IPAddressQuerySet(RestrictedQuerySet):
         Attempts to parse a (potentially incomplete) IPAddress and return an IPNetwork.
         eg: '10.10' should be interpreted as netaddr.IPNetwork('10.10.0.0/16')
         """
+        version = 4
+
         try:
-            # disregard netmask
+            # Disregard netmask
             search = search.split("/")[0]
 
-            # get non-empty octets from search string
-            octets = search.split(".")
-            octets = list(filter(lambda o: o, octets))
-            prefix_len = 8 * len(octets)
+            # Attempt to quickly assess v6
+            if ":" in search:
+                version = 6
 
-            # create an netaddr.IPNetwork to search within
-            octets.extend(["0" for _ in range(len(octets), 4)])
-            ip = f"{octets[0]}.{octets[1]}.{octets[2]}.{octets[3]}/{prefix_len}"
-            return netaddr.IPNetwork(ip)
+            # (IPv6) If the value ends with ":" but it's not "::", make it so.
+            if search.endswith(":") and not self.RE_COLON.match(search):
+                search += ":"
+            # (IPv6) If the value is numeric and > 255, append "::"
+            # (IPv6) If the value is a hextet (e.g. "fe80"), append "::"
+            elif any(
+                [
+                    search.isdigit() and int(search) > 255,
+                    self.RE_HEXTET.match(search),
+                ]
+            ):
+                search += "::"
+                version = 6
+
+            call_map = {
+                4: self._parse_ipv4,
+                6: self._parse_ipv6,
+            }
+            return call_map[version](search)
 
         except netaddr.core.AddrFormatError:
-            return netaddr.IPNetwork("0/32")
+            ver_map = {4: "0/32", 6: "::/128"}
+            return netaddr.IPNetwork(ver_map[version])
+
+    def _parse_ipv6(self, value):
+        """IPv6 addresses are 8, 16-bit fields."""
+
+        # Get non-empty octets from search string
+        hextets = value.split(":")
+
+        # Before we normalize, check that final value is a digit.
+        if hextets[-1].isdigit():
+            fill_zeroes = False  # Leave "" in there.
+            prefix_len = 128  # Force /128
+        else:
+            fill_zeroes = True  # Replace "" w/ "0"
+            hextets = list(filter(lambda h: h, hextets))
+            prefix_len = 16 * len(hextets)
+
+        # Create an netaddr.IPNetwork to search within
+        if fill_zeroes:
+            hextets.extend(["0" for _ in range(len(hextets), 8)])
+
+        network = ":".join(hextets)
+        ip = f"{network}/{prefix_len}"
+        return netaddr.IPNetwork(ip)
+
+    def _parse_ipv4(self, value):
+        """IPv4 addresses are 4, 8-bit fields."""
+
+        # Get non-empty octets from search string
+        octets = value.split(".")
+        octets = list(filter(lambda o: o, octets))
+        prefix_len = 8 * len(octets)
+
+        # Create an netaddr.IPNetwork to search within
+        octets.extend(["0" for _ in range(len(octets), 4)])
+        network = ".".join(octets)
+        ip = f"{network}/{prefix_len}"
+        return netaddr.IPNetwork(ip)
 
     def ip_family(self, family):
         try:
