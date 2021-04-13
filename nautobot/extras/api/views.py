@@ -140,6 +140,7 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
     """
     Manage the use of Git repositories as external data sources.
     """
+
     queryset = GitRepository.objects.all()
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
