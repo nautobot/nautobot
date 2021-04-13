@@ -14,9 +14,8 @@ from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
 from nautobot.dcim.models import *
 from nautobot.extras.models import Status
-from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import ViewTestCases
-
+from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.utilities.testing import ViewTestCases, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1120,6 +1119,29 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:device_inventory", kwargs={"pk": device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_primary_ips(self):
+        """Test assigning a primary IP to a device."""
+        self.add_permissions("dcim.change_device")
+
+        # Create an interface and assign an IP to it.
+        device = Device.objects.first()
+        interface = Interface.objects.create(device=device, name="Interface 1")
+        ip_address = IPAddress.objects.create(address="1.2.3.4/32")
+        interface.ip_addresses.add(ip_address)
+
+        # Dupe the form data and populated primary_ip4 w/ ip_address
+        form_data = self.form_data.copy()
+        form_data["primary_ip4"] = ip_address.pk
+
+        # Assert that update succeeds.
+        request = {
+            "path": self._get_url("edit", device),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), form_data)
 
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
