@@ -24,7 +24,7 @@ The real benefit of custom status is adding your own organization status and pro
 
 Another example for sites is tracking the nature of a specific site's installation status. A site that is under construction could received a status like 'Pre Production'.
 
-For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be customized to reflect the specific ['statuses available to Nova VMs'](https://docs.openstack.org/nova/latest/reference/vm-states.html).
+For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be customized to reflect the specific [Nova virtual machine states](https://docs.openstack.org/nova/latest/reference/vm-states.html).
 ## Status Internals
 
 !!! warning
