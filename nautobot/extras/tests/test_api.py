@@ -201,26 +201,30 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.repos = (
-            GitRepository.objects.create(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
-            GitRepository.objects.create(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
-            GitRepository.objects.create(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
+            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
         )
         for repo in cls.repos:
             repo.save(trigger_resync=False)
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_git_sync_nonexistent_repo(self):
+        self.add_permissions("extras.add_gitrepository")
+        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_without_permissions(self):
-        url = reverse("extras-api:gitrepository-run", kwargs={"pk": self.repos[0].id})
+        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_with_permissions(self):
         self.add_permissions("extras.add_gitrepository")
-        self.add_permissions("extras.run_job")
-        url = reverse("extras-api:gitrepository-run", kwargs={"pk": self.repos[0].id})
+        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 

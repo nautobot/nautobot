@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django_rq.queues import get_connection
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import action
@@ -146,14 +147,14 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
 
     @swagger_auto_schema(method="post", request_body=serializers.GitRepositorySerializer)
     @action(detail=True, methods=["post"])
-    def run(self, request, pk):
+    def sync(self, request, pk):
         """
         Enqueue pull git repository and refresh data.
         """
         if not Worker.count(get_connection("default")):
             raise RQWorkerNotRunningException()
 
-        repository = GitRepository.objects.get(id=pk)
+        repository = get_object_or_404(GitRepository, id=pk)
         enqueue_pull_git_repository_and_refresh_data(repository, request)
         return Response({"message": f"Repository {repository} sync job started."})
 
