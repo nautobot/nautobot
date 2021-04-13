@@ -139,7 +139,6 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
     """
     Manage the use of Git repositories as external data sources.
     """
-
     queryset = GitRepository.objects.all()
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
@@ -155,7 +154,7 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
 
         repository = GitRepository.objects.get(id=pk)
         enqueue_pull_git_repository_and_refresh_data(repository, request)
-        return Response(f"Repository {repository} sync job started.")
+        return Response({"message": "Repository {repository} sync job started."})
 
 
 #
