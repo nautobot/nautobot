@@ -295,6 +295,11 @@ class AggregateBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEd
 
 class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
     model = Aggregate
+    field_order = [
+        "q",
+        "rir",
+    ]
+
     q = forms.CharField(required=False, label="Search")
     family = forms.ChoiceField(
         required=False,
