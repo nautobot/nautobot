@@ -334,6 +334,7 @@ class StatusTest(TestCase):
     def test_name(self):
         # Test a bunch of wackado names.
         tests = [
+            "CAPSLOCK",
             "---;;a;l^^^2ZSsljk¡",
             "-42",
             "392405834ioafdjskl;ajr30894fjakl;fs___π",
@@ -342,3 +343,4 @@ class StatusTest(TestCase):
             self.status.name = test
             self.status.clean()
             self.status.save()
+            self.assertEquals(str(self.status), self.status.name)
