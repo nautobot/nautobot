@@ -137,6 +137,7 @@ class IPAddressQuerySet(TestCase):
             "fe80": "fe80::/16",
             "fe80::": "fe80::/16",
             "fe80::46b:a212:1132:3615": "fe80::46b:a212:1132:3615/128",
+            "fe80::76:88e9:12aa:334d": "fe80::76:88e9:12aa:334d/128",
         }
 
         for test, expected in tests.items():
