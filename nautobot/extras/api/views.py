@@ -154,7 +154,7 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
 
         repository = GitRepository.objects.get(id=pk)
         enqueue_pull_git_repository_and_refresh_data(repository, request)
-        return Response({"message": "Repository {repository} sync job started."})
+        return Response({"message": f"Repository {repository} sync job started."})
 
 
 #
