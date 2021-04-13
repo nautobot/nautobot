@@ -75,14 +75,14 @@ RQ_QUEUES = {
         "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
-    # "webhooks": {
-    #     "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
-    #     "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
-    #     "DB": 0,
-    #     "PASSWORD": os.environ["NAUTOBOT_REDIS_PASSWORD"],
-    #     "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
-    #     "DEFAULT_TIMEOUT": 300,
-    # },
+    "webhooks": {
+        "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
+        "DB": 0,
+        "PASSWORD": os.environ["NAUTOBOT_REDIS_PASSWORD"],
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
+        "DEFAULT_TIMEOUT": 300,
+    },
     "check_releases": {
         "HOST": os.environ["NAUTOBOT_REDIS_HOST"],
         "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
