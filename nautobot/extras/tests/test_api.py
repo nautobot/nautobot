@@ -208,6 +208,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         for repo in cls.repos:
             repo.save(trigger_resync=False)
 
+    @skipIf(not rq_worker_running, "RQ worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_nonexistent_repo(self):
         self.add_permissions("extras.add_gitrepository")
@@ -215,15 +216,18 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
+    @skipIf(not rq_worker_running, "RQ worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_without_permissions(self):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
+    @skipIf(not rq_worker_running, "RQ worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_with_permissions(self):
         self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)

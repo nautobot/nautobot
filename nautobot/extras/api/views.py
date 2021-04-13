@@ -151,12 +151,15 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
         """
         Enqueue pull git repository and refresh data.
         """
+        if not request.user.has_perm("extras.change_gitrepository"):
+            raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
+
         if not Worker.count(get_connection("default")):
             raise RQWorkerNotRunningException()
 
         repository = get_object_or_404(GitRepository, id=pk)
         enqueue_pull_git_repository_and_refresh_data(repository, request)
-        return Response({"message": f"Repository {repository} sync job started."})
+        return Response({"message": f"Repository {repository} sync job added to queue."})
 
 
 #
