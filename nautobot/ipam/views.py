@@ -586,7 +586,7 @@ class IPAddressView(generic.ObjectView):
         # Parent prefixes table
         parent_prefixes = (
             Prefix.objects.restrict(request.user, "view")
-            .net_contains(instance.address)
+            .net_contains_or_equals(instance.address)
             .filter(vrf=instance.vrf)
             .prefetch_related("site", "status", "role")
         )
