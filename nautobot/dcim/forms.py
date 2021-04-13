@@ -1797,9 +1797,9 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         # call IPAddress setter method to deconstruct netaddr.IPNetwork
         # into host, broadcast, and prefix_length model fields
         if instance.primary_ip4:
-            instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
+            instance.primary_ip4 = self.cleaned_data.get("primary_ip4")
         if instance.primary_ip6:
-            instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
+            instance.primary_ip6 = self.cleaned_data.get("primary_ip6")
         instance.save()
         self.save_m2m()
         return instance
