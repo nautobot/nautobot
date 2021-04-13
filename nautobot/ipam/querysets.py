@@ -251,7 +251,7 @@ class IPAddressQuerySet(RestrictedQuerySet):
         hextets = value.split(":")
 
         # Before we normalize, check that final value is a digit.
-        if hextets[-1].alnum():
+        if hextets[-1].isalnum():
             fill_zeroes = False  # Leave "" in there.
             prefix_len = 128  # Force /128
         else:
