@@ -225,7 +225,7 @@ query {
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.
 
-<img src="../images/graphql/10-graphiql-swagger.png" alt="GraphQL: Swagger" width="400">
+<img src="../images/graphql/10-graphql-swagger.png" alt="GraphQL: Swagger" width="400">
 
 From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is a required. The `query` field is where we put the GraphQL query. The `variables` field is optional. It's where we define filters, if we choose to do so. 
 
