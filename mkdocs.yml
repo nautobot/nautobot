@@ -41,6 +41,7 @@ nav:
         - Remote Header: 'configuration/authentication/remote.md'
     - User Guides:
         - Git as a Data Source: 'user-guides/git-data-source.md'
+        - GraphQL: 'user-guides/graphql.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'
