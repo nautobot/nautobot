@@ -180,7 +180,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
                 network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast),
+                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
             )
         except (AddrFormatError, ValueError):
             pass
@@ -333,7 +333,7 @@ class PrefixFilterSet(
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
                 network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast),
+                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
             )
         except (AddrFormatError, ValueError):
             pass
