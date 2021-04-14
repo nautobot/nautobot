@@ -1980,7 +1980,6 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
         }
 
-
     def test_power_feed_detail(self):
         self.add_permissions("dcim.view_powerfeed")
         # Setup base device info
@@ -1993,11 +1992,11 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="Device1",
             site=self.site,
         )
-        
+
         powerport = PowerPort.objects.create(device=device, name="Power Port 1")
 
         powerfeed = self.powerfeeds[0]
-        
+
         Cable(termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected"))
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
