@@ -1934,7 +1934,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         powerfeed_1 = PowerFeed.objects.create(name="Power Feed 1", power_panel=powerpanels[0], rack=racks[0])
         powerfeed_2 = PowerFeed.objects.create(name="Power Feed 2", power_panel=powerpanels[0], rack=racks[0])
-        powerfeed_3 = PowerFeed.objects.create(name="Power Feed 3", power_panel=powerpanels[0], rack=racks[0])
+        PowerFeed.objects.create(name="Power Feed 3", power_panel=powerpanels[0], rack=racks[0])
 
         # Assign power feeds for the tests later
         cls.powerfeeds = (powerfeed_1, powerfeed_2)
