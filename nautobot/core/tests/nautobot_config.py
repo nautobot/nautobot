@@ -3,8 +3,8 @@
 #  only. It is not intended for production use.                   #
 ###################################################################
 
-import os
 from distutils.util import strtobool
+import os
 
 from nautobot.core.settings import *  # noqa: F401,F403
 
