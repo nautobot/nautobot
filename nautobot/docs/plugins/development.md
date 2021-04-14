@@ -158,7 +158,7 @@ All required settings must be configured by the user. If a configuration paramet
 
 The plugin needs to be installed into the same python environment where Nautobot is, so that we can get access to `nautobot-server` command, and also so that the nautobot-server is aware of the new plugin.  
 
-If you installed Nautobot using poetry, then go to the Nautobot repo clone and run `poetry shell` there.  
+If you installed Nautobot using Poetry, then go to the root directory of your clone of the Nautobot repository and run `poetry shell` there.  Afterward, return to the root directory of your plugin to continue development.
 
 Otherwise, manually activate nautobot using `source /opt/nautobot/bin/activate`.
 
