@@ -38,13 +38,7 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
+    "custom_fields", "custom_links", "custom_validators", "export_templates", "graphql", "relationships", "webhooks",
 )
 class VRF(PrimaryModel):
     """
@@ -63,11 +57,7 @@ class VRF(PrimaryModel):
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
     tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="vrfs",
-        blank=True,
-        null=True,
+        to="tenancy.Tenant", on_delete=models.PROTECT, related_name="vrfs", blank=True, null=True,
     )
     enforce_unique = models.BooleanField(
         default=True,
@@ -113,13 +103,7 @@ class VRF(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
+    "custom_fields", "custom_links", "custom_validators", "export_templates", "graphql", "relationships", "webhooks",
 )
 class RouteTarget(PrimaryModel):
     """
@@ -133,11 +117,7 @@ class RouteTarget(PrimaryModel):
     )
     description = models.CharField(max_length=200, blank=True)
     tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="route_targets",
-        blank=True,
-        null=True,
+        to="tenancy.Tenant", on_delete=models.PROTECT, related_name="route_targets", blank=True, null=True,
     )
 
     csv_headers = ["name", "description", "tenant"]
@@ -160,10 +140,7 @@ class RouteTarget(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
+    "custom_fields", "custom_validators", "graphql", "relationships",
 )
 class RIR(OrganizationalModel):
     """
@@ -174,9 +151,7 @@ class RIR(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     is_private = models.BooleanField(
-        default=False,
-        verbose_name="Private",
-        help_text="IP space managed by this RIR is considered private",
+        default=False, verbose_name="Private", help_text="IP space managed by this RIR is considered private",
     )
     description = models.CharField(max_length=200, blank=True)
 
@@ -203,13 +178,7 @@ class RIR(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
+    "custom_fields", "custom_links", "custom_validators", "export_templates", "graphql", "relationships", "webhooks",
 )
 class Aggregate(PrimaryModel):
     """
@@ -217,25 +186,12 @@ class Aggregate(PrimaryModel):
     the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
     """
 
-    network = VarbinaryIPField(
-        null=False,
-        db_index=True,
-        help_text="IPv4 or IPv6 network address",
-    )
+    network = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 network address",)
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
-    rir = models.ForeignKey(
-        to="ipam.RIR",
-        on_delete=models.PROTECT,
-        related_name="aggregates",
-        verbose_name="RIR",
-    )
+    rir = models.ForeignKey(to="ipam.RIR", on_delete=models.PROTECT, related_name="aggregates", verbose_name="RIR",)
     tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="aggregates",
-        blank=True,
-        null=True,
+        to="tenancy.Tenant", on_delete=models.PROTECT, related_name="aggregates", blank=True, null=True,
     )
     date_added = models.DateField(blank=True, null=True)
     description = models.CharField(max_length=200, blank=True)
@@ -363,10 +319,7 @@ class Aggregate(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
+    "custom_fields", "custom_validators", "graphql", "relationships",
 )
 class Role(OrganizationalModel):
     """
@@ -377,10 +330,7 @@ class Role(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     weight = models.PositiveSmallIntegerField(default=1000)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
+    description = models.CharField(max_length=200, blank=True,)
 
     csv_headers = ["name", "slug", "weight", "description"]
 
@@ -419,42 +369,18 @@ class Prefix(PrimaryModel, StatusModel):
     assigned to a VLAN where appropriate.
     """
 
-    network = VarbinaryIPField(
-        null=False,
-        db_index=True,
-        help_text="IPv4 or IPv6 network address",
-    )
+    network = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 network address",)
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-    )
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="prefixes", blank=True, null=True,)
     vrf = models.ForeignKey(
-        to="ipam.VRF",
-        on_delete=models.PROTECT,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-        verbose_name="VRF",
+        to="ipam.VRF", on_delete=models.PROTECT, related_name="prefixes", blank=True, null=True, verbose_name="VRF",
     )
     tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="prefixes",
-        blank=True,
-        null=True,
+        to="tenancy.Tenant", on_delete=models.PROTECT, related_name="prefixes", blank=True, null=True,
     )
     vlan = models.ForeignKey(
-        to="ipam.VLAN",
-        on_delete=models.PROTECT,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-        verbose_name="VLAN",
+        to="ipam.VLAN", on_delete=models.PROTECT, related_name="prefixes", blank=True, null=True, verbose_name="VLAN",
     )
     role = models.ForeignKey(
         to="ipam.Role",
@@ -465,9 +391,7 @@ class Prefix(PrimaryModel, StatusModel):
         help_text="The primary function of this prefix",
     )
     is_pool = models.BooleanField(
-        verbose_name="Is a pool",
-        default=False,
-        help_text="All IP addresses within this prefix are considered usable",
+        verbose_name="Is a pool", default=False, help_text="All IP addresses within this prefix are considered usable",
     )
     description = models.CharField(max_length=200, blank=True)
 
@@ -559,8 +483,7 @@ class Prefix(PrimaryModel, StatusModel):
                     raise ValidationError(
                         {
                             "prefix": "Duplicate prefix found in {}: {}".format(
-                                "VRF {}".format(self.vrf) if self.vrf else "global table",
-                                duplicate_prefixes.first(),
+                                "VRF {}".format(self.vrf) if self.vrf else "global table", duplicate_prefixes.first(),
                             )
                         }
                     )
@@ -660,12 +583,7 @@ class Prefix(PrimaryModel, StatusModel):
             return available_ips
 
         # Omit first and last IP address from the available set
-        available_ips -= netaddr.IPSet(
-            [
-                netaddr.IPAddress(self.prefix.first),
-                netaddr.IPAddress(self.prefix.last),
-            ]
-        )
+        available_ips -= netaddr.IPSet([netaddr.IPAddress(self.prefix.first), netaddr.IPAddress(self.prefix.last),])
 
         return available_ips
 
@@ -731,33 +649,17 @@ class IPAddress(PrimaryModel, StatusModel):
     which has a NAT outside IP, that Interface's Device can use either the inside or outside IP as its primary IP.
     """
 
-    host = VarbinaryIPField(
-        null=False,
-        db_index=True,
-        help_text="IPv4 or IPv6 host address",
-    )
+    host = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 host address",)
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
     vrf = models.ForeignKey(
-        to="ipam.VRF",
-        on_delete=models.PROTECT,
-        related_name="ip_addresses",
-        blank=True,
-        null=True,
-        verbose_name="VRF",
+        to="ipam.VRF", on_delete=models.PROTECT, related_name="ip_addresses", blank=True, null=True, verbose_name="VRF",
     )
     tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="ip_addresses",
-        blank=True,
-        null=True,
+        to="tenancy.Tenant", on_delete=models.PROTECT, related_name="ip_addresses", blank=True, null=True,
     )
     role = models.CharField(
-        max_length=50,
-        choices=IPAddressRoleChoices,
-        blank=True,
-        help_text="The functional role of this IP",
+        max_length=50, choices=IPAddressRoleChoices, blank=True, help_text="The functional role of this IP",
     )
     assigned_object_type = models.ForeignKey(
         to=ContentType,
@@ -849,14 +751,10 @@ class IPAddress(PrimaryModel, StatusModel):
     def clean(self):
         super().clean()
 
-        # Set necessary instance attributes after parsing temp_address field
-        if hasattr(self, "form_address"):
-            self._deconstruct_address(self.form_address)
-
-        if self.address or hasattr(self, "form_address"):
+        if self.address:
 
             # /0 masks are not acceptable
-            if self.prefix_length == 0:
+            if self.prefixlen == 0:
                 raise ValidationError({"address": "Cannot create IP address with /0 mask."})
 
             # Enforce unique IP space (if applicable)
@@ -868,8 +766,7 @@ class IPAddress(PrimaryModel, StatusModel):
                     raise ValidationError(
                         {
                             "address": "Duplicate IP address found in {}: {}".format(
-                                "VRF {}".format(self.vrf) if self.vrf else "global table",
-                                duplicate_ips.first(),
+                                "VRF {}".format(self.vrf) if self.vrf else "global table", duplicate_ips.first(),
                             )
                         }
                     )
@@ -967,10 +864,7 @@ class IPAddress(PrimaryModel, StatusModel):
 
 
 @extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
+    "custom_fields", "custom_validators", "graphql", "relationships",
 )
 class VLANGroup(OrganizationalModel):
     """
@@ -980,11 +874,7 @@ class VLANGroup(OrganizationalModel):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="vlan_groups",
-        blank=True,
-        null=True,
+        to="dcim.Site", on_delete=models.PROTECT, related_name="vlan_groups", blank=True, null=True,
     )
     description = models.CharField(max_length=200, blank=True)
 
@@ -1047,38 +937,18 @@ class VLAN(PrimaryModel, StatusModel):
     or more Prefixes assigned to it.
     """
 
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="vlans", blank=True, null=True,)
     group = models.ForeignKey(
-        to="ipam.VLANGroup",
-        on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
+        to="ipam.VLANGroup", on_delete=models.PROTECT, related_name="vlans", blank=True, null=True,
     )
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
     name = models.CharField(max_length=64)
     tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
+        to="tenancy.Tenant", on_delete=models.PROTECT, related_name="vlans", blank=True, null=True,
     )
-    role = models.ForeignKey(
-        to="ipam.Role",
-        on_delete=models.SET_NULL,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
+    role = models.ForeignKey(to="ipam.Role", on_delete=models.SET_NULL, related_name="vlans", blank=True, null=True,)
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = [
@@ -1152,13 +1022,7 @@ class VLAN(PrimaryModel, StatusModel):
 
 
 @extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
+    "custom_fields", "custom_links", "custom_validators", "export_templates", "graphql", "relationships", "webhooks",
 )
 class Service(PrimaryModel):
     """
@@ -1175,28 +1039,18 @@ class Service(PrimaryModel):
         blank=True,
     )
     virtual_machine = models.ForeignKey(
-        to="virtualization.VirtualMachine",
-        on_delete=models.CASCADE,
-        related_name="services",
-        null=True,
-        blank=True,
+        to="virtualization.VirtualMachine", on_delete=models.CASCADE, related_name="services", null=True, blank=True,
     )
     name = models.CharField(max_length=100)
     protocol = models.CharField(max_length=50, choices=ServiceProtocolChoices)
     ports = JSONArrayField(
         base_field=models.PositiveIntegerField(
-            validators=[
-                MinValueValidator(SERVICE_PORT_MIN),
-                MaxValueValidator(SERVICE_PORT_MAX),
-            ]
+            validators=[MinValueValidator(SERVICE_PORT_MIN), MaxValueValidator(SERVICE_PORT_MAX),]
         ),
         verbose_name="Port numbers",
     )
     ipaddresses = models.ManyToManyField(
-        to="ipam.IPAddress",
-        related_name="services",
-        blank=True,
-        verbose_name="IP addresses",
+        to="ipam.IPAddress", related_name="services", blank=True, verbose_name="IP addresses",
     )
     description = models.CharField(max_length=200, blank=True)
 
