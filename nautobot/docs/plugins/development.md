@@ -164,7 +164,7 @@ Otherwise, manually activate nautobot using `source /opt/nautobot/bin/activate`.
 
 To install the plugin for development the following steps should be taken:
 
-* Activate the Nautobot virtual environment (`/opt/nautobot/bin/activate` if using official doc)
+* Activate the Nautobot virtual environment (as detailed above)
 * Navigate to the project root, where the `pyproject.toml` file exists for the plugin
 * Execute the command `poetry install` to install the local package into the Nautobot virtual environment
 
