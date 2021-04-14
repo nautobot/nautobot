@@ -45,6 +45,11 @@ class IPNetworkFormField(forms.Field):
     }
 
     def __init__(self, allow_zero_prefix=True, *args, **kwargs):
+        """Initialize any arguments that will be used for field validation.
+
+        Args:
+            allow_zero_prefix (bool, optional): Use for IPAddress validation to invalidate /0 CIDR masks. Defaults to True.
+        """
         self.allow_zero_prefix = allow_zero_prefix
         super().__init__(*args, **kwargs)
 
