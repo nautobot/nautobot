@@ -87,7 +87,7 @@ Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) settin
 For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
 
 !!! important
-	Cacheops does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching. Instead it monkey patches the underlying queryset methods to intercept calls to get and set cached items in Redis.
+    Cacheops does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching. Instead it monkey patches the underlying queryset methods to intercept calls to get and set cached items in Redis.
 
 #### CACHEOPS_REDIS
 
@@ -144,7 +144,7 @@ It is up to you to modify the task queues for your environment and know that oth
 The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to provide the backend for Redis as a concurrent write lock for preventing race conditions when allocating IP address objects and to define centralized Redis connection settings that will be used by RQ. This setting is used to to simplify the configuration for defining queues. *It is not used for caching at this time.* 
 
 !!! important
-	Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
+    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
 
 Default:
 
@@ -166,7 +166,7 @@ CACHES = {
 
 The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
 
- Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
+Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
 
 Default:
 
