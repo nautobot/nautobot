@@ -160,7 +160,7 @@ The plugin needs to be installed into the same python environment where Nautobot
 
 If you installed Nautobot using Poetry, then go to the root directory of your clone of the Nautobot repository and run `poetry shell` there.  Afterward, return to the root directory of your plugin to continue development.
 
-Otherwise, manually activate nautobot using `source /opt/nautobot/bin/activate`.
+Otherwise if using the pip install or Docker workflows, manually activate nautobot using `source /opt/nautobot/bin/activate`.
 
 To install the plugin for development the following steps should be taken:
 
