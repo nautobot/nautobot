@@ -5,7 +5,7 @@ from nautobot.extras.models.statuses import Status
 from nautobot.ipam.forms import IPAddressForm
 
 
-class EoxFormTest(TestCase):
+class IPAddressFormTest(TestCase):
     def test_valid_ip_address(self):
         form = IPAddressForm(data={"address": "192.168.1.0/24", "status": Status.objects.get(slug="dhcp")})
         self.assertTrue(form.is_valid())
