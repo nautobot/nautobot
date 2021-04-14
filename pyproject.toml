@@ -41,6 +41,8 @@ django-cors-headers = "~3.7.0"
 django-cryptography = "~1.0"
 # Advanced query filters
 django-filter = "~2.4.0"
+# Health check endpoint
+django-health-check = "^3.16.3"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
 # PostgreSQL advisory lock handling
@@ -87,8 +89,6 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
-# Health check endpoint
-django-health-check = "^3.16.3"
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
