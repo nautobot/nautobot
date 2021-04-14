@@ -1997,7 +1997,8 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         powerfeed = self.powerfeeds[0]
 
-        Cable(termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected"))
+        cable = Cable(termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected"))
+        cable.save()
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
         self.assertHttpStatus(self.client.get(url), 200)
