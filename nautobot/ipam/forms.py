@@ -564,7 +564,7 @@ class IPAddressForm(
     CustomFieldModelForm,
     RelationshipModelForm,
 ):
-    address = IPNetworkFormField()
+    address = IPNetworkFormField(allow_zero_prefix=False)
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -718,6 +718,10 @@ class IPAddressForm(
 
     def clean(self):
         super().clean()
+
+        # Need to set instance attribute to address field
+        # to run proper address validation on Model.clean()
+        self.instance.address = self.cleaned_data.get("address")
 
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
