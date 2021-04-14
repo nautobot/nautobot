@@ -280,17 +280,6 @@ Django = ">=1.11"
 django-js-asset = "*"
 
 [[package]]
-name = "django-pglocks"
-version = "1.0.4"
-description = "django_pglocks provides useful context managers for advisory locks for PostgreSQL."
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-six = ">=1.0.0"
-
-[[package]]
 name = "django-prometheus"
 version = "2.1.0"
 description = "Django middlewares to monitor your application with Prometheus.io."
@@ -300,6 +289,18 @@ python-versions = "*"
 
 [package.dependencies]
 prometheus-client = ">=0.7"
+
+[[package]]
+name = "django-redis"
+version = "4.12.1"
+description = "Full featured redis cache backend for Django."
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+Django = ">=2.2"
+redis = ">=3.0.0"
 
 [[package]]
 name = "django-rq"
@@ -1216,7 +1217,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "f8bbf5bf0562677459bc70d623ef260f3f46589c4b7c5b44d5d33d41e0322564"
+content-hash = "c20cc150d438f8867020893acc7b27cd3ffa7a5b9c793c9739ff6b5c096179a9"
 
 [metadata.files]
 aniso8601 = [
@@ -1406,12 +1407,13 @@ django-mptt = [
     {file = "django-mptt-0.11.0.tar.gz", hash = "sha256:dfdb3af75ad27cdd4458b0544ec8574174f2b90f99bc2cafab6a15b4bc1895a8"},
     {file = "django_mptt-0.11.0-py2.py3-none-any.whl", hash = "sha256:90eb236eb4f1a92124bd7c37852bbe09c0d21158477cc237556d59842a91c509"},
 ]
-django-pglocks = [
-    {file = "django-pglocks-1.0.4.tar.gz", hash = "sha256:3c47c66fbfbd268ef46269673a0516a039539b0972b8ed2ec9cfee44c4b65523"},
-]
 django-prometheus = [
     {file = "django-prometheus-2.1.0.tar.gz", hash = "sha256:dd3f8da1399140fbef5c00d1526a23d1ade286b144281c325f8e409a781643f2"},
     {file = "django_prometheus-2.1.0-py2.py3-none-any.whl", hash = "sha256:c338d6efde1ca336e90c540b5e87afe9287d7bcc82d651a778f302b0be17a933"},
+]
+django-redis = [
+    {file = "django-redis-4.12.1.tar.gz", hash = "sha256:306589c7021e6468b2656edc89f62b8ba67e8d5a1c8877e2688042263daa7a63"},
+    {file = "django_redis-4.12.1-py3-none-any.whl", hash = "sha256:1133b26b75baa3664164c3f44b9d5d133d1b8de45d94d79f38d1adc5b1d502e5"},
 ]
 django-rq = [
     {file = "django-rq-2.4.1.tar.gz", hash = "sha256:f09059ab37403a47c7933bca396fabb7f3058732d132462eade5333bc4bcac5f"},
