@@ -43,8 +43,6 @@ django-cryptography = "~1.0"
 django-filter = "~2.4.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
-# PostgreSQL advisory lock handling
-django-pglocks = "~1.0.4"
 # Prometheus metrics for Django
 django-prometheus = "~2.1.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
@@ -87,6 +85,8 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+# Redis cache for Django used for distributed locking
+django-redis = "^4.12.1"
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement

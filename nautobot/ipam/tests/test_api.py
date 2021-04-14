@@ -1,5 +1,8 @@
+from concurrent.futures.thread import ThreadPoolExecutor
 import json
+from random import shuffle
 
+from django.db import connection
 from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
@@ -20,6 +23,7 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
+from nautobot.utilities.testing.api import APITransactionTestCase
 
 
 class AppTest(APITestCase):
@@ -391,6 +395,53 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 8)
+
+
+class ParallelPrefixTest(APITransactionTestCase):
+    """
+    Adapted from https://github.com/netbox-community/netbox/pull/3726
+    """
+
+    def test_create_multiple_available_prefixes_parallel(self):
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
+
+        # 5 Prefixes
+        requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": "active"} for i in range(1, 6)]
+        url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
+
+        self._do_parallel_requests(url, requests)
+
+        prefixes = [str(o) for o in Prefix.objects.filter(prefix_length=30).all()]
+        self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
+
+    def test_create_multiple_available_ips_parallel(self):
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), is_pool=True)
+
+        # 8 IPs
+        requests = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 9)]
+        url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
+
+        self._do_parallel_requests(url, requests)
+
+        ips = [str(o) for o in IPAddress.objects.filter().all()]
+        self.assertEqual(len(ips), len(set(ips)), "Duplicate IPs should not exist")
+
+    def _do_parallel_requests(self, url, requests):
+        # Randomize request order, such that test run more closely simulates
+        # a real calling pattern.
+        shuffle(requests)
+        with ThreadPoolExecutor(max_workers=len(requests)) as executor:
+            futures = []
+            for req in requests:
+                futures.append(executor.submit(self._threaded_post, url, req))
+
+    def _threaded_post(self, url, data):
+        try:
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        finally:
+            # Django will use a separate DB connection for each thread, but will not
+            # automatically close connections, it must be done here.
+            connection.close()
 
 
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
