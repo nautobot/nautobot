@@ -849,10 +849,14 @@ class IPAddress(PrimaryModel, StatusModel):
     def clean(self):
         super().clean()
 
-        if self.address:
+        # Set necessary instance attributes after parsing temp_address field
+        if hasattr(self, "form_address"):
+            self._deconstruct_address(self.form_address)
+
+        if self.address or hasattr(self, "temp_address"):
 
             # /0 masks are not acceptable
-            if self.address.prefixlen == 0:
+            if self.prefix_length == 0:
                 raise ValidationError({"address": "Cannot create IP address with /0 mask."})
 
             # Enforce unique IP space (if applicable)

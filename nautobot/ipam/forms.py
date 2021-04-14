@@ -714,6 +714,10 @@ class IPAddressForm(
     def clean(self):
         super().clean()
 
+        # Need to set instance attribute to non-overlapping address computed field
+        # to run proper address validation on Model.clean()
+        self.instance.form_address = self.cleaned_data.get("address")
+
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
             raise forms.ValidationError("Cannot select both a device interface and a virtual machine interface")
