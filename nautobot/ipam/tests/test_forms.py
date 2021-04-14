@@ -28,7 +28,12 @@ class IPAddressFormTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertEquals("Please specify a valid IPv4 or IPv6 address.", form.errors["address"][0])
 
-    def test_address_missing_cidr_mask(self):
+    def test_address_zero_mask(self):
         form = IPAddressForm(data={"address": "192.168.0.1/0", "status": Status.objects.get(slug="dhcp")})
+        self.assertFalse(form.is_valid())
+        self.assertEquals("Cannot create IP address with /0 mask.", form.errors["address"][0])
+
+    def test_address_missing_mask(self):
+        form = IPAddressForm(data={"address": "192.168.0.1", "status": Status.objects.get(slug="dhcp")})
         self.assertFalse(form.is_valid())
         self.assertEquals("CIDR mask (e.g. /24) is required.", form.errors["address"][0])
