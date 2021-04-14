@@ -343,4 +343,4 @@ class StatusTest(TestCase):
             self.status.name = test
             self.status.clean()
             self.status.save()
-            self.assertEquals(str(self.status), self.status.name)
+            self.assertEquals(str(self.status), test)
