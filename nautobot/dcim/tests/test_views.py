@@ -1997,7 +1997,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         powerfeed = self.powerfeeds[0]
 
-        cable = Cable.objects.create(
+        Cable.objects.create(
             termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected")
         )
 
