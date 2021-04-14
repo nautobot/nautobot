@@ -21,14 +21,14 @@ class IPAddressFormTest(TestCase):
     def test_slaac_status_invalid_ipv4(self):
         form = IPAddressForm(data={"address": "192.168.0.1/32", "status": Status.objects.get(slug="slaac")})
         self.assertFalse(form.is_valid())
-        self.assertEquals("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"])
+        self.assertEquals("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])
 
     def test_address_invalid_ipv4(self):
         form = IPAddressForm(data={"address": "192.168.0.1/64", "status": Status.objects.get(slug="dhcp")})
         self.assertFalse(form.is_valid())
-        self.assertIn("Please specify a valid IPv4 or IPv6 address.", form.errors)
+        self.assertEquals("Please specify a valid IPv4 or IPv6 address.", form.errors["address"][0])
 
     def test_address_missing_cidr_mask(self):
         form = IPAddressForm(data={"address": "192.168.0.1/0", "status": Status.objects.get(slug="dhcp")})
         self.assertFalse(form.is_valid())
-        self.assertIn("CIDR mask (e.g. /24) is required.", form.errors)
+        self.assertEquals("CIDR mask (e.g. /24) is required.", form.errors["address"][0])
