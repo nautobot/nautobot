@@ -1,5 +1,6 @@
 from django import template
 from django.urls import reverse
+from django.conf import settings
 
 from nautobot.extras.models import ExportTemplate
 from nautobot.utilities.utils import prepare_cloned_fields
@@ -15,6 +16,8 @@ def _get_viewname(instance, action):
     # Validate action
     assert action in ("add", "edit", "delete")
     viewname = "{}:{}_{}".format(instance._meta.app_label, instance._meta.model_name, action)
+    if instance._meta.app_label in settings.PLUGINS:
+        viewname = f"plugins:{viewname}"
 
     return viewname
 

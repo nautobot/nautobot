@@ -65,7 +65,7 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
         verbose_name_plural = "statuses"
 
     def __str__(self):
-        return self.name.capitalize()
+        return self.name
 
     def get_absolute_url(self):
         return reverse("extras:status", args=[self.slug])
