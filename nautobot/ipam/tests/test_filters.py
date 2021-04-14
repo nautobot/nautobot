@@ -779,6 +779,39 @@ class IPAddressTestCase(TestCase):
             status=status_map["active"],
         ),
 
+    def test_search(self):
+        search_terms = {
+            # string searches
+            "ipaddress-a": 2,
+            "foo": 0,
+            # network searches
+            "": 10,
+            "10": 5,
+            "10.": 5,
+            "10.0": 5,
+            "10.0.0.4": 1,
+            "10.0.0.4/24": 1,
+            "11": 0,
+            "11.": 0,
+            "11.0": 0,
+            "10.10.10.0/24": 0,
+            "2001": 5,
+            "2001:": 5,
+            "2001::": 5,
+            "2001:db8:": 5,
+            "2001:db8::": 5,
+            "2001:db8::/64": 5,
+            "2001:db8::2": 1,
+            "2001:db8:0:2": 0,
+            "fe80": 0,
+            "fe80::": 0,
+            "foo.bar": 0,
+        }
+
+        for term, cnt in search_terms.items():
+            params = {"q": term}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
+
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)

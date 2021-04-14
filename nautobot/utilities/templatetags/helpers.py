@@ -90,6 +90,8 @@ def validated_viewname(model, action):
     Return the view name for the given model and action if valid, or None if invalid.
     """
     viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+    if model._meta.app_label in settings.PLUGINS:
+        viewname = f"plugins:{viewname}"
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
         # are written to pass a name to {% url %}.
