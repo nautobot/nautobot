@@ -851,10 +851,6 @@ class IPAddress(PrimaryModel, StatusModel):
 
         if self.address:
 
-            # /0 masks are not acceptable
-            if self.address.prefixlen == 0:
-                raise ValidationError({"address": "Cannot create IP address with /0 mask."})
-
             # Enforce unique IP space (if applicable)
             if self.role not in IPADDRESS_ROLES_NONUNIQUE and (
                 (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique)

@@ -559,7 +559,7 @@ class IPAddressForm(
     CustomFieldModelForm,
     RelationshipModelForm,
 ):
-    address = IPNetworkFormField()
+    address = IPNetworkFormField(allow_zero_prefix=False)
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
