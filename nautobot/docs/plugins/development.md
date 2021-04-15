@@ -264,7 +264,7 @@ Plugins can optionally expose their models via the GraphQL interface to allow th
 * By using the `extras_features` decorator
 * By creating your own GraphQL Type object and registering it within `graphql/types.py` of your plugin (decorator is not needed)
 
-#### Using the `extras_features` Decorator for Graphql
+#### Using the `extras_features` Decorator for GraphQL
 
 To expose a model, simply register it using the `extras_features("graphql")` decorator. Nautobot will automatically create a GraphQL `Type` object and try to convert the model automatically to GraphQL. If a `FilterSet` is available at `<app_name>.filters.<ModelName>FilterSet` Nautobot will automatically use the filterset to generate search parameters for the list views.
 
