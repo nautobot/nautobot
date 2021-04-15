@@ -43,7 +43,7 @@
             {% delete_button object %}
         {% endif %}
     </div>
-    <h1>{% block title %}VLAN {{ object.display_name }}{% endblock %}</h1>
+    <h1>{% block title %}VLAN {{ object.display }}{% endblock %}</h1>
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">
         {% custom_links object %}

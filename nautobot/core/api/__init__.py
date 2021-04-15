@@ -6,6 +6,7 @@ from .fields import (
 )
 from .routers import OrderedDefaultRouter
 from .serializers import (
+    BaseModelSerializer,
     BulkOperationSerializer,
     ValidatedModelSerializer,
     WritableNestedSerializer,
@@ -19,6 +20,7 @@ __all__ = (
     "OrderedDefaultRouter",
     "SerializedPKRelatedField",
     "TimeZoneField",
+    "BaseModelSerializer",
     "ValidatedModelSerializer",
     "WritableNestedSerializer",
 )
