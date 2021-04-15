@@ -323,7 +323,7 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            id_list = self._get_queryset().values_list("id", flat=True)[:3]
+            id_list = list(self._get_queryset().values_list("id", flat=True)[:3])
             self.assertEqual(len(id_list), 3, "Insufficient number of objects to test bulk update")
             data = [{"id": id, **self.bulk_update_data} for id in id_list]
 
