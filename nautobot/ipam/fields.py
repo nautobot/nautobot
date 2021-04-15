@@ -23,7 +23,7 @@ class VarbinaryIPField(models.BinaryField):
 
         # Use 'bytea' type for Postgres.
         if "postgres" in engine:
-            return super().db_type(connection)
+            return "bytea"
 
         # Or 'varbinary' for everyone else.
         max_length = DictWrapper(self.__dict__, connection.ops.quote_name, "qn_")
