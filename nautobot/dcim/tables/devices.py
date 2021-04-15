@@ -178,7 +178,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
         viewname="dcim:devicetype",
         args=[Accessor("device_type__pk")],
         verbose_name="Type",
-        text=lambda record: record.device_type.display_name,
+        text=lambda record: record.device_type.display,
     )
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")

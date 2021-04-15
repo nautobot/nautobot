@@ -153,7 +153,6 @@ class StatusField(models.ForeignKey):
         """Return a prepped formfield for use in model forms."""
         defaults = {
             "form_class": DynamicModelChoiceField,
-            "display_field": "name",
             "queryset": Status.objects.all(),
             # label_lower e.g. "dcim.device"
             "query_params": {"content_types": self.model._meta.label_lower},
