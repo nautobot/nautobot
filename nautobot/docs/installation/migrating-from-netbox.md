@@ -71,6 +71,10 @@ The following backwards-incompatible changes have been made to the data model in
 
 A new [`Status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), and a `slug` field (e.g. `active`).
 
+### Display name
+
+Several models such as device type and VLAN expose a `display_name` property which has been renamed to `display`. In fact, there are several other instances, especially in the REST API, where the `display_name` field is used and as such, all instances have been renamed to `display`.
+
 #### CSV Imports
 
 When using CSV import to define a `status` field on imported objects, such as when importing Devices or Prefixes, the `Status.slug` field is used.
@@ -511,3 +515,15 @@ IPAddress.objects.filter(prefix_length=value)
 # or
 Prefix.objects.filter(prefix_length=value)
 ```
+
+## REST API Changes
+
+The following backwards-incompatible changes have been made to the REST API in Nautobot. 
+
+### Display field
+
+In several endpoints such as device type and VLAN, a `display_name` field is used to expose a human friendly string value for the object. This field has been renamed to `display` and has been standardized across all model API endpoints.
+
+### Custom Field Choices
+
+Custom field choices are exposed in Nautobot at a dedicated endpoint: `/api/extras/custom-field-choices/`. This replaces the `choices` field on on the CustomField model and the subsequent endpoint: `/api/extras/custom-fields/`
