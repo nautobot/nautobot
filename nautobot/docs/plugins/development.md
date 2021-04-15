@@ -260,6 +260,7 @@ This will display the plugin and its model in the admin UI. Staff users can crea
 ### Register the Model in the GraphQL Interface
 
 Plugins can optionally expose their models via the GraphQL interface to allow the models to be part of the Graph and to be queried easily. There are two ways to expose a model to the graphql interface.
+
 * By using the `extras_features` decorator
 * By creating your own GraphQL Type object and registering it within `graphql/types.py` of your plugin (decorator is not needed)
 
