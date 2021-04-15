@@ -2432,7 +2432,7 @@ class CableBulkDeleteView(generic.BulkDeleteView):
 
 
 class ConsoleConnectionsListView(generic.ObjectListView):
-    queryset = ConsolePort.objects.filter(_path__isnull=False).order_by("device")
+    queryset = ConsolePort.objects.filter(_path__isnull=False).order_by("device__identifier", "name")
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
@@ -2450,7 +2450,7 @@ class ConsoleConnectionsListView(generic.ObjectListView):
                     obj._path.destination.name if obj._path.destination else None,
                     obj.device.identifier,
                     obj.name,
-                    obj._path.is_active,
+                    str(obj._path.is_active),
                 ]
             )
             csv_data.append(csv)
@@ -2462,7 +2462,7 @@ class ConsoleConnectionsListView(generic.ObjectListView):
 
 
 class PowerConnectionsListView(generic.ObjectListView):
-    queryset = PowerPort.objects.filter(_path__isnull=False).order_by("device")
+    queryset = PowerPort.objects.filter(_path__isnull=False).order_by("device__identifier", "name")
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable
@@ -2474,15 +2474,16 @@ class PowerConnectionsListView(generic.ObjectListView):
             ",".join(["pdu", "outlet", "device", "power_port", "reachable"])
         ]
         for obj in self.queryset:
-            csv = csv_format(
-                [
-                    obj._path.destination.device.identifier if obj._path.destination else None,
-                    obj._path.destination.name if obj._path.destination else None,
-                    obj.device.identifier,
-                    obj.name,
-                    obj._path.is_active,
-                ]
-            )
+            obj_data = [
+                None,  # see below
+                obj._path.destination.name if obj._path.destination else None,
+                obj.device.identifier,
+                obj.name,
+                str(obj._path.is_active),
+            ]
+            if obj._path.destination and hasattr(obj._path.destination, "device"):
+                obj_data[0] = obj._path.destination.device.identifier
+            csv = csv_format(obj_data)
             csv_data.append(csv)
 
         return "\n".join(csv_data)
@@ -2496,7 +2497,7 @@ class InterfaceConnectionsListView(generic.ObjectListView):
         # Avoid duplicate connections by only selecting the lower PK in a connected pair
         _path__isnull=False,
         pk__lt=F("_path__destination_id"),
-    ).order_by("device")
+    ).order_by("device__identifier", "name")
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
     table = tables.InterfaceConnectionTable
@@ -2508,15 +2509,18 @@ class InterfaceConnectionsListView(generic.ObjectListView):
             ",".join(["device_a", "interface_a", "device_b", "interface_b", "reachable"])
         ]
         for obj in self.queryset:
-            csv = csv_format(
-                [
-                    obj._path.destination.device.identifier if obj._path.destination else None,
-                    obj._path.destination.name if obj._path.destination else None,
-                    obj.device.identifier,
-                    obj.name,
-                    obj._path.is_active,
-                ]
-            )
+            obj_data = [
+                None,  # see below
+                None,  # see below
+                obj.device.identifier,
+                obj.name,
+                str(obj._path.is_active),
+            ]
+            if obj._path.destination and hasattr(obj._path.destination, "device"):
+                obj_data[0] = obj._path.destination.device.identifier
+            if obj._path.destination and hasattr(obj._path.destination, "name"):
+                obj_data[1] = obj._path.destination.name
+            csv = csv_format(obj_data)
             csv_data.append(csv)
 
         return "\n".join(csv_data)
