@@ -73,7 +73,7 @@ A new [`Status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/
 
 ### Display name
 
-Several models such as device type and VLAN expose a `display_name` property which has been renamed to `display`. In fact, there are several other instances, especially in the REST API, where the `display_name` field is used and as such, all instances have been renamed to `display`.
+Several models such as device type and VLAN exposed a `display_name` property, which has now been renamed to `display`. In fact, there are several other instances, especially in the REST API, where the `display_name` field was used and as such, all instances have been renamed to `display`.
 
 #### CSV Imports
 

@@ -14,13 +14,13 @@ from .serializers import (
 
 
 __all__ = (
+    "BaseModelSerializer",
     "BulkOperationSerializer",
     "ChoiceField",
     "ContentTypeField",
     "OrderedDefaultRouter",
     "SerializedPKRelatedField",
     "TimeZoneField",
-    "BaseModelSerializer",
     "ValidatedModelSerializer",
     "WritableNestedSerializer",
 )

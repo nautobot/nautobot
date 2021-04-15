@@ -37,7 +37,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
         on a super class be included in `Meta.fields` to allow for a subclass to include only a subset of declared
         fields from the super. This means either we intercept and append the display field at this level, or
         enforce by convention that all consumers of BaseModelSerializer include `display` in their `Meta.fields`
-        which would surely lead to errors of omition.
+        which would surely lead to errors of omission; therefore we have chosen the former approach.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
         fields.append("display")
