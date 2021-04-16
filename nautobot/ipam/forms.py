@@ -347,7 +347,6 @@ class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModel
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
@@ -368,7 +367,6 @@ class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModel
         queryset=VLAN.objects.all(),
         required=False,
         label="VLAN",
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "group_id": "$vlan_group",
@@ -463,7 +461,6 @@ class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMi
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -564,11 +561,10 @@ class IPAddressForm(
     CustomFieldModelForm,
     RelationshipModelForm,
 ):
-    address = IPNetworkFormField()
+    address = IPNetworkFormField(allow_zero_prefix=False)
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
-        display_field="display_name",
         initial_params={"interfaces": "$interface"},
     )
     interface = DynamicModelChoiceField(
@@ -591,7 +587,6 @@ class IPAddressForm(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     nat_region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
@@ -609,7 +604,6 @@ class IPAddressForm(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
-        display_field="display_name",
         null_option="None",
         query_params={"site_id": "$site"},
     )
@@ -617,7 +611,6 @@ class IPAddressForm(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "rack_id": "$nat_rack",
@@ -636,13 +629,11 @@ class IPAddressForm(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     nat_inside = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,
         label="IP Address",
-        display_field="address",
         query_params={
             "device_id": "$nat_device",
             "virtual_machine_id": "$nat_virtual_machine",
@@ -719,6 +710,10 @@ class IPAddressForm(
     def clean(self):
         super().clean()
 
+        # Need to set instance attribute to address field
+        # to run proper address validation on Model.clean()
+        self.instance.address = self.cleaned_data.get("address")
+
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
             raise forms.ValidationError("Cannot select both a device interface and a virtual machine interface")
@@ -762,7 +757,6 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, Custo
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -892,7 +886,6 @@ class IPAddressBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFor
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     mask_length = forms.IntegerField(
         min_value=IPADDRESS_MASK_LENGTH_MIN,
