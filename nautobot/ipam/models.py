@@ -91,7 +91,7 @@ class VRF(PrimaryModel):
         verbose_name_plural = "VRFs"
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("ipam:vrf", args=[self.pk])
@@ -106,7 +106,7 @@ class VRF(PrimaryModel):
         )
 
     @property
-    def display_name(self):
+    def display(self):
         if self.rd:
             return f"{self.name} ({self.rd})"
         return self.name
@@ -851,10 +851,6 @@ class IPAddress(PrimaryModel, StatusModel):
 
         if self.address:
 
-            # /0 masks are not acceptable
-            if self.address.prefixlen == 0:
-                raise ValidationError({"address": "Cannot create IP address with /0 mask."})
-
             # Enforce unique IP space (if applicable)
             if self.role not in IPADDRESS_ROLES_NONUNIQUE and (
                 (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique)
@@ -1110,7 +1106,7 @@ class VLAN(PrimaryModel, StatusModel):
         verbose_name_plural = "VLANs"
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("ipam:vlan", args=[self.pk])
@@ -1135,7 +1131,7 @@ class VLAN(PrimaryModel, StatusModel):
         )
 
     @property
-    def display_name(self):
+    def display(self):
         return f"{self.name} ({self.vid})"
 
     def get_interfaces(self):

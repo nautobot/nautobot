@@ -577,7 +577,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     user_id = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
-        display_field="username",
         label="User",
         widget=APISelectMultiple(
             api_url="/api/users/users/",
@@ -586,7 +585,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     changed_object_type_id = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field="display_name",
         label="Object Type",
         widget=APISelectMultiple(
             api_url="/api/extras/content-types/",
@@ -630,7 +628,6 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
     user = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
-        display_field="username",
         label="User",
         widget=APISelectMultiple(
             api_url="/api/users/users/",
@@ -813,7 +810,6 @@ class StatusBulkEditFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            display_field="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -829,7 +825,6 @@ class StatusFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            display_field="name",
             to_field_name="slug",
         )
         self.order_fields(self.field_order)  # Reorder fields again

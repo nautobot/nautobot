@@ -44,6 +44,15 @@ class IPNetworkFormField(forms.Field):
         "invalid": "Enter a valid IPv4 or IPv6 address (with CIDR mask).",
     }
 
+    def __init__(self, allow_zero_prefix=True, *args, **kwargs):
+        """Initialize any arguments that will be used for field validation.
+
+        Args:
+            allow_zero_prefix (bool, optional): Use for IPAddress validation to invalidate /0 CIDR masks. Defaults to True.
+        """
+        self.allow_zero_prefix = allow_zero_prefix
+        super().__init__(*args, **kwargs)
+
     def to_python(self, value):
         if not value:
             return None
@@ -56,6 +65,13 @@ class IPNetworkFormField(forms.Field):
             raise ValidationError("CIDR mask (e.g. /24) is required.")
 
         try:
-            return IPNetwork(value)
+            address = IPNetwork(value)
         except AddrFormatError:
             raise ValidationError("Please specify a valid IPv4 or IPv6 address.")
+
+        # If we're expecting an IPAddress, we set self.allow_zero_prefix to false
+        # to validate that IP address does not have a 0 CIDR mask
+        if not self.allow_zero_prefix and address.prefixlen == 0:
+            raise ValidationError("Cannot create IP address with /0 mask.")
+
+        return address

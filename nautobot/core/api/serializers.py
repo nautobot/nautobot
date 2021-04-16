@@ -6,13 +6,46 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
 )
 from django.db.models import AutoField, ManyToManyField
+from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from nautobot.utilities.utils import dict_to_filter_params
 
 
-class ValidatedModelSerializer(serializers.ModelSerializer):
+class BaseModelSerializer(serializers.ModelSerializer):
+    """
+    This base serializer implements common fields and logic for all ModelSerializers.
+    Namely it defines the `display` field which exposes a human friendly value for the given object.
+    """
+
+    display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
+
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    def get_display(self, instance):
+        """
+        Return either the `display` property of the instance or `str(instance)`
+        """
+        return getattr(instance, "display", str(instance))
+
+    def get_field_names(self, declared_fields, info):
+        """
+        Override get_field_names() to append the `display` field so it is always included in the
+        serializer's `Meta.fields`.
+
+        DRF does not automatically add declared fields to `Meta.fields`, nor does it require that declared fields
+        on a super class be included in `Meta.fields` to allow for a subclass to include only a subset of declared
+        fields from the super. This means either we intercept and append the display field at this level, or
+        enforce by convention that all consumers of BaseModelSerializer include `display` in their `Meta.fields`
+        which would surely lead to errors of omission; therefore we have chosen the former approach.
+        """
+        fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
+        fields.append("display")
+
+        return fields
+
+
+class ValidatedModelSerializer(BaseModelSerializer):
     """
     Extends the built-in ModelSerializer to enforce calling full_clean() on a copy of the associated instance during
     validation. (DRF does not do this by default; see https://github.com/encode/django-rest-framework/issues/3144)
@@ -42,7 +75,7 @@ class ValidatedModelSerializer(serializers.ModelSerializer):
         return data
 
 
-class WritableNestedSerializer(serializers.ModelSerializer):
+class WritableNestedSerializer(BaseModelSerializer):
     """
     Returns a nested representation of an object on read, but accepts only a primary key on write.
     """

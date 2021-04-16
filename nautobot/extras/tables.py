@@ -409,7 +409,7 @@ class RelationshipTable(BaseTable):
 
 class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
-    actions = ButtonsColumn(Relationship, buttons=("delete",))
+    actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
 
     source = tables.Column(linkify=True)
 

@@ -369,7 +369,7 @@ class DynamicModelChoiceMixin:
 
     def __init__(
         self,
-        display_field="name",
+        display_field="display",
         query_params=None,
         initial_params=None,
         null_option=None,
