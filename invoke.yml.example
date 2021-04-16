@@ -1,0 +1,7 @@
+---
+nautobot:
+  local: False
+  python_ver: "3.7"
+  compose_dir: "/full/path/to/nautobot/development"
+  compose_file": "docker-compose.yml"
+  compose_override_file": "docker-compose.override.yml"
