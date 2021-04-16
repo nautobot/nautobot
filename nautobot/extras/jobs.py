@@ -515,7 +515,7 @@ class ObjectVar(ScriptVariable):
         self,
         model=None,
         queryset=None,
-        display_field="name",
+        display_field="display",
         query_params=None,
         null_option=None,
         *args,

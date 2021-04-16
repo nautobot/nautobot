@@ -14,9 +14,8 @@ from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
 from nautobot.dcim.models import *
 from nautobot.extras.models import Status
-from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import ViewTestCases
-
+from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.utilities.testing import ViewTestCases, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1121,6 +1120,29 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         url = reverse("dcim:device_inventory", kwargs={"pk": device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_primary_ips(self):
+        """Test assigning a primary IP to a device."""
+        self.add_permissions("dcim.change_device")
+
+        # Create an interface and assign an IP to it.
+        device = Device.objects.first()
+        interface = Interface.objects.create(device=device, name="Interface 1")
+        ip_address = IPAddress.objects.create(address="1.2.3.4/32")
+        interface.ip_addresses.add(ip_address)
+
+        # Dupe the form data and populated primary_ip4 w/ ip_address
+        form_data = self.form_data.copy()
+        form_data["primary_ip4"] = ip_address.pk
+
+        # Assert that update succeeds.
+        request = {
+            "path": self._get_url("edit", device),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), form_data)
+
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
@@ -1916,23 +1938,33 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         site = Site.objects.create(name="Site 1", slug="site-1")
 
+        # Assign site generated to the class object for use later.
+        cls.site = site
+
         powerpanels = (
             PowerPanel.objects.create(site=site, name="Power Panel 1"),
             PowerPanel.objects.create(site=site, name="Power Panel 2"),
         )
+
+        # Assign power panels generated to the class object for use later.
+        cls.powerpanels = powerpanels
 
         racks = (
             Rack.objects.create(site=site, name="Rack 1"),
             Rack.objects.create(site=site, name="Rack 2"),
         )
 
-        PowerFeed.objects.create(name="Power Feed 1", power_panel=powerpanels[0], rack=racks[0])
-        PowerFeed.objects.create(name="Power Feed 2", power_panel=powerpanels[0], rack=racks[0])
+        powerfeed_1 = PowerFeed.objects.create(name="Power Feed 1", power_panel=powerpanels[0], rack=racks[0])
+        powerfeed_2 = PowerFeed.objects.create(name="Power Feed 2", power_panel=powerpanels[0], rack=racks[0])
         PowerFeed.objects.create(name="Power Feed 3", power_panel=powerpanels[0], rack=racks[0])
+
+        # Assign power feeds for the tests later
+        cls.powerfeeds = (powerfeed_1, powerfeed_2)
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         statuses = Status.objects.get_for_model(PowerFeed)
+        cls.statuses = statuses
         status_planned = statuses.get(slug="planned")
 
         cls.form_data = {
@@ -1969,3 +2001,27 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "max_utilization": 50,
             "comments": "New comments",
         }
+
+    def test_power_feed_detail(self):
+        self.add_permissions("dcim.view_powerfeed")
+        # Setup base device info
+        manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role-1")
+        device = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            name="Device1",
+            site=self.site,
+        )
+
+        powerport = PowerPort.objects.create(device=device, name="Power Port 1")
+
+        powerfeed = self.powerfeeds[0]
+
+        Cable.objects.create(
+            termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected")
+        )
+
+        url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
+        self.assertHttpStatus(self.client.get(url), 200)
