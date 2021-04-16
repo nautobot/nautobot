@@ -25,14 +25,13 @@ class TestVarbinaryIPField(TestCase):
 
     def test_db_type(self):
         """Test `VarbinaryIPField.db_type`."""
-        # Mapping of engine -> db_type
+        # Mapping of vendor -> db_type
         db_types = {
-            "django.db.backends.postgresql": "bytea",
-            "django.db.backends.mysql": "varbinary(16)",
+            "postgresql": "bytea",
+            "mysql": "varbinary(16)",
         }
 
-        engine = connection.settings_dict["ENGINE"]
-        expected = db_types[engine]
+        expected = db_types[connection.vendor]
         self.assertEqual(self.field.db_type(connection), expected)
 
     def test_value_to_string(self):
@@ -80,7 +79,7 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(self.field.to_python(self.prefix.prefix.ip), self.network)
 
     @skipIf(
-        "postgres" not in connection.settings_dict["ENGINE"],
+        connection.vendor != "postgresql",
         "postgres is not the database driver",
     )
     def test_get_db_prep_value_postgres(self):
@@ -93,7 +92,7 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(prepped.getquoted(), manual.getquoted())
 
     @skipIf(
-        "mysql" not in connection.settings_dict["ENGINE"],
+        connection.vendor != "mysql",
         "mysql is not the database driver",
     )
     def test_get_db_prep_value_mysql(self):
