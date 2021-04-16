@@ -273,16 +273,19 @@ def check_migrations(context):
         "keepdb": "save and re-use test database between test runs for faster re-testing.",
         "label": "specify a directory or module to test instead of running all Nautobot tests",
         "failfast": "fail as soon as a single test fails don't run the entire test suite",
+        "buffer": "Discard output from passing tests",
     }
 )
-def unittest(context, keepdb=False, label="nautobot", failfast=False):
+def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=True):
     """Run Nautobot unit tests."""
-    command = f"coverage run -m nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
+    command = f"coverage run --module nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
 
     if keepdb:
         command += " --keepdb"
     if failfast:
         command += " --failfast"
+    if buffer:
+        command += " --buffer"
     run_command(context, command)
 
 
