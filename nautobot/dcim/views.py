@@ -2493,11 +2493,19 @@ class PowerConnectionsListView(generic.ObjectListView):
 
 
 class InterfaceConnectionsListView(generic.ObjectListView):
-    queryset = Interface.objects.filter(
-        # Avoid duplicate connections by only selecting the lower PK in a connected pair
-        _path__isnull=False,
-        pk__lt=F("_path__destination_id"),
-    ).order_by("device__identifier", "name")
+    queryset = (
+        Interface.objects.filter(_path__isnull=False)
+        .exclude(
+            # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
+            # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
+            # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
+            # used for reverse querying.
+            # The below at least ensures uniqueness, but doesn't guarantee that we get (A, B) versus (B, A)
+            _path__destination_type=ContentType.objects.get_for_model(Interface),
+            pk__lt=F("_path__destination_id"),
+        )
+        .order_by("device__identifier", "name")
+    )
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
     table = tables.InterfaceConnectionTable
@@ -2510,16 +2518,22 @@ class InterfaceConnectionsListView(generic.ObjectListView):
         ]
         for obj in self.queryset:
             obj_data = [
-                None,  # see below
-                None,  # see below
                 obj.device.identifier,
                 obj.name,
+                None,  # see below
+                None,  # see below
                 str(obj._path.is_active),
             ]
             if obj._path.destination and hasattr(obj._path.destination, "device"):
-                obj_data[0] = obj._path.destination.device.identifier
+                obj_data[2] = obj._path.destination.device.identifier
             if obj._path.destination and hasattr(obj._path.destination, "name"):
-                obj_data[1] = obj._path.destination.name
+                obj_data[3] = obj._path.destination.name
+            # Ensure consistent ordering (see comment on queryset above) for the CSV export at least
+            if obj_data[2] and (
+                obj_data[0] > obj_data[2] or (obj_data[0] == obj_data[2] and obj_data[1] > obj_data[3])
+            ):
+                # Swap a and b!
+                obj_data = [*obj_data[2:4], *obj_data[0:2], *obj_data[4:]]
             csv = csv_format(obj_data)
             csv_data.append(csv)
 

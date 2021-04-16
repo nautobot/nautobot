@@ -1812,12 +1812,12 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
-            response.content.decode(response.charset),
             """\
 console_server,port,device,console_port,reachable
 Device 2,Console Server Port 1,Device 1,Console Port 1,True
 Device 2,Console Server Port 2,Device 1,Console Port 2,True
 ,,Device 1,Console Port 3,False""",
+            response.content.decode(response.charset),
         )
 
 
@@ -1870,12 +1870,12 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
-            response.content.decode(response.charset),
             """\
 pdu,outlet,device,power_port,reachable
 Device 2,Power Outlet 1,Device 1,Power Port 1,True
 Device 2,Power Outlet 2,Device 1,Power Port 2,True
 ,Power Feed 1,Device 1,Power Port 3,True""",
+            response.content.decode(response.charset),
         )
 
 
@@ -1931,11 +1931,12 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
-            response.content.decode(response.charset),
             """\
 device_a,interface_a,device_b,interface_b,reachable
-Device 2,Interface 1,Device 1,Interface 1,True
-,,Device 1,Interface 2,True""",
+Device 1,Interface 1,Device 2,Interface 1,True
+Device 1,Interface 2,,,True
+Device 1,Interface 3,,,False""",
+            response.content.decode(response.charset),
         )
 
 
