@@ -37,32 +37,53 @@ RQ_QUEUES = {
         "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
         "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
+        "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
         "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "webhooks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
+        "DB": 2,
+        "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "check_releases": {
         "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
         "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
+        "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
         "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 300,
     },
     "custom_fields": {
-        "HOST": os.getenv("REDIS_HOST", "localhost"),
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+        "PORT": int(os.environ.get("NAUTOBOT_REDIS_PORT", 6379)),
         "DB": 2,
-        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
+        "SSL": is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False)),
         "DEFAULT_TIMEOUT": 900,
     },
+}
+
+redis_protocol = "rediss" if is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)) else "redis"
+cache_ops_pwd = os.getenv("NAUTOBOT_REDIS_PASSWORD")
+cache_ops_host = os.getenv("NAUTOBOT_REDIS_HOST", "localhost")
+cache_ops_user = os.getenv("NAUTOBOT_REDIS_USER")
+cache_ops_port = int(os.getenv("NAUTOBOT_REDIS_PORT", 6379))
+
+CACHEOPS_REDIS = os.getenv(
+    "NAUTOBOT_CACHEOPS_REDIS", f"{redis_protocol}://:{cache_ops_pwd}@{cache_ops_host}:{cache_ops_port}/2"
+)
+
+# This is used for configuring Redis locks via django caching backend.
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": CACHEOPS_REDIS,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
 }

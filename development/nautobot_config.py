@@ -108,6 +108,16 @@ BASE_PATH = os.environ.get("BASE_PATH", "")
 # REDIS CACHEOPS
 CACHEOPS_REDIS = f"redis://:{os.getenv('NAUTOBOT_REDIS_PASSWORD')}@{os.getenv('NAUTOBOT_REDIS_HOST')}:{os.getenv('NAUTOBOT_REDIS_PORT')}/2"
 
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": CACHEOPS_REDIS,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
 HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
 
 SECRET_KEY = os.environ.get("NAUTOBOT_SECRET_KEY", "")

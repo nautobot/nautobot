@@ -21,14 +21,14 @@ _unit_test: &unit_test
   before_script:
     - invoke buildx
   script:
-    - invoke unittest || travis_terminate 1
+    - invoke unittest --failfast || travis_terminate 1
     - invoke unittest-coverage
 
 _integration_test: &integration_test
   python: "3.9"
   <<: *setup_docker
   before_script:
-    - invoke buildx --target final --tag networktocode/nautobot-py${PYTHON_VER}:local
+    - invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
   script:
     - invoke integration-tests
 
@@ -36,7 +36,7 @@ _publish: &publish
   python: "3.9"
   <<: *setup_docker
   before_script:
-    - invoke buildx --target final --tag networktocode/nautobot-py${PYTHON_VER}:local
+    - invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
     - docker images
     - echo Sign into docker hub
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
@@ -75,35 +75,35 @@ jobs:
     - stage: Unit Test
       name: Python 3.6 Unit Test
       env:
-        - PYTHON_VER=3.6
+        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
       <<: *unit_test
     - name: Python 3.7 Unit Test
       env:
-        - PYTHON_VER=3.7
+        - INVOKE_NAUTOBOT_PYTHON_VER=3.7
       <<: *unit_test
     - name: Python 3.8 Unit Test
       env:
-        - PYTHON_VER=3.8
+        - INVOKE_NAUTOBOT_PYTHON_VER=3.8
       <<: *unit_test
     - name: Python 3.9 Unit Test
       env:
-        - PYTHON_VER=3.9
+        - INVOKE_NAUTOBOT_PYTHON_VER=3.9
       <<: *unit_test
 
 
     - stage: Integration Tests
       name: Python 3.6 Integration Tests
       env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.6
+        - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
+        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
       <<: *integration_test
 
     - stage: Publish Docker Image (Develop)
       name: Publish Python 3.6 Images
       if: branch = develop AND type = push
       env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.6
+        - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
+        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
       <<: *publish
       <<: *publish_develop
 
@@ -111,10 +111,10 @@ jobs:
       name: Publish Python 3.6 Images
       if: branch = main AND type = push
       env:
-        - OVERRIDE_FILENAME=docker-compose.build.yml
-        - PYTHON_VER=3.6
+        - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
+        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
       <<: *publish
       <<: *publish_main
 
   allow_failures:
-    - env: PYTHON_VER=3.9
+    - env: INVOKE_NAUTOBOT_PYTHON_VER=3.9
