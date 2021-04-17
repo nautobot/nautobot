@@ -67,10 +67,12 @@ jobs:
         - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
         - chmod +x /home/travis/bin/hadolint
         - mkdir -p /home/travis/.cache/docker
+      env:
+        - INVOKE_NAUTOBOT_LOCAL=True
       script:
-        - invoke black --local
-        - invoke flake8 --local
-        - invoke hadolint --local
+        - invoke black
+        - invoke flake8
+        - invoke hadolint
 
     # Unfortunately we can't do travis matrix builds in multiple stages so we get to define each build here
     - stage: Unit Test

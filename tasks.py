@@ -48,7 +48,12 @@ namespace.configure(
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_file": "docker-compose.yml",
             "compose_override_file": "docker-compose.dev.yml",
-            "docker_image_names_main": ["networktocode/nautobot", "ghcr.io/nautobot/nautobot"],
+            "docker_image_names_main": [
+                "networktocode/nautobot",
+                "ghcr.io/nautobot/nautobot",
+                "networktocode/nautobot-dev",
+                "ghcr.io/nautobot/nautobot-dev",
+            ],
             "docker_image_names_develop": [
                 "networktocode/nautobot",
                 "ghcr.io/nautobot/nautobot",
@@ -338,7 +343,7 @@ def post_upgrade(context):
         "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
     }
 )
-def black(context, autoformat=False, local=False):
+def black(context, autoformat=False):
     """Check Python code style with Black."""
     if autoformat:
         black_command = "black"
@@ -351,24 +356,16 @@ def black(context, autoformat=False, local=False):
 
 
 @task
-def flake8(context, local=False):
+def flake8(context):
     """Check for PEP8 compliance and other style issues."""
     command = "flake8 development/ nautobot/ tasks.py"
-    if local:
-        context.run(command)
-    else:
-        run_command(context, command)
+    run_command(context, command)
 
 
 @task
-def hadolint(context, local=False):
+def hadolint(context):
     """Check Dockerfile for hadolint compliance and other style issues."""
     command = "hadolint docker/Dockerfile"
-    if local:
-        context.run(command)
-    else:
-        run_command(context, command)
-
     run_command(context, command)
 
 
