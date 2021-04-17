@@ -48,6 +48,13 @@ namespace.configure(
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_file": "docker-compose.yml",
             "compose_override_file": "docker-compose.dev.yml",
+            "docker_image_names_main": ["networktocode/nautobot", "ghcr.io/nautobot/nautobot"],
+            "docker_image_names_develop": [
+                "networktocode/nautobot",
+                "ghcr.io/nautobot/nautobot",
+                "networktocode/nautobot-dev",
+                "ghcr.io/nautobot/nautobot-dev",
+            ],
         }
     }
 )
@@ -169,7 +176,7 @@ def push(context, branch, commit="", datestamp=""):
         parsed_toml = toml.load(pyproject)
 
     nautobot_version = parsed_toml["tool"]["poetry"]["version"]
-    docker_image_names = ["networktocode/nautobot", "ghcr.io/nautobot/nautobot"]
+
     docker_image_tags_main = [
         f"latest-py{context.nautobot.python_ver}",
         f"v{nautobot_version}-py{context.nautobot.python_ver}",
@@ -183,18 +190,24 @@ def push(context, branch, commit="", datestamp=""):
         docker_image_tags_main += ["latest", f"v{nautobot_version}"]
         docker_image_tags_develop += ["develop-latest", f"develop-{commit}-{datestamp}"]
     if branch == "main":
+        docker_image_names = context.nautobot.docker_image_names_main
         docker_image_tags = docker_image_tags_main
     elif branch == "develop":
+        docker_image_names = context.nautobot.docker_image_names_develop
         docker_image_tags = docker_image_tags_develop
     else:
         raise Exit(f"Unknown Branch ({branch}) Specified", 1)
 
     for image_name in docker_image_names:
         for image_tag in docker_image_tags:
+            if image_name.endswith("-dev"):
+                local_image = f"networktocode/nautobot-dev-py{context.nautobot.python_ver}:local"
+            else:
+                local_image = f"networktocode/nautobot-py{context.nautobot.python_ver}:local"
             new_image = f"{image_name}:{image_tag}"
-            tag_command = f"docker tag networktocode/nautobot-py{context.nautobot.python_ver}:local {new_image}"
+            tag_command = f"docker tag {local_image} {new_image}"
             push_command = f"docker push {new_image}"
-            print(f"Tagging networktocode/nautobot-py{context.nautobot.python_ver}:local as {new_image}")
+            print(f"Tagging {local_image} as {new_image}")
             context.run(tag_command)
             print(f"Pushing {new_image}")
             context.run(push_command)
