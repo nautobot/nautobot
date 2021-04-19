@@ -137,7 +137,7 @@ Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues)
 
 Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
 
-It is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined. In most cases the default settings will be suitable for production use.
+In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined. 
 
 #### CACHES
 
