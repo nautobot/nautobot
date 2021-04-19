@@ -5,16 +5,19 @@ import yaml
 
 from django.contrib.auth import get_user_model
 
-# from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
 
+from nautobot.circuits.choices import CircuitTerminationSideChoices
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
 from nautobot.dcim.models import *
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, post_data
 
 # Use the proper swappable User model
@@ -1764,6 +1767,195 @@ class CableTestCase(
             "length": 50,
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
+
+
+class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
+    """
+    Test the ConsoleConnectionsListView.
+    """
+
+    def _get_base_url(self):
+        return "dcim:console_connections_{}"
+
+    model = ConsolePort
+
+    @classmethod
+    def setUpTestData(cls):
+        device_1 = create_test_device("Device 1")
+        device_2 = create_test_device("Device 2")
+
+        serverports = (
+            ConsoleServerPort.objects.create(device=device_2, name="Console Server Port 1"),
+            ConsoleServerPort.objects.create(device=device_2, name="Console Server Port 2"),
+        )
+        rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
+
+        consoleports = (
+            ConsolePort.objects.create(device=device_1, name="Console Port 1"),
+            ConsolePort.objects.create(device=device_1, name="Console Port 2"),
+            ConsolePort.objects.create(device=device_1, name="Console Port 3"),
+        )
+
+        Cable.objects.create(
+            termination_a=consoleports[0], termination_b=serverports[0], status=Status.objects.get(slug="connected")
+        )
+        Cable.objects.create(
+            termination_a=consoleports[1], termination_b=serverports[1], status=Status.objects.get(slug="connected")
+        )
+        Cable.objects.create(
+            termination_a=consoleports[2], termination_b=rearport, status=Status.objects.get(slug="connected")
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_queryset_to_csv(self):
+        """This view has a custom queryset_to_csv() implementation."""
+        response = self.client.get("{}?export".format(self._get_url("list")))
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response.get("Content-Type"), "text/csv")
+        self.assertEqual(
+            """\
+device,console_port,console_server,port,reachable
+Device 1,Console Port 1,Device 2,Console Server Port 1,True
+Device 1,Console Port 2,Device 2,Console Server Port 2,True
+Device 1,Console Port 3,,,False""",
+            response.content.decode(response.charset),
+        )
+
+
+class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
+    """
+    Test the PowerConnectionsListView.
+    """
+
+    def _get_base_url(self):
+        return "dcim:power_connections_{}"
+
+    model = PowerPort
+
+    @classmethod
+    def setUpTestData(cls):
+        site = Site.objects.create(name="Site 1", slug="site-1")
+
+        device_1 = create_test_device("Device 1")
+        device_2 = create_test_device("Device 2")
+
+        powerports = (
+            PowerPort.objects.create(device=device_1, name="Power Port 1"),
+            PowerPort.objects.create(device=device_1, name="Power Port 2"),
+            PowerPort.objects.create(device=device_1, name="Power Port 3"),
+        )
+
+        poweroutlets = (
+            PowerOutlet.objects.create(device=device_2, name="Power Outlet 1", power_port=powerports[0]),
+            PowerOutlet.objects.create(device=device_2, name="Power Outlet 2", power_port=powerports[1]),
+        )
+
+        powerpanel = PowerPanel.objects.create(site=site, name="Power Panel 1")
+        powerfeed = PowerFeed.objects.create(power_panel=powerpanel, name="Power Feed 1")
+
+        Cable.objects.create(
+            termination_a=powerports[2], termination_b=powerfeed, status=Status.objects.get(slug="connected")
+        )
+        # Creating a PowerOutlet with a PowerPort via the ORM does *not* automatically cable the two together. Bug?
+        Cable.objects.create(
+            termination_a=powerports[0], termination_b=poweroutlets[0], status=Status.objects.get(slug="connected")
+        )
+        Cable.objects.create(
+            termination_a=powerports[1], termination_b=poweroutlets[1], status=Status.objects.get(slug="connected")
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_queryset_to_csv(self):
+        """This view has a custom queryset_to_csv() implementation."""
+        response = self.client.get("{}?export".format(self._get_url("list")))
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response.get("Content-Type"), "text/csv")
+        self.assertEqual(
+            """\
+device,power_port,pdu,outlet,reachable
+Device 1,Power Port 1,Device 2,Power Outlet 1,True
+Device 1,Power Port 2,Device 2,Power Outlet 2,True
+Device 1,Power Port 3,,Power Feed 1,True""",
+            response.content.decode(response.charset),
+        )
+
+
+class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
+    """
+    Test the InterfaceConnectionsListView.
+    """
+
+    def _get_base_url(self):
+        return "dcim:interface_connections_{}"
+
+    model = Interface
+
+    @classmethod
+    def setUpTestData(cls):
+        site = Site.objects.create(name="Site 1", slug="site-1")
+
+        device_1 = create_test_device("Device 1")
+        device_2 = create_test_device("Device 2")
+
+        cls.interfaces = (
+            Interface.objects.create(device=device_1, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP),
+            Interface.objects.create(device=device_1, name="Interface 2", type=InterfaceTypeChoices.TYPE_1GE_SFP),
+            Interface.objects.create(device=device_1, name="Interface 3", type=InterfaceTypeChoices.TYPE_1GE_SFP),
+        )
+
+        cls.device_2_interface = Interface.objects.create(
+            device=device_2, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP
+        )
+        rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
+
+        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
+        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuittype)
+        circuittermination = CircuitTermination.objects.create(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
+        )
+
+        connected = Status.objects.get(slug="connected")
+
+        Cable.objects.create(termination_a=cls.interfaces[0], termination_b=cls.device_2_interface, status=connected)
+        Cable.objects.create(termination_a=cls.interfaces[1], termination_b=circuittermination, status=connected)
+        Cable.objects.create(termination_a=cls.interfaces[2], termination_b=rearport, status=connected)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_queryset_to_csv(self):
+        """This view has a custom queryset_to_csv() implementation."""
+        response = self.client.get("{}?export".format(self._get_url("list")))
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response.get("Content-Type"), "text/csv")
+        self.assertEqual(
+            """\
+device_a,interface_a,device_b,interface_b,reachable
+Device 1,Interface 1,Device 2,Interface 1,True
+Device 1,Interface 2,,,True
+Device 1,Interface 3,,,False""",
+            response.content.decode(response.charset),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_constrained_permission(self):
+        """
+        Extend base GetObjectViewTestCase to have correct permissions for *both ends* of a connection.
+        """
+        instance1 = self._get_queryset().all()[0]
+
+        # Add object-level permission for the remote end of this connection as well.
+        endpoint = instance1.connected_endpoint
+        obj_perm = ObjectPermission(
+            name="Endpoint test permission",
+            constraints={"pk": endpoint.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(endpoint))
+
+        # super().test_list_objects_with_constrained_permission will add permissions for instance1 itself.
+        super().test_list_objects_with_constrained_permission()
 
 
 class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
