@@ -141,7 +141,7 @@ In most cases the default settings will be suitable for production use, but it i
 
 #### CACHES
 
-The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to provide the backend for Redis as a concurrent write lock for preventing race conditions when allocating IP address objects and to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
+The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
 
 !!! important
     Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
