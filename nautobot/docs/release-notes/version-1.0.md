@@ -6,12 +6,9 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 ## v1.0.0b4 (2021-04-19)
 
-This release includes a large share of IPAM and GraphQL fixes that went uncaught in our testing for beta3. Inall cases where issues were fixed, new unit tests were added to increase test coverage in areas that were relatively untested before.
-
 ### Added
 - [#96](https://github.com/nautobot/nautobot/issues/96) - Implemented user guide documentation for GraphQL
 - [#97](https://github.com/nautobot/nautobot/issues/97) - Implemented user guide documentation for Git as a Data Source
-- [#212](https://github.com/nautobot/nautobot/issues/212) - Allow plugins to use built-in buttons
 
 ### Changed
 - [#150](https://github.com/nautobot/nautobot/issues/150) - Revised all documentation referencing objects wiht status fields
@@ -22,12 +19,11 @@ This release includes a large share of IPAM and GraphQL fixes that went uncaught
 - [#252](https://github.com/nautobot/nautobot/pull/252) - Revised and clarified install instructions for CentOS
 - [#262](https://github.com/nautobot/nautobot/issues/262) - Revised Nautobot upgrade and NetBox migration guides
 - [#273](https://github.com/nautobot/nautobot/pull/273) - Update to jQuery 3.6.0
-- [#285](https://github.com/nautobot/nautobot/pull/285) - Refactor GraphQL filter argument generation to emit the correct types for each field
 - [#289](https://github.com/nautobot/nautobot/pull/289) - Updated natural unicode-aware sorting for interface/device names to support MySQL
-- [#293](https://github.com/nautobot/nautobot/pull/293) - Allow `DynamicModel[Multiple]ChoiceField` to work with plugin model
 
 ### Fixed
 - [#167](https://github.com/nautobot/nautobot/issues/167) - Fix to enable to query `ip_addresses` by parent in GraphQL
+- [#212](https://github.com/nautobot/nautobot/issues/212) - Allow plugins to use built-in buttons
 - [#232](https://github.com/nautobot/nautobot/issues/232) - Fix to enable inclusion of custom fields in queries in GraphQL
 - [#233](https://github.com/nautobot/nautobot/issues/233) - Fix to enable filtering by booleans in GraphQL
 - [#247](https://github.com/nautobot/nautobot/issues/247) - Fix to enable filtering by custom field values in GraphQL
@@ -37,9 +33,11 @@ This release includes a large share of IPAM and GraphQL fixes that went uncaught
 - [#269](https://github.com/nautobot/nautobot/issues/269) - Fix `NoneType` error when searching for /31 prefixes
 - [#272](https://github.com/nautobot/nautobot/pull/272) - Fix invalid f-string in `invoke createsuperuser`
 - [#278](https://github.com/nautobot/nautobot/issues/278) - Fix crash when sorting IPAM objects in list view by network address in web UI
+- [#285](https://github.com/nautobot/nautobot/pull/285) - Refactor GraphQL filter argument generation to emit the correct types for each field
 - [#286](https://github.com/nautobot/nautobot/issues/286) - Fix `NoneType` error when seraching for IPs without a prefix
 - [#287](https://github.com/nautobot/nautobot/issues/287) - Fix IP addresses not showing in search results
 - [#288](https://github.com/nautobot/nautobot/issues/288) - Fix display of parent prefixes from IPAddress detail view
+- [#293](https://github.com/nautobot/nautobot/pull/293) - Allow `DynamicModel[Multiple]ChoiceField` to work with plugin model
 - [#300](https://github.com/nautobot/nautobot/issues/300) - Fix `AttributeError` when assigning an IP to a device interface
 - [#304](https://github.com/nautobot/nautobot/issues/304) - Fix for IPAM network objects `clean()` checks not working as intended
 - [#305](https://github.com/nautobot/nautobot/issues/305) - Fix `Status` rendering to always preserve capitalization of `Status.name`
