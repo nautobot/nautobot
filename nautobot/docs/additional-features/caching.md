@@ -9,7 +9,7 @@ If a change is made to any of the objects returned by the cached query within th
 
 ## How it Works
 
-Caching is a complex topic and there are some important details to clarify with how caching is implemented and configureed in Nautobot.
+Caching is a complex topic and there are some important details to clarify with how caching is implemented and configured in Nautobot.
 
 ### Caching in Django
 
