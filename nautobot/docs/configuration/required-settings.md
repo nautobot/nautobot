@@ -87,7 +87,7 @@ Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) settin
 For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
 
 !!! important
-    Cacheops does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching. Instead it [monkey patches](./../additional-features/caching.md#django_cacheops) the underlying queryset methods to intercept calls to get and set cached items in Redis.
+    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching, as `django-cacheops` takes its place.
 
 #### CACHEOPS_REDIS
 
