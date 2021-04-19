@@ -25,6 +25,13 @@ The following tags are available:
 Currently images are pushed for the following python versions:
 
 * 3.6
+* 3.7
+* 3.8
+* 3.9 _For Testing Only_
+
+!!! info
+    A dev image `networktocode/nautobot-dev` and `ghcr.io/nautobot/nautobot-dev` is also provided with the same tags, this image provides the development dependencies needed to build Nautobot.  This container can be used as a base for development to develop additional Nautobot plugins but should **NOT** be used in production.
+
 ## Getting Started
 
 Nautobot requires a Postgres database and Redis cache before it will start, because of this the quickest and easiest way to get Nautobot running is with docker-compose.  Please see the docker-compose deployment repository for more information.

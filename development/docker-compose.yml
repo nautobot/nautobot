@@ -3,6 +3,8 @@ version: "3"
 services:
   nautobot:
     build:
+      args:
+        PYTHON_VER: "${PYTHON_VER}"
       context: ../
       dockerfile: docker/Dockerfile
       target: dev

@@ -19,7 +19,7 @@ _unit_test: &unit_test
   python: "3.9"
   <<: *setup_docker
   before_script:
-    - invoke buildx
+    - invoke buildx --target dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
   script:
     - invoke unittest --failfast || travis_terminate 1
     - invoke unittest-coverage
