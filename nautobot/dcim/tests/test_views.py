@@ -4,6 +4,7 @@ import pytz
 import yaml
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
@@ -15,7 +16,8 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
 from nautobot.dcim.models import *
-from nautobot.extras.models import Status
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.models import CustomField, CustomFieldChoice, Relationship, RelationshipAssociation, Status
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, post_data
@@ -80,9 +82,52 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status_active = statuses.get(slug="active")
         status_planned = statuses.get(slug="planned")
 
-        Site.objects.create(name="Site 1", slug="site-1", region=regions[0], status=status_planned)
-        Site.objects.create(name="Site 2", slug="site-2", region=regions[0], status=status_planned)
-        Site.objects.create(name="Site 3", slug="site-3", region=regions[0], status=status_planned)
+        cls.custom_fields = (
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="contact_slack", default=""),
+        )
+        for custom_field in cls.custom_fields:
+            custom_field.content_types.set([ContentType.objects.get_for_model(Site)])
+
+        sites = (
+            Site.objects.create(
+                name="Site 1",
+                slug="site-1",
+                region=regions[0],
+                status=status_planned,
+                _custom_field_data={"contact_slack": "@site-1-manager"},
+            ),
+            Site.objects.create(
+                name="Site 2",
+                slug="site-2",
+                region=regions[0],
+                status=status_planned,
+                _custom_field_data={"contact_slack": "@site-2-manager"},
+            ),
+            Site.objects.create(
+                name="Site 3",
+                slug="site-3",
+                region=regions[0],
+                status=status_planned,
+                _custom_field_data={"contact_slack": "@site-3-manager"},
+            ),
+        )
+
+        cls.relationships = (
+            Relationship.objects.create(
+                name="Region related sites",
+                slug="region-related-sites",
+                type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+                source_type=ContentType.objects.get_for_model(Region),
+                source_label="Related sites",
+                destination_type=ContentType.objects.get_for_model(Site),
+                destination_label="Related region",
+            ),
+        )
+
+        for site in sites:
+            RelationshipAssociation.objects.create(
+                relationship=cls.relationships[0], source=site, destination=regions[1]
+            )
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -105,6 +150,8 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "contact_email": "hank@stricklandpropane.com",
             "comments": "Test site",
             "tags": [t.pk for t in tags],
+            "cf_contact_slack": "@site-x-manager",
+            "cr_region-related-sites__destination": regions[0].pk,
         }
 
         cls.csv_data = (
@@ -244,9 +291,41 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(Rack)
         status_active = statuses.get(slug="active")
 
-        Rack.objects.create(name="Rack 1", site=sites[0], status=status_active)
-        Rack.objects.create(name="Rack 2", site=sites[0], status=status_active)
-        Rack.objects.create(name="Rack 3", site=sites[0], status=status_active)
+        cls.custom_fields = (
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
+        )
+        CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="red")
+        CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="green")
+        CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="blue")
+        for custom_field in cls.custom_fields:
+            custom_field.content_types.set([ContentType.objects.get_for_model(Rack)])
+
+        racks = (
+            Rack.objects.create(
+                name="Rack 1", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["red"]}
+            ),
+            Rack.objects.create(
+                name="Rack 2", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["green"]}
+            ),
+            Rack.objects.create(
+                name="Rack 3", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["blue"]}
+            ),
+        )
+
+        cls.relationships = (
+            Relationship.objects.create(
+                name="Backup Sites",
+                slug="backup-sites",
+                type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                source_type=ContentType.objects.get_for_model(Rack),
+                source_label="Backup site(s)",
+                destination_type=ContentType.objects.get_for_model(Site),
+                destination_label="Racks using this site as a backup",
+            ),
+        )
+
+        for rack in racks:
+            RelationshipAssociation.objects.create(relationship=cls.relationships[0], source=rack, destination=sites[1])
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -269,6 +348,8 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER,
             "comments": "Some comments",
             "tags": [t.pk for t in tags],
+            "cf_rack-colors": ["red", "green", "blue"],
+            "cr_backup-sites__destination": [sites[0].pk],
         }
 
         cls.csv_data = (
@@ -934,33 +1015,66 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses.get(slug="active")
 
-        Device.objects.create(
-            name="Device 1",
-            site=sites[0],
-            rack=racks[0],
-            device_type=devicetypes[0],
-            device_role=deviceroles[0],
-            platform=platforms[0],
-            status=status_active,
+        cls.custom_fields = (
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, name="crash-counter", default=0),
         )
-        Device.objects.create(
-            name="Device 2",
-            site=sites[0],
-            rack=racks[0],
-            device_type=devicetypes[0],
-            device_role=deviceroles[0],
-            platform=platforms[0],
-            status=status_active,
+        cls.custom_fields[0].content_types.set([ContentType.objects.get_for_model(Device)])
+
+        devices = (
+            Device.objects.create(
+                name="Device 1",
+                site=sites[0],
+                rack=racks[0],
+                device_type=devicetypes[0],
+                device_role=deviceroles[0],
+                platform=platforms[0],
+                status=status_active,
+                _custom_field_data={"crash-counter": 5},
+            ),
+            Device.objects.create(
+                name="Device 2",
+                site=sites[0],
+                rack=racks[0],
+                device_type=devicetypes[0],
+                device_role=deviceroles[0],
+                platform=platforms[0],
+                status=status_active,
+                _custom_field_data={"crash-counter": 10},
+            ),
+            Device.objects.create(
+                name="Device 3",
+                site=sites[0],
+                rack=racks[0],
+                device_type=devicetypes[0],
+                device_role=deviceroles[0],
+                platform=platforms[0],
+                status=status_active,
+                _custom_field_data={"crash-counter": 15},
+            ),
         )
-        Device.objects.create(
-            name="Device 3",
-            site=sites[0],
-            rack=racks[0],
-            device_type=devicetypes[0],
-            device_role=deviceroles[0],
-            platform=platforms[0],
-            status=status_active,
+
+        cls.relationships = (
+            Relationship.objects.create(
+                name="BGP Router-ID",
+                slug="router-id",
+                type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+                source_type=ContentType.objects.get_for_model(Device),
+                source_label="BGP Router ID",
+                destination_type=ContentType.objects.get_for_model(IPAddress),
+                destination_label="Device using this as BGP router-ID",
+            ),
         )
+
+        ipaddresses = (
+            IPAddress.objects.create(address="1.1.1.1/32"),
+            IPAddress.objects.create(address="2.2.2.2/32"),
+            IPAddress.objects.create(address="3.3.3.3/32"),
+        )
+
+        for device, ipaddress in zip(devices, ipaddresses):
+            RelationshipAssociation.objects.create(
+                relationship=cls.relationships[0], source=device, destination=ipaddress
+            )
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -986,6 +1100,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "A new device",
             "tags": [t.pk for t in tags],
             "local_context_data": None,
+            "cf_crash-counter": -1,
+            "cr_router-id": None,
         }
 
         cls.csv_data = (
