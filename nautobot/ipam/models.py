@@ -324,7 +324,7 @@ class Aggregate(PrimaryModel):
 
     @property
     def cidr_str(self):
-        if self.network and self.prefix_length:
+        if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
 
     @property
@@ -590,7 +590,7 @@ class Prefix(PrimaryModel, StatusModel):
 
     @property
     def cidr_str(self):
-        if self.network and self.prefix_length:
+        if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
 
     @property
@@ -851,6 +851,10 @@ class IPAddress(PrimaryModel, StatusModel):
 
         if self.address:
 
+            # /0 masks are not acceptable
+            if self.address.prefixlen == 0:
+                raise ValidationError({"address": "Cannot create IP address with /0 mask."})
+
             # Enforce unique IP space (if applicable)
             if self.role not in IPADDRESS_ROLES_NONUNIQUE and (
                 (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique)
@@ -930,7 +934,7 @@ class IPAddress(PrimaryModel, StatusModel):
 
     @property
     def address(self):
-        if self.host and self.prefix_length:
+        if self.host is not None and self.prefix_length is not None:
             cidr = "%s/%s" % (self.host, self.prefix_length)
             return netaddr.IPNetwork(cidr)
 

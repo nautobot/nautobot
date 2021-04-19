@@ -38,7 +38,6 @@ from nautobot.utilities.forms import (
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import *
 from .constants import *
-from .formfields import IPNetworkFormField
 from .models import (
     Aggregate,
     IPAddress,
@@ -561,7 +560,6 @@ class IPAddressForm(
     CustomFieldModelForm,
     RelationshipModelForm,
 ):
-    address = IPNetworkFormField(allow_zero_prefix=False)
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -673,6 +671,7 @@ class IPAddressForm(
         # Initialize helper selectors
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
+
         if instance:
             if type(instance.assigned_object) is Interface:
                 initial["interface"] = instance.assigned_object
@@ -688,8 +687,6 @@ class IPAddressForm(
                 elif type(nat_inside_parent) is VMInterface:
                     initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
                     initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
-            # Address is a computed field, so it must be added to initial.
-            initial["address"] = instance.address
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
@@ -709,10 +706,6 @@ class IPAddressForm(
 
     def clean(self):
         super().clean()
-
-        # Need to set instance attribute to address field
-        # to run proper address validation on Model.clean()
-        self.instance.address = self.cleaned_data.get("address")
 
         # Cannot select both a device interface and a VM interface
         if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
