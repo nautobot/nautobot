@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -2431,8 +2431,62 @@ class CableBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ConsoleConnectionsListView(generic.ObjectListView):
-    queryset = ConsolePort.objects.filter(_path__isnull=False).order_by("device__identifier", "name")
+class ConnectionsListView(generic.ObjectListView):
+
+    CSVRow = namedtuple("CSVRow", ["device", "name", "dest_device", "dest_name", "reachable"])
+
+    def queryset_to_csv_body_data(self):
+        """
+        The headers may differ from view to view but the formatting of the CSV data is the same.
+        """
+        csv_body_data = []
+        for obj in self.queryset:
+            # The connected endpoint may or may not be associated with a Device (e.g., CircuitTerminations are not)
+            # and may or may not have a name of its own (e.g., CircuitTerminations do not)
+            dest_device = None
+            dest_name = None
+            if obj.connected_endpoint:
+                if hasattr(obj.connected_endpoint, "device"):
+                    dest_device = obj.connected_endpoint.device.identifier
+                if hasattr(obj.connected_endpoint, "name"):
+                    dest_name = obj.connected_endpoint.name
+
+            # In the case where a connection exists between two like endpoints,
+            # for consistency of output we want to ensure that it's always represented as
+            # ("device a", "interface a", "device b", "interface b") rather than
+            # ("device b", "interface b", "device a", "interface a")
+            if obj.__class__ == obj.connected_endpoint.__class__ and (
+                obj.device.identifier > obj.connected_endpoint.device.identifier
+                or (
+                    obj.device.identifier == obj.connected_endpoint.device.identifier
+                    and obj.name > obj.connected_endpoint.name
+                )
+            ):
+                # Swap the two endpoints around for consistent output as described above
+                row = self.CSVRow(
+                    device=dest_device,
+                    name=dest_name,
+                    dest_device=obj.device.identifier,
+                    dest_name=obj.name,
+                    reachable=str(obj.path.is_active),
+                )
+            else:
+                # Existing order of endpoints is fine and correct
+                row = self.CSVRow(
+                    device=obj.device.identifier,
+                    name=obj.name,
+                    dest_device=dest_device,
+                    dest_name=dest_name,
+                    reachable=str(obj.path.is_active),
+                )
+
+            csv_body_data.append(csv_format(row))
+
+        return sorted(csv_body_data)
+
+
+class ConsoleConnectionsListView(ConnectionsListView):
+    queryset = ConsolePort.objects.filter(_path__isnull=False)
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
@@ -2441,19 +2495,9 @@ class ConsoleConnectionsListView(generic.ObjectListView):
     def queryset_to_csv(self):
         csv_data = [
             # Headers
-            ",".join(["console_server", "port", "device", "console_port", "reachable"])
+            ",".join(["device", "console_port", "console_server", "port", "reachable"])
         ]
-        for obj in self.queryset:
-            csv = csv_format(
-                [
-                    obj._path.destination.device.identifier if obj._path.destination else None,
-                    obj._path.destination.name if obj._path.destination else None,
-                    obj.device.identifier,
-                    obj.name,
-                    str(obj._path.is_active),
-                ]
-            )
-            csv_data.append(csv)
+        csv_data.extend(self.queryset_to_csv_body_data())
 
         return "\n".join(csv_data)
 
@@ -2461,8 +2505,8 @@ class ConsoleConnectionsListView(generic.ObjectListView):
         return {"title": "Console Connections"}
 
 
-class PowerConnectionsListView(generic.ObjectListView):
-    queryset = PowerPort.objects.filter(_path__isnull=False).order_by("device__identifier", "name")
+class PowerConnectionsListView(ConnectionsListView):
+    queryset = PowerPort.objects.filter(_path__isnull=False)
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable
@@ -2471,20 +2515,9 @@ class PowerConnectionsListView(generic.ObjectListView):
     def queryset_to_csv(self):
         csv_data = [
             # Headers
-            ",".join(["pdu", "outlet", "device", "power_port", "reachable"])
+            ",".join(["device", "power_port", "pdu", "outlet", "reachable"])
         ]
-        for obj in self.queryset:
-            obj_data = [
-                None,  # see below
-                obj._path.destination.name if obj._path.destination else None,
-                obj.device.identifier,
-                obj.name,
-                str(obj._path.is_active),
-            ]
-            if obj._path.destination and hasattr(obj._path.destination, "device"):
-                obj_data[0] = obj._path.destination.device.identifier
-            csv = csv_format(obj_data)
-            csv_data.append(csv)
+        csv_data.extend(self.queryset_to_csv_body_data())
 
         return "\n".join(csv_data)
 
@@ -2492,20 +2525,16 @@ class PowerConnectionsListView(generic.ObjectListView):
         return {"title": "Power Connections"}
 
 
-class InterfaceConnectionsListView(generic.ObjectListView):
-    queryset = (
-        Interface.objects.filter(_path__isnull=False)
-        .exclude(
-            # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
-            # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
-            # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
-            # used for reverse querying.
-            # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
-            # we fix it up to be consistently (A, B) in queryset_to_csv() below.
-            _path__destination_type=ContentType.objects.get_for_model(Interface),
-            pk__lt=F("_path__destination_id"),
-        )
-        .order_by("device__identifier", "name")
+class InterfaceConnectionsListView(ConnectionsListView):
+    queryset = Interface.objects.filter(_path__isnull=False).exclude(
+        # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
+        # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
+        # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
+        # used for reverse querying.
+        # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
+        # we fix it up to be consistently (A, B) in queryset_to_csv_body_data().
+        _path__destination_type=ContentType.objects.get_for_model(Interface),
+        pk__lt=F("_path__destination_id"),
     )
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
@@ -2513,30 +2542,13 @@ class InterfaceConnectionsListView(generic.ObjectListView):
     template_name = "dcim/connections_list.html"
 
     def queryset_to_csv(self):
-        headers = ",".join(["device_a", "interface_a", "device_b", "interface_b", "reachable"])
-        csv_data = []
-        for obj in self.queryset:
-            obj_data = [
-                obj.device.identifier,
-                obj.name,
-                None,  # see below
-                None,  # see below
-                str(obj._path.is_active),
-            ]
-            if obj._path.destination and hasattr(obj._path.destination, "device"):
-                obj_data[2] = obj._path.destination.device.identifier
-            if obj._path.destination and hasattr(obj._path.destination, "name"):
-                obj_data[3] = obj._path.destination.name
-            # Ensure consistent ordering (see comment on queryset above) for the CSV export at least
-            if obj_data[2] and (
-                obj_data[0] > obj_data[2] or (obj_data[0] == obj_data[2] and obj_data[1] > obj_data[3])
-            ):
-                # Swap a and b!
-                obj_data = [*obj_data[2:4], *obj_data[0:2], *obj_data[4:]]
-            csv = csv_format(obj_data)
-            csv_data.append(csv)
+        csv_data = [
+            # Headers
+            ",".join(["device_a", "interface_a", "device_b", "interface_b", "reachable"])
+        ]
+        csv_data.extend(self.queryset_to_csv_body_data())
 
-        return "\n".join([headers, *sorted(csv_data)])
+        return "\n".join(csv_data)
 
     def extra_context(self):
         return {"title": "Interface Connections"}

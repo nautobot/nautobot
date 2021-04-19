@@ -1814,10 +1814,10 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
             """\
-console_server,port,device,console_port,reachable
-Device 2,Console Server Port 1,Device 1,Console Port 1,True
-Device 2,Console Server Port 2,Device 1,Console Port 2,True
-,,Device 1,Console Port 3,False""",
+device,console_port,console_server,port,reachable
+Device 1,Console Port 1,Device 2,Console Server Port 1,True
+Device 1,Console Port 2,Device 2,Console Server Port 2,True
+Device 1,Console Port 3,,,False""",
             response.content.decode(response.charset),
         )
 
@@ -1872,10 +1872,10 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
             """\
-pdu,outlet,device,power_port,reachable
-Device 2,Power Outlet 1,Device 1,Power Port 1,True
-Device 2,Power Outlet 2,Device 1,Power Port 2,True
-,Power Feed 1,Device 1,Power Port 3,True""",
+device,power_port,pdu,outlet,reachable
+Device 1,Power Port 1,Device 2,Power Outlet 1,True
+Device 1,Power Port 2,Device 2,Power Outlet 2,True
+Device 1,Power Port 3,,Power Feed 1,True""",
             response.content.decode(response.charset),
         )
 
