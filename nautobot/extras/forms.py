@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
@@ -227,23 +228,62 @@ class RelationshipModelForm(forms.ModelForm):
         One form field per side will be added to the list.
         """
         for side, relationships in self.instance.get_relationships().items():
-            for cr, queryset in relationships.items():
-                field_name = f"cr_{cr.slug}__{side}"
+            for relationship, queryset in relationships.items():
+                field_name = f"cr_{relationship.slug}__{side}"
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
-                self.fields[field_name] = cr.to_form_field(side=side)
+                self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
-                    if cr.has_many(peer_side):
-                        initial = [getattr(cra, peer_side) for cra in queryset.all()]
+                    if relationship.has_many(peer_side):
+                        initial = [getattr(association, peer_side) for association in queryset.all()]
                         self.fields[field_name].initial = initial
                     else:
-                        cra = queryset.first()
-                        if cra:
-                            self.fields[field_name].initial = getattr(cra, peer_side)
+                        association = queryset.first()
+                        if association:
+                            self.fields[field_name].initial = getattr(association, peer_side)
 
                 # Annotate the field in the list of Relationship form fields
                 self.relationships.append(field_name)
+
+    def clean(self):
+        """Check RelationshipAssociation sanity."""
+        # For each relationship:
+        # - if this model is on the source side of the relation, and this is not a TYPE_MANY_TO_MANY,
+        #   we must verify that no existing relation exists with our destination object
+        # - if this model is on the destination side of the relation, and this is TYPE_ONE_TO_ONE,
+        #   we must verify that no existing relation exists with our source object
+        for side, relationships in self.instance.get_relationships().items():
+            for relationship in relationships:
+                # Is this a relationship where we expect to be on the "ONE" side? If not, nothing to check
+                if relationship.has_many(side):
+                    continue
+
+                field_name = f"cr_{relationship.slug}__{side}"
+                peer_side = RelationshipSideChoices.OPPOSITE[side]
+
+                # Is the form even trying to set this field?
+                if field_name not in self.cleaned_data or not self.cleaned_data[field_name]:
+                    continue
+
+                # Are any of the objects we want a relationship with already entangled with another object?
+                if relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_MANY:
+                    target_peers = [item for item in self.cleaned_data[field_name]]
+                else:
+                    target_peers = [self.cleaned_data[field_name]]
+                for target_peer in target_peers:
+                    existing_peer_associations = RelationshipAssociation.objects.filter(
+                        relationship=relationship,
+                        **{
+                            f"{peer_side}_id": target_peer.pk,
+                        }
+                    ).exclude(**{f"{side}_id": self.instance.pk})
+                    if existing_peer_associations.count() > 0:
+                        raise ValidationError(
+                            {field_name: f"{target_peer} is already involved in a {relationship} relationship"}
+                        )
+
+        return super().clean()
 
     def _save_relationships(self):
         """Update RelationshipAssociations for all Relationships on form save."""
@@ -301,7 +341,7 @@ class RelationshipModelForm(forms.ModelForm):
                     },
                 )
 
-                # FIXME Run Clean
+                association.clean()
                 association.save()
 
     def save(self, commit=True):
