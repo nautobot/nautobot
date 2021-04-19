@@ -294,11 +294,12 @@ class ViewTestCases:
             # If any Relationships are defined, they should appear in the response
             if self.relationships:
                 for relationship in self.relationships:
-                    if ContentType.objects.get_for_model(instance) == relationship.source_type:
+                    content_type = ContentType.objects.get_for_model(instance)
+                    if content_type == relationship.source_type:
                         self.assertIn(
                             relationship.get_label(RelationshipSideChoices.SIDE_SOURCE), str(response.content)
                         )
-                    if ContentType.objects.get_for_model(instance) == relationship.destination_type:
+                    if content_type == relationship.destination_type:
                         self.assertIn(
                             relationship.get_label(RelationshipSideChoices.SIDE_DESTINATION), str(response.content)
                         )
