@@ -124,6 +124,7 @@ class RelationshipModel(models.Model):
 
                 resp[side][relationship] = {
                     "label": relationship.get_label(side),
+                    "peer_type": getattr(relationship, f"{peer_side}_type"),
                     "value": None,
                 }
 
