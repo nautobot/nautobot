@@ -13,7 +13,7 @@ Caching is a complex topic and there are some important details to clarify with 
 
 ### Caching in Django
 
-Django comes included with its own [cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) that works for common cases, but does not work well for the wide array of use-cases within Nautobot. For that reason, for the caching of web UI views, API results, and underlying database queries. **Django's built-in caching is not used.**
+Django comes included with its own [cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) that works for common cases, but it does not work well for the wide array of use-cases within Nautobot. For that reason, for the caching of web UI views, API results, and underlying database queries **Django's built-in cache framework caching is not used.**
 
 Django's built-in caching is configured using the [`CACHES`](../../configuration/required-settings/#caches) setting. You'll observe that we have this as a required setting. Here's why:
 
