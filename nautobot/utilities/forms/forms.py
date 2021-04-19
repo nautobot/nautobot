@@ -149,6 +149,7 @@ class PrefixFieldMixin(forms.ModelForm):
     IMPORTANT: because this mixin's save() method discards any arguments such as commit=True,
     it MUST be last in any inheritance sequence.
     """
+
     prefix = IPNetworkFormField()
 
     def __init__(self, *args, **kwargs):

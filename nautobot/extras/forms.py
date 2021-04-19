@@ -276,7 +276,7 @@ class RelationshipModelForm(forms.ModelForm):
                         relationship=relationship,
                         **{
                             f"{peer_side}_id": target_peer.pk,
-                        }
+                        },
                     ).exclude(**{f"{side}_id": self.instance.pk})
                     if existing_peer_associations.count() > 0:
                         raise ValidationError(
