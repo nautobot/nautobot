@@ -5,7 +5,7 @@ import yaml
 
 from django.contrib.auth import get_user_model
 
-# from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
@@ -17,6 +17,7 @@ from nautobot.dcim.constants import *
 from nautobot.dcim.models import *
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, post_data
 
 # Use the proper swappable User model
@@ -1896,13 +1897,13 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
 
-        interfaces = (
+        cls.interfaces = (
             Interface.objects.create(device=device_1, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP),
             Interface.objects.create(device=device_1, name="Interface 2", type=InterfaceTypeChoices.TYPE_1GE_SFP),
             Interface.objects.create(device=device_1, name="Interface 3", type=InterfaceTypeChoices.TYPE_1GE_SFP),
         )
 
-        device_2_interface = Interface.objects.create(
+        cls.device_2_interface = Interface.objects.create(
             device=device_2, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP
         )
         rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
@@ -1914,15 +1915,11 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
             circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
         )
 
-        Cable.objects.create(
-            termination_a=interfaces[0], termination_b=device_2_interface, status=Status.objects.get(slug="connected")
-        )
-        Cable.objects.create(
-            termination_a=interfaces[1], termination_b=circuittermination, status=Status.objects.get(slug="connected")
-        )
-        Cable.objects.create(
-            termination_a=interfaces[2], termination_b=rearport, status=Status.objects.get(slug="connected")
-        )
+        connected = Status.objects.get(slug="connected")
+
+        Cable.objects.create(termination_a=cls.interfaces[0], termination_b=cls.device_2_interface, status=connected)
+        Cable.objects.create(termination_a=cls.interfaces[1], termination_b=circuittermination, status=connected)
+        Cable.objects.create(termination_a=cls.interfaces[2], termination_b=rearport, status=connected)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
@@ -1938,6 +1935,27 @@ Device 1,Interface 2,,,True
 Device 1,Interface 3,,,False""",
             response.content.decode(response.charset),
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_constrained_permission(self):
+        """
+        Extend base GetObjectViewTestCase to have correct permissions for *both ends* of a connection.
+        """
+        instance1 = self._get_queryset().all()[0]
+
+        # Add object-level permission for the remote end of this connection as well.
+        endpoint = instance1.connected_endpoint
+        obj_perm = ObjectPermission(
+            name="Endpoint test permission",
+            constraints={"pk": endpoint.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(endpoint))
+
+        # super().test_list_objects_with_constrained_permission will add permissions for instance1 itself.
+        super().test_list_objects_with_constrained_permission()
 
 
 class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):

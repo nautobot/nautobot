@@ -2500,7 +2500,8 @@ class InterfaceConnectionsListView(generic.ObjectListView):
             # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
             # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
             # used for reverse querying.
-            # The below at least ensures uniqueness, but doesn't guarantee that we get (A, B) versus (B, A)
+            # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
+            # we fix it up to be consistently (A, B) in queryset_to_csv() below.
             _path__destination_type=ContentType.objects.get_for_model(Interface),
             pk__lt=F("_path__destination_id"),
         )
@@ -2512,10 +2513,8 @@ class InterfaceConnectionsListView(generic.ObjectListView):
     template_name = "dcim/connections_list.html"
 
     def queryset_to_csv(self):
-        csv_data = [
-            # Headers
-            ",".join(["device_a", "interface_a", "device_b", "interface_b", "reachable"])
-        ]
+        headers = ",".join(["device_a", "interface_a", "device_b", "interface_b", "reachable"])
+        csv_data = []
         for obj in self.queryset:
             obj_data = [
                 obj.device.identifier,
@@ -2537,7 +2536,7 @@ class InterfaceConnectionsListView(generic.ObjectListView):
             csv = csv_format(obj_data)
             csv_data.append(csv)
 
-        return "\n".join(csv_data)
+        return "\n".join([headers, *sorted(csv_data)])
 
     def extra_context(self):
         return {"title": "Interface Connections"}
