@@ -17,7 +17,7 @@ Django comes included with its own [cache framework](https://docs.djangoproject.
 
 Django's built-in caching is configured using the [`CACHES`](../../configuration/required-settings/#caches) setting. You'll observe that we have this as a required setting. Here's why:
 
-Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to provide the backend for Redis as a concurrent write lock for preventing race conditions when allocating IP address objects and to define centralized Redis connection settings that will be used by RQ. Previously, Nautobot was using PostgreSQL "advisory" locks, but because we are adding support for MySQL and other database backends in the future, we replaced the database-specific locking with a distributed Redis lock.
+Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin to provide the backend for Redis as a concurrent write lock for preventing race conditions when allocating IP address objects and to define centralized Redis connection settings that will be used by RQ. Previously, Nautobot was using PostgreSQL "advisory" locks, but because of the added support for other database backends, we replaced the database-specific locking with a distributed Redis lock.
 
 For this purpose, the [`CACHES`](../../configuration/required-settings/#caches) setting is required to to simplify the configuration for establishing concurrent write locks and for referencing the correct Redis connection information when defining RQ task queues using the  [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) setting.
 
