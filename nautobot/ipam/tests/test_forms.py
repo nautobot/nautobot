@@ -26,7 +26,7 @@ class BaseNetworkFormTest:
         form = self.form_class(data)
 
         self.assertFalse(form.is_valid())
-        self.assertEquals("Please specify a valid IPv4 or IPv6 address.", form.errors[self.field_name][0])
+        self.assertEqual("Please specify a valid IPv4 or IPv6 address.", form.errors[self.field_name][0])
 
     def test_address_zero_mask(self):
         data = {self.field_name: "192.168.0.1/0", "status": Status.objects.get(slug="active")}
@@ -34,7 +34,7 @@ class BaseNetworkFormTest:
         form = self.form_class(data)
 
         self.assertFalse(form.is_valid())
-        self.assertEquals(f"Cannot create {self.object_name} with /0 mask.", form.errors[self.field_name][0])
+        self.assertEqual(f"Cannot create {self.object_name} with /0 mask.", form.errors[self.field_name][0])
 
     def test_address_missing_mask(self):
         data = {self.field_name: "192.168.0.1", "status": Status.objects.get(slug="active")}
@@ -42,7 +42,7 @@ class BaseNetworkFormTest:
         form = self.form_class(data)
 
         self.assertFalse(form.is_valid())
-        self.assertEquals("CIDR mask (e.g. /24) is required.", form.errors[self.field_name][0])
+        self.assertEqual("CIDR mask (e.g. /24) is required.", form.errors[self.field_name][0])
 
 
 class AggregateFormTest(BaseNetworkFormTest, TestCase):
@@ -79,4 +79,4 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
     def test_slaac_status_invalid_ipv4(self):
         form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.get(slug="slaac")})
         self.assertFalse(form.is_valid())
-        self.assertEquals("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])
+        self.assertEqual("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])
