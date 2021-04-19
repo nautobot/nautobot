@@ -237,7 +237,8 @@ class RIRFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldModelForm, RelationshipModelForm):
+# Important! PrefixFieldMixin must be last in the listing because it overrides save(commit=True)
+class AggregateForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, PrefixFieldMixin):
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -261,7 +262,8 @@ class AggregateForm(BootstrapMixin, TenancyForm, PrefixFieldMixin, CustomFieldMo
         }
 
 
-class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
+# Important! PrefixFieldMixin must be last in the listing because it overrides save(commit=True)
+class AggregateCSVForm(CustomFieldModelCSVForm, PrefixFieldMixin):
     rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -341,7 +343,8 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+# Important! PrefixFieldMixin must be last in the listing because it overrides save(commit=True)
+class PrefixForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, PrefixFieldMixin):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -397,7 +400,8 @@ class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModel
         self.fields["vrf"].empty_label = "Global"
 
 
-class PrefixCSVForm(PrefixFieldMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+# Important! PrefixFieldMixin must be last in the listing because it overrides save(commit=True)
+class PrefixCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm, PrefixFieldMixin):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -552,13 +556,14 @@ class PrefixFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin,
 #
 
 
+# Important! AddressFieldMixin must be last in the list because it overrides save(commit=True)
 class IPAddressForm(
     BootstrapMixin,
     TenancyForm,
     ReturnURLForm,
-    AddressFieldMixin,
     CustomFieldModelForm,
     RelationshipModelForm,
+    AddressFieldMixin,
 ):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
@@ -745,7 +750,8 @@ class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
-class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, CustomFieldModelForm):
+# Important! AddressFieldMixin must be last in the list because it overrides save(commit=True)
+class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, AddressFieldMixin):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -775,7 +781,8 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, Custo
         self.fields["vrf"].empty_label = "Global"
 
 
-class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
+# Important! AddressFieldMixin must be last in the list because it overrides save(commit=True)
+class IPAddressCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm, AddressFieldMixin):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",
