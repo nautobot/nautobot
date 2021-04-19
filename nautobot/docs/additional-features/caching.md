@@ -1,30 +1,34 @@
 # Caching
 
+A fundamental trade-off in dynamic websites like Nautobot is that, well, they’re dynamic. Each time a user requests a page, the Web server makes all sorts of calculations – from database queries to template rendering to business logic – to create the page that your site’s visitor sees. This is a lot more expensive, from a processing-overhead perspective, than your standard read-a-file-off-the-filesystem server arrangement.
+
+That’s where caching comes in.
+
+To cache something is to save the result of an expensive calculation so that you don’t have to perform the calculation next time.
+
+Nautobot makes extensive use of caching; this is not a simple topic but it's a useful one for a Nautobot administrator to understand, so read on if you please.
+
+## How it Works
+
 Nautobot supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops) and Redis. When a query is made, the results are cached in Redis for a short period of time, as defined by the [`CACHEOPS_DEFAULTS`](../../configuration/optional-settings/#cacheops_defaults) parameter (15 minutes by default). Within that time, all recurrences of that specific query will return the pre-fetched results from the cache. Caching can be completely disabled by toggling [`CACHEOPS_ENABLED`](../../configuration/optional-settings/#cacheops_enabled) to `False` (it is `True` by default).
 
 If a change is made to any of the objects returned by the cached query within that time, or if the timeout expires, the cached results are automatically invalidated and the next request for those results will be sent to the database.
 
-!!! important
-    Cacheops does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching. Therefore it does not rely upon the [`CACHES`](../../configuration/required-settings/#caches) setting. Instead it monkey patches the underlying queryset methods to intercept calls to get and set cached items in Redis.
-
-## How it Works
-
-Caching is a complex topic and there are some important details to clarify with how caching is implemented and configured in Nautobot.
+Caching is a complex topic and there are some important details to clarify with how caching is implemented and configureed in Nautobot.
 
 ### Caching in Django
 
-Django comes included with its own [cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) that works for common cases, but it does not work well for the wide array of use-cases within Nautobot. For that reason, for the caching of web UI views, API results, and underlying database queries **Django's built-in cache framework caching is not used.**
+Django includes with its own [cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) that works for common cases, but does not work well for the wide array of use-cases within Nautobot. For that reason, **Django's built-in caching is not used for the caching of web UI views, API results, and underlying database queries.** Instead, we use [`django-cacheops`](https://github.com/Suor/django-cacheops). Please see below for more on this.
 
-Django's built-in caching is configured using the [`CACHES`](../../configuration/required-settings/#caches) setting. You'll observe that we have this as a required setting. Here's why:
+### `CACHES` and `django-redis`
 
-Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin to provide the backend for Redis as a concurrent write lock for preventing race conditions when allocating IP address objects and to define centralized Redis connection settings that will be used by RQ. Previously, Nautobot was using PostgreSQL "advisory" locks, but because of the added support for other database backends, we replaced the database-specific locking with a distributed Redis lock.
+The [`CACHES`](../../configuration/required-settings/#caches) setting is used to, among other things, configure Django's built-in caching. You'll observe that, even though we aren't using Django's built-in caching, *we still have this as a required setting*. Here's why:
 
-For this purpose, the [`CACHES`](../../configuration/required-settings/#caches) setting is required to to simplify the configuration for establishing concurrent write locks and for referencing the correct Redis connection information when defining RQ task queues using the  [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) setting.
+Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin which allows it to use Redis as a backend for caching and session storage. This is used to provide a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. 
 
-Again: **`CACHES` is not used for caching at this time.**
+`django-redis` *also* uses the [`CACHES`](../../configuration/required-settings/#caches) setting, in its case to simplify the configuration for establishing concurrent write locks, and also for referencing the correct Redis connection information when defining RQ task queues using the  [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) setting.
 
-!!! important
-    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
+Again: **`CACHES` is not used for Django's built-in caching at this time, but it is still a required setting for `django-redis` to function properly.**
 
 ### Django Cacheops
 
