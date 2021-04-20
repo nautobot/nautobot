@@ -247,27 +247,33 @@ class RelationshipModelForm(forms.ModelForm):
                 self.relationships.append(field_name)
 
     def clean(self):
-        """Check RelationshipAssociation sanity."""
-        # For each relationship:
-        # - if this model is on the source side of the relation, and this is not a TYPE_MANY_TO_MANY,
-        #   we must verify that no existing relation exists with our destination object
-        # - if this model is on the destination side of the relation, and this is TYPE_ONE_TO_ONE,
-        #   we must verify that no existing relation exists with our source object
+        """
+        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
+
+        - For TYPE_ONE_TO_MANY and TYPE_ONE_TO_ONE relations, if the form's object is on the "source" side of
+          the relationship, verify that the requested "destination" object(s) do not already have any existing
+          RelationshipAssociation to a different source object.
+        - For TYPE_ONE_TO_ONE relations, if the form's object is on the "destination" side of the relationship,
+          verify that the requested "source" object does not have an existing RelationshipAssociation to
+          a different destination object.
+        """
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
-                # Is this a relationship where we expect to be on the "ONE" side? If not, nothing to check
+                # If this side of the relationship is a "MANY" relation,
+                # we can coexist with other existing RelationshipAssociations and there's nothing to check now.
                 if relationship.has_many(side):
                     continue
 
                 field_name = f"cr_{relationship.slug}__{side}"
-                peer_side = RelationshipSideChoices.OPPOSITE[side]
 
-                # Is the form even trying to set this field?
+                # Is the form trying to set this field (create/update a RelationshipAssociation(s))?
+                # If not (that is, clearing the field / deleting RelationshipAssociation(s)), we don't need to check.
                 if field_name not in self.cleaned_data or not self.cleaned_data[field_name]:
                     continue
 
+                peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # Are any of the objects we want a relationship with already entangled with another object?
-                if relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_MANY:
+                if relationship.has_many(peer_side):
                     target_peers = [item for item in self.cleaned_data[field_name]]
                 else:
                     target_peers = [self.cleaned_data[field_name]]

@@ -93,15 +93,17 @@ class RelationshipModel(models.Model):
             response {
                 "source": {
                     <relationship #1>: {
-                        "label": <>,
-                        "value": <>,
-                        "url": <>,
+                        "label": "...",
+                        "peer_type": <ContentType>,
                         "has_many": False,
+                        "value": <model>,
+                        "url": "...",
                     },
                     <relationship #2>: {
-                        "label": <>,
-                        "value": <>,
+                        "label": "...",
+                        "peer_type": <ContentType>,
                         "has_many": True,
+                        "value": None,
                         "queryset": <queryset #2>
                     },
                 },
