@@ -2526,20 +2526,34 @@ class PowerConnectionsListView(ConnectionsListView):
 
 
 class InterfaceConnectionsListView(ConnectionsListView):
-    queryset = Interface.objects.filter(_path__isnull=False).exclude(
-        # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
-        # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
-        # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
-        # used for reverse querying.
-        # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
-        # we fix it up to be consistently (A, B) in queryset_to_csv_body_data().
-        _path__destination_type=ContentType.objects.get_for_model(Interface),
-        pk__lt=F("_path__destination_id"),
-    )
+    queryset = None  # This gets set initially in init (See `get_queryset()`)
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
     table = tables.InterfaceConnectionTable
     template_name = "dcim/connections_list.html"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.get_queryset()  # Populate self.queryset after init.
+
+    def get_queryset(self):
+        """
+        This is a required so that the call to `ContentType.objects.get_for_model` does not result in a circular import.
+        """
+        qs = Interface.objects.filter(_path__isnull=False).exclude(
+            # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
+            # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
+            # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
+            # used for reverse querying.
+            # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
+            # we fix it up to be consistently (A, B) in queryset_to_csv_body_data().
+            _path__destination_type=ContentType.objects.get_for_model(Interface),
+            pk__lt=F("_path__destination_id"),
+        )
+        if self.queryset is None:
+            self.queryset = qs
+
+        return self.queryset
 
     def queryset_to_csv(self):
         csv_data = [
