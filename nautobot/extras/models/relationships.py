@@ -235,7 +235,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name.replace("_", " ").capitalize()
+        return self.name.replace("_", " ")
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.
