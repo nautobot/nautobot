@@ -91,7 +91,7 @@ class VRF(PrimaryModel):
         verbose_name_plural = "VRFs"
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("ipam:vrf", args=[self.pk])
@@ -106,7 +106,7 @@ class VRF(PrimaryModel):
         )
 
     @property
-    def display_name(self):
+    def display(self):
         if self.rd:
             return f"{self.name} ({self.rd})"
         return self.name
@@ -268,8 +268,8 @@ class Aggregate(PrimaryModel):
             # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
             # then |address.broadcast| is None
             broadcast = pre.broadcast if pre.broadcast else pre.network
-            self.network = bytes(pre.network)
-            self.broadcast = bytes(broadcast)
+            self.network = str(pre.network)
+            self.broadcast = str(broadcast)
             self.prefix_length = pre.prefixlen
 
     def get_absolute_url(self):
@@ -288,7 +288,7 @@ class Aggregate(PrimaryModel):
                 raise ValidationError({"prefix": "Cannot create aggregate with /0 mask."})
 
             # Ensure that the aggregate being added is not covered by an existing aggregate
-            covering_aggregates = Aggregate.objects.net_contains_or_equal(self.prefix)
+            covering_aggregates = Aggregate.objects.net_contains_or_equals(self.prefix)
             if self.present_in_database:
                 covering_aggregates = covering_aggregates.exclude(pk=self.pk)
             if covering_aggregates:
@@ -324,9 +324,8 @@ class Aggregate(PrimaryModel):
 
     @property
     def cidr_str(self):
-        if self.network and self.prefix_length:
-            ip = netaddr.IPAddress(int.from_bytes(self.network, "big"))
-            return "%s/%s" % (ip, self.prefix_length)
+        if self.network is not None and self.prefix_length is not None:
+            return "%s/%s" % (self.network, self.prefix_length)
 
     @property
     def prefix(self):
@@ -520,8 +519,8 @@ class Prefix(PrimaryModel, StatusModel):
             # if |prefix.prefixlen| is 32 (ip4) or 128 (ip6)
             # then |prefix.broadcast| is None
             broadcast = pre.broadcast if pre.broadcast else pre.network
-            self.network = bytes(pre.network)
-            self.broadcast = bytes(broadcast)
+            self.network = str(pre.network)
+            self.broadcast = str(broadcast)
             self.prefix_length = pre.prefixlen
 
     def get_absolute_url(self):
@@ -591,9 +590,8 @@ class Prefix(PrimaryModel, StatusModel):
 
     @property
     def cidr_str(self):
-        if self.network and self.prefix_length:
-            ip = netaddr.IPAddress(int.from_bytes(self.network, "big"))
-            return "%s/%s" % (ip, self.prefix_length)
+        if self.network is not None and self.prefix_length is not None:
+            return "%s/%s" % (self.network, self.prefix_length)
 
     @property
     def prefix(self):
@@ -831,8 +829,8 @@ class IPAddress(PrimaryModel, StatusModel):
             # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
             # then |address.broadcast| is None
             broadcast = address.broadcast if address.broadcast else address.network
-            self.host = bytes(address.ip)
-            self.broadcast = bytes(broadcast)
+            self.host = str(address.ip)
+            self.broadcast = str(broadcast)
             self.prefix_length = address.prefixlen
 
     def get_absolute_url(self):
@@ -936,9 +934,8 @@ class IPAddress(PrimaryModel, StatusModel):
 
     @property
     def address(self):
-        if self.host and self.prefix_length:
-            host = netaddr.IPAddress(int.from_bytes(self.host, "big"))
-            cidr = "%s/%s" % (host, self.prefix_length)
+        if self.host is not None and self.prefix_length is not None:
+            cidr = "%s/%s" % (self.host, self.prefix_length)
             return netaddr.IPNetwork(cidr)
 
     @address.setter
@@ -1113,7 +1110,7 @@ class VLAN(PrimaryModel, StatusModel):
         verbose_name_plural = "VLANs"
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("ipam:vlan", args=[self.pk])
@@ -1138,7 +1135,7 @@ class VLAN(PrimaryModel, StatusModel):
         )
 
     @property
-    def display_name(self):
+    def display(self):
         return f"{self.name} ({self.vid})"
 
     def get_interfaces(self):

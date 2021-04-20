@@ -1,7 +1,7 @@
 # Deploying Nautobot: Web Service and Worker
 
 !!! warning
-    As of Nautobot v1.0.0b2 these instructions are in a pre-release state and will be evolving rapidly!
+    As of Nautobot v1.0.0b3 these instructions are in a pre-release state and will be evolving rapidly!
 
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
@@ -17,7 +17,7 @@ $ nautobot-server start --help
 
 ## Configuration
 
-Copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
+As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 
 ```ini
 [uwsgi]

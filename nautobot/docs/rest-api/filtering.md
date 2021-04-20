@@ -20,19 +20,19 @@ http://nautobot/api/ipam/prefixes/ | jq ".actions.POST.status.choices"
 [
   {
     "value": "container",
-    "display_name": "Container"
+    "display": "Container"
   },
   {
     "value": "active",
-    "display_name": "Active"
+    "display": "Active"
   },
   {
     "value": "reserved",
-    "display_name": "Reserved"
+    "display": "Reserved"
   },
   {
     "value": "deprecated",
-    "display_name": "Deprecated"
+    "display": "Deprecated"
   }
 ]
 ```

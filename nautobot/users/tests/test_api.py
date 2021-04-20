@@ -24,7 +24,7 @@ class AppTest(APITestCase):
 class UserTest(APIViewTestCases.APIViewTestCase):
     model = User
     view_namespace = "users"
-    brief_fields = ["id", "url", "username"]
+    brief_fields = ["display", "id", "url", "username"]
     validation_excluded_fields = ["password"]
     create_data = [
         {
@@ -52,7 +52,7 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 class GroupTest(APIViewTestCases.APIViewTestCase):
     model = Group
     view_namespace = "users"
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "Group 4",
@@ -77,6 +77,7 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
     model = ObjectPermission
     brief_fields = [
         "actions",
+        "display",
         "enabled",
         "groups",
         "id",
