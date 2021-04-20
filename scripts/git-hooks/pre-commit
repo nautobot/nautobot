@@ -18,20 +18,19 @@ if [ -d ./venv/ ]; then
 fi
 
 echo "Validating PEP8 compliance..."
-flake8 development/ nautobot/ tasks.py
+invoke flake8
 if [ $? != 0 ]; then
 	EXIT=1
 fi
 
-# Check that all files conform to Black.
-black --check development/ nautobot/ tasks.py
+echo "Check that all files conform to Black..."
+invoke black
 if [[ $? != 0 ]]; then
     EXIT=1
 fi
 
 echo "Checking for missing migrations..."
-TEST_CONFIG=nautobot/core/tests/nautobot_config.py
-nautobot-server --config=$TEST_CONFIG makemigrations --dry-run --check
+invoke check-migrations
 if [ $? != 0 ]; then
 	EXIT=1
 fi

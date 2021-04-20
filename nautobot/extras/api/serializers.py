@@ -508,14 +508,14 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
 
 class ContentTypeSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:contenttype-detail")
-    display_name = serializers.SerializerMethodField()
+    display = serializers.SerializerMethodField()
 
     class Meta:
         model = ContentType
-        fields = ["id", "url", "app_label", "model", "display_name"]
+        fields = ["id", "url", "app_label", "model", "display"]
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
-    def get_display_name(self, obj):
+    def get_display(self, obj):
         return obj.app_labeled_name
 
 

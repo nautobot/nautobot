@@ -29,7 +29,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.models import CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType
-from nautobot.ipam.graphql.types import IPAddressType
+from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
 
 logger = logging.getLogger("nautobot.graphql.schema")
 
@@ -40,7 +40,9 @@ registry["graphql_types"]["dcim.interface"] = InterfaceType
 registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.cable"] = CableType
 registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
+registry["graphql_types"]["ipam.aggregate"] = AggregateType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
+registry["graphql_types"]["ipam.prefix"] = PrefixType
 registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
 registry["graphql_types"]["extras.tag"] = TagType
 
