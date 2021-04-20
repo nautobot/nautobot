@@ -229,8 +229,8 @@ class RelationshipModelForm(forms.ModelForm):
         """
         for side, relationships in self.instance.get_relationships().items():
             for relationship, queryset in relationships.items():
-                field_name = f"cr_{relationship.slug}__{side}"
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
+                field_name = f"cr_{relationship.slug}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
@@ -264,14 +264,14 @@ class RelationshipModelForm(forms.ModelForm):
                 if relationship.has_many(side):
                     continue
 
-                field_name = f"cr_{relationship.slug}__{side}"
+                peer_side = RelationshipSideChoices.OPPOSITE[side]
+                field_name = f"cr_{relationship.slug}__{peer_side}"
 
                 # Is the form trying to set this field (create/update a RelationshipAssociation(s))?
                 # If not (that is, clearing the field / deleting RelationshipAssociation(s)), we don't need to check.
                 if field_name not in self.cleaned_data or not self.cleaned_data[field_name]:
                     continue
 
-                peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # Are any of the objects we want a relationship with already entangled with another object?
                 if relationship.has_many(peer_side):
                     target_peers = [item for item in self.cleaned_data[field_name]]
@@ -298,8 +298,8 @@ class RelationshipModelForm(forms.ModelForm):
 
             # Extract the side from the field_name
             # Based on the side, find the list of existing RelationshipAssociation
-            side = field_name.split("__")[-1]
-            peer_side = RelationshipSideChoices.OPPOSITE[side]
+            peer_side = field_name.split("__")[-1]
+            side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
                 "relationship": self.fields[field_name].model,
                 f"{side}_type": self.obj_type,
