@@ -1,5 +1,8 @@
+from concurrent.futures.thread import ThreadPoolExecutor
 import json
+from random import shuffle
 
+from django.db import connection
 from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
@@ -20,6 +23,7 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
+from nautobot.utilities.testing.api import APITransactionTestCase
 
 
 class AppTest(APITestCase):
@@ -33,7 +37,7 @@ class AppTest(APITestCase):
 
 class VRFTest(APIViewTestCases.APIViewTestCase):
     model = VRF
-    brief_fields = ["display_name", "id", "name", "prefix_count", "rd", "url"]
+    brief_fields = ["display", "id", "name", "prefix_count", "rd", "url"]
     create_data = [
         {
             "name": "VRF 4",
@@ -65,7 +69,7 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
     model = RouteTarget
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "65000:1004",
@@ -94,7 +98,7 @@ class RouteTargetTest(APIViewTestCases.APIViewTestCase):
 
 class RIRTest(APIViewTestCases.APIViewTestCase):
     model = RIR
-    brief_fields = ["aggregate_count", "id", "name", "slug", "url"]
+    brief_fields = ["aggregate_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "RIR 4",
@@ -126,7 +130,7 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
     model = Aggregate
-    brief_fields = ["family", "id", "prefix", "url"]
+    brief_fields = ["display", "family", "id", "prefix", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -161,7 +165,7 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
 
 class RoleTest(APIViewTestCases.APIViewTestCase):
     model = Role
-    brief_fields = ["id", "name", "prefix_count", "slug", "url", "vlan_count"]
+    brief_fields = ["display", "id", "name", "prefix_count", "slug", "url", "vlan_count"]
     create_data = [
         {
             "name": "Role 4",
@@ -193,7 +197,7 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
 
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
-    brief_fields = ["family", "id", "prefix", "url"]
+    brief_fields = ["display", "family", "id", "prefix", "url"]
 
     create_data = [
         {
@@ -393,9 +397,56 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(len(response.data), 8)
 
 
+class ParallelPrefixTest(APITransactionTestCase):
+    """
+    Adapted from https://github.com/netbox-community/netbox/pull/3726
+    """
+
+    def test_create_multiple_available_prefixes_parallel(self):
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
+
+        # 5 Prefixes
+        requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": "active"} for i in range(1, 6)]
+        url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
+
+        self._do_parallel_requests(url, requests)
+
+        prefixes = [str(o) for o in Prefix.objects.filter(prefix_length=30).all()]
+        self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
+
+    def test_create_multiple_available_ips_parallel(self):
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), is_pool=True)
+
+        # 8 IPs
+        requests = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 9)]
+        url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
+
+        self._do_parallel_requests(url, requests)
+
+        ips = [str(o) for o in IPAddress.objects.filter().all()]
+        self.assertEqual(len(ips), len(set(ips)), "Duplicate IPs should not exist")
+
+    def _do_parallel_requests(self, url, requests):
+        # Randomize request order, such that test run more closely simulates
+        # a real calling pattern.
+        shuffle(requests)
+        with ThreadPoolExecutor(max_workers=len(requests)) as executor:
+            futures = []
+            for req in requests:
+                futures.append(executor.submit(self._threaded_post, url, req))
+
+    def _threaded_post(self, url, data):
+        try:
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        finally:
+            # Django will use a separate DB connection for each thread, but will not
+            # automatically close connections, it must be done here.
+            connection.close()
+
+
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
-    brief_fields = ["address", "family", "id", "url"]
+    brief_fields = ["address", "display", "family", "id", "url"]
     create_data = [
         {
             "address": "192.168.0.4/24",
@@ -434,7 +485,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     model = VLANGroup
-    brief_fields = ["id", "name", "slug", "url", "vlan_count"]
+    brief_fields = ["display", "id", "name", "slug", "url", "vlan_count"]
     create_data = [
         {
             "name": "VLAN Group 4",
@@ -466,7 +517,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
-    brief_fields = ["display_name", "id", "name", "url", "vid"]
+    brief_fields = ["display", "id", "name", "url", "vid"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -535,7 +586,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):
     model = Service
-    brief_fields = ["id", "name", "ports", "protocol", "url"]
+    brief_fields = ["display", "id", "name", "ports", "protocol", "url"]
     bulk_update_data = {
         "description": "New description",
     }

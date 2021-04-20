@@ -6,9 +6,8 @@ import django_filters.fields
 import graphene
 from graphql import GraphQLError
 from graphene_django import DjangoObjectType
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 
-from nautobot.core.graphql.utils import str_to_var_name
+from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.utilities.utils import get_filterset_for_model
@@ -113,24 +112,9 @@ def generate_list_search_parameters(schema_type):
 
     search_params = {}
     if schema_type._meta.filterset_class is not None:
-        # We need an instance for custom fields generation to happen for the
-        # filterset_class or the `cf_*` fields won't be detected.
-        filterset = schema_type._meta.filterset_class()
-        # Patch base_filters because `get_filtering_args_from_filterset` looks there
-        filterset.base_filters = filterset.filters
-
         search_params = get_filtering_args_from_filterset(
-            filterset,
-            schema_type,
+            schema_type._meta.filterset_class,
         )
-
-    # Hack to swap `type` fields to `_type` since they will conflict with
-    # `graphene.types.fields.Field.type` in Graphene 2.x.
-    # TODO(jathan): Once we upgrade to Graphene 3.x we can remove this, but we
-    # will still need to do an API migration to deprecate it. This argument was
-    # validated to be safe to keep even in Graphene 3.
-    if "type" in search_params:
-        search_params["_type"] = search_params.pop("type")
 
     return search_params
 

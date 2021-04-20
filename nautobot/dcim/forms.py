@@ -660,7 +660,6 @@ class RackElevationFilterForm(RackFilterForm):
         queryset=Rack.objects.all(),
         label="Rack",
         required=False,
-        display_field="display_name",
         query_params={
             "site": "$site",
             "group_id": "$group_id",
@@ -687,7 +686,6 @@ class RackReservationForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rel
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "group_id": "$rack_group",
@@ -797,7 +795,6 @@ class RackReservationFilterForm(BootstrapMixin, TenancyFilterForm):
     user_id = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
-        display_field="username",
         label="User",
         widget=APISelectMultiple(
             api_url="/api/users/users/",
@@ -951,7 +948,6 @@ class ComponentTemplateCreateForm(ComponentForm):
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        display_field="model",
         query_params={"manufacturer_id": "$manufacturer"},
     )
     description = forms.CharField(required=False)
@@ -1633,14 +1629,12 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        display_field="display_name",
         query_params={"site_id": "$site"},
         initial_params={"racks": "$rack"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "group_id": "$rack_group",
@@ -1664,7 +1658,6 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        display_field="model",
         query_params={"manufacturer_id": "$manufacturer"},
     )
     device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all())
@@ -1792,18 +1785,6 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         if position:
             self.fields["position"].widget.choices = [(position, f"U{position}")]
 
-    def save(self, *args, **kwargs):
-        instance = super().save(*args, commit=False, **kwargs)
-        # call IPAddress setter method to deconstruct netaddr.IPNetwork
-        # into host, broadcast, and prefix_length model fields
-        if instance.primary_ip4:
-            instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
-        if instance.primary_ip6:
-            instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
-        instance.save()
-        self.save_m2m()
-        return instance
-
 
 class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     device_role = CSVModelChoiceField(
@@ -1852,18 +1833,6 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             # Limit device type queryset by manufacturer
             params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
-
-    def save(self, *args, **kwargs):
-        instance = super().save(*args, commit=False, **kwargs)
-        # call IPAddress setter method to deconstruct netaddr.IPNetwork
-        # into host, broadcast, and prefix_length model fields
-        if instance.primary_ip4:
-            instance.primary_ip4.address = self.cleaned_data.get("primary_ip4")
-        if instance.primary_ip6:
-            instance.primary_ip6.address = self.cleaned_data.get("primary_ip6")
-        instance.save()
-        self.save_m2m()
-        return instance
 
 
 class DeviceCSVForm(BaseDeviceCSVForm):
@@ -1974,7 +1943,6 @@ class DeviceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMi
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
-        display_field="model",
         query_params={"manufacturer_id": "$manufacturer"},
     )
     device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all(), required=False)
@@ -2048,7 +2016,6 @@ class DeviceFilterForm(
         queryset=DeviceType.objects.all(),
         required=False,
         label="Model",
-        display_field="model",
         query_params={"manufacturer": "$manufacturer"},
     )
     platform = DynamicModelMultipleChoiceField(
@@ -2111,7 +2078,7 @@ class ComponentCreateForm(ComponentForm):
     Base form for the creation of device components (models subclassed from ComponentModel).
     """
 
-    device = DynamicModelChoiceField(queryset=Device.objects.all(), display_field="display_name")
+    device = DynamicModelChoiceField(queryset=Device.objects.all())
     description = forms.CharField(max_length=100, required=False)
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -2517,7 +2484,6 @@ class InterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm, R
         queryset=VLAN.objects.all(),
         required=False,
         label="Untagged VLAN",
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -2527,7 +2493,6 @@ class InterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm, R
         queryset=VLAN.objects.all(),
         required=False,
         label="Tagged VLANs",
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -2619,7 +2584,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -2628,7 +2592,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -2700,7 +2663,6 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -2709,7 +2671,6 @@ class InterfaceBulkEditForm(
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -3196,7 +3157,7 @@ class DeviceBayCSVForm(CustomFieldModelCSVForm):
 
 
 class InventoryItemForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
-    device = DynamicModelChoiceField(queryset=Device.objects.all(), display_field="display_name")
+    device = DynamicModelChoiceField(queryset=Device.objects.all())
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,
@@ -3322,7 +3283,6 @@ class ConnectCableToDeviceForm(BootstrapMixin, CustomFieldModelForm):
         queryset=Rack.objects.all(),
         label="Rack",
         required=False,
-        display_field="display_name",
         null_option="None",
         query_params={"site_id": "$termination_b_site"},
     )
@@ -3330,7 +3290,6 @@ class ConnectCableToDeviceForm(BootstrapMixin, CustomFieldModelForm):
         queryset=Device.objects.all(),
         label="Device",
         required=False,
-        display_field="display_name",
         query_params={
             "site_id": "$termination_b_site",
             "rack_id": "$termination_b_rack",
@@ -3445,7 +3404,6 @@ class ConnectCableToCircuitTerminationForm(BootstrapMixin, CustomFieldModelForm)
     termination_b_circuit = DynamicModelChoiceField(
         queryset=Circuit.objects.all(),
         label="Circuit",
-        display_field="cid",
         query_params={
             "provider_id": "$termination_b_provider",
             "site_id": "$termination_b_site",
@@ -3454,7 +3412,6 @@ class ConnectCableToCircuitTerminationForm(BootstrapMixin, CustomFieldModelForm)
     termination_b_id = DynamicModelChoiceField(
         queryset=CircuitTermination.objects.all(),
         label="Side",
-        display_field="term_side",
         disabled_indicator="cable",
         query_params={"circuit_id": "$termination_b_circuit"},
     )
@@ -3494,7 +3451,6 @@ class ConnectCableToPowerFeedForm(BootstrapMixin, CustomFieldModelForm):
         queryset=RackGroup.objects.all(),
         label="Rack Group",
         required=False,
-        display_field="cid",
         query_params={"site_id": "$termination_b_site"},
     )
     termination_b_powerpanel = DynamicModelChoiceField(
@@ -3787,13 +3743,11 @@ class VirtualChassisCreateForm(BootstrapMixin, CustomFieldModelForm, Relationshi
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        display_field="display_name",
         query_params={"site_id": "$site"},
     )
     members = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "rack_id": "$rack",
@@ -3921,12 +3875,10 @@ class VCMemberSelectForm(BootstrapMixin, forms.Form):
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        display_field="display_name",
         query_params={"site_id": "$site"},
     )
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "rack_id": "$rack",
@@ -4095,7 +4047,6 @@ class PowerFeedForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm)
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
-        display_field="display_name",
         query_params={"site_id": "$site"},
     )
     comments = CommentField()
@@ -4177,7 +4128,7 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 class PowerFeedBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerFeed.objects.all(), widget=forms.MultipleHiddenInput)
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
-    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False, display_field="display_name")
+    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
         required=False,

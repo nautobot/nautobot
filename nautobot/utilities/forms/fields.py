@@ -6,6 +6,7 @@ from io import StringIO
 import django_filters
 from django import forms
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
@@ -369,7 +370,7 @@ class DynamicModelChoiceMixin:
 
     def __init__(
         self,
-        display_field="name",
+        display_field="display",
         query_params=None,
         initial_params=None,
         null_option=None,
@@ -450,7 +451,10 @@ class DynamicModelChoiceMixin:
         if not widget.attrs.get("data-url"):
             app_label = self.queryset.model._meta.app_label
             model_name = self.queryset.model._meta.model_name
-            data_url = reverse("{}-api:{}-list".format(app_label, model_name))
+            if app_label in settings.PLUGINS:
+                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
+            else:
+                data_url = reverse(f"{app_label}-api:{model_name}-list")
             widget.attrs["data-url"] = data_url
 
         return bound_field

@@ -457,16 +457,11 @@ class ConfigContextModel(models.Model):
         Return the rendered configuration context for a device or VM.
         """
 
+        # always manually query for config contexts
+        config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
-
-        if not hasattr(self, "config_context_data"):
-            # The annotation is not available, so we fall back to manually querying for the config context objects
-            config_context_data = ConfigContext.objects.get_for_object(self, aggregate_data=True)
-        else:
-            # The attribute may exist, but the annotated value could be None if there is no config context data
-            config_context_data = self.config_context_data or []
-
         for context in config_context_data:
             data = deepmerge(data, context)
 

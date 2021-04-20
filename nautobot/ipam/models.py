@@ -91,7 +91,7 @@ class VRF(PrimaryModel):
         verbose_name_plural = "VRFs"
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("ipam:vrf", args=[self.pk])
@@ -106,7 +106,7 @@ class VRF(PrimaryModel):
         )
 
     @property
-    def display_name(self):
+    def display(self):
         if self.rd:
             return f"{self.name} ({self.rd})"
         return self.name
@@ -288,7 +288,7 @@ class Aggregate(PrimaryModel):
                 raise ValidationError({"prefix": "Cannot create aggregate with /0 mask."})
 
             # Ensure that the aggregate being added is not covered by an existing aggregate
-            covering_aggregates = Aggregate.objects.net_contains_or_equal(self.prefix)
+            covering_aggregates = Aggregate.objects.net_contains_or_equals(self.prefix)
             if self.present_in_database:
                 covering_aggregates = covering_aggregates.exclude(pk=self.pk)
             if covering_aggregates:
@@ -324,7 +324,7 @@ class Aggregate(PrimaryModel):
 
     @property
     def cidr_str(self):
-        if self.network and self.prefix_length:
+        if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
 
     @property
@@ -590,7 +590,7 @@ class Prefix(PrimaryModel, StatusModel):
 
     @property
     def cidr_str(self):
-        if self.network and self.prefix_length:
+        if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
 
     @property
@@ -934,7 +934,7 @@ class IPAddress(PrimaryModel, StatusModel):
 
     @property
     def address(self):
-        if self.host and self.prefix_length:
+        if self.host is not None and self.prefix_length is not None:
             cidr = "%s/%s" % (self.host, self.prefix_length)
             return netaddr.IPNetwork(cidr)
 
@@ -1110,7 +1110,7 @@ class VLAN(PrimaryModel, StatusModel):
         verbose_name_plural = "VLANs"
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("ipam:vlan", args=[self.pk])
@@ -1135,7 +1135,7 @@ class VLAN(PrimaryModel, StatusModel):
         )
 
     @property
-    def display_name(self):
+    def display(self):
         return f"{self.name} ({self.vid})"
 
     def get_interfaces(self):
