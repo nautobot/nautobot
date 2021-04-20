@@ -60,7 +60,7 @@ class AppTest(APITestCase):
 
 class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     model = CustomField
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "content_types": ["dcim.site"],
@@ -102,7 +102,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ExportTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "content_type": "dcim.device",
@@ -147,7 +147,7 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class TagTest(APIViewTestCases.APIViewTestCase):
     model = Tag
-    brief_fields = ["color", "id", "name", "slug", "url"]
+    brief_fields = ["color", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Tag 4",
@@ -176,7 +176,7 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "New Git Repository 1",
@@ -240,7 +240,7 @@ class ImageAttachmentTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = ImageAttachment
-    brief_fields = ["id", "image", "name", "url"]
+    brief_fields = ["display", "id", "image", "name", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -276,7 +276,7 @@ class ImageAttachmentTest(
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "Config Context 4",
@@ -586,7 +586,7 @@ class ContentTypeTest(APITestCase):
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):
     model = CustomLink
-    brief_fields = ["content_type", "id", "name", "url"]
+    brief_fields = ["content_type", "display", "id", "name", "url"]
     create_data = [
         {
             "content_type": "dcim.site",
@@ -646,7 +646,7 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
     model = Webhook
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "content_types": ["dcim.consoleport"],
@@ -715,7 +715,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
-    brief_fields = ["id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "slug", "url"]
     bulk_update_data = {
         "color": "000000",
     }
@@ -757,7 +757,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
     model = Relationship
-    brief_fields = ["id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "slug", "url"]
 
     create_data = [
         {
@@ -819,7 +819,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
-    brief_fields = ["destination_id", "id", "relationship", "source_id", "url"]
+    brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
 
     @classmethod
     def setUpTestData(cls):

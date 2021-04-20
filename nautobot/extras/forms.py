@@ -246,11 +246,11 @@ class RelationshipModelForm(forms.ModelForm):
                 self.relationships.append(field_name)
 
     def _save_relationships(self):
-        """Save all Relationships on form save."""
+        """Update RelationshipAssociations for all Relationships on form save."""
 
         for field_name in self.relationships:
 
-            # Extract the sidefrom the field_name
+            # Extract the side from the field_name
             # Based on the side, find the list of existing RelationshipAssociation
             side = field_name.split("__")[-1]
             peer_side = RelationshipSideChoices.OPPOSITE[side]
@@ -259,41 +259,50 @@ class RelationshipModelForm(forms.ModelForm):
                 f"{side}_type": self.obj_type,
                 f"{side}_id": self.instance.pk,
             }
-            existing_cras = RelationshipAssociation.objects.filter(**filters)
+            existing_associations = RelationshipAssociation.objects.filter(**filters)
 
-            # Extract the list of ids of the target peers
+            # Get the list of target peer ids (PKs) that are specified in the form
             target_peer_ids = []
             if hasattr(self.cleaned_data[field_name], "__iter__"):
+                # One-to-many or many-to-many association
                 target_peer_ids = [item.pk for item in self.cleaned_data[field_name]]
             elif self.cleaned_data[field_name]:
+                # Many-to-one or one-to-one association
                 target_peer_ids = [self.cleaned_data[field_name].pk]
             else:
-                continue
+                # Unset/delete case
+                target_peer_ids = []
 
-            # Delete all existing CRA that are not in cleaned_data/target_peer_ids list
-            # Remove from target_peer_ids all peers that already exist
-            for cra in existing_cras:
-                found_peer = False
+            # Create/delete RelationshipAssociations as needed to match the target_peer_ids list
+
+            # First, for each existing association, if it's one that's already in target_peer_ids,
+            # we can discard it from target_peer_ids (no update needed to this association).
+            # Conversely, if it's *not* in target_peer_ids, we should delete it.
+            for association in existing_associations:
                 for peer_id in target_peer_ids:
-                    if peer_id == getattr(cra, f"{peer_side}_id"):
-                        found_peer = peer_id
-                if not found_peer:
-                    cra.delete()
+                    if peer_id == getattr(association, f"{peer_side}_id"):
+                        # This association already exists, so we can ignore it
+                        target_peer_ids.remove(peer_id)
+                        break
                 else:
-                    target_peer_ids.remove(found_peer)
+                    # This association is not in target_peer_ids, so delete it
+                    association.delete()
 
-            for cra_peer_id in target_peer_ids:
+            # Anything remaining in target_peer_ids now does not exist yet and needs to be created.
+            for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
-                cra = RelationshipAssociation(
+                association = RelationshipAssociation(
                     relationship=relationship,
+                    **{
+                        f"{side}_type": self.obj_type,
+                        f"{side}_id": self.instance.pk,
+                        f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
+                        f"{peer_side}_id": peer_id,
+                    },
                 )
-                setattr(cra, f"{side}_id", self.instance.pk)
-                setattr(cra, f"{side}_type", self.obj_type)
-                setattr(cra, f"{peer_side}_id", cra_peer_id)
-                setattr(cra, f"{peer_side}_type", getattr(relationship, f"{peer_side}_type"))
 
                 # FIXME Run Clean
-                cra.save()
+                association.save()
 
     def save(self, commit=True):
 
@@ -577,7 +586,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     user_id = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
-        display_field="username",
         label="User",
         widget=APISelectMultiple(
             api_url="/api/users/users/",
@@ -586,7 +594,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     changed_object_type_id = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field="display_name",
         label="Object Type",
         widget=APISelectMultiple(
             api_url="/api/extras/content-types/",
@@ -630,7 +637,6 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
     user = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
-        display_field="username",
         label="User",
         widget=APISelectMultiple(
             api_url="/api/users/users/",
@@ -813,7 +819,6 @@ class StatusBulkEditFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            display_field="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -829,7 +834,6 @@ class StatusFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            display_field="name",
             to_field_name="slug",
         )
         self.order_fields(self.field_order)  # Reorder fields again

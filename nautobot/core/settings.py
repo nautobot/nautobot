@@ -432,6 +432,8 @@ GRAPHQL_RELATIONSHIP_PREFIX = "rel"
 # Caching
 #
 
+# The django-cacheops plugin is used to cache querysets. The built-in Django
+# caching is not used.
 CACHEOPS = {
     "auth.user": {"ops": "get", "timeout": 60 * 15},
     "auth.*": {"ops": ("fetch", "get")},
@@ -453,41 +455,37 @@ CACHEOPS_ENABLED = True
 CACHEOPS_REDIS = "redis://localhost:6379/1"
 CACHEOPS_DEFAULTS = {"timeout": 900}
 
+# The django-redis cache is used to establish concurrent locks using Redis. The
+# django-rq settings will use the same instance/database by default.
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://localhost:6379/0",
+        "TIMEOUT": 300,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PASSWORD": "",
+        },
+    }
+}
+
 #
 # Django RQ (Webhooks backend)
 #
 
+# These defaults utilize the Django caches setting defined for django-redis.
+# See: https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache
 RQ_QUEUES = {
     "default": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
-    },
-    "webhooks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+        "USE_REDIS_CACHE": "default",
     },
     "check_releases": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+        "USE_REDIS_CACHE": "default",
     },
     "custom_fields": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+        "USE_REDIS_CACHE": "default",
+    },
+    "webhooks": {
+        "USE_REDIS_CACHE": "default",
     },
 }
