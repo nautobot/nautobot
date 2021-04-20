@@ -230,7 +230,7 @@ class RIRTable(BaseTable):
 
 class AggregateTable(BaseTable):
     pk = ToggleColumn()
-    prefix = tables.LinkColumn(verbose_name="Aggregate")
+    prefix = tables.LinkColumn(verbose_name="Aggregate", order_by=("network", "prefix_length"))
     tenant = tables.TemplateColumn(template_code=TENANT_LINK)
     date_added = tables.DateColumn(format="Y-m-d", verbose_name="Added")
 
@@ -313,7 +313,9 @@ class RoleTable(BaseTable):
 
 class PrefixTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
-    prefix = tables.TemplateColumn(template_code=PREFIX_LINK, attrs={"td": {"class": "text-nowrap"}})
+    prefix = tables.TemplateColumn(
+        template_code=PREFIX_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
+    )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = tables.TemplateColumn(template_code=TENANT_LINK)
     site = tables.Column(linkify=True)
@@ -395,7 +397,9 @@ class PrefixDetailTable(PrefixTable):
 
 class IPAddressTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
-    address = tables.TemplateColumn(template_code=IPADDRESS_LINK, verbose_name="IP Address")
+    address = tables.TemplateColumn(
+        template_code=IPADDRESS_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
+    )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     role = ChoiceFieldColumn()
     tenant = tables.TemplateColumn(template_code=TENANT_LINK)

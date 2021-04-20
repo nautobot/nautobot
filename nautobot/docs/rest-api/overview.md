@@ -42,7 +42,7 @@ curl -s http://nautobot/api/ipam/ip-addresses/c557df87-9a63-4555-bfd1-21cea2f6aa
       "id": "6a522ebb-5739-4c5c-922f-ab4a2dc12eb0",
       "url": "http://nautobot/api/dcim/devices/6a522ebb-5739-4c5c-922f-ab4a2dc12eb0/",
       "name": "router1",
-      "display_name": "router1"
+      "display": "router1"
     },
     "name": "et-0/1/2",
     "cable": null,
@@ -126,7 +126,7 @@ The REST API employs two types of serializers to represent model data: base seri
         "slug": "user-access"
     },
     "description": "",
-    "display_name": "101 (Users-Floor1)",
+    "display": "101 (Users-Floor1)",
     "custom_fields": {}
 }
 ```
@@ -197,7 +197,7 @@ http://nautobot/api/ipam/ip-addresses/ \
             "id": "76816a69-db2c-40e6-812d-115c61156e21",
             "url": "http://nautobot/api/dcim/devices/76816a69-db2c-40e6-812d-115c61156e21/",
             "name": "device105",
-            "display_name": "device105"
+            "display": "device105"
         },
         "name": "ge-0/0/0",
         "cable": null,

@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.users.models import ObjectPermission, Token
 from .utils import disable_warnings
@@ -323,7 +323,7 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            id_list = self._get_queryset().values_list("id", flat=True)[:3]
+            id_list = list(self._get_queryset().values_list("id", flat=True)[:3])
             self.assertEqual(len(id_list), 3, "Insufficient number of objects to test bulk update")
             data = [{"id": id, **self.bulk_update_data} for id in id_list]
 
@@ -398,3 +398,24 @@ class APIViewTestCases:
         DeleteObjectViewTestCase,
     ):
         pass
+
+
+class APITransactionTestCase(_APITransactionTestCase):
+    def setUp(self):
+        """
+        Create a superuser and token for API calls.
+        """
+        self.user = User.objects.create(username="testuser", is_superuser=True)
+        self.token = Token.objects.create(user=self.user)
+        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+
+    def assertHttpStatus(self, response, expected_status):
+        """
+        Provide more detail in the event of an unexpected HTTP response.
+        """
+        err_message = "Expected HTTP status {}; received {}: {}"
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+            err_message.format(expected_status, response.status_code, response.data),
+        )

@@ -25,13 +25,25 @@ class AddressFieldMixin(forms.ModelForm):
 
     address = IPNetworkFormField()
 
-    def save(self, *args, **kwargs):
-        instance = super().save(commit=False)
-        # call the model's address.setter
-        instance.address = self.cleaned_data.get("address")
-        instance.save()
-        self.save_m2m()
-        return instance
+    def __init__(self, *args, **kwargs):
+
+        instance = kwargs.get("instance")
+        initial = kwargs.get("initial", {}).copy()
+
+        # If we're editing an object with a `address` field, we need to patch initial to include
+        # `address` because it is a computed field.
+        if instance is not None:
+            initial["address"] = instance.address
+
+        kwargs["initial"] = initial
+
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        # Need to set instance attribute for `address` to run proper validation on Model.clean()
+        self.instance.address = self.cleaned_data.get("address")
 
 
 class BootstrapMixin(forms.BaseForm):
@@ -144,13 +156,11 @@ class PrefixFieldMixin(forms.ModelForm):
 
         super().__init__(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
-        instance = super().save(commit=False)
-        # call the model's prefix.setter method
-        instance.prefix = self.cleaned_data.get("prefix")
-        instance.save()
-        self.save_m2m()
-        return instance
+    def clean(self):
+        super().clean()
+
+        # Need to set instance attribute for `prefix` to run proper validation on Model.clean()
+        self.instance.prefix = self.cleaned_data.get("prefix")
 
 
 class ImportForm(BootstrapMixin, forms.Form):

@@ -12,6 +12,7 @@ from django.utils.text import slugify
 from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.models import Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
@@ -196,6 +197,12 @@ class ModelTestCase(TestCase):
     """
 
     model = None
+    # Optional, list of Relationships populated in setUpTestData for testing with this model
+    # Be sure to also create RelationshipAssociations using these Relationships!
+    relationships = None
+    # Optional, list of CustomFields populated in setUpTestData for testing with this model
+    # Be sure to also populate these fields on your test data!
+    custom_fields = None
 
     def _get_queryset(self):
         """
@@ -278,7 +285,34 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(instance.get_absolute_url()), 200)
+            response = self.client.get(instance.get_absolute_url())
+            self.assertHttpStatus(response, 200)
+
+            # The object's display name or string representation should appear in the response
+            self.assertIn(getattr(instance, "display", str(instance)), str(response.content))
+
+            # If any Relationships are defined, they should appear in the response
+            if self.relationships:
+                for relationship in self.relationships:
+                    content_type = ContentType.objects.get_for_model(instance)
+                    if content_type == relationship.source_type:
+                        self.assertIn(
+                            relationship.get_label(RelationshipSideChoices.SIDE_SOURCE), str(response.content)
+                        )
+                    if content_type == relationship.destination_type:
+                        self.assertIn(
+                            relationship.get_label(RelationshipSideChoices.SIDE_DESTINATION), str(response.content)
+                        )
+
+            # If any Custom Fields are defined, they should appear in the response
+            if self.custom_fields:
+                for custom_field in self.custom_fields:
+                    self.assertIn(str(custom_field), str(response.content))
+                    if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+                        for value in instance.cf.get(custom_field.name):
+                            self.assertIn(str(value), str(response.content))
+                    else:
+                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), str(response.content))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
