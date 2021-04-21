@@ -45,12 +45,12 @@ def is_truthy(arg):
 
 # Redis variables
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = os.getenv("REDIS_PORT", 6379)
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 
 # Check for Redis SSL
 REDIS_SCHEME = "redis"
-REDIS_SSL = is_truthy(os.environ.get("REDIS_SSL", False))
+REDIS_SSL = is_truthy(os.getenv("REDIS_SSL", False))
 if REDIS_SSL:
     REDIS_SCHEME = "rediss"
 
