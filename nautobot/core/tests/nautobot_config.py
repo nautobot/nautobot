@@ -50,7 +50,7 @@ REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 
 # Check for Redis SSL
 REDIS_SCHEME = "redis"
-REDIS_SSL = is_truthy(os.getenv("REDIS_SSL", False))
+REDIS_SSL = is_truthy(os.getenv("REDIS_SSL", "False"))
 if REDIS_SSL:
     REDIS_SCHEME = "rediss"
 
