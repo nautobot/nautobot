@@ -2,9 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.dcim.forms import DeviceForm
-import nautobot.dcim.models as dcim
+import nautobot.dcim.models as dcim_models
 from nautobot.ipam.forms import IPAddressForm, VLANGroupForm
-import nautobot.ipam.models as ipam
+import nautobot.ipam.models as ipam_models
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 
@@ -16,13 +16,13 @@ class RelationshipModelFormTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.site = dcim.Site.objects.create(name="Site 1", slug="site-1")
-        cls.manufacturer = dcim.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        cls.device_type = dcim.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
-        cls.device_role = dcim.DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        cls.platform = dcim.Platform.objects.create(name="Platform 1", slug="platform-1")
+        cls.site = dcim_models.Site.objects.create(name="Site 1", slug="site-1")
+        cls.manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
+        cls.device_role = dcim_models.DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        cls.platform = dcim_models.Platform.objects.create(name="Platform 1", slug="platform-1")
         cls.status_active = Status.objects.get(slug="active")
-        cls.device_1 = dcim.Device.objects.create(
+        cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
             site=cls.site,
             device_type=cls.device_type,
@@ -30,7 +30,7 @@ class RelationshipModelFormTestCase(TestCase):
             platform=cls.platform,
             status=cls.status_active,
         )
-        cls.device_2 = dcim.Device.objects.create(
+        cls.device_2 = dcim_models.Device.objects.create(
             name="Device 1",
             site=cls.site,
             device_type=cls.device_type,
@@ -39,24 +39,24 @@ class RelationshipModelFormTestCase(TestCase):
             status=cls.status_active,
         )
 
-        cls.ipaddress_1 = ipam.IPAddress.objects.create(address="10.1.1.1/24", status=cls.status_active)
-        cls.ipaddress_2 = ipam.IPAddress.objects.create(address="10.2.2.2/24", status=cls.status_active)
+        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.status_active)
+        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.status_active)
 
-        cls.vlangroup_1 = ipam.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.site)
-        cls.vlangroup_2 = ipam.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.site)
+        cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.site)
+        cls.vlangroup_2 = ipam_models.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.site)
 
         cls.relationship_1 = Relationship.objects.create(
             name="BGP Router-ID",
             slug="bgp-router-id",
-            source_type=ContentType.objects.get_for_model(dcim.Device),
-            destination_type=ContentType.objects.get_for_model(ipam.IPAddress),
+            source_type=ContentType.objects.get_for_model(dcim_models.Device),
+            destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
         )
         cls.relationship_2 = Relationship.objects.create(
             name="Device VLAN Groups",
             slug="device-vlan-groups",
-            source_type=ContentType.objects.get_for_model(dcim.Device),
-            destination_type=ContentType.objects.get_for_model(ipam.VLANGroup),
+            source_type=ContentType.objects.get_for_model(dcim_models.Device),
+            destination_type=ContentType.objects.get_for_model(ipam_models.VLANGroup),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
         )
 
@@ -99,7 +99,7 @@ class RelationshipModelFormTestCase(TestCase):
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
 
-        new_device = dcim.Device.objects.get(name=self.device_form_base_data["name"])
+        new_device = dcim_models.Device.objects.get(name=self.device_form_base_data["name"])
         # Verify that RelationshipAssociations were created
         RelationshipAssociation.objects.get(
             relationship=self.relationship_1, source_id=new_device.pk, destination_id=self.ipaddress_1.pk
@@ -125,7 +125,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
-        new_ip = ipam.IPAddress.objects.get(address=self.ipaddress_form_base_data["address"])
+        new_ip = ipam_models.IPAddress.objects.get(address=self.ipaddress_form_base_data["address"])
         RelationshipAssociation.objects.get(
             relationship=self.relationship_1, source_id=self.device_1.pk, destination_id=new_ip.pk
         )
@@ -144,7 +144,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
-        new_vlangroup = ipam.VLANGroup.objects.get(name=self.vlangroup_form_base_data["name"])
+        new_vlangroup = ipam_models.VLANGroup.objects.get(name=self.vlangroup_form_base_data["name"])
         RelationshipAssociation.objects.get(
             relationship=self.relationship_2, source_id=self.device_1.pk, destination_id=new_vlangroup.pk
         )

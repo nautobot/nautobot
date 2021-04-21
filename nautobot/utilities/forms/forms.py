@@ -23,9 +23,6 @@ __all__ = (
 class AddressFieldMixin(forms.ModelForm):
     """
     ModelForm mixin for IPAddress based models.
-
-    IMPORTANT: because this mixin's save() method discards any arguments such as commit=True,
-    it MUST be last in any inheritance sequence.
     """
 
     address = IPNetworkFormField()
@@ -145,9 +142,6 @@ class CSVModelForm(forms.ModelForm):
 class PrefixFieldMixin(forms.ModelForm):
     """
     ModelForm mixin for IPNetwork based models.
-
-    IMPORTANT: because this mixin's save() method discards any arguments such as commit=True,
-    it MUST be last in any inheritance sequence.
     """
 
     prefix = IPNetworkFormField()

@@ -230,6 +230,9 @@ class RelationshipModelForm(forms.ModelForm):
         for side, relationships in self.instance.get_relationships().items():
             for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
+                # If this model is on the "source" side of the relationship, then the field will be named
+                # cr_relationship-slug__destination since it's used to pick the destination object(s).
+                # Conversely if we're on the "destination" side, the field will be cr_relationship-slug__source.
                 field_name = f"cr_{relationship.slug}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
@@ -264,6 +267,7 @@ class RelationshipModelForm(forms.ModelForm):
                 if relationship.has_many(side):
                     continue
 
+                # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 field_name = f"cr_{relationship.slug}__{peer_side}"
 
@@ -295,10 +299,10 @@ class RelationshipModelForm(forms.ModelForm):
         """Update RelationshipAssociations for all Relationships on form save."""
 
         for field_name in self.relationships:
-
-            # Extract the side from the field_name
-            # Based on the side, find the list of existing RelationshipAssociation
+            # The field name tells us the side of the relationship that it is providing peer objects(s) to link into.
             peer_side = field_name.split("__")[-1]
+            # Based on the side of the relationship that our local object represents,
+            # find the list of existing RelationshipAssociations it already has for this Relationship.
             side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
                 "relationship": self.fields[field_name].model,
