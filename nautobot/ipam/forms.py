@@ -341,7 +341,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class PrefixForm(BootstrapMixin, PrefixFieldMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,

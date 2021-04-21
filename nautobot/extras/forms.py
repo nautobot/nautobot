@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, Platform, Region, Site
@@ -227,33 +228,82 @@ class RelationshipModelForm(forms.ModelForm):
         One form field per side will be added to the list.
         """
         for side, relationships in self.instance.get_relationships().items():
-            for cr, queryset in relationships.items():
-                field_name = f"cr_{cr.slug}__{side}"
+            for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
-                self.fields[field_name] = cr.to_form_field(side=side)
+                # If this model is on the "source" side of the relationship, then the field will be named
+                # cr_relationship-slug__destination since it's used to pick the destination object(s).
+                # Conversely if we're on the "destination" side, the field will be cr_relationship-slug__source.
+                field_name = f"cr_{relationship.slug}__{peer_side}"
+                self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
-                    if cr.has_many(peer_side):
-                        initial = [getattr(cra, peer_side) for cra in queryset.all()]
+                    if relationship.has_many(peer_side):
+                        initial = [getattr(association, peer_side) for association in queryset.all()]
                         self.fields[field_name].initial = initial
                     else:
-                        cra = queryset.first()
-                        if cra:
-                            self.fields[field_name].initial = getattr(cra, peer_side)
+                        association = queryset.first()
+                        if association:
+                            self.fields[field_name].initial = getattr(association, peer_side)
 
                 # Annotate the field in the list of Relationship form fields
                 self.relationships.append(field_name)
+
+    def clean(self):
+        """
+        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
+
+        - For TYPE_ONE_TO_MANY and TYPE_ONE_TO_ONE relations, if the form's object is on the "source" side of
+          the relationship, verify that the requested "destination" object(s) do not already have any existing
+          RelationshipAssociation to a different source object.
+        - For TYPE_ONE_TO_ONE relations, if the form's object is on the "destination" side of the relationship,
+          verify that the requested "source" object does not have an existing RelationshipAssociation to
+          a different destination object.
+        """
+        for side, relationships in self.instance.get_relationships().items():
+            for relationship in relationships:
+                # If this side of the relationship is a "MANY" relation,
+                # we can coexist with other existing RelationshipAssociations and there's nothing to check now.
+                if relationship.has_many(side):
+                    continue
+
+                # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
+                peer_side = RelationshipSideChoices.OPPOSITE[side]
+                field_name = f"cr_{relationship.slug}__{peer_side}"
+
+                # Is the form trying to set this field (create/update a RelationshipAssociation(s))?
+                # If not (that is, clearing the field / deleting RelationshipAssociation(s)), we don't need to check.
+                if field_name not in self.cleaned_data or not self.cleaned_data[field_name]:
+                    continue
+
+                # Are any of the objects we want a relationship with already entangled with another object?
+                if relationship.has_many(peer_side):
+                    target_peers = [item for item in self.cleaned_data[field_name]]
+                else:
+                    target_peers = [self.cleaned_data[field_name]]
+                for target_peer in target_peers:
+                    existing_peer_associations = RelationshipAssociation.objects.filter(
+                        relationship=relationship,
+                        **{
+                            f"{peer_side}_id": target_peer.pk,
+                        },
+                    ).exclude(**{f"{side}_id": self.instance.pk})
+                    if existing_peer_associations.exists():
+                        raise ValidationError(
+                            {field_name: f"{target_peer} is already involved in a {relationship} relationship"}
+                        )
+
+        super().clean()
 
     def _save_relationships(self):
         """Update RelationshipAssociations for all Relationships on form save."""
 
         for field_name in self.relationships:
-
-            # Extract the side from the field_name
-            # Based on the side, find the list of existing RelationshipAssociation
-            side = field_name.split("__")[-1]
-            peer_side = RelationshipSideChoices.OPPOSITE[side]
+            # The field name tells us the side of the relationship that it is providing peer objects(s) to link into.
+            peer_side = field_name.split("__")[-1]
+            # Based on the side of the relationship that our local object represents,
+            # find the list of existing RelationshipAssociations it already has for this Relationship.
+            side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
                 "relationship": self.fields[field_name].model,
                 f"{side}_type": self.obj_type,
@@ -301,7 +351,7 @@ class RelationshipModelForm(forms.ModelForm):
                     },
                 )
 
-                # FIXME Run Clean
+                association.clean()
                 association.save()
 
     def save(self, commit=True):

@@ -21,7 +21,9 @@ __all__ = (
 
 
 class AddressFieldMixin(forms.ModelForm):
-    """ ModelForm mixin for IPAddress based models """
+    """
+    ModelForm mixin for IPAddress based models.
+    """
 
     address = IPNetworkFormField()
 
@@ -138,7 +140,9 @@ class CSVModelForm(forms.ModelForm):
 
 
 class PrefixFieldMixin(forms.ModelForm):
-    """ ModelForm mixin for IPNetwork based models """
+    """
+    ModelForm mixin for IPNetwork based models.
+    """
 
     prefix = IPNetworkFormField()
 
