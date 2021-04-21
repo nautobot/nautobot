@@ -3,11 +3,10 @@ from urllib.parse import urljoin
 
 from django import forms
 from django.conf import settings
-from django.contrib.postgres.forms import SimpleArrayField
 from django.urls import get_script_prefix
 
 from nautobot.utilities.choices import ColorChoices
-from .utils import add_blank_choice, parse_numeric_range
+from .utils import add_blank_choice
 
 __all__ = (
     "APISelect",
@@ -17,7 +16,6 @@ __all__ = (
     "ContentTypeSelect",
     "DatePicker",
     "DateTimePicker",
-    "NumericArrayField",
     "SelectWithDisabled",
     "SelectWithPK",
     "SlugWidget",
@@ -32,8 +30,6 @@ class SmallTextarea(forms.Textarea):
     """
     Subclass used for rendering a smaller textarea element.
     """
-
-    pass
 
 
 class SlugWidget(forms.TextInput):
@@ -117,12 +113,6 @@ class ContentTypeSelect(StaticSelect2):
     """
 
     option_template_name = "widgets/select_contenttype.html"
-
-
-class NumericArrayField(SimpleArrayField):
-    def to_python(self, value):
-        value = ",".join([str(n) for n in parse_numeric_range(value)])
-        return super().to_python(value)
 
 
 class APISelect(SelectWithDisabled):

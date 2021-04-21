@@ -1,4 +1,5 @@
 import copy
+from unittest import skipIf
 
 import netaddr
 from django.core.exceptions import ValidationError
@@ -10,48 +11,28 @@ from nautobot.ipam.choices import IPAddressRoleChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
 
 
-class DummyConnection:
-    """
-    Behaves like a connection but with a copy of the `settings_dict`.
-    """
-
-    def __init__(self, connection):
-        self._connection = connection
-        self.settings_dict = copy.deepcopy(connection.settings_dict)
-        self.ops = connection.ops
-        self.data_types = connection.data_types
-        self.Database = connection.Database
-
-    def set_engine(self, engine):
-        self.settings_dict["ENGINE"] = f"django.db.backends.{engine}"
-
-
 class TestVarbinaryIPField(TestCase):
     """Tests for `nautobot.ipam.fields.VarbinaryIPField`."""
 
     def setUp(self):
         super().setUp()
 
-        # Reusable dummy connection object
-        self.connection = DummyConnection(connection)
-
         # Field is a VarbinaryIPField we'll use to test.
         self.prefix = Prefix.objects.create(prefix="10.0.0.0/24")
         self.field = self.prefix._meta.get_field("network")
-        self.network = "10.0.0.0"
-        self.network_packed = bytes(self.prefix.prefix.ip)
+        self.network = self.prefix.network
+        self.network_packed = bytes(self.prefix.prefix.network)
 
     def test_db_type(self):
         """Test `VarbinaryIPField.db_type`."""
-        # Mapping of engine -> db_type
+        # Mapping of vendor -> db_type
         db_types = {
-            "postgres": "bytea",
+            "postgresql": "bytea",
             "mysql": "varbinary(16)",
         }
 
-        for engine, expected in db_types.items():
-            self.connection.set_engine(engine)
-            self.assertEqual(self.field.db_type(self.connection), expected)
+        expected = db_types[connection.vendor]
+        self.assertEqual(self.field.db_type(connection), expected)
 
     def test_value_to_string(self):
         """"Test `VarbinaryIPField.value_to_string`."""
@@ -97,18 +78,28 @@ class TestVarbinaryIPField(TestCase):
         # netaddr.IPAddress => str
         self.assertEqual(self.field.to_python(self.prefix.prefix.ip), self.network)
 
-    def test_get_db_prep_value(self):
+    @skipIf(
+        connection.vendor != "postgresql",
+        "postgres is not the database driver",
+    )
+    def test_get_db_prep_value_postgres(self):
         """"Test `VarbinaryIPField.get_db_prep_value`."""
 
-        # PostgreSQL quotes `bytes` in `::bytea`
-        self.connection.set_engine("postgresql")
-        prepped = self.field.get_db_prep_value(self.network, self.connection)
+        # PostgreSQL escapes `bytes` in `::bytea` and you must call
+        # `getquoted()` to extract the value.
+        prepped = self.field.get_db_prep_value(self.network, connection)
         manual = connection.Database.Binary(self.network_packed)
         self.assertEqual(prepped.getquoted(), manual.getquoted())
 
+    @skipIf(
+        connection.vendor != "mysql",
+        "mysql is not the database driver",
+    )
+    def test_get_db_prep_value_mysql(self):
+        """"Test `VarbinaryIPField.get_db_prep_value` for MySQL."""
+
         # MySQL uses raw `bytes`
-        self.connection.set_engine("mysql")
-        prepped = self.field.get_db_prep_value(self.network, self.connection)
+        prepped = self.field.get_db_prep_value(self.network, connection)
         manual = bytes(self.network_packed)
         self.assertEqual(prepped, manual)
 
