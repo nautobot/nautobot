@@ -284,12 +284,12 @@ class RelationshipModelForm(forms.ModelForm):
                             f"{peer_side}_id": target_peer.pk,
                         },
                     ).exclude(**{f"{side}_id": self.instance.pk})
-                    if existing_peer_associations.count() > 0:
+                    if existing_peer_associations.exists():
                         raise ValidationError(
                             {field_name: f"{target_peer} is already involved in a {relationship} relationship"}
                         )
 
-        return super().clean()
+        super().clean()
 
     def _save_relationships(self):
         """Update RelationshipAssociations for all Relationships on form save."""
