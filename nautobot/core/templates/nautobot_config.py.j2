@@ -28,63 +28,42 @@ DATABASES = {
     }
 }
 
+# The django-redis cache is used to establish concurrent locks using Redis. The
+# django-rq settings will use the same instance/database by default.
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://localhost:6379/0",
+        "TIMEOUT": 300,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PASSWORD": "",
+        },
+    }
+}
+
 # Nautobot uses RQ for task scheduling. These are the following defaults.
 # For detailed configuration see: https://github.com/rq/django-rq#installation
+# These defaults utilize the Django `CACHES` setting defined above for django-redis.
+# See: https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache
 RQ_QUEUES = {
-    "default": {"HOST": "localhost", "PORT": 6379, "DB": 0, "PASSWORD": "", "SSL": False, "DEFAULT_TIMEOUT": 300},
-    # "with-sentinel": {
-    #     "SENTINELS": [
-    #         ("mysentinel.redis.example.com", 6379)
-    #         ("othersentinel.redis.example.com", 6379)
-    #     ],
-    #     "MASTER_NAME": 'nautobot",
-    #     "DB": 0,
-    #     "PASSWORD": "",
-    #     "SOCKET_TIMEOUT": None,
-    #     'CONNECTION_KWARGS': {
-    #         'socket_connect_timeout': 10,
-    #     },
-    # },
-    "webhooks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+    "default": {
+        "USE_REDIS_CACHE": "default",
     },
     "check_releases": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+        "USE_REDIS_CACHE": "default",
     },
     "custom_fields": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 900,
+        "USE_REDIS_CACHE": "default",
+    },
+    "webhooks": {
+        "USE_REDIS_CACHE": "default",
     },
 }
 
 # Nautobot uses Cacheops for database query caching. These are the following defaults.
 # For detailed configuration see: https://github.com/Suor/django-cacheops#setup
 CACHEOPS_REDIS = "redis://localhost:6379/1"
-
-# This is used for configuring Redis locks via django caching backend.
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    }
-}
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
 # For optimal security, SECRET_KEY should be at least 50 characters in length and contain a mix of letters, numbers, and
