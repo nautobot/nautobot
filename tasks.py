@@ -184,16 +184,16 @@ def push(context, branch, commit="", datestamp=""):
 
     docker_image_tags_main = [
         f"latest-py{context.nautobot.python_ver}",
-        f"v{nautobot_version}-py{context.nautobot.python_ver}",
+        f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
     docker_image_tags_develop = [
-        f"develop-latest-py{context.nautobot.python_ver}",
+        f"develop-py{context.nautobot.python_ver}",
         f"develop-py{context.nautobot.python_ver}-{commit}-{datestamp}",
     ]
 
     if context.nautobot.python_ver == "3.6":
-        docker_image_tags_main += ["latest", f"v{nautobot_version}"]
-        docker_image_tags_develop += ["develop-latest", f"develop-{commit}-{datestamp}"]
+        docker_image_tags_main += ["latest", f"{nautobot_version}"]
+        docker_image_tags_develop += ["develop", f"develop-{commit}-{datestamp}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
         docker_image_tags = docker_image_tags_main
@@ -216,6 +216,12 @@ def push(context, branch, commit="", datestamp=""):
             context.run(tag_command)
             print(f"Pushing {new_image}")
             context.run(push_command)
+
+    print("\nThe following Images have been pushed:\n")
+    for image_name in docker_image_names:
+        for image_tag in docker_image_tags:
+            new_image = f"{image_name}:{image_tag}"
+            print(new_image)
 
 
 # ------------------------------------------------------------------------------
