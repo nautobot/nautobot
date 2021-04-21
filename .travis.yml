@@ -37,8 +37,8 @@ _publish: &publish
   python: "3.9"
   <<: *setup_docker
   before_script:
-    - invoke buildx --target dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-    - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+    - invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+    - invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
     - docker images
     - echo Sign into docker hub
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1

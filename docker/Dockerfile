@@ -19,6 +19,7 @@ RUN apt-get update && \
 
 ################################ Stage: dev
 # The dev container is used for development purposes but also to build the .whl for the final image
+# nautobot will be installed in editable mode in /source 
 FROM base as dev
 
 # Modify the PATH here because otherwise poetry fails 100% of the time. WAT??
@@ -139,3 +140,12 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "na
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nautobot-server", "start", "--ini", "/opt/nautobot/uwsgi.ini"]
+
+################################ Stage: final-dev
+# This image will contain the development dependencies (including poetry) as well as nautobot installed
+# as a system package
+FROM dev as final-dev
+
+# Nautobot was installed in editable mode so reinstall as a system package (all dependencies are already there)
+RUN pip install --force-reinstall --no-deps --no-cache-dir /source/dist/*.whl && \
+    rm -rf /source
