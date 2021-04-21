@@ -3,10 +3,10 @@ from django.test import TestCase
 
 from nautobot.dcim.forms import DeviceForm
 import nautobot.dcim.models as dcim_models
-from nautobot.ipam.forms import IPAddressForm, VLANGroupForm
-import nautobot.ipam.models as ipam_models
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
+from nautobot.ipam.forms import IPAddressForm, VLANGroupForm
+import nautobot.ipam.models as ipam_models
 
 
 class RelationshipModelFormTestCase(TestCase):
