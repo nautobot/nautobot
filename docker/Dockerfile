@@ -41,7 +41,8 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 # dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/#osx-linux-bashonwindows-install-instructions
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -o /tmp/get-poetry.py && \
-    python /tmp/get-poetry.py
+    python /tmp/get-poetry.py && \
+    rm -f /tmp/get-poetry.py
 
 # Poetry shouldn't create a venv as we want global install
 # Poetry 1.1.0 added parallel installation as an option;
