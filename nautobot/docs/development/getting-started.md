@@ -177,8 +177,21 @@ Additional useful commands for the development environment:
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
 - `invoke stop` - Stops all containers created by `invoke start`
 
-!!! info
-    By default the Nautobot docker images for development are built with Python 3.7. If you wish to build them with a different Python version, stop any running containers, then set the environment variable `PYTHON_VER` to the desired version (for example, `export PYTHON_VER=3.8`) and rerun the `invoke build` command. As long as `PYTHON_VER` remains set, all other `invoke` tasks will use the containers built for this version instead of the default.
+#### Invoke Configuration
+
+The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html) which you may want to override. Configuration properties include:
+
+- `python_ver`: the Python version which is used to build the Docker container (default: `3.7`)
+- `local`: run the commands in the local environment vs the Docker container (default: `False`)
+- `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
+- `compose_file`: the Docker Compose YAML file to use (default: `"docker-compose.yml"`)
+- `compose_override_file`: the default Docker Compose override file to use if it exists (default: `"docker-compose.override.yml"`)
+
+These setting may be overridden several different ways (from highest to lowest precedence):
+
+- Command line argument on the individual commands (see `invoke $command --help`) if available
+- Using environment variables such as `INVOKE_NAUTOBOT_PYTHON_VER`; the variables are prefixed with `INVOKE_NAUTOBOT_` and must be uppercase
+- Using an `invoke.yml` file (see `invoke.yml.example`)
 
 #### Working with Docker Compose
 
@@ -491,6 +504,9 @@ Throughout the course of development, it's a good idea to occasionally run Nauto
 | Docker Compose Workflow | Virtual Environment Workflow                                           |
 |-------------------------|------------------------------------------------------------------------|
 | `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
+
+!!! info
+    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.  See the [Invoke configuration](#invoke-configuration) for more information.
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
