@@ -29,11 +29,12 @@ from nautobot.core.graphql.schema import (
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
+from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.tenancy.models import Tenant
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -506,6 +507,10 @@ class GraphQLQuery(TestCase):
         self.site2 = Site.objects.create(
             name="Site-2", slug="site-2", asn=65099, status=self.status2, region=self.region2
         )
+        self.rack1 = Rack.objects.create(name="Rack 1", site=self.site1)
+        self.rack2 = Rack.objects.create(name="Rack 2", site=self.site2)
+        self.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
+        self.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
 
         self.device1 = Device.objects.create(
             name="Device 1",
@@ -513,6 +518,8 @@ class GraphQLQuery(TestCase):
             device_role=self.devicerole1,
             site=self.site1,
             status=self.status1,
+            rack=self.rack1,
+            tenant=self.tenant1,
             face="front",
             comments="First Device",
         )
@@ -533,6 +540,8 @@ class GraphQLQuery(TestCase):
             device_role=self.devicerole2,
             site=self.site1,
             status=self.status2,
+            rack=self.rack2,
+            tenant=self.tenant2,
             face="rear",
         )
 
@@ -552,6 +561,21 @@ class GraphQLQuery(TestCase):
             device_role=self.devicerole1,
             site=self.site2,
             status=self.status1,
+        )
+
+        self.interface31 = Interface.objects.create(
+            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device3
+        )
+
+        self.cable1 = Cable.objects.create(
+            termination_a=self.interface11,
+            termination_b=self.interface12,
+            status=self.status1,
+        )
+        self.cable2 = Cable.objects.create(
+            termination_a=self.interface31,
+            termination_b=self.interface21,
+            status=self.status2,
         )
 
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
@@ -723,3 +747,28 @@ class GraphQLQuery(TestCase):
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_cables_filter(self):
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 1),
+            ('device: "Device 3"', 1),
+            ('device: ["Device 1", "Device 3"]', 2),
+            (f'rack_id: "{self.rack1.id}"', 1),
+            ('rack: "Rack 2"', 1),
+            ('rack: ["Rack 1", "Rack 2"]', 2),
+            (f'site_id: "{self.site1.id}"', 2),
+            ('site: "site-2"', 1),
+            ('site: ["site-1", "site-2"]', 2),
+            (f'tenant_id: "{self.tenant1.id}"', 1),
+            ('tenant: "tenant-2"', 1),
+            ('tenant: ["tenant-1", "tenant-2"]', 2),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { cables(" + filter + "){ id }}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["cables"]), nbr_expected_results)
