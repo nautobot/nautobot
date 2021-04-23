@@ -1,10 +1,10 @@
 # Nautobot Docker Images
 
-Nautobot is packaged as a docker image for use in a production environment.  The published image is based on the `python:3.6-slim` docker image to maintain the most compatibility with Nautobot deployments.  The docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com) for the most up to date information.
+Nautobot is packaged as a Docker image for use in a production environment. The published image is based on the `python:3.6-slim` image to maintain the most compatibility with Nautobot deployments. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com) for the most up to date information.
 
 ## Tags
 
-We publish the docker image to both the Github container registry as well as docker hub.  The image can be pulled with either:
+The Docker image is published to both the GitHub container registry as well as Docker Hub.  The image can be pulled with either:
 
 ```
 docker image pull networktocode/nautobot
@@ -34,21 +34,21 @@ Currently images are pushed for the following python versions:
 
 ## Getting Started
 
-Nautobot requires a Postgres database and Redis cache before it will start, because of this the quickest and easiest way to get Nautobot running is with docker-compose.  Please see the docker-compose deployment repository for more information.
+Nautobot requires a PostgreSQL database and Redis instance before it will start, because of this the quickest and easiest way to get Nautobot running is with `docker-compose`.  Please see the `docker-compose` deployment repository for more information.
 
 ## Configuration
 
 Most configuration parameters are available via environment variables which can be passed to the container.  If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py`.
 
-### UWSGI
+### uWSGI
 
-The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uwsgi defaults:
+The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uWSGI defaults:
 
 #### `NAUTOBOT_UWSGI_LISTEN`
 
 Default: `128`
 
-The socket listen queue size of uWSGI.  In production environments it is recommended to increase this value to 1024 or higher, however depending on your host OS, this may require additional kernel parameter settings, please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/articles/TheArtOfGracefulReloading.html#the-listen-queue) for more information.
+The socket listen queue size of uWSGI.  In production environments it is recommended to increase this value to 1024 or higher, however depending on your platform, this may require additional kernel parameter settings, please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/articles/TheArtOfGracefulReloading.html#the-listen-queue) for more information.
 
 Please see the [official uWSGI documentation on `listen`](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=listen#listen) for more information.
 
@@ -58,7 +58,7 @@ Please see the [official uWSGI documentation on `listen`](https://uwsgi-docs.rea
 
 Default: `3`
 
-The number of workers/processes uWSGI will spawn.
+The number of worker processes uWSGI will spawn.
 
 Please see the [official uWSGI documentation on `processes`](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=processes#processes) for more information.
 
@@ -68,15 +68,15 @@ Please see the [official uWSGI documentation on `processes`](https://uwsgi-docs.
 
 Self signed SSL certificates are included by default with the container.  For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime.  The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`.
 
-### Plugins
+### Nautobot Plugins
 
-At this time adding plugins to the existing docker image is not supported, however, you can use this docker image as the base for your Dockerfile to install your own plugins:
+At this time adding Nautobot plugins to the existing Docker image is not supported, however, you can use the included development image as the base within your `Dockerfile` to install your own plugins:
 
 ## Building the Image
 
 If you have a [development environment](/development/getting-started/#setting-up-your-development-environment) you can use invoke to build the docker images.  By default `invoke build` will build the development containers:
 
-```
+```no-highlight
 $ invoke build
 ...
 $ docker images
@@ -84,9 +84,9 @@ REPOSITORY                                                                TAG   
 networktocode/nautobot-dev                                                local                  25487d93fc1f   16 seconds ago   630MB
 ```
 
-If you need to build/test the final image set the `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE`:
+If you need to build or test the final image set the `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE` environment variable:
 
-```
+```no-highlight
 $ export INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
 $ invoke build
 ...
@@ -97,6 +97,6 @@ networktocode/nautobot                                                    local 
 
 If you do not have a development environment created you can also build the container using the regular `docker build` command:
 
-```
+```no-highlight
 $ docker build -t networktocode/nautobot -f ./docker/Dockerfile --build-arg PYTHON_VER=3.6 .
 ```

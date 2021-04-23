@@ -122,7 +122,7 @@ COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
 # Copy SSL certs after the directory exists
 COPY --from=dev /opt/nautobot/nautobot.key /opt/nautobot/nautobot.crt /opt/nautobot/
 
-# Configure UWSGI
+# Configure uWSGI
 COPY docker/uwsgi.ini /opt/nautobot
 COPY docker/nautobot_config.append.py /opt/nautobot
 

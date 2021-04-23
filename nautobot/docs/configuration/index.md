@@ -72,7 +72,7 @@ Each of the features requiring use of file storage default to being stored in `N
 
 ## Configuration Parameters
 
-While Nautobot has many configuration settings, only a few of them must be defined at the time of installation.  These configuration parameters may be set in `nautobot_config.py` or by default many of these configuration parameters may also be set by environment variables, see the following links for more information:
+While Nautobot has many configuration settings, only a few of them must be defined at the time of installation.  These configuration parameters may be set in `nautobot_config.py` or by default many of these configuration parameters may also be set by environment variables. Please see the following links for more information:
 
 * [Required settings](required-settings.md)
 * [Optional settings](optional-settings.md)
