@@ -216,7 +216,7 @@ In the `docker` directory you will find the following files:
 
 #### Docker-Compose Overrides
 
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml``` and set the environment variable `OVERRIDE_FILENAME=docker-compose.override.yml`.
+If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml``` and set the environment variable `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.override.yml`.
 
 This file will override any configuration in the main `docker-compose.yml` file, without making changes to the repository.
 

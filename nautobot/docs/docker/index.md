@@ -84,10 +84,10 @@ REPOSITORY                                                                TAG   
 networktocode/nautobot-dev                                                local                  25487d93fc1f   16 seconds ago   630MB
 ```
 
-If you need to build/test the final image set the `OVERRIDE_FILENAME`:
+If you need to build/test the final image set the `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE`:
 
 ```
-$ export OVERRIDE_FILENAME=docker-compose.build.yml
+$ export INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
 $ invoke build
 ...
 $ docker images
