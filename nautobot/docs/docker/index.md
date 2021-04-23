@@ -4,10 +4,20 @@ Nautobot is packaged as a Docker image for use in a production environment. The 
 
 ## Tags
 
-The Docker image is published to both the GitHub container registry as well as Docker Hub.  The image can be pulled with either:
+The Docker image is published to both the GitHub container registry as well as Docker Hub.
 
-```
+To get the image from Docker Hub run:
+
+```no-highlight
 docker image pull networktocode/nautobot
+```
+
+!!! info
+    Effective November 20, 2020, [rate limits](https://www.docker.com/increase-rate-limits) have gone into effect on Docker Hub.  To increase the rate limit you can use `docker login` to authenticate with an account, however using the GitHub container registry avoids these limits all together.
+
+To get the image from the GitHub Container Registry (GHCR) run:
+
+```no-highlight
 docker image pull ghcr.io/nautobot/nautobot
 ```
 
@@ -21,6 +31,18 @@ The following tags are available:
 * `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch based on the default python version (3.6) docker container
 * `develop-latest-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
 * `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the develop branch based on the python version ($PYTHON_VER) docker container
+
+To pull a specific tag you can append the image name with `:tag` for example, to pull the 1.0.0 image:
+
+```no-highlight
+docker image pull networktocode/nautobot:1.0.0
+```
+
+or to pull the 1.0.0 image from GitHub:
+
+```no-highlight
+docker image pull ghcr.io/nautobot/nautobot:1.0.0
+```
 
 Currently images are pushed for the following python versions:
 
@@ -38,7 +60,11 @@ Nautobot requires a PostgreSQL database and Redis instance before it will start,
 
 ## Configuration
 
-Most configuration parameters are available via environment variables which can be passed to the container.  If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py`.
+Most configuration parameters are available via environment variables which can be passed to the container.  If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py` using [docker volumes](https://docs.docker.com/storage/volumes/) by adding `-v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py` to your docker run command, for example:
+
+```no-highlight
+docker run --name nautobot -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py ghcr.io/nautobot/nautobot
+```
 
 ### uWSGI
 
@@ -66,7 +92,11 @@ Please see the [official uWSGI documentation on `processes`](https://uwsgi-docs.
 
 ### SSL
 
-Self signed SSL certificates are included by default with the container.  For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime.  The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`.
+Self signed SSL certificates are included by default with the container.  For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime using [docker volumes](https://docs.docker.com/storage/volumes/).  The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`.  Using a `docker run` these can be injected using the `-v` parameter:
+
+```no-hightlight
+docker run --name nautobot -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key ghcr.io/nautobot/nautobot
+```
 
 ### Nautobot Plugins
 

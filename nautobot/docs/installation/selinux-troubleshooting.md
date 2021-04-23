@@ -51,14 +51,14 @@ Troubleshooting SELinux in most instances is straightforward. Using the `sealert
 found 1 alerts in /var/log/audit/audit.log
 --------------------------------------------------------------------------------
 
-SELinux is preventing /usr/sbin/nginx from name_connect access on the tcp_socket port 8000.
+SELinux is preventing /usr/sbin/nginx from name_connect access on the tcp_socket port 8080.
 
 *****  Plugin connect_ports (85.9 confidence) suggests   *********************
 
-If you want to allow /usr/sbin/nginx to connect to network port 8000
+If you want to allow /usr/sbin/nginx to connect to network port 8080
 Then you need to modify the port type.
 Do
-# semanage port -a -t PORT_TYPE -p tcp 8000
+# semanage port -a -t PORT_TYPE -p tcp 8080
     where PORT_TYPE is one of the following: dns_port_t, dnssec_port_t, kerberos_port_t, ocsp_port_t.
 
 *****  Plugin catchall_boolean (7.33 confidence) suggests   ******************
@@ -79,7 +79,7 @@ setsebool -P nis_enabled 1
 
 *****  Plugin catchall (1.35 confidence) suggests   **************************
 
-If you believe that nginx should be allowed name_connect access on the port 8000 tcp_socket by default.
+If you believe that nginx should be allowed name_connect access on the port 8080 tcp_socket by default.
 Then you should report this as a bug.
 You can generate a local policy module to allow this access.
 Do
@@ -91,10 +91,10 @@ allow this access for now by executing:
 Additional Information:
 Source Context                system_u:system_r:httpd_t:s0
 Target Context                system_u:object_r:unreserved_port_t:s0
-Target Objects                port 8000 [ tcp_socket ]
+Target Objects                port 8080 [ tcp_socket ]
 Source                        nginx
 Source Path                   /usr/sbin/nginx
-Port                          8000
+Port                          8080
 Host                          <Unknown>
 Source RPM Packages           nginx-1.14.1-9.module_el8.0.0+184+e34fea82.x86_64
 Target RPM Packages
@@ -113,7 +113,7 @@ Last Seen                     2021-02-26 15:23:12 UTC
 Local ID                      b83bb817-85f6-4f5c-b6e0-eee3acc85504
 
 Raw Audit Messages
-type=AVC msg=audit(1614352992.209:585): avc:  denied  { name_connect } for  pid=67245 comm="nginx" dest=8000 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:unreserved_port_t:s0 tclass=tcp_socket permissive=0
+type=AVC msg=audit(1614352992.209:585): avc:  denied  { name_connect } for  pid=67245 comm="nginx" dest=8080 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:unreserved_port_t:s0 tclass=tcp_socket permissive=0
 
 
 type=SYSCALL msg=audit(1614352992.209:585): arch=x86_64 syscall=connect success=no exit=EACCES a0=12 a1=55d061477358 a2=10 a3=7ffc0c62296c items=0 ppid=67243 pid=67245 auid=4294967295 uid=988 gid=985 euid=988 suid=988 fsuid=988 egid=985 sgid=985 fsgid=985 tty=(none) ses=4294967295 comm=nginx exe=/usr/sbin/nginx subj=system_u:system_r:httpd_t:s0 key=(null)ARCH=x86_64 SYSCALL=connect AUID=unset UID=nginx GID=nginx EUID=nginx SUID=nginx FSUID=nginx EGID=nginx SGID=nginx FSGID=nginx
@@ -125,14 +125,14 @@ In the first few lines of the audit, `sealert` details what SELinux is blocking 
 Since Nginx is communicating with the Nautobot application via HTTP, the second option is the best option.
 
 ```no-highlight
-SELinux is preventing /usr/sbin/nginx from name_connect access on the tcp_socket port 8000.
+SELinux is preventing /usr/sbin/nginx from name_connect access on the tcp_socket port 8080.
 
 *****  Plugin connect_ports (85.9 confidence) suggests   *********************
 
-If you want to allow /usr/sbin/nginx to connect to network port 8000
+If you want to allow /usr/sbin/nginx to connect to network port 8080
 Then you need to modify the port type.
 Do
-# semanage port -a -t PORT_TYPE -p tcp 8000
+# semanage port -a -t PORT_TYPE -p tcp 8080
     where PORT_TYPE is one of the following: dns_port_t, dnssec_port_t, kerberos_port_t, ocsp_port_t.
 
 *****  Plugin catchall_boolean (7.33 confidence) suggests   ******************

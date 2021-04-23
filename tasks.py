@@ -151,8 +151,8 @@ def build(context, force_rm=False, cache=True):
 )
 def buildx(
     context,
-    cache=True,
-    cache_dir="/home/travis/.cache/docker",
+    cache=False,
+    cache_dir="",
     platforms="linux/amd64",
     tag="networktocode/nautobot-dev-py3.6:local",
     target="dev",
