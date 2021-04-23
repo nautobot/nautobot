@@ -26,7 +26,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_config_context,
     extend_schema_type_relationships,
 )
-from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
@@ -512,6 +512,9 @@ class GraphQLQuery(TestCase):
         self.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
         self.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
 
+        self.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, site=self.site1)
+        self.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, site=self.site2)
+
         self.device1 = Device.objects.create(
             name="Device 1",
             device_type=self.devicetype,
@@ -525,10 +528,17 @@ class GraphQLQuery(TestCase):
         )
 
         self.interface11 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device1, mac_address="00:11:11:11:11:11"
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device1,
+            mac_address="00:11:11:11:11:11",
+            mode=InterfaceModeChoices.MODE_ACCESS,
+            untagged_vlan=self.vlan1,
         )
         self.interface12 = Interface.objects.create(
-            name="Int2", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device1
+            name="Int2",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device1,
         )
         self.ipaddr1 = IPAddress.objects.create(
             address="10.0.1.1/24", status=self.status1, assigned_object=self.interface11
@@ -546,7 +556,11 @@ class GraphQLQuery(TestCase):
         )
 
         self.interface21 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device2
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device2,
+            untagged_vlan=self.vlan2,
+            mode=InterfaceModeChoices.MODE_ACCESS,
         )
         self.interface22 = Interface.objects.create(
             name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=self.device2, mac_address="00:12:12:12:12:12"
@@ -565,6 +579,10 @@ class GraphQLQuery(TestCase):
 
         self.interface31 = Interface.objects.create(
             name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device3
+        )
+        self.interface31 = Interface.objects.create(
+            name="Mgmt1", type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device3, mgmt_only=True, enabled=False,
         )
 
         self.cable1 = Cable.objects.create(
@@ -772,3 +790,26 @@ class GraphQLQuery(TestCase):
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_filter(self):
+        """Test custom interface filter fields and boolean, not other concrete fields."""
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 2),
+            ('device: "Device 3"', 2),
+            ('device: ["Device 1", "Device 3"]', 4),
+            ('kind: "virtual"', 5),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ('vlan: "100"', 1),
+            (f'vlan_id: "{self.vlan1.id}"', 1),
+            ('mgmt_only: true', 1),
+            ('enabled: false', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { interfaces(" + filter + "){ id }}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)

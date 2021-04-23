@@ -826,7 +826,7 @@ class CableTerminationFilterSet(django_filters.FilterSet):
 
 
 class PathEndpointFilterSet(django_filters.FilterSet):
-    connected = django_filters.BooleanFilter(method="filter_connected")
+    connected = django_filters.BooleanFilter(method="filter_connected", label="BBQ PIZZA")
 
     def filter_connected(self, queryset, name, value):
         if value:
@@ -904,7 +904,7 @@ class InterfaceFilterSet(
         field_name="name",
         label="Device",
     )
-    device_id = MultiValueNumberFilter(
+    device_id = MultiValueCharFilter(
         method="filter_device_id",
         field_name="pk",
         label="Device (ID)",
@@ -1181,7 +1181,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueNumberFilter(method="filter_device")
+    device_id = MultiValueCharFilter(method="filter_device")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name")
 
     class Meta:
@@ -1194,7 +1194,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueNumberFilter(method="filter_device")
+    device_id = MultiValueCharFilter(method="filter_device")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name")
 
     class Meta:
@@ -1207,7 +1207,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueNumberFilter(method="filter_device")
+    device_id = MultiValueCharFilter(method="filter_device")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name")
 
     class Meta:
