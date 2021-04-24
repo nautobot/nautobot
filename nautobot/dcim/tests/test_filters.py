@@ -3690,17 +3690,4 @@ class PowerFeedTestCase(TestCase):
         params = {"connected": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_cabled(self):
-        params = {"cabled": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"cabled": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_connected(self):
-        params = {"connected": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"connected": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-
 # TODO: Connection filters

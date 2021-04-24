@@ -826,7 +826,7 @@ class CableTerminationFilterSet(django_filters.FilterSet):
 
 
 class PathEndpointFilterSet(django_filters.FilterSet):
-    connected = django_filters.BooleanFilter(method="filter_connected", label="BBQ PIZZA")
+    connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
 
     def filter_connected(self, queryset, name, value):
         if value:
@@ -902,7 +902,7 @@ class InterfaceFilterSet(
     device = MultiValueCharFilter(
         method="filter_device",
         field_name="name",
-        label="Device",
+        label="Device (name)",
     )
     device_id = MultiValueCharFilter(
         method="filter_device_id",
@@ -1138,14 +1138,14 @@ class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet):
     )
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
-    device_id = MultiValueCharFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
-    rack_id = MultiValueCharFilter(method="filter_device", field_name="device__rack_id")
-    rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name")
-    site_id = MultiValueCharFilter(method="filter_device", field_name="device__site_id")
-    site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug")
-    tenant_id = MultiValueCharFilter(method="filter_device", field_name="device__tenant_id")
-    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
+    rack_id = MultiValueCharFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
+    rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
+    site_id = MultiValueCharFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
+    site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
+    tenant_id = MultiValueCharFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
+    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     tag = TagFilter()
 
     class Meta:
@@ -1181,8 +1181,8 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (nam;e)")
 
     class Meta:
         model = ConsolePort
@@ -1194,8 +1194,8 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
         model = PowerPort
@@ -1207,8 +1207,8 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueCharFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
         model = Interface
