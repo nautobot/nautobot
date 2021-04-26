@@ -24,8 +24,6 @@ One example application for custom statuses would be in defining additional valu
 
 Data quality assurance in Nautobot becomes easier with the new [data validation plugin API](../plugins/development.md#implementing-custom-validators). This makes it possible to codify organizational standards.  Using a data validation [plugin](../../plugins/), an organization can ensure all data stored in Nautobot meets its specific standards, such as enforcing device naming standards, ensuring certain prefixes are never used, asserting that VLANs always have a name, requiring interfaces to always have a description, etc. The ability to ensure a high quality of data becomes much more streamlined; error-prone, manual process becomes automated; and there is no more need to actively run reports to check data quality.
 
-A [data validation plugin](https://github.com/nautobot/nautobot-plugin-data-validation-engine) is available that addresses many common use cases for data validation, but you are also free to implement your own plugin to meet your own unique requirements.
-
 #### Detail Views for more Models
 
 Detailed view pages are now provided for models including ClusterGroup, ClusterType, DeviceRole, Manufacturer, Platform, and RackRole.
