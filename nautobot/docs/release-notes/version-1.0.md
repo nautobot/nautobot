@@ -32,11 +32,11 @@ Detailed view pages are now provided for models including ClusterGroup, ClusterT
 
 #### Docker-Based Development Environment
 
-In addition to the previously available virtual-environment-based developer workflow, Nautobot now additionally supports a [development environment based around Docker](../development/getting-started.md#docker-development-environment-workflow) as an alternative.
+In addition to the previously available virtual-environment-based developer workflow, Nautobot now additionally supports a [development environment based around Docker](../development/getting-started.md#docker-compose-workflow) as an alternative.
 
 #### Git Integration as a Data Source
 
-[Git integration](../models/extras/gitrepository.md) offers users an option to integrate into a more traditional NetDevOps pipeline for managing Python modules, Jinja templates, and YAML/JSON data.  There are several use cases that have historically required users to either manage Python modules on the filesystem or use Jinja2 templates within the GUI. With this new feature, users can add a Git repository from the UI or REST API, the contents of which will be synchronized into Nautobot immediately and can be later refreshed on-demand. This allows users to more easily update and manage:
+[Git integration](../user-guides/git-data-source.md) offers users an option to integrate into a more traditional NetDevOps pipeline for managing Python modules, Jinja templates, and YAML/JSON data.  There are several use cases that have historically required users to either manage Python modules on the filesystem or use Jinja2 templates within the GUI. With this new feature, users can add a Git repository from the UI or REST API, the contents of which will be synchronized into Nautobot immediately and can be later refreshed on-demand. This allows users to more easily update and manage:
 
 - *Jobs* - store your Python modules that define Jobs (formerly known as Custom Scripts and/or Reports) in a Git repository
 - *Export Templates* - store your Jinja templates used to create an export template in a Git repository
@@ -49,7 +49,15 @@ Not only does this integration and feature simplify management of these features
 
 Nautobot now provides an HTTP API endpoint supporting [GraphQL](https://graphql.org/). This feature adds a tremendous amount of flexibility in querying data from Nautobot. It offers the ability to query for specific datasets across multiple models in a single query.  Historically, if you wanted to retrieve the list of devices, all of their interfaces, and all of their neighbors, this would require numerous REST API calls.  GraphQL gives the flexibility to get all the data desired and nothing unnecessary, all in a single API call.
 
-For more details, please refer to the GraphQL website, as well as to the [Nautobot GraphQL](../additional-features/graphql.md) documentation.
+For more details, please refer to the GraphQL website, as well as to the [Nautobot GraphQL](../user-guides/graphql.md) documentation.
+
+#### Installable Python Package
+
+Nautobot is now installable as a self-contained Python package via `pip install nautobot`. Packages are released to [PyPI](https://pypi.org/) with every Nautobot update.
+
+#### `nautobot-server` command
+
+Nautobot now includes a dedicated administrative CLI command, [`nautobot-server`](../administration/nautobot-server.md).
 
 #### Plugin API Enhancements
 
@@ -57,7 +65,7 @@ Plugins can now provide custom [data validation](#data-validation-plugin-api) lo
 
 Plugins can now include executable [Jobs](../additional-features/jobs.md) (formerly known as Custom Scripts and Reports) that will automatically be added to the list of available Jobs for a user to execute.
 
-Additional data models defined by a plugin are automatically made available in [GraphQL](../additional-features/graphql).
+Additional data models defined by a plugin are automatically made available in [GraphQL](../user-guides/graphql.md).
 
 Plugins can now define additional Django apps that they require and these dependencies will be automatically enabled when the plugin is activated.
 
@@ -67,9 +75,9 @@ Nautobot now supports single sign on as an authentication option using OAuth2, O
 
 #### User-Defined Relationships
 
-User-Defined, or "custom", [relationships](../../models/extras/relationship) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design. Nautobot comes with opinionated data models and relationships.
+User-Defined, or "custom", [relationships](../../models/extras/relationship) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design.
 
-For example, a VLAN is mapped to a Site by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites.  Other use cases include circuits, ASNs, or IP addressing--just to name a few--allowing users to define the exact relationships required for their network.
+For example, a VLAN is mapped to a Site by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites. Relationships allow you to express these additional requirements and relationships without requiring code changes to Nautobot itself. Other use cases include circuits, ASNs, or IP addressing -- just to name a few -- allowing users to define the exact relationships required for their network.
 
 ### Changed
 
@@ -121,7 +129,9 @@ As an [option](../configuration/optional-settings.md#hide_restricted_ui), admini
 
 #### IPAM Network Fields to VARBINARY
 
-For the support of databases other than Postgres, the network fields inside of IPAM needed to be changed. `cidr` and `inet` field types have been replaced with a database agnostic field type. For this purpose `varbinary` was chosen because it can safely and efficiently store packed binary integers.
+To enable future support of databases other than PostgreSQL, the network fields inside of IPAM needed to be changed. `cidr` and `inet` field types have been replaced with a database agnostic field type. For this purpose `varbinary` was chosen because it can safely and efficiently store packed binary integers.
+
+More details about the impact of this and other changes can be found in the [Migration documentation](../installation/migrating-from-netbox.md#ipam-network-field-types).
 
 #### Navigation Menu Changes
 
@@ -131,25 +141,19 @@ The "Other" menu has been renamed to "Extensibility" and many new items have bee
 
 #### New Name and Logo
 
-NetBox has been changed to Nautobot throughout the code, UI, and documentation, and Nautobot has a new logo.
+"NetBox" has been changed to "Nautobot" throughout the code, UI, and documentation, and Nautobot has a new logo and icon.
 
 #### User-Defined Custom Links
 
-Nautobot allows for the definition of [custom links](../models/extras/customlink.md) to add to various built-in data views. These can be used to provide convenient cross-references to other data sources outside Nautobot, among many other possibilities.
-
-Historically this feature was restricted so that only administrators could define and manage custom links. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+Historically the [custom links](../models/extras/customlink.md) feature was restricted so that only administrators could define and manage custom links to add to various built-in data views. In Nautobot the management of custom links has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
 
 #### User-Defined Export Templates
 
-Nautobot allows for the definition of custom [Jinja2 templates](../models/extras/exporttemplate.md) to use to format exported data.
-
-Historically this feature was restricted such that only administrators could define and edit these templates. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+Historically the [custom data export templates](../models/extras/exporttemplate.md) feature was restricted such that only administrators could define and edit these templates. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
 
 #### User-Defined Webhooks
 
-Nautobot allows for the creation of [webhooks](../models/extras/webhook.md), HTTP callbacks that are triggered automatically when a specified data model(s) are created, updated, and/or deleted.
-
-Historically this feature was restricted such that only administrators could define and manage webhooks. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+Historically the [webhooks](../models/extras/webhook.md) feature was restricted such that only administrators could define and manage webhooks, HTTP callbacks that are triggered automatically when a specified data model(s) are created, updated, and/or deleted. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
 
 #### UUID Primary Database Keys
 
@@ -344,7 +348,9 @@ Other changes:
 
 ## v1.0.0b1 (2021-02-24)
 
+Initial public beta release.
+
 ### Fixed
 
-- Fixed a bug in which object permissions were not filtered correctly in the admin interface. <!-- FIXME(john): improve the description of this fix -->
-- Fixed a bug in which the UI would report an exception if the database contains ChangeLog entries that reference a nonexistent ContentType.
+- Fixed a bug, inherited from NetBox 2.10, in which object permissions were not filtered correctly in the admin interface.
+- Fixed a bug, inherited from NetBox 2.10, in which the UI would report an exception if the database contains ChangeLog entries that reference a nonexistent ContentType.
