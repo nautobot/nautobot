@@ -176,10 +176,12 @@ The "Related Devices" table has been removed from the detailed Device view.
 ## v1.0.0b4 (2021-04-19)
 
 ### Added
+
 - [#96](https://github.com/nautobot/nautobot/issues/96) - Implemented user guide documentation for GraphQL
 - [#97](https://github.com/nautobot/nautobot/issues/97) - Implemented user guide documentation for Git as a Data Source
 
 ### Changed
+
 - [#150](https://github.com/nautobot/nautobot/issues/150) - Revised all documentation referencing objects wiht status fields
 - [#175](https://github.com/nautobot/nautobot/issues/175) - Revised plugin development guide to use Poetry
 - [#211](https://github.com/nautobot/nautobot/pull/211) - Travis CI build improvements to simplify entry points and make tests fail faster
@@ -189,8 +191,10 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#262](https://github.com/nautobot/nautobot/issues/262) - Revised Nautobot upgrade and NetBox migration guides
 - [#273](https://github.com/nautobot/nautobot/pull/273) - Update to jQuery 3.6.0
 - [#289](https://github.com/nautobot/nautobot/pull/289) - Updated natural unicode-aware sorting for interface/device names to support MySQL
+- [#373](https://github.com/nautobot/nautobot/pull/373) - Fix 334 enable tab rendering
 
 ### Fixed
+
 - [#167](https://github.com/nautobot/nautobot/issues/167) - Fix to enable to query `ip_addresses` by parent in GraphQL
 - [#212](https://github.com/nautobot/nautobot/issues/212) - Allow plugins to use built-in buttons
 - [#232](https://github.com/nautobot/nautobot/issues/232) - Fix to enable inclusion of custom fields in queries in GraphQL
