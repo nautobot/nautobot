@@ -14,13 +14,17 @@ class CollateAsChar(Func):
     template = "(%(expressions)s) COLLATE %(function)s"
 
     def as_sql(self, compiler, connection, function=None, template=None, arg_joiner=None, **extra_context):
-        engine = connection.settings_dict["ENGINE"]
-        if "postgres" in engine:
-            function = '"C"'
-        elif "mysql" in engine:
-            function = "utf8mb4_bin"
-        else:
-            raise NotSupportedError(f"CollateAsChar is not supported for database {engine}")
+        vendor = connection.vendor
+        # Mapping of vendor => function
+        func_map = {
+            "postgresql": '"C"',
+            "mysql": "utf8mb4_bin",
+        }
+
+        if vendor not in func_map:
+            raise NotSupportedError(f"CollateAsChar is not supported for database {vendor}")
+
+        function = func_map[connection.vendor]
 
         return super().as_sql(compiler, connection, function, template, arg_joiner, **extra_context)
 
@@ -36,14 +40,18 @@ class JSONBAgg(Aggregate):
         return value
 
     def as_sql(self, compiler, connection, **extra_context):
-        engine = connection.settings_dict["ENGINE"]
-        if not JSONBAgg.function:
-            if "postgres" in engine:
-                JSONBAgg.function = "JSONB_AGG"
-            elif "mysql" in engine:
-                JSONBAgg.function = "JSON_ARRAYAGG"
-            else:
-                raise ConnectionError("Only Postgres and MySQL supported")
+        vendor = connection.vendor
+        # Mapping of vendor => func
+        func_map = {
+            "postgresql": "JSONB_AGG",
+            "mysql": "JSON_ARRAYAGG",
+        }
+
+        if JSONBAgg.function is None and vendor not in func_map:
+            raise ConnectionError(f"JSON aggregation is not supported for database {vendor}")
+
+        JSONBAgg.function = func_map[vendor]
+
         return super().as_sql(compiler, connection, **extra_context)
 
 
