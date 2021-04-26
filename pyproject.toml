@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.0.0-beta.4"
+version = "1.0.0-beta.5"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -32,7 +32,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.6"
 # Fundamental web framework for Nautobot
-Django = "~3.1.7"
+Django = "~3.1.8"
 # Caching with Redis
 django-cacheops = "~5.1"
 # Permit cross-domain API requests
@@ -45,22 +45,24 @@ django-filter = "~2.4.0"
 django-mptt = "~0.11.0"
 # Prometheus metrics for Django
 django-prometheus = "~2.1.0"
-# Run production webservers such as uWSGI/gunicorn as a Django management command.
-django-webserver = "~1.2.0"
+# Redis cache for Django used for distributed locking
+django-redis = "~4.12.1"
 # RQ (Redis Queueing) for background handlin of webhooks, jobs, etc.
-django-rq = "^2.4.0"
+django-rq = "~2.4.1"
 # Advanced HTML tables
 django-tables2 = "~2.3.4"
 # Tags
 django-taggit = "~1.3.0"
 # Represent time zones in Django
-django-timezone-field = "~4.1.1"
+django-timezone-field = "~4.1.2"
+# Run production webservers such as uWSGI/gunicorn as a Django management command.
+django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.12.2"
+djangorestframework = "~3.12.4"
 # Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
-GitPython = "~3.1.13"
+GitPython = "~3.1.15"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Package version detection in older versions of Python
@@ -68,7 +70,7 @@ importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 # Template rendering engine
 Jinja2 = "~2.11.3"
 # Rendering of markdown files to HTML
-Markdown = "~3.3.3"
+Markdown = "~3.3.4"
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Image processing library
@@ -78,15 +80,13 @@ psycopg2-binary = "~2.8.6"
 # Cryptographic library
 pycryptodome = "~3.10.1"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "^2.0.19"
+pyuwsgi = "~2.0.19.1.post0"
 # YAML parsing and rendering
 PyYAML = "~5.4.1"
 # Social authentication/registration with support for many auth providers
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
-# Redis cache for Django used for distributed locking
-django-redis = "^4.12.1"
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
@@ -94,9 +94,9 @@ black = "^20.8b1"
 # Test code coverage measurement
 coverage = "~5.4"
 # Tool for debugging Django
-django-debug-toolbar = "^3.2"
+django-debug-toolbar = "~3.2.1"
 # Code style checking and limited static analysis
-flake8 = "^3.8.4"
+flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.5.0"
 # Allow Markdown files to include other files
