@@ -180,7 +180,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Changed
 
-- [#150](https://github.com/nautobot/nautobot/issues/150) - Revised all documentation referencing objects wiht status fields
+- [#150](https://github.com/nautobot/nautobot/issues/150) - Revised all documentation referencing objects with status fields
 - [#175](https://github.com/nautobot/nautobot/issues/175) - Revised plugin development guide to use Poetry
 - [#211](https://github.com/nautobot/nautobot/pull/211) - Travis CI build improvements to simplify entry points and make tests fail faster
 - [#217](https://github.com/nautobot/nautobot/pull/217) - Replaced JSONB aggregation with custom cross-database implementation that supports PG and MySQL
@@ -189,7 +189,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#262](https://github.com/nautobot/nautobot/issues/262) - Revised Nautobot upgrade and NetBox migration guides
 - [#273](https://github.com/nautobot/nautobot/pull/273) - Update to jQuery 3.6.0
 - [#289](https://github.com/nautobot/nautobot/pull/289) - Updated natural unicode-aware sorting for interface/device names to support MySQL
-- [#373](https://github.com/nautobot/nautobot/pull/373) - Fix 334 enable tab rendering
 
 ### Fixed
 
@@ -220,6 +219,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#324](https://github.com/nautobot/nautobot/pull/324) - Fix unit test execution on MySQL by changing subquery limiting to list slicing
 - [#325](https://github.com/nautobot/nautobot/issues/325) - Fix to allow relationship associations to be unset in the web UI
 - [#326](https://github.com/nautobot/nautobot/issues/326) - Fix 404 error when attempting to delete a RelationshipAssociation from the list view
+- [#373](https://github.com/nautobot/nautobot/pull/373) - Fix missing "Bulk Add IP Addresses" tab
 
 ## v1.0.0b3 (2021-04-05)
 
