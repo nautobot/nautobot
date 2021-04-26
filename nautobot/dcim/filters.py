@@ -1182,7 +1182,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         label="Site (slug)",
     )
     device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (nam;e)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
         model = ConsolePort
