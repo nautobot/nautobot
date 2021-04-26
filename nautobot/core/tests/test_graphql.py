@@ -581,8 +581,11 @@ class GraphQLQuery(TestCase):
             name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=self.device3
         )
         self.interface31 = Interface.objects.create(
-            name="Mgmt1", type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device3, mgmt_only=True, enabled=False,
+            name="Mgmt1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device3,
+            mgmt_only=True,
+            enabled=False,
         )
 
         self.cable1 = Cable.objects.create(
@@ -803,8 +806,8 @@ class GraphQLQuery(TestCase):
             ('mac_address: "00:11:11:11:11:11"', 1),
             ('vlan: "100"', 1),
             (f'vlan_id: "{self.vlan1.id}"', 1),
-            ('mgmt_only: true', 1),
-            ('enabled: false', 1),
+            ("mgmt_only: true", 1),
+            ("enabled: false", 1),
         )
 
         for filter, nbr_expected_results in filters:

@@ -2366,7 +2366,6 @@ class InterfaceTestCase(TestCase):
         tagged_interface = interfaces[-1]
         tagged_interface.tagged_vlans.add(vlan3)
 
-
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
 
@@ -3689,5 +3688,6 @@ class PowerFeedTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"connected": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
 
 # TODO: Connection filters
