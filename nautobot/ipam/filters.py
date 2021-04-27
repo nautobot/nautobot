@@ -302,7 +302,7 @@ class PrefixFilterSet(
         queryset=VLAN.objects.all(),
         label="VLAN (ID)",
     )
-    vlan_vid = django_filters.CharFilter(
+    vlan_vid = django_filters.NumberFilter(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
     )

@@ -804,7 +804,7 @@ class GraphQLQuery(TestCase):
             ('device: ["Device 1", "Device 3"]', 4),
             ('kind: "virtual"', 5),
             ('mac_address: "00:11:11:11:11:11"', 1),
-            ('vlan: "100"', 1),
+            ("vlan: 100", 1),
             (f'vlan_id: "{self.vlan1.id}"', 1),
             ("mgmt_only: true", 1),
             ("enabled: false", 1),
