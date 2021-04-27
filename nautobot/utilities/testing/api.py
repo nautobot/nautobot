@@ -48,7 +48,11 @@ class APITestCase(ModelTestCase):
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 
     def _get_view_namespace(self):
-        return f"{self.view_namespace or self.model._meta.app_label}-api"
+        if self.view_namespace:
+            return f"{self.view_namespace}-api"
+        if self.model._meta.app_label in settings.PLUGINS:
+            return f"plugins-api:{self.model._meta.app_label}-api"
+        return f"{self.model._meta.app_label}-api"
 
     def _get_detail_url(self, instance):
         viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
