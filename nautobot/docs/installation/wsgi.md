@@ -81,7 +81,7 @@ First, copy and paste the following into `/etc/systemd/system/nautobot.service`:
 ```
 [Unit]
 Description=Nautobot WSGI Service
-Documentation=https://nautobot.readthedocs.io/
+Documentation=https://nautobot.readthedocs.io/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -113,7 +113,7 @@ Next, copy and paste the following into `/etc/systemd/system/nautobot-worker.ser
 ```
 [Unit]
 Description=Nautobot Request Queue Worker
-Documentation=https://nautobot.readthedocs.io/
+Documentation=https://nautobot.readthedocs.io/en/stable/
 After=network-online.target
 Wants=network-online.target
 
