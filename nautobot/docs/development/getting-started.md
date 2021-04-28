@@ -311,6 +311,14 @@ $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-po
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
 
+#### Install Hadolint
+
+[Hadolint](https://github.com/hadolint/hadolint) is a tool used to validate and lint Dockerfiles to ensure we are following best practices.  On Mac OS with [Homebrew](https://brew.sh/) you can install Hadolint by running:
+
+```no-hightlight
+$ brew install hadolint
+```
+
 #### Creating a Python Virtual Environment
 
 A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or *virtualenv*) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.

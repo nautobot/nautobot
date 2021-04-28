@@ -190,7 +190,10 @@ Push the images to GitHub Container Registry and Docker Hub
 ```
 docker login
 docker login ghcr.io
-invoke docker-push main
+for ver in 3.6 3.7 3.8 3.9; do
+  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+  invoke docker-push main
+done
 ```
 
 ### Bump the Development Version
