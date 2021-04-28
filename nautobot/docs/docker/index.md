@@ -56,7 +56,7 @@ Currently images are pushed for the following python versions:
 
 ## Getting Started
 
-Nautobot requires a PostgreSQL database and Redis instance before it will start, because of this the quickest and easiest way to get Nautobot running is with `docker-compose`.  Please see the `docker-compose` deployment repository for more information.
+Nautobot requires a PostgreSQL database and Redis instance before it will start, because of this the quickest and easiest way to get Nautobot running is with `docker-compose`.
 
 ## Configuration
 
@@ -64,6 +64,16 @@ Most configuration parameters are available via environment variables which can 
 
 ```no-highlight
 docker run --name nautobot -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py ghcr.io/nautobot/nautobot
+```
+
+Or if you are using docker-compose:
+
+```no-highlight
+services:
+  nautobot:
+    image: "ghcr.io/nautobot/nautobot"
+    volumes:
+      - /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py:ro
 ```
 
 ### uWSGI
@@ -98,9 +108,26 @@ Self signed SSL certificates are included by default with the container.  For a 
 docker run --name nautobot -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key ghcr.io/nautobot/nautobot
 ```
 
+Or if you are using docker-compose:
+
+```no-highlight
+services:
+  nautobot:
+    image: "ghcr.io/nautobot/nautobot"
+    volumes:
+      - /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt:ro
+      - /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key:ro
+```
+
 ### Nautobot Plugins
 
-At this time adding Nautobot plugins to the existing Docker image is not supported, however, you can use the included development image as the base within your `Dockerfile` to install your own plugins:
+At this time adding Nautobot plugins to the existing Docker image is not supported, however, you can use the Nautobot image as the base within your `Dockerfile` to install your own plugins, here is an example dockerfile:
+
+```dockerfile
+FROM ghcr.io/nautobot/nautobot
+
+RUN pip install nautobot-chatops
+```
 
 ## Building the Image
 

@@ -165,6 +165,34 @@ Next, publish to PyPI using the username `__token__` and the Nautobot PyPI API t
 $ poetry publish --username __token__ --password <api_token>
 ```
 
+### Publish Docker Images
+
+Build the images locally:
+
+```
+for ver in 3.6 3.7 3.8 3.9; do
+  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+  invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+  invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+done
+```
+
+Test the images locally:
+```
+for ver in 3.6 3.7 3.8 3.9; do
+  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+  INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml invoke stop
+  INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml invoke integration-tests
+done
+```
+
+Push the images to GitHub Container Registry and Docker Hub
+```
+docker login
+docker login ghcr.io
+invoke docker-push main
+```
+
 ### Bump the Development Version
 
 Use `poetry version prepatch` to bump the version to the next release and commit it to the `develop` branch.

@@ -74,6 +74,8 @@ This defines custom content to be displayed on the login page above the login fo
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
 
+Environment Variable: `NAUTOBOT_CACHEOPS_TIMEOUT` (timeout value only)
+
 !!! warning
     It is an error to set the timeout value to `0`. If you wish to disable caching, please use [`CACHEOPS_ENABLED`](#cacheops_enabled).
 

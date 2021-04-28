@@ -1,174 +1,37 @@
----
-# Linting available at https://config.travis-ci.com/explore
-_setup_docker: &setup_docker
-  before_install:
-    - sudo rm -rf /var/lib/apt/lists/*
-    - sudo rm -f /etc/default/docker
-    - sudo apt-get remove -y docker docker.io containerd runc
-    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-    - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce docker-ce-cli containerd.io
-    - mkdir -vp ~/.docker/cli-plugins/
-    - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
-    - chmod a+x ~/.docker/cli-plugins/docker-buildx
-    - pip install invoke docker-compose requests
-    - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
-    - sudo service docker restart
-    - docker version
-    - docker buildx create --use
-
-_unit_test: &unit_test
-  python: "3.9"
-  <<: *setup_docker
-  before_script:
-    - invoke buildx --cache-dir /home/travis/.cache/docker --cache --target dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-  script:
-    - invoke unittest --failfast || travis_terminate 1
-    - invoke unittest-coverage
-
-_integration_test: &integration_test
-  python: "3.9"
-  <<: *setup_docker
-  before_script:
-    - invoke buildx --cache-dir /home/travis/.cache/docker --cache --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-  script:
-    - invoke integration-tests
-
-_publish: &publish
-  python: "3.9"
-  <<: *setup_docker
-  before_script:
-    - invoke buildx --cache-dir /home/travis/.cache/docker --cache --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-    - invoke buildx --cache-dir /home/travis/.cache/docker --cache --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-    - docker images
-    - echo Sign into docker hub
-    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
-    - echo Sign into Github Container Registry
-    - echo $GHCR_ACCESS_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin || travis_terminate 1
-
-_publish_develop: &publish_develop
-  script:
-    - invoke push ${TRAVIS_BRANCH} --commit=${TRAVIS_COMMIT:0:7} --datestamp=$(date +%s)
-
-_publish_main: &publish_main
-  script:
-    - invoke push ${TRAVIS_BRANCH}
-
+# Linting/Testing available at https://config.travis-ci.com/explore
 os: linux
-dist: focal
+dist: xenial
+services:
+  - postgresql
+  - redis
+addons:
+  postgresql: "9.6"
 language: python
-cache:
-  directories:
-    - /home/travis/.cache/docker
+env:
+  - INVOKE_NAUTOBOT_LOCAL=True
 jobs:
+  fast_finish: true
   include:
-    - stage: Linting
-      python: "3.9"  # 3.9 for performance gains over 3.6
-      install:
-        - pip install invoke black==20.8b1 flake8==3.9.1 requests==2.25.1  # really should use poetry to install but there is no poetry install --dev-only (hopefully in 1.1.6 https://github.com/python-poetry/poetry/commit/d2485b8f849f0bbfd8f6933b625ea07f11f80615)
-        - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
-        - chmod +x /home/travis/bin/hadolint
-        - mkdir -p /home/travis/.cache/docker
-      env:
-        - INVOKE_NAUTOBOT_LOCAL=True
-      script:
-        - invoke black
-        - invoke flake8
-        - invoke hadolint
-
-    # Unfortunately we can't do travis matrix builds in multiple stages so we get to define each build here
-    - stage: Unit Test
-      name: Python 3.6 Unit Test
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
-      <<: *unit_test
-    - name: Python 3.7 Unit Test
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.7
-      <<: *unit_test
-    - name: Python 3.8 Unit Test
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.8
-      <<: *unit_test
-    - name: Python 3.9 Unit Test
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.9
-      <<: *unit_test
-
-
-    - stage: Integration Tests
-      name: Python 3.6 Integration Tests
-      env:
-        - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
-      <<: *integration_test
-    - name: Python 3.7 Integration Tests
-      env:
-        - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.7
-      <<: *integration_test
-    - name: Python 3.8 Integration Tests
-      env:
-        - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.8
-      <<: *integration_test
-    - name: Python 3.9 Integration Tests
-      env:
-        - INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.9
-      <<: *integration_test
-
-    - stage: Publish Docker Image (Develop)
-      name: Publish Python 3.6 Images
-      if: branch = develop AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
-      <<: *publish
-      <<: *publish_develop
-    - name: Publish Python 3.7 Images
-      if: branch = develop AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.7
-      <<: *publish
-      <<: *publish_develop
-    - name: Publish Python 3.8 Images
-      if: branch = develop AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.8
-      <<: *publish
-      <<: *publish_develop
-    - name: Publish Python 3.9 Images
-      if: branch = develop AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.9
-      <<: *publish
-      <<: *publish_develop
-
-    - stage: Publish Docker Image (Main)
-      name: Publish Python 3.6 Images
-      if: branch = main AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.6
-      <<: *publish
-      <<: *publish_main
-    - name: Publish Python 3.7 Images
-      if: branch = main AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.7
-      <<: *publish
-      <<: *publish_main
-    - name: Publish Python 3.8 Images
-      if: branch = main AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.8
-      <<: *publish
-      <<: *publish_main
-    - name: Publish Python 3.9 Images
-      if: branch = main AND type = push
-      env:
-        - INVOKE_NAUTOBOT_PYTHON_VER=3.9
-      <<: *publish
-      <<: *publish_main
-
+    - stage: Tests
+      python: "3.6"
+    - python: "3.7"
+    - python: "3.8"
+    - python: "3.9"
   allow_failures:
-    - env: INVOKE_NAUTOBOT_PYTHON_VER=3.9
+    - python: "3.9"
+before_install:
+  - pip install poetry
+install:
+  - poetry config virtualenvs.create false
+  # Poetry 1.1.0 added parallel installation as an option;
+  # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
+  # while simultaneously atttempting to *use* those packages to install other packages.
+  # For now we disable it.
+  - poetry config installer.parallel false
+  - poetry install
+before_script:
+  - psql --version
+  - psql -U postgres -c 'SELECT version();'
+  - psql -U postgres -c 'create database nautobot;'
+script:
+  - poetry run ./scripts/cibuild.sh

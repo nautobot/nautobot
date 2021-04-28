@@ -157,8 +157,8 @@ def buildx(
     tag="networktocode/nautobot-dev-py3.6:local",
     target="dev",
 ):
-    """Build Nautobot docker image."""
-    print("Building Nautobot .. ")
+    """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
+    print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
     command = f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile --build-arg PYTHON_VER={context.nautobot.python_ver} ."
     if not cache:
         command += " --no-cache"
@@ -175,7 +175,7 @@ def buildx(
         "datestamp": "The datestamp to tag the develop image with",
     }
 )
-def push(context, branch, commit="", datestamp=""):
+def docker_push(context, branch, commit="", datestamp=""):
     """Tags and pushes docker images to the appropriate repos, intended for CI use only."""
     with open("pyproject.toml", "r") as pyproject:
         parsed_toml = toml.load(pyproject)
