@@ -196,8 +196,10 @@ Below is an example `models.py` file containing a model with two character field
 # models.py
 from django.db import models
 
+from nautobot.core.models import BaseModel
 
-class Animal(models.Model):
+
+class Animal(BaseModel):
     """Base model for animals."""
 
     name = models.CharField(max_length=50)
@@ -272,11 +274,12 @@ To expose a model, simply register it using the `extras_features("graphql")` dec
 # models.py
 from django.db import models
 
+from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
 
 
 @extras_features("graphql")
-class Animal(models.Model):
+class Animal(BaseModel):
     """Base model for animals."""
 
     name = models.CharField(max_length=50)
