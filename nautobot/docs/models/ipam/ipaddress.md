@@ -4,7 +4,7 @@ An IP address comprises a single host address (either IPv4 or IPv6) and its subn
 
 Like a prefix, an IP address can optionally be assigned to a VRF (otherwise, it will appear in the "global" table). IP addresses are automatically arranged under parent prefixes within their respective VRFs according to the IP hierarchy.
 
-Each IP address can also be assigned an operational [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/) and a functional role.  The following statuses are available by default:
+Each IP address can also be assigned an operational [`status`](https://nautobot.readthedocs.io/en/stable/models/extras/status/) and a functional role.  The following statuses are available by default:
 
 * Active
 * Reserved
