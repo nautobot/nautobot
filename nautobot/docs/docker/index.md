@@ -18,7 +18,7 @@ docker image pull networktocode/nautobot
 To get the image from the GitHub Container Registry (GHCR) run:
 
 ```no-highlight
-docker image pull ghcr.io/nautobot/nautobot
+$ docker image pull ghcr.io/nautobot/nautobot
 ```
 
 The following tags are available:
@@ -35,13 +35,13 @@ The following tags are available:
 To pull a specific tag you can append the image name with `:tag` for example, to pull the 1.0.0 image:
 
 ```no-highlight
-docker image pull networktocode/nautobot:1.0.0
+$ docker image pull networktocode/nautobot:1.0.0
 ```
 
 or to pull the 1.0.0 image from GitHub:
 
 ```no-highlight
-docker image pull ghcr.io/nautobot/nautobot:1.0.0
+$ docker image pull ghcr.io/nautobot/nautobot:1.0.0
 ```
 
 Currently images are pushed for the following python versions:
@@ -63,12 +63,12 @@ Nautobot requires a PostgreSQL database and Redis instance before it will start,
 Most configuration parameters are available via environment variables which can be passed to the container.  If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py` using [docker volumes](https://docs.docker.com/storage/volumes/) by adding `-v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py` to your docker run command, for example:
 
 ```no-highlight
-docker run --name nautobot -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py ghcr.io/nautobot/nautobot
+$ docker run --name nautobot -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py ghcr.io/nautobot/nautobot
 ```
 
 Or if you are using docker-compose:
 
-```no-highlight
+```yaml
 services:
   nautobot:
     image: "ghcr.io/nautobot/nautobot"
@@ -104,13 +104,13 @@ Please see the [official uWSGI documentation on `processes`](https://uwsgi-docs.
 
 Self signed SSL certificates are included by default with the container.  For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime using [docker volumes](https://docs.docker.com/storage/volumes/).  The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`.  Using a `docker run` these can be injected using the `-v` parameter:
 
-```no-hightlight
-docker run --name nautobot -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key ghcr.io/nautobot/nautobot
+```no-highlight
+$ docker run --name nautobot -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key ghcr.io/nautobot/nautobot
 ```
 
-Or if you are using docker-compose:
+Or if you are using `docker-compose`:
 
-```no-highlight
+```yaml
 services:
   nautobot:
     image: "ghcr.io/nautobot/nautobot"

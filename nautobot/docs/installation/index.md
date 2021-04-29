@@ -85,7 +85,7 @@ Nautobot should work on any POSIX-compliant system including practically any fla
 
 ### Running Nautobot in Docker
 
-Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [docker overview](/docker) for more information.
+Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](/docker) for more information.
 
 ## Upgrading
 

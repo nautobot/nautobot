@@ -107,7 +107,7 @@ def run_command(context, command, **kwargs):
     if is_truthy(context.nautobot.local):
         context.run(command, **kwargs)
     else:
-        # Check if netbox is running, no need to start another netbox container to run a command
+        # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
         if "nautobot" in results.stdout:
@@ -142,11 +142,11 @@ def build(context, force_rm=False, cache=True):
 
 @task(
     help={
-        "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
-        "cache_dir": "The directory to use for caching buildx output (defaults to /home/travis/.cache/docker for Travis)",
-        "platforms": "Comma separated list of strings for which to build (defaults to linux/amd64)",
-        "tag": "tags should be applied to the built image (defaults to networktocode/nautobot-dev:local)",
-        "target": "the target from the dockerfile to build (defaults to dev)",
+        "cache": "Whether to use Docker's cache when building the image (Default: enabled)",
+        "cache_dir": "Directory to use for caching buildx output (Default:  /home/travis/.cache/docker)",
+        "platforms": "Comma-separated list of strings for which to build (Default: linux/amd64)",
+        "tag": "Tags to be applied to the built image (Default: networktocode/nautobot-dev:local)",
+        "target": "Built target from the Dockerfile (Default: dev)",
     }
 )
 def buildx(
@@ -170,9 +170,9 @@ def buildx(
 
 @task(
     help={
-        "branch": "Which branch we are pushing from",
-        "commit": "The commit hash to tag the develop image with",
-        "datestamp": "The datestamp to tag the develop image with",
+        "branch": "Source branch used to push",
+        "commit": "Commit hash used to tag the image",
+        "datestamp": "Datestamp used to tag the develop image",
     }
 )
 def docker_push(context, branch, commit="", datestamp=""):
@@ -422,19 +422,19 @@ def integration_tests(context):
     start(context)
     while retries < max_retries:
         try:
-            request = session.get("http://localhost:8080", timeout=300)
+            response = session.get("http://localhost:8080", timeout=300)
         except requests.exceptions.ConnectionError:
             print("Nautobot not ready yet sleeping for 5 seconds...")
             sleep(5)
             retries += 1
             continue
-        if request.status_code == 200:
+        if response.ok:
             print("Nautobot is ready...")
             break
         else:
-            raise Exit(f"Nautobot returned and invalid status {request.status_code}", request.status_code)
+            raise Exit(f"Nautobot returned and invalid status {response.status_code}", 1)
     if retries >= max_retries:
-        raise Exit("Timed Out waiting for Nautobot", 1)
+        raise Exit("Timed out waiting for Nautobot", 1)
 
 
 @task(

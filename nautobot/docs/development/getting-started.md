@@ -313,9 +313,9 @@ For detailed installation instructions, please see the [official Poetry installa
 
 #### Install Hadolint
 
-[Hadolint](https://github.com/hadolint/hadolint) is a tool used to validate and lint Dockerfiles to ensure we are following best practices.  On Mac OS with [Homebrew](https://brew.sh/) you can install Hadolint by running:
+[Hadolint](https://github.com/hadolint/hadolint) is a tool used to validate and lint Dockerfiles to ensure we are following best practices. On macOS with [Homebrew](https://brew.sh/) you can install Hadolint by running:
 
-```no-hightlight
+```no-highlight
 $ brew install hadolint
 ```
 
