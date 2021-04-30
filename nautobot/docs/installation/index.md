@@ -2,9 +2,6 @@
 
 This set of documents will help you get Nautobot up and running.
 
-!!! warning
-    As of Nautobot v1.0.0b2 these instructions are still in a pre-release state. We are working to revise them for the recent changes.
-
 ## About Dependencies
 
 This section describes the system dependencies required for Nautobot. They can be all installed on a single system, or distributed across your environment. That will be up to you. Our install instructions assume a single system install, and that is good for most use cases. More advanced configurations are also possible, but are not covered here.

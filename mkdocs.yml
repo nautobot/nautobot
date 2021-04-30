@@ -1,4 +1,5 @@
 dev_addr: '127.0.0.1:8001'
+edit_uri: edit/main/nautobot/docs
 site_name: Nautobot Documentation
 site_url: https://nautobot.readthedocs.io/
 repo_url: https://github.com/nautobot/nautobot
@@ -9,6 +10,7 @@ theme:
     name: readthedocs
     navigation_depth: 4
     hljs_languages:
+        - django
         - yaml
 extra_css:
     - extra.css
@@ -31,12 +33,15 @@ nav:
         - Upgrading Nautobot: 'installation/upgrading.md'
     - Configuration:
         - Configuring Nautobot: 'configuration/index.md'
-        - External Authentication:
-            - LDAP: 'configuration/authentication/ldap.md'
-            - SSO: 'configuration/authentication/sso.md'
-            - Remote Header: 'configuration/authentication/remote.md'
         - Required Settings: 'configuration/required-settings.md'
         - Optional Settings: 'configuration/optional-settings.md'
+    - External Authentication:
+        - LDAP: 'configuration/authentication/ldap.md'
+        - SSO: 'configuration/authentication/sso.md'
+        - Remote Header: 'configuration/authentication/remote.md'
+    - User Guides:
+        - Git as a Data Source: 'user-guides/git-data-source.md'
+        - GraphQL: 'user-guides/graphql.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'

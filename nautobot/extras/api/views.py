@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django_rq.queues import get_connection
 from drf_yasg.utils import swagger_auto_schema
 from graphene_django.views import GraphQLView
@@ -18,6 +19,7 @@ from nautobot.core.api.views import ModelViewSet
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
     ConfigContext,
     CustomLink,
@@ -34,7 +36,7 @@ from nautobot.extras.models import (
     TaggedItem,
     Webhook,
 )
-from nautobot.extras.models import CustomField
+from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, get_jobs, run_job
 from nautobot.utilities.exceptions import RQWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
@@ -83,6 +85,12 @@ class CustomFieldViewSet(ModelViewSet):
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
+
+
+class CustomFieldChoiceViewSet(ModelViewSet):
+    queryset = CustomFieldChoice.objects.all()
+    serializer_class = serializers.CustomFieldChoiceSerializer
+    filterset_class = filters.CustomFieldChoiceFilterSet
 
 
 class CustomFieldModelViewSet(ModelViewSet):
@@ -141,6 +149,22 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
     queryset = GitRepository.objects.all()
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
+
+    @swagger_auto_schema(method="post", request_body=serializers.GitRepositorySerializer)
+    @action(detail=True, methods=["post"])
+    def sync(self, request, pk):
+        """
+        Enqueue pull git repository and refresh data.
+        """
+        if not request.user.has_perm("extras.change_gitrepository"):
+            raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
+
+        if not Worker.count(get_connection("default")):
+            raise RQWorkerNotRunningException()
+
+        repository = get_object_or_404(GitRepository, id=pk)
+        enqueue_pull_git_repository_and_refresh_data(repository, request)
+        return Response({"message": f"Repository {repository} sync job added to queue."})
 
 
 #

@@ -24,6 +24,7 @@ from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ConfigContext,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -87,8 +88,16 @@ class CustomFieldSerializer(ValidatedModelSerializer):
             "validation_minimum",
             "validation_maximum",
             "validation_regex",
-            "choices",
         ]
+
+
+class CustomFieldChoiceSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfieldchoice-detail")
+    field = NestedCustomFieldSerializer()
+
+    class Meta:
+        model = CustomFieldChoice
+        fields = ["id", "url", "field", "value", "weight"]
 
 
 #
@@ -500,14 +509,14 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
 
 class ContentTypeSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:contenttype-detail")
-    display_name = serializers.SerializerMethodField()
+    display = serializers.SerializerMethodField()
 
     class Meta:
         model = ContentType
-        fields = ["id", "url", "app_label", "model", "display_name"]
+        fields = ["id", "url", "app_label", "model", "display"]
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
-    def get_display_name(self, obj):
+    def get_display(self, obj):
         return obj.app_labeled_name
 
 

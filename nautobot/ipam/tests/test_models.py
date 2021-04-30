@@ -1,10 +1,107 @@
+import copy
+from unittest import skipIf
+
 import netaddr
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.test import TestCase, override_settings
 
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import IPAddressRoleChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
+
+
+class TestVarbinaryIPField(TestCase):
+    """Tests for `nautobot.ipam.fields.VarbinaryIPField`."""
+
+    def setUp(self):
+        super().setUp()
+
+        # Field is a VarbinaryIPField we'll use to test.
+        self.prefix = Prefix.objects.create(prefix="10.0.0.0/24")
+        self.field = self.prefix._meta.get_field("network")
+        self.network = self.prefix.network
+        self.network_packed = bytes(self.prefix.prefix.network)
+
+    def test_db_type(self):
+        """Test `VarbinaryIPField.db_type`."""
+        # Mapping of vendor -> db_type
+        db_types = {
+            "postgresql": "bytea",
+            "mysql": "varbinary(16)",
+        }
+
+        expected = db_types[connection.vendor]
+        self.assertEqual(self.field.db_type(connection), expected)
+
+    def test_value_to_string(self):
+        """"Test `VarbinaryIPField.value_to_string`."""
+        # value_to_string calls _parse_address so no need for negative tests here.
+        self.assertEqual(self.field.value_to_string(self.prefix), self.network)
+
+    def test_parse_address_success(self):
+        """"Test `VarbinaryIPField._parse_address` PASS."""
+
+        # str => netaddr.IPAddress
+        obj = self.field._parse_address(self.prefix.network)
+        self.assertEqual(obj, netaddr.IPAddress(self.network))
+
+        # bytes => netaddr.IPAddress
+        self.assertEqual(self.field._parse_address(bytes(obj)), obj)
+
+        # int => netaddr.IPAddress
+        self.assertEqual(self.field._parse_address(int(obj)), obj)
+
+        # IPAddress => netaddr.IPAddress
+        self.assertEqual(self.field._parse_address(obj), obj)
+
+    def test_parse_address_failure(self):
+        """"Test `VarbinaryIPField._parse_address` FAIL."""
+
+        bad_inputs = (
+            None,
+            -42,
+            "10.10.10.10/32",  # Prefixes not allowed here
+            "310.10.10.10",  # Bad IP
+        )
+        for bad in bad_inputs:
+            self.assertRaises(ValidationError, self.field._parse_address, bad)
+
+    def test_to_python(self):
+        """"Test `VarbinaryIPField.to_python`."""
+
+        # to_python calls _parse_address so no need for negative tests here.
+
+        # str => str
+        self.assertEqual(self.field.to_python(self.prefix.network), self.network)
+
+        # netaddr.IPAddress => str
+        self.assertEqual(self.field.to_python(self.prefix.prefix.ip), self.network)
+
+    @skipIf(
+        connection.vendor != "postgresql",
+        "postgres is not the database driver",
+    )
+    def test_get_db_prep_value_postgres(self):
+        """"Test `VarbinaryIPField.get_db_prep_value`."""
+
+        # PostgreSQL escapes `bytes` in `::bytea` and you must call
+        # `getquoted()` to extract the value.
+        prepped = self.field.get_db_prep_value(self.network, connection)
+        manual = connection.Database.Binary(self.network_packed)
+        self.assertEqual(prepped.getquoted(), manual.getquoted())
+
+    @skipIf(
+        connection.vendor != "mysql",
+        "mysql is not the database driver",
+    )
+    def test_get_db_prep_value_mysql(self):
+        """"Test `VarbinaryIPField.get_db_prep_value` for MySQL."""
+
+        # MySQL uses raw `bytes`
+        prepped = self.field.get_db_prep_value(self.network, connection)
+        manual = bytes(self.network_packed)
+        self.assertEqual(prepped, manual)
 
 
 class TestAggregate(TestCase):

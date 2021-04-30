@@ -154,6 +154,7 @@ Available tasks:
   makemigrations      Perform makemigrations operation in Django.
   migrate             Perform migrate operation in Django.
   nbshell             Launch an interactive nbshell session.
+  post-upgrade        Performs Nautobot common post-upgrade operations using a single entrypoint.
   restart             Gracefully restart all containers.
   start               Start Nautobot and its dependencies in detached mode.
   stop                Stop Nautobot and its dependencies.
@@ -176,8 +177,21 @@ Additional useful commands for the development environment:
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
 - `invoke stop` - Stops all containers created by `invoke start`
 
-!!! info
-    By default the Nautobot docker images for development are built with Python 3.7. If you wish to build them with a different Python version, stop any running containers, then set the environment variable `PYTHON_VER` to the desired version (for example, `export PYTHON_VER=3.8`) and rerun the `invoke build` command. As long as `PYTHON_VER` remains set, all other `invoke` tasks will use the containers built for this version instead of the default.
+#### Invoke Configuration
+
+The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html) which you may want to override. Configuration properties include:
+
+- `python_ver`: the Python version which is used to build the Docker container (default: `3.7`)
+- `local`: run the commands in the local environment vs the Docker container (default: `False`)
+- `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
+- `compose_file`: the Docker Compose YAML file to use (default: `"docker-compose.yml"`)
+- `compose_override_file`: the default Docker Compose override file to use if it exists (default: `"docker-compose.override.yml"`)
+
+These setting may be overridden several different ways (from highest to lowest precedence):
+
+- Command line argument on the individual commands (see `invoke $command --help`) if available
+- Using environment variables such as `INVOKE_NAUTOBOT_PYTHON_VER`; the variables are prefixed with `INVOKE_NAUTOBOT_` and must be uppercase
+- Using an `invoke.yml` file (see `invoke.yml.example`)
 
 #### Working with Docker Compose
 
@@ -200,9 +214,9 @@ This file will override any configuration in the main `docker-compose.yml` file,
 
 Please see the [official documentation on extending Docker Compose](https://docs.docker.com/compose/extends/) for more information.
 
-##### Automatically Creating a SuperUser
+##### Automatically Creating a Superuser
 
-There may be times where you want to bootstrap Nautobot with a a superuser account and API token already created for quick access or for running within a CI/CD pipeline. Below will detail the steps required to bootstrap Nautobot with a user and token.
+There may be times where you want to bootstrap Nautobot with a superuser account and API token already created for quick access or for running within a CI/CD pipeline. Below will detail the steps required to bootstrap Nautobot with a user and token.
 
 Create `development/docker-compose.override.yml` with the following contents:
 
@@ -389,14 +403,24 @@ A newly created configuration includes sane defaults. If you need to customize t
 * [`DEBUG`](../../configuration/optional-settings/#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
 * [`EXTRA_INSTALLED_APPS`](../../configuration/optional-settings/#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
-#### Starting the Development Server
+## Working in your Development Environment
+
+Below are common commands for working your development environment.
+
+### Starting the Development Server
 
 Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
 
 !!! danger
     **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
-You can start the Nautobot development server with the `runserver` management command:
+You can start the Nautobot development server with the `invoke start` command (if using Docker), or the `nautobot-server runserver` management command:
+
+| Docker Compose Workflow | Virtual Environment Workflow   |
+|-------------------------|--------------------------------|
+| `invoke start`          | `nautobot-server runserver`    |
+
+For example:
 
 ```no-highlight
 $ nautobot-server runserver
@@ -414,11 +438,17 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-#### Starting the Interactive Shell
+### Starting the Interactive Shell
 
 Nautobot provides an [interactive Python shell](../../administration/nautobot-shell) that sets up the server environment and gives you direct access to the database models for debugging. Nautobot extends this slightly to automatically import models and other utilities.
 
-Run the Nautobot interactive shell with the `nbshell` management command:
+Run the Nautobot interactive shell with `invoke nbshell` (Docker) or the `nautobot-server nbshell` management command:
+
+| Docker Compose Workflow | Virtual Environment Workflow   |
+|-------------------------|--------------------------------|
+| `invoke nbshell`        | `nautobot-server nbshell`      |
+
+For example:
 
 ```bash
 $ nautobot-server nbshell
@@ -428,13 +458,55 @@ $ nautobot-server nbshell
 >>>
 ```
 
-## Running Tests
+### Post-upgrade Operations
+
+There will be times where you're working with the bleeding edge of Nautobot from the `develop` branch or feature branches and will need to pull in database changes or run server operations.
+
+Get into the habit of running `nautobot-server post_upgrade` (or `invoke post-upgrade` when using Docker) after you pull in a major set of changes from Nautobot, which performs a handful of common operations (such as `migrate`) from a single command:
+
+| Docker Compose Workflow | Virtual Environment Workflow   |
+|-------------------------|--------------------------------|
+| `invoke post-upgrade`   | `nautobot-server post_upgrade` |
+
+Please see the [documentation on the `nautobot-server post_upgrade` command](../administration/nautobot-server.md#post_upgrade) for more information.
+
+### Reinstalling Nautobot
+
+!!! note
+    This mostly applies to working with Nautobot in a virtualenv, since Docker containers are typically rebuilt when the code changes.
+
+Sometimes when files are renamed, moved, or deleted and you've been working in the same environment for a while, you can encounter weird behavior. If this happens, don't panic and nuke your environment.
+
+First, use `pip3` to explicitly uninstall the Nautobot package from the environment:
+
+```no-highlight
+$ pip3 uninstall -y nautobot
+Found existing installation: nautobot 1.0.0b2
+Uninstalling nautobot-1.0.0b2:
+  Successfully uninstalled nautobot-1.0.0b2
+```
+
+Then try to just have Poetry do the right thing by telling it to install again:
+
+```no-highlight
+$ poetry install
+Installing dependencies from lock file
+
+No dependencies to install or update
+
+Installing the current project: nautobot (1.0.0-beta.2)
+```
+
+### Running Tests
 
 Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
 
 | Docker Compose Workflow | Virtual Environment Workflow                                           |
 |-------------------------|------------------------------------------------------------------------|
 | `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
+
+!!! info
+    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.  See the [Invoke configuration](#invoke-configuration) for more information.
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
@@ -443,12 +515,12 @@ In cases where you haven't made any changes to the database (which is most of th
 | `invoke unittest --keepdb` | `nautobot-server test --keepdb --config=nautobot/core/tests/nautobot_config.py` |
 
 !!! note
-	Using the `--keepdb` argument will cause errors if you've modified any model fields since the previous test run.
+	Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
 
 !!! warning
 	In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
 
-## Verifying Code Style
+### Verifying Code Style
 
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). You should run both of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 

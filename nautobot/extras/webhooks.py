@@ -48,7 +48,7 @@ def enqueue_webhooks(instance, user, request_id, action):
         serializer = serializer_class(instance, context=serializer_context)
 
         # Enqueue the webhooks
-        webhook_queue = get_queue("default")
+        webhook_queue = get_queue("webhooks")
         for webhook in webhooks:
             webhook_queue.enqueue(
                 "nautobot.extras.webhooks_worker.process_webhook",

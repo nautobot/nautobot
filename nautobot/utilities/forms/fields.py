@@ -6,11 +6,12 @@ from io import StringIO
 import django_filters
 from django import forms
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.forms.fields import JSONField as _JSONField, InvalidJSONInput
+from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Count
-from django.forms import BoundField
+from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
 from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
@@ -18,12 +19,13 @@ from nautobot.utilities.choices import unpack_grouped_choices
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import *
-from .utils import expand_alphanumeric_pattern, expand_ipaddress_pattern
+from .utils import expand_alphanumeric_pattern, expand_ipaddress_pattern, parse_numeric_range
 
 __all__ = (
     "CommentField",
     "CSVChoiceField",
     "CSVContentTypeField",
+    "CSVMultipleChoiceField",
     "CSVDataField",
     "CSVModelChoiceField",
     "CSVMultipleContentTypeField",
@@ -34,6 +36,7 @@ __all__ = (
     "JSONField",
     "JSONArrayFormField",
     "MultipleContentTypeField",
+    "NumericArrayField",
     "LaxURLField",
     "SlugField",
     "TagFilterField",
@@ -128,6 +131,23 @@ class CSVChoiceField(forms.ChoiceField):
     def __init__(self, *, choices=(), **kwargs):
         super().__init__(choices=choices, **kwargs)
         self.choices = unpack_grouped_choices(choices)
+
+
+class CSVMultipleChoiceField(CSVChoiceField):
+    """
+    A version of CSVChoiceField that supports and emits a list of choice values
+    """
+
+    def to_python(self, value):
+        """Return a list of strings."""
+        if value in self.empty_values:
+            return ""
+        return [v.strip() for v in str(value).split(",")]
+
+    def validate(self, value):
+        """Validate that each of the input values is in self.choices."""
+        for v in value:
+            super().validate(v)
 
 
 class CSVModelChoiceField(forms.ModelChoiceField):
@@ -350,7 +370,7 @@ class DynamicModelChoiceMixin:
 
     def __init__(
         self,
-        display_field="name",
+        display_field="display",
         query_params=None,
         initial_params=None,
         null_option=None,
@@ -431,7 +451,10 @@ class DynamicModelChoiceMixin:
         if not widget.attrs.get("data-url"):
             app_label = self.queryset.model._meta.app_label
             model_name = self.queryset.model._meta.model_name
-            data_url = reverse("{}-api:{}-list".format(app_label, model_name))
+            if app_label in settings.PLUGINS:
+                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
+            else:
+                data_url = reverse(f"{app_label}-api:{model_name}-list")
             widget.attrs["data-url"] = data_url
 
         return bound_field
@@ -574,3 +597,14 @@ class JSONArrayFormField(forms.JSONField):
         if initial in self.empty_values and value in self.empty_values:
             return False
         return super().has_changed(initial, data)
+
+
+class NumericArrayField(SimpleArrayField):
+    """Basic array field that takes comma-separated or hyphenated ranges."""
+
+    def to_python(self, value):
+        try:
+            value = ",".join([str(n) for n in parse_numeric_range(value)])
+        except ValueError as error:
+            raise ValidationError(error)
+        return super().to_python(value)

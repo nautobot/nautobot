@@ -10,14 +10,17 @@ from django.db import models
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.choices import *
+from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
     CSVChoiceField,
+    CSVMultipleChoiceField,
     DatePicker,
     LaxURLField,
     StaticSelect2,
+    StaticSelect2Multiple,
     add_blank_choice,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
@@ -29,24 +32,33 @@ class CustomFieldModel(models.Model):
     Abstract class for any model which may have custom fields associated with it.
     """
 
-    custom_field_data = models.JSONField(encoder=DjangoJSONEncoder, blank=True, default=dict)
+    _custom_field_data = models.JSONField(encoder=DjangoJSONEncoder, blank=True, default=dict)
 
     class Meta:
         abstract = True
+
+    @property
+    def custom_field_data(self):
+        """
+        Legacy interface to raw custom field data
+
+        TODO(John): remove this entirely when the cf property is enhanced
+        """
+        return self._custom_field_data
 
     @property
     def cf(self):
         """
         Convenience wrapper for custom field data.
         """
-        return self.custom_field_data
+        return self._custom_field_data
 
     def get_custom_fields(self):
         """
         Return a dictionary of custom fields for a single object in the form {<field>: value}.
         """
         fields = CustomField.objects.get_for_model(self)
-        return OrderedDict([(field, self.custom_field_data.get(field.name)) for field in fields])
+        return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
     def clean(self):
         super().clean()
@@ -54,7 +66,7 @@ class CustomFieldModel(models.Model):
         custom_fields = {cf.name: cf for cf in CustomField.objects.get_for_model(self)}
 
         # Validate all field values
-        for field_name, value in self.custom_field_data.items():
+        for field_name, value in self._custom_field_data.items():
             if field_name not in custom_fields:
                 raise ValidationError(f"Unknown field name '{field_name}' in custom field data.")
             try:
@@ -64,7 +76,7 @@ class CustomFieldModel(models.Model):
 
         # Check for missing required values
         for cf in custom_fields.values():
-            if cf.required and cf.name not in self.custom_field_data:
+            if cf.required and cf.name not in self._custom_field_data:
                 raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
 
@@ -139,12 +151,6 @@ class CustomField(BaseModel):
         help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
         "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters.",
     )
-    choices = JSONArrayField(
-        base_field=models.CharField(max_length=100),
-        blank=True,
-        null=True,
-        help_text="Comma-separated list of available choices (for selection fields)",
-    )
 
     objects = CustomFieldManager()
 
@@ -154,19 +160,18 @@ class CustomField(BaseModel):
     def __str__(self):
         return self.label or self.name.replace("_", " ").capitalize()
 
-    def remove_stale_data(self, content_types):
-        """
-        Delete custom field data which is no longer relevant (either because the CustomField is
-        no longer assigned to a model, or because it has been deleted).
-        """
-        for ct in content_types:
-            model = ct.model_class()
-            for obj in model.objects.filter(**{f"custom_field_data__{self.name}__isnull": False}):
-                del obj.custom_field_data[self.name]
-                obj.save()
-
     def clean(self):
         super().clean()
+
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.objects.get(pk=self.pk)
+
+            if self.name != database_object.name:
+                raise ValidationError({"name": "Name cannot be changed once created"})
+
+            if self.type != database_object.type:
+                raise ValidationError({"type": "Type cannot be changed once created"})
 
         # Validate the field's default value (if any)
         if self.default is not None:
@@ -192,15 +197,18 @@ class CustomField(BaseModel):
             )
 
         # Choices can be set only on selection fields
-        if self.choices and self.type != CustomFieldTypeChoices.TYPE_SELECT:
-            raise ValidationError({"choices": "Choices may be set only for custom selection fields."})
-
-        # A selection field must have at least two choices defined
-        if self.type == CustomFieldTypeChoices.TYPE_SELECT and self.choices and len(self.choices) < 2:
-            raise ValidationError({"choices": "Selection fields must specify at least two choices."})
+        if self.choices.exists() and self.type not in (
+            CustomFieldTypeChoices.TYPE_SELECT,
+            CustomFieldTypeChoices.TYPE_MULTISELECT,
+        ):
+            raise ValidationError("Choices may be set only for custom selection fields.")
 
         # A selection field's default (if any) must be present in its available choices
-        if self.type == CustomFieldTypeChoices.TYPE_SELECT and self.default and self.default not in self.choices:
+        if (
+            self.type == CustomFieldTypeChoices.TYPE_SELECT
+            and self.default
+            and self.default not in self.choices.values_list("value", flat=True)
+        ):
             raise ValidationError(
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
@@ -242,32 +250,12 @@ class CustomField(BaseModel):
         elif self.type == CustomFieldTypeChoices.TYPE_DATE:
             field = forms.DateField(required=required, initial=initial, widget=DatePicker())
 
-        # Select
-        elif self.type == CustomFieldTypeChoices.TYPE_SELECT:
-            choices = [(c, c) for c in self.choices]
-            default_choice = self.default if self.default in self.choices else None
-
-            if not required or default_choice is None:
-                choices = add_blank_choice(choices)
-
-            # Set the initial value to the first available choice (if any)
-            if set_initial and default_choice:
-                initial = default_choice
-
-            field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
-            field = field_class(
-                choices=choices,
-                required=required,
-                initial=initial,
-                widget=StaticSelect2(),
-            )
-
         # URL
         elif self.type == CustomFieldTypeChoices.TYPE_URL:
             field = LaxURLField(required=required, initial=initial)
 
         # Text
-        else:
+        elif self.type == CustomFieldTypeChoices.TYPE_TEXT:
             field = forms.CharField(max_length=255, required=required, initial=initial)
             if self.validation_regex:
                 field.validators = [
@@ -276,6 +264,30 @@ class CustomField(BaseModel):
                         message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
                     )
                 ]
+
+        # Select or Multi-select
+        else:
+            choices = [(cfc.value, cfc.value) for cfc in self.choices.all()]
+            default_choice = self.choices.filter(value=self.default).first()
+
+            if not required or default_choice is None:
+                choices = add_blank_choice(choices)
+
+            # Set the initial value to the first available choice (if any)
+            if set_initial and default_choice:
+                initial = default_choice.value
+
+            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+                field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
+                field = field_class(
+                    choices=choices,
+                    required=required,
+                    initial=initial,
+                    widget=StaticSelect2(),
+                )
+            else:
+                field_class = CSVMultipleChoiceField if for_csv_import else forms.MultipleChoiceField
+                field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
 
         field.model = self
         field.label = str(self)
@@ -288,7 +300,7 @@ class CustomField(BaseModel):
         """
         Validate a value according to the field's type validation rules.
         """
-        if value not in [None, ""]:
+        if value not in [None, "", []]:
 
             # Validate text field
             if self.type == CustomFieldTypeChoices.TYPE_TEXT and self.validation_regex:
@@ -325,8 +337,99 @@ class CustomField(BaseModel):
 
             # Validate selected choice
             if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if value not in self.choices:
-                    raise ValidationError(f"Invalid choice ({value}). Available choices are: {', '.join(self.choices)}")
+                if value not in self.choices.values_list("value", flat=True):
+                    raise ValidationError(
+                        f"Invalid choice ({value}). Available choices are: {', '.join(self.choices.values_list('value', flat=True))}"
+                    )
+
+            if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+                if not set(value).issubset(self.choices.values_list("value", flat=True)):
+                    raise ValidationError(
+                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices.values_list('value', flat=True))}"
+                    )
 
         elif self.required:
             raise ValidationError("Required field cannot be empty.")
+
+    def delete(self, *args, **kwargs):
+        """
+        Handle the cleanup of old custom field data when a CustomField is deleted.
+        """
+        content_types = set(self.content_types.values_list("pk", flat=True))
+
+        super().delete(*args, **kwargs)
+
+        delete_custom_field_data.delay(self.name, content_types)
+
+
+class CustomFieldChoice(BaseModel):
+    """
+    The custom field choice is used to store the possible set of values for a selection type custom field
+    """
+
+    field = models.ForeignKey(
+        to="extras.CustomField",
+        on_delete=models.CASCADE,
+        related_name="choices",
+        limit_choices_to=models.Q(
+            type__in=[CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]
+        ),
+    )
+    value = models.CharField(max_length=100)
+    weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
+
+    class Meta:
+        ordering = ["field", "weight", "value"]
+        unique_together = ["field", "value"]
+
+    def __str__(self):
+        return self.value
+
+    def clean(self):
+        if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
+            raise ValidationError("Custom field choices can only be assigned to selection fields.")
+
+    def save(self, *args, **kwargs):
+        """
+        When a custom field choice is saved, perform logic that will update data across all custom field data.
+        """
+        if self.present_in_database:
+            database_object = self.__class__.objects.get(pk=self.pk)
+        else:
+            database_object = self
+
+        super().save(*args, **kwargs)
+
+        if self.value != database_object.value:
+            update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+
+    def delete(self, *args, **kwargs):
+        """
+        When a custom field choice is deleted, remove references to in custom field data
+        """
+        if self.field.default:
+            # Cannot delete the choice if it is the default value.
+            if self.field.type == CustomFieldTypeChoices.TYPE_SELECT and self.field.default == self.value:
+                raise models.ProtectedError(
+                    self, "Cannot delete this choice because it is the default value for the field."
+                )
+            elif self.value in self.field.default:
+                raise models.ProtectedError(
+                    self, "Cannot delete this choice because it is one of the default values for the field."
+                )
+
+        if self.field.type == CustomFieldTypeChoices.TYPE_SELECT:
+            # Check if this value is in active use in a select field
+            for ct in self.field.content_types.all():
+                model = ct.model_class()
+                if model.objects.filter(**{f"_custom_field_data__{self.field.name}": self.value}).exists():
+                    raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
+
+        else:
+            # Check if this value is in active use in a multi-select field
+            for ct in self.field.content_types.all():
+                model = ct.model_class()
+                if model.objects.filter(**{f"_custom_field_data__{self.field.name}__contains": self.value}).exists():
+                    raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
+
+        super().delete(*args, **kwargs)

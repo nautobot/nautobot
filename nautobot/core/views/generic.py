@@ -131,7 +131,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         headers = self.queryset.model.csv_headers.copy()
 
         # Add custom field headers, if any
-        if hasattr(self.queryset.model, "custom_field_data"):
+        if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
                 headers.append(custom_field.name)
                 custom_fields.append(custom_field.name)
@@ -878,9 +878,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             # Update custom fields
                             for name in custom_fields:
                                 if name in form.nullable_fields and name in nullified_fields:
-                                    obj.custom_field_data[name] = None
+                                    obj.cf[name] = None
                                 elif form.cleaned_data.get(name) not in (None, ""):
-                                    obj.custom_field_data[name] = form.cleaned_data[name]
+                                    obj.cf[name] = form.cleaned_data[name]
 
                             obj.full_clean()
                             obj.save()

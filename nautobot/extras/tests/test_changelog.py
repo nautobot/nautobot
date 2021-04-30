@@ -4,7 +4,7 @@ from rest_framework import status
 
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import *
-from nautobot.extras.models import CustomField, ObjectChange, Status, Tag
+from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
 from nautobot.utilities.testing import APITestCase
 from nautobot.utilities.testing.utils import post_data
 from nautobot.utilities.testing.views import ModelViewTestCase
@@ -27,10 +27,12 @@ class ChangeLogViewTest(ModelViewTestCase):
             type=CustomFieldTypeChoices.TYPE_SELECT,
             name="my_field_select",
             required=False,
-            choices=["Bar", "Foo"],
         )
         cf_select.save()
         cf_select.content_types.set([ct])
+
+        CustomFieldChoice.objects.create(field=cf_select, value="Bar")
+        CustomFieldChoice.objects.create(field=cf_select, value="Foo")
 
     def test_create_object(self):
         tags = self.create_tags("Tag 1", "Tag 2")
@@ -116,7 +118,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         site = Site(
             name="Test Site 1",
             slug="test-site-1",
-            custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
+            _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         site.save()
         self.create_tags("Tag 1", "Tag 2")
@@ -154,10 +156,12 @@ class ChangeLogAPITest(APITestCase):
             type=CustomFieldTypeChoices.TYPE_SELECT,
             name="my_field_select",
             required=False,
-            choices=["Bar", "Foo"],
         )
         cf_select.save()
         cf_select.content_types.set([ct])
+
+        CustomFieldChoice.objects.create(field=cf_select, value="Bar")
+        CustomFieldChoice.objects.create(field=cf_select, value="Foo")
 
         # Create some tags
         Tag.objects.create(name="Tag 1", slug="tag-1")
@@ -240,7 +244,7 @@ class ChangeLogAPITest(APITestCase):
             name="Test Site 1",
             slug="test-site-1",
             status=self.statuses.get(slug="active"),
-            custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
+            _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         site.save()
         site.tags.set(*Tag.objects.all()[:2])
