@@ -465,7 +465,7 @@ class IPAddressFilterSet(
         field_name="name",
         label="Device (name)",
     )
-    device_id = MultiValueNumberFilter(
+    device_id = MultiValueCharFilter(
         method="filter_device",
         field_name="pk",
         label="Device (ID)",
@@ -475,7 +475,7 @@ class IPAddressFilterSet(
         field_name="name",
         label="Virtual machine (name)",
     )
-    virtual_machine_id = MultiValueNumberFilter(
+    virtual_machine_id = MultiValueCharFilter(
         method="filter_virtual_machine",
         field_name="pk",
         label="Virtual machine (ID)",
