@@ -48,7 +48,7 @@ class InstalledPluginsAPIView(APIView):
             "author": plugin_app_config.author,
             "author_email": plugin_app_config.author_email,
             "description": plugin_app_config.description,
-            "verison": plugin_app_config.version,
+            "version": plugin_app_config.version,
         }
 
     def get(self, request, format=None):
@@ -69,7 +69,7 @@ class PluginsAPIRootView(APIView):
         api_app_name = f"{app_config.name}-api"
         try:
             entry = (
-                getattr(app_config, "base_url", app_config.label),
+                getattr(app_config, "base_url", app_config.name.replace("_", "-")),
                 reverse(
                     f"plugins-api:{api_app_name}:api-root",
                     request=request,
