@@ -37,11 +37,12 @@ class VirtualChassisTest(TestCase):
         self.device.vc_position = 3
         self.device.save()
         self.assertEqual(self.device.vc_position, 3)
-        VirtualChassis.objects.create(name="Virtual Chassis 1", master=self.device, domain="domain-1")
+        virtualchassis = VirtualChassis.objects.create(name="Virtual Chassis 1", master=self.device, domain="domain-1")
         self.device.refresh_from_db()
         self.assertEqual(self.device.vc_position, 3)
+        self.assertEqual(self.device.virtual_chassis, virtualchassis)
 
-    def tert_master_device_vc_position_is_0(self):
+    def test_master_device_vc_position_is_0(self):
         """Test device assigned vc_position 0 keeps assignment after being set to master.
 
         This test is for https://github.com/nautobot/nautobot/issues/393
@@ -49,9 +50,10 @@ class VirtualChassisTest(TestCase):
         self.device.vc_position = 0
         self.device.save()
         self.assertEqual(self.device.vc_position, 0)
-        VirtualChassis.objects.create(name="Virtual Chassis 1", master=self.device, domain="domain-1")
+        virtualchassis = VirtualChassis.objects.create(name="Virtual Chassis 1", master=self.device, domain="domain-1")
         self.device.refresh_from_db()
         self.assertEqual(self.device.vc_position, 0)
+        self.assertEqual(self.device.virtual_chassis, virtualchassis)
 
     def test_master_device_null_vc_assignment(self):
         """Test device with null vc_position gets assigned 1 after being set to master.
@@ -59,6 +61,7 @@ class VirtualChassisTest(TestCase):
         This test is for https://github.com/nautobot/nautobot/issues/393
         """
         self.assertIsNone(self.device.vc_position)
-        VirtualChassis.objects.create(name="Virtual Chassis 1", master=self.device, domain="domain-1")
+        virtualchassis = VirtualChassis.objects.create(name="Virtual Chassis 1", master=self.device, domain="domain-1")
         self.device.refresh_from_db()
         self.assertEqual(self.device.vc_position, 1)
+        self.assertEqual(self.device.virtual_chassis, virtualchassis)
