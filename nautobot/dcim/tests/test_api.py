@@ -1770,30 +1770,6 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
             "domain": "newdomain",
         }
 
-    def test_master_device_vc_assignment(self):
-        """Test device assigned vc_position keeps assignment after being set to master.
-
-        This test is for https://github.com/nautobot/nautobot/issues/393
-        """
-        device = Device.objects.get(name="Device 12")
-        device.vc_position = 3
-        device.save()
-        self.assertEquals(device.vc_position, 3)
-        VirtualChassis.objects.create(name="Virtual Chassis 1", master=device, domain="domain-1")
-        device = Device.objects.get(name="Device 12")
-        self.assertEquals(device.vc_position, 3)
-
-    def test_master_device_null_vc_assignment(self):
-        """Test device with null vc_position gets assigned 1 after being set to master.
-
-        This test is for https://github.com/nautobot/nautobot/issues/393
-        """
-        device = Device.objects.get(name="Device 11")
-        self.assertIsNone(device.vc_position)
-        VirtualChassis.objects.create(name="Virtual Chassis 1", master=device, domain="domain-1")
-        device = Device.objects.get(name="Device 11")
-        self.assertEquals(device.vc_position, 1)
-
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel

@@ -96,7 +96,7 @@ def assign_virtualchassis_master(instance, created, **kwargs):
     if created and instance.master:
         master = Device.objects.get(pk=instance.master.pk)
         master.virtual_chassis = instance
-        if not instance.master.vc_position:
+        if instance.master.vc_position is None:
             master.vc_position = 1
         master.save()
 
