@@ -29,7 +29,7 @@ The following tags are available:
 * `latest-py${PYTHON_VER}` these images are built from the latest code in the main branch (should be the latest released version) based on the python version ($PYTHON_VER) docker container
 * `develop` these images are built from the latest code in the develop branch on each commit based on the default python version (3.6) docker container
 * `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch based on the default python version (3.6) docker container
-* `develop-latest-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
+* `develop-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
 * `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the develop branch based on the python version ($PYTHON_VER) docker container
 
 To pull a specific tag you can append the image name with `:tag` for example, to pull the 1.0.0 image:
@@ -127,6 +127,8 @@ At this time adding Nautobot plugins to the existing Docker image is not support
 FROM ghcr.io/nautobot/nautobot
 
 RUN pip install nautobot-chatops
+
+COPY nautobot_config.py /opt/nautobot/nautobot_config.py
 ```
 
 ## Building the Image
