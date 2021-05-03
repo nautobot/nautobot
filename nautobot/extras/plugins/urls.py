@@ -30,7 +30,7 @@ plugin_admin_patterns = [
 for plugin_path in settings.PLUGINS:
     plugin_name = plugin_path.split(".")[-1]
     app = apps.get_app_config(plugin_name)
-    base_url = getattr(app, "base_url", app.label)
+    base_url = getattr(app, "base_url") or app.label.replace("_", "-")
 
     # Check if the plugin specifies any base URLs
     urlpatterns = import_object(f"{plugin_path}.urls.urlpatterns")
