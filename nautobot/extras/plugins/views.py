@@ -71,7 +71,7 @@ class PluginsAPIRootView(APIView):
         api_app_name = f"{app_config.name}-api"
         try:
             entry = (
-                getattr(app_config, "base_url") or app_config.label.replace("_", "-"),
+                app_config.base_url or app_config.label,
                 reverse(
                     f"plugins-api:{api_app_name}:api-root",
                     request=request,
