@@ -274,7 +274,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
     )
 
 
-@register.inclusion_tag("utilities/templatetags/utilization_graph_raw_data.html")
+@register.inclusion_tag("utilities/templatetags/utilization_graph.html")
 def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, danger_threshold=90):
     """Display a horizontal bar graph indicating a percentage of utilization.
 

@@ -1,3 +1,5 @@
+{% load helpers %}
+
 {% with relationships=object.get_relationships_data %}
     {% if relationships.source or relationships.destination %}
         <div class="panel panel-default">
@@ -15,7 +17,9 @@
                             </td>
                         {% elif value.has_many and value.queryset.count %}
                             <td>
-                                <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.slug}}&{{side}}_id={{object.id}}">{{ value.queryset.count }}</a>
+                                <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.slug}}&{{side}}_id={{object.id}}">
+                                    {{ value.queryset.count }} {{ value.peer_type.model_class|meta:"verbose_name_plural" }}
+                                </a>
                             </td>
                         {% else %}
                             <td>

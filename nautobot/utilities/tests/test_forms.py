@@ -1,8 +1,8 @@
 from django import forms
 from django.test import TestCase
 
-from nautobot.ipam.forms import IPAddressCSVForm
-from nautobot.utilities.forms.fields import CSVDataField
+from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm
+from nautobot.utilities.forms.fields import CSVDataField, NumericArrayField
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
@@ -405,3 +405,27 @@ class CSVDataFieldTest(TestCase):
         """
         with self.assertRaises(forms.ValidationError):
             self.field.clean(input)
+
+
+class NumericArrayFieldTest(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.field = ServiceForm().fields["ports"]
+
+    def test_valid_input(self):
+        # Mapping of input => expected
+        tests = {
+            "80,443-444": [80, 443, 444],
+            "1024-1028,31337": [1024, 1025, 1026, 1027, 1028, 31337],
+        }
+        for test, expected in tests.items():
+            self.assertEqual(self.field.clean(test), expected)
+
+    def test_invalid_input(self):
+        tests = [
+            "pizza",
+            "-41",
+        ]
+        for test in tests:
+            with self.assertRaises(forms.ValidationError):
+                self.field.clean(test)

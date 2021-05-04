@@ -8,10 +8,10 @@ from django import forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.forms.fields import JSONField as _JSONField, InvalidJSONInput
+from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Count
-from django.forms import BoundField
+from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
 from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
@@ -19,7 +19,7 @@ from nautobot.utilities.choices import unpack_grouped_choices
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import *
-from .utils import expand_alphanumeric_pattern, expand_ipaddress_pattern
+from .utils import expand_alphanumeric_pattern, expand_ipaddress_pattern, parse_numeric_range
 
 __all__ = (
     "CommentField",
@@ -36,6 +36,7 @@ __all__ = (
     "JSONField",
     "JSONArrayFormField",
     "MultipleContentTypeField",
+    "NumericArrayField",
     "LaxURLField",
     "SlugField",
     "TagFilterField",
@@ -369,7 +370,7 @@ class DynamicModelChoiceMixin:
 
     def __init__(
         self,
-        display_field="name",
+        display_field="display",
         query_params=None,
         initial_params=None,
         null_option=None,
@@ -596,3 +597,14 @@ class JSONArrayFormField(forms.JSONField):
         if initial in self.empty_values and value in self.empty_values:
             return False
         return super().has_changed(initial, data)
+
+
+class NumericArrayField(SimpleArrayField):
+    """Basic array field that takes comma-separated or hyphenated ranges."""
+
+    def to_python(self, value):
+        try:
+            value = ",".join([str(n) for n in parse_numeric_range(value)])
+        except ValueError as error:
+            raise ValidationError(error)
+        return super().to_python(value)

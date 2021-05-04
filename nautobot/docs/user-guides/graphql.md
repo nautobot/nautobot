@@ -24,7 +24,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
       "id": "c8886c88-6eff-4c4f-a079-4ef16b53d4f6",
       "url": "https://demo.nautobot.com/api/dcim/devices/c8886c88-6eff-4c4f-a079-4ef16b53d4f6/",
       "name": "ams-edge-02",
-      "display_name": "ams-edge-02",
+      "display": "ams-edge-02",
       "device_type": {
         "id": "244ea351-3c7a-4d23-ba80-5db6b65312cc",
         "url": "https://demo.nautobot.com/api/dcim/device-types/244ea351-3c7a-4d23-ba80-5db6b65312cc/",
@@ -36,7 +36,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
         },
         "model": "DCS-7280CR2-60",
         "slug": "dcs-7280cr2-60",
-        "display_name": "Arista DCS-7280CR2-60"
+        "display": "Arista DCS-7280CR2-60"
       },
       "device_role": {
         "id": "a3637471-6b4d-4f5a-a249-838d621abe60",
@@ -58,7 +58,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
         "id": "bff3f7af-bd77-49b6-a57a-9c4b8fc7673a",
         "url": "https://demo.nautobot.com/api/dcim/racks/bff3f7af-bd77-49b6-a57a-9c4b8fc7673a/",
         "name": "ams-102",
-        "display_name": "ams-102"
+        "display": "ams-102"
       },
       "position": 40,
       "face": {
