@@ -32,7 +32,8 @@ class Command(TemplateCommand):
             dest="files",
             action="append",
             default=[],
-            help="Additional file name(s) to render. Separate multiple file names " "with commas, or use -n multiple times.",
+            help="Additional file name(s) to render. Separate multiple file names "
+            "with commas, or use -n multiple times.",
         )
 
     def handle(self, **options):
