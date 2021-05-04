@@ -347,8 +347,8 @@ This command is similar to the django-admin [startapp](https://docs.djangoprojec
 Without passing in the destination directory, `nautobot-server startplugin` will use your current directory and the `name` argument provided to create a new directory. We recommend providing a directory so that the plugin can be installed or published easily. Here is an example:
 
 ```bash
-mkdir -p ~/my-plugin/my-plugin
-nautobot-server startplugin my-plugin ~/my-plugin/my-plugin
+mkdir -p ~/myplugin/myplugin
+nautobot-server startplugin myplugin ~/myplugin/myplugin
 ```
 
 Additional options can be found in the Django [documentation](https://docs.djangoproject.com/en/dev/ref/django-admin/#startapp).
