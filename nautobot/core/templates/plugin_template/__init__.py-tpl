@@ -9,7 +9,8 @@ class {{ camel_case_app_name }}Config(PluginConfig):
     verbose_name = "{{ app_name }}"  # Human-friendly name for the plugin.
     base_url = "{{ app_name }}"  # (Optional) Base path to use for plugin URLs. Defaulting to app_name.
     required_settings = []  # A list of any configuration parameters that must be defined by the user.
-    min_version = "1.0.0b4"  # Minimum version of Nautobot with which the plugin is compatible.
+    min_version = "1.0.0"  # Minimum version of Nautobot with which the plugin is compatible.
+    max_version = "1.999"  # Maximum version of Nautobot with which the plugin is compatible.
     default_settings = {}  # A dictionary of configuration parameters and their default values.
     caching_config = {}  # Plugin-specific cache configuration.
 

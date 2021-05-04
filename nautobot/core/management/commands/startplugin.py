@@ -12,7 +12,7 @@ class Command(TemplateCommand):
     missing_args_message = "You must provide an plugin name."
 
     def add_arguments(self, parser):
-        default_template = os.path.join(settings.BASE_DIR, "core/templates/plugin_template")
+        default_template = os.path.join(settings.BASE_DIR, "core", "templates", "plugin_template")
         parser.add_argument("name", help="Name of the plugin.")
         parser.add_argument("directory", nargs="?", help="Optional destination directory")
         parser.add_argument("--template", default=default_template, help="The path or URL to load the template from.")
@@ -32,7 +32,7 @@ class Command(TemplateCommand):
             dest="files",
             action="append",
             default=[],
-            help="The file name(s) to render. Separate multiple file names " "with commas, or use -n multiple times.",
+            help="Additional file name(s) to render. Separate multiple file names " "with commas, or use -n multiple times.",
         )
 
     def handle(self, **options):
