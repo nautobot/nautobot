@@ -60,6 +60,11 @@ The top level is the project root. Immediately within the root should exist seve
 
 The plugin source directory contains all of the actual Python code and other resources used by your plugin. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `PluginConfig` class.
 
+!!! note
+    Nautobot includes a command to help create the plugin directory:  
+    `nautobot-server startplugin [app_name]`  
+    Please see the [Nautobot Server Guide](../administration/nautobot-server.md#startplugin) for more information.
+
 ### Create pyproject.toml
 
 #### Poetry Init (Recommended)

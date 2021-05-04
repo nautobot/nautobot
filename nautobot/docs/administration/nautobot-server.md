@@ -383,3 +383,13 @@ Listening on port http://localhost:9000. Stop with CONTROL-C.
 ```
 
 Please see the guide on [Troubleshooting Webhooks](../models/extras/webhook.md#troubleshooting) for more information.
+
+### `startplugin`
+
+`nautobot-server startplugin [app_name]`
+
+Create a new plugin with `app_name`.
+
+This command is just like the django-admin [startapp](https://docs.djangoproject.com/en/dev/ref/django-admin/#startapp). But has the template directory set to `nautobot/core/template/plugin_template`. This command assists with creating the Nautobot plugin folder structure.
+
+Additional options can be found in the django [documentation](https://docs.djangoproject.com/en/dev/ref/django-admin/#startapp).
