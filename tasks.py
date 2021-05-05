@@ -50,11 +50,15 @@ namespace.configure(
             "compose_override_file": "docker-compose.dev.yml",
             "docker_image_names_main": [
                 "networktocode/nautobot",
+                "ghcr.io/nautobot/nautobot",
                 "networktocode/nautobot-dev",
+                "ghcr.io/nautobot/nautobot-dev",
             ],
             "docker_image_names_develop": [
                 "networktocode/nautobot",
+                "ghcr.io/nautobot/nautobot",
                 "networktocode/nautobot-dev",
+                "ghcr.io/nautobot/nautobot-dev",
             ],
         }
     }
