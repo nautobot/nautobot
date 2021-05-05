@@ -524,7 +524,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(site_names, ["Site 1", "Site 2"])
 
 
-class GraphQLQuery(TestCase):
+class GraphQLQueryTest(TestCase):
     def setUp(self):
         """Initialize the Database with some datas."""
         super().setUp()

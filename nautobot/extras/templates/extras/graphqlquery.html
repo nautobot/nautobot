@@ -22,7 +22,7 @@
 
     <div class="pull-right noprint">
         {% plugin_buttons object %}
-        <a class="btn btn-primary" href="{% url 'graphql' %}?id={{ object.id }}#query={{ object.query|urlencode }}&variables={{ object.variables|urlencode }}">Open in GraphiQL</a>
+        <a class="btn btn-primary" href="{% url 'graphql' %}?id={{ object.id }}#query={{ object.query|urlencode }}&variables={{ object.variables|to_json|urlencode }}">Open in GraphiQL</a>
         {% if perms.extras.add_graphqlquery %}
             {% clone_button object %}
         {% endif %}
@@ -70,12 +70,12 @@
                     <td><span>{{ object.slug }}</span></td>
                 </tr>
                 <tr>
-                    <td>Query Variables</td>
-                    <td><textarea id="query_variables" class="form-control">{{ object.variables|to_json }}</textarea></td>
-                </tr>
-                <tr>
                     <td>Query</td>
                     <td><pre id="query">{{ object.query }}</pre></td>
+                </tr>
+                <tr>
+                    <td>Query Variables</td>
+                    <td><textarea id="query_variables" class="form-control">{{ object.variables|to_json }}</textarea></td>
                 </tr>
             </table>
         </div>
