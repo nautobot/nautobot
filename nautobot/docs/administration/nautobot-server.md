@@ -342,7 +342,7 @@ Please see the guide on [Deploying Nautobot](../installation/wsgi.md) for our re
 
 Create a new plugin with `name`.
 
-This command is similar to the django-admin [startapp](https://docs.djangoproject.com/en/dev/ref/django-admin/#startapp) command, but with a default template directory of `nautobot/core/template/plugin_template`. This command assists with creating a basic file structure for beginning development of a new Nautobot plugin.
+This command is similar to the django-admin [startapp](https://docs.djangoproject.com/en/dev/ref/django-admin/#startapp) command, but with a default template directory (`--template`) of `nautobot/core/template/plugin_template`. This command assists with creating a basic file structure for beginning development of a new Nautobot plugin.
 
 Without passing in the destination directory, `nautobot-server startplugin` will use your current directory and the `name` argument provided to create a new directory. We recommend providing a directory so that the plugin can be installed or published easily. Here is an example:
 
@@ -351,7 +351,7 @@ mkdir -p ~/myplugin/myplugin
 nautobot-server startplugin myplugin ~/myplugin/myplugin
 ```
 
-Additional options can be found in the Django [documentation](https://docs.djangoproject.com/en/dev/ref/django-admin/#startapp).
+Additional options such as `--name` or `--extension` can be found in the Django [documentation](https://docs.djangoproject.com/en/dev/ref/django-admin/#startapp).
 
 ### `trace_paths`
 
