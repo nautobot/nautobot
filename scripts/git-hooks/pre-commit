@@ -35,8 +35,17 @@ if [ $? != 0 ]; then
 	EXIT=1
 fi
 
+HADOLINT_PATH=$(which hadolint)
+if [ -x $HADOLINT_PATH ]; then
+	echo "Checking Dockerfile..."
+	hadolint docker/Dockerfile
+	if [ $? != 0 ]; then
+		EXIT=1
+	fi
+fi
+
 if [ $EXIT != 0 ]; then
-  printf "${RED}COMMIT FAILED${NOCOLOR}\n"
+	printf "${RED}COMMIT FAILED${NOCOLOR}\n"
 fi
 
 exit $EXIT

@@ -10,6 +10,7 @@ local_requirements.txt
 !upgrade.sh
 fabfile.py
 gunicorn.py
+invoke.yml
 nautobot.log
 nautobot.pid
 .DS_Store

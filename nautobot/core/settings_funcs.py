@@ -1,4 +1,5 @@
 """Helper functions to detect settings after app initialization.  AKA 'dynamic settings'"""
+from distutils.util import strtobool
 from functools import lru_cache
 
 
@@ -37,3 +38,17 @@ def ldap_auth_enabled(auth_backends):
 @lru_cache(maxsize=5)
 def _ldap_auth_enabled(auth_backends):
     return "django_auth_ldap.backend.LDAPBackend" in auth_backends
+
+
+def is_truthy(arg):
+    """Convert "truthy" strings into Booleans.
+    Examples:
+        >>> is_truthy('yes')
+        True
+    Args:
+        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
+        f, false, off and 0. Raises ValueError if val is anything else.
+    """
+    if isinstance(arg, bool):
+        return arg
+    return bool(strtobool(str(arg)))

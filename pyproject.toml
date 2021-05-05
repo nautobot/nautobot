@@ -103,6 +103,8 @@ invoke = "~1.5.0"
 markdown-include = "~0.6.0"
 # Rendering docs to HTML
 mkdocs = "~1.1.2"
+# Integration Tests
+requests = "~2.25.1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
