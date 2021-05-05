@@ -2,6 +2,7 @@
 
 from nautobot.extras.plugins import PluginConfig
 
+
 class {{ camel_case_app_name }}Config(PluginConfig):
     """Plugin configuration for the {{ app_name }} plugin."""
 
