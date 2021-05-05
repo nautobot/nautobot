@@ -7,9 +7,6 @@ nautobot:
   compose_override_file: "docker-compose.override.yml"
   docker_image_names_main:
     - "networktocode/nautobot"
-    - "ghcr.io/nautobot/nautobot"
   docker_image_names_develop:
     - "networktocode/nautobot"
-    - "ghcr.io/nautobot/nautobot"
     - "networktocode/nautobot-dev"
-    - "ghcr.io/nautobot/nautobot-dev"
