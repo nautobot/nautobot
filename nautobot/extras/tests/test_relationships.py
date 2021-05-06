@@ -106,6 +106,30 @@ class RelationshipTest(RelationshipBaseTest):
         with self.assertRaises(ValidationError):
             m2m.clean()
 
+        m2m = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=self.site_ct,
+            source_filter={"site": "not a list"},
+            destination_type=self.rack_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+
+        with self.assertRaises(ValidationError):
+            m2m.clean()
+
+        m2m = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=self.site_ct,
+            source_filter={"site": ["not a valid site"]},
+            destination_type=self.rack_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+
+        with self.assertRaises(ValidationError):
+            m2m.clean()
+
     def test_clean_same_object(self):
         m2m = Relationship(
             name="Another Vlan to Rack",
@@ -123,14 +147,13 @@ class RelationshipTest(RelationshipBaseTest):
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=self.site_ct,
-            source_filter={"region": "myregion"},
+            source_filter={"name": ["site-b"]},
             destination_type=self.rack_ct,
-            destination_filter={"site": "mysite"},
+            destination_filter={"site": ["site-a"]},
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         m2m.clean()
-
         self.assertTrue(True)
 
     def test_get_label_input(self):

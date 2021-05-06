@@ -332,16 +332,27 @@ class Relationship(BaseModel, ChangeLoggedModel):
             side_model = getattr(self, f"{side}_type").model_class()
             model_name = side_model._meta.label
             if not isinstance(filter, dict):
-                raise ValidationError(f"Filter for {model_name} must be a dictionary")
+                raise ValidationError({f"{side}_filter": f"Filter for {model_name} must be a dictionary"})
 
-            filterset = get_filterset_for_model(side_model)
-            if not filterset:
-                raise ValidationError(f"Filter are not supported for {model_name} object (Unable to find a FilterSet)")
+            filterset_class = get_filterset_for_model(side_model)
+            if not filterset_class:
+                raise ValidationError(
+                    {f"{side}_filter": f"Filter are not supported for {model_name} object (Unable to find a FilterSet)"}
+                )
+            filterset = filterset_class(filter, side_model.objects.all())
+
+            error_messages = []
+            if filterset.errors:
+                for key in filterset.errors:
+                    error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
 
             filterset_params = set(filterset.get_filters().keys())
             for key in filter.keys():
                 if key not in filterset_params:
-                    raise ValidationError(f"'{key}' is not a valid filter parameter for {model_name} object")
+                    error_messages.append(f"'{key}' is not a valid filter parameter for {model_name} object")
+
+            if error_messages:
+                raise ValidationError({f"{side}_filter": error_messages})
 
         # If the model already exist, ensure that it's not possible to modify the source or destination type
         if self.present_in_database:
