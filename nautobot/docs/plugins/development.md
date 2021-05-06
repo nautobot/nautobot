@@ -60,6 +60,11 @@ The top level is the project root. Immediately within the root should exist seve
 
 The plugin source directory contains all of the actual Python code and other resources used by your plugin. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `PluginConfig` class.
 
+!!! note
+    Nautobot includes a command to help create the plugin directory:  
+    `nautobot-server startplugin [app_name]`  
+    Please see the [Nautobot Server Guide](../administration/nautobot-server.md#startplugin) for more information.
+
 ### Create pyproject.toml
 
 #### Poetry Init (Recommended)
@@ -196,8 +201,10 @@ Below is an example `models.py` file containing a model with two character field
 # models.py
 from django.db import models
 
+from nautobot.core.models import BaseModel
 
-class Animal(models.Model):
+
+class Animal(BaseModel):
     """Base model for animals."""
 
     name = models.CharField(max_length=50)
@@ -272,11 +279,12 @@ To expose a model, simply register it using the `extras_features("graphql")` dec
 # models.py
 from django.db import models
 
+from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
 
 
 @extras_features("graphql")
-class Animal(models.Model):
+class Animal(BaseModel):
     """Base model for animals."""
 
     name = models.CharField(max_length=50)

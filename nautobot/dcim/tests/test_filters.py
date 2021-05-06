@@ -38,7 +38,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -2299,6 +2299,10 @@ class InterfaceTestCase(TestCase):
             ),  # For cable connections
         )
 
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1)
+        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2)
+        vlan3 = VLAN.objects.create(name="VLAN 3", vid=3)
+
         interfaces = (
             Interface.objects.create(
                 device=devices[0],
@@ -2309,6 +2313,7 @@ class InterfaceTestCase(TestCase):
                 mtu=100,
                 mode=InterfaceModeChoices.MODE_ACCESS,
                 mac_address="00-00-00-00-00-01",
+                untagged_vlan=vlan1,
                 description="First",
             ),
             Interface.objects.create(
@@ -2320,6 +2325,7 @@ class InterfaceTestCase(TestCase):
                 mtu=200,
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 mac_address="00-00-00-00-00-02",
+                untagged_vlan=vlan2,
                 description="Second",
             ),
             Interface.objects.create(
@@ -2355,6 +2361,10 @@ class InterfaceTestCase(TestCase):
                 mgmt_only=False,
             ),
         )
+
+        # Tagged VLAN interface is "Interface 6"
+        tagged_interface = interfaces[-1]
+        tagged_interface.tagged_vlans.add(vlan3)
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
@@ -2458,6 +2468,14 @@ class InterfaceTestCase(TestCase):
             ]
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_vlan(self):
+        params = {"vlan": VLAN.objects.first().vid}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_vlan_id(self):
+        params = {"vlan_id": VLAN.objects.last().id}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class FrontPortTestCase(TestCase):

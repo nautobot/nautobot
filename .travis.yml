@@ -21,6 +21,8 @@ jobs:
     - python: "3.9"
 before_install:
   - pip install poetry
+  - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+  - chmod +x /home/travis/bin/hadolint
 install:
   - poetry config virtualenvs.create false
   # Poetry 1.1.0 added parallel installation as an option;
