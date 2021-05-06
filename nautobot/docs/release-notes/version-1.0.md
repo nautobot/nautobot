@@ -4,6 +4,32 @@ This document describes all new features and changes in Nautobot 1.0, a divergen
 
 Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation as well.
 
+## v1.0.1 (2021-05-06)
+
+### Added
+
+- [#242](https://github.com/nautobot/nautobot/issues/242) - Added a production-ready `Dockerfile` for clustered deployment
+- [#356](https://github.com/nautobot/nautobot/issues/356) - Added a new `nautobot-server startplugin` management command to ease plugin development
+- [#366](https://github.com/nautobot/nautobot/pull/366) - Added GraphQL filter tests for `interfaces` queries and added missing unit tests for `Interface` filtersets
+
+### Changed
+
+- [#362](https://github.com/nautobot/nautobot/pull/362) - Updated sample code in plugin development guide to inherit from `BaseModel`
+
+### Fixed
+
+- [#15](https://github.com/nautobot/nautobot/issues/15) - Added documentation for plugins using generic models to get change logging using `ChangeLoggedModel`
+- [#336](https://github.com/nautobot/nautobot/issues/336) - Fixed `nautobot.utilities.api.get_serializer_for_model` to now support the plugins namespace
+- [#337](https://github.com/nautobot/nautobot/issues/337) - Fixed `nautobot.extras.plugins.api.views.PluginsAPIRootView` no longer creates null entries when `PluginConfig` does not define a `base_url`
+- [#365](https://github.com/nautobot/nautobot/issues/365) - Fixed incorrect field types on GraphQL ID fields
+- [#382](https://github.com/nautobot/nautobot/issues/382) - Fixed choices returned from `OPTIONS` requests returning mixed use of `display` and `display_name` fields.
+- [#393](https://github.com/nautobot/nautobot/issues/393) - Fixed creating a `VirtualChassis` with a master device changes the master device's `vc_position`
+- [#398](https://github.com/nautobot/nautobot/issues/398) - Fixed `VirtualChassis` edit view to now show "Update" button vs. "Create"
+- [#399](https://github.com/nautobot/nautobot/issues/399) - Fixed `nautobot.utilities.utils.get_filterset_for_model` to now support the plugins namespace
+- [#400](https://github.com/nautobot/nautobot/issues/400) - Fixed the class_path format for Jobs API usage documentation not being clear enough
+- [#402](https://github.com/nautobot/nautobot/issues/402) - Docs build requirements will now install `markdown-include` version from PyPI instead of GitHub
+- [#409](https://github.com/nautobot/nautobot/pull/409) - Fixed misspelling: "Datbase" --> "Database" in `nautobot_config.py.j2`
+
 ## v1.0 (2021-04-26)
 
 ### Added

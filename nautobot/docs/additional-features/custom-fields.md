@@ -52,7 +52,7 @@ When retrieving an object via the REST API, all of its custom data will be inclu
 ```json
 {
     "id": 123,
-    "url": "http://localhost:8000/api/dcim/sites/123/",
+    "url": "http://localhost:8080/api/dcim/sites/123/",
     "name": "Raleigh 42",
     ...
     "custom_fields": {

@@ -349,6 +349,12 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 --data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
 ```
 
+The URL contains the `class_path` element that is composed of 3 elements, from the above example:
+
+- `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `example` - path to the job definition file; in this example, a locally installed `example.py` file. For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename`.
+- `MyJobWithVars` - name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:

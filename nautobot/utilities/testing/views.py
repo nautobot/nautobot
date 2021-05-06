@@ -1,6 +1,7 @@
 import json
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
@@ -226,6 +227,8 @@ class ModelViewTestCase(ModelTestCase):
         Return the base format for a URL for the test's model. Override this to test for a model which belongs
         to a different app (e.g. testing Interfaces within the virtualization app).
         """
+        if self.model._meta.app_label in settings.PLUGINS:
+            return "plugins:{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
         return "{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
 
     def _get_url(self, action, instance=None):

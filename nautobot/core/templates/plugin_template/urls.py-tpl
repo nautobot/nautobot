@@ -1,0 +1,9 @@
+"""Urls for {{ app_name }}."""
+
+from django.urls import path
+
+from {{ app_name }} import views
+
+urlpatterns = [
+    # path('random/', views.RandomAnimalView.as_view(), name='random_animal'),
+]
