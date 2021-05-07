@@ -60,6 +60,11 @@ The top level is the project root. Immediately within the root should exist seve
 
 The plugin source directory contains all of the actual Python code and other resources used by your plugin. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `PluginConfig` class.
 
+!!! note
+    Nautobot includes a command to help create the plugin directory:  
+    `nautobot-server startplugin [app_name]`  
+    Please see the [Nautobot Server Guide](../administration/nautobot-server.md#startplugin) for more information.
+
 ### Create pyproject.toml
 
 #### Poetry Init (Recommended)
@@ -156,7 +161,7 @@ All required settings must be configured by the user. If a configuration paramet
 
 ### Install the Plugin for Development
 
-The plugin needs to be installed into the same python environment where Nautobot is, so that we can get access to `nautobot-server` command, and also so that the nautobot-server is aware of the new plugin.  
+The plugin needs to be installed into the same python environment where Nautobot is, so that we can get access to `nautobot-server` command, and also so that the nautobot-server is aware of the new plugin.
 
 If you installed Nautobot using Poetry, then go to the root directory of your clone of the Nautobot repository and run `poetry shell` there.  Afterward, return to the root directory of your plugin to continue development.
 
@@ -190,7 +195,22 @@ If your plugin introduces a new type of object in Nautobot, you'll probably want
 
 It is highly recommended to have plugin models inherit from at least `nautobot.core.models.BaseModel` which provides base functionality and convenience methods common to all models.
 
-Below is an example `models.py` file containing a model with two character fields:
+For more advanced usage, you may want to instead inherit from one of Nautobot's "generic" models derived from `BaseModel` -- `nautobot.core.models.generics.OrganizationalModel` or `nautobot.core.models.generics.PrimaryModel`. The inherent capabilities provided by inheriting from these various parent models differ as follows:
+
+| Feature | `django.db.models.Model` | `BaseModel` | `OrganizationalModel` | `PrimaryModel` |
+| ------- | --------------------- | ----------- | --------------------- | -------------- |
+| UUID primary key | ❌ | ✅ | ✅ | ✅ |
+| [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
+| [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
+| [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
+| [Custom fields](../additional-features/custom-fields.md) | ❌ | ❌ | ✅ | ✅ |
+| [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
+| [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
+
+!!! note
+    When using `OrganizationalModel` or `PrimaryModel`, you also must use the `@extras_features` decorator to specify support for (at a minimum) the `"custom_fields"` and `"relationships"` features.
+
+Below is an example `models.py` file containing a basic model with two character fields:
 
 ```python
 # models.py
@@ -209,7 +229,7 @@ class Animal(BaseModel):
         return self.name
 ```
 
-Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.  
+Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.
 
 Creating migrations can be done automatically using the `nautobot-server makemigrations <plugin_name>` management command, where `<plugin_name>` is the name of the Python package for your plugin (e.g. `animal_sounds`):
 
