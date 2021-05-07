@@ -1,6 +1,6 @@
 # Installation
 
-This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](/docker).
+This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](../docker).
 
 ## About Dependencies
 
