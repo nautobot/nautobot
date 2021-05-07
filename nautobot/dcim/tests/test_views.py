@@ -45,23 +45,23 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         # Create three Regions
         regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-            Region.objects.create(name="Region 3", slug="region-3"),
+            Region.objects.create(name="Region ɑ", slug="region-alpha"),
+            Region.objects.create(name="Region β", slug="region-beta"),
+            Region.objects.create(name="Region γ", slug="region-gamma"),
         )
 
         cls.form_data = {
-            "name": "Region X",
-            "slug": "region-x",
+            "name": "Region χ",
+            "slug": "region-chi",
             "parent": regions[2].pk,
             "description": "A new region",
         }
 
         cls.csv_data = (
             "name,slug,description",
-            "Region 4,region-4,Fourth region",
-            "Region 5,region-5,Fifth region",
-            "Region 6,region-6,Sixth region",
+            "Region δ,region-delta,Fourth region",
+            "Region ε,region-epsilon,Fifth region",
+            "Region ζ,region-zeta,Sixth region",
         )
 
 
