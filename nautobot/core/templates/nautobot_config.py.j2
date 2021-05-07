@@ -191,7 +191,13 @@ INTERNAL_IPS = ("127.0.0.1", "::1")
 
 # Enable custom logging. Please see the Django documentation for detailed guidance on configuring custom logs:
 #   https://docs.djangoproject.com/en/stable/topics/logging/
-LOGGING = {}
+LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
+LOGDIR = "/var/log/nautobot"
+DJANGO_LOG_LEVEL = "INFO"
+
+# Django logging configuration
+# For detailed information see https://nautobot.readthedocs.io/en/latest/configuration/optional-settings/#logging
+# LOGGING = {}
 
 # Setting this to True will display a "maintenance mode" banner at the top of every page.
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", False))
