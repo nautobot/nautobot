@@ -18,7 +18,7 @@ from nautobot.extras.models import Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
-from .utils import disable_warnings, extract_form_failures, post_data
+from .utils import disable_warnings, extract_form_failures, extract_page_body, post_data
 
 
 __all__ = (
@@ -139,8 +139,8 @@ class TestCase(_TestCase):
                 err = response.data
             else:
                 # Attempt to extract form validation errors from the response HTML
-                form_errors = extract_form_failures(response.content)
-                err = form_errors or response.content or "No data"
+                form_errors = extract_form_failures(response.content.decode(response.charset))
+                err = form_errors or response.content.decode(response.charset) or "No data"
             err_message = f"Expected HTTP status {expected_status}; received {response.status_code}: {err}"
         self.assertEqual(response.status_code, expected_status, err_message)
 
@@ -291,8 +291,10 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
             self.assertHttpStatus(response, 200)
 
+            response_body = extract_page_body(response.content.decode(response.charset))
+
             # The object's display name or string representation should appear in the response
-            self.assertIn(getattr(instance, "display", str(instance)), str(response.content))
+            self.assertIn(getattr(instance, "display", str(instance)), response_body, response_body)
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships:
@@ -300,22 +302,26 @@ class ViewTestCases:
                     content_type = ContentType.objects.get_for_model(instance)
                     if content_type == relationship.source_type:
                         self.assertIn(
-                            relationship.get_label(RelationshipSideChoices.SIDE_SOURCE), str(response.content)
+                            relationship.get_label(RelationshipSideChoices.SIDE_SOURCE),
+                            response_body,
+                            response_body,
                         )
                     if content_type == relationship.destination_type:
                         self.assertIn(
-                            relationship.get_label(RelationshipSideChoices.SIDE_DESTINATION), str(response.content)
+                            relationship.get_label(RelationshipSideChoices.SIDE_DESTINATION),
+                            response_body,
+                            response_body,
                         )
 
             # If any Custom Fields are defined, they should appear in the response
             if self.custom_fields:
                 for custom_field in self.custom_fields:
-                    self.assertIn(str(custom_field), str(response.content))
+                    self.assertIn(str(custom_field), response_body, response_body)
                     if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                         for value in instance.cf.get(custom_field.name):
-                            self.assertIn(str(value), str(response.content))
+                            self.assertIn(str(value), response_body, response_body)
                     else:
-                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), str(response.content))
+                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), response_body, response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
@@ -651,13 +657,14 @@ class ViewTestCases:
             # Try GET with object-level permission
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
-            content = str(response.content)
+            content = extract_page_body(response.content.decode(response.charset))
+            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
-                self.assertIn(instance1.name, content)
-                self.assertNotIn(instance2.name, content)
+                self.assertIn(instance1.name, content, content)
+                self.assertNotIn(instance2.name, content, content)
             elif hasattr(self.model, "get_absolute_url"):
-                self.assertIn(instance1.get_absolute_url(), content)
-                self.assertNotIn(instance2.get_absolute_url(), content)
+                self.assertIn(instance1.get_absolute_url(), content, content)
+                self.assertNotIn(instance2.get_absolute_url(), content, content)
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
