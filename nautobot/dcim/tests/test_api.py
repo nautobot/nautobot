@@ -168,6 +168,85 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_time_zone_field_post_null(self):
+        """
+        Test non-null constraint to time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": None}
+
+        # Attempt to create new site with null time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], None)
+
+    def test_time_zone_field_post_blank(self):
+        """
+        Test blank time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": ""}
+
+        # Attempt to create new site with blank time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+
+    def test_time_zone_field_post_valid(self):
+        """
+        Test valid time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        time_zone = "UTC"
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+
+        # Attempt to create new site with valid time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], time_zone)
+
+    def test_time_zone_field_post_invalid(self):
+        """
+        Test invalid time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        time_zone = "IDONOTEXIST"
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+
+        # Attempt to create new site with invalid time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["time_zone"],
+            ["A valid timezone is required."],
+        )
+
+    def test_time_zone_field_get_blank(self):
+        """
+        Test that a site's time_zone field defaults to null.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+
+        self.add_permissions("dcim.view_site")
+        site = Site.objects.get(slug="site-1")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["time_zone"], None)
+
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup

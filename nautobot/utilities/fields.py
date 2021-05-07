@@ -3,6 +3,11 @@ import json
 from django.core.validators import RegexValidator
 from django.db import models
 from django.core import exceptions
+from django.utils.encoding import force_str
+import pytz
+from rest_framework.exceptions import ValidationError
+from timezone_field.fields import TimeZoneField as TZField
+from timezone_field.utils import is_pytz_instance
 
 from nautobot.utilities.ordering import naturalize
 from .forms import ColorSelect
@@ -189,3 +194,18 @@ class JSONArrayField(models.JSONField):
                 **kwargs,
             }
         )
+
+
+class TimeZoneField(TZField):
+    """Overloads time_zone.TimeZoneField to represent blank value as "" instead of null."""
+
+    def _get_python_and_db_repr(self, value):
+        "Returns a tuple of (python representation, db representation)"
+        if value is None or value == "":
+            return ("", "")
+        if is_pytz_instance(value):
+            return (value, value.zone)
+        try:
+            return (pytz.timezone(force_str(value)), force_str(value))
+        except pytz.UnknownTimeZoneError:
+            raise ValidationError(f"Invalid timezone '{value}'")
