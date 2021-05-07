@@ -6,6 +6,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     Tag,
     Status,
     Webhook,
@@ -295,5 +296,30 @@ urlpatterns = [
         "relationships/associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
+    ),
+    # GraphQL Queries
+    path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
+    path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
+    path(
+        "graphql-queries/delete/",
+        views.GraphQLQueryBulkDeleteView.as_view(),
+        name="GraphQLQuery_bulk_delete",
+    ),
+    path("graphql-queries/<str:slug>/", views.GraphQLQueryView.as_view(), name="graphqlquery"),
+    path(
+        "graphql-queries/<str:slug>/edit/",
+        views.GraphQLQueryEditView.as_view(),
+        name="graphqlquery_edit",
+    ),
+    path(
+        "graphql-queries/<str:slug>/delete/",
+        views.GraphQLQueryDeleteView.as_view(),
+        name="graphqlquery_delete",
+    ),
+    path(
+        "graphql-queries/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="graphqlquery_changelog",
+        kwargs={"model": GraphQLQuery},
     ),
 ]
