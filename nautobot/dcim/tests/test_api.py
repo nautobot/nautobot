@@ -230,7 +230,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.json()["time_zone"],
-            [f'Unknown time zone "{time_zone}" (see pytz.common_timezones for all options)']
+            [f'Unknown time zone "{time_zone}" (see pytz.common_timezones for all options)'],
         )
 
     def test_time_zone_field_get_blank(self):

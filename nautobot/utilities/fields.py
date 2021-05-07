@@ -196,7 +196,6 @@ class JSONArrayField(models.JSONField):
         )
 
 
-
 class TimeZoneField(TZField):
     """Overloads time_zone.TimeZoneField to represent blank value as "" instead of null."""
 
