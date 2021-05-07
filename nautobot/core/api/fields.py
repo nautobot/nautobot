@@ -108,7 +108,7 @@ class TimeZoneField(serializers.Field):
     """
 
     def to_representation(self, obj):
-        return obj.zone if obj else None
+        return obj.zone if obj else ""
 
     def to_internal_value(self, data):
         if not data:
