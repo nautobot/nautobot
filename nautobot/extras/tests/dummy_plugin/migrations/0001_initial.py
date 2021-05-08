@@ -1,4 +1,5 @@
 from django.db import migrations, models
+import uuid
 
 
 class Migration(migrations.Migration):
@@ -13,7 +14,9 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(auto_created=True, primary_key=True, serialize=False),
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
                 ),
                 ("name", models.CharField(max_length=20)),
                 ("number", models.IntegerField(default=100)),

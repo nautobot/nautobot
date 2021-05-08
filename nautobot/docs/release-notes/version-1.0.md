@@ -4,19 +4,248 @@ This document describes all new features and changes in Nautobot 1.0, a divergen
 
 Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation as well.
 
-## v1.0.0b4 (2021-??-??)
+## v1.0.1 (2021-05-06)
 
 ### Added
 
+- [#242](https://github.com/nautobot/nautobot/issues/242) - Added a production-ready `Dockerfile` for clustered deployment
+- [#356](https://github.com/nautobot/nautobot/issues/356) - Added a new `nautobot-server startplugin` management command to ease plugin development
+- [#366](https://github.com/nautobot/nautobot/pull/366) - Added GraphQL filter tests for `interfaces` queries and added missing unit tests for `Interface` filtersets
+
 ### Changed
 
-### Deprecated
-
-### Removed
+- [#362](https://github.com/nautobot/nautobot/pull/362) - Updated sample code in plugin development guide to inherit from `BaseModel`
 
 ### Fixed
 
-### Security
+- [#15](https://github.com/nautobot/nautobot/issues/15) - Added documentation for plugins using generic models to get change logging using `ChangeLoggedModel`
+- [#336](https://github.com/nautobot/nautobot/issues/336) - Fixed `nautobot.utilities.api.get_serializer_for_model` to now support the plugins namespace
+- [#337](https://github.com/nautobot/nautobot/issues/337) - Fixed `nautobot.extras.plugins.api.views.PluginsAPIRootView` no longer creates null entries when `PluginConfig` does not define a `base_url`
+- [#365](https://github.com/nautobot/nautobot/issues/365) - Fixed incorrect field types on GraphQL ID fields
+- [#382](https://github.com/nautobot/nautobot/issues/382) - Fixed choices returned from `OPTIONS` requests returning mixed use of `display` and `display_name` fields.
+- [#393](https://github.com/nautobot/nautobot/issues/393) - Fixed creating a `VirtualChassis` with a master device changes the master device's `vc_position`
+- [#398](https://github.com/nautobot/nautobot/issues/398) - Fixed `VirtualChassis` edit view to now show "Update" button vs. "Create"
+- [#399](https://github.com/nautobot/nautobot/issues/399) - Fixed `nautobot.utilities.utils.get_filterset_for_model` to now support the plugins namespace
+- [#400](https://github.com/nautobot/nautobot/issues/400) - Fixed the class_path format for Jobs API usage documentation not being clear enough
+- [#402](https://github.com/nautobot/nautobot/issues/402) - Docs build requirements will now install `markdown-include` version from PyPI instead of GitHub
+- [#409](https://github.com/nautobot/nautobot/pull/409) - Fixed misspelling: "Datbase" --> "Database" in `nautobot_config.py.j2`
+
+## v1.0 (2021-04-26)
+
+### Added
+
+#### Custom Fields on All Models
+
+[Custom fields](../additional-features/custom-fields.md) allow user-defined fields, or attributes, on specific data models such as sites or devices. Historically, custom fields have been supported only on “primary” models (Site, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Region, Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
+
+Once created the name or data type of the custom field cannot be modified. Choices for custom fields are now stored as discrete database objects. Choices that are in active use cannot be deleted.
+
+#### Customizable Statuses
+
+A new ["Status" model](../models/extras/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Site, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
+
+One example application for custom statuses would be in defining additional values to apply to a Device as part of an automation workflow, with statuses such as `upgrading` or `rebooting` to reflect the progress of each device through the workflow, allowing automation to identify the appropriate next action to take for each status.
+
+#### Data Validation Plugin API
+
+Data quality assurance in Nautobot becomes easier with the new [data validation plugin API](../plugins/development.md#implementing-custom-validators). This makes it possible to codify organizational standards.  Using a data validation [plugin](../../plugins/), an organization can ensure all data stored in Nautobot meets its specific standards, such as enforcing device naming standards, ensuring certain prefixes are never used, asserting that VLANs always have a name, requiring interfaces to always have a description, etc. The ability to ensure a high quality of data becomes much more streamlined; error-prone, manual process becomes automated; and there is no more need to actively run reports to check data quality.
+
+#### Detail Views for more Models
+
+Detailed view pages are now provided for models including ClusterGroup, ClusterType, DeviceRole, Manufacturer, Platform, and RackRole.
+
+#### Docker-Based Development Environment
+
+In addition to the previously available virtual-environment-based developer workflow, Nautobot now additionally supports a [development environment based around Docker](../development/getting-started.md#docker-compose-workflow) as an alternative.
+
+#### Git Integration as a Data Source
+
+[Git integration](../user-guides/git-data-source.md) offers users an option to integrate into a more traditional NetDevOps pipeline for managing Python modules, Jinja templates, and YAML/JSON data.  There are several use cases that have historically required users to either manage Python modules on the filesystem or use Jinja2 templates within the GUI. With this new feature, users can add a Git repository from the UI or REST API, the contents of which will be synchronized into Nautobot immediately and can be later refreshed on-demand. This allows users to more easily update and manage:
+
+- *Jobs* - store your Python modules that define Jobs (formerly known as Custom Scripts and/or Reports) in a Git repository
+- *Export Templates* - store your Jinja templates used to create an export template in a Git repository
+- *Config Contexts* - store your YAML/JSON data used within a config context in a Git repository
+- *Arbitrary Files* - usable by custom plugins and apps
+
+Not only does this integration and feature simplify management of these features in Nautobot, it offers users the ability to use Git workflows for the management of the jobs, templates, and data ensuring there has been proper review and approval before updating them on the system.
+
+#### GraphQL Support
+
+Nautobot now provides an HTTP API endpoint supporting [GraphQL](https://graphql.org/). This feature adds a tremendous amount of flexibility in querying data from Nautobot. It offers the ability to query for specific datasets across multiple models in a single query.  Historically, if you wanted to retrieve the list of devices, all of their interfaces, and all of their neighbors, this would require numerous REST API calls.  GraphQL gives the flexibility to get all the data desired and nothing unnecessary, all in a single API call.
+
+For more details, please refer to the GraphQL website, as well as to the [Nautobot GraphQL](../user-guides/graphql.md) documentation.
+
+#### Installable Python Package
+
+Nautobot is now installable as a self-contained Python package via `pip install nautobot`. Packages are released to [PyPI](https://pypi.org/) with every Nautobot update.
+
+#### `nautobot-server` command
+
+Nautobot now includes a dedicated administrative CLI command, [`nautobot-server`](../administration/nautobot-server.md).
+
+#### Plugin API Enhancements
+
+Plugins can now provide custom [data validation](#data-validation-plugin-api) logic.
+
+Plugins can now include executable [Jobs](../additional-features/jobs.md) (formerly known as Custom Scripts and Reports) that will automatically be added to the list of available Jobs for a user to execute.
+
+Additional data models defined by a plugin are automatically made available in [GraphQL](../user-guides/graphql.md).
+
+Plugins can now define additional Django apps that they require and these dependencies will be automatically enabled when the plugin is activated.
+
+#### Single Sign-On / Social Authentication Support
+
+Nautobot now supports single sign on as an authentication option using OAuth2, OpenID, SAML, and others, using the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/) module. For more details please refer to the guide on [SSO authentication](../configuration/authentication/sso.md).
+
+#### User-Defined Relationships
+
+User-Defined, or "custom", [relationships](../../models/extras/relationship) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design.
+
+For example, a VLAN is mapped to a Site by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites. Relationships allow you to express these additional requirements and relationships without requiring code changes to Nautobot itself. Other use cases include circuits, ASNs, or IP addressing -- just to name a few -- allowing users to define the exact relationships required for their network.
+
+### Changed
+
+#### Code Reorganization
+
+All of the individual Django apps in NetBox (`dcim`, `extras`, `ipam`, etc.) have been moved into a common `nautobot` Python package namespace. The `netbox` application namespace has been moved to `nautobot.core`. This will require updates when porting NetBox custom scripts and reports to Nautobot jobs, as well as when porting NetBox plugins to Nautobot.
+
+#### Packaging Changes
+
+Nautobot is now packaged using [Poetry](https://python-poetry.org/) and builds as an installable Python package. `setup.py` and `requirements.txt` have been replaced with `pyproject.toml`. Releases of Nautobot are now published to [PyPI](https://pypi.org/), the Python Package Index, and therefore can now be installed using `pip install nautobot`.
+
+#### Installation and Startup
+
+Because Nautobot may be installed using `pip`, we have replaced `manage.py` with a dedicated `nautobot-server` CLI command used to adminster the server. It works exactly as `manage.py` does, but does not require you to be within the project root directory.
+
+#### Configuration and Settings
+
+Nautobot has done away with the requirement to duplicate or modify files anywhere in the source code. The `configuration.py` file has been replaced with a `nautobot_config.py` file that may be read from anywhere on your system. It is also much easier to add custom settings or overload nearly any default setting.
+
+To facilitate this, many automatically generated settings have been removed, and replaced with their underlying static configurations. We feel this affords a greater amount of flexibility in deployment patterns, with a tradeoff of slightly more initial configuration.
+
+To make things a little easier, you may generate a new configuration with sane defaults using the `nautobot-server init` command! The configuration file defaults to `~/.nautbot/nautobot_config.py` but using the `nautobot-server --config` argument, you may name or place the file anywhere you choose.
+
+You may also defined a `NAUTOBOT_CONFIG` variable to tell Nautobot where to find the file so that you don't need to always pass the `--config` argument.
+
+For details see [Configuring Nautobot](../../configuration).
+
+#### Consolidating Custom Scripts and Reports into Jobs
+
+Nautobot has consolidated NetBox's "custom scripts" and "reports" into what is now called [Jobs](../additional-features/jobs.md).
+
+The job history ([results](../models/extras/jobresult.md)) table on the home page now shows metadata on each job such as the timestamp and the user that executed the job. Additionally, jobs can be defined and executed by the system and by plugins, and when they are, users can see their results in the history too. UI views have been added for viewing the details of a given job result, and the [JobResult](../models/extras/jobresult.md) model now provides standard APIs for Jobs to log their status and results in a consistent way.
+
+Job result history is now retained indefinitely unless intentionally deleted. Historically only the most recent result for each custom script or report was retained and all older records were deleted.
+
+Python modules that define jobs can now be stored in Git and easily added to Nautobot via the UI as documented above in [Git Integration as a Data Source](#git-integration-as-a-data-source).
+
+#### Custom User Model
+
+A new custom model has been created for `User` data. This has allowed Nautobot to use a UUID as a primary key for the `User` model, and to prepare for future use-cases not support by the default Django model.
+
+This has also meant `UserConfig` no longer exists as a separate model. `UserConfig` is now a property on the custom `User` class.
+
+#### Hiding UI Elements based on Permissions
+
+Historically, a user viewing the home page and navigation menu would see a list of all model types and menu items in the system, with a “lock” icon on items that they were not granted access to view in detail.
+
+As an [option](../configuration/optional-settings.md#hide_restricted_ui), administrators can now choose to instead hide un-permitted items altogether from the home page and the navigation menu, providing a simpler interface for limited-access users. The prior behavior remains as the default.
+
+#### IPAM Network Fields to VARBINARY
+
+To enable future support of databases other than PostgreSQL, the network fields inside of IPAM needed to be changed. `cidr` and `inet` field types have been replaced with a database agnostic field type. For this purpose `varbinary` was chosen because it can safely and efficiently store packed binary integers.
+
+More details about the impact of this and other changes can be found in the [Migration documentation](../installation/migrating-from-netbox.md#ipam-network-field-types).
+
+#### Navigation Menu Changes
+
+The "Other" menu has been renamed to "Extensibility" and many new items have been added to this menu.
+
+[Status](../models/extras/status.md) records have been added to the "Organization" menu.
+
+#### New Name and Logo
+
+"NetBox" has been changed to "Nautobot" throughout the code, UI, and documentation, and Nautobot has a new logo and icon.
+
+#### User-Defined Custom Links
+
+Historically the [custom links](../models/extras/customlink.md) feature was restricted so that only administrators could define and manage custom links to add to various built-in data views. In Nautobot the management of custom links has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+
+#### User-Defined Export Templates
+
+Historically the [custom data export templates](../models/extras/exporttemplate.md) feature was restricted such that only administrators could define and edit these templates. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+
+#### User-Defined Webhooks
+
+Historically the [webhooks](../models/extras/webhook.md) feature was restricted such that only administrators could define and manage webhooks, HTTP callbacks that are triggered automatically when a specified data model(s) are created, updated, and/or deleted. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+
+#### UUID Primary Database Keys
+
+Database keys are now defined as Universally Unique Identifiers (UUIDs) instead of integers, protecting against certain classes of data-traversal attacks.
+
+#### uWSGI
+
+Nautobot has replaced Gunicorn with uWSGI. In most cases uWSGI is faster, more stable and easier to setup making it ideal to use over Gunicorn. Our recommendation is to use uWSGI in production.
+
+### Removed
+
+#### Secrets
+
+Secrets storage and management has been removed from Nautobot.
+
+#### Related Devices
+
+The "Related Devices" table has been removed from the detailed Device view.
+
+## v1.0.0b4 (2021-04-19)
+
+### Added
+
+- [#96](https://github.com/nautobot/nautobot/issues/96) - Implemented user guide documentation for GraphQL
+- [#97](https://github.com/nautobot/nautobot/issues/97) - Implemented user guide documentation for Git as a Data Source
+
+### Changed
+
+- [#150](https://github.com/nautobot/nautobot/issues/150) - Revised all documentation referencing objects with status fields
+- [#175](https://github.com/nautobot/nautobot/issues/175) - Revised plugin development guide to use Poetry
+- [#211](https://github.com/nautobot/nautobot/pull/211) - Travis CI build improvements to simplify entry points and make tests fail faster
+- [#217](https://github.com/nautobot/nautobot/pull/217) - Replaced JSONB aggregation with custom cross-database implementation that supports PG and MySQL
+- [#245](https://github.com/nautobot/nautobot/pull/245) - Replaced PG-specific "advisory locks" with cross-database distributed Redis lock
+- [#252](https://github.com/nautobot/nautobot/pull/252) - Revised and clarified install instructions for CentOS
+- [#262](https://github.com/nautobot/nautobot/issues/262) - Revised Nautobot upgrade and NetBox migration guides
+- [#273](https://github.com/nautobot/nautobot/pull/273) - Update to jQuery 3.6.0
+- [#289](https://github.com/nautobot/nautobot/pull/289) - Updated natural unicode-aware sorting for interface/device names to support MySQL
+
+### Fixed
+
+- [#167](https://github.com/nautobot/nautobot/issues/167) - Fix to enable to query `ip_addresses` by parent in GraphQL
+- [#212](https://github.com/nautobot/nautobot/issues/212) - Allow plugins to use built-in buttons
+- [#232](https://github.com/nautobot/nautobot/issues/232) - Fix to enable inclusion of custom fields in queries in GraphQL
+- [#233](https://github.com/nautobot/nautobot/issues/233) - Fix to enable filtering by booleans in GraphQL
+- [#247](https://github.com/nautobot/nautobot/issues/247) - Fix to enable filtering by custom field values in GraphQL
+- [#260](https://github.com/nautobot/nautobot/issues/260) - Fix cable path tracing by not coercing UUID values to version 4
+- [#264](https://github.com/nautobot/nautobot/issues/264) - Fix missing parenthesis in datasources example
+- [#265](https://github.com/nautobot/nautobot/issues/265) - Fix 500 crash in API when posting ports as strings to IPAM services
+- [#269](https://github.com/nautobot/nautobot/issues/269) - Fix `NoneType` error when searching for /31 prefixes
+- [#272](https://github.com/nautobot/nautobot/pull/272) - Fix invalid f-string in `invoke createsuperuser`
+- [#278](https://github.com/nautobot/nautobot/issues/278) - Fix crash when sorting IPAM objects in list view by network address in web UI
+- [#285](https://github.com/nautobot/nautobot/pull/285) - Refactor GraphQL filter argument generation to emit the correct types for each field
+- [#286](https://github.com/nautobot/nautobot/issues/286) - Fix `NoneType` error when seraching for IPs without a prefix
+- [#287](https://github.com/nautobot/nautobot/issues/287) - Fix IP addresses not showing in search results
+- [#288](https://github.com/nautobot/nautobot/issues/288) - Fix display of parent prefixes from IPAddress detail view
+- [#293](https://github.com/nautobot/nautobot/pull/293) - Allow `DynamicModel[Multiple]ChoiceField` to work with plugin model
+- [#300](https://github.com/nautobot/nautobot/issues/300) - Fix `AttributeError` when assigning an IP to a device interface
+- [#304](https://github.com/nautobot/nautobot/issues/304) - Fix for IPAM network objects `clean()` checks not working as intended
+- [#305](https://github.com/nautobot/nautobot/issues/305) - Fix `Status` rendering to always preserve capitalization of `Status.name`
+- [#306](https://github.com/nautobot/nautobot/issues/306) - Fix custom relationship display fields for all models
+- [#307](https://github.com/nautobot/nautobot/issues/307) - Fix the ability to CSV export power connections if connected to a PowerFeed
+- [#308](https://github.com/nautobot/nautobot/issues/308) - Fix missing template error when viewing a PowerFeed connected to a PowerPort on a Device.
+- [#318](https://github.com/nautobot/nautobot/issues/318) - Fix `TypeError` when creating any IPAM network object  with prefix of /0
+- [#320](https://github.com/nautobot/nautobot/issues/320) - Fix issue causing model validation to fail on all IPAM network objects
+- [#324](https://github.com/nautobot/nautobot/pull/324) - Fix unit test execution on MySQL by changing subquery limiting to list slicing
+- [#325](https://github.com/nautobot/nautobot/issues/325) - Fix to allow relationship associations to be unset in the web UI
+- [#326](https://github.com/nautobot/nautobot/issues/326) - Fix 404 error when attempting to delete a RelationshipAssociation from the list view
+- [#373](https://github.com/nautobot/nautobot/pull/373) - Fix missing "Bulk Add IP Addresses" tab
 
 ## v1.0.0b3 (2021-04-05)
 
@@ -147,156 +376,9 @@ Other changes:
 
 ## v1.0.0b1 (2021-02-24)
 
-### Added
-
-#### Custom Fields on All Models
-
-[Custom fields](../additional-features/custom-fields.md) allow user-defined fields, or attributes, on specific data models such as sites or devices. Historically, custom fields have been supported only on “primary” models (Site, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Region, Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
-
-#### Customizable Statuses
-
-A new ["Status" model](../models/extras/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Site, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
-
-One example application for custom statuses would be in defining additional values to apply to a Device as part of an automation workflow, with statuses such as `upgrading` or `rebooting` to reflect the progress of each device through the workflow, allowing automation to identify the appropriate next action to take for each status.
-
-#### Data Validation Plugin API
-
-Data quality assurance in Nautobot becomes easier with the new [data validation plugin API](../plugins/development.md#implementing-custom-validators). This makes it possible to codify organizational standards.  Using a data validation [plugin](../../plugins/), an organization can ensure all data stored in Nautobot meets its specific standards, such as enforcing device naming standards, ensuring certain prefixes are never used, asserting that VLANs always have a name, requiring interfaces to always have a description, etc. The ability to ensure a high quality of data becomes much more streamlined; error-prone, manual process becomes automated; and there is no more need to actively run reports to check data quality.
-
-A [data validation plugin](https://github.com/nautobot/nautobot-plugin-data-validation-engine) is available that addresses many common use cases for data validation, but you are also free to implement your own plugin to meet your own unique requirements.
-
-#### Detail Views for more Models
-
-Detailed view pages are now provided for models including ClusterGroup, ClusterType, DeviceRole, Manufacturer, Platform, and RackRole.
-
-#### Docker-Based Development Environment
-
-In addition to the previously available virtual-environment-based developer workflow, Nautobot now additionally supports a [development environment based around Docker](../development/getting-started.md#docker-development-environment-workflow) as an alternative.
-
-#### Git Integration as a Data Source
-
-[Git integration](../models/extras/gitrepository.md) offers users an option to integrate into a more traditional NetDevOps pipeline for managing Python modules, Jinja templates, and YAML/JSON data.  There are several use cases that have historically required users to either manage Python modules on the filesystem or use Jinja2 templates within the GUI. With this new feature, users can add a Git repository from the UI or REST API, the contents of which will be synchronized into Nautobot immediately and can be later refreshed on-demand. This allows users to more easily update and manage:
-
-- *Jobs* - store your Python modules that define Jobs (formerly known as Custom Scripts and/or Reports) in a Git repository
-- *Export Templates* - store your Jinja templates used to create an export template in a Git repository
-- *Config Contexts* - store your YAML/JSON data used within a config context in a Git repository
-- *Arbitrary Files* - usable by custom plugins and apps
-
-Not only does this integration and feature simplify management of these features in Nautobot, it offers users the ability to use Git workflows for the management of the jobs, templates, and data ensuring there has been proper review and approval before updating them on the system.
-
-#### GraphQL Support
-
-Nautobot now provides an HTTP API endpoint supporting [GraphQL](https://graphql.org/). This feature adds a tremendous amount of flexibility in querying data from Nautobot. It offers the ability to query for specific datasets across multiple models in a single query.  Historically, if you wanted to retrieve the list of devices, all of their interfaces, and all of their neighbors, this would require numerous REST API calls.  GraphQL gives the flexibility to get all the data desired and nothing unnecessary, all in a single API call.
-
-For more details, please refer to the GraphQL website, as well as to the [Nautobot GraphQL](../additional-features/graphql.md) documentation.
-
-#### Plugin API Enhancements
-
-Plugins can now provide custom [data validation](#data-validation-plugin-api) logic.
-
-Plugins can now include executable [Jobs](../additional-features/jobs.md) (formerly known as Custom Scripts and Reports) that will automatically be added to the list of available Jobs for a user to execute.
-
-Additional data models defined by a plugin are automatically made available in [GraphQL](../additional-features/graphql).
-
-Plugins can now define additional Django apps that they require and these dependencies will be automatically enabled when the plugin is activated.
-
-#### Single Sign-On / Social Authentication Support
-
-Nautobot now supports single sign on as an authentication option using OAuth2, OpenID, SAML, and others, using the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/) module. For more details please refer to the guide on [SSO authentication](../configuration/authentication/sso.md).
-
-#### User-Defined Relationships
-
-User-Defined, or "custom", [relationships](../../models/extras/relationship) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design. Nautobot comes with opinionated data models and relationships.
-
-For example, a VLAN is mapped to a Site by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites.  Other use cases include circuits, ASNs, or IP addressing--just to name a few--allowing users to define the exact relationships required for their network.
-
-### Changed
-
-#### Code Reorganization
-
-All of the individual Django apps in NetBox (`dcim`, `extras`, `ipam`, etc.) have been moved into a common `nautobot` Python package namespace. The `netbox` application namespace has been moved to `nautobot.core`. This will require updates when porting NetBox custom scripts and reports to Nautobot jobs, as well as when porting NetBox plugins to Nautobot.
-
-#### Packaging Changes
-
-Nautobot is now packaged using [Poetry](https://python-poetry.org/) and builds as an installable Python package. `setup.py` and `requirements.txt` have been replaced with `pyproject.toml`. Releases of Nautobot are now published to [PyPI](https://pypi.org/), the Python Package Index, and therefore can now be installed using `pip install nautobot`.
-
-#### Installation and Startup
-
-Because Nautobot may be installed using `pip`, we have replaced `manage.py` with a dedicated `nautobot-server` CLI command used to adminster the server. It works exactly as `manage.py` does, but does not require you to be within the project root directory.
-
-#### Configuration and Settings
-
-Nautobot has done away with the requirement to duplicate or modify files anywhere in the source code. The `configuration.py` file has been replaced with a `nautobot_config.py` file that may be read from anywhere on your system. It is also much easier to add custom settings or overload nearly any default setting.
-
-To facilitate this, many automatically generated settings have been removed, and replaced with their underlying static configurations. We feel this affords a greater amount of flexibility in deployment patterns, with a tradeoff of slightly more initial configuration.
-
-To make things a little easier, you may generate a new configuration with sane defaults using the `nautobot-server init` command! The configuration file defaults to `~/.nautbot/nautobot_config.py` but using the `nautobot-server --config` argument, you may name or place the file anywhere you choose.
-
-You may also defined a `NAUTOBOT_CONFIG` variable to tell Nautobot where to find the file so that you don't need to always pass the `--config` argument.
-
-For details see [Configuring Nautobot](../../configuration).
-
-#### Consolidating Custom Scripts and Reports into Jobs
-
-Nautobot has consolidated NetBox's "custom scripts" and "reports" into what is now called [Jobs](../additional-features/jobs.md).
-
-The job history ([results](../models/extras/jobresult.md)) table on the home page now shows metadata on each job such as the timestamp and the user that executed the job. Additionally, jobs can be defined and executed by the system and by plugins, and when they are, users can see their results in the history too. UI views have been added for viewing the details of a given job result, and the [JobResult](../models/extras/jobresult.md) model now provides standard APIs for Jobs to log their status and results in a consistent way.
-
-Job result history is now retained indefinitely unless intentionally deleted. Historically only the most recent result for each custom script or report was retained and all older records were deleted.
-
-Python modules that define jobs can now be stored in Git and easily added to Nautobot via the UI as documented above in [Git Integration as a Data Source](#git-integration-as-a-data-source).
-
-#### Hiding UI Elements based on Permissions
-
-Historically, a user viewing the home page and navigation menu would see a list of all model types and menu items in the system, with a “lock” icon on items that they were not granted access to view in detail.
-
-As an [option](../configuration/optional-settings.md#hide_restricted_ui), administrators can now choose to instead hide un-permitted items altogether from the home page and the navigation menu, providing a simpler interface for limited-access users. The prior behavior remains as the default.
-
-#### Navigation Menu Changes
-
-The "Other" menu has been renamed to "Extensibility" and many new items have been added to this menu.
-
-[Status](../models/extras/status.md) records have been added to the "Organization" menu.
-
-#### New Name and Logo
-
-NetBox has been changed to Nautobot throughout the code, UI, and documentation, and Nautobot has a new logo.
-
-#### User-Defined Custom Links
-
-Nautobot allows for the definition of [custom links](../models/extras/customlink.md) to add to various built-in data views. These can be used to provide convenient cross-references to other data sources outside Nautobot, among many other possibilities.
-
-Historically this feature was restricted so that only administrators could define and manage custom links. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
-
-#### User-Defined Export Templates
-
-Nautobot allows for the definition of custom [Jinja2 templates](../models/extras/exporttemplate.md) to use to format exported data.
-
-Historically this feature was restricted such that only administrators could define and edit these templates. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
-
-#### User-Defined Webhooks
-
-Nautobot allows for the creation of [webhooks](../models/extras/webhook.md), HTTP callbacks that are triggered automatically when a specified data model(s) are created, updated, and/or deleted.
-
-Historically this feature was restricted such that only administrators could define and manage webhooks. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
-
-#### UUID Primary Database Keys
-
-Database keys are now defined as Universally Unique Identifiers (UUIDs) instead of integers, protecting against certain classes of data-traversal attacks.
-
-### Removed
-
-#### Secrets
-
-Secrets storage and management has been removed from Nautobot.
-
-#### Related Devices
-
-The "Related Devices" table has been removed from the detailed Device view.
+Initial public beta release.
 
 ### Fixed
 
-- Fixed a bug in which object permissions were not filtered correctly in the admin interface. <!-- FIXME(john): improve the description of this fix -->
-- Fixed a bug in which the UI would report an exception if the database contains ChangeLog entries that reference a nonexistent ContentType.
-
----
+- Fixed a bug, inherited from NetBox 2.10, in which object permissions were not filtered correctly in the admin interface.
+- Fixed a bug, inherited from NetBox 2.10, in which the UI would report an exception if the database contains ChangeLog entries that reference a nonexistent ContentType.

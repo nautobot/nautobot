@@ -93,15 +93,17 @@ class RelationshipModel(models.Model):
             response {
                 "source": {
                     <relationship #1>: {
-                        "label": <>,
-                        "value": <>,
-                        "url": <>,
+                        "label": "...",
+                        "peer_type": <ContentType>,
                         "has_many": False,
+                        "value": <model>,
+                        "url": "...",
                     },
                     <relationship #2>: {
-                        "label": <>,
-                        "value": <>,
+                        "label": "...",
+                        "peer_type": <ContentType>,
                         "has_many": True,
+                        "value": None,
                         "queryset": <queryset #2>
                     },
                 },
@@ -124,6 +126,7 @@ class RelationshipModel(models.Model):
 
                 resp[side][relationship] = {
                     "label": relationship.get_label(side),
+                    "peer_type": getattr(relationship, f"{peer_side}_type"),
                     "value": None,
                 }
 
@@ -232,7 +235,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name.replace("_", " ").capitalize()
+        return self.name.replace("_", " ")
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.

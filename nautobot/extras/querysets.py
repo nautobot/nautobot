@@ -6,7 +6,7 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class ConfigContextQuerySet(RestrictedQuerySet):
-    def get_for_object(self, obj, aggregate_data=False):
+    def get_for_object(self, obj):
         """
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
 
@@ -48,11 +48,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             .distinct()
         )
 
-        if aggregate_data:
-            return queryset.aggregate(config_context_data=OrderableJSONBAgg("data", ordering=["weight", "name"]))[
-                "config_context_data"
-            ]
-
         return queryset
 
 
@@ -70,14 +65,17 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
     def annotate_config_context_data(self):
         """
-        Attach the subquery annotation to the base queryset
+        Attach the subquery annotation to the base queryset.
+        Order By clause in Subquery is not guaranteed to be respected
+        within the aggregated JSON array.
         """
         from nautobot.extras.models import ConfigContext
 
         return self.annotate(
             config_context_data=Subquery(
                 ConfigContext.objects.filter(self._get_config_context_filters())
-                .annotate(_data=EmptyGroupByJSONBAgg("data", ordering=["weight", "name"]))
+                .order_by("weight", "name")
+                .annotate(_data=EmptyGroupByJSONBAgg("data"))
                 .values("_data")
             )
         ).distinct()

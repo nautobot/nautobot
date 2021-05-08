@@ -41,11 +41,11 @@ Add the name of the new field to `csv_headers` and included a CSV-friendly repre
 
 ## 4. Update relevant querysets
 
-If you're adding a relational field (e.g. `ForeignKey`) and intend to include the data when retreiving a list of objects, be sure to include the field using `prefetch_related()` as appropriate. This will optimize the view and avoid extraneous database queries.
+If you're adding a relational field (e.g. `ForeignKey`) and intend to include the data when retrieving a list of objects, be sure to include the field using `prefetch_related()` as appropriate. This will optimize the view and avoid extraneous database queries.
 
 ## 5. Update API serializer
 
-Extend the model's API serializer in `<app>.api.serializers` to include the new field. In most cases, it will not be necessary to also extend the nested serializer, which produces a minimal represenation of the model.
+Extend the model's API serializer in `<app>.api.serializers` to include the new field. In most cases, it will not be necessary to also extend the nested serializer, which produces a minimal representation of the model.
 
 ## 6. Add field to forms
 

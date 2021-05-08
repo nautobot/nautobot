@@ -22,12 +22,17 @@ class PathContains(Lookup):
         rhs, rhs_params = self.process_rhs(compiler, connection)
         params = lhs_params + rhs_params
 
-        engine = connection.settings_dict["ENGINE"]
-        if "postgres" in engine:
-            sql = "%s::jsonb ? '%s'" % (lhs, rhs)
-        elif "mysql" in engine:
-            sql = "JSON_CONTAINS(%s, '\"%s\"','$')" % (lhs, rhs)
-        else:
-            raise NotSupportedError("PathContains only supports PostgreSQL and MySQL")
+        vendor = connection.vendor
+        # Mapping of vendor => expr
+        sql_map = {
+            "postgresql": "%s::jsonb ? '%s'",
+            "mysql": "JSON_CONTAINS(%s, '\"%s\"','$')",
+        }
+
+        if vendor not in sql_map:
+            raise NotSupportedError(f"PathContains not supported by database {vendor}")
+
+        sql_expr = sql_map[vendor]
+        sql = sql_expr % (lhs, rhs)
 
         return sql, params

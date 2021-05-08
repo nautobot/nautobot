@@ -168,16 +168,16 @@ Similar to `ChoiceVar`, but allows for the selection of multiple choices.
 A particular object within Nautobot. Each ObjectVar must specify a particular model, and allows the user to select one of the available instances. ObjectVar accepts several arguments, listed below.
 
 * `model` - The model class
-* `display_field` - The name of the REST API object field to display in the selection list (default: `'name'`)
+* `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
 * `query_params` - A dictionary of query parameters to use when retrieving available options (optional)
 * `null_option` - A label representing a "null" or empty choice (optional)
 
-The `display_field` argument is useful when referencing a model which does not have a `name` field. For example, when displaying a list of device types, you would likely use the `model` field:
+The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
 
 ```python
 device_type = ObjectVar(
-    model=DeviceType,
-    display_field='model'
+    model=IPAddress,
+    display_field="dns_name",
 )
 ```
 
@@ -349,6 +349,12 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 --data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
 ```
 
+The URL contains the `class_path` element that is composed of 3 elements, from the above example:
+
+- `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `example` - path to the job definition file; in this example, a locally installed `example.py` file. For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename`.
+- `MyJobWithVars` - name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
@@ -401,7 +407,6 @@ class NewBranch(Job):
     switch_model = ObjectVar(
         description="Access switch model",
         model=DeviceType,
-        display_field='model',
         query_params={
             'manufacturer_id': '$manufacturer'
         }
