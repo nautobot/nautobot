@@ -1,9 +1,11 @@
 from django.db import models
+
+from nautobot.core.models import BaseModel
 from nautobot.extras.utils import extras_features
 
 
 @extras_features("graphql")
-class DummyModel(models.Model):
+class DummyModel(BaseModel):
     name = models.CharField(max_length=20)
     number = models.IntegerField(default=100)
 
@@ -11,7 +13,7 @@ class DummyModel(models.Model):
         ordering = ["name"]
 
 
-class AnotherDummyModel(models.Model):
+class AnotherDummyModel(BaseModel):
     name = models.CharField(max_length=20)
     number = models.IntegerField(default=100)
 
