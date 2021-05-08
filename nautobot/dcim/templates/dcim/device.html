@@ -154,7 +154,7 @@
                                                 {% elif object.primary_ip4.nat_outside %}
                                                     <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
                                                 {% endif %}
-                                                <button class="btn btn-xs" data-clipboard-target="#ipv4"><span class="mdi mdi-content-copy"></span></button>
+                                                <button class="btn btn-inline" data-clipboard-target="#ipv4"><span class="mdi mdi-content-copy"></span></button>
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
