@@ -413,6 +413,17 @@ textarea {
     font-size: 18px;
     top: 3px;
 }
+.btn-inline {
+    font-size: .9em;
+    line-height: .9em;
+    vertical-align: baseline;
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+.btn-inline .mdi::before {
+    font-size: .9em;
+    top: 0px;
+}
 .dropdown-menu .mdi {
     margin-left: 2px;
 }
