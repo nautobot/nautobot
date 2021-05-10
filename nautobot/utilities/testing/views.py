@@ -294,7 +294,7 @@ class ViewTestCases:
             response_body = extract_page_body(response.content.decode(response.charset))
 
             # The object's display name or string representation should appear in the response
-            self.assertIn(getattr(instance, "display", str(instance)), response_body, response_body)
+            self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships:
@@ -304,24 +304,24 @@ class ViewTestCases:
                         self.assertIn(
                             relationship.get_label(RelationshipSideChoices.SIDE_SOURCE),
                             response_body,
-                            response_body,
+                            msg=response_body,
                         )
                     if content_type == relationship.destination_type:
                         self.assertIn(
                             relationship.get_label(RelationshipSideChoices.SIDE_DESTINATION),
                             response_body,
-                            response_body,
+                            msg=response_body,
                         )
 
             # If any Custom Fields are defined, they should appear in the response
             if self.custom_fields:
                 for custom_field in self.custom_fields:
-                    self.assertIn(str(custom_field), response_body, response_body)
+                    self.assertIn(str(custom_field), response_body, msg=response_body)
                     if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                         for value in instance.cf.get(custom_field.name):
-                            self.assertIn(str(value), response_body, response_body)
+                            self.assertIn(str(value), response_body, msg=response_body)
                     else:
-                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), response_body, response_body)
+                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
@@ -660,11 +660,11 @@ class ViewTestCases:
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
-                self.assertIn(instance1.name, content, content)
-                self.assertNotIn(instance2.name, content, content)
+                self.assertIn(instance1.name, content, msg=content)
+                self.assertNotIn(instance2.name, content, msg=content)
             elif hasattr(self.model, "get_absolute_url"):
-                self.assertIn(instance1.get_absolute_url(), content, content)
-                self.assertNotIn(instance2.get_absolute_url(), content, content)
+                self.assertIn(instance1.get_absolute_url(), content, msg=content)
+                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
