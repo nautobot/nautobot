@@ -14,7 +14,7 @@
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:graphqlquery_list' %}">GraphQL Queries</a></li>
                 {% if object.name %}
-                    <li><a href="{% url 'extras:graphqlquery' slug=object.slug %}">{{ object.name }}</a></li>
+                    <li><a href="{% url 'extras:graphqlquery' slug=object.slug %}" value="{{ object }}">{{ object.name }}</a></li>
                 {% endif %}
             </ol>
         </div>

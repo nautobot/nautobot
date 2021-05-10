@@ -8,23 +8,31 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0004_populate_default_status_records'),
+        ("extras", "0004_populate_default_status_records"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='GraphQLQuery',
+            name="GraphQLQuery",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('slug', models.CharField(max_length=100, unique=True)),
-                ('query', models.TextField()),
-                ('variables', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                ("name", models.CharField(max_length=100, unique=True)),
+                ("slug", models.CharField(max_length=100, unique=True)),
+                ("query", models.TextField()),
+                (
+                    "variables",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
             ],
             options={
-                'ordering': ('slug',),
+                "ordering": ("slug",),
             },
         ),
     ]

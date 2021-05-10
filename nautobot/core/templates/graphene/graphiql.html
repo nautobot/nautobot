@@ -122,6 +122,9 @@ add "&raw" to the end of the URL within a browser.
   <script src="{% static 'graphene_django/graphiql.js' %}"></script>
   <script>
     function reload(id, query, variables) {
+      if (variables == null){
+          variables = '{}';
+      }
       window.location.replace("#");
       window.location.hash = 'query=' + query + "&variables=" + variables;
 
@@ -198,6 +201,6 @@ add "&raw" to the end of the URL within a browser.
     }
 
   </script>
-  {% model_form_as_dialog form editing=editing form_name="GraphQLQueries" obj=obj obj_type="GraphQLQueries" %}
+  {% modal_form_as_dialog form editing=editing form_name="GraphQLQueries" obj=obj obj_type="GraphQLQueries" %}
 </body>
 </html>

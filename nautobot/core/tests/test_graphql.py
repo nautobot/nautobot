@@ -50,7 +50,7 @@ class GraphQLTestCase(TestCase):
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
         GraphQLQuery.objects.create(
-            name="GQL 2", slug="gql-2", query="query ($name: String!) { sites(name:$name) {name} }"
+            name="GQL 2", slug="gql-2", query="query ($name: [String!]) { sites(name:$name) {name} }"
         )
         self.region = Region.objects.create(name="Region")
         self.sites = (
@@ -68,9 +68,9 @@ class GraphQLTestCase(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
-        query = "query ($name: String!) { sites(name:$name) {name} }"
+        query = "query ($name: [String!]) { sites(name:$name) {name} }"
         resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
-        self.assertFalse(resp["data"].get("error"))
+        self.assertFalse(resp.get("error"))
         self.assertEquals(len(resp["data"]["sites"]), 1)
 
     def test_execute_query_with_error(self):

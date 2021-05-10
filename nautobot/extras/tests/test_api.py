@@ -758,7 +758,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
 
     create_data = [
         {

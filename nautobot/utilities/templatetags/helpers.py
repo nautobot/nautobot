@@ -333,8 +333,8 @@ def table_config_form(table, table_name=None):
     }
 
 
-@register.inclusion_tag("utilities/templatetags/model_form_as_dialog.html")
-def model_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
+@register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
+def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     return {
         "editing": editing,
         "form": form,
