@@ -11,11 +11,13 @@ ENV PYTHONUNBUFFERED=1 \
 # hadolint ignore=DL3005,DL3008,DL3013
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git mime-support && \
+    apt-get install --no-install-recommends -y git mime-support curl && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
     pip --no-cache-dir install --upgrade pip wheel
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=1 CMD curl --fail http://localhost:8080/health || exit 1
 
 ################################ Stage: dev
 # The dev container is used for development purposes but also to build the .whl for the final image
@@ -28,7 +30,7 @@ ENV PATH="${PATH}:/root/.poetry/bin"
 # Install development OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y curl openssl && \
+    apt-get install --no-install-recommends -y openssl && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -136,8 +138,6 @@ WORKDIR /opt/nautobot
 RUN nautobot-server init && \
     cat /opt/nautobot/nautobot_config.append.py >> /opt/nautobot/nautobot_config.py && \
     rm -f /opt/nautobot/nautobot_config.append.py
-
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "nautobot-server", "check" ]
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nautobot-server", "start", "--ini", "/opt/nautobot/uwsgi.ini"]

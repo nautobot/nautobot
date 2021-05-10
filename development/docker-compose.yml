@@ -20,6 +20,12 @@ services:
   worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server rqworker"
+    healthcheck:
+      interval: 30s
+      timeout: 10s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "check"]
     depends_on:
       - nautobot
     env_file:
