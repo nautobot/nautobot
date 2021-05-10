@@ -1229,7 +1229,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "656f783f2b109f4b842625b76e2bc99037d18ece6745665c1a066b04b3f6bc53"
+content-hash = "7ad9c4b08eca9e51704d429a447cc25bf54a4e69a69ee8f613058065516c2e8f"
 
 [metadata.files]
 aniso8601 = [
