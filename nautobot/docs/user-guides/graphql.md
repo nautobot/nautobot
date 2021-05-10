@@ -24,7 +24,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
       "id": "c8886c88-6eff-4c4f-a079-4ef16b53d4f6",
       "url": "https://demo.nautobot.com/api/dcim/devices/c8886c88-6eff-4c4f-a079-4ef16b53d4f6/",
       "name": "ams-edge-02",
-      "display_name": "ams-edge-02",
+      "display": "ams-edge-02",
       "device_type": {
         "id": "244ea351-3c7a-4d23-ba80-5db6b65312cc",
         "url": "https://demo.nautobot.com/api/dcim/device-types/244ea351-3c7a-4d23-ba80-5db6b65312cc/",
@@ -36,7 +36,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
         },
         "model": "DCS-7280CR2-60",
         "slug": "dcs-7280cr2-60",
-        "display_name": "Arista DCS-7280CR2-60"
+        "display": "Arista DCS-7280CR2-60"
       },
       "device_role": {
         "id": "a3637471-6b4d-4f5a-a249-838d621abe60",
@@ -58,7 +58,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
         "id": "bff3f7af-bd77-49b6-a57a-9c4b8fc7673a",
         "url": "https://demo.nautobot.com/api/dcim/racks/bff3f7af-bd77-49b6-a57a-9c4b8fc7673a/",
         "name": "ams-102",
-        "display_name": "ams-102"
+        "display": "ams-102"
       },
       "position": 40,
       "face": {
@@ -100,21 +100,21 @@ GraphQL reduces the complexity of performing multiple API calls and correlating 
 
 In Nautobot, there is a link to the GraphQL web interface at the bottom right-hand side of the page. The GraphQL web interface is called GraphiQL. Navigating to the URI (`/graphql`), brings up the GraphiQL tool for creating queries. This interface is useful for exploring the possibilities of GraphQL and validating that written queries execute successfully.
 
-![GraphiQL Interface](/user-guides/images/graphql/00-graphiql.png)
+![GraphiQL Interface](./images/graphql/00-graphiql.png)
 
 ### Documentation Explorer
 
 If you're new to GraphQL, take a little bit of time to explore the *Documentation Explorer*. This can be accomplished by clicking the `< Docs` link in the GraphiQL interface. The information within *Documentation Explorer* is specific to creating queries in Nautobot.
 
-<img src="/user-guides/images/graphql/01-graphiql-explorer.png" alt="Documentation Explorer" width="400">
+<img src="../images/graphql/01-graphiql-explorer.png" alt="Documentation Explorer" width="400">
 
 In the *Documentation Explorer*, search for `devices`. The results are all of the models that utilize the `devices` model.
 
-<img src="/user-guides/images/graphql/02-graphiql-explorer-device-query.png" alt="Documentation Explorer: Devices" width="400">
+<img src="../images/graphql/02-graphiql-explorer-device-query.png" alt="Documentation Explorer: Devices" width="400">
 
 From the `devices` query, select `devices` from `Query.devices`. This will display all of the potential query fields from devices.
 
-<img src="/user-guides/images/graphql/03-graphiql-explorer-device-attributes.png" alt="Documentation Explorer: Devices Attributes" width="400">
+<img src="../images/graphql/03-graphiql-explorer-device-attributes.png" alt="Documentation Explorer: Devices Attributes" width="400">
 
 ### First Query
 
@@ -134,14 +134,14 @@ This query will retrieve a list of all devices by their hostname.
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/user-guides/images/graphql/04-graphql-query-01.png">
+    <img src="../images/graphql/04-graphql-query-01.png">
   </details>
 </div>
 
 <br />
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
-<img src="/user-guides/images/graphql/05-graphiql-autocomplete.png" alt="GraphQL: Autocompletion" width="400">
+<img src="../images/graphql/05-graphiql-autocomplete.png" alt="GraphQL: Autocompletion" width="400">
 
 ```graphql
 query {
@@ -158,7 +158,7 @@ The result is a list of all the devices by their hostname and associated interfa
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/user-guides/images/graphql/06-graphql-query-02.png">
+    <img src="../images/graphql/06-graphql-query-02.png">
   </details>
 </div>
 
@@ -185,7 +185,7 @@ The results of the query look like:
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/user-guides/images/graphql/07-graphql-query-03.png">
+    <img src="../images/graphql/07-graphql-query-03.png">
   </details>
 </div>
 
@@ -199,7 +199,7 @@ As an example. We can query devices by their site location. This is done by addi
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/user-guides/images/graphql/08-graphql-query-04.png">
+    <img src="../images/graphql/08-graphql-query-04.png">
   </details>
 </div>
 
@@ -216,7 +216,7 @@ query {
 <div>
   <details>
     <summary>View GraphQL Query Results</summary>
-    <img src="/user-guides/images/graphql/09-graphql-query-05.png">
+    <img src="../images/graphql/09-graphql-query-05.png">
   </details>
 </div>
 
@@ -225,7 +225,7 @@ query {
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.
 
-<img src="/user-guides/images/graphql/10-graphiql-swagger.png" alt="GraphQL: Swagger" width="400">
+<img src="../images/graphql/10-graphql-swagger.png" alt="GraphQL: Swagger" width="400">
 
 From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is a required. The `query` field is where we put the GraphQL query. The `variables` field is optional. It's where we define filters, if we choose to do so. 
 

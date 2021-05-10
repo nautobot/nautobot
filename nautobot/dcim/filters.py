@@ -826,7 +826,7 @@ class CableTerminationFilterSet(django_filters.FilterSet):
 
 
 class PathEndpointFilterSet(django_filters.FilterSet):
-    connected = django_filters.BooleanFilter(method="filter_connected")
+    connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
 
     def filter_connected(self, queryset, name, value):
         if value:
@@ -902,9 +902,9 @@ class InterfaceFilterSet(
     device = MultiValueCharFilter(
         method="filter_device",
         field_name="name",
-        label="Device",
+        label="Device (name)",
     )
-    device_id = MultiValueNumberFilter(
+    device_id = MultiValueCharFilter(
         method="filter_device_id",
         field_name="pk",
         label="Device (ID)",
@@ -921,7 +921,7 @@ class InterfaceFilterSet(
     mac_address = MultiValueMACAddressFilter()
     tag = TagFilter()
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
-    vlan = django_filters.CharFilter(method="filter_vlan", label="Assigned VID")
+    vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
 
     class Meta:
@@ -965,7 +965,7 @@ class InterfaceFilterSet(
         return queryset.filter(Q(untagged_vlan_id=value) | Q(tagged_vlans=value))
 
     def filter_vlan(self, queryset, name, value):
-        value = value.strip()
+        value = str(value).strip()
         if not value:
             return queryset
         return queryset.filter(Q(untagged_vlan_id__vid=value) | Q(tagged_vlans__vid=value))
@@ -1138,14 +1138,14 @@ class CableFilterSet(StatusModelFilterSetMixin, BaseFilterSet):
     )
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
-    device_id = MultiValueNumberFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
-    rack_id = MultiValueNumberFilter(method="filter_device", field_name="device__rack_id")
-    rack = MultiValueNumberFilter(method="filter_device", field_name="device__rack__name")
-    site_id = MultiValueNumberFilter(method="filter_device", field_name="device__site_id")
-    site = MultiValueNumberFilter(method="filter_device", field_name="device__site__slug")
-    tenant_id = MultiValueNumberFilter(method="filter_device", field_name="device__tenant_id")
-    tenant = MultiValueNumberFilter(method="filter_device", field_name="device__tenant__slug")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
+    rack_id = MultiValueCharFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
+    rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
+    site_id = MultiValueCharFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
+    site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
+    tenant_id = MultiValueCharFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
+    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     tag = TagFilter()
 
     class Meta:
@@ -1181,8 +1181,8 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueNumberFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
         model = ConsolePort
@@ -1194,8 +1194,8 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueNumberFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
         model = PowerPort
@@ -1207,8 +1207,8 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         method="filter_site",
         label="Site (slug)",
     )
-    device_id = MultiValueNumberFilter(method="filter_device")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name")
+    device_id = MultiValueCharFilter(method="filter_device", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
 
     class Meta:
         model = Interface

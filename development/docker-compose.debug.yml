@@ -4,3 +4,10 @@ version: "3"
 services:
   nautobot:
     command: "sleep infinity"
+    volumes:
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source
+  worker:
+    volumes:
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source

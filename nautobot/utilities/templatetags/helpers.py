@@ -90,6 +90,8 @@ def validated_viewname(model, action):
     Return the view name for the given model and action if valid, or None if invalid.
     """
     viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+    if model._meta.app_label in settings.PLUGINS:
+        viewname = f"plugins:{viewname}"
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
         # are written to pass a name to {% url %}.
@@ -272,7 +274,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
     )
 
 
-@register.inclusion_tag("utilities/templatetags/utilization_graph_raw_data.html")
+@register.inclusion_tag("utilities/templatetags/utilization_graph.html")
 def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, danger_threshold=90):
     """Display a horizontal bar graph indicating a percentage of utilization.
 
