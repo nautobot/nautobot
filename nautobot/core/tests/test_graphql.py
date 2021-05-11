@@ -14,6 +14,7 @@ from graphql import get_default_backend
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from nautobot.circuits.models import Provider
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_schema_type,
@@ -602,6 +603,9 @@ class GraphQLQuery(TestCase):
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
         context1.regions.add(self.region1)
 
+        self.provider1 = Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
+        self.provider2 = Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
+
     def execute_query(self, query, variables=None):
 
         document = self.backend.document_from_string(self.schema, query)
@@ -816,3 +820,21 @@ class GraphQLQuery(TestCase):
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_providers_filter(self):
+        """Test provider filtering by ASN (issue #428)."""
+
+        filters = (
+            ("asn: [4294967295]", 1),
+            ("asn: [1, 4294967295]", 2),
+        )
+
+        for filter_s, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter_s=filter_s, nbr_expected_results=nbr_expected_results):
+                query = "query { providers (" + filter_s + "){ id asn }}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["providers"]), nbr_expected_results)
+                for provider in result.data["providers"]:
+                    self.assertEqual(provider["asn"], Provider.objects.get(id=provider["id"]).asn)
