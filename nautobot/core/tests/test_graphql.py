@@ -32,7 +32,7 @@ from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status
+from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status, Webhook
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
@@ -603,8 +603,13 @@ class GraphQLQuery(TestCase):
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
         context1.regions.add(self.region1)
 
-        self.provider1 = Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
-        self.provider2 = Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
+        Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
+        Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
+
+        webhook1 = Webhook.objects.create(name="webhook 1", type_delete=True, enabled=False)
+        webhook1.content_types.add(ContentType.objects.get_for_model(Device))
+        webhook2 = Webhook.objects.create(name="webhook 2", type_update=True, enabled=False)
+        webhook2.content_types.add(ContentType.objects.get_for_model(Interface))
 
     def execute_query(self, query, variables=None):
 
@@ -824,17 +829,34 @@ class GraphQLQuery(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_providers_filter(self):
         """Test provider filtering by ASN (issue #428)."""
-
         filters = (
             ("asn: [4294967295]", 1),
             ("asn: [1, 4294967295]", 2),
         )
 
-        for filter_s, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter_s=filter_s, nbr_expected_results=nbr_expected_results):
-                query = "query { providers (" + filter_s + "){ id asn }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { providers (" + filterv + "){ id asn }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["providers"]), nbr_expected_results)
                 for provider in result.data["providers"]:
                     self.assertEqual(provider["asn"], Provider.objects.get(id=provider["id"]).asn)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_webhooks_filter(self):
+        """Test webhook querying and filtering with content types."""
+        filters = (
+            ('content_types: ["dcim.device"]', 1),
+            ('content_types: ["dcim.interface"]', 1),
+            # Since content_types is a many-to-many field, this query is an AND, not an OR
+            ('content_types: ["dcim.device", "dcim.interface"]', 0),
+            ('content_types: ["ipam.ipaddress"]', 0),
+        )
+
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { webhooks (" + filterv + "){ id name content_types {app_label model}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["webhooks"]), nbr_expected_results)

@@ -17,6 +17,7 @@ from nautobot.core.graphql.generators import (
     generate_restricted_queryset,
     generate_attrs_for_schema_type,
 )
+from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
     SiteType,
     DeviceType,
@@ -34,6 +35,7 @@ from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
 logger = logging.getLogger("nautobot.graphql.schema")
 
 registry["graphql_types"] = OrderedDict()
+registry["graphql_types"]["contenttypes.contenttype"] = ContentTypeType
 registry["graphql_types"]["dcim.site"] = SiteType
 registry["graphql_types"]["dcim.device"] = DeviceType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
