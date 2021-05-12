@@ -25,7 +25,7 @@ def convert_binary(field, registry=None):
 class BigInteger(graphene.types.Scalar):
     """An integer which, unlike GraphQL's native Int type, doesn't reject values outside (-2^31, 2^31-1).
 
-    Currently only used for ASNField, which goes up to 2^32-1 (i.e., unsinged 32-bit int); it's possible
+    Currently only used for ASNField, which goes up to 2^32-1 (i.e., unsigned 32-bit int); it's possible
     that this approach may fail for values in excess of 2^53-1 (the largest integer value supported in JavaScript).
     """
 
