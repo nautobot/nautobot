@@ -20,6 +20,14 @@
                 <a href="{{ termination.get_absolute_url }}">{{ termination }}</a>
             </td>
         </tr>
+    {% elif termination.power_panel %}
+        {# Device Power Panel #}
+        <tr>
+            <td>Power Feed</td>
+            <td>
+                <a href="{{ termination.power_panel.get_absolute_url }}">{{ termination }}</a>
+            </td>
+        </tr>
     {% else %}
         {# Circuit termination #}
         <tr>
