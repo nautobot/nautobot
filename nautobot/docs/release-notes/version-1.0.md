@@ -4,6 +4,22 @@ This document describes all new features and changes in Nautobot 1.0, a divergen
 
 Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation as well.
 
+## Unreleased (2021-MM-DD)
+
+### Added
+
+- [#430](https://github.com/nautobot/nautobot/pull/430) - GraphQL `ip_addresses` now includes an `assigned_object` field
+
+### Changed
+
+### Fixed
+
+- [#428](https://github.com/nautobot/nautobot/issues/428) - Fix GraphQL error when handling ASNs greater than 2147483647
+- [#430](https://github.com/nautobot/nautobot/pull/430) - Fix missing `ContentType` foreign keys in GraphQL.
+
+### Removed
+
+
 ## v1.0.1 (2021-05-06)
 
 ### Added

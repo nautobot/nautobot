@@ -12,7 +12,6 @@ from nautobot.dcim.filters import (
     CableFilterSet,
     ConsoleServerPortFilterSet,
 )
-from nautobot.ipam.graphql.types import IPAddressType
 from nautobot.extras.graphql.types import TagType  # noqa: F401
 
 
@@ -83,7 +82,7 @@ class InterfaceType(DjangoObjectType, CableTerminationMixin):
         filterset_class = InterfaceFilterSet
         exclude = ["_name"]
 
-    ip_addresses = graphene.List(IPAddressType)
+    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
     def resolve_ip_addresses(self, args):
         return self.ip_addresses.all()

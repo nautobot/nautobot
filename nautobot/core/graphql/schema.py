@@ -17,6 +17,7 @@ from nautobot.core.graphql.generators import (
     generate_restricted_queryset,
     generate_attrs_for_schema_type,
 )
+from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
     SiteType,
     DeviceType,
@@ -30,21 +31,24 @@ from nautobot.extras.models import CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType
 from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
+from nautobot.virtualization.graphql.types import VMInterfaceType
 
 logger = logging.getLogger("nautobot.graphql.schema")
 
 registry["graphql_types"] = OrderedDict()
-registry["graphql_types"]["dcim.site"] = SiteType
+registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
+registry["graphql_types"]["contenttypes.contenttype"] = ContentTypeType
+registry["graphql_types"]["dcim.cable"] = CableType
+registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
 registry["graphql_types"]["dcim.device"] = DeviceType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
 registry["graphql_types"]["dcim.rack"] = RackType
-registry["graphql_types"]["dcim.cable"] = CableType
-registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
+registry["graphql_types"]["dcim.site"] = SiteType
+registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.aggregate"] = AggregateType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
-registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
-registry["graphql_types"]["extras.tag"] = TagType
+registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
 
 
 STATIC_TYPES = registry["graphql_types"].keys()
