@@ -336,6 +336,23 @@ spawned uWSGI worker 5 (pid: 112171, cores: 3)
 
 Please see the guide on [Deploying Nautobot](../installation/wsgi.md) for our recommended configuration for use with uWSGI.
 
+### `startplugin`
+
+`nautobot-server startplugin <name> [directory]`
+
+Create a new plugin with `name`.
+
+This command is similar to the django-admin [startapp](https://docs.djangoproject.com/en/stable/ref/django-admin/#startapp) command, but with a default template directory (`--template`) of `nautobot/core/templates/plugin_template`. This command assists with creating a basic file structure for beginning development of a new Nautobot plugin.
+
+Without passing in the destination directory, `nautobot-server startplugin` will use your current directory and the `name` argument provided to create a new directory. We recommend providing a  directory so that the plugin can be installed or published easily. Here is an example:
+
+```bash
+mkdir -p ~/myplugin/myplugin
+nautobot-server startplugin myplugin ~/myplugin/myplugin
+```
+
+Additional options such as `--name` or `--extension` can be found in the Django [documentation](https://docs.djangoproject.com/en/stable/ref/django-admin/#startapp).
+
 ### `trace_paths`
 
 `nautobot-server trace_paths`

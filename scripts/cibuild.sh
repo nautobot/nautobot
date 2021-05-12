@@ -29,6 +29,14 @@ if [[ $RC != 0 ]]; then
 	exit $RC
 fi
 
+# Dockerfile lint with hadolint
+invoke hadolint
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) Dockerfile did not pass hadolint; failing build."
+	exit $RC
+fi
+
 echo -e "\n>> Checking that Python files confirm to PEP 8..."
 invoke flake8
 RC=$?

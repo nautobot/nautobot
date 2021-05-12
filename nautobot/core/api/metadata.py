@@ -38,6 +38,17 @@ class BulkOperationMetadata(SimpleMetadata):
 
         return actions
 
+    def get_field_info(self, field):
+        """
+        Replace DRF choices `display_name` to `display` to match new pattern.
+
+        See `ContentTypeMetadata` and `StatusFieldMetadata` classes below.
+        """
+        field_info = super().get_field_info(field)
+        for choice in field_info.get("choices", []):
+            choice["display"] = choice.pop("display_name")
+        return field_info
+
 
 class ContentTypeMetadata(BulkOperationMetadata):
     def get_field_info(self, field):

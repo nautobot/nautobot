@@ -48,7 +48,11 @@ class APITestCase(ModelTestCase):
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 
     def _get_view_namespace(self):
-        return f"{self.view_namespace or self.model._meta.app_label}-api"
+        if self.view_namespace:
+            return f"{self.view_namespace}-api"
+        if self.model._meta.app_label in settings.PLUGINS:
+            return f"plugins-api:{self.model._meta.app_label}-api"
+        return f"{self.model._meta.app_label}-api"
 
     def _get_detail_url(self, instance):
         viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
@@ -206,6 +210,28 @@ class APIViewTestCases:
             """
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_objects_returns_display_and_value(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choices use the display and value keys.
+            """
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            # Grab any field that has choices defined (fields with enums)
+            field_choices = {k: v["choices"] for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+
+            # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
+            # Broken down to provide better failure messages
+            for field, choices in field_choices.items():
+                for choice in choices:
+                    self.assertIn("display", choice, f"A choice in {field} is missing the display key")
+                    self.assertIn("value", choice, f"A choice in {field} is missing the value key")
 
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
