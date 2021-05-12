@@ -19,12 +19,13 @@ from nautobot.core.graphql.generators import (
 )
 from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
-    SiteType,
+    CableType,
+    CablePathType,
+    ConsoleServerPortType,
     DeviceType,
     InterfaceType,
     RackType,
-    CableType,
-    ConsoleServerPortType,
+    SiteType,
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.models import CustomField, Relationship
@@ -39,6 +40,7 @@ registry["graphql_types"] = OrderedDict()
 registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
 registry["graphql_types"]["contenttypes.contenttype"] = ContentTypeType
 registry["graphql_types"]["dcim.cable"] = CableType
+registry["graphql_types"]["dcim.cablepath"] = CablePathType
 registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
 registry["graphql_types"]["dcim.device"] = DeviceType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
