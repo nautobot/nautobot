@@ -21,17 +21,17 @@
             </td>
         </tr>
     {% elif termination.power_panel %}
-        {# Device Power Panel #}
-        <tr>
-            <td>Power Feed</td>
-            <td>
-                <a href="{{ termination.get_absolute_url }}">{{ termination }}</a>
-            </td>
-        </tr>
+        {# Power panel #}
         <tr>
             <td>Power Panel</td>
             <td>
                 <a href="{{ termination.power_panel.get_absolute_url }}">{{ termination.power_panel }}</a>
+            </td>
+        </tr>
+        <tr>
+            <td>Power Feed</td>
+            <td>
+                <a href="{{ termination.get_absolute_url }}">{{ termination }}</a>
             </td>
         </tr>
     {% else %}
