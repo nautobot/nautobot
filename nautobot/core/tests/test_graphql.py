@@ -36,6 +36,7 @@ from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -611,6 +612,21 @@ class GraphQLQuery(TestCase):
         webhook2 = Webhook.objects.create(name="webhook 2", type_update=True, enabled=False)
         webhook2.content_types.add(ContentType.objects.get_for_model(Interface))
 
+        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        cluster = Cluster.objects.create(name="Cluster 1", type=clustertype)
+        self.virtualmachine = VirtualMachine.objects.create(
+            name="Virtual Machine 1",
+            cluster=cluster,
+            status=self.status1,
+        )
+        self.vminterface = VMInterface.objects.create(
+            virtual_machine=self.virtualmachine,
+            name="eth0",
+        )
+        self.vmipaddr = IPAddress.objects.create(
+            address="1.1.1.1/32", status=self.status1, assigned_object=self.vminterface
+        )
+
     def execute_query(self, query, variables=None):
 
         document = self.backend.document_from_string(self.schema, query)
@@ -760,12 +776,13 @@ class GraphQLQuery(TestCase):
 
         filters = (
             ('address: "10.0.1.1"', 1),
-            ("family: 4", 2),
-            ('status: "status1"', 1),
+            ("family: 4", 3),
+            ('status: "status1"', 2),
             ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 2),
+            ('status: ["status1", "status2"]', 3),
             ("mask_length: 24", 1),
             ("mask_length: 30", 1),
+            ("mask_length: 32", 1),
             ("mask_length: 28", 0),
             ('parent: "10.0.0.0/16"', 2),
             ('parent: "10.0.2.0/24"', 1),
@@ -777,6 +794,45 @@ class GraphQLQuery(TestCase):
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_ip_addresses_assigned_object(self):
+        """Query IP Address assigned_object values."""
+
+        query = """\
+query {
+    ip_addresses {
+        address
+        assigned_object {
+            ... on InterfaceType {
+                name
+                device { name }
+            }
+            ... on VMInterfaceType {
+                name
+                virtual_machine { name }
+            }
+        }
+    }
+}"""
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(result.data["ip_addresses"]), 3)
+        for entry in result.data["ip_addresses"]:
+            self.assertIn(
+                entry["address"], (str(self.ipaddr1.address), str(self.ipaddr2.address), str(self.vmipaddr.address))
+            )
+            self.assertIn("assigned_object", entry)
+            if entry["address"] == str(self.vmipaddr.address):
+                self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
+                self.assertIn("virtual_machine", entry["assigned_object"])
+                self.assertNotIn("device", entry["assigned_object"])
+                self.assertEqual(entry["assigned_object"]["virtual_machine"]["name"], self.virtualmachine.name)
+            else:
+                self.assertIn(entry["assigned_object"]["name"], (self.interface11.name, self.interface12.name))
+                self.assertIn("device", entry["assigned_object"])
+                self.assertNotIn("virtual_machine", entry["assigned_object"])
+                self.assertEqual(entry["assigned_object"]["device"]["name"], self.device1.name)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_cables_filter(self):
