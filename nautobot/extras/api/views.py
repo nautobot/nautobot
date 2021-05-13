@@ -184,6 +184,7 @@ class ConfigContextViewSet(ModelViewSet):
         "regions",
         "sites",
         "roles",
+        "types",
         "platforms",
         "tenant_groups",
         "tenants",

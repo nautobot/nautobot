@@ -1,3 +1,4 @@
+from nautobot.dcim.models.devices import DeviceType
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -437,6 +438,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
+    types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
@@ -455,6 +457,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
             "regions",
             "sites",
             "roles",
+            "types",
             "platforms",
             "cluster_groups",
             "clusters",
@@ -483,6 +486,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
+    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(), to_field_name="slug", required=False

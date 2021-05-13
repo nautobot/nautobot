@@ -140,6 +140,20 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Types</td>
+                        <td>
+                            {% if object.types.all %}
+                                <ul>
+                                    {% for type in object.types.all %}
+                                        <li><a href="{% url 'dcim:device_list' %}?type={{ type.slug }}">{{ type }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Platforms</td>
                         <td>
                             {% if object.platforms.all %}

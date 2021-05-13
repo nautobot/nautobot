@@ -393,6 +393,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
+    types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
     cluster_groups = models.ManyToManyField(to="virtualization.ClusterGroup", related_name="+", blank=True)
     clusters = models.ManyToManyField(to="virtualization.Cluster", related_name="+", blank=True)
