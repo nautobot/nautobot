@@ -1,5 +1,4 @@
 {% load static %}
-{% load to_json %}
 {% load helpers %}
 <nav class="navbar navbar-default navbar-fixed-top">
     <div class="container-fluid">
@@ -866,7 +865,7 @@
                             </li>
                             {% for query in saved_graphiql_queries %}
                                 <li>
-                                    <a href="#" onclick="reload('{{query.id}}', '{{ query.query|urlencode }}', '{{ query.variables|to_json|urlencode }}')">{{ query.name }}</a>
+                                    <a href="#" onclick="reload('{{query.id}}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
                                 </li>
                             {% endfor %}
                             <br>

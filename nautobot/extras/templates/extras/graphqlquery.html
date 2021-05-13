@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% load buttons %}
 {% load custom_links %}
-{% load to_json %}
 {% load helpers %}
 {% load plugins %}
 {% load static %}
@@ -22,7 +21,7 @@
 
     <div class="pull-right noprint">
         {% plugin_buttons object %}
-        <a class="btn btn-primary" href="{% url 'graphql' %}?id={{ object.id }}#query={{ object.query|urlencode }}&variables={{ object.variables|to_json|urlencode }}">Open in GraphiQL</a>
+        <a class="btn btn-primary" href="{% url 'graphql' %}?id={{ object.id }}#query={{ object.query|urlencode }}&variables={{ object.variables|render_json|urlencode }}">Open in GraphiQL</a>
         {% if perms.extras.add_graphqlquery %}
             {% clone_button object %}
         {% endif %}
@@ -75,7 +74,7 @@
                 </tr>
                 <tr>
                     <td>Query Variables</td>
-                    <td><textarea id="query_variables" class="form-control">{{ object.variables|to_json }}</textarea></td>
+                    <td><pre>{{ object.variables|render_json }}</pre></td>
                 </tr>
             </table>
         </div>
@@ -87,6 +86,14 @@
                 <strong>Response</strong>
                 <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
             </div>
+            {% if object.variables %}
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Variables:</td>
+                        <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json }}</textarea></td>
+                    </tr>
+                </table>
+            {% endif %}
             <pre id="query_output">
 
             </pre>
@@ -118,5 +125,16 @@ function test_query() {
     });
 
 };
+</script>
+ <script type="text/javascript">
+    textarea = document.querySelector("#query_variables");
+    textarea.addEventListener('input', autoResize, false);
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+
+    function autoResize() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    }
 </script>
 {% endblock %}

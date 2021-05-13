@@ -77,7 +77,6 @@ class GraphQLTestCase(TestCase):
         query = "THIS TEST WILL ERROR"
         with self.assertRaises(GraphQLError):
             execute_query(query, user=self.user).to_dict()
-            self.assertTrue("Exception was not raised.")
 
     def test_execute_saved_query(self):
         resp = execute_saved_query("gql-1", user=self.user).to_dict()

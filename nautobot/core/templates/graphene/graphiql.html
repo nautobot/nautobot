@@ -139,14 +139,14 @@ add "&raw" to the end of the URL within a browser.
       // To modify the GraphiQL termial, hash fragments in the URL need to be set,
       // this then adds text to the query, vairable and output text boxes in the UI.
       var hashParams = {};
-      var e,
-          a = /\+/g,  // Regex for replacing addition symbol with a space
-          r = /([^&;=]+)=?([^&;]*)/g,
-          d = function (s) { return decodeURIComponent(s.replace(a, " ")); },
-          q = window.location.hash.substring(1);
+      var matches,
+          re_match_plus = /\+/g,  // Regex for replacing addition symbol with a space
+          re_match_query_param_and_value = /([^&;=]+)=?([^&;]*)/g,
+          decode_and_replace_plus_with_space = function (s) { return decodeURIComponent(s.replace(re_match_plus, " ")); },
+          query_text = window.location.hash.substring(1);
 
-      while (e = r.exec(q))
-        hashParams[d(e[1])] = d(e[2]);
+      while (matches = re_match_query_param_and_value.exec(query_text))
+        hashParams[decode_and_replace_plus_with_space(matches[1])] = decode_and_replace_plus_with_space(matches[2]);
 
       return hashParams;
     }
