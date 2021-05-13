@@ -14,7 +14,7 @@ from nautobot.core.settings_funcs import is_truthy
 # access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
 #
 # Example: ALLOWED_HOSTS = ['nautobot.example.com', 'nautobot.internal.local']
-ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS").split(",")
+ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(",")
 
 # PostgreSQL database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
@@ -53,9 +53,9 @@ RQ_QUEUES = {
 # For detailed configuration see: https://github.com/Suor/django-cacheops#setup
 # Set Cache Ops variables
 redis_protocol = "rediss" if is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)) else "redis"
-cache_ops_pwd = os.getenv("NAUTOBOT_REDIS_PASSWORD")
+cache_ops_pwd = os.getenv("NAUTOBOT_REDIS_PASSWORD", "")
 cache_ops_host = os.getenv("NAUTOBOT_REDIS_HOST", "localhost")
-cache_ops_user = os.getenv("NAUTOBOT_REDIS_USER")
+cache_ops_user = os.getenv("NAUTOBOT_REDIS_USER", "")
 cache_ops_port = int(os.getenv("NAUTOBOT_REDIS_PORT", 6379))
 
 CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", f"{redis_protocol}://:{cache_ops_pwd}@{cache_ops_host}:{cache_ops_port}/1")
