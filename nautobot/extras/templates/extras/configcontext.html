@@ -140,12 +140,12 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Types</td>
+                        <td>Device Types</td>
                         <td>
-                            {% if object.types.all %}
+                            {% if object.device_types.all %}
                                 <ul>
-                                    {% for type in object.types.all %}
-                                        <li><a href="{% url 'dcim:device_list' %}?type={{ type.slug }}">{{ type }}</a></li>
+                                    {% for device_type in object.device_types.all %}
+                                        <li><a href="{{ device_type.get_absolute_url }}">{{ device_type }}</a></li>
                                     {% endfor %}
                                 </ul>
                             {% else %}

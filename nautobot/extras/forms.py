@@ -1,11 +1,10 @@
-from nautobot.dcim.models.devices import DeviceType
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
@@ -438,7 +437,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
-    types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
+    device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
@@ -457,7 +456,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
             "regions",
             "sites",
             "roles",
-            "types",
+            "device_types",
             "platforms",
             "cluster_groups",
             "clusters",

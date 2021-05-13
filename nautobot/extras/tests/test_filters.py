@@ -219,7 +219,7 @@ class ConfigContextTestCase(TestCase):
             c.regions.set([regions[i]])
             c.sites.set([sites[i]])
             c.roles.set([device_roles[i]])
-            c.types.set([device_types[i]])
+            c.device_types.set([device_types[i]])
             c.platforms.set([platforms[i]])
             c.cluster_groups.set([cluster_groups[i]])
             c.clusters.set([clusters[i]])
@@ -263,9 +263,9 @@ class ConfigContextTestCase(TestCase):
 
     def test_type(self):
         device_types = DeviceType.objects.all()[:2]
-        params = {"type_id": [device_types[0].pk, device_types[1].pk]}
+        params = {"device_type_id": [device_types[0].pk, device_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"type": [device_types[0].slug, device_types[1].slug]}
+        params = {"device_type": [device_types[0].slug, device_types[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_platform(self):
