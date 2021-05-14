@@ -2,6 +2,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import json
 from random import shuffle
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.urls import reverse
 from netaddr import IPNetwork
@@ -22,6 +23,7 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.utilities.testing.api import APITransactionTestCase
 
@@ -470,12 +472,12 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        statuses = Status.objects.get_for_model(IPAddress)
+        cls.statuses = Status.objects.get_for_model(IPAddress)
 
-        IPAddress.objects.create(address=IPNetwork("192.168.0.1/24"), status=statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.168.0.2/24"), status=statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.168.0.3/24"), status=statuses[0])
-        IPAddress.objects.create(address=IPNetwork("2001:db8:abcd::20/128"), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork("192.168.0.1/24"), status=cls.statuses[0])
+        IPAddress.objects.create(address=IPNetwork("192.168.0.2/24"), status=cls.statuses[0])
+        IPAddress.objects.create(address=IPNetwork("192.168.0.3/24"), status=cls.statuses[0])
+        IPAddress.objects.create(address=IPNetwork("2001:db8:abcd::20/128"), status=cls.statuses[0])
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -484,6 +486,20 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         # The test code for `utilities.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
+
+    def test_create_invalid_address(self):
+        """Pass various invalid inputs and confirm they are rejected cleanly."""
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        for bad_address in ("", "192.168.0.0.100/24", "192.168.0.0/35", "2001:db8:1:2:3:4:5:6:7:8/64"):
+            response = self.client.post(
+                self._get_list_url(), {"address": bad_address, "status": "active"}, format="json", **self.header
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("address", response.data)
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
