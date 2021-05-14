@@ -188,7 +188,7 @@ At this point all changes, and history can be kept using Git.  A simple `sync` o
 ### Config Contexts
 Detailed information on [config contexts](../models/extras/gitrepository.md#configuration-contexts) in Git Repositories.
 
-Config contexts may be provided as JSON or YAML files located in `/config_contexts/`.
+Config contexts may be provided as JSON or YAML files located in the `/config_contexts/` folder, which must be in the root of the Git repository.
 
 Config contexts can be used to provide additional details to different automation tooling.  For example Ansible variables, or any other data that you can't natively store in Nautobot.  It can also be used in the Golden Configuration Nautobot plugin to provide extra details to generate configuration templates.
 
