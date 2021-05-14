@@ -143,9 +143,10 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
             RIR.objects.create(name="RIR 2", slug="rir-2"),
         )
 
-        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("2001:db8:abcd::/64"), rir=rirs[0])
 
         cls.create_data = [
             {
@@ -153,7 +154,7 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
                 "rir": rirs[1].pk,
             },
             {
-                "prefix": "101.0.0.0/8",
+                "prefix": "2001:db8:abcd:12::/64",
                 "rir": rirs[1].pk,
             },
             {
@@ -205,7 +206,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             "status": "active",
         },
         {
-            "prefix": "192.168.5.0/24",
+            "prefix": "2001:db8:abcd:12::/80",
             "status": "active",
         },
         {
@@ -230,6 +231,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Prefix.objects.create(prefix=IPNetwork("192.168.1.0/24"), status=statuses[0])
         Prefix.objects.create(prefix=IPNetwork("192.168.2.0/24"), status=statuses[0])
         Prefix.objects.create(prefix=IPNetwork("192.168.3.0/24"), status=statuses[0])
+        Prefix.objects.create(prefix=IPNetwork("2001:db8:abcd::/80"), status=statuses[0])
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -453,7 +455,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             "status": "active",
         },
         {
-            "address": "192.168.0.5/24",
+            "address": "2001:db8:abcd:12::20/128",
             "status": "active",
         },
         {
@@ -473,6 +475,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         IPAddress.objects.create(address=IPNetwork("192.168.0.1/24"), status=statuses[0])
         IPAddress.objects.create(address=IPNetwork("192.168.0.2/24"), status=statuses[0])
         IPAddress.objects.create(address=IPNetwork("192.168.0.3/24"), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork("2001:db8:abcd::20/128"), status=statuses[0])
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
