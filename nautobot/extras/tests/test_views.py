@@ -419,6 +419,7 @@ class GraphQLQueriesTestCase(
         )
 
         for query in graphqlqueries:
+            query.clean()
             query.save()
 
         cls.form_data = {

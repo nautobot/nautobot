@@ -43,6 +43,7 @@ __all__ = (
     "CustomLinkFilterSet",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
+    "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
     "JobResultFilterSet",
     "LocalConfigContextFilterSet",
@@ -630,4 +631,4 @@ class GraphQLQueryFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value) | Q(query__icontains=value))

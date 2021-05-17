@@ -103,30 +103,29 @@
 </div>
 
 <script>
-function test_query() {
-    var output = $("#query_output");
-    var variables = $("#query_variables").val();
-    $.ajax({
-        url: "{% url 'graphql' %}",
-        method: "POST",
-        headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
-        dataType: "json",
-        data: {
-            "query": `{{ object.query }}`,
-            "variables": variables,
-        },
-        success: function(data) {
-            output.text(JSON.stringify(data, undefined, 2));
-        },
-        error: function(error) {
-            console.log(error);
-            output.text(JSON.stringify(error.responseJSON, undefined, 2));
-        }
-    });
 
-};
-</script>
- <script type="text/javascript">
+    function test_query() {
+        var output = $("#query_output");
+        var variables = $("#query_variables").val();
+        $.ajax({
+            url: "{% url 'graphql' %}",
+            method: "POST",
+            headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+            dataType: "json",
+            data: {
+                "query": `{{ object.query }}`,
+                "variables": variables,
+            },
+            success: function(data) {
+                output.text(JSON.stringify(data, undefined, 2));
+            },
+            error: function(error) {
+                console.log(error);
+                output.text(JSON.stringify(error.responseJSON, undefined, 2));
+            }
+        });
+    };
+
     textarea = document.querySelector("#query_variables");
     textarea.addEventListener('input', autoResize, false);
     textarea.style.height = 'auto';

@@ -16,6 +16,7 @@ from django.utils import timezone
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
+from graphql.language.ast import OperationDefinition
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.extras.choices import *
@@ -701,12 +702,18 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
         return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
 
     def save(self, *args, **kwargs):
-        query_vars = re.findall(r"\$[a-zA-Z0-9]+", self.query)
-        vars_object = {}
-        for var in query_vars:
-            vars_object[var[1:]] = ""
+        variables = {}
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        document = backend.document_from_string(schema, self.query)
+        for definition in document.document_ast.definitions:
+            if isinstance(definition, OperationDefinition):
+                if definition.variable_definitions:
+                    for variable_definition in definition.variable_definitions:
+                        default = variable_definition.default_value.value if variable_definition.default_value else ""
+                        variables[variable_definition.variable.name.value] = default
 
-        self.variables = vars_object
+        self.variables = variables
         return super().save(*args, **kwargs)
 
     def clean(self):

@@ -862,7 +862,7 @@ query ($device: String!) {
       }
     }
   }
-}"""
+}""",
         },
     ]
 
@@ -975,6 +975,7 @@ query ($device: String!) {
         )
 
         for query in graphqlqueries:
+            query.clean()
             query.save()
 
 
