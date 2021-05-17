@@ -344,7 +344,7 @@ def post_upgrade(context):
 @task()
 def dumpdata(context, format="json"):
     """Dump data from database to db_output file."""
-    command = f"nautobot-server dumpdata -e extras.job --indent 4 -o db_output.{format} --format {format}"
+    command = f"nautobot-server dumpdata --exclude extras.job --indent 4 --output db_output.{format} --format {format}"
     run_command(context, command)
 
 
