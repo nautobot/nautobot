@@ -21,3 +21,6 @@ docker-compose.override.yml
 override.env
 *.egg-info
 .python-version
+db_output.json
+db_output.xml
+db_output.yaml

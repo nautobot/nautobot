@@ -341,6 +341,20 @@ def post_upgrade(context):
     run_command(context, command)
 
 
+@task()
+def dumpdata(context, format="json"):
+    """Dump data from database to db_output file."""
+    command = f"nautobot-server dumpdata -e extras.job --indent 4 -o db_output.{format} --format {format}"
+    run_command(context, command)
+
+
+@task()
+def loaddata(context, file_name):
+    """Load data from file."""
+    command = f"nautobot-server loaddata {file_name}"
+    run_command(context, command)
+
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
