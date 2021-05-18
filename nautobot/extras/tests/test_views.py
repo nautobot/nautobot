@@ -88,6 +88,7 @@ class ConfigContextTestCase(
             "regions": [],
             "sites": [site.pk],
             "roles": [],
+            "device_types": [],
             "platforms": [],
             "tenant_groups": [],
             "tenants": [],
