@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "dummy_plugin"
+version = "1.0.0"
+description = "Nautobot example plugin that does a whole lot of nothing."
+authors = ["Network to Code <opensource@networktocode.com>"]
+license = "Apache-2.0"
+packages = [
+    {include = "dummy_plugin"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

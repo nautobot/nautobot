@@ -5,31 +5,31 @@ from django.core.exceptions import ValidationError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from dummy_plugin import config as dummy_config
+from dummy_plugin.datasources import refresh_git_text_files
 from nautobot.dcim.models import Site
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.extras.tests.dummy_plugin import config as dummy_config
-from nautobot.extras.tests.dummy_plugin.datasources import refresh_git_text_files
 from nautobot.utilities.testing import APITestCase
 
 
 @skipIf(
-    "nautobot.extras.tests.dummy_plugin" not in settings.PLUGINS,
+    "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
 )
 class PluginTest(TestCase):
     def test_config(self):
 
         self.assertIn(
-            "nautobot.extras.tests.dummy_plugin.DummyPluginConfig",
+            "dummy_plugin.DummyPluginConfig",
             settings.INSTALLED_APPS,
         )
 
     def test_models(self):
-        from nautobot.extras.tests.dummy_plugin.models import DummyModel
+        from dummy_plugin.models import DummyModel
 
         # Test saving an instance
         instance = DummyModel(name="Instance 1", number=100)
@@ -70,7 +70,7 @@ class PluginTest(TestCase):
         """
         Check that plugin TemplateExtensions are registered.
         """
-        from nautobot.extras.tests.dummy_plugin.template_content import SiteContent
+        from dummy_plugin.template_content import SiteContent
 
         self.assertIn(SiteContent, registry["plugin_template_extensions"]["dcim.site"])
 
@@ -78,7 +78,7 @@ class PluginTest(TestCase):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from nautobot.extras.tests.dummy_plugin.custom_validators import (
+        from dummy_plugin.custom_validators import (
             SiteCustomValidator,
         )
 
@@ -88,7 +88,7 @@ class PluginTest(TestCase):
         """
         Check that plugin GraphQL Types are registered.
         """
-        from nautobot.extras.tests.dummy_plugin.graphql.types import AnotherDummyType
+        from dummy_plugin.graphql.types import AnotherDummyType
 
         self.assertIn(AnotherDummyType, registry["plugin_graphql_types"])
 
@@ -105,33 +105,33 @@ class PluginTest(TestCase):
         """
         Check that plugin jobs are registered correctly and discoverable.
         """
-        from nautobot.extras.tests.dummy_plugin.jobs import DummyJob
+        from dummy_plugin.jobs import DummyJob
 
         self.assertIn(DummyJob, registry.get("plugin_jobs", []))
 
         self.assertEqual(
             DummyJob,
-            get_job("plugins/nautobot.extras.tests.dummy_plugin.jobs/DummyJob"),
+            get_job("plugins/dummy_plugin.jobs/DummyJob"),
         )
         self.assertIn(
-            "plugins/nautobot.extras.tests.dummy_plugin.jobs/DummyJob",
+            "plugins/dummy_plugin.jobs/DummyJob",
             get_job_classpaths(),
         )
         jobs_dict = get_jobs()
         self.assertIn("plugins", jobs_dict)
-        self.assertIn("nautobot.extras.tests.dummy_plugin.jobs", jobs_dict["plugins"])
+        self.assertIn("dummy_plugin.jobs", jobs_dict["plugins"])
         self.assertEqual(
             "DummyPlugin jobs",
-            jobs_dict["plugins"]["nautobot.extras.tests.dummy_plugin.jobs"].get("name"),
+            jobs_dict["plugins"]["dummy_plugin.jobs"].get("name"),
         )
-        self.assertIn("jobs", jobs_dict["plugins"]["nautobot.extras.tests.dummy_plugin.jobs"])
+        self.assertIn("jobs", jobs_dict["plugins"]["dummy_plugin.jobs"])
         self.assertIn(
             "DummyJob",
-            jobs_dict["plugins"]["nautobot.extras.tests.dummy_plugin.jobs"]["jobs"],
+            jobs_dict["plugins"]["dummy_plugin.jobs"]["jobs"],
         )
         self.assertEqual(
             DummyJob,
-            jobs_dict["plugins"]["nautobot.extras.tests.dummy_plugin.jobs"]["jobs"]["DummyJob"],
+            jobs_dict["plugins"]["dummy_plugin.jobs"]["jobs"]["DummyJob"],
         )
 
     def test_git_datasource_contents(self):
@@ -155,7 +155,7 @@ class PluginTest(TestCase):
         Check that plugin middleware is registered.
         """
         self.assertIn(
-            "nautobot.extras.tests.dummy_plugin.middleware.DummyMiddleware",
+            "dummy_plugin.middleware.DummyMiddleware",
             settings.MIDDLEWARE,
         )
 
@@ -171,7 +171,7 @@ class PluginTest(TestCase):
         """
         Check that plugin caching configuration is registered and valid.
         """
-        self.assertIn("nautobot.extras.tests.dummy_plugin.*", settings.CACHEOPS)
+        self.assertIn("dummy_plugin.*", settings.CACHEOPS)
 
         # Establish dummy config to have invalid cache_config (list)
         class DummyConfigWithBadCacheConfig(dummy_config):
@@ -247,7 +247,7 @@ class PluginTest(TestCase):
         Validate that plugin installed apps and dependencies are are registerd.
         """
         self.assertIn(
-            "nautobot.extras.tests.dummy_plugin.DummyPluginConfig",
+            "dummy_plugin.DummyPluginConfig",
             settings.INSTALLED_APPS,
         )
         self.assertIn("nautobot.extras.tests.dummy_plugin_dependency", settings.INSTALLED_APPS)
@@ -262,7 +262,7 @@ class PluginTest(TestCase):
 
 
 @skipIf(
-    "nautobot.extras.tests.dummy_plugin" not in settings.PLUGINS,
+    "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
 )
 class PluginAPITestCase(APITestCase):
@@ -279,7 +279,7 @@ class PluginAPITestCase(APITestCase):
 
 
 @skipIf(
-    "nautobot.extras.tests.dummy_plugin" not in settings.PLUGINS,
+    "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
 )
 class PluginCustomValidationTest(TestCase):
@@ -318,5 +318,5 @@ class LoadPluginTest(TestCase):
             load_plugin(plugin_name, settings)
 
         # Move to the dummy plugin. No errors should be raised (which is good).
-        plugin_name = "nautobot.extras.tests.dummy_plugin"
+        plugin_name = "dummy_plugin"
         load_plugin(plugin_name, settings)

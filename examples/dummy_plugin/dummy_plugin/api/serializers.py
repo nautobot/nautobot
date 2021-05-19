@@ -1,5 +1,6 @@
 from rest_framework.serializers import ModelSerializer
-from nautobot.extras.tests.dummy_plugin.models import DummyModel
+
+from dummy_plugin.models import DummyModel
 
 
 class DummySerializer(ModelSerializer):

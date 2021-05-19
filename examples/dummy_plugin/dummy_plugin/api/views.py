@@ -1,5 +1,7 @@
 from rest_framework.viewsets import ModelViewSet
-from nautobot.extras.tests.dummy_plugin.models import DummyModel
+
+from dummy_plugin.models import DummyModel
+
 from .serializers import DummySerializer
 
 
