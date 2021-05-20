@@ -311,7 +311,7 @@ def generate_query_mixin():
         model = schema_type._meta.model
         type_identifier = f"{model._meta.app_label}.{model._meta.model_name}"
 
-        if type_identifier in registry["graphql_types"].keys():
+        if type_identifier in registry["graphql_types"]:
             logger.warning(
                 f'Unable to load schema type for the model "{type_identifier}" as there is already another type '
                 "registered under this name. If you are seeing this message during plugin development, check to "
