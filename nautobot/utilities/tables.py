@@ -354,6 +354,11 @@ class CustomFieldColumn(tables.Column):
                     template += f'<span class="label label-default">{v}</span> '
             else:
                 template = '<span class="text-muted">&mdash;</span>'
+        elif isinstance(value, bool):
+            if value:
+                template = '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
+            else:
+                template = '<span class="text-danger"><i class="mdi mdi-close-thick"></i></span>'
         elif value:
             template = value
         else:
