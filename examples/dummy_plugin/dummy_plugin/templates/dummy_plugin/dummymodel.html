@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'plugins:dummy_plugin:dummymodel_list' %}">Custom Links</a></li>
+                {% if object.name %}
+                    <li><a href="{% url 'plugins:dummy_plugin:dummymodel' pk=object.pk %}">{{ object.name }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.extras.add_dummymodel %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_dummymodel %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_dummymodel %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Dummy Model</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'plugins:dummy_plugin:dummymodel_changelog' pk=object.pk %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+	<div class="col-md-7">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Webhook</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td><span>{{ object.name }}</span></td>
+                </tr>
+                <tr>
+                    <td>Number</td>
+                    <td><span>{{ object.number }}</span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
