@@ -2,7 +2,6 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import json
 from random import shuffle
 
-from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.urls import reverse
 from netaddr import IPNetwork
@@ -23,7 +22,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.utilities.testing.api import APITransactionTestCase
 
@@ -472,12 +470,12 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.statuses = Status.objects.get_for_model(IPAddress)
+        statuses = Status.objects.get_for_model(IPAddress)
 
-        IPAddress.objects.create(address=IPNetwork("192.168.0.1/24"), status=cls.statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.168.0.2/24"), status=cls.statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.168.0.3/24"), status=cls.statuses[0])
-        IPAddress.objects.create(address=IPNetwork("2001:db8:abcd::20/128"), status=cls.statuses[0])
+        IPAddress.objects.create(address=IPNetwork("192.168.0.1/24"), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork("192.168.0.2/24"), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork("192.168.0.3/24"), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork("2001:db8:abcd::20/128"), status=statuses[0])
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -489,10 +487,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
     def test_create_invalid_address(self):
         """Pass various invalid inputs and confirm they are rejected cleanly."""
-        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        self.add_permissions("ipam.add_ipaddress")
 
         for bad_address in ("", "192.168.0.0.100/24", "192.168.0.0/35", "2001:db8:1:2:3:4:5:6:7:8/64"):
             response = self.client.post(
