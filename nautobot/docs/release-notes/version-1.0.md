@@ -179,6 +179,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#430](https://github.com/nautobot/nautobot/pull/430) - GraphQL `ip_addresses` now includes an `assigned_object` field
 - [#442](https://github.com/nautobot/nautobot/issues/442) - Added warning when mixing `@extras_features("graphql")` with explicitly declared GraphQL types
 - [#451](https://github.com/nautobot/nautobot/issues/451) - Added static GraphQL type for VirtualMachine model
+- [#456](https://github.com/nautobot/nautobot/issues/456) - Added mkdocs-include-markdown-plugin
 
 ### Changed
 
@@ -193,6 +194,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Removed
 
+- [#456](https://github.com/nautobot/nautobot/issues/456) - Removed markdown-include
 
 ## v1.0.1 (2021-05-06)
 

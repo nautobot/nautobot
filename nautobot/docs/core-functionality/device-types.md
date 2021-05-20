@@ -1,7 +1,13 @@
 # Device Types
 
-{!docs/models/dcim/devicetype.md!}
-{!docs/models/dcim/manufacturer.md!}
+{%
+    include-markdown "../models/dcim/devicetype.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/manufacturer.md"
+    heading-offset=1
+%}
 
 ---
 
@@ -30,11 +36,35 @@ Once component templates have been created, every new device that you create as 
 !!! note
     Assignment of components from templates occurs only at the time of device creation. If you modify the templates of a device type, it will not affect devices which have already been created. However, you always have the option of adding, modifying, or deleting components on existing devices.
 
-{!docs/models/dcim/consoleporttemplate.md!}
-{!docs/models/dcim/consoleserverporttemplate.md!}
-{!docs/models/dcim/powerporttemplate.md!}
-{!docs/models/dcim/poweroutlettemplate.md!}
-{!docs/models/dcim/interfacetemplate.md!}
-{!docs/models/dcim/frontporttemplate.md!}
-{!docs/models/dcim/rearporttemplate.md!}
-{!docs/models/dcim/devicebaytemplate.md!}
+{%
+    include-markdown "../models/dcim/consoleporttemplate.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/consoleserverporttemplate.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/powerporttemplate.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/poweroutlettemplate.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/interfacetemplate.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/frontporttemplate.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/rearporttemplate.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/devicebaytemplate.md"
+    heading-offset=2
+%}
