@@ -180,6 +180,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#442](https://github.com/nautobot/nautobot/issues/442) - Added warning when mixing `@extras_features("graphql")` with explicitly declared GraphQL types
 - [#451](https://github.com/nautobot/nautobot/issues/451) - Added static GraphQL type for VirtualMachine model
 - [#456](https://github.com/nautobot/nautobot/issues/456) - Added mkdocs-include-markdown-plugin
+- [#465](https://github.com/nautobot/nautobot/pull/465) - Added Virtual Chassis to the Home Page
 
 ### Changed
 
