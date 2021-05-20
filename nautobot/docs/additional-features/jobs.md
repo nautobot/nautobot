@@ -89,7 +89,7 @@ class MyJob(Job):
 
 #### `field_order`
 
-A list representing the order your form fields should appear.
+A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
 
 ### Variables
 
