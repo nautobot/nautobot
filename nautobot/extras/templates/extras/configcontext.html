@@ -140,6 +140,20 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Device Types</td>
+                        <td>
+                            {% if object.device_types.all %}
+                                <ul>
+                                    {% for device_type in object.device_types.all %}
+                                        <li><a href="{{ device_type.get_absolute_url }}">{{ device_type }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Platforms</td>
                         <td>
                             {% if object.platforms.all %}
