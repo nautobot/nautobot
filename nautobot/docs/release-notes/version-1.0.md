@@ -184,6 +184,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Changed
 
 - [#423](https://github.com/nautobot/nautobot/pull/423) - Clarified reference to `/config_contexts/` folder in Git user guide
+- [#467](https://github.com/nautobot/nautobot/pull/467) - Fixes issue with jobs not following field_order
 
 ### Fixed
 
