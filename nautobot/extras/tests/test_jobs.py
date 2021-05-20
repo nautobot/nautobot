@@ -84,7 +84,7 @@ class JobTest(TestCase):
 
     def test_no_field_order(self):
         """
-        Job test with field order.
+        Job test without field_order.
         """
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
 
