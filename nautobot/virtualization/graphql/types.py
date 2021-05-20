@@ -2,8 +2,16 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from nautobot.dcim.graphql.types import CableTerminationMixin
-from nautobot.virtualization.models import VMInterface
-from nautobot.virtualization.filters import VMInterfaceFilterSet
+from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.virtualization.filters import VirtualMachineFilterSet, VMInterfaceFilterSet
+
+
+class VirtualMachineType(DjangoObjectType):
+    """GraphQL type object for VirtualMachine model."""
+
+    class Meta:
+        model = VirtualMachine
+        filterset_class = VirtualMachineFilterSet
 
 
 class VMInterfaceType(DjangoObjectType, CableTerminationMixin):
