@@ -31,7 +31,7 @@ from nautobot.extras.models import CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType
 from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
-from nautobot.virtualization.graphql.types import VMInterfaceType
+from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
 logger = logging.getLogger("nautobot.graphql.schema")
 
@@ -48,6 +48,7 @@ registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.aggregate"] = AggregateType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
+registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
 registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
 
 
