@@ -103,7 +103,7 @@
 
             {% if perms.dcim.view_virtualchassis or not settings.HIDE_RESTRICTED_UI %}
                 <div class="list-group-item">
-                    {% if perms.virtualchassis %}
+                    {% if perms.dcim.view_virtualchassis %}
                         <span class="badge pull-right">{{ stats.virtualchassis_count }}</span>
                         <h4 class="list-group-item-heading"><a href="{% url 'dcim:virtualchassis_list' %}">Virtual Chassis</a></h4>
                     {% else %}
