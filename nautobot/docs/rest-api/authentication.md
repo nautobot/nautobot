@@ -2,7 +2,10 @@
 
 The Nautobot REST API primarily employs token-based authentication. For convenience, cookie-based authentication can also be used when navigating the browsable API.
 
-{!docs/models/users/token.md!}
+{%
+    include-markdown "../models/users/token.md"
+    heading-offset=1
+%}
 
 ## Authenticating to the API
 
