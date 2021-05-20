@@ -2,12 +2,16 @@ import django_tables2 as tables
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Func, F, Value
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
+
+from nautobot.extras.models import CustomField
 
 
 class BaseTable(tables.Table):
@@ -23,6 +27,18 @@ class BaseTable(tables.Table):
         }
 
     def __init__(self, *args, user=None, **kwargs):
+        # Add custom field columns
+        obj_type = ContentType.objects.get_for_model(self._meta.model)
+        custom_fields = {}
+
+        for cf in CustomField.objects.filter(content_types=obj_type):
+            name = "cf_{}".format(cf.name)
+            label = cf.label if cf.label != "" else cf.name
+            self.base_columns[name] = CustomFieldColumn(verbose_name=label)
+            custom_fields[name] = cf
+        self._meta.fields += tuple(x for x in custom_fields.keys() if x not in self._meta.fields)
+
+        # Init table
         super().__init__(*args, **kwargs)
 
         # Set default empty_text if none was provided
@@ -60,6 +76,12 @@ class BaseTable(tables.Table):
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
+            # Extract custom field values
+            cf_fields = {}
+            for key, cf in custom_fields.items():
+                cf_fields[key] = Func(F("_custom_field_data"), Value(cf.name), function="jsonb_extract_path_text")
+            self.data.data = self.data.data.annotate(**cf_fields)
+
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
@@ -316,4 +338,27 @@ class ContentTypesColumn(tables.ManyToManyColumn):
         if self.truncate_words is not None:
             trunc = Truncator(value)
             value = trunc.words(self.truncate_words)
+        return value
+
+
+class CustomFieldColumn(tables.Column):
+    """
+    Display custom fields in the appropriate format.
+    """
+
+    def render(self, record, bound_column, value):
+        if isinstance(value, list):
+            if len(value):
+                template = ""
+                for v in value:
+                    template += f'<span class="label label-default">{v}</span> '
+            else:
+                template = '<span class="text-muted">&mdash;</span>'
+        elif value:
+            template = value
+        else:
+            return self.default
+        return mark_safe(template)
+
+    def value(self, value):
         return value
