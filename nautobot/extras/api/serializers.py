@@ -18,7 +18,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack, Region, Site
 from nautobot.extras.choices import *
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -330,6 +330,12 @@ class ConfigContextSerializer(ValidatedModelSerializer):
         required=False,
         many=True,
     )
+    device_types = SerializedPKRelatedField(
+        queryset=DeviceType.objects.all(),
+        serializer=NestedDeviceRoleSerializer,
+        required=False,
+        many=True,
+    )
     platforms = SerializedPKRelatedField(
         queryset=Platform.objects.all(),
         serializer=NestedPlatformSerializer,
@@ -377,6 +383,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "regions",
             "sites",
             "roles",
+            "device_types",
             "platforms",
             "cluster_groups",
             "clusters",
@@ -508,14 +515,14 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
 
 class ContentTypeSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:contenttype-detail")
-    display_name = serializers.SerializerMethodField()
+    display = serializers.SerializerMethodField()
 
     class Meta:
         model = ContentType
-        fields = ["id", "url", "app_label", "model", "display_name"]
+        fields = ["id", "url", "app_label", "model", "display"]
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
-    def get_display_name(self, obj):
+    def get_display(self, obj):
         return obj.app_labeled_name
 
 

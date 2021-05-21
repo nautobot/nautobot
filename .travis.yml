@@ -1,13 +1,19 @@
-sudo: required
+# Linting/Testing available at https://config.travis-ci.com/explore
+os: linux
+dist: xenial
 services:
   - postgresql
-  - redis-server
+  - redis
 addons:
   postgresql: "9.6"
 language: python
-matrix:
+env:
+  - INVOKE_NAUTOBOT_LOCAL=True
+jobs:
+  fast_finish: true
   include:
-    - python: "3.6"
+    - stage: Tests
+      python: "3.6"
     - python: "3.7"
     - python: "3.8"
     - python: "3.9"
@@ -15,6 +21,8 @@ matrix:
     - python: "3.9"
 before_install:
   - pip install poetry
+  - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+  - chmod +x /home/travis/bin/hadolint
 install:
   - poetry config virtualenvs.create false
   # Poetry 1.1.0 added parallel installation as an option;

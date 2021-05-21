@@ -6,7 +6,7 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class ConfigContextQuerySet(RestrictedQuerySet):
-    def get_for_object(self, obj, aggregate_data=False):
+    def get_for_object(self, obj):
         """
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
 
@@ -16,6 +16,9 @@ class ConfigContextQuerySet(RestrictedQuerySet):
 
         # `device_role` for Device; `role` for VirtualMachine
         role = getattr(obj, "device_role", None) or obj.role
+
+        # `device_type` for Device; `type` for VirtualMachine
+        device_type = getattr(obj, "device_type", None)
 
         # Virtualization cluster for VirtualMachine
         cluster = getattr(obj, "cluster", None)
@@ -36,6 +39,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
                 Q(regions__in=regions) | Q(regions=None),
                 Q(sites=obj.site) | Q(sites=None),
                 Q(roles=role) | Q(roles=None),
+                Q(device_types=device_type) | Q(device_types=None),
                 Q(platforms=obj.platform) | Q(platforms=None),
                 Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
                 Q(clusters=cluster) | Q(clusters=None),
@@ -47,11 +51,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             .order_by("weight", "name")
             .distinct()
         )
-
-        if aggregate_data:
-            return queryset.aggregate(config_context_data=OrderableJSONBAgg("data", ordering=["weight", "name"]))[
-                "config_context_data"
-            ]
 
         return queryset
 
@@ -70,14 +69,17 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
     def annotate_config_context_data(self):
         """
-        Attach the subquery annotation to the base queryset
+        Attach the subquery annotation to the base queryset.
+        Order By clause in Subquery is not guaranteed to be respected
+        within the aggregated JSON array.
         """
         from nautobot.extras.models import ConfigContext
 
         return self.annotate(
             config_context_data=Subquery(
                 ConfigContext.objects.filter(self._get_config_context_filters())
-                .annotate(_data=EmptyGroupByJSONBAgg("data", ordering=["weight", "name"]))
+                .order_by("weight", "name")
+                .annotate(_data=EmptyGroupByJSONBAgg("data"))
                 .values("_data")
             )
         ).distinct()
@@ -102,6 +104,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
         if self.model._meta.model_name == "device":
             base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
+            base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
             region_field = "site__region"
 

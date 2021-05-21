@@ -180,7 +180,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
                 network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast),
+                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
             )
         except (AddrFormatError, ValueError):
             pass
@@ -333,7 +333,7 @@ class PrefixFilterSet(
             qs_filter |= Q(
                 prefix_length__lte=query.prefixlen,
                 network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast),
+                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
             )
         except (AddrFormatError, ValueError):
             pass
@@ -465,7 +465,7 @@ class IPAddressFilterSet(
         field_name="name",
         label="Device (name)",
     )
-    device_id = MultiValueNumberFilter(
+    device_id = MultiValueCharFilter(
         method="filter_device",
         field_name="pk",
         label="Device (ID)",
@@ -475,7 +475,7 @@ class IPAddressFilterSet(
         field_name="name",
         label="Virtual machine (name)",
     )
-    virtual_machine_id = MultiValueNumberFilter(
+    virtual_machine_id = MultiValueCharFilter(
         method="filter_virtual_machine",
         field_name="pk",
         label="Virtual machine (ID)",
@@ -514,10 +514,7 @@ class IPAddressFilterSet(
         fields = ["id", "dns_name"]
 
     def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        qs_filter = Q(dns_name__icontains=value) | Q(description__icontains=value)
-        return queryset.filter(qs_filter)
+        return queryset.string_search(value)
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()

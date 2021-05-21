@@ -2,8 +2,10 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django.converter import convert_django_field, convert_field_to_string
 
+from nautobot.dcim.graphql.types import InterfaceType
 from nautobot.ipam import models, filters, fields
 from nautobot.extras.graphql.types import TagType  # noqa: F401
+from nautobot.virtualization.graphql.types import VMInterfaceType
 
 
 # Register VarbinaryIPField to be converted to a string type
@@ -20,10 +22,26 @@ class AggregateType(DjangoObjectType):
         filterset_class = filters.AggregateFilterSet
 
 
+class AssignedObjectType(graphene.Union):
+    """GraphQL type object for IPAddress's assigned_object field."""
+
+    class Meta:
+        types = (InterfaceType, VMInterfaceType)
+
+    @classmethod
+    def resolve_type(cls, instance, info):
+        if type(instance).__name__ == "Interface":
+            return InterfaceType
+        elif type(instance).__name__ == "VMInterface":
+            return VMInterfaceType
+        return None
+
+
 class IPAddressType(DjangoObjectType):
     """Graphql Type Object for IPAddress model."""
 
     address = graphene.String()
+    assigned_object = AssignedObjectType()
 
     class Meta:
         model = models.IPAddress

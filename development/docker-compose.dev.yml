@@ -1,0 +1,15 @@
+# We can't remove volumes in a compose override, for the test configuration using the final containers
+# we don't want the volumes so this is the default override file to add the volumes in the dev case
+# any override will need to include these volumes to use them.
+# see:  https://github.com/docker/compose/issues/3729
+---
+version: "3"
+services:
+  nautobot:
+    volumes:
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source
+  worker:
+    volumes:
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source

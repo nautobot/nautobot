@@ -14,16 +14,14 @@ class VarbinaryIPField(models.BinaryField):
     description = "IP network address"
 
     def __init__(self, **kwargs):
-        kwargs["max_length"] = 16
         super().__init__(**kwargs)
 
     def db_type(self, connection):
-        """Returns the correct field type for a given database engine."""
-        engine = connection.settings_dict["ENGINE"]
+        """Returns the correct field type for a given database vendor."""
 
-        # Use 'bytea' type for Postgres.
-        if "postgres" in engine:
-            return super().db_type(connection)
+        # Use 'bytea' type for PostgreSQL.
+        if connection.vendor == "postgresql":
+            return "bytea"
 
         # Or 'varbinary' for everyone else.
         max_length = DictWrapper(self.__dict__, connection.ops.quote_name, "qn_")
@@ -72,12 +70,11 @@ class VarbinaryIPField(models.BinaryField):
         if value is None:
             return value
 
-        # Parse the address and then pack it to binary
+        # Parse the address and then pack it to binary.
         value = self._parse_address(value).packed
 
-        # Use defaults for Postgres
-        engine = connection.settings_dict["ENGINE"]
-        if "postgres" in engine:
+        # Use defaults for PostgreSQL
+        if connection.vendor == "postgresql":
             return super().get_db_prep_value(value, connection, prepared)
 
         return value
