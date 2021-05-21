@@ -192,6 +192,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#428](https://github.com/nautobot/nautobot/issues/428) - Fixed GraphQL error when handling ASNs greater than 2147483647
 - [#430](https://github.com/nautobot/nautobot/pull/430) - Fixed missing `ContentType` foreign keys in GraphQL
 - [#448](https://github.com/nautobot/nautobot/issues/448) - Fixed nautobot-server init overwriting configuration
+- [#454](https://github.com/nautobot/nautobot/issues/454) - Fixed inability to create IPv6 addresses via REST API.
 - [#461](https://github.com/nautobot/nautobot/issues/461) - Fixed NAUTOBOT_DB_TIMEOUT read as string in default config
 
 ### Removed
