@@ -48,7 +48,11 @@ class APITestCase(ModelTestCase):
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 
     def _get_view_namespace(self):
-        return f"{self.view_namespace or self.model._meta.app_label}-api"
+        if self.view_namespace:
+            return f"{self.view_namespace}-api"
+        if self.model._meta.app_label in settings.PLUGINS:
+            return f"plugins-api:{self.model._meta.app_label}-api"
+        return f"{self.model._meta.app_label}-api"
 
     def _get_detail_url(self, instance):
         viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
@@ -255,15 +259,16 @@ class APIViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             initial_count = self._get_queryset().count()
-            response = self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(self._get_queryset().count(), initial_count + 1)
-            self.assertInstanceEqual(
-                self._get_queryset().get(pk=response.data["id"]),
-                self.create_data[0],
-                exclude=self.validation_excluded_fields,
-                api=True,
-            )
+            for i, create_data in enumerate(self.create_data):
+                response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_201_CREATED)
+                self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
+                self.assertInstanceEqual(
+                    self._get_queryset().get(pk=response.data["id"]),
+                    create_data,
+                    exclude=self.validation_excluded_fields,
+                    api=True,
+                )
 
         def test_bulk_create_objects(self):
             """

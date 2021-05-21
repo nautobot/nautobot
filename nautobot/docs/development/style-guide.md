@@ -1,6 +1,6 @@
 # Style Guide
 
-Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. See `scripts/cibuild.sh` and `tasks.py`.
+Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile. See `scripts/cibuild.sh` and `tasks.py`.
 
 ## Flake8 Exceptions
 
@@ -14,7 +14,7 @@ enable this check after changing the above import pattern.
 
 ## Enforcing Code Style
 
-The `flake8` and `black` utilities are used by the CI process to enforce code style. It is strongly recommended to include both as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `flake8` and `black --check` prior to every commit attempt and abort if the validation fails.
+The `flake8`, `black` and `hadolint` utilities are used by the CI process to enforce code style. It is strongly recommended to include these as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `flake8` and `black --check` prior to every commit attempt and abort if the validation fails.
 
 ```
 $ cd .git/hooks/
@@ -26,6 +26,7 @@ You can also invoke these utilities manually against the development Docker cont
 ```
 invoke flake8
 invoke black
+invoke hadolint
 ```
 
 ## Introducing New Dependencies

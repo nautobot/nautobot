@@ -16,10 +16,10 @@ extra_css:
     - extra.css
 markdown_extensions:
     - admonition:
-    - markdown_include.include:
-        headingOffset: 1
     - toc:
         permalink: true
+plugins:
+  - include-markdown
 nav:
     - Introduction: 'index.md'
     - Installation:
@@ -28,6 +28,8 @@ nav:
         - Deploying Nautobot: 'installation/wsgi.md'
         - Configuring an HTTP Server: 'installation/http-server.md'
         - External Authentication (Optional): 'installation/external-authentication.md'
+    - Docker:
+        - Overview: 'docker/index.md'
     - Migration:
         - Migrating from NetBox: 'installation/migrating-from-netbox.md'
         - Upgrading Nautobot: 'installation/upgrading.md'

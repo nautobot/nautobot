@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.0.1-beta.1"
+version = "1.0.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -100,9 +100,11 @@ flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.5.0"
 # Allow Markdown files to include other files
-markdown-include = "~0.6.0"
+mkdocs-include-markdown-plugin = "~3.0.1"
 # Rendering docs to HTML
 mkdocs = "~1.1.2"
+# Integration Tests
+requests = "~2.25.1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

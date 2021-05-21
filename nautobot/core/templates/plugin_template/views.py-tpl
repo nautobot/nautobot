@@ -1,0 +1,6 @@
+"""Views for {{ app_name }}."""
+
+from django.shortcuts import render
+from django.views.generic import views
+
+from {{ app_name }} import models

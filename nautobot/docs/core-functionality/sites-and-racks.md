@@ -1,11 +1,29 @@
 # Sites and Racks
 
-{!docs/models/dcim/site.md!}
-{!docs/models/dcim/region.md!}
+{%
+    include-markdown "../models/dcim/site.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/region.md"
+    heading-offset=1
+%}
 
 ---
 
-{!docs/models/dcim/rack.md!}
-{!docs/models/dcim/rackgroup.md!}
-{!docs/models/dcim/rackrole.md!}
-{!docs/models/dcim/rackreservation.md!}
+{%
+    include-markdown "../models/dcim/rack.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/rackgroup.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/rackrole.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/rackreservation.md"
+    heading-offset=1
+%}
