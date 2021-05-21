@@ -32,6 +32,12 @@ class DummyModel(BaseModel):
             object_data=serialize_object(self),
         )
 
+    def to_csv(self):
+        return (
+            self.name,
+            self.number,
+        )
+
 
 class AnotherDummyModel(BaseModel):
     name = models.CharField(max_length=20)

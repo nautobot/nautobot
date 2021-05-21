@@ -1,10 +1,19 @@
+try:
+    from importlib import metadata
+except ImportError:
+    # Python version < 3.8
+    import importlib_metadata as metadata
+
+__version__ = metadata.version(__name__)
+
+
 from nautobot.extras.plugins import PluginConfig
 
 
 class DummyPluginConfig(PluginConfig):
     name = "dummy_plugin"
     verbose_name = "Dummy plugin"
-    version = "0.0"
+    version = __version__
     description = "For testing purposes only"
     base_url = "dummy-plugin"
     min_version = "0.9"

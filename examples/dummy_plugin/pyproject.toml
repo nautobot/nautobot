@@ -10,6 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 
 [tool.poetry.dev-dependencies]
 
