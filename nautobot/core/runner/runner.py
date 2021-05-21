@@ -234,14 +234,10 @@ def run_app(**kwargs):
 
         config_path = os.path.expanduser(args.config_path)
 
-        # Check if the config already exists; confirm w/ user
+        # Check if the config already exists; alert user and exit if exists.
         if os.path.exists(config_path):
-            resp = None
-            while resp not in ("y", "n", ""):
-                resp = input("File already exists at %r, overwrite? [yN] " % config_path).lower()
-                if resp != "y":
-                    print("Aborted!")
-                    return
+            print(f"A configuration already exists at {config_path}. Please backup and remove or choose another path.")
+            return
 
         # Create the config
         try:
@@ -253,7 +249,7 @@ def run_app(**kwargs):
 
         return
 
-    # Fetch config path from `--config` if provided, otheriwse we want it to
+    # Fetch config path from `--config` if provided, otherwise we want it to
     # default to None so that the underlying machinery in `configure_app` will
     # process default path or environment variable.
     config_path = args.config
