@@ -1,4 +1,4 @@
-## Power Ports
+# Power Ports
 
 A power port represents the inlet of a device where it draws its power, i.e. the connection port(s) on a device's power supply. Each power port may be assigned a physical type, as well as allocated and maximum draw values (in watts). These values can be used to calculate the overall utilization of an upstream power feed.
 

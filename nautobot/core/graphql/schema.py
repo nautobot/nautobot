@@ -31,7 +31,7 @@ from nautobot.extras.models import CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType
 from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
-from nautobot.virtualization.graphql.types import VMInterfaceType
+from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
 logger = logging.getLogger("nautobot.graphql.schema")
 
@@ -48,6 +48,7 @@ registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.aggregate"] = AggregateType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
+registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
 registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
 
 
@@ -311,7 +312,14 @@ def generate_query_mixin():
         model = schema_type._meta.model
         type_identifier = f"{model._meta.app_label}.{model._meta.model_name}"
 
-        if type_identifier not in registry["graphql_types"].keys():
+        if type_identifier in registry["graphql_types"]:
+            logger.warning(
+                f'Unable to load schema type for the model "{type_identifier}" as there is already another type '
+                "registered under this name. If you are seeing this message during plugin development, check to "
+                "make sure that you aren't using @extras_features(\"graphql\") on the same model you're also "
+                "defining a custom GraphQL type for."
+            )
+        else:
             registry["graphql_types"][type_identifier] = schema_type
 
     # Extend schema_type with dynamic attributes for all object defined in the registry

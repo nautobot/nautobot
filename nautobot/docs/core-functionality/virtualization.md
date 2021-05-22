@@ -1,10 +1,25 @@
 # Virtualization
 
-{!docs/models/virtualization/cluster.md!}
-{!docs/models/virtualization/clustertype.md!}
-{!docs/models/virtualization/clustergroup.md!}
+{%
+    include-markdown "../models/virtualization/cluster.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/virtualization/clustertype.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/virtualization/clustergroup.md"
+    heading-offset=1
+%}
 
 ---
 
-{!docs/models/virtualization/virtualmachine.md!}
-{!docs/models/virtualization/vminterface.md!}
+{%
+    include-markdown "../models/virtualization/virtualmachine.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/virtualization/vminterface.md"
+    heading-offset=1
+%}
