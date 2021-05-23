@@ -6,9 +6,7 @@ from dummy_plugin.models import DummyModel
 
 
 class DummySerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name="plugins-api:dummy_plugin-api:dummymodel-detail"
-    )
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:dummy_plugin-api:dummymodel-detail")
 
     class Meta:
         model = DummyModel

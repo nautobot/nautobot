@@ -37,9 +37,7 @@ class DummyModelFilterForm(BootstrapMixin, forms.Form):
 class DummyModelBulkEditForm(BootstrapMixin, BulkEditForm):
     """Bulk edit/delete form for `DummyModel` objects."""
 
-    pk = forms.ModelMultipleChoiceField(
-        queryset=DummyModel.objects.all(), widget=forms.MultipleHiddenInput
-    )
+    pk = forms.ModelMultipleChoiceField(queryset=DummyModel.objects.all(), widget=forms.MultipleHiddenInput)
 
     class Meta:
         nullable_fields = []
