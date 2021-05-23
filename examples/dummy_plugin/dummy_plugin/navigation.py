@@ -11,13 +11,13 @@ menu_items = (
                 link="plugins:dummy_plugin:dummymodel_add",
                 title="Add a new dummy model",
                 icon_class="mdi mdi-plus-thick",
-                color=ButtonColorChoices.GREEN
+                color=ButtonColorChoices.GREEN,
             ),
             PluginMenuButton(
                 link="plugins:dummy_plugin:dummymodel_import",
                 title="Import dummy models",
                 icon_class="mdi mdi-database-import-outline",
-                color=ButtonColorChoices.DEFAULT
+                color=ButtonColorChoices.DEFAULT,
             ),
         ),
     ),

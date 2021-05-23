@@ -2,18 +2,20 @@ from unittest import skipIf
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.test import Client, TestCase, override_settings
+from django.test import override_settings
 from django.urls import reverse
 
-from dummy_plugin import config as dummy_config
-from dummy_plugin.datasources import refresh_git_text_files
 from nautobot.dcim.models import Site
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.utilities.testing import APITestCase
+from nautobot.utilities.testing import APITestCase, APIViewTestCases, TestCase, ViewTestCases
+
+from dummy_plugin.models import DummyModel
+from dummy_plugin import config as dummy_config
+from dummy_plugin.datasources import refresh_git_text_files
 
 
 @skipIf(
@@ -45,17 +47,6 @@ class PluginTest(TestCase):
         # Test admin view URL resolution
         url = reverse("admin:dummy_plugin_dummymodel_add")
         self.assertEqual(url, "/admin/dummy_plugin/dummymodel/add/")
-
-    def test_views(self):
-
-        # Test URL resolution
-        url = reverse("plugins:dummy_plugin:dummymodel_list")
-        self.assertEqual(url, "/plugins/dummy-plugin/models/")
-
-        # Test GET request
-        client = Client()
-        response = client.get(url)
-        self.assertEqual(response.status_code, 200)
 
     def test_menu_items(self):
         """
@@ -265,17 +256,84 @@ class PluginTest(TestCase):
     "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
 )
-class PluginAPITestCase(APITestCase):
+class PluginGenericViewTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = DummyModel
+
+    @classmethod
+    def setUpTestData(cls):
+        # Dummy objects to test.
+        DummyModel.objects.create(name="Dummy 1", number=1)
+        DummyModel.objects.create(name="Dummy 2", number=2)
+        DummyModel.objects.create(name="Dummy 3", number=3)
+
+        cls.form_data = {
+            "name": "Dummy 4",
+            "number": 42,
+        }
+
+        cls.csv_data = (
+            "name,number",
+            "Bob,16",
+            "Alice,32",
+            "Joe,0",
+            "Horse,13",
+        )
+
+        cls.bulk_edit_data = {
+            "number": 2600,
+        }
+
+
+@skipIf(
+    "dummy_plugin" not in settings.PLUGINS,
+    "dummy_plugin not in settings.PLUGINS",
+)
+class PluginAPITestCase(APIViewTestCases.APIViewTestCase):
+    model = DummyModel
+    brief_fields = ["display", "id", "name", "number", "url"]
+    bulk_update_data = {
+        "number": 2600,
+    }
+
+    create_data = [
+        {
+            "name": "Pizza",
+            "number": 10,
+        },
+        {
+            "name": "Oysters",
+            "number": 20,
+        },
+        {
+            "name": "Bad combinations",
+            "number": 30,
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        # Dummy objects to test.
+        DummyModel.objects.create(name="Dummy 1", number=1)
+        DummyModel.objects.create(name="Dummy 2", number=2)
+        DummyModel.objects.create(name="Dummy 3", number=3)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_api_views(self):
+    def test_api_urls(self):
+        # Test list URL resolution
+        list_url = reverse("plugins-api:dummy_plugin-api:dummymodel-list")
+        self.assertEqual(list_url, self._get_list_url())
 
-        # Test URL resolution
-        url = reverse("plugins-api:dummy_plugin-api:dummymodel-list")
-        self.assertEqual(url, "/api/plugins/dummy-plugin/dummy-models/")
-
-        # Test GET request
-        response = self.client.get(url, **self.header)
-        self.assertEqual(response.status_code, 200)
+        # Test detail URL resolution
+        instance = DummyModel.objects.first()
+        detail_url = reverse("plugins-api:dummy_plugin-api:dummymodel-detail", kwargs={"pk": instance.pk})
+        self.assertEqual(detail_url, self._get_detail_url(instance))
 
 
 @skipIf(

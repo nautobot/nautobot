@@ -3,24 +3,13 @@ from django import forms
 from nautobot.utilities.forms import (
     BootstrapMixin,
     BulkEditForm,
-    CSVModelChoiceField,
     CSVModelForm,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-)
-from nautobot.extras.forms import (
-    CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
-    CustomFieldModelForm,
-    CustomFieldModelCSVForm,
-    RelationshipModelForm
 )
 
 from .models import DummyModel
 
 
-# class DummyModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
-class DummyModelForm(BootstrapMixin, CustomFieldModelForm):
+class DummyModelForm(BootstrapMixin, forms.ModelForm):
     """Generic create/update form for `DummyModel` objects."""
 
     class Meta:
@@ -28,7 +17,7 @@ class DummyModelForm(BootstrapMixin, CustomFieldModelForm):
         fields = ["name", "number"]
 
 
-class DummyModelCSVForm(CustomFieldModelCSVForm):
+class DummyModelCSVForm(CSVModelForm):
     """Generic CSV bulk import form for `DummyModel` objects."""
 
     class Meta:
@@ -36,7 +25,7 @@ class DummyModelCSVForm(CustomFieldModelCSVForm):
         fields = DummyModel.csv_headers
 
 
-class DummyModelFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class DummyModelFilterForm(BootstrapMixin, forms.Form):
     """Filtering/search form for `DummyModel` objects."""
 
     model = DummyModel
@@ -45,10 +34,12 @@ class DummyModelFilterForm(BootstrapMixin, CustomFieldFilterForm):
     number = forms.IntegerField(required=False)
 
 
-class DummyModelBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+class DummyModelBulkEditForm(BootstrapMixin, BulkEditForm):
     """Bulk edit/delete form for `DummyModel` objects."""
 
-    pk = forms.ModelMultipleChoiceField(queryset=DummyModel.objects.all(), widget=forms.MultipleHiddenInput)
+    pk = forms.ModelMultipleChoiceField(
+        queryset=DummyModel.objects.all(), widget=forms.MultipleHiddenInput
+    )
 
     class Meta:
         nullable_fields = []

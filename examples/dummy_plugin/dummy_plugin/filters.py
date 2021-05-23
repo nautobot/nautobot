@@ -1,13 +1,12 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.extras.filters import CreatedUpdatedFilterSet, CustomFieldModelFilterSet
 from nautobot.utilities.filters import BaseFilterSet
 
 from .models import DummyModel
 
 
-class DummyModelFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomFieldModelFilterSet):
+class DummyModelFilterSet(BaseFilterSet):
     """API filter for filtering dummy model objects."""
 
     q = django_filters.CharFilter(

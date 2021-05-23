@@ -324,7 +324,7 @@ Please note that this key is **not** used directly for hashing user passwords or
 You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
 ```no-highlight
-$ nautobot-server generate_secret_key.py
+$ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 

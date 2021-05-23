@@ -1,9 +1,15 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
+
+from nautobot.core.api import ValidatedModelSerializer
 
 from dummy_plugin.models import DummyModel
 
 
-class DummySerializer(ModelSerializer):
+class DummySerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        view_name="plugins-api:dummy_plugin-api:dummymodel-detail"
+    )
+
     class Meta:
         model = DummyModel
-        fields = ("id", "name", "number")
+        fields = ("url", "id", "name", "number")
