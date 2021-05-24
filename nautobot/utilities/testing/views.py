@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
-from django.test import Client, TestCase as _TestCase, override_settings
+from django.test import Client as _Client, TestCase as _TestCase, override_settings
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from netaddr import IPNetwork
@@ -31,6 +31,15 @@ __all__ = (
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+class Client(_Client):
+    def get(self, path, data=None, follow=True, secure=False, **extra):
+        """
+        Request a response from the server using GET.
+        Overrides default value for `follow` to be True.
+        """
+        return super().get(path, data=data, follow=follow, secure=secure, **extra)
 
 
 class TestCase(_TestCase):
