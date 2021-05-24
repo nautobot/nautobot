@@ -370,7 +370,7 @@ def black(context, autoformat=False):
     else:
         black_command = "black --check --diff"
 
-    command = f"{black_command} development/ nautobot/ tasks.py"
+    command = f"{black_command} development/ examples/ nautobot/ tasks.py"
 
     run_command(context, command)
 
@@ -378,7 +378,7 @@ def black(context, autoformat=False):
 @task
 def flake8(context):
     """Check for PEP8 compliance and other style issues."""
-    command = "flake8 development/ nautobot/ tasks.py"
+    command = "flake8 development/ examples/ nautobot/ tasks.py"
     run_command(context, command)
 
 
