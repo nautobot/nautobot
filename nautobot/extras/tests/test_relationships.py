@@ -114,28 +114,32 @@ class RelationshipTest(RelationshipBaseTest):
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=self.site_ct,
-            source_filter={"site": "not a list"},
+            source_filter={"region": "not a list"},
             destination_type=self.rack_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         with self.assertRaises(ValidationError) as handler:
             m2m.clean()
-        expected_errors = {"source_filter": ["'site' is not a valid filter parameter for dcim.Site object"]}
+        expected_errors = {"source_filter": ["'region': Enter a list of values."]}
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         m2m = Relationship(
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=self.site_ct,
-            source_filter={"site": ["not a valid site"]},
+            source_filter={"region": ["not a valid region"]},
             destination_type=self.rack_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         with self.assertRaises(ValidationError) as handler:
             m2m.clean()
-        expected_errors = {"source_filter": ["'site' is not a valid filter parameter for dcim.Site object"]}
+        expected_errors = {
+            "source_filter": [
+                "'region': Select a valid choice. not a valid region is not one of the available choices."
+            ]
+        }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_same_object(self):
