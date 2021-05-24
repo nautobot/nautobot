@@ -181,6 +181,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#450](https://github.com/nautobot/nautobot/issues/450) - GraphQL `ip_addresses` now includes `interface` and `vminterface` fields; GraphQL `interfaces` and similar models now include `connected_endpoint` and `path` fields
 - [#451](https://github.com/nautobot/nautobot/issues/451) - Added static GraphQL type for VirtualMachine model
 - [#456](https://github.com/nautobot/nautobot/issues/456) - Added mkdocs-include-markdown-plugin
+- [#465](https://github.com/nautobot/nautobot/pull/465) - Added Virtual Chassis to the Home Page
 
 ### Changed
 
