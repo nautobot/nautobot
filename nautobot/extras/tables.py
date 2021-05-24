@@ -208,12 +208,20 @@ class GitRepositoryBulkTable(BaseTable):
 
 def job_creator_link(value, record):
     if record.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+        # JobResult associated with a Job by classpath?
         if record.name in get_job_classpaths():
             return reverse("extras:job", kwargs={"class_path": record.name})
     else:
+        # JobResult associated with a model such as GitRepository by name?
         model_class = record.obj_type.model_class()
+        if hasattr(model_class, "name"):
+            try:
+                return model_class.objects.get(name=record.name).get_absolute_url()
+            except model_class.DoesNotExist:
+                pass
+        # JobResult associated with a model instance by job_id?
         try:
-            return model_class.objects.get(name=record.name).get_absolute_url()
+            return model_class.objects.get(id=record.job_id).get_absolute_url()
         except model_class.DoesNotExist:
             pass
     return None

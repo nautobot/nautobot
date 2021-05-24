@@ -645,13 +645,21 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
         job = None
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
         if job_result.obj_type == job_content_type:
+            # JobResult associated with a Job by classpath?
             job_class = get_job(job_result.name)
             if job_class is not None:
                 job = job_class()
         else:
+            # JobResult associated with a model such as GitRepository by name?
             model_class = job_result.obj_type.model_class()
+            if hasattr(model_class, "name"):
+                try:
+                    associated_record = model_class.objects.get(name=job_result.name)
+                except model_class.DoesNotExist:
+                    pass
+            # JobResult associated with a model instance by job_id?
             try:
-                associated_record = model_class.objects.get(name=job_result.name)
+                associated_record = model_class.objects.get(id=job_result.job_id)
             except model_class.DoesNotExist:
                 pass
 
