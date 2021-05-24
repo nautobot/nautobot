@@ -169,7 +169,6 @@ CACHES = {
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PASSWORD": "",
         },
     }
 }
@@ -254,6 +253,9 @@ The following environment variables may also be set for some of the above values
 * `NAUTOBOT_REDIS_USERNAME`
 * `NAUTOBOT_REDIS_SSL`
 * `NAUTOBOT_REDIS_TIMEOUT`
+
+!!! note
+    If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
 
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
