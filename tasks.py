@@ -341,6 +341,20 @@ def post_upgrade(context):
     run_command(context, command)
 
 
+@task(help={"format": "Output type for file ('json', 'xml', 'yaml')."})
+def dumpdata(context, format="json"):
+    """Dump data from database to db_output file."""
+    command = f"nautobot-server dumpdata --exclude extras.job --indent 4 --output db_output.{format} --format {format}"
+    run_command(context, command)
+
+
+@task(help={"file_name": "Name and path of file to load."})
+def loaddata(context, file_name):
+    """Load data from file."""
+    command = f"nautobot-server loaddata {file_name}"
+    run_command(context, command)
+
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
