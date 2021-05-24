@@ -23,6 +23,10 @@ class Registry(dict):
 
 
 registry = Registry()
+registry["nav_menu"] = {
+    "sorted_tabs": [],
+    "tabs": {},
+}
 
 
 DatasourceContent = namedtuple("DatasourceContent", ["name", "content_identifier", "icon", "callback"])

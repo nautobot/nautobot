@@ -1,16 +1,17 @@
 import logging
 
-from django.apps import AppConfig
+from nautobot.extras.nautobot_app import NautobotConfig
 from django.db.utils import ProgrammingError
 
 
 logger = logging.getLogger("nautobot.extras.apps")
 
 
-class ExtrasConfig(AppConfig):
+class ExtrasConfig(NautobotConfig):
     name = "nautobot.extras"
 
     def ready(self):
+        super().ready()
         import nautobot.extras.signals  # noqa
         from nautobot.extras.plugins.validators import wrap_model_clean_methods
 

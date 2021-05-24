@@ -13,6 +13,7 @@
                 <img src="{% static 'img/nautobot_logo.svg' %}" height="30" />
             </a>
         </div>
+        {% include 'inc/nav_menu_items.html' %}
         <div id="navbar" class="navbar-collapse collapse">
             {% if request.user.is_authenticated %}
             <ul class="nav navbar-nav">
