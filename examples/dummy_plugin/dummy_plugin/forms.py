@@ -6,7 +6,7 @@ from nautobot.utilities.forms import (
     CSVModelForm,
 )
 
-from .models import DummyModel
+from dummy_plugin.models import DummyModel
 
 
 class DummyModelForm(BootstrapMixin, forms.ModelForm):
@@ -35,9 +35,11 @@ class DummyModelFilterForm(BootstrapMixin, forms.Form):
 
 
 class DummyModelBulkEditForm(BootstrapMixin, BulkEditForm):
-    """Bulk edit/delete form for `DummyModel` objects."""
+    """Bulk edit form for `DummyModel` objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=DummyModel.objects.all(), widget=forms.MultipleHiddenInput)
+    name = forms.CharField(max_length=20, required=False)
+    number = forms.IntegerField(required=False)
 
     class Meta:
         nullable_fields = []

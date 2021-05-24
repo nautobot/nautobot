@@ -3,7 +3,7 @@ from django.db.models import Q
 
 from nautobot.utilities.filters import BaseFilterSet
 
-from .models import DummyModel
+from dummy_plugin.models import DummyModel
 
 
 class DummyModelFilterSet(BaseFilterSet):

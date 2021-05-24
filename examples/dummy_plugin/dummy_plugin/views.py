@@ -1,7 +1,7 @@
 from nautobot.core.views import generic
 
-from .models import DummyModel
-from . import filters, forms, tables
+from dummy_plugin.models import DummyModel
+from dummy_plugin import filters, forms, tables
 
 
 class DummyModelListView(generic.ObjectListView):

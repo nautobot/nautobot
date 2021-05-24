@@ -6,7 +6,7 @@ from nautobot.utilities.tables import (
     ToggleColumn,
 )
 
-from .models import DummyModel
+from dummy_plugin.models import DummyModel
 
 
 class DummyModelTable(BaseTable):

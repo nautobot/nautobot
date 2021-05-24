@@ -1,6 +1,6 @@
 from nautobot.core.api import OrderedDefaultRouter
 
-from .views import DummyViewSet
+from dummy_plugin.api.views import DummyViewSet
 
 
 router = OrderedDefaultRouter()

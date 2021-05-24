@@ -256,14 +256,7 @@ class PluginTest(TestCase):
     "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
 )
-class PluginGenericViewTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-):
+class PluginGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
     model = DummyModel
 
     @classmethod
@@ -287,7 +280,7 @@ class PluginGenericViewTestCase(
         )
 
         cls.bulk_edit_data = {
-            "number": 2600,
+            "number": 31337,
         }
 
 
@@ -295,9 +288,9 @@ class PluginGenericViewTestCase(
     "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
 )
-class PluginAPITestCase(APIViewTestCases.APIViewTestCase):
+class PluginAPITest(APIViewTestCases.APIViewTestCase):
     model = DummyModel
-    brief_fields = ["display", "id", "name", "number", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "number": 2600,
     }

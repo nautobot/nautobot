@@ -1,8 +1,9 @@
 from django.urls import path
 
 from nautobot.extras.views import ObjectChangeLogView
-from . import views
-from .models import DummyModel
+
+from dummy_plugin import views
+from dummy_plugin.models import DummyModel
 
 
 app_name = "dummy_plugin"
