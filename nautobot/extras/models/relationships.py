@@ -337,7 +337,9 @@ class Relationship(BaseModel, ChangeLoggedModel):
             filterset_class = get_filterset_for_model(side_model)
             if not filterset_class:
                 raise ValidationError(
-                    {f"{side}_filter": f"Filters are not supported for {model_name} object (Unable to find a FilterSet)"}
+                    {
+                        f"{side}_filter": f"Filters are not supported for {model_name} object (Unable to find a FilterSet)"
+                    }
                 )
             filterset = filterset_class(filter, side_model.objects.all())
 
