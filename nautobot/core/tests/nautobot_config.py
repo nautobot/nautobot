@@ -24,7 +24,7 @@ DATABASES = {
 }
 
 PLUGINS = [
-    "nautobot.extras.tests.dummy_plugin",
+    "dummy_plugin",
 ]
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
