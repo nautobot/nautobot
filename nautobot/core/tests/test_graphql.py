@@ -813,6 +813,8 @@ query {
                 virtual_machine { name }
             }
         }
+        interface { name }
+        vminterface { name }
     }
 }"""
         result = self.execute_query(query)
@@ -825,11 +827,15 @@ query {
             self.assertIn("assigned_object", entry)
             if entry["address"] == str(self.vmipaddr.address):
                 self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
+                self.assertEqual(entry["vminterface"]["name"], self.vminterface.name)
+                self.assertIsNone(entry["interface"])
                 self.assertIn("virtual_machine", entry["assigned_object"])
                 self.assertNotIn("device", entry["assigned_object"])
                 self.assertEqual(entry["assigned_object"]["virtual_machine"]["name"], self.virtualmachine.name)
             else:
                 self.assertIn(entry["assigned_object"]["name"], (self.interface11.name, self.interface12.name))
+                self.assertIn(entry["interface"]["name"], (self.interface11.name, self.interface12.name))
+                self.assertIsNone(entry["vminterface"])
                 self.assertIn("device", entry["assigned_object"])
                 self.assertNotIn("virtual_machine", entry["assigned_object"])
                 self.assertEqual(entry["assigned_object"]["device"]["name"], self.device1.name)
@@ -881,6 +887,45 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_connected_endpoint(self):
+        """Test querying interfaces for their connected endpoints."""
+
+        query = """\
+query {
+    interfaces {
+        connected_endpoint {
+            ... on InterfaceType {
+                name
+                device { name }
+            }
+        }
+        connected_interface {
+            name
+            device { name }
+        }
+        connected_console_server_port { id }
+        connected_circuit_termination { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for interface_entry in result.data["interfaces"]:
+            if interface_entry["connected_endpoint"] is None:
+                self.assertIsNone(interface_entry["connected_interface"])
+            else:
+                self.assertEqual(
+                    interface_entry["connected_endpoint"]["name"], interface_entry["connected_interface"]["name"]
+                )
+                self.assertEqual(
+                    interface_entry["connected_endpoint"]["device"]["name"],
+                    interface_entry["connected_interface"]["device"]["name"],
+                )
+            # TODO: it would be nice to have connections to console server ports and circuit terminations to test!
+            self.assertIsNone(interface_entry["connected_console_server_port"])
+            self.assertIsNone(interface_entry["connected_circuit_termination"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_providers_filter(self):

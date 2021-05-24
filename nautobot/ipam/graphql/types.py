@@ -42,10 +42,22 @@ class IPAddressType(DjangoObjectType):
 
     address = graphene.String()
     assigned_object = AssignedObjectType()
+    interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
+    vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
 
     class Meta:
         model = models.IPAddress
         filterset_class = filters.IPAddressFilterSet
+
+    def resolve_interface(self, args):
+        if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
+            return self.assigned_object
+        return None
+
+    def resolve_vminterface(self, args):
+        if self.assigned_object and type(self.assigned_object).__name__ == "VMInterface":
+            return self.assigned_object
+        return None
 
 
 class PrefixType(DjangoObjectType):
