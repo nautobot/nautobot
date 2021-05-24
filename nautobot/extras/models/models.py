@@ -705,13 +705,17 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
         variables = {}
         schema = graphene_settings.SCHEMA
         backend = get_default_backend()
+        # Load query into GraphQL backend
         document = backend.document_from_string(schema, self.query)
-        for definition in document.document_ast.definitions:
-            if isinstance(definition, OperationDefinition):
-                if definition.variable_definitions:
-                    for variable_definition in definition.variable_definitions:
-                        default = variable_definition.default_value.value if variable_definition.default_value else ""
-                        variables[variable_definition.variable.name.value] = default
+
+        # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
+        # that define one or more variables. For each operation and variable definition, store the variable's
+        # default value (if any) into our own "variables" dict.
+        definitions = [d for d in document.document_ast.definitions if isinstance(d, OperationDefinition) and d.variable_definitions]
+        for definition in definitions:
+            for variable_definition in definition.variable_definitions:
+                default = variable_definition.default_value.value if variable_definition.default_value else ""
+                variables[variable_definition.variable.name.value] = default
 
         self.variables = variables
         return super().save(*args, **kwargs)

@@ -975,7 +975,7 @@ query ($device: String!) {
         )
 
         for query in graphqlqueries:
-            query.clean()
+            query.full_clean()
             query.save()
 
 
