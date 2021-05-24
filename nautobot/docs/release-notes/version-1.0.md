@@ -8,6 +8,10 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 ### Added
 
+#### Configuration Context Association to Device Types
+
+[Config contexts](../models/extras/configcontext.md) can now be associated to (filtered by) Device Types, in addition to all other previously supported associations.
+
 #### Custom Fields on All Models
 
 [Custom fields](../additional-features/custom-fields.md) allow user-defined fields, or attributes, on specific data models such as sites or devices. Historically, custom fields have been supported only on “primary” models (Site, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Region, Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
@@ -176,7 +180,9 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Added
 
+- [#162](https://github.com/nautobot/nautobot/issues/162) - Added Invoke tasks `dumpdata` and `loaddata` for database backup/restoration in the development environment.
 - [#430](https://github.com/nautobot/nautobot/pull/430) - GraphQL `ip_addresses` now includes an `assigned_object` field
+- [#438](https://github.com/nautobot/nautobot/issues/438) - Config contexts can now be assigned to individual DeviceTypes.
 - [#442](https://github.com/nautobot/nautobot/issues/442) - Added warning when mixing `@extras_features("graphql")` with explicitly declared GraphQL types
 - [#450](https://github.com/nautobot/nautobot/issues/450) - GraphQL `ip_addresses` now includes `interface` and `vminterface` fields; GraphQL `interfaces` and similar models now include `connected_endpoint` and `path` fields
 - [#451](https://github.com/nautobot/nautobot/issues/451) - Added static GraphQL type for VirtualMachine model
@@ -188,13 +194,15 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Fixed
 
+- [#309](https://github.com/nautobot/nautobot/issues/309) - Fixed erroneous termination display when cables are connected to power feeds.
+- [#397](https://github.com/nautobot/nautobot/issues/397) - Fixed Git repository sync failure when token contains special characters
 - [#415](https://github.com/nautobot/nautobot/issues/415) - Fixed incorrect handling of Unicode in view test cases
 - [#417](https://github.com/nautobot/nautobot/pull/417) - Fixed incorrect link to Docker docs from installation docs
 - [#428](https://github.com/nautobot/nautobot/issues/428) - Fixed GraphQL error when handling ASNs greater than 2147483647
 - [#430](https://github.com/nautobot/nautobot/pull/430) - Fixed missing `ContentType` foreign keys in GraphQL
 - [#454](https://github.com/nautobot/nautobot/issues/454) - Fixed inability to create IPv6 addresses via REST API.
-- [#461](https://github.com/nautobot/nautobot/issues/461) - Fixed NAUTOBOT_DB_TIMEOUT read as string in default config
-- [#467](https://github.com/nautobot/nautobot/pull/467) - Fixes issue with job forms not respecting `field_order`
+- [#459](https://github.com/nautobot/nautobot/issues/459) - Fixed issue with Job forms not respecting `field_order`
+- [#461](https://github.com/nautobot/nautobot/issues/461) - Fixed `NAUTOBOT_DB_TIMEOUT` read as string in default config
 
 ### Removed
 
