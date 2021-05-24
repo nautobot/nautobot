@@ -2,7 +2,7 @@
 
 ## ALLOWED_HOSTS
 
-Environment Variable: `NAUTOBOT_ALLOWED_HOSTS` specified as a comma separated list.
+Environment Variable: `NAUTOBOT_ALLOWED_HOSTS` specified as a space-separated quoted string (e.g. `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 example.com"`).
 
 This is a list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the Nautobot service. Usually this is the same as the hostname for the Nautobot server, but can also be different; for example, when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the Nautobot server. To help guard against [HTTP Host header attacks](https://docs.djangoproject.com/en/stable/topics/security/#host-headers-virtual-hosting), Nautobot will not permit access to the server via any other hostnames (or IPs).
 
@@ -169,7 +169,6 @@ CACHES = {
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PASSWORD": "",
         },
     }
 }
@@ -251,8 +250,12 @@ The following environment variables may also be set for some of the above values
 * `NAUTOBOT_REDIS_HOST`
 * `NAUTOBOT_REDIS_PORT`
 * `NAUTOBOT_REDIS_PASSWORD`
+* `NAUTOBOT_REDIS_USERNAME`
 * `NAUTOBOT_REDIS_SSL`
 * `NAUTOBOT_REDIS_TIMEOUT`
+
+!!! note
+    If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
 
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
