@@ -2,7 +2,7 @@ import os
 import sys
 
 from nautobot.core.settings import *  # noqa F401,F403
-from nautobot.core.settings_funcs import is_truthy
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 #########################
 #                       #
@@ -14,7 +14,7 @@ from nautobot.core.settings_funcs import is_truthy
 # access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
 #
 # Example: ALLOWED_HOSTS = ['nautobot.example.com', 'nautobot.internal.local']
-ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
 # PostgreSQL database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
@@ -49,29 +49,16 @@ RQ_QUEUES = {
     },
 }
 
-# The following `_redis_*` variables are used to generate settings based on environment variables. Please do NOT override any of the following variables that begin with `_redis_`. If you need to override a default setting manually, either use the environment variables or the CAPITALIZED setting name.
-_redis_protocol = "rediss" if is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)) else "redis"
-_redis_host = os.getenv("NAUTOBOT_REDIS_HOST", "localhost")
-_redis_port = int(os.getenv("NAUTOBOT_REDIS_PORT", 6379))
-_redis_password = os.getenv("NAUTOBOT_REDIS_PASSWORD", "")
-
-# Default Redis credentials to being empty unless a password is provided. Then map it to ":password@"
-_redis_creds = ""
-if _redis_password:
-    _redis_creds = f":{_redis_password}@"
-
 # Nautobot uses Cacheops for database query caching. These are the following defaults.
 # For detailed configuration see: https://github.com/Suor/django-cacheops#setup
-CACHEOPS_REDIS = os.getenv(
-    "NAUTOBOT_CACHEOPS_REDIS", f"{_redis_protocol}://{_redis_creds}{_redis_host}:{_redis_port}/1"
-)
+CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"{_redis_protocol}://{_redis_creds}{_redis_host}:{_redis_port}/0",
+        "LOCATION": parse_redis_connection(redis_database=0),
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
