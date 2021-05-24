@@ -711,7 +711,11 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
         # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
         # that define one or more variables. For each operation and variable definition, store the variable's
         # default value (if any) into our own "variables" dict.
-        definitions = [d for d in document.document_ast.definitions if isinstance(d, OperationDefinition) and d.variable_definitions]
+        definitions = [
+            d
+            for d in document.document_ast.definitions
+            if isinstance(d, OperationDefinition) and d.variable_definitions
+        ]
         for definition in definitions:
             for variable_definition in definition.variable_definitions:
                 default = variable_definition.default_value.value if variable_definition.default_value else ""
