@@ -851,7 +851,7 @@
             The following if statement means the Query tab is only rendered when the GraphiQL
             is rendered.
             {% endcomment %}
-            {% if  saved_graphiql_queries and perms.extras.view_graphqlquery %}
+            {% if  graphiql and perms.extras.view_graphqlquery %}
 
                 <ul class="nav navbar-nav navbar-right">
                     <li class="dropdown">
