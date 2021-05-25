@@ -860,9 +860,6 @@
                             <span class="caret"></span>
                         </a>
                         <ul class="dropdown-menu" id="graphql-queries-menu">
-                            <li>
-                                <a href="#" onclick="reload('', '')">Clear</a>
-                            </li>
                             {% for query in saved_graphiql_queries %}
                                 <li>
                                     <a href="#" onclick="reload('{{query.id}}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
