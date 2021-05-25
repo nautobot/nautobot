@@ -178,8 +178,10 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 - [#430](https://github.com/nautobot/nautobot/pull/430) - GraphQL `ip_addresses` now includes an `assigned_object` field
 - [#442](https://github.com/nautobot/nautobot/issues/442) - Added warning when mixing `@extras_features("graphql")` with explicitly declared GraphQL types
+- [#450](https://github.com/nautobot/nautobot/issues/450) - GraphQL `ip_addresses` now includes `interface` and `vminterface` fields; GraphQL `interfaces` and similar models now include `connected_endpoint` and `path` fields
 - [#451](https://github.com/nautobot/nautobot/issues/451) - Added static GraphQL type for VirtualMachine model
 - [#456](https://github.com/nautobot/nautobot/issues/456) - Added mkdocs-include-markdown-plugin
+- [#465](https://github.com/nautobot/nautobot/pull/465) - Added Virtual Chassis to the Home Page
 
 ### Changed
 
@@ -193,6 +195,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#430](https://github.com/nautobot/nautobot/pull/430) - Fixed missing `ContentType` foreign keys in GraphQL
 - [#454](https://github.com/nautobot/nautobot/issues/454) - Fixed inability to create IPv6 addresses via REST API.
 - [#461](https://github.com/nautobot/nautobot/issues/461) - Fixed NAUTOBOT_DB_TIMEOUT read as string in default config
+- [#467](https://github.com/nautobot/nautobot/pull/467) - Fixes issue with job forms not respecting `field_order`
 
 ### Removed
 
