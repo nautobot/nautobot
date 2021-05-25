@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
     PowerPort,
     Rack,
     Site,
+    VirtualChassis,
 )
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
@@ -81,6 +82,7 @@ class HomeView(TemplateView):
             "power_connections_count": connected_powerports.count(),
             "powerpanel_count": PowerPanel.objects.restrict(request.user, "view").count(),
             "powerfeed_count": PowerFeed.objects.restrict(request.user, "view").count(),
+            "virtualchassis_count": VirtualChassis.objects.restrict(request.user, "view").count(),
             # IPAM
             "vrf_count": VRF.objects.restrict(request.user, "view").count(),
             "aggregate_count": Aggregate.objects.restrict(request.user, "view").count(),

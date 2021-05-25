@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.forms import DateField, IntegerField, NullBooleanField
 
-from nautobot.dcim.models import DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.utils import FeatureQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.filters import (
@@ -225,6 +225,17 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=DeviceRole.objects.all(),
         to_field_name="slug",
         label="Role (slug)",
+    )
+    device_type_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="device_types",
+        queryset=DeviceType.objects.all(),
+        label="Device Type",
+    )
+    device_type = django_filters.ModelMultipleChoiceFilter(
+        field_name="device_types__slug",
+        queryset=DeviceType.objects.all(),
+        to_field_name="slug",
+        label="Device Type (slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         field_name="platforms",

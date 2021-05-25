@@ -48,7 +48,11 @@ class APITestCase(ModelTestCase):
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 
     def _get_view_namespace(self):
-        return f"{self.view_namespace or self.model._meta.app_label}-api"
+        if self.view_namespace:
+            return f"{self.view_namespace}-api"
+        if self.model._meta.app_label in settings.PLUGINS:
+            return f"plugins-api:{self.model._meta.app_label}-api"
+        return f"{self.model._meta.app_label}-api"
 
     def _get_detail_url(self, instance):
         viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
@@ -207,6 +211,28 @@ class APIViewTestCases:
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_objects_returns_display_and_value(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choices use the display and value keys.
+            """
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            # Grab any field that has choices defined (fields with enums)
+            field_choices = {k: v["choices"] for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+
+            # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
+            # Broken down to provide better failure messages
+            for field, choices in field_choices.items():
+                for choice in choices:
+                    self.assertIn("display", choice, f"A choice in {field} is missing the display key")
+                    self.assertIn("value", choice, f"A choice in {field} is missing the value key")
+
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
@@ -233,15 +259,16 @@ class APIViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             initial_count = self._get_queryset().count()
-            response = self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(self._get_queryset().count(), initial_count + 1)
-            self.assertInstanceEqual(
-                self._get_queryset().get(pk=response.data["id"]),
-                self.create_data[0],
-                exclude=self.validation_excluded_fields,
-                api=True,
-            )
+            for i, create_data in enumerate(self.create_data):
+                response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_201_CREATED)
+                self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
+                self.assertInstanceEqual(
+                    self._get_queryset().get(pk=response.data["id"]),
+                    create_data,
+                    exclude=self.validation_excluded_fields,
+                    api=True,
+                )
 
         def test_bulk_create_objects(self):
             """

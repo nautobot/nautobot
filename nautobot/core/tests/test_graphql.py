@@ -15,6 +15,7 @@ from graphql import get_default_backend
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from nautobot.circuits.models import Provider
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_schema_type,
@@ -35,10 +36,11 @@ from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interfac
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.utilities.testing.utils import create_test_user
 
-from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, GraphQLQuery, Relationship, Status
+from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, GraphQLQuery, Relationship, Status, Webhook
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -649,6 +651,29 @@ class GraphQLQueryTest(TestCase):
         context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
         context1.regions.add(self.region1)
 
+        Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
+        Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
+
+        webhook1 = Webhook.objects.create(name="webhook 1", type_delete=True, enabled=False)
+        webhook1.content_types.add(ContentType.objects.get_for_model(Device))
+        webhook2 = Webhook.objects.create(name="webhook 2", type_update=True, enabled=False)
+        webhook2.content_types.add(ContentType.objects.get_for_model(Interface))
+
+        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        cluster = Cluster.objects.create(name="Cluster 1", type=clustertype)
+        self.virtualmachine = VirtualMachine.objects.create(
+            name="Virtual Machine 1",
+            cluster=cluster,
+            status=self.status1,
+        )
+        self.vminterface = VMInterface.objects.create(
+            virtual_machine=self.virtualmachine,
+            name="eth0",
+        )
+        self.vmipaddr = IPAddress.objects.create(
+            address="1.1.1.1/32", status=self.status1, assigned_object=self.vminterface
+        )
+
     def execute_query(self, query, variables=None):
 
         document = self.backend.document_from_string(self.schema, query)
@@ -798,12 +823,13 @@ class GraphQLQueryTest(TestCase):
 
         filters = (
             ('address: "10.0.1.1"', 1),
-            ("family: 4", 2),
-            ('status: "status1"', 1),
+            ("family: 4", 3),
+            ('status: "status1"', 2),
             ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 2),
+            ('status: ["status1", "status2"]', 3),
             ("mask_length: 24", 1),
             ("mask_length: 30", 1),
+            ("mask_length: 32", 1),
             ("mask_length: 28", 0),
             ('parent: "10.0.0.0/16"', 2),
             ('parent: "10.0.2.0/24"', 1),
@@ -815,6 +841,51 @@ class GraphQLQueryTest(TestCase):
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_ip_addresses_assigned_object(self):
+        """Query IP Address assigned_object values."""
+
+        query = """\
+query {
+    ip_addresses {
+        address
+        assigned_object {
+            ... on InterfaceType {
+                name
+                device { name }
+            }
+            ... on VMInterfaceType {
+                name
+                virtual_machine { name }
+            }
+        }
+        interface { name }
+        vminterface { name }
+    }
+}"""
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(result.data["ip_addresses"]), 3)
+        for entry in result.data["ip_addresses"]:
+            self.assertIn(
+                entry["address"], (str(self.ipaddr1.address), str(self.ipaddr2.address), str(self.vmipaddr.address))
+            )
+            self.assertIn("assigned_object", entry)
+            if entry["address"] == str(self.vmipaddr.address):
+                self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
+                self.assertEqual(entry["vminterface"]["name"], self.vminterface.name)
+                self.assertIsNone(entry["interface"])
+                self.assertIn("virtual_machine", entry["assigned_object"])
+                self.assertNotIn("device", entry["assigned_object"])
+                self.assertEqual(entry["assigned_object"]["virtual_machine"]["name"], self.virtualmachine.name)
+            else:
+                self.assertIn(entry["assigned_object"]["name"], (self.interface11.name, self.interface12.name))
+                self.assertIn(entry["interface"]["name"], (self.interface11.name, self.interface12.name))
+                self.assertIsNone(entry["vminterface"])
+                self.assertIn("device", entry["assigned_object"])
+                self.assertNotIn("virtual_machine", entry["assigned_object"])
+                self.assertEqual(entry["assigned_object"]["device"]["name"], self.device1.name)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_cables_filter(self):
@@ -863,3 +934,77 @@ class GraphQLQueryTest(TestCase):
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_connected_endpoint(self):
+        """Test querying interfaces for their connected endpoints."""
+
+        query = """\
+query {
+    interfaces {
+        connected_endpoint {
+            ... on InterfaceType {
+                name
+                device { name }
+            }
+        }
+        connected_interface {
+            name
+            device { name }
+        }
+        connected_console_server_port { id }
+        connected_circuit_termination { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for interface_entry in result.data["interfaces"]:
+            if interface_entry["connected_endpoint"] is None:
+                self.assertIsNone(interface_entry["connected_interface"])
+            else:
+                self.assertEqual(
+                    interface_entry["connected_endpoint"]["name"], interface_entry["connected_interface"]["name"]
+                )
+                self.assertEqual(
+                    interface_entry["connected_endpoint"]["device"]["name"],
+                    interface_entry["connected_interface"]["device"]["name"],
+                )
+            # TODO: it would be nice to have connections to console server ports and circuit terminations to test!
+            self.assertIsNone(interface_entry["connected_console_server_port"])
+            self.assertIsNone(interface_entry["connected_circuit_termination"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_providers_filter(self):
+        """Test provider filtering by ASN (issue #428)."""
+        filters = (
+            ("asn: [4294967295]", 1),
+            ("asn: [1, 4294967295]", 2),
+        )
+
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { providers (" + filterv + "){ id asn }}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["providers"]), nbr_expected_results)
+                for provider in result.data["providers"]:
+                    self.assertEqual(provider["asn"], Provider.objects.get(id=provider["id"]).asn)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_webhooks_filter(self):
+        """Test webhook querying and filtering with content types."""
+        filters = (
+            ('content_types: ["dcim.device"]', 1),
+            ('content_types: ["dcim.interface"]', 1),
+            # Since content_types is a many-to-many field, this query is an AND, not an OR
+            ('content_types: ["dcim.device", "dcim.interface"]', 0),
+            ('content_types: ["ipam.ipaddress"]', 0),
+        )
+
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { webhooks (" + filterv + "){ id name content_types {app_label model}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["webhooks"]), nbr_expected_results)

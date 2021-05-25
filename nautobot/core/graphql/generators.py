@@ -17,9 +17,17 @@ RESOLVER_PREFIX = "resolve_"
 
 
 def generate_restricted_queryset():
-    """Generate a function to return a restricted queryset compatible with the internal permissions system."""
+    """
+    Generate a function to return a restricted queryset compatible with the internal permissions system.
+
+    Note that for built-in models such as ContentType the queryset has no `restrict` method, so we have to
+    fail gracefully in that case.
+    """
 
     def get_queryset(queryset, info):
+        if not hasattr(queryset, "restrict"):
+            logger.debug(f"Queryset {queryset} is not restrictable")
+            return queryset
         return queryset.restrict(info.context.user, "view")
 
     return get_queryset

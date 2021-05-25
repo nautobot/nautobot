@@ -9,7 +9,7 @@ Plugins can do a lot, including:
 * Provide their own "pages" (views) in the web user interface
 * Provide [Jobs](../additional-features/jobs.md)
 * Inject template content and navigation links
-* Establish their own REST API endpoints
+* Establish their own GraphQL types and REST API endpoints
 * Add custom request/response middleware
 
 Keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
@@ -59,6 +59,11 @@ The top level is the project root. Immediately within the root should exist seve
 * The plugin source directory, with the same name as your plugin.
 
 The plugin source directory contains all of the actual Python code and other resources used by your plugin. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `PluginConfig` class.
+
+!!! note
+    Nautobot includes a command to help create the plugin directory:  
+    `nautobot-server startplugin [app_name]`  
+    Please see the [Nautobot Server Guide](../administration/nautobot-server.md#startplugin) for more information.
 
 ### Create pyproject.toml
 
@@ -139,7 +144,7 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `datasource_contents` | The dotted path to the list of datasource (Git, etc.) content types to register (default: `datasources.datasource_contents`) |
 | `default_settings` | A dictionary of configuration parameters and their default values |
 | `description` | Brief description of the plugin's purpose |
-| `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.graphql_types)` |
+| `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.types.graphql_types)` |
 | `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
 | `max_version` | Maximum version of Nautobot with which the plugin is compatible |
@@ -156,7 +161,7 @@ All required settings must be configured by the user. If a configuration paramet
 
 ### Install the Plugin for Development
 
-The plugin needs to be installed into the same python environment where Nautobot is, so that we can get access to `nautobot-server` command, and also so that the nautobot-server is aware of the new plugin.  
+The plugin needs to be installed into the same python environment where Nautobot is, so that we can get access to `nautobot-server` command, and also so that the nautobot-server is aware of the new plugin.
 
 If you installed Nautobot using Poetry, then go to the root directory of your clone of the Nautobot repository and run `poetry shell` there.  Afterward, return to the root directory of your plugin to continue development.
 
@@ -190,7 +195,22 @@ If your plugin introduces a new type of object in Nautobot, you'll probably want
 
 It is highly recommended to have plugin models inherit from at least `nautobot.core.models.BaseModel` which provides base functionality and convenience methods common to all models.
 
-Below is an example `models.py` file containing a model with two character fields:
+For more advanced usage, you may want to instead inherit from one of Nautobot's "generic" models derived from `BaseModel` -- `nautobot.core.models.generics.OrganizationalModel` or `nautobot.core.models.generics.PrimaryModel`. The inherent capabilities provided by inheriting from these various parent models differ as follows:
+
+| Feature | `django.db.models.Model` | `BaseModel` | `OrganizationalModel` | `PrimaryModel` |
+| ------- | --------------------- | ----------- | --------------------- | -------------- |
+| UUID primary key | ❌ | ✅ | ✅ | ✅ |
+| [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
+| [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
+| [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
+| [Custom fields](../additional-features/custom-fields.md) | ❌ | ❌ | ✅ | ✅ |
+| [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
+| [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
+
+!!! note
+    When using `OrganizationalModel` or `PrimaryModel`, you also must use the `@extras_features` decorator to specify support for (at a minimum) the `"custom_fields"` and `"relationships"` features.
+
+Below is an example `models.py` file containing a basic model with two character fields:
 
 ```python
 # models.py
@@ -209,7 +229,7 @@ class Animal(BaseModel):
         return self.name
 ```
 
-Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.  
+Once you have defined the model(s) for your plugin, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.
 
 Creating migrations can be done automatically using the `nautobot-server makemigrations <plugin_name>` management command, where `<plugin_name>` is the name of the Python package for your plugin (e.g. `animal_sounds`):
 
@@ -363,7 +383,7 @@ class GraphQLModelView(ModelViewSet):
             )
 ```
 
-## Views
+## Web UI Views
 
 If your plugin needs its own page or pages in the Nautobot web UI, you'll need to define views. A view is a particular page tied to a URL within Nautobot, which renders content using a template. Views are typically defined in `views.py`, and URL patterns in `urls.py`. As an example, let's write a view which displays a random animal and the sound it makes. First, create the view in `views.py`:
 
@@ -447,6 +467,70 @@ A URL pattern has three components:
 * `name` - A short name used to identify the URL path internally
 
 This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
+
+## GraphQL Types
+
+Plugins can optionally expose their models via the GraphQL interface to allow the models to be part of the Graph and to be queried easily. There are two mutually exclusive ways to expose a model to the GraphQL interface.
+
+* By using the `@extras_features` decorator
+* By creating your own GraphQL type definition and registering it within `graphql/types.py` of your plugin (the decorator *should not* be used in this case)
+
+All GraphQL model types defined by your plugin, regardless of which method is chosen, will automatically support some built-in Nautobot features:
+
+* Support for object permissions based on their associated `Model` class
+* Include any [custom fields](../additional-features/custom-fields.md) defined for their `Model`
+* Include any [relationships](../models/extras/relationship.md) defined for their `Model`
+* Include [tags](../models/extras/tag.md), if the `Model` supports them
+
+### Using the `@extras_features` Decorator for GraphQL
+
+To expose a model via GraphQL, simply register it using the `@extras_features("graphql")` decorator. Nautobot will detect this and will automatically create a GraphQL type definition based on the model. Additionally, if a `FilterSet` is available at `<app_name>.filters.<ModelName>FilterSet`, Nautobot will automatically use the filterset to generate GraphQL filtering options for this type as well.
+
+```python
+# models.py
+from django.db import models
+
+from nautobot.core.models import BaseModel
+from nautobot.extras.utils import extras_features
+
+
+@extras_features("graphql")
+class Animal(BaseModel):
+    """Base model for animals."""
+
+    name = models.CharField(max_length=50)
+    sound = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+```
+
+### Creating Your Own GraphQL Type Object
+
+In some cases, such as when a model is using Generic Foreign Keys, or when a model has constructed fields that should also be reflected in GraphQL, the default GraphQL type definition generated by the `@extras_features` decorator may not work as the developer intends, and it will be preferable to provide custom GraphQL types.
+
+By default, Nautobot looks for custom GraphQL types in an iterable named `graphql_types` within a `graphql/types.py` file. (This can be overridden by setting `graphql_types` to a custom value on the plugin's `PluginConfig`.) Each type defined in this way must be a class inheriting from `graphene_django.DjangoObjectType` and must follow the [standards defined by graphene-django](https://docs.graphene-python.org/projects/django/en/latest/queries/).
+
+!!! warning
+    When defining types this way, do **not** use the `@extras_features("graphql")` decorator on the corresponding Model class, as no auto-generated GraphQL type is desired for this model.
+
+```python
+# graphql/types.py
+from graphene_django import DjangoObjectType
+
+from nautobot_animal_sounds.models import Animal
+
+
+class AnimalType(DjangoObjectType):
+    """GraphQL Type for Animal"""
+
+    class Meta:
+        model = Animal
+        exclude = ["sound"]
+
+
+graphql_types = [AnimalType]
+```
 
 ## REST API Endpoints
 

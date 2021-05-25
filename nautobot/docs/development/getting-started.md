@@ -148,9 +148,11 @@ Available tasks:
   build               Build all docker images.
   cli                 Launch a bash shell inside the running Nautobot container.
   createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
+  dumpdata            Dump database data into file, only for development environment use.
   debug               Start Nautobot and its dependencies in debug mode.
   destroy             Destroy all containers and volumes.
   flake8              Check for PEP8 compliance and other style issues.
+  loaddata            Load data from file into database, only for development environment use.
   makemigrations      Perform makemigrations operation in Django.
   migrate             Perform migrate operation in Django.
   nbshell             Launch an interactive nbshell session.
@@ -195,20 +197,28 @@ These setting may be overridden several different ways (from highest to lowest p
 
 #### Working with Docker Compose
 
-The files related to the Docker container environment used for development can be found inside of the `development` directory at the root of the project.
+The files related to the Docker development environment can be found inside of the `development` directory at the root of the project.
 
 In this directory you'll find the following core files:
 
-- `Dockerfile` - Docker container definition for Nautobot
-
+- `docker-compose.build.yml` - Docker compose override file used to start/build the production docker images for local testing.
+- `docker-compose.debug.yml` - Docker compose override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
+- `docker-compose.dev.yml` - Docker compose override file used to mount the Nautobot source code inside the container at `/source` and the `nautobot_config.py` from the same directory as `/opt/nautobot/nautobot_config.py` for the active configuration.
 - `docker-compose.yml` - Docker service containers and their relationships to the Nautobot container
-- `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
 - `dev.env` - Environment variables used to setup the container services
 - `nautobot_config.py` - Nautobot configuration file
 
+In addition to the development environment the `Dockerfile` which is used to build the Nautobot containers is located in the `docker` directory at the root of the project.  The development container is actually used to install the development tools necessary to build the packages which are used to install Nautobot in the production image as a separate build stage.
+
+In the `docker` directory you will find the following files:
+
+- `Dockerfile` - Docker container definition for Nautobot containers
+- `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
+- `uwsgi.ini` - The [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) ini file used in the production docker container
+
 #### Docker-Compose Overrides
 
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml```.
+If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml``` and set the environment variable `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.override.yml`.
 
 This file will override any configuration in the main `docker-compose.yml` file, without making changes to the repository.
 
@@ -302,6 +312,14 @@ $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-po
 ```
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
+
+#### Install Hadolint
+
+[Hadolint](https://github.com/hadolint/hadolint) is a tool used to validate and lint Dockerfiles to ensure we are following best practices. On macOS with [Homebrew](https://brew.sh/) you can install Hadolint by running:
+
+```no-highlight
+$ brew install hadolint
+```
 
 #### Creating a Python Virtual Environment
 
@@ -429,7 +447,7 @@ Performing system checks...
 System check identified no issues (0 silenced).
 November 18, 2020 - 15:52:31
 Django version 3.1, using settings 'nautobot.core.settings'
-Starting development server at http://127.0.0.1:8000/
+Starting development server at http://127.0.0.1:8080/
 Quit the server with CONTROL-C.
 ```
 

@@ -4,6 +4,7 @@ from collections import defaultdict
 import logging
 import os
 import re
+from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -124,9 +125,9 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
         if user:
-            from_url = re.sub("//", f"//{user}:{token}@", from_url)
+            from_url = re.sub("//", f"//{quote(user, safe='')}:{quote(token, safe='')}@", from_url)
         else:
-            from_url = re.sub("//", f"//{token}@", from_url)
+            from_url = re.sub("//", f"//{quote(token, safe='')}@", from_url)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch

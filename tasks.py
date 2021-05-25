@@ -13,8 +13,12 @@ limitations under the License.
 """
 
 from distutils.util import strtobool
-import os
 from invoke import Collection, task as invoke_task
+from invoke.exceptions import Exit
+import os
+import requests
+from time import sleep
+import toml
 
 
 def is_truthy(arg):
@@ -38,11 +42,24 @@ namespace = Collection("nautobot")
 namespace.configure(
     {
         "nautobot": {
-            "python_ver": "3.7",
+            "project_name": "nautobot",
+            "python_ver": "3.6",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_file": "docker-compose.yml",
-            "compose_override_file": "docker-compose.override.yml",
+            "compose_override_file": "docker-compose.dev.yml",
+            "docker_image_names_main": [
+                "networktocode/nautobot",
+                "ghcr.io/nautobot/nautobot",
+                "networktocode/nautobot-dev",
+                "ghcr.io/nautobot/nautobot-dev",
+            ],
+            "docker_image_names_develop": [
+                "networktocode/nautobot",
+                "ghcr.io/nautobot/nautobot",
+                "networktocode/nautobot-dev",
+                "ghcr.io/nautobot/nautobot-dev",
+            ],
         }
     }
 )
@@ -76,7 +93,7 @@ def docker_compose(context, command, **kwargs):
         **kwargs: Passed through to the context.run() call.
     """
     compose_file_path = os.path.join(context.nautobot.compose_dir, context.nautobot.compose_file)
-    compose_command = f'docker-compose --project-directory "{context.nautobot.compose_dir}" -f "{compose_file_path}"'
+    compose_command = f'docker-compose --project-name {context.nautobot.project_name} --project-directory "{context.nautobot.compose_dir}" -f "{compose_file_path}"'
     compose_override_path = os.path.join(context.nautobot.compose_dir, context.nautobot.compose_override_file)
     if os.path.isfile(compose_override_path):
         compose_command += f' -f "{compose_override_path}"'
@@ -90,7 +107,15 @@ def run_command(context, command, **kwargs):
     if is_truthy(context.nautobot.local):
         context.run(command, **kwargs)
     else:
-        docker_compose(context, f"run --entrypoint '{command}' nautobot", pty=True)
+        # Check if Nautobot is running; no need to start another Nautobot container to run a command
+        docker_compose_status = "ps --services --filter status=running"
+        results = docker_compose(context, docker_compose_status, hide="out")
+        if "nautobot" in results.stdout:
+            compose_command = f"exec nautobot {command}"
+        else:
+            compose_command = f"run --entrypoint '{command}' nautobot"
+
+        docker_compose(context, compose_command, pty=True)
 
 
 # ------------------------------------------------------------------------------
@@ -113,6 +138,90 @@ def build(context, force_rm=False, cache=True):
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
     docker_compose(context, command)
+
+
+@task(
+    help={
+        "cache": "Whether to use Docker's cache when building the image (Default: enabled)",
+        "cache_dir": "Directory to use for caching buildx output (Default:  /home/travis/.cache/docker)",
+        "platforms": "Comma-separated list of strings for which to build (Default: linux/amd64)",
+        "tag": "Tags to be applied to the built image (Default: networktocode/nautobot-dev:local)",
+        "target": "Built target from the Dockerfile (Default: dev)",
+    }
+)
+def buildx(
+    context,
+    cache=False,
+    cache_dir="",
+    platforms="linux/amd64",
+    tag="networktocode/nautobot-dev-py3.6:local",
+    target="dev",
+):
+    """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
+    print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
+    command = f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile --build-arg PYTHON_VER={context.nautobot.python_ver} ."
+    if not cache:
+        command += " --no-cache"
+    else:
+        command += f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver} --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
+
+    context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
+
+
+@task(
+    help={
+        "branch": "Source branch used to push",
+        "commit": "Commit hash used to tag the image",
+        "datestamp": "Datestamp used to tag the develop image",
+    }
+)
+def docker_push(context, branch, commit="", datestamp=""):
+    """Tags and pushes docker images to the appropriate repos, intended for CI use only."""
+    with open("pyproject.toml", "r") as pyproject:
+        parsed_toml = toml.load(pyproject)
+
+    nautobot_version = parsed_toml["tool"]["poetry"]["version"]
+
+    docker_image_tags_main = [
+        f"latest-py{context.nautobot.python_ver}",
+        f"{nautobot_version}-py{context.nautobot.python_ver}",
+    ]
+    docker_image_tags_develop = [
+        f"develop-py{context.nautobot.python_ver}",
+        f"develop-py{context.nautobot.python_ver}-{commit}-{datestamp}",
+    ]
+
+    if context.nautobot.python_ver == "3.6":
+        docker_image_tags_main += ["latest", f"{nautobot_version}"]
+        docker_image_tags_develop += ["develop", f"develop-{commit}-{datestamp}"]
+    if branch == "main":
+        docker_image_names = context.nautobot.docker_image_names_main
+        docker_image_tags = docker_image_tags_main
+    elif branch == "develop":
+        docker_image_names = context.nautobot.docker_image_names_develop
+        docker_image_tags = docker_image_tags_develop
+    else:
+        raise Exit(f"Unknown Branch ({branch}) Specified", 1)
+
+    for image_name in docker_image_names:
+        for image_tag in docker_image_tags:
+            if image_name.endswith("-dev"):
+                local_image = f"networktocode/nautobot-dev-py{context.nautobot.python_ver}:local"
+            else:
+                local_image = f"networktocode/nautobot-py{context.nautobot.python_ver}:local"
+            new_image = f"{image_name}:{image_tag}"
+            tag_command = f"docker tag {local_image} {new_image}"
+            push_command = f"docker push {new_image}"
+            print(f"Tagging {local_image} as {new_image}")
+            context.run(tag_command)
+            print(f"Pushing {new_image}")
+            context.run(push_command)
+
+    print("\nThe following Images have been pushed:\n")
+    for image_name in docker_image_names:
+        for image_tag in docker_image_tags:
+            new_image = f"{image_name}:{image_tag}"
+            print(new_image)
 
 
 # ------------------------------------------------------------------------------
@@ -232,6 +341,20 @@ def post_upgrade(context):
     run_command(context, command)
 
 
+@task(help={"format": "Output type for file ('json', 'xml', 'yaml')."})
+def dumpdata(context, format="json"):
+    """Dump data from database to db_output file."""
+    command = f"nautobot-server dumpdata --exclude extras.job --indent 4 --output db_output.{format} --format {format}"
+    run_command(context, command)
+
+
+@task(help={"file_name": "Name and path of file to load."})
+def loaddata(context, file_name):
+    """Load data from file."""
+    command = f"nautobot-server loaddata {file_name}"
+    run_command(context, command)
+
+
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
@@ -247,7 +370,7 @@ def black(context, autoformat=False):
     else:
         black_command = "black --check --diff"
 
-    command = f"{black_command} development/ nautobot/ tasks.py"
+    command = f"{black_command} development/ examples/ nautobot/ tasks.py"
 
     run_command(context, command)
 
@@ -255,8 +378,14 @@ def black(context, autoformat=False):
 @task
 def flake8(context):
     """Check for PEP8 compliance and other style issues."""
-    command = "flake8 development/ nautobot/ tasks.py"
+    command = "flake8 development/ examples/ nautobot/ tasks.py"
+    run_command(context, command)
 
+
+@task
+def hadolint(context):
+    """Check Dockerfile for hadolint compliance and other style issues."""
+    command = "hadolint docker/Dockerfile"
     run_command(context, command)
 
 
@@ -297,6 +426,31 @@ def unittest_coverage(context):
     run_command(context, command)
 
 
+@task
+def integration_tests(context):
+    """Some very generic high level integration tests."""
+    session = requests.Session()
+    retries = 1
+    max_retries = 60
+
+    start(context)
+    while retries < max_retries:
+        try:
+            response = session.get("http://localhost:8080", timeout=5)
+        except requests.exceptions.ConnectionError:
+            print("Nautobot not ready yet sleeping for 5 seconds...")
+            sleep(5)
+            retries += 1
+            continue
+        if response.ok:
+            print("Nautobot is ready...")
+            break
+        else:
+            raise Exit(f"Nautobot returned and invalid status {response.status_code}", 1)
+    if retries >= max_retries:
+        raise Exit("Timed out waiting for Nautobot", 1)
+
+
 @task(
     help={
         "lint-only": "only run linters, unit tests will be excluded",
@@ -306,6 +460,7 @@ def tests(context, lint_only=False):
     """Run all tests and linters."""
     black(context)
     flake8(context)
+    hadolint(context)
     check_migrations(context)
     if not lint_only:
         unittest(context)

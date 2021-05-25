@@ -60,6 +60,10 @@ class MultiValueNumberFilter(django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(forms.IntegerField)
 
 
+class MultiValueBigNumberFilter(MultiValueNumberFilter):
+    """Subclass of MultiValueNumberFilter used for BigInteger model fields."""
+
+
 class MultiValueTimeFilter(django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(forms.TimeField)
 
@@ -213,6 +217,7 @@ class BaseFilterSet(django_filters.FilterSet):
     FILTER_DEFAULTS.update(
         {
             models.AutoField: {"filter_class": MultiValueNumberFilter},
+            models.BigIntegerField: {"filter_class": MultiValueBigNumberFilter},
             models.CharField: {"filter_class": MultiValueCharFilter},
             models.DateField: {"filter_class": MultiValueDateFilter},
             models.DateTimeField: {"filter_class": MultiValueDateTimeFilter},

@@ -22,7 +22,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import ViewTestCases, TestCase
+from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body
 
 
 # Use the proper swappable User model
@@ -89,6 +89,7 @@ class ConfigContextTestCase(
             "regions": [],
             "sites": [site.pk],
             "roles": [],
+            "device_types": [],
             "platforms": [],
             "tenant_groups": [],
             "tenants": [],
@@ -156,7 +157,8 @@ class CustomLinkTest(TestCase):
 
         response = self.client.get(site.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f"FOO {site.name} BAR", str(response.content))
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"FOO {site.name} BAR", content, content)
 
 
 class GitRepositoryTestCase(
@@ -474,7 +476,7 @@ class RelationshipTestCase(
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
             "source_hidden": False,
-            "source_filter": '{"status": {"slug": "active"}}',
+            "source_filter": '{"status": ["active"]}',
             "destination_type": interface_type.pk,
             "destination_label": "VLANs",
             "destination_hidden": True,
