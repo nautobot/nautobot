@@ -1,5 +1,6 @@
 from graphene_django import DjangoObjectType
-from nautobot.extras.tests.dummy_plugin.models import AnotherDummyModel
+
+from dummy_plugin.models import AnotherDummyModel
 
 
 class AnotherDummyType(DjangoObjectType):
