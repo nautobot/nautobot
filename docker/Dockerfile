@@ -54,6 +54,7 @@ RUN /root/.poetry/bin/poetry config virtualenvs.create false && \
 
 # Keep the project source code from NAUTOBOT_ROOT
 COPY pyproject.toml poetry.lock /source/
+COPY examples /source/examples
 WORKDIR /source
 
 # -------------------------------------------------------------------------------------
