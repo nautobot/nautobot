@@ -65,7 +65,7 @@ menu_tabs = (
                             ),
                         ),
                     ),
-                )
+                ),
             ),
             NavMenuGroup(
                 name="Providers",
@@ -98,8 +98,8 @@ menu_tabs = (
                             ),
                         ),
                     ),
-                )
-            )
+                ),
+            ),
         ),
     ),
 )
