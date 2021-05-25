@@ -21,7 +21,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack, Region, Site
 from nautobot.extras.choices import *
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -334,6 +334,12 @@ class ConfigContextSerializer(ValidatedModelSerializer):
         required=False,
         many=True,
     )
+    device_types = SerializedPKRelatedField(
+        queryset=DeviceType.objects.all(),
+        serializer=NestedDeviceRoleSerializer,
+        required=False,
+        many=True,
+    )
     platforms = SerializedPKRelatedField(
         queryset=Platform.objects.all(),
         serializer=NestedPlatformSerializer,
@@ -381,6 +387,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "regions",
             "sites",
             "roles",
+            "device_types",
             "platforms",
             "cluster_groups",
             "clusters",
