@@ -236,7 +236,9 @@ def run_app(**kwargs):
 
         # Check if the config already exists; alert user and exit if exists.
         if os.path.exists(config_path):
-            print(f"A configuration already exists at {config_path}. Please backup and remove it or choose another path.")
+            print(
+                f"A configuration already exists at {config_path}. Please backup and remove it or choose another path."
+            )
             return
 
         # Create the config
