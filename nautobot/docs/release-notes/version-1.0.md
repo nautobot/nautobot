@@ -186,6 +186,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Changed
 
 - [#423](https://github.com/nautobot/nautobot/pull/423) - Clarified reference to `/config_contexts/` folder in Git user guide
+- [#448](https://github.com/nautobot/nautobot/issues/448) - `nautobot-server init`  no longer provides an option to overwrite the existing configuration files.
 
 ### Fixed
 
@@ -193,7 +194,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#417](https://github.com/nautobot/nautobot/pull/417) - Fixed incorrect link to Docker docs from installation docs
 - [#428](https://github.com/nautobot/nautobot/issues/428) - Fixed GraphQL error when handling ASNs greater than 2147483647
 - [#430](https://github.com/nautobot/nautobot/pull/430) - Fixed missing `ContentType` foreign keys in GraphQL
-- [#448](https://github.com/nautobot/nautobot/issues/448) - Fixed nautobot-server init overwriting configuration
 - [#454](https://github.com/nautobot/nautobot/issues/454) - Fixed inability to create IPv6 addresses via REST API.
 - [#461](https://github.com/nautobot/nautobot/issues/461) - Fixed NAUTOBOT_DB_TIMEOUT read as string in default config
 - [#467](https://github.com/nautobot/nautobot/pull/467) - Fixes issue with job forms not respecting `field_order`
