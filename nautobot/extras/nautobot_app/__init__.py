@@ -1,4 +1,6 @@
 from django.apps import AppConfig
+from operator import getitem
+from collections import OrderedDict
 
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
@@ -18,23 +20,39 @@ class NautobotConfig(AppConfig):
 
 def register_menu_items(class_list):
     for nav_tab in class_list:
-        if not registry["nav_menu"]["tabs"].get(nav_tab.name):
-            registry["nav_menu"]["tabs"][nav_tab.name] = {
-                "weight": nav_tab.weight,
-                "groups": {},
-            }
-        for group in nav_tab.groups:
-            if not registry["nav_menu"]["tabs"][nav_tab.name]["groups"].get(group.name):
-                registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name] = {
-                    "weight": group.weight,
-                    "items": {},
-                }
-            for item in group.items:
-                if not registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["items"].get(item.link):
-                    registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["items"][item.link] = item
+        registry["nav_menu"]["tabs"][nav_tab.name] = {
+            "weight": nav_tab.weight,
+            "groups": registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
+            if registry["nav_menu"]["tabs"].get(nav_tab.name)
+            else {},
+            "permissions": [],
+        }
 
-        registry["nav_menu"]["tabs"][nav_tab.name]["sorted_groups"] = sorted(registry["nav_menu"]["tabs"][nav_tab.name]["groups"], key=lambda x: registry["nav_menu"]["tabs"][nav_tab.name]["groups"][x]['weight'])
-    registry["nav_menu"]["sorted_tabs"] = sorted(registry["nav_menu"]["tabs"], key=lambda x: registry["nav_menu"]["tabs"][x]['weight'])
+        tab_perms = []
+        for group in nav_tab.groups:
+            registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name] = {
+                "weight": group.weight,
+                "items": registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["items"]
+                if registry["nav_menu"]["tabs"][nav_tab.name]["groups"].get(group.name)
+                else {},
+                "permissions": [],
+            }
+
+            group_perms = []
+            for item in group.items:
+                registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["items"][item.link] = item
+                group_perms += item.permissions
+            registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["permissions"] = group_perms
+            tab_perms += group_perms
+
+        registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] += tab_perms
+        registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
+            sorted(registry["nav_menu"]["tabs"][nav_tab.name]["groups"].items(), key=lambda x: getitem(x[1], "weight"))
+        )
+
+    registry["nav_menu"]["tabs"] = OrderedDict(
+        sorted(registry["nav_menu"]["tabs"].items(), key=lambda x: getitem(x[1], "weight"))
+    )
 
 
 class NavMenuTab:

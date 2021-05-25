@@ -1,6 +1,6 @@
-from django.apps import AppConfig
+from nautobot.extras.nautobot_app import NautobotConfig
 
 
-class IPAMConfig(AppConfig):
+class IPAMConfig(NautobotConfig):
     name = "nautobot.ipam"
     verbose_name = "IPAM"

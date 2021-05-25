@@ -6,7 +6,7 @@ menu_tabs = (
     NavMenuTab(
         name="Organization",
         weight=100,
-        groups= (
+        groups=(
             NavMenuGroup(
                 name="Tenancy",
                 weight=300,
@@ -14,12 +14,56 @@ menu_tabs = (
                     NavMenuItem(
                         link="tenancy:tenant_list",
                         link_text="Tenants",
-                        permissions=["",],
+                        permissions=[
+                            "tenancy.view_tenant",
+                        ],
+                        buttons=(
+                            NavMenuButton(
+                                link="tenancy:tenant_add",
+                                title="Tenants",
+                                icon_class="mdi mdi-plus-thick",
+                                color=ButtonColorChoices.GREEN,
+                                permissions=[
+                                    "tenancy.add_tag",
+                                ],
+                            ),
+                            NavMenuButton(
+                                link="tenancy:tenant_import",
+                                title="Tenants",
+                                icon_class="mdi mdi-database-import-outline",
+                                color=ButtonColorChoices.BLUE,
+                                permissions=[
+                                    "tenancy.add_tenant",
+                                ],
+                            ),
+                        ),
                     ),
                     NavMenuItem(
                         link="tenancy:tenantgroup_list",
                         link_text="Tenant Group",
-                        permissions=["",],
+                        permissions=[
+                            "tenancy.view_tenantgroup",
+                        ],
+                        buttons=(
+                            NavMenuButton(
+                                link="tenancy:tenant_add",
+                                title="Tenant Group",
+                                icon_class="mdi mdi-plus-thick",
+                                color=ButtonColorChoices.GREEN,
+                                permissions=[
+                                    "tenancy.add_tenant",
+                                ],
+                            ),
+                            NavMenuButton(
+                                link="tenancy:tenantgroup_import",
+                                title="Tenant Group",
+                                icon_class="mdi mdi-database-import-outline",
+                                color=ButtonColorChoices.BLUE,
+                                permissions=[
+                                    "tenancy.add_tenant",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),

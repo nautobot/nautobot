@@ -1,9 +1,10 @@
-from django.apps import AppConfig
+from nautobot.extras.nautobot_app import NautobotConfig
 
 
-class CircuitsConfig(AppConfig):
+class CircuitsConfig(NautobotConfig):
     name = "nautobot.circuits"
     verbose_name = "Circuits"
 
     def ready(self):
+        super().ready()
         import nautobot.circuits.signals  # noqa: F401
