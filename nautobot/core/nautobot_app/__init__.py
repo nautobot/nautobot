@@ -46,7 +46,9 @@ def register_menu_items(class_list):
                 }
                 group_perms += item.permissions
 
-            registry_groups[group.name]["items"] = OrderedDict(sorted(registry_groups[group.name]["items"].items(), key=lambda x: getitem(x[1], "weight")))
+            registry_groups[group.name]["items"] = OrderedDict(
+                sorted(registry_groups[group.name]["items"].items(), key=lambda x: getitem(x[1], "weight"))
+            )
             registry_groups[group.name]["permissions"] = group_perms
             tab_perms += group_perms
 
@@ -121,10 +123,15 @@ class NavMenuButton:
     ButtonColorChoices.
     """
 
-    button_class = CustomLinkButtonClassChoices.CLASS_DEFAULT
-    permissions = []
-
-    def __init__(self, link, title, icon_class, button_class=None, permissions=None, weight=1000):
+    def __init__(
+        self,
+        link,
+        title,
+        icon_class,
+        button_class=CustomLinkButtonClassChoices.CLASS_DEFAULT,
+        permissions=None,
+        weight=1000,
+    ):
         reverse(link)
         self.link = link
         self.title = title
