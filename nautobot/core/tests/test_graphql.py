@@ -36,7 +36,15 @@ from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interfac
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.utilities.testing.utils import create_test_user
 
-from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, GraphQLQuery, Relationship, Status, Webhook
+from nautobot.extras.models import (
+    ChangeLoggedModel,
+    CustomField,
+    ConfigContext,
+    GraphQLQuery,
+    Relationship,
+    Status,
+    Webhook,
+)
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
