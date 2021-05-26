@@ -430,7 +430,7 @@ graphql_types = [AnimalType]
 
 #### Using GraphQL ORM Utility
 
-Two new GraphQL utility functions have been created:
+GraphQL utility functions:
 
 1) `execute_query()`: Runs string as a query against GraphQL.
 2) `execute_saved_query()`: Execute a saved query from Nautobot database.
