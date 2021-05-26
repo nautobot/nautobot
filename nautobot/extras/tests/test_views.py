@@ -434,7 +434,7 @@ class RelationshipTestCase(
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
             "source_hidden": False,
-            "source_filter": '{"status": {"slug": "active"}}',
+            "source_filter": '{"status": ["active"]}',
             "destination_type": interface_type.pk,
             "destination_label": "VLANs",
             "destination_hidden": True,
