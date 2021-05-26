@@ -860,16 +860,25 @@
                             <span class="caret"></span>
                         </a>
                         <ul class="dropdown-menu" id="graphql-queries-menu">
+                            <li class="dropdown-header">Saved Queries</li>
                             {% for query in saved_graphiql_queries %}
                                 <li>
-                                    <a href="#" onclick="reload('{{query.id}}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                                    {% if request.GET.id|slugify == query.id|slugify %}
+                                        <div class="buttons pull-right">
+                                            <button type="button" class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</button>
+                                        </div>
+                                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                                            <strong>{{ query.name }}</strong>
+                                        </a>
+                                    {% else %}
+                                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                                    {% endif %}
                                 </li>
                             {% endfor %}
-                            <br>
-                            <div style="margin:0 auto; display: block; width: fit-content; height: fit-content">
-                                <button type="button" class="btn btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save</button>
-                                <button type="button" class="btn btn-success" onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form"><i class="mdi mdi-content-save"></i> Save As</button>
-                            </div>
+                            <li class="divider" role="separator"></li>
+                            <li>
+                                <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
+                            </li>
                         </ul>
                     <li>
                 </ul>

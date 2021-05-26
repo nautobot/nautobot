@@ -698,6 +698,8 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
 
     class Meta:
         ordering = ("slug",)
+        verbose_name = "GraphQL query"
+        verbose_name_plural = "GraphQL queries"
 
     def get_absolute_url(self):
         return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
@@ -733,3 +735,6 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
             backend.document_from_string(schema, self.query)
         except GraphQLSyntaxError as error:
             raise ValidationError({"query": error})
+
+    def __str__(self):
+        return self.name
