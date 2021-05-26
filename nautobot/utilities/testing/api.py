@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
+import unittest
 
 from nautobot.users.models import ObjectPermission, Token
 from .utils import disable_warnings
@@ -32,6 +33,7 @@ class APITestCase(ModelTestCase):
 
     client_class: Test client class
     view_namespace: Namespace for API views. If None, the model's app_label will be used.
+    choices: List of choices to validate are returned via OPTIONS. If None, do not do anything.
     """
 
     client_class = APIClient
@@ -134,6 +136,7 @@ class APIViewTestCases:
 
     class ListObjectsViewTestCase(APITestCase):
         brief_fields = []
+        choices = None
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -232,6 +235,27 @@ class APIViewTestCases:
                 for choice in choices:
                     self.assertIn("display", choice, f"A choice in {field} is missing the display key")
                     self.assertIn("value", choice, f"A choice in {field} is missing the value key")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_returns_expected_choices(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choices match expected choices.
+            """
+            # Skip test if test case does not supply a list of choices to test against.
+            if not self.choices:
+                self.skipTest("choices was not provided by test case.")
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            # Grab any field name that has choices defined (fields with enums)
+            field_choices = {k for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+
+            self.assertEqual(set(self.choices), field_choices)
 
     class CreateObjectViewTestCase(APITestCase):
         create_data = []

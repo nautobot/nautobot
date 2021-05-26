@@ -1485,6 +1485,7 @@ class CableTest(APIViewTestCases.APIViewTestCase):
         "length": 100,
         "length_unit": "m",
     }
+    choices = ["termination_a_type", "termination_b_type", "type", "status", "length_unit"]
 
     # TODO: Allow updating cable terminations
     test_update_object = None
