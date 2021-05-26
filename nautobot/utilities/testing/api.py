@@ -134,7 +134,7 @@ class APIViewTestCases:
 
     class ListObjectsViewTestCase(APITestCase):
         brief_fields = []
-        choices = None
+        choices_fields = None
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -237,11 +237,11 @@ class APIViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_options_returns_expected_choices(self):
             """
-            Make an OPTIONS request for a list endpoint and validate choices match expected choices.
+            Make an OPTIONS request for a list endpoint and validate choice fields match expected choice fields for serializer.
             """
-            # Skip test if test case does not supply a list of choices to test against.
-            if not self.choices:
-                self.skipTest("choices was not provided by test case.")
+            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
 
             # Save self.user as superuser to be able to view available choices on list views.
             self.user.is_superuser = True
@@ -253,7 +253,7 @@ class APIViewTestCases:
             # Grab any field name that has choices defined (fields with enums)
             field_choices = {k for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
 
-            self.assertEqual(set(self.choices), field_choices)
+            self.assertEqual(set(self.choices_fields), field_choices)
 
     class CreateObjectViewTestCase(APITestCase):
         create_data = []

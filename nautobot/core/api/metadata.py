@@ -69,10 +69,6 @@ class StatusFieldMetadata(ContentTypeMetadata):
     """Emit `Status` serializer fields as a choice enum."""
 
     def get_field_info(self, field):
-        # Keep backwards compatible behavior if serializer also has `ContentTypeField` fields specified
-        if isinstance(field, ContentTypeField):
-            return super().get_field_info(field)
-
         # Gather field_info and determine if we need to add `Status` choices
         field_info = super().get_field_info(field)
         if (
