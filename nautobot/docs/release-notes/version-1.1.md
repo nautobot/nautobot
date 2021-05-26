@@ -15,6 +15,6 @@ Two new [GraphQL utility functions](../plugins/development.md) have been added t
 
 #### Saved GraphQL Queries
 
-[Saved GraphQL queries](../additional-features/graphql.md) offers a new model where reusable queries can be stored in Nautobot. New views have been create for entering data and modifcations to the original GraphiQL interface to allow populating the interface, editing and saving new queries.
+[Saved GraphQL queries](../additional-features/graphql.md#saved-queries) offers a new model where reusable queries can be stored in Nautobot. New views for managing saved queries are available; additionally, the GraphiQL interface has been augmented to allow populating the interface from a saved query, editing and saving new queries.
 
 Saved queries can easily be imported into the GraphiQL interface by using the new navigation tab located on the right side of the navbar. Inside the new tab are also buttons for editing and saving queries directly into Nautobot's databases.

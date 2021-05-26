@@ -131,7 +131,7 @@ Result
 
 Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
 
-Inside of Extensibility > Data Management > GraphQL Queries, there are views to create and manage GraphQL queries.
+Inside of **Extensibility -> Data Management -> GraphQL Queries**, there are views to create and manage GraphQL queries.
 
 Saved queries can be executed from the detailed query view or via a REST API request. The queries can also be populated from the detailed query view into GraphiQL by using the "Open in GraphiQL" button. Additionally, in the GraphiQL UI, there is now a menu item, "Queries", which can be used to populate GraphiQL with any previously saved query.
 

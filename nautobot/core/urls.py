@@ -1,14 +1,10 @@
 from django.conf import settings
 from django.conf.urls import include
-from django.urls import path, re_path
+from django.urls import path
 from django.views.static import serve
-
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
 
 from nautobot.core.api.views import GraphQLDRFAPIView
 from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView
-from graphene_django.views import GraphQLView
 
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
