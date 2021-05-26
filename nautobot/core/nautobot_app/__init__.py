@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.urls import reverse
 from operator import getitem
 from collections import OrderedDict
 
@@ -100,6 +101,7 @@ class NavMenuItem:
     """
 
     def __init__(self, link, link_text, permissions=None, buttons=None, weight=1000):
+        reverse(link)
         self.link = link
         self.link_text = link_text
         self.weight = weight
@@ -122,7 +124,8 @@ class NavMenuButton:
     button_class = CustomLinkButtonClassChoices.CLASS_DEFAULT
     permissions = []
 
-    def __init__(self, link=None, title=None, icon_class=None, button_class=None, permissions=None, weight=1000):
+    def __init__(self, link, title, icon_class, button_class=None, permissions=None, weight=1000):
+        reverse(link)
         self.link = link
         self.title = title
         self.icon_class = icon_class
