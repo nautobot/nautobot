@@ -5,7 +5,6 @@ from django.urls import reverse
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
-import unittest
 
 from nautobot.users.models import ObjectPermission, Token
 from .utils import disable_warnings
@@ -33,7 +32,6 @@ class APITestCase(ModelTestCase):
 
     client_class: Test client class
     view_namespace: Namespace for API views. If None, the model's app_label will be used.
-    choices: List of choices to validate are returned via OPTIONS. If None, do not do anything.
     """
 
     client_class = APIClient
