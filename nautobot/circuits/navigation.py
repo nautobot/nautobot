@@ -1,5 +1,4 @@
-from nautobot.extras.nautobot_app import NavMenuButton, NavMenuItem, NavMenuTab, NavMenuGroup
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.core.nautobot_app import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
 menu_tabs = (
@@ -14,24 +13,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="circuits:circuit_list",
                         link_text="Circuits",
+                        weight=100,
                         permissions=[
                             "circuits.view_circuit",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="circuits:circuit_add",
-                                title="Circuits",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "circuits.add_circuit",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="circuits:circuit_import",
-                                title="Circuits",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "circuits.add_circuit",
                                 ],
@@ -41,24 +35,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="circuits:circuittype_list",
                         link_text="Circuit Types",
+                        weight=200,
                         permissions=[
                             "circuits.view_circuittypes",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="circuits:circuittype_add",
-                                title="Circuit Types",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "circuits.add_circuittype",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="circuits:circuittype_import",
-                                title="Circuit Types",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "circuits.add_circuittype",
                                 ],
@@ -74,24 +63,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="circuits:provider_list",
                         link_text="Providers",
+                        weight=100,
                         permissions=[
                             "circuits.view_providers",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="circuits:provider_add",
-                                title="Providers",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "circuits.add_provider",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="circuits:provider_import",
-                                title="Providers",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "circuits.add_provider",
                                 ],

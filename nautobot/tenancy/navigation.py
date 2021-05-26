@@ -1,5 +1,4 @@
-from nautobot.extras.nautobot_app import NavMenuButton, NavMenuItem, NavMenuTab, NavMenuGroup
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.core.nautobot_app import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
 menu_tabs = (
@@ -14,24 +13,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="tenancy:tenant_list",
                         link_text="Tenants",
+                        weight=100,
                         permissions=[
                             "tenancy.view_tenant",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="tenancy:tenant_add",
-                                title="Tenants",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "tenancy.add_tag",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="tenancy:tenant_import",
-                                title="Tenants",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "tenancy.add_tenant",
                                 ],
@@ -40,25 +34,20 @@ menu_tabs = (
                     ),
                     NavMenuItem(
                         link="tenancy:tenantgroup_list",
-                        link_text="Tenant Group",
+                        link_text="Tenant Groups",
+                        weight=200,
                         permissions=[
                             "tenancy.view_tenantgroup",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="tenancy:tenant_add",
-                                title="Tenant Group",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "tenancy.add_tenant",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="tenancy:tenantgroup_import",
-                                title="Tenant Group",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "tenancy.add_tenant",
                                 ],

@@ -2,9 +2,9 @@ from django.apps import AppConfig
 from operator import getitem
 from collections import OrderedDict
 
+from nautobot.extras.choices import CustomLinkButtonClassChoices
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
-from nautobot.utilities.choices import ButtonColorChoices
 
 
 class NautobotConfig(AppConfig):
@@ -22,32 +22,36 @@ def register_menu_items(class_list):
     for nav_tab in class_list:
         registry["nav_menu"]["tabs"][nav_tab.name] = {
             "weight": nav_tab.weight,
-            "groups": registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
-            if registry["nav_menu"]["tabs"].get(nav_tab.name)
-            else {},
+            "groups": registry["nav_menu"]["tabs"].get(nav_tab.name, {}).get("groups", {}),
             "permissions": [],
         }
 
         tab_perms = []
+        registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
         for group in nav_tab.groups:
-            registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name] = {
+            registry_groups[group.name] = {
                 "weight": group.weight,
-                "items": registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["items"]
-                if registry["nav_menu"]["tabs"][nav_tab.name]["groups"].get(group.name)
-                else {},
+                "items": registry_groups.get(group.name, {}).get("items", {}),
                 "permissions": [],
             }
 
             group_perms = []
             for item in group.items:
-                registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["items"][item.link] = item
+                registry_groups[group.name]["items"][item.link] = {
+                    "link_text": item.link_text,
+                    "weight": item.weight,
+                    "buttons": item.buttons,
+                    "permissions": item.permissions,
+                }
                 group_perms += item.permissions
-            registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["permissions"] = group_perms
+
+            registry_groups[group.name]["items"] = OrderedDict(sorted(registry_groups[group.name]["items"].items(), key=lambda x: getitem(x[1], "weight")))
+            registry_groups[group.name]["permissions"] = group_perms
             tab_perms += group_perms
 
         registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] += tab_perms
         registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
-            sorted(registry["nav_menu"]["tabs"][nav_tab.name]["groups"].items(), key=lambda x: getitem(x[1], "weight"))
+            sorted(registry_groups.items(), key=lambda x: getitem(x[1], "weight"))
         )
 
     registry["nav_menu"]["tabs"] = OrderedDict(
@@ -95,9 +99,6 @@ class NavMenuItem:
     Buttons are each specified as a list of NavMenuButton instances.
     """
 
-    permissions = []
-    buttons = []
-
     def __init__(self, link, link_text, permissions=None, buttons=None, weight=1000):
         self.link = link
         self.link_text = link_text
@@ -118,10 +119,10 @@ class NavMenuButton:
     ButtonColorChoices.
     """
 
-    color = ButtonColorChoices.DEFAULT
+    button_class = CustomLinkButtonClassChoices.CLASS_DEFAULT
     permissions = []
 
-    def __init__(self, link, title, icon_class, color=None, permissions=None, weight=1000):
+    def __init__(self, link=None, title=None, icon_class=None, button_class=None, permissions=None, weight=1000):
         self.link = link
         self.title = title
         self.icon_class = icon_class
@@ -130,7 +131,29 @@ class NavMenuButton:
             if type(permissions) not in (list, tuple):
                 raise TypeError("Permissions must be passed as a tuple or list.")
             self.permissions = permissions
-        if color is not None:
-            if color not in ButtonColorChoices.values():
+        if button_class is not None:
+            if button_class not in CustomLinkButtonClassChoices.values():
                 raise ValueError("Button color must be a choice within ButtonColorChoices.")
-            self.color = color
+            self.button_class = button_class
+
+
+class NavMenuAddButton(NavMenuButton):
+    def __init__(self, *args, **kwargs):
+        if "title" not in kwargs:
+            kwargs["title"] = "Add"
+        if "icon_class" not in kwargs:
+            kwargs["icon_class"] = "mdi mdi-plus-thick"
+        if "button_classs" not in kwargs:
+            kwargs["button_class"] = CustomLinkButtonClassChoices.CLASS_SUCCESS
+        super().__init__(*args, **kwargs)
+
+
+class NavMenuImportButton(NavMenuButton):
+    def __init__(self, *args, **kwargs):
+        if "title" not in kwargs:
+            kwargs["title"] = "Import"
+        if "icon_class" not in kwargs:
+            kwargs["icon_class"] = "mdi mdi-database-import-outline"
+        if "button_class" not in kwargs:
+            kwargs["button_class"] = CustomLinkButtonClassChoices.CLASS_INFO
+        super().__init__(*args, **kwargs)

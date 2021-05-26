@@ -17,7 +17,6 @@
         <div id="navbar" class="navbar-collapse collapse">
             {% if request.user.is_authenticated %}
                 <ul class="nav navbar-nav">
-                    {% comment %} TODO Permissions {% endcomment %}
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
                         {% if request.user|has_perms:tab_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                             <li class="dropdown">
@@ -33,7 +32,7 @@
                                                             <div class="buttons pull-right">
                                                                 {% for button in item_details.buttons %}
                                                                     {% if not button.permissions or request.user|has_perms:button.permissions %}
-                                                                        <a href="{% url button.link %}" class="btn btn-xs btn-{{ button.color }}" title="{{ button.title }}"><i class="{{ button.icon_class }}"></i></a>
+                                                                        <a href="{% url button.link %}" class="btn btn-xs btn-{{ button.button_class }}" title="{{ button.title }}"><i class="{{ button.icon_class }}"></i></a>
                                                                     {% endif %}
                                                                 {% endfor %}
                                                             </div>

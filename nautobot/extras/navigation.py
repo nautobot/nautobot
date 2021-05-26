@@ -1,5 +1,4 @@
-from nautobot.extras.nautobot_app import NavMenuButton, NavMenuItem, NavMenuTab, NavMenuGroup
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.core.nautobot_app import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
 menu_tabs = (
@@ -14,24 +13,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:tag_list",
                         link_text="Tags",
+                        weight=100,
                         permissions=[
                             "extras.view_tags",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:tag_add",
-                                title="Tags",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_tag",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="extras:tag_add",
-                                title="Tags",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "extras.add_tag",
                                 ],
@@ -47,24 +41,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:status_list",
                         link_text="Statuses",
+                        weight=100,
                         permissions=[
                             "extras.view_status",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:status_add",
-                                title="Statuses",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_status",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="extras:status_import",
-                                title="Statuses",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "extras.add_status",
                                 ],
@@ -86,6 +75,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:objectchange_list",
                         link_text="Change Log",
+                        weight=100,
                         permissions=[
                             "extras.view_objectchange",
                         ],
@@ -94,6 +84,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:jobresult_list",
                         link_text="Job Results",
+                        weight=200,
                         permissions=[
                             "extras.view_jobresult",
                         ],
@@ -108,24 +99,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:gitrepository_list",
                         link_text="Git Repositories",
+                        weight=100,
                         permissions=[
                             "extras.view_gitrepository",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:gitrepository_add",
-                                title="Git Repositories",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_gitrepository",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="extras:gitrepository_import",
-                                title="Git Repositories",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "extras.add_gitrepository",
                                 ],
@@ -141,15 +127,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:relationship_list",
                         link_text="Relationships",
+                        weight=100,
                         permissions=[
                             "extras.view_relationship",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:relationship_add",
-                                title="Relationships",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_relationship",
                                 ],
@@ -164,16 +148,14 @@ menu_tabs = (
                 items=(
                     NavMenuItem(
                         link="extras:configcontext_list",
-                        link_text="Config Context",
+                        link_text="Config Contexts",
+                        weight=100,
                         permissions=[
                             "extras.view_configcontext",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:configcontext_add",
-                                title="Config Context",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_configcontext",
                                 ],
@@ -183,15 +165,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:exporttemplate_list",
                         link_text="Export Templates",
+                        weight=200,
                         permissions=[
                             "extras.view_exporttemplate",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:exporttemplate_add",
-                                title="Export Templates",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_exporttemplate",
                                 ],
@@ -201,6 +181,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:job_list",
                         link_text="Jobs",
+                        weight=300,
                         permissions=[
                             "extras.view_job",
                         ],
@@ -209,15 +190,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:webhook_list",
                         link_text="Webhooks",
+                        weight=400,
                         permissions=[
                             "extras.view_webhook",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:webhook_add",
-                                title="Webhooks",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_webhook",
                                 ],
@@ -233,15 +212,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="extras:customlink_list",
                         link_text="Custom Links",
+                        weight=100,
                         permissions=[
                             "extras.view_customlink",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="extras:customlink_add",
-                                title="Custom Links",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "extras.add_customlink",
                                 ],

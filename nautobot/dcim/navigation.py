@@ -1,5 +1,4 @@
-from nautobot.extras.nautobot_app import NavMenuButton, NavMenuItem, NavMenuTab, NavMenuGroup
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.core.nautobot_app import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
 menu_tabs = (
@@ -14,24 +13,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:site_list",
                         link_text="Sites",
+                        weight=100,
                         permissions=[
                             "dcim.view_site",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:site_add",
-                                title="Sites",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_site",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:site_add",
-                                title="Sites",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_site",
                                 ],
@@ -41,24 +35,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:region_list",
                         link_text="Regions",
+                        weight=200,
                         permissions=[
                             "dcim.view_region",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:region_add",
-                                title="Regions",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_region",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:region_add",
-                                title="Regions",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_region",
                                 ],
@@ -74,24 +63,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:rack_list",
                         link_text="Racks",
+                        weight=100,
                         permissions=[
                             "dcim.view_rack",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:rack_add",
-                                title="Racks",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_rack",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:rack_import",
-                                title="Racks",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_rack",
                                 ],
@@ -101,24 +85,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:rackgroup_list",
                         link_text="Rack Groups",
+                        weight=200,
                         permissions=[
                             "dcim.view_rackgroup",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:rackgroup_add",
-                                title="Racks Groups",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_rackgroup",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:rackgroup_import",
-                                title="Racks Groups",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_rackgroup",
                                 ],
@@ -128,24 +107,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:rackrole_list",
                         link_text="Rack Roles",
+                        weight=300,
                         permissions=[
                             "dcim.view_rackrole",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:rackrole_add",
-                                title="Racks Roles",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_rackrole",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:rackrole_import",
-                                title="Racks Roles",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_rackrole",
                                 ],
@@ -155,24 +129,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:rackreservation_list",
                         link_text="Reservations",
+                        weight=400,
                         permissions=[
                             "dcim.view_rackreservation",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:rackreservation_add",
-                                title="Racks Reservations",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_rackreservation",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:rackreservation_import",
-                                title="Racks Reservations",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_rackreservation",
                                 ],
@@ -182,6 +151,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:rack_elevation_list",
                         link_text="Elevations",
+                        weight=500,
                         permissions=[
                             "dcim.view_elevation",
                         ],
@@ -202,24 +172,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:device_list",
                         link_text="Devices",
+                        weight=100,
                         permissions=[
                             "dcim.view_device",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:device_add",
-                                title="Devices",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_device",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:device_import",
-                                title="Devices",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_device",
                                 ],
@@ -229,24 +194,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:devicerole_list",
                         link_text="Device Roles",
+                        weight=200,
                         permissions=[
                             "dcim.view_devicerole",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:devicerole_add",
-                                title="Device Roles",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_devicerole",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:devicerole_import",
-                                title="Device Roles",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_devicerole",
                                 ],
@@ -256,24 +216,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:platform_list",
                         link_text="Platforms",
+                        weight=300,
                         permissions=[
                             "dcim.view_platform",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:platform_add",
-                                title="Platforms",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_platform",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:platform_import",
-                                title="Platforms",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_platform",
                                 ],
@@ -283,24 +238,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:virtualchassis_list",
                         link_text="Virtual Chassis",
+                        weight=400,
                         permissions=[
                             "dcim.view_virtualchassis",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:virtualchassis_add",
-                                title="Virtual Chassis",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_virtualchassis",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:virtualchassis_import",
-                                title="Virtual Chassis",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_virtualchassis",
                                 ],
@@ -316,24 +266,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:devicetype_list",
                         link_text="Device Types",
+                        weight=100,
                         permissions=[
                             "dcim.view_devicetype",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:devicetype_add",
-                                title="Device Types",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_devicetype",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:devicetype_import",
-                                title="Device Types",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_devicetype",
                                 ],
@@ -342,25 +287,20 @@ menu_tabs = (
                     ),
                     NavMenuItem(
                         link="dcim:manufacturer_list",
-                        link_text="Manufacturer",
+                        link_text="Manufacturers",
+                        weight=200,
                         permissions=[
                             "dcim.view_manufacturer",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:manufacturer_add",
-                                title="Manufacturer",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_manufacturer",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:manufacturer_import",
-                                title="Manufacturer",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_manufacturer",
                                 ],
@@ -376,15 +316,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:cable_list",
                         link_text="Cables",
+                        weight=100,
                         permissions=[
                             "dcim.view_cable",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:cable_import",
-                                title="Cables",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_cables",
                                 ],
@@ -394,6 +332,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:console_connections_list",
                         link_text="Console Connections",
+                        weight=200,
                         permissions=[
                             "dcim.view_consoleport",
                             "dcim.view_consoleserverport",
@@ -403,6 +342,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:power_connections_list",
                         link_text="Power Connections",
+                        weight=300,
                         permissions=[
                             "dcim.view_powerport",
                             "dcim.view_poweroutlet",
@@ -412,6 +352,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:interface_connections_list",
                         link_text="Interface Connections",
+                        weight=400,
                         permissions=[
                             "dcim.view_interface",
                         ],
@@ -426,15 +367,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:interface_list",
                         link_text="Interfaces",
+                        weight=100,
                         permissions=[
                             "dcim.view_interface",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:interface_import",
-                                title="Interfaces",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_interface",
                                 ],
@@ -444,15 +383,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:frontport_list",
                         link_text="Front Ports",
+                        weight=200,
                         permissions=[
                             "dcim.view_frontport",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:frontport_import",
-                                title="Front Ports",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_frontport",
                                 ],
@@ -462,15 +399,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:rearport_list",
                         link_text="Rear Ports",
+                        weight=300,
                         permissions=[
                             "dcim.view_rearport",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:rearport_import",
-                                title="Rear Ports",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_rearport",
                                 ],
@@ -480,15 +415,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:consoleport_list",
                         link_text="Console Ports",
+                        weight=400,
                         permissions=[
                             "dcim.view_consoleport",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:consoleport_import",
-                                title="Console Ports",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_consoleport",
                                 ],
@@ -498,15 +431,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:consoleport_list",
                         link_text="Console Server Ports",
+                        weight=500,
                         permissions=[
                             "dcim.view_consoleserverport",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:consoleserverport_import",
-                                title="Console Server Ports",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_serverport",
                                 ],
@@ -516,15 +447,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:powerport_list",
                         link_text="Power Ports",
+                        weight=600,
                         permissions=[
                             "dcim.view_powerport",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:powerport_import",
-                                title="Power Ports",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_powerport",
                                 ],
@@ -534,15 +463,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:poweroutlet_list",
                         link_text="Power Outlets",
+                        weight=700,
                         permissions=[
                             "dcim.view_poweroutlet",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:poweroutlet_import",
-                                title="Power Outlets",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_poweroutlet",
                                 ],
@@ -552,15 +479,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:devicebay_list",
                         link_text="Device Bays",
+                        weight=800,
                         permissions=[
                             "dcim.view_devicebay",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:devicebay_import",
-                                title="Device Bays",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_devicebay",
                                 ],
@@ -570,15 +495,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="dcim:inventoryitem_list",
                         link_text="Inventory Items",
+                        weight=900,
                         permissions=[
                             "dcim.view_inventoryitem",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:inventoryitem_import",
-                                title="Inventory Items",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_inventoryitem",
                                 ],
@@ -604,20 +527,14 @@ menu_tabs = (
                             "dcim.view_powerfeed",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:powerfeed_add",
-                                title="Power Feeds",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_powerfeed",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:powerfeed_import",
-                                title="Power Feeds",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_powerfeed",
                                 ],
@@ -631,20 +548,14 @@ menu_tabs = (
                             "dcim.view_powerpanel",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="dcim:powerpanel_add",
-                                title="Power Panels",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "dcim.add_powerpanel",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="dcim:powerpanel_import",
-                                title="Power Panels",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "dcim.add_powerpanel",
                                 ],

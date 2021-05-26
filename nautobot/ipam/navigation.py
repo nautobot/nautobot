@@ -1,5 +1,4 @@
-from nautobot.extras.nautobot_app import NavMenuButton, NavMenuItem, NavMenuTab, NavMenuGroup
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.core.nautobot_app import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
 menu_tabs = (
@@ -14,24 +13,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:ipaddress_list",
                         link_text="IP Addresses",
+                        weight=100,
                         permissions=[
                             "ipam.view_ipaddress",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:ipaddress_add",
-                                title="IP Addresses",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_ipaddress",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:ipaddress_import",
-                                title="IP Addresses",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_ipaddress",
                                 ],
@@ -47,24 +41,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:prefix_list",
                         link_text="Prefixes",
+                        weight=100,
                         permissions=[
                             "ipam.view_prefix",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:prefix_add",
-                                title="Prefixes",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_prefix",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:prefix_import",
-                                title="Prefixes",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_prefix",
                                 ],
@@ -74,24 +63,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:role_list",
                         link_text="Prefix/VLAN Roles",
+                        weight=200,
                         permissions=[
                             "ipam.view_role",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:role_add",
-                                title="Prefix/VLAN Roles",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_role",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:role_import",
-                                title="Prefix/VLAN Roles",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_role",
                                 ],
@@ -107,24 +91,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:aggregate_list",
                         link_text="Aggregates",
+                        weight=100,
                         permissions=[
                             "ipam.view_aggregate",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:aggregate_add",
-                                title="Aggregates",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_aggregate",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:aggregate_import",
-                                title="Aggregates",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_aggregate",
                                 ],
@@ -134,24 +113,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:rir_list",
                         link_text="RIRs",
+                        weight=200,
                         permissions=[
                             "ipam.view_rir",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:rir_add",
-                                title="RIRs",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_rir",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:rir_import",
-                                title="RIRs",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_rir",
                                 ],
@@ -167,24 +141,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:vrf_list",
                         link_text="VRFs",
+                        weight=100,
                         permissions=[
                             "ipam.view_vrf",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:vrf_add",
-                                title="VRFs",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_vrf",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:vrf_import",
-                                title="VRFs",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_vrf",
                                 ],
@@ -194,24 +163,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:routetarget_list",
                         link_text="Route Targets",
+                        weight=200,
                         permissions=[
                             "ipam.view_routetarget",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:routetarget_add",
-                                title="Route Targets",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_routetarget",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:routetarget_import",
-                                title="Route Targets",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_routetarget",
                                 ],
@@ -227,24 +191,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:vlan_list",
                         link_text="VLANs",
+                        weight=100,
                         permissions=[
                             "ipam.view_vlan",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:vlan_add",
-                                title="VLANs",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_vlan",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:vlan_import",
-                                title="VLANs",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_vlan",
                                 ],
@@ -254,24 +213,19 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:vlangroup_list",
                         link_text="VLAN Groups",
+                        weight=200,
                         permissions=[
                             "ipam.view_vlangroup",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuAddButton(
                                 link="ipam:vlangroup_add",
-                                title="VLAN Groups",
-                                icon_class="mdi mdi-plus-thick",
-                                color=ButtonColorChoices.GREEN,
                                 permissions=[
                                     "ipam.add_vlangroup",
                                 ],
                             ),
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:vlangroup_import",
-                                title="VLAN Groups",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_vlangroup",
                                 ],
@@ -287,15 +241,13 @@ menu_tabs = (
                     NavMenuItem(
                         link="ipam:service_list",
                         link_text="Services",
+                        weight=100,
                         permissions=[
                             "ipam.view_service",
                         ],
                         buttons=(
-                            NavMenuButton(
+                            NavMenuImportButton(
                                 link="ipam:service_import",
-                                title="Services",
-                                icon_class="mdi mdi-database-import-outline",
-                                color=ButtonColorChoices.BLUE,
                                 permissions=[
                                     "ipam.add_service",
                                 ],
