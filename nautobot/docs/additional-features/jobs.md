@@ -87,6 +87,10 @@ class MyJob(Job):
         commit_default = False
 ```
 
+#### `field_order`
+
+A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
+
 ### Variables
 
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.

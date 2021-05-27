@@ -1,4 +1,4 @@
-## Tokens
+# Tokens
 
 A token is a unique identifier mapped to a Nautobot user account. Each user may have one or more tokens which he or she can use for authentication when making REST API requests. To create a token, navigate to the API tokens page under your user profile.
 
