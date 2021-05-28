@@ -148,9 +148,11 @@ Available tasks:
   build               Build all docker images.
   cli                 Launch a bash shell inside the running Nautobot container.
   createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
+  dumpdata            Dump database data into file, only for development environment use.
   debug               Start Nautobot and its dependencies in debug mode.
   destroy             Destroy all containers and volumes.
   flake8              Check for PEP8 compliance and other style issues.
+  loaddata            Load data from file into database, only for development environment use.
   makemigrations      Perform makemigrations operation in Django.
   migrate             Perform migrate operation in Django.
   nbshell             Launch an interactive nbshell session.
