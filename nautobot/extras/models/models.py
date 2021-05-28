@@ -580,6 +580,47 @@ class JobResult(BaseModel):
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
+    @property
+    def related_object(self):
+        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `job_id` fields.
+
+        If `obj_type` is extras.Job, then the `name` is used to look up an extras.jobs.Job subclass based on the
+        `class_path` of the Job subclass.
+        Note that this is **not** the extras.models.Job model class nor an instance thereof.
+
+        Else, if the the model class referenced by `obj_type` has a `name` field, our `name` field will be used
+        to look up a corresponding model instance. This is used, for example, to look up a related `GitRepository`;
+        more generally it can be used by any model that 1) has a unique `name` field and 2) needs to have a many-to-one
+        relationship between JobResults and model instances.
+
+        Else, the `obj_type` and `job_id` will be used together as a quasi-GenericForeignKey to look up a model
+        instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
+        but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
+        to plugin model instances.
+        """
+        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+
+        if self.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+            # Related object is an extras.Job subclass, our `name` matches its `class_path`
+            return get_job(self.name)
+
+        model_class = self.obj_type.model_class()
+
+        if hasattr(model_class, "name"):
+            # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
+            try:
+                return model_class.objects.get(name=self.name)
+            except model_class.DoesNotExist:
+                pass
+
+        # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
+        try:
+            return model_class.objects.get(id=self.job_id)
+        except model_class.DoesNotExist:
+            pass
+
+        return None
+
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
 
