@@ -12,6 +12,13 @@ registry["nav_menu"] = {"tabs": {}}
 
 
 class NautobotConfig(AppConfig):
+    """
+    Custom AppConfig for Nautobot application.
+
+    Adds functionality to generate the HTML navigation menu using `navigation.py` files from nautbot
+    applications.
+    """
+
     menu_tabs = "navigation.menu_tabs"
 
     def ready(self):
