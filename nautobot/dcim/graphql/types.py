@@ -2,17 +2,18 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django.converter import convert_django_field
 
+from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.dcim.fields import MACAddressField
-from nautobot.dcim.models import Site, Device, Interface, Rack, Cable, ConsoleServerPort
+from nautobot.dcim.graphql.mixins import PathEndpointMixin
+from nautobot.dcim.models import Cable, CablePath, ConsoleServerPort, Device, Interface, Rack, Site
 from nautobot.dcim.filters import (
-    SiteFilterSet,
+    CableFilterSet,
+    ConsoleServerPortFilterSet,
     DeviceFilterSet,
     InterfaceFilterSet,
     RackFilterSet,
-    CableFilterSet,
-    ConsoleServerPortFilterSet,
+    SiteFilterSet,
 )
-from nautobot.ipam.graphql.types import IPAddressType
 from nautobot.extras.graphql.types import TagType  # noqa: F401
 
 
@@ -20,32 +21,6 @@ from nautobot.extras.graphql.types import TagType  # noqa: F401
 def convert_field_to_string(field, registry=None):
     """Convert MACAddressField to String."""
     return graphene.String()
-
-
-class CableTerminationMixin:
-    """Mixin for CableTermination for GraphQL objects."""
-
-    connected_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
-    connected_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
-    connected_console_server_port = graphene.Field("nautobot.dcim.graphql.types.ConsoleServerPortType")
-
-    def resolve_connected_interface(self, args):
-        peer = self.connected_endpoint
-        if peer and type(peer).__name__ == "Interface":  # type built-in used to avoid class loading
-            return peer
-        return None
-
-    def resolve_connected_circuit_termination(self, args):
-        peer = self.connected_endpoint
-        if peer and type(peer).__name__ == "CircuitTermination":  # type built-in used to avoid class loading
-            return peer
-        return None
-
-    def resolve_connected_console_server_port(self, args):
-        peer = self.connected_endpoint
-        if peer and type(peer).__name__ == "ConsoleServerPort":  # type built-in used to avoid class loading
-            return peer
-        return None
 
 
 class SiteType(DjangoObjectType):
@@ -75,7 +50,7 @@ class RackType(DjangoObjectType):
         exclude = ["images"]
 
 
-class InterfaceType(DjangoObjectType, CableTerminationMixin):
+class InterfaceType(DjangoObjectType, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
     class Meta:
@@ -83,13 +58,13 @@ class InterfaceType(DjangoObjectType, CableTerminationMixin):
         filterset_class = InterfaceFilterSet
         exclude = ["_name"]
 
-    ip_addresses = graphene.List(IPAddressType)
+    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
     def resolve_ip_addresses(self, args):
         return self.ip_addresses.all()
 
 
-class ConsoleServerPortType(DjangoObjectType, CableTerminationMixin):
+class ConsoleServerPortType(DjangoObjectType, PathEndpointMixin):
     """Graphql Type Object for ConsoleServerPort model."""
 
     class Meta:
@@ -118,4 +93,32 @@ class CableType(DjangoObjectType):
         if self.termination_b_type:
             model = self.termination_b_type.model_class()
             return f"{model._meta.app_label}.{model._meta.model_name}"
+        return None
+
+
+class CablePathType(DjangoObjectType):
+    """GraphQL type object for CablePath model."""
+
+    class Meta:
+        model = CablePath
+
+
+class CableTerminationTypes(graphene.Union):
+    """GraphQL type for models that can terminate a Circuit."""
+
+    class Meta:
+        types = (
+            InterfaceType,
+            ConsoleServerPortType,
+            CircuitTerminationType,
+        )
+
+    @classmethod
+    def resolve_type(cls, instance, info):
+        if type(instance).__name__ == "Interface":
+            return InterfaceType
+        elif type(instance).__name__ == "CircuitTermination":
+            return CircuitTerminationType
+        elif type(instance).__name__ == "ConsoleServerPort":
+            return ConsoleServerPortType
         return None

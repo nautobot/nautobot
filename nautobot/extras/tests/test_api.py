@@ -386,7 +386,7 @@ class JobTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     @skipIf(
-        "nautobot.extras.tests.dummy_plugin" not in settings.PLUGINS,
+        "dummy_plugin" not in settings.PLUGINS,
         "dummy_plugin not in settings.PLUGINS",
     )
     def test_list_jobs_with_permission(self):
@@ -398,7 +398,7 @@ class JobTest(APITestCase):
         # At a minimum, the job provided by the dummy plugin should be present
         self.assertNotEqual(response.data, [])
         self.assertIn(
-            "plugins/nautobot.extras.tests.dummy_plugin.jobs/DummyJob",
+            "plugins/dummy_plugin.jobs/DummyJob",
             [job["id"] for job in response.data],
         )
 
