@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.0.1"
+version = "1.0.2"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -97,12 +97,14 @@ black = "^20.8b1"
 coverage = "~5.4"
 # Tool for debugging Django
 django-debug-toolbar = "~3.2.1"
+# Nautobot dummy plugin used for testing
+dummy-plugin = {path = "examples/dummy_plugin", develop = true}
 # Code style checking and limited static analysis
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.5.0"
 # Allow Markdown files to include other files
-markdown-include = "~0.6.0"
+mkdocs-include-markdown-plugin = "~3.0.1"
 # Rendering docs to HTML
 mkdocs = "~1.1.2"
 # Integration Tests
