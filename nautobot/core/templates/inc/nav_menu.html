@@ -20,25 +20,25 @@
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
                         {% if request.user|has_perms:tab_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                             <li class="dropdown">
-                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ tab_name }} <span class="caret"></span></a>
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                    {{ tab_name }} <span class="caret"></span>
+                                </a>
                                 <ul class="dropdown-menu">
                                     {% for group_name, group_details in tab_details.groups.items %}
                                         {% if request.user|has_perms:group_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                                             <li class="dropdown-header">{{ group_name }}</li>
-                                            {% for item_link, item_details in group_details.items.items %}
-                                                {% if not item_details.permissions or request.user|has_perms:item_details.permissions %}
-                                                    {% if request.user|has_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
-                                                        <li {% if not item_details.permissions %} class="disabled"{% endif %}>
-                                                            <div class="buttons pull-right">
-                                                                {% for button in item_details.buttons %}
-                                                                    {% if not button.permissions or request.user|has_perms:button.permissions %}
-                                                                        <a href="{% url button.link %}" class="btn btn-xs btn-{{ button.button_class }}" title="{{ button.title }}"><i class="{{ button.icon_class }}"></i></a>
-                                                                    {% endif %}
-                                                                {% endfor %}
-                                                            </div>
-                                                            <a href="{% url item_link %}">{{ item_details.link_text }}</a>
-                                                        </li>
-                                                    {% endif %}
+                                            {% for item in group_details.items %}
+                                                {% if request.user|has_perms:item.permissions or not settings.HIDE_RESTRICTED_UI %}
+                                                    <li {% if not request.user|has_perms:item.permissions %} class="disabled"{% endif %}>
+                                                        <div class="buttons pull-right">
+                                                            {% for button in item.buttons %}
+                                                                {% if not button.permissions or request.user|has_perms:button.permissions %}
+                                                                    <a href="{% url button.link %}" class="btn btn-xs btn-{{ button.button_class }}" title="{{ button.title }}"><i class="{{ button.icon_class }}"></i></a>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                        <a href="{% url item.link %}">{{ item.link_text }}</a>
+                                                    </li>
                                                 {% endif %}
                                             {% endfor %}
                                             {% if not forloop.last %}

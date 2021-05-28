@@ -1,4 +1,4 @@
-from nautobot.core.nautobot_app import NautobotConfig
+from nautobot.core.app import NautobotConfig
 
 
 class IPAMConfig(NautobotConfig):
