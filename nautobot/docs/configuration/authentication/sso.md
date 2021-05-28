@@ -107,10 +107,6 @@ a default set of permissions there are some additional variables to configure th
 
 Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) for more information.
 
-If you would like to make a single user an admin without setting either `EXTERNAL_AUTH_DEFAULT_GROUPS` or `EXTERNAL_AUTH_DEFAULT_PERMISSIONS`, create a super user and login via the admin page at `/admin`, selet
-
-
-
 ---
 
 ## Configuration Guides
@@ -159,6 +155,22 @@ SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = 'https://<Okta URL>/oauth2/<Authenticat
 ```
 
 The `/default` authentication server can be used for testing, however, it should not be used in production.
+
+#### Okta - Additional Scopes
+
+It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list.  For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
+
+```python
+SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ['groups']
+```
+
+for OpenID:
+
+```python
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ['groups']
+```
+
+In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [python social auth core pipeline](https://python-social-auth.readthedocs.io/en/stable/pipeline.html) documentation.  An example to sync groups with Okta is provided in the [`/examples/okta`](https://github.com/nautobot/nautobot/tree/develop/examples/okta) folder.
 
 ### Google - OAuth2
 
