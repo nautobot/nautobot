@@ -79,6 +79,7 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "planned",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -147,6 +148,7 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
 class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
     model = CircuitTermination
     brief_fields = ["cable", "circuit", "display", "id", "term_side", "url"]
+    choices_fields = ["term_side"]
 
     @classmethod
     def setUpTestData(cls):

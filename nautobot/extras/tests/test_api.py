@@ -86,6 +86,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["filter_logic", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -123,6 +124,7 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["owner_content_type", "content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -197,6 +199,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "branch": "develop",
     }
+    choices_fields = ["provided_contents"]
 
     @classmethod
     def setUpTestData(cls):
@@ -241,6 +244,7 @@ class ImageAttachmentTest(
 ):
     model = ImageAttachment
     brief_fields = ["display", "id", "image", "name", "url"]
+    choices_fields = ["content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -613,6 +617,7 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
             "new_window": False,
         },
     ]
+    choices_fields = ["button_class"]
 
     @classmethod
     def setUpTestData(cls):
@@ -676,6 +681,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "ssl_verification": True,
         },
     ]
+    choices_fields = ["http_method"]
 
     @classmethod
     def setUpTestData(cls):
@@ -788,6 +794,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "destination_filter": {"role": {"slug": "controller"}},
     }
+    choices_fields = ["destination_type", "source_type", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -820,6 +827,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
+    choices_fields = ["destination_type", "source_type"]
 
     @classmethod
     def setUpTestData(cls):

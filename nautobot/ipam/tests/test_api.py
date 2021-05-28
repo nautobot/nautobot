@@ -216,6 +216,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["status"]
 
     def setUp(self):
         super().setUp()
@@ -464,6 +465,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["assigned_object_type", "role", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -521,6 +523,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -590,6 +593,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["protocol"]
 
     @classmethod
     def setUpTestData(cls):
