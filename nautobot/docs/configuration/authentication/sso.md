@@ -107,13 +107,17 @@ a default set of permissions there are some additional variables to configure th
 
 Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) for more information.
 
+If you would like to make a single user an admin without setting either `EXTERNAL_AUTH_DEFAULT_GROUPS` or `EXTERNAL_AUTH_DEFAULT_PERMISSIONS`, create a super user and login via the admin page at `/admin`, selet
+
+
+
 ---
 
 ## Configuration Guides
 
 The following guides are provided for some of the most common authentication methods.
 
-### Okta - OpenID
+### Okta
 
 1. In the Okta admin portal, create a new *Web* application
 2. Configure the application as follows:
@@ -122,7 +126,26 @@ The following guides are provided for some of the most common authentication met
     * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
     * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
 
-3. Once the application is configured in Okta, edit your `nautobot_config.py` as follows:
+3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC).  When using the organizations authentication server OAuth2 is preferred, with custom Okta authentication backends use OIDC.
+
+#### Okta - OAuth2
+
+Edit your `nautobot_config.py` as follows:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.okta.OktaOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+SOCIAL_AUTH_OKTA_OAUTH2_KEY = '<Client ID from Okta>'
+SOCIAL_AUTH_OKTA_OAUTH2_SECRET = '<Client Secret From Okta>'
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = 'https://<Okta URL>'
+```
+
+#### Okta - OpenID
+
+Edit your `nautobot_config.py` as follows:
 
 ```python
 AUTHENTICATION_BACKENDS = [
@@ -135,7 +158,7 @@ SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = '<Client Secret From Okta>'
 SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = 'https://<Okta URL>/oauth2/<Authentication Server>'
 ```
 
-The default authentication server can be used for testing, however, it should not be used in production.
+The `/default` authentication server can be used for testing, however, it should not be used in production.
 
 ### Google - OAuth2
 
