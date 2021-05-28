@@ -1,27 +1,69 @@
 # Devices and Cabling
 
-{!docs/models/dcim/device.md!}
-{!docs/models/dcim/devicerole.md!}
-{!docs/models/dcim/platform.md!}
+{%
+    include-markdown "../models/dcim/device.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/devicerole.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/platform.md"
+    heading-offset=1
+%}
 
 ---
 
 ## Device Components
 
-{!docs/models/dcim/consoleport.md!}
-{!docs/models/dcim/consoleserverport.md!}
-{!docs/models/dcim/powerport.md!}
-{!docs/models/dcim/poweroutlet.md!}
-{!docs/models/dcim/interface.md!}
-{!docs/models/dcim/frontport.md!}
-{!docs/models/dcim/rearport.md!}
-{!docs/models/dcim/devicebay.md!}
-{!docs/models/dcim/inventoryitem.md!}
+{%
+    include-markdown "../models/dcim/consoleport.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/consoleserverport.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/powerport.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/poweroutlet.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/interface.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/frontport.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/rearport.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/devicebay.md"
+    heading-offset=2
+%}
+{%
+    include-markdown "../models/dcim/inventoryitem.md"
+    heading-offset=2
+%}
 
 ---
 
-{!docs/models/dcim/virtualchassis.md!}
+{%
+    include-markdown "../models/dcim/virtualchassis.md"
+    heading-offset=1
+%}
 
 ---
 
-{!docs/models/dcim/cable.md!}
+{%
+    include-markdown "../models/dcim/cable.md"
+    heading-offset=1
+%}
