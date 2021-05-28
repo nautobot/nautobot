@@ -17,7 +17,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip --no-cache-dir install --upgrade pip wheel
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=1 CMD curl --fail http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
 
 ################################ Stage: dev
 # The dev container is used for development purposes but also to build the .whl for the final image

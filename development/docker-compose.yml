@@ -9,12 +9,6 @@ services:
       dockerfile: docker/Dockerfile
       target: dev
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
-    healthcheck:
-      interval: 30s
-      timeout: 10s
-      start_period: 5s
-      retries: 3
-      test: ["CMD", "nautobot-server", "health_check"]
     ports:
       - "8080:8080"
     depends_on:
@@ -27,8 +21,8 @@ services:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server rqworker"
     healthcheck:
-      interval: 30s
-      timeout: 10s
+      interval: 5s
+      timeout: 5s
       start_period: 5s
       retries: 3
       test: ["CMD", "nautobot-server", "health_check"]
