@@ -518,6 +518,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         return "extras.view_job"
 
     def get(self, request, class_path):
+        print("hello")
         job_class = get_job(class_path)
         if job_class is None:
             raise Http404
