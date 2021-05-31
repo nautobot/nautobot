@@ -154,7 +154,7 @@ class JobTest(TestCase):
                 job_result.data["run"]["log"][-1][-1], "Database changes have been reverted due to error."
             )
 
-    def test_field_order(self):
+    def test_read_only_no_commit_field(self):
         """
         Job read only test commit field is not shown.
         """
