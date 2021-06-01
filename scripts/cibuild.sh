@@ -57,7 +57,15 @@ echo -e "\n>> Running unit tests..."
 invoke unittest --failfast
 RC=$?
 if [[ $RC != 0 ]]; then
-	echo -e "\n$(info) one or more tests failed, failing build."
+	echo -e "\n$(info) one or more unit tests failed, failing build."
+	exit $RC
+fi
+
+echo -e "\n>> Running integration tests..."
+invoke unittest --failfast --label nautobot.core.tests.integration
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) one or more integration tests failed, failing build."
 	exit $RC
 fi
 
