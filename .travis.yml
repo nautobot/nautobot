@@ -24,19 +24,18 @@ python:
   - "3.9"
 
 env:
-  # global:
-  #   - INVOKE_NAUTOBOT_LOCAL=True
+  global:
+    - NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub 
+    - NAUTOBOT_SELENIUM_HOST=host.docker.internal
+    - INVOKE_NAUTOBOT_LOCAL=True
   jobs:
     - "INVOKE_NAUTOBOT_LOCAL=True TESTING_OPTIONS='--failfast'"
     - "INVOKE_NAUTOBOT_LOCAL=False TESTING_OPTIONS='--failfast --label nautobot.core.tests.integration' NAUTOBOT_INTEGRATION_TEST=True"
 
 addons:
   postgresql: "9.6"
-
 before_install:
   - pip install poetry
-  - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
-  - chmod +x /home/travis/bin/hadolint
 install:
   - poetry config virtualenvs.create false
   # Poetry 1.1.0 added parallel installation as an option;
@@ -58,6 +57,10 @@ jobs:
   include:
     # Lint in python 3.9 for speed
     - stage: "Linting"
+      before_install:
+        - pip install black flake8
+        - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+        - chmod +x /home/travis/bin/hadolint
       services: []
       addons:
         postgresql: ""

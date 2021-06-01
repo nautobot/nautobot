@@ -1,8 +1,10 @@
 import os
+from unittest import skipIf
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from django.urls import reverse
+from django.utils.functional import classproperty
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -29,6 +31,10 @@ class NautobotRemote(webdriver.Remote):
         return self.find_element_by_xpath(f'//button[text()="{button_text}"]')
 
 
+@skipIf(
+    "NAUTOBOT_INTEGRATION_TEST" not in os.environ,
+    "NAUTOBOT_INTEGRATION_TEST environment variable not set",
+)
 class SeleniumTestCase(StaticLiveServerTestCase):
     """
     Base test case for Selenium integration testing with custom helper mthods.
@@ -37,7 +43,8 @@ class SeleniumTestCase(StaticLiveServerTestCase):
     so there is no need to run `collectstatic` prior to running tests.
     """
 
-    host = SELENIUM_HOST  # Docker: `nautobot`; else `localhost`
+    host = "0.0.0.0"  # Always listen publicly
+    selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `localhost`
 
     @classmethod
     def setUpClass(cls):
@@ -52,6 +59,10 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
         # Wait for the DOM in case an element is not yet rendered.
         cls.selenium.implicitly_wait(10)
+
+    @classproperty
+    def live_server_url(cls):
+        return "http://%s:%s" % (cls.selenium_host, cls.server_thread.port)
 
     @classmethod
     def tearDownClass(cls):
