@@ -54,7 +54,7 @@ if [[ ! -z $SYNTAX ]]; then
 fi
 
 echo -e "\n>> Running unit tests..."
-invoke unittest --failfast --buffer --keepdb
+invoke unittest --failfast --keepdb
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more unit tests failed, failing build."
@@ -62,7 +62,7 @@ if [[ $RC != 0 ]]; then
 fi
 
 echo -e "\n>> Running integration tests..."
-invoke unittest --failfast --buffer --keepdb --label nautobot.core.tests.integration
+invoke unittest --failfast --keepdb --label nautobot.core.tests.integration
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more integration tests failed, failing build."
