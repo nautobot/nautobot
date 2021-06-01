@@ -63,7 +63,7 @@ fi
 
 echo -e "\n>> Running unit tests..."
 # invoke unittest --failfast --keepdb
-sleep 5  # Just for now. Skip unit tests and take a short nap.
+sleep 60  # Just for now. Skip unit tests and take a short nap.
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more unit tests failed, failing build."
