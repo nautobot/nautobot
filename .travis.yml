@@ -28,7 +28,7 @@ env:
     - INVOKE_NAUTOBOT_LOCAL=True
   jobs:
     - "TESTING_OPTIONS='--failfast --buffer'"
-    - "TESTING_OPTIONS='--failfast --buffer --label nautobot.core.tests.integration'"
+    - "TESTING_OPTIONS='--failfast --buffer --label nautobot.core.tests.integration' NAUTOBOT_INTEGRATION_TEST=True"
 
 addons:
   postgresql: "9.6"
