@@ -1,4 +1,4 @@
-from nautobot.core.app import NautobotConfig
+from nautobot.core.apps import NautobotConfig
 
 
 class DCIMConfig(NautobotConfig):

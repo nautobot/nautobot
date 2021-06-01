@@ -1,6 +1,6 @@
 import logging
 
-from nautobot.core.app import NautobotConfig
+from nautobot.core.apps import NautobotConfig
 from django.db.utils import ProgrammingError
 
 

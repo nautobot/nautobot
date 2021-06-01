@@ -24,6 +24,7 @@ class Registry(dict):
 
 registry = Registry()
 
+
 DatasourceContent = namedtuple("DatasourceContent", ["name", "content_identifier", "icon", "callback"])
 """
 name (str): Human-readable name for this content type, such as "config contexts"

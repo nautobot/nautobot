@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
-from nautobot.utilities.choices import ButtonActionColorChoice
+from nautobot.utilities.choices import ButtonActionColorChoices
 
 
 registry["nav_menu"] = {"tabs": {}}
@@ -36,8 +36,10 @@ class NautobotConfig(AppConfig):
             Loaded from `app.py`:           `nautobot.circuits.apps`
         """
         if self.__module__.endswith(".apps"):
-            self.__module__ = self.__module__[:-5]
-        menu_items = import_object(f"{self.__module__}.{self.menu_tabs}")
+            module_location = self.__module__[:-5]
+        else:
+            module_location = self.__module__
+        menu_items = import_object(f"{module_location}.{self.menu_tabs}")
         if menu_items is not None:
             register_menu_items(menu_items)
 
@@ -54,7 +56,7 @@ def register_menu_items(tab_list):
         if nav_tab.name not in registry["nav_menu"]["tabs"]:
             registry["nav_menu"]["tabs"][nav_tab.name] = {
                 "weight": nav_tab.weight,
-                "groups": registry["nav_menu"]["tabs"].get(nav_tab.name, {}).get("groups", {}),
+                "groups": {},
                 "permissions": [],
             }
 
@@ -64,26 +66,24 @@ def register_menu_items(tab_list):
             if group.name not in registry_groups:
                 registry_groups[group.name] = {
                     "weight": group.weight,
-                    "items": registry_groups.get(group.name, {}).get("items", []),
+                    "items": {},
                     "permissions": [],
                 }
 
             group_perms = []
             for item in group.items:
-                registry_groups[group.name]["items"].append(
-                    {
-                        "link": item.link,
-                        "link_text": item.link_text,
-                        "weight": item.weight,
-                        "buttons": item.buttons,
-                        "permissions": item.permissions,
-                    }
-                )
+                registry_groups[group.name]["items"][item.link] = {
+                    "link_text": item.link_text,
+                    "weight": item.weight,
+                    "buttons": item.buttons,
+                    "permissions": item.permissions,
+                }
+
                 group_perms += item.permissions
 
             # Add sorted items to group registry dict
-            registry_groups[group.name]["items"] = sorted(
-                registry_groups[group.name]["items"], key=lambda x: x["weight"]
+            registry_groups[group.name]["items"] = OrderedDict(
+                sorted(registry_groups[group.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
             )
             # Add collected permissions to group
             registry_groups[group.name]["permissions"] = group_perms
@@ -92,14 +92,14 @@ def register_menu_items(tab_list):
 
         # Add sorted groups to tab dict
         registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
-            sorted(registry_groups.items(), key=lambda x: getitem(x[1], "weight"))
+            sorted(registry_groups.items(), key=lambda kv_pair: kv_pair[1]["weight"])
         )
         # Add collected permissions to tab dict
         registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] += tab_perms
 
     # Order all tabs in dict
     registry["nav_menu"]["tabs"] = OrderedDict(
-        sorted(registry["nav_menu"]["tabs"].items(), key=lambda x: getitem(x[1], "weight"))
+        sorted(registry["nav_menu"]["tabs"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
     )
 
 
@@ -108,7 +108,7 @@ class PermissionsMixin:
 
     def __init__(self, permissions=None):
         """Ensure permissions."""
-        if permissions is not None and type(permissions) not in (list, tuple):
+        if permissions is not None and not isinstance(permissions, (list, tuple)):
             raise TypeError("Permissions must be passed as a tuple or list.")
         self.permissions = permissions
 
@@ -199,7 +199,7 @@ class NavMenuButton(PermissionsMixin):
         link,
         title,
         icon_class,
-        button_class=ButtonActionColorChoice.DEFAULT,
+        button_class=ButtonActionColorChoices.DEFAULT,
         permissions=None,
         weight=1000,
     ):
@@ -211,7 +211,7 @@ class NavMenuButton(PermissionsMixin):
         self.icon_class = icon_class
         self.weight = weight
 
-        if button_class is not None and button_class not in ButtonActionColorChoice.values():
+        if button_class is not None and button_class not in ButtonActionColorChoices.values():
             raise ValueError("Button color must be a choice within ButtonColorChoices.")
         self.button_class = button_class
 
@@ -226,7 +226,7 @@ class NavMenuAddButton(NavMenuButton):
         if "icon_class" not in kwargs:
             kwargs["icon_class"] = "mdi mdi-plus-thick"
         if "button_classs" not in kwargs:
-            kwargs["button_class"] = ButtonActionColorChoice.ADD
+            kwargs["button_class"] = ButtonActionColorChoices.ADD
         super().__init__(*args, **kwargs)
 
 
@@ -240,5 +240,5 @@ class NavMenuImportButton(NavMenuButton):
         if "icon_class" not in kwargs:
             kwargs["icon_class"] = "mdi mdi-database-import-outline"
         if "button_class" not in kwargs:
-            kwargs["button_class"] = ButtonActionColorChoice.IMPORT
+            kwargs["button_class"] = ButtonActionColorChoices.IMPORT
         super().__init__(*args, **kwargs)
