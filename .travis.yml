@@ -8,7 +8,7 @@ addons:
   postgresql: "9.6"
 language: python
 env:
-  - INVOKE_NAUTOBOT_LOCAL=True
+  - INVOKE_NAUTOBOT_LOCAL=True NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub NAUTOBOT_SELENIUM_HOST=host.docker.internal
 jobs:
   fast_finish: true
   include:

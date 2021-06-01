@@ -14,6 +14,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - selenium
     env_file:
       - dev.env
     tty: true
@@ -43,7 +44,6 @@ services:
     image: selenium/standalone-firefox:latest
     ports: 
         - "4444:4444"
-    # privileged: true
     shm_size: 2g
 volumes:
   pgdata_nautobot:

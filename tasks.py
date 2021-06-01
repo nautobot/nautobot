@@ -98,6 +98,12 @@ def docker_compose(context, command, **kwargs):
     if os.path.isfile(compose_override_path):
         compose_command += f' -f "{compose_override_path}"'
     compose_command += f" {command}"
+
+    # If `service` was passed as a kwarg, add it to the end.
+    service = kwargs.pop("service", None)
+    if service is not None:
+        compose_command += f" {service}"
+
     print(f'Running docker-compose command "{command}"')
     return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
 
@@ -227,25 +233,25 @@ def docker_push(context, branch, commit="", datestamp=""):
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
-@task
-def debug(context):
+@task(help={"service": "If specified, only affect this service." ""})
+def debug(context, service=None):
     """Start Nautobot and its dependencies in debug mode."""
     print("Starting Nautobot in debug mode...")
-    docker_compose(context, "up")
+    docker_compose(context, "up", service=service)
 
 
-@task
-def start(context):
+@task(help={"service": "If specified, only affect this service." ""})
+def start(context, service=None):
     """Start Nautobot and its dependencies in detached mode."""
     print("Starting Nautobot in detached mode...")
-    docker_compose(context, "up --detach")
+    docker_compose(context, "up --detach", service=service)
 
 
-@task
-def restart(context):
-    """Gracefully restart all containers."""
+@task(help={"service": "If specified, only affect this service." ""})
+def restart(context, service=None):
+    """Gracefully restart containers."""
     print("Restarting Nautobot...")
-    docker_compose(context, "restart")
+    docker_compose(context, "restart", service=service)
 
 
 @task

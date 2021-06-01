@@ -53,6 +53,14 @@ if [[ ! -z $SYNTAX ]]; then
 	exit 1
 fi
 
+echo -e "\n>> Starting Selenium..."
+invoke start --service selenium
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) Selenium failed to start."
+	exit $RC
+fi
+
 echo -e "\n>> Running unit tests..."
 invoke unittest --failfast --keepdb
 RC=$?
@@ -62,7 +70,7 @@ if [[ $RC != 0 ]]; then
 fi
 
 echo -e "\n>> Running integration tests..."
-invoke unittest --failfast --keepdb --label nautobot.core.tests.integration
+NAUTOBOT_INTEGRATION_TEST=True invoke unittest --failfast --keepdb --label nautobot.core.tests.integration
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more integration tests failed, failing build."
