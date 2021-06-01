@@ -3,8 +3,8 @@ os: linux
 dist: xenial
 
 stages:
-  - lint
-  - tests
+  - Linting
+  - Testing
   # - name: "deploy-github"
   #   if: "tag IS present"
   # - name: "deploy-pypi"
