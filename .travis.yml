@@ -4,17 +4,18 @@ dist: xenial
 
 stages:
   - Linting
-  - Testing
-  # - name: "deploy-github"
-  #   if: "tag IS present"
-  # - name: "deploy-pypi"
-  #   if: "tag IS present"
+  - test
+  # This assumes tags will only be used for version releases
+  - name: "deploy-github"
+    if: "tag IS present"
+  - name: "deploy-pypi"
+    if: "tag IS present"
 
 services:
   - postgresql
   - redis
 
-# The test stage will be a 
+# The test stage will be a matrix of the python list * the env['jobs'] list
 language: "python"
 python:
   - "3.6"
@@ -59,3 +60,26 @@ jobs:
     - stage: "Linting"
       python: "3.9"
       script: "invoke tests --lint-only"
+
+    - stage: "deploy-github"
+      before_script:
+        - "pip install poetry"
+      script:
+        - "poetry version $TRAVIS_TAG"
+        - "poetry build"
+      deploy:
+        provider: "releases"
+        api_key: "$GITHUB_AUTH_TOKEN"
+        file_glob: true
+        file: "dist/*"
+        skip_cleanup: true
+        "on":
+          all_branches: true
+
+    - stage: "deploy-pypi"
+      before_script:
+        - "pip install poetry"
+      script:
+        - "poetry version $TRAVIS_TAG"
+        - "poetry config pypi-token.pypi $PYPI_TOKEN"
+        - "poetry publish --build"
