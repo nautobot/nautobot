@@ -93,7 +93,7 @@ A list of strings (field names) representing the order your form fields should a
 
 #### `read_only`
 
-A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described bellow.
+A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 ### Variables
 
