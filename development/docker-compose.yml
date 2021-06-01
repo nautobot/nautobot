@@ -14,6 +14,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - selenium
     env_file:
       - dev.env
     tty: true
