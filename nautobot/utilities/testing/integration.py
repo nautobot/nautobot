@@ -44,7 +44,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
     """
 
     host = "0.0.0.0"  # Always listen publicly
-    selenium_host = SELENIUM_HOST # Docker: `nautobot`; else `localhost`
+    selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `localhost`
 
     @classmethod
     def setUpClass(cls):
@@ -62,7 +62,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
     @classproperty
     def live_server_url(cls):
-        return 'http://%s:%s' % (cls.selenium_host, cls.server_thread.port)
+        return "http://%s:%s" % (cls.selenium_host, cls.server_thread.port)
 
     @classmethod
     def tearDownClass(cls):
