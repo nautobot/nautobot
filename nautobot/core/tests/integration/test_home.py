@@ -1,59 +1,49 @@
+import logging
+import os
+from unittest import skipIf
+
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-# from selenium.webdriver.firefox.webdriver import WebDriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
 
 
+# URL used to connect to the Selenium host
+SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
+logging.debug("SELENIUM_URL = %s", SELENIUM_URL)
+
+# Hostname used by Selenium client to talk to Nautobot
+SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "localhost")
+logging.debug("SELENIUM_HOST = %s", SELENIUM_HOST)
+
+
+@skipIf(
+    "NAUTOBOT_INTEGRATION_TEST" not in os.environ,
+    "NAUTOBOT_INTEGRATION_TEST environment variable not set",
+)
 class MySeleniumTests(StaticLiveServerTestCase):
-    fixtures = ['user-data.json']
+    host = SELENIUM_HOST  # Docker: `nautobot`; else `localhost`
+    fixtures = ["user-data.json"]  # bob/bob
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # cls.selenium = WebDriver()
 
         # Firefox driver
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.headless = True
+        # firefox_options.add_argument("-headless")
+        # firefox_options.add_argument("--screenshot")
+        # firefox_options.add_argument("--no-sandbox")
+        # firefox_options.add_argument("--disable-dev-shm-usage")
+        firefox_options.add_argument("-disable-gpu")
 
-        # Chrome driver
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument('--disable-gpu')
-        # options.add_argument('--window-size=1280x1696')
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--hide-scrollbars')
-        chrome_options.add_argument('--ignore-certificate-errors')
-        # options.disablegpu = True        
-
-        chrome_options.add_argument("start-maximized")
-        chrome_options.add_argument("disable-infobars")
-        chrome_options.add_argument("--disable-extensions")
-
-        # Experimental options
-        '''
-        options.add_experimental_option(
-            'prefs',
-            {
-                "download.default_directory": self._download_path,
-                "download.prompt_for_download": False,
-                "download.directory_upgrade": True,
-                "plugins.always_open_pdf_externally": True
-            },
-        )
-        '''
-
-        # options.set_capability("browserVersion", "67")
-        # options.set_capability("platformName", "Windows XP")
-
+        # Selenium remote client
         cls.selenium = webdriver.Remote(
-            # command_executor="http://localhost:4444/wd/hub",
-            command_executor="http://potato.local:4444/wd/hub",
-            # options=chrome_options,
-            # desired_capabilities=DesiredCapabilities.CHROME
+            command_executor=SELENIUM_URL,
             options=firefox_options,
-            desired_capabilities=DesiredCapabilities.FIREFOX
         )
+
+        # Wait for the DOM in case an element is not yet rendered.
         cls.selenium.implicitly_wait(10)
 
     @classmethod
@@ -62,9 +52,13 @@ class MySeleniumTests(StaticLiveServerTestCase):
         super().tearDownClass()
 
     def test_login(self):
-        self.selenium.get('%s%s' % (self.live_server_url, '/login/'))
+        self.selenium.get("%s%s" % (self.live_server_url, "/login/"))
         username_input = self.selenium.find_element_by_name("username")
-        username_input.send_keys('bob')
+        username_input.send_keys("bob")
         password_input = self.selenium.find_element_by_name("password")
-        password_input.send_keys('bob')
-        self.selenium.find_element_by_xpath('//input[@value="Log in"]').click()
+        password_input.send_keys("bob")
+        self.selenium.find_element_by_xpath('//button[text()="Log In"]').click()
+
+        # Wait for the page to render and make sure we got a body.
+        WebDriverWait(self.selenium, timeout=2).until(lambda driver: driver.find_element_by_tag_name("body"))
+        # self.selenium.find_element_by_xpath('//div[text()="Logged in as "]').click()
