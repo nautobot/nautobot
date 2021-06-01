@@ -108,7 +108,7 @@ mkdocs = "~1.1.2"
 # Integration Tests
 requests = "~2.25.1"
 # Selenium web drivers for live integration testing
-selenium = "=3.141.0"
+selenium = "~3.141.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
