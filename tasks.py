@@ -456,11 +456,12 @@ def integration_tests(context):
         "lint-only": "only run linters, unit tests will be excluded",
     }
 )
-def tests(context, lint_only=False):
+def tests(context, lint_only=False, *args, **kwargs):
     """Run all tests and linters."""
     black(context)
     flake8(context)
     hadolint(context)
     check_migrations(context)
     if not lint_only:
-        unittest(context)
+        unittest(context, *args, **kwargs)
+        unittest_coverage(context)

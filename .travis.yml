@@ -1,24 +1,37 @@
 # Linting/Testing available at https://config.travis-ci.com/explore
 os: linux
 dist: xenial
+
+stages:
+  - lint
+  - tests
+  # - name: "deploy-github"
+  #   if: "tag IS present"
+  # - name: "deploy-pypi"
+  #   if: "tag IS present"
+
 services:
   - postgresql
   - redis
+
+# The test stage will be a 
+language: "python"
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "3.9"
+
+env:
+  global:
+    - INVOKE_NAUTOBOT_LOCAL=True
+  jobs:
+    - "TESTING_OPTIONS='--failfast --buffer --keepdb'"
+    - "TESTING_OPTIONS='--failfast --buffer --keepdb --label nautobot.core.tests.integration'"
+
 addons:
   postgresql: "9.6"
-language: python
-env:
-  - INVOKE_NAUTOBOT_LOCAL=True
-jobs:
-  fast_finish: true
-  include:
-    - stage: Tests
-      python: "3.6"
-    - python: "3.7"
-    - python: "3.8"
-    - python: "3.9"
-  allow_failures:
-    - python: "3.9"
+
 before_install:
   - pip install poetry
   - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
@@ -36,4 +49,13 @@ before_script:
   - psql -U postgres -c 'SELECT version();'
   - psql -U postgres -c 'create database nautobot;'
 script:
-  - poetry run ./scripts/cibuild.sh
+  - invoke unittest $TESTING_OPTIONS
+  - invoke unittest-coverage
+
+jobs:
+  fast_finish: true
+  include:
+    # Lint in python 3.9 for speed
+    - stage: "Linting"
+      python: "3.9"
+      script: "invoke tests --lint-only"
