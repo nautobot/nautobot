@@ -27,8 +27,8 @@ env:
   global:
     - INVOKE_NAUTOBOT_LOCAL=True
   jobs:
-    - "TESTING_OPTIONS='--failfast --buffer --keepdb'"
-    - "TESTING_OPTIONS='--failfast --buffer --keepdb --label nautobot.core.tests.integration'"
+    - "TESTING_OPTIONS='--failfast --buffer'"
+    - "TESTING_OPTIONS='--failfast --buffer --label nautobot.core.tests.integration'"
 
 addons:
   postgresql: "9.6"
@@ -58,6 +58,9 @@ jobs:
   include:
     # Lint in python 3.9 for speed
     - stage: "Linting"
+      services: []
+      addons:
+        postgresql: ""
       python: "3.9"
       script: "invoke tests --lint-only"
 
@@ -69,7 +72,7 @@ jobs:
         - "poetry build"
       deploy:
         provider: "releases"
-        api_key: "$GITHUB_AUTH_TOKEN"
+        token: "$GITHUB_AUTH_TOKEN"
         file_glob: true
         file: "dist/*"
         skip_cleanup: true
