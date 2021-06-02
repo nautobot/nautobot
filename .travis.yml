@@ -6,6 +6,7 @@ stages:
   - Linting
   - test
   # This assumes tags will only be used for version releases
+  - nick
   - name: "deploy-github"
     if: "tag IS present"
   - name: "deploy-pypi"
@@ -69,6 +70,21 @@ jobs:
       python: "3.9"
       before_script: []
       script: "invoke tests --lint-only"
+
+    - stage: nick
+      before_install: []
+      install: []
+      services: []
+      addons:
+        postgresql: ""
+      python: 
+        - "3.7"
+        - "3.9"
+      env:
+        - "TESTVAR=1"
+        - "TESTVAR=2"
+      before_script: []
+      script: "echo hi $TESTVAR"
 
     - stage: "deploy-github"
       before_script:

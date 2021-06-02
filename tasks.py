@@ -16,9 +16,13 @@ from distutils.util import strtobool
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 import os
-import requests
 from time import sleep
 import toml
+
+try:
+    import requests
+except ModuleNotFoundError:
+    print("Requests module required but not found, some tasks may not function correctly.")
 
 
 def is_truthy(arg):
