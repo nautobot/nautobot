@@ -62,8 +62,7 @@ if [[ $RC != 0 ]]; then
 fi
 
 echo -e "\n>> Running unit tests..."
-# invoke unittest --failfast --keepdb
-sleep 60  # Just for now. Skip unit tests and take a short nap.
+invoke unittest --failfast --keepdb
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more unit tests failed, failing build."
