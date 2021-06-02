@@ -3,7 +3,7 @@ os: linux
 dist: xenial
 
 stages:
-  - Linting
+  # - Linting
   - test
   # This assumes tags will only be used for version releases
   - name: "deploy-github"
@@ -48,15 +48,18 @@ before_script:
   - psql -U postgres -c 'create database nautobot;'
   - pip install docker-compose
 script:
-  - invoke start --service selenium &
-  - invoke unittest --failfast --keepdb || travis_terminate 1
-  - NAUTOBOT_SELENIUM_HOST=$(hostname) invoke unittest --failfast --keepdb --label nautobot.core.tests.integration || travis_terminate 1
+  - invoke start --service selenium
+  # - invoke unittest --failfast --keepdb || travis_terminate 1
+  - hostname -f
+  - export NAUTOBOT_SELENIUM_HOST=$(hostname -f)
+  - echo $NAUTOBOT_SELENIUM_HOST
+  - invoke unittest --failfast --keepdb --label nautobot.core.tests.integration || travis_terminate 1
   - invoke unittest-coverage || travis_terminate 1
 
 jobs:
   fast_finish: true
   include:
-    # Lint in python 3.9 for speed
+    # Lint in python 3.9 for speed, install only the linting tools, skip poetry for this stage, saves ~1m
     - stage: "Linting"
       before_install:
         - pip install invoke black=="20.8b1" flake8=="3.9.2"  # Until there is a poetry install --dev-only install the linting tools here to speed up this step
