@@ -54,7 +54,7 @@ if [[ ! -z $SYNTAX ]]; then
 fi
 
 echo -e "\n>> Starting Selenium in background..."
-invoke start --service selenium &
+invoke start --service selenium
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) Selenium failed to start."
