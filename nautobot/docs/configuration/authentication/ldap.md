@@ -96,6 +96,7 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
     ldap.OPT_X_TLS_CACERTFILE: "/path/to/ca.pem",
     ldap.OPT_X_TLS_NEWCTX: 0
 }
+LDAP_IGNORE_CERT_ERRORS = False
 ```
 
 ### User Authentication
