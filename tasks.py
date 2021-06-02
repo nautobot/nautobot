@@ -129,8 +129,8 @@ def run_command(context, command, **kwargs):
 # ------------------------------------------------------------------------------
 @task(
     help={
-        "force_rm": "Always remove intermediate containers",
-        "cache": "Whether to use Docker's cache when building the image (defaults to enabled)",
+        "force_rm": "Always remove intermediate containers.",
+        "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
     }
 )
 def build(context, force_rm=False, cache=True):
@@ -148,11 +148,11 @@ def build(context, force_rm=False, cache=True):
 
 @task(
     help={
-        "cache": "Whether to use Docker's cache when building the image (Default: enabled)",
-        "cache_dir": "Directory to use for caching buildx output (Default:  /home/travis/.cache/docker)",
-        "platforms": "Comma-separated list of strings for which to build (Default: linux/amd64)",
-        "tag": "Tags to be applied to the built image (Default: networktocode/nautobot-dev:local)",
-        "target": "Built target from the Dockerfile (Default: dev)",
+        "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
+        "cache_dir": "Directory to use for caching buildx output. (Default: /home/travis/.cache/docker)",
+        "platforms": "Comma-separated list of strings for which to build. (Default: linux/amd64)",
+        "tag": "Tags to be applied to the built image. (Default: networktocode/nautobot-dev:local)",
+        "target": "Build target from the Dockerfile. (Default: dev)",
     }
 )
 def buildx(
@@ -176,9 +176,9 @@ def buildx(
 
 @task(
     help={
-        "branch": "Source branch used to push",
-        "commit": "Commit hash used to tag the image",
-        "datestamp": "Datestamp used to tag the develop image",
+        "branch": "Source branch used to push.",
+        "commit": "Commit hash used to tag the image.",
+        "datestamp": "Datestamp used to tag the develop image.",
     }
 )
 def docker_push(context, branch, commit="", datestamp=""):
@@ -233,21 +233,21 @@ def docker_push(context, branch, commit="", datestamp=""):
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
-@task(help={"service": "If specified, only affect this service." ""})
+@task(help={"service": "If specified, only affect this service."})
 def debug(context, service=None):
     """Start Nautobot and its dependencies in debug mode."""
     print("Starting Nautobot in debug mode...")
     docker_compose(context, "up", service=service)
 
 
-@task(help={"service": "If specified, only affect this service." ""})
+@task(help={"service": "If specified, only affect this service."})
 def start(context, service=None):
     """Start Nautobot and its dependencies in detached mode."""
     print("Starting Nautobot in detached mode...")
     docker_compose(context, "up --detach", service=service)
 
 
-@task(help={"service": "If specified, only affect this service." ""})
+@task(help={"service": "If specified, only affect this service."})
 def restart(context, service=None):
     """Gracefully restart containers."""
     print("Restarting Nautobot...")
@@ -295,21 +295,17 @@ def cli(context):
 
 @task(
     help={
-        "user": "name of the superuser to create (default: admin)",
+        "user": "Name of the superuser to create. (Default: admin)",
     }
 )
 def createsuperuser(context, user="admin"):
-    """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
+    """Create a new Nautobot superuser account (default: admin), will prompt for password."""
     command = f"nautobot-server createsuperuser --username {user}"
 
     run_command(context, command)
 
 
-@task(
-    help={
-        "name": "name of the migration to be created; if unspecified, will autogenerate a name",
-    }
-)
+@task(help={"name": "Use this name for migration file(s). If unspecified, a name will be generated." ""})
 def makemigrations(context, name=""):
     """Perform makemigrations operation in Django."""
     command = "nautobot-server makemigrations"
@@ -347,7 +343,7 @@ def post_upgrade(context):
     run_command(context, command)
 
 
-@task(help={"format": "Output type for file ('json', 'xml', 'yaml')."})
+@task(help={"format": "Output serialization format for dumped data. (Choices: json, xml, yaml)"})
 def dumpdata(context, format="json"):
     """Dump data from database to db_output file."""
     command = f"nautobot-server dumpdata --exclude extras.job --indent 4 --output db_output.{format} --format {format}"
@@ -405,11 +401,11 @@ def check_migrations(context):
 
 @task(
     help={
-        "keepdb": "save and re-use test database between test runs for faster re-testing.",
-        "label": "specify a directory or module to test instead of running all Nautobot tests",
-        "failfast": "fail as soon as a single test fails don't run the entire test suite",
-        "buffer": "Discard output from passing tests",
-        "verbose": "Toggle verbose test output",
+        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
+        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
+        "buffer": "Discard output from passing tests.",
+        "verbose": "Toggle verbose test output.",
     }
 )
 def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=True, verbose=False):
@@ -437,11 +433,11 @@ def unittest_coverage(context):
 
 @task(
     help={
-        "keepdb": "save and re-use test database between test runs for faster re-testing.",
-        "label": "specify a directory or module to test instead of running all Nautobot tests",
-        "failfast": "fail as soon as a single test fails don't run the entire test suite",
-        "buffer": "Discard output from passing tests",
-        "verbose": "Toggle verbose test output",
+        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
+        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
+        "buffer": "Discard output from passing tests.",
+        "verbose": "Toggle verbose test output.",
     }
 )
 def integration_test(
@@ -454,7 +450,7 @@ def integration_test(
 
 @task(
     help={
-        "lint-only": "only run linters, unit tests will be excluded",
+        "lint-only": "Only run linters; unit tests will be excluded.",
     }
 )
 def tests(context, lint_only=False):
