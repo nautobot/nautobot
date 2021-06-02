@@ -84,7 +84,19 @@ AUTH_LDAP_BIND_PASSWORD = "demo"
 LDAP_IGNORE_CERT_ERRORS = True
 ```
 
+### TLS Options
+
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
+
+Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`. 
+
+```
+# Set the path to the trusted CA certificates and create a new internal SSL context.
+AUTH_LDAP_CONNECTION_OPTIONS = {
+    ldap.OPT_X_TLS_CACERTFILE: "/path/to/ca.pem",
+    ldap.OPT_X_TLS_NEWCTX: 0
+}
+```
 
 ### User Authentication
 
