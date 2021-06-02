@@ -177,8 +177,7 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
-
-## Unreleased (2021-MM-DD)
+## Unreleased (2021-05-27)
 
 ### Added
 
@@ -211,6 +210,9 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#454](https://github.com/nautobot/nautobot/issues/454) - Fixed inability to create IPv6 addresses via REST API.
 - [#459](https://github.com/nautobot/nautobot/issues/459) - Fixed issue with Job forms not respecting `field_order`
 - [#461](https://github.com/nautobot/nautobot/issues/461) - Fixed `NAUTOBOT_DB_TIMEOUT` read as string in default config
+- [#482](https://github.com/nautobot/nautobot/issues/482) - Fixed `FieldError` from being raised when a `JobResult` references a model with no `name` field
+- [#486](https://github.com/nautobot/nautobot/issues/486) - Fixed failing Docker builds due to do missing `examples` development dependency
+- [#488](https://github.com/nautobot/nautobot/issues/488) - Fix migrations in MySQL by hard-coding the `VarbinaryIPField` to use `varbinary(16)`
 
 ### Removed
 
