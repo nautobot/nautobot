@@ -548,13 +548,13 @@ In cases where you haven't made any changes to the database (which is most of th
 
 Integration tests are automated tests written and run to ensure that the Nautobot application behaves as expected when being used as it would be in practice. By contrast to unit tests, where individual units of code are being tested, integration tests rely upon the server code actually running, and web UI clients or API clients to make real connections to the service to exercise actual workflows, such as navigating to the login page, filling out the username/passwords fields, and clicking the "Log In" button.
 
-It goes without saying that integration testing is much more involved, and builds on top of the foundation laid by unit testing. As a guiding principle, integration tests should be comprehensive, because they are the last mile to asserting that Nautobot does what it is advertised to do. Without integration testing, we have to do it all manually, and that's no fun for anyone!
+Integration testing is much more involved, and builds on top of the foundation laid by unit testing. As a guiding principle, integration tests should be comprehensive, because they are the last mile to asserting that Nautobot does what it is advertised to do. Without integration testing, we have to do it all manually, and that's no fun for anyone!
 
 Running integrations tests requires the use of Docker at this time. They can be directly invoked using `nautobot-server test` just as unit tests can, however, a headless Firefox browser provided by Selenium is required. Because Selenium installation and setup is complicated, we have included a configuration for this to work out of the box using Docker. 
 
 The Selenium contianer is running a standalone, headless Firefox "web driver" browser that can be remotely controlled by Nautobot for use in integration testing.
 
-Before running integration tests, the `selenium` container must be running. If you are using the Docker Compose workflow, it is automatically started for yo. For the Virtual Environment workflow, you must start it manually.
+Before running integration tests, the `selenium` container must be running. If you are using the Docker Compose workflow, it is automatically started for you. For the Virtual Environment workflow, you must start it manually.
 
 | Docker Compose Workflow   | Virtual Environment Workflow      |
 |---------------------------|-----------------------------------|
@@ -567,7 +567,7 @@ Integration tests are run using the `invoke integration_test` command.
 | `invoke integration_test` | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py nautobot.core.tests.integration` |
 
 !!! info
-    The same arguments supported by `invoke unittest` are supported by `invoke integration_test`. The key difference being the dependency upon the Selenium container, and a different default test label.
+    The same arguments supported by `invoke unittest` are supported by `invoke integration_test`. The key difference being the dependency upon the Selenium container, and a different default test label. Additionally, you may also use `invoke integration-test` in the Virtual Environment workflow given that the container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
 
 Unlike unit tests, where the tests live adjacent to each inner application within the Nautobot code, integration tests must only ever be defined in `nautobot.core.tests.integration`. The reason for this is that integration tests are designed to test the core application and all of its functionality in one place. Integration tests must never be added anywhere but `nautobot.core.tests.integration`. We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and managable continuous development cycle.
 
