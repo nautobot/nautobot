@@ -3,7 +3,7 @@ os: linux
 dist: xenial
 
 stages:
-  # - Linting
+  - Linting
   - test
   # This assumes tags will only be used for version releases
   - name: "deploy-github"
@@ -49,10 +49,8 @@ before_script:
   - pip install docker-compose
 script:
   - invoke start --service selenium
-  # - invoke unittest --failfast --keepdb || travis_terminate 1
-  - hostname -f
+  - invoke unittest --failfast --keepdb || travis_terminate 1
   - export NAUTOBOT_SELENIUM_HOST=$(hostname -f)
-  - echo $NAUTOBOT_SELENIUM_HOST
   - invoke unittest --failfast --keepdb --label nautobot.core.tests.integration || travis_terminate 1
   - invoke unittest-coverage || travis_terminate 1
 
