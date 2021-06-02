@@ -26,7 +26,6 @@ python:
 env:
   global:
     - NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub 
-    - NAUTOBOT_SELENIUM_HOST=host.docker.internal
     - INVOKE_NAUTOBOT_LOCAL=True
   jobs:
     - "INVOKE_NAUTOBOT_LOCAL=True TESTING_OPTIONS='--failfast'"
@@ -49,7 +48,7 @@ before_script:
   - psql -U postgres -c 'SELECT version();'
   - psql -U postgres -c 'create database nautobot;'
 script:
-  - invoke unittest $TESTING_OPTIONS
+  - NAUTOBOT_SELENIUM_HOST=$(hostname) invoke unittest $TESTING_OPTIONS
   - invoke unittest-coverage
 
 jobs:
