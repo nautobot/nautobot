@@ -6,11 +6,12 @@ services:
   - redis
 addons:
   postgresql: "9.6"
-  hosts:
-    - host.docker.internal
 language: python
 env:
-  - INVOKE_NAUTOBOT_LOCAL=True NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub NAUTOBOT_SELENIUM_HOST=host.docker.internal
+  global:
+    - INVOKE_NAUTOBOT_LOCAL=True
+    - NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub
+    - NAUTOBOT_SELENIUM_HOST=$(hostname -f)
 jobs:
   fast_finish: true
   include:

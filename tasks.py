@@ -409,9 +409,10 @@ def check_migrations(context):
         "label": "specify a directory or module to test instead of running all Nautobot tests",
         "failfast": "fail as soon as a single test fails don't run the entire test suite",
         "buffer": "Discard output from passing tests",
+        "verbose": "Toggle verbose test output",
     }
 )
-def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=True):
+def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=True, verbose=False):
     """Run Nautobot unit tests."""
     command = f"coverage run --module nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
 
@@ -421,6 +422,8 @@ def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=Tru
         command += " --failfast"
     if buffer:
         command += " --buffer"
+    if verbose:
+        command += " --verbosity 2"
     run_command(context, command)
 
 
@@ -432,29 +435,21 @@ def unittest_coverage(context):
     run_command(context, command)
 
 
-@task
-def integration_tests(context):
-    """Some very generic high level integration tests."""
-    session = requests.Session()
-    retries = 1
-    max_retries = 60
-
-    start(context)
-    while retries < max_retries:
-        try:
-            response = session.get("http://localhost:8080", timeout=5)
-        except requests.exceptions.ConnectionError:
-            print("Nautobot not ready yet sleeping for 5 seconds...")
-            sleep(5)
-            retries += 1
-            continue
-        if response.ok:
-            print("Nautobot is ready...")
-            break
-        else:
-            raise Exit(f"Nautobot returned and invalid status {response.status_code}", 1)
-    if retries >= max_retries:
-        raise Exit("Timed out waiting for Nautobot", 1)
+@task(
+    help={
+        "keepdb": "save and re-use test database between test runs for faster re-testing.",
+        "label": "specify a directory or module to test instead of running all Nautobot tests",
+        "failfast": "fail as soon as a single test fails don't run the entire test suite",
+        "buffer": "Discard output from passing tests",
+        "verbose": "Toggle verbose test output",
+    }
+)
+def integration_test(
+    context, keepdb=False, label="nautobot.core.tests.integration", failfast=False, buffer=True, verbose=False
+):
+    """Run Nautobot integration tests."""
+    os.environ["NAUTOBOT_INTEGRATION_TEST"] = "True"
+    unittest(context, keepdb=keepdb, label=label, failfast=failfast, buffer=buffer, verbose=verbose)
 
 
 @task(
