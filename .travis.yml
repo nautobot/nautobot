@@ -1,6 +1,6 @@
 # Linting/Testing available at https://config.travis-ci.com/explore
 os: linux
-dist: focal
+dist: xenial
 
 stages:
   - Linting
@@ -28,6 +28,7 @@ env:
     - NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub 
     - INVOKE_NAUTOBOT_LOCAL=True
     - NAUTOBOT_INTEGRATION_TEST=True
+    - NAUTOBOT_SELENIUM_HOST=$(hostname -f)
   # jobs:
   #   - "INVOKE_NAUTOBOT_LOCAL=True TESTING_OPTIONS='--failfast'"
   #   - "INVOKE_NAUTOBOT_LOCAL=False TESTING_OPTIONS='--failfast --label nautobot.core.tests.integration' NAUTOBOT_INTEGRATION_TEST=True"
@@ -48,8 +49,8 @@ before_script:
   - psql -U postgres -c 'create database nautobot;'
   - pip install docker-compose
 script:
-  - hostname -f
-  - export NAUTOBOT_SELENIUM_HOST=$(hostname -f)
+  # - hostname -f
+  # - export NAUTOBOT_SELENIUM_HOST=$(hostname -f)
   - echo $NAUTOBOT_SELENIUM_HOST
   - invoke start --service selenium &  # Start selenium in the background, it takes some time to pull the image might as well burn that time with unit tests
   - invoke unittest --failfast --keepdb || travis_terminate 1
