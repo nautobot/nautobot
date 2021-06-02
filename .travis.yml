@@ -48,11 +48,11 @@ before_script:
   - psql -U postgres -c 'create database nautobot;'
   - pip install docker-compose
 script:
-  - invoke start --service selenium &  # Start selenium in the background, it takes some time to pull the image might as well burn that time with unit tests
-  - invoke unittest --failfast --keepdb || travis_terminate 1
   - hostname -f
   - export NAUTOBOT_SELENIUM_HOST=$(hostname -f)
   - echo $NAUTOBOT_SELENIUM_HOST
+  - invoke start --service selenium &  # Start selenium in the background, it takes some time to pull the image might as well burn that time with unit tests
+  - invoke unittest --failfast --keepdb || travis_terminate 1
   - invoke unittest --failfast --keepdb --label nautobot.core.tests.integration || travis_terminate 1
   - invoke unittest-coverage || travis_terminate 1
 
