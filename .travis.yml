@@ -49,9 +49,9 @@ before_script:
   - pip install docker-compose
 script:
   - invoke start --service selenium &
-  - invoke unittest --failfast --keepdb
-  - NAUTOBOT_SELENIUM_HOST=$(hostname) invoke unittest --failfast --keepdb --label nautobot.core.tests.integration
-  - invoke unittest-coverage
+  - invoke unittest --failfast --keepdb || travis_terminate 1
+  - NAUTOBOT_SELENIUM_HOST=$(hostname) invoke unittest --failfast --keepdb --label nautobot.core.tests.integration || travis_terminate 1
+  - invoke unittest-coverage || travis_terminate 1
 
 jobs:
   fast_finish: true
@@ -59,7 +59,7 @@ jobs:
     # Lint in python 3.9 for speed
     - stage: "Linting"
       before_install:
-        - pip install black flake8
+        - pip install invoke black flake8
         - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
         - chmod +x /home/travis/bin/hadolint
       services: []
