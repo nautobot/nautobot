@@ -37,7 +37,7 @@ class NautobotRemote(webdriver.Remote):
 )
 class SeleniumTestCase(StaticLiveServerTestCase):
     """
-    Base test case for Selenium integration testing with custom helper mthods.
+    Base test case for Selenium integration testing with custom helper methods.
 
     This extends `django.contrib.staticfiles.testing.StaticLiveServerTestCase`
     so there is no need to run `collectstatic` prior to running tests.
@@ -62,7 +62,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
     @classproperty
     def live_server_url(cls):
-        return "http://%s:%s" % (cls.selenium_host, cls.server_thread.port)
+        return f"http://{cls.selenium_host}:{cls.server_thread.port}"
 
     @classmethod
     def tearDownClass(cls):
@@ -83,7 +83,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
     @classmethod
     def _create_firefox_options(cls):
         """
-        Return a `FirefoxOptions` with required arguments such ass disabling the GPU and enabling
+        Return a `FirefoxOptions` with required arguments such as disabling the GPU and enabling
         headless mode.
         """
 
