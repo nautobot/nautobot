@@ -1,6 +1,6 @@
 # Linting/Testing available at https://config.travis-ci.com/explore
 os: linux
-dist: focal
+dist: xenial
 
 stages:
   - Linting
