@@ -62,10 +62,12 @@ jobs:
         - pip install invoke black flake8
         - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
         - chmod +x /home/travis/bin/hadolint
+      install: []
       services: []
       addons:
         postgresql: ""
       python: "3.9"
+      before_script: []
       script: "invoke tests --lint-only"
 
     - stage: "deploy-github"
