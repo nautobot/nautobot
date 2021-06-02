@@ -1,9 +1,6 @@
 # Installation
 
-This set of documents will help you get Nautobot up and running.
-
-!!! warning
-    As of Nautobot v1.0.0b2 these instructions are still in a pre-release state. We are working to revise them for the recent changes.
+This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](../docker).
 
 ## About Dependencies
 
@@ -82,6 +79,10 @@ Ubuntu 20.04 or later is supported.
 ### Installing on Other Systems
 
 Nautobot should work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
+
+### Running Nautobot in Docker
+
+Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](../docker) for more information.
 
 ## Upgrading
 

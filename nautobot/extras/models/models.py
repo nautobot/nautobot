@@ -3,7 +3,7 @@ import logging
 import uuid
 from collections import OrderedDict
 
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -166,11 +166,14 @@ class CustomLink(BaseModel, ChangeLoggedModel):
         limit_choices_to=FeatureQuery("custom_links"),
     )
     name = models.CharField(max_length=100, unique=True)
-    text = models.CharField(max_length=500, help_text="Jinja2 template code for link text")
+    text = models.CharField(
+        max_length=500,
+        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
+    )
     target_url = models.CharField(
         max_length=500,
         verbose_name="URL",
-        help_text="Jinja2 template code for link URL",
+        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
@@ -390,6 +393,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
+    device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
     cluster_groups = models.ManyToManyField(to="virtualization.ClusterGroup", related_name="+", blank=True)
     clusters = models.ManyToManyField(to="virtualization.Cluster", related_name="+", blank=True)
@@ -454,16 +458,11 @@ class ConfigContextModel(models.Model):
         Return the rendered configuration context for a device or VM.
         """
 
+        # always manually query for config contexts
+        config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
-
-        if not hasattr(self, "config_context_data"):
-            # The annotation is not available, so we fall back to manually querying for the config context objects
-            config_context_data = ConfigContext.objects.get_for_object(self, aggregate_data=True)
-        else:
-            # The attribute may exist, but the annotated value could be None if there is no config context data
-            config_context_data = self.config_context_data or []
-
         for context in config_context_data:
             data = deepmerge(data, context)
 
@@ -516,7 +515,9 @@ class JobResult(BaseModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     completed = models.DateTimeField(null=True, blank=True)
-    user = models.ForeignKey(to=User, on_delete=models.SET_NULL, related_name="+", blank=True, null=True)
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
+    )
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
@@ -578,6 +579,47 @@ class JobResult(BaseModel):
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
+
+    @property
+    def related_object(self):
+        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `job_id` fields.
+
+        If `obj_type` is extras.Job, then the `name` is used to look up an extras.jobs.Job subclass based on the
+        `class_path` of the Job subclass.
+        Note that this is **not** the extras.models.Job model class nor an instance thereof.
+
+        Else, if the the model class referenced by `obj_type` has a `name` field, our `name` field will be used
+        to look up a corresponding model instance. This is used, for example, to look up a related `GitRepository`;
+        more generally it can be used by any model that 1) has a unique `name` field and 2) needs to have a many-to-one
+        relationship between JobResults and model instances.
+
+        Else, the `obj_type` and `job_id` will be used together as a quasi-GenericForeignKey to look up a model
+        instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
+        but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
+        to plugin model instances.
+        """
+        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+
+        if self.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+            # Related object is an extras.Job subclass, our `name` matches its `class_path`
+            return get_job(self.name)
+
+        model_class = self.obj_type.model_class()
+
+        if hasattr(model_class, "name"):
+            # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
+            try:
+                return model_class.objects.get(name=self.name)
+            except model_class.DoesNotExist:
+                pass
+
+        # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
+        try:
+            return model_class.objects.get(id=self.job_id)
+        except model_class.DoesNotExist:
+            pass
+
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})

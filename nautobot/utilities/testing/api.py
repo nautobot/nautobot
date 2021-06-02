@@ -1,10 +1,10 @@
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.users.models import ObjectPermission, Token
 from .utils import disable_warnings
@@ -15,6 +15,10 @@ __all__ = (
     "APITestCase",
     "APIViewTestCases",
 )
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 #
@@ -44,7 +48,11 @@ class APITestCase(ModelTestCase):
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
 
     def _get_view_namespace(self):
-        return f"{self.view_namespace or self.model._meta.app_label}-api"
+        if self.view_namespace:
+            return f"{self.view_namespace}-api"
+        if self.model._meta.app_label in settings.PLUGINS:
+            return f"plugins-api:{self.model._meta.app_label}-api"
+        return f"{self.model._meta.app_label}-api"
 
     def _get_detail_url(self, instance):
         viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
@@ -203,6 +211,28 @@ class APIViewTestCases:
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_objects_returns_display_and_value(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choices use the display and value keys.
+            """
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            # Grab any field that has choices defined (fields with enums)
+            field_choices = {k: v["choices"] for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+
+            # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
+            # Broken down to provide better failure messages
+            for field, choices in field_choices.items():
+                for choice in choices:
+                    self.assertIn("display", choice, f"A choice in {field} is missing the display key")
+                    self.assertIn("value", choice, f"A choice in {field} is missing the value key")
+
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
@@ -229,15 +259,16 @@ class APIViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             initial_count = self._get_queryset().count()
-            response = self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(self._get_queryset().count(), initial_count + 1)
-            self.assertInstanceEqual(
-                self._get_queryset().get(pk=response.data["id"]),
-                self.create_data[0],
-                exclude=self.validation_excluded_fields,
-                api=True,
-            )
+            for i, create_data in enumerate(self.create_data):
+                response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_201_CREATED)
+                self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
+                self.assertInstanceEqual(
+                    self._get_queryset().get(pk=response.data["id"]),
+                    create_data,
+                    exclude=self.validation_excluded_fields,
+                    api=True,
+                )
 
         def test_bulk_create_objects(self):
             """
@@ -319,7 +350,7 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            id_list = self._get_queryset().values_list("id", flat=True)[:3]
+            id_list = list(self._get_queryset().values_list("id", flat=True)[:3])
             self.assertEqual(len(id_list), 3, "Insufficient number of objects to test bulk update")
             data = [{"id": id, **self.bulk_update_data} for id in id_list]
 
@@ -354,7 +385,7 @@ class APIViewTestCases:
 
         def test_delete_object(self):
             """
-            DELETE a single object identified by its numeric ID.
+            DELETE a single object identified by its primary key.
             """
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
@@ -394,3 +425,24 @@ class APIViewTestCases:
         DeleteObjectViewTestCase,
     ):
         pass
+
+
+class APITransactionTestCase(_APITransactionTestCase):
+    def setUp(self):
+        """
+        Create a superuser and token for API calls.
+        """
+        self.user = User.objects.create(username="testuser", is_superuser=True)
+        self.token = Token.objects.create(user=self.user)
+        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+
+    def assertHttpStatus(self, response, expected_status):
+        """
+        Provide more detail in the event of an unexpected HTTP response.
+        """
+        err_message = "Expected HTTP status {}; received {}: {}"
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+            err_message.format(expected_status, response.status_code, response.data),
+        )

@@ -18,12 +18,13 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack, Region, Site
 from nautobot.extras.choices import *
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ConfigContext,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -86,8 +87,16 @@ class CustomFieldSerializer(ValidatedModelSerializer):
             "validation_minimum",
             "validation_maximum",
             "validation_regex",
-            "choices",
         ]
+
+
+class CustomFieldChoiceSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfieldchoice-detail")
+    field = NestedCustomFieldSerializer()
+
+    class Meta:
+        model = CustomFieldChoice
+        fields = ["id", "url", "field", "value", "weight"]
 
 
 #
@@ -321,6 +330,12 @@ class ConfigContextSerializer(ValidatedModelSerializer):
         required=False,
         many=True,
     )
+    device_types = SerializedPKRelatedField(
+        queryset=DeviceType.objects.all(),
+        serializer=NestedDeviceRoleSerializer,
+        required=False,
+        many=True,
+    )
     platforms = SerializedPKRelatedField(
         queryset=Platform.objects.all(),
         serializer=NestedPlatformSerializer,
@@ -368,6 +383,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "regions",
             "sites",
             "roles",
+            "device_types",
             "platforms",
             "cluster_groups",
             "clusters",
@@ -499,14 +515,14 @@ class ObjectChangeSerializer(serializers.ModelSerializer):
 
 class ContentTypeSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:contenttype-detail")
-    display_name = serializers.SerializerMethodField()
+    display = serializers.SerializerMethodField()
 
     class Meta:
         model = ContentType
-        fields = ["id", "url", "app_label", "model", "display_name"]
+        fields = ["id", "url", "app_label", "model", "display"]
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
-    def get_display_name(self, obj):
+    def get_display(self, obj):
         return obj.app_labeled_name
 
 

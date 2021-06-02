@@ -1,13 +1,14 @@
 from django import forms
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as UserAdmin_
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import Q
 
 from nautobot.extras.admin import order_content_types
-from .models import AdminGroup, AdminUser, ObjectPermission, Token, UserConfig
+from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
 
 
 #
@@ -44,23 +45,15 @@ class GroupObjectPermissionInline(ObjectPermissionInline):
 
 
 class UserObjectPermissionInline(ObjectPermissionInline):
-    model = AdminUser.object_permissions.through
-
-
-class UserConfigInline(admin.TabularInline):
-    model = UserConfig
-    readonly_fields = ("data",)
-    can_delete = False
-    verbose_name = "Preferences"
+    model = get_user_model().object_permissions.through
 
 
 #
 # Users & groups
 #
 
-# Unregister the built-in GroupAdmin and UserAdmin classes so that we can use our custom admin classes below
+# Unregister the built-in GroupAdmin class so that we can use our custom admin class below
 admin.site.unregister(Group)
-admin.site.unregister(User)
 
 
 @admin.register(AdminGroup)
@@ -76,7 +69,7 @@ class GroupAdmin(admin.ModelAdmin):
         return obj.user_set.count()
 
 
-@admin.register(AdminUser)
+@admin.register(User)
 class UserAdmin(UserAdmin_):
     list_display = [
         "username",
@@ -100,12 +93,14 @@ class UserAdmin(UserAdmin_):
             },
         ),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
+        ("User Preferences", {"fields": ("config_data",)}),
     )
     filter_horizontal = ("groups",)
+    readonly_fields = ("config_data",)
 
     def get_inlines(self, request, obj):
         if obj is not None:
-            return (UserObjectPermissionInline, UserConfigInline)
+            return (UserObjectPermissionInline,)
         return ()
 
 

@@ -1,4 +1,4 @@
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from drf_yasg import openapi
 from drf_yasg.inspectors import (
     FieldInspector,

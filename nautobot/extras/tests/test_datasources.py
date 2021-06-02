@@ -6,7 +6,7 @@ import uuid
 
 import yaml
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase
 
@@ -22,6 +22,10 @@ from nautobot.extras.models import (
     JobResult,
     Status,
 )
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
@@ -69,13 +73,13 @@ class GitTest(TestCase):
 
     def test_pull_git_repository_and_refresh_data_with_no_data(self, MockGitRepo):
         """
-        The test_pull_git_repository_and_refresh_data job should succeeed if the given repo is empty.
+        The pull_git_repository_and_refresh_data job should succeed if the given repo is empty.
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
 
                 def create_empty_repo(path, url):
-                    os.makedirs(path)
+                    os.makedirs(path, exist_ok=True)
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = create_empty_repo
@@ -90,7 +94,51 @@ class GitTest(TestCase):
                 )
                 self.repo.refresh_from_db()
                 self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, self.job_result.data)
+                MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
                 # TODO: inspect the logs in job_result.data?
+
+                # Check that token-based authentication is handled as expected
+                self.repo._token = "1:3@/?=ab@"
+                self.repo.save()
+                # For verisimilitude, don't re-use the old request and job_result
+                self.dummy_request.id = uuid.uuid4()
+                self.job_result = JobResult(
+                    name=self.repo.name,
+                    obj_type=ContentType.objects.get_for_model(GitRepository),
+                    job_id=uuid.uuid4(),
+                )
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+
+                self.assertEqual(
+                    self.job_result.status,
+                    JobResultStatusChoices.STATUS_COMPLETED,
+                    self.job_result.data,
+                )
+                MockGitRepo.assert_called_with(
+                    os.path.join(tempdir, self.repo.slug), "http://1%3A3%40%2F%3F%3Dab%40@localhost/git.git"
+                )
+
+                # Check that username/password authentication is handled as expected
+                self.repo.username = "núñez"
+                self.repo.save()
+                # For verisimilitude, don't re-use the old request and job_result
+                self.dummy_request.id = uuid.uuid4()
+                self.job_result = JobResult(
+                    name=self.repo.name,
+                    obj_type=ContentType.objects.get_for_model(GitRepository),
+                    job_id=uuid.uuid4(),
+                )
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+
+                self.assertEqual(
+                    self.job_result.status,
+                    JobResultStatusChoices.STATUS_COMPLETED,
+                    self.job_result.data,
+                )
+                MockGitRepo.assert_called_with(
+                    os.path.join(tempdir, self.repo.slug),
+                    "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
+                )
 
     def test_pull_git_repository_and_refresh_data_with_valid_data(self, MockGitRepo):
         """

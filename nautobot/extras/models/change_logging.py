@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -49,7 +49,7 @@ class ObjectChange(BaseModel):
 
     time = models.DateTimeField(auto_now_add=True, editable=False, db_index=True)
     user = models.ForeignKey(
-        to=User,
+        to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         related_name="changes",
         blank=True,

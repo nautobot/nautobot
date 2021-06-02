@@ -10,7 +10,7 @@ from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME
-from django.views.generic import View
+from django.views.generic import TemplateView, View
 from packaging import version
 
 from nautobot.circuits.models import Circuit, Provider
@@ -25,6 +25,7 @@ from nautobot.dcim.models import (
     PowerPort,
     Rack,
     Site,
+    VirtualChassis,
 )
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
@@ -36,7 +37,7 @@ from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 
-class HomeView(View):
+class HomeView(TemplateView):
     template_name = "home.html"
 
     def get(self, request):
@@ -79,6 +80,7 @@ class HomeView(View):
             "power_connections_count": connected_powerports.count(),
             "powerpanel_count": PowerPanel.objects.restrict(request.user, "view").count(),
             "powerfeed_count": PowerFeed.objects.restrict(request.user, "view").count(),
+            "virtualchassis_count": VirtualChassis.objects.restrict(request.user, "view").count(),
             # IPAM
             "vrf_count": VRF.objects.restrict(request.user, "view").count(),
             "aggregate_count": Aggregate.objects.restrict(request.user, "view").count(),
@@ -109,17 +111,18 @@ class HomeView(View):
                         "url": release_url,
                     }
 
-        return render(
-            request,
-            self.template_name,
+        context = self.get_context_data()
+        context.update(
             {
                 "search_form": SearchForm(),
                 "stats": stats,
                 "job_results": job_results[:10],
                 "changelog": changelog[:15],
                 "new_release": new_release,
-            },
+            }
         )
+
+        return self.render_to_response(context)
 
 
 class SearchView(View):

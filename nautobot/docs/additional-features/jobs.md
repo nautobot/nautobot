@@ -87,6 +87,10 @@ class MyJob(Job):
         commit_default = False
 ```
 
+#### `field_order`
+
+A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
+
 ### Variables
 
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
@@ -168,16 +172,16 @@ Similar to `ChoiceVar`, but allows for the selection of multiple choices.
 A particular object within Nautobot. Each ObjectVar must specify a particular model, and allows the user to select one of the available instances. ObjectVar accepts several arguments, listed below.
 
 * `model` - The model class
-* `display_field` - The name of the REST API object field to display in the selection list (default: `'name'`)
+* `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
 * `query_params` - A dictionary of query parameters to use when retrieving available options (optional)
 * `null_option` - A label representing a "null" or empty choice (optional)
 
-The `display_field` argument is useful when referencing a model which does not have a `name` field. For example, when displaying a list of device types, you would likely use the `model` field:
+The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
 
 ```python
 device_type = ObjectVar(
-    model=DeviceType,
-    display_field='model'
+    model=IPAddress,
+    display_field="dns_name",
 )
 ```
 
@@ -349,6 +353,12 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 --data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
 ```
 
+The URL contains the `class_path` element that is composed of 3 elements, from the above example:
+
+- `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `example` - path to the job definition file; in this example, a locally installed `example.py` file. For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename`.
+- `MyJobWithVars` - name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
@@ -376,8 +386,8 @@ These variables are presented as a web form to be completed by the user. Once su
 ```python
 from django.utils.text import slugify
 
-from nautobot.dcim.choices import DeviceStatusChoices, SiteStatusChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Status
 from nautobot.extras.jobs import *
 
 
@@ -401,19 +411,19 @@ class NewBranch(Job):
     switch_model = ObjectVar(
         description="Access switch model",
         model=DeviceType,
-        display_field='model',
         query_params={
             'manufacturer_id': '$manufacturer'
         }
     )
 
     def run(self, data, commit):
+        STATUS_PLANNED = Status.objects.get(slug='planned')
 
         # Create the new site
         site = Site(
             name=data['site_name'],
             slug=slugify(data['site_name']),
-            status=SiteStatusChoices.STATUS_PLANNED
+            status=STATUS_PLANNED,
         )
         site.validated_save()
         self.log_success(obj=site, message="Created new site")
@@ -425,7 +435,7 @@ class NewBranch(Job):
                 device_type=data['switch_model'],
                 name=f'{site.slug}-switch{i}',
                 site=site,
-                status=DeviceStatusChoices.STATUS_PLANNED,
+                status=STATUS_PLANNED,
                 device_role=switch_role
             )
             switch.validated_save()
@@ -451,8 +461,8 @@ class NewBranch(Job):
 A job to perform various validation of Device data in Nautobot. As this job does not require any user input, it does not define any variables, nor does it implement a `run()` method.
 
 ```python
-from nautobot.dcim.choices import DeviceStatusChoices
 from nautobot.dcim.models import ConsolePort, Device, PowerPort
+from nautobot.extras.models import Status
 from nautobot.extras.jobs import Job
 
 
@@ -460,10 +470,10 @@ class DeviceConnectionsReport(Job):
     description = "Validate the minimum physical connections for each device"
 
     def test_console_connection(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every console port for every active device has a connection defined.
-        active = DeviceStatusChoices.STATUS_ACTIVE
-        for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=active):
+        for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
             if console_port.connected_endpoint is None:
                 self.log_failure(
                     obj=console_port.device,
@@ -478,9 +488,10 @@ class DeviceConnectionsReport(Job):
                 self.log_success(obj=console_port.device)
 
     def test_power_connections(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every active device has at least two connected power supplies.
-        for device in Device.objects.filter(status=DeviceStatusChoices.STATUS_ACTIVE):
+        for device in Device.objects.filter(status=STATUS_ACTIVE):
             connected_ports = 0
             for power_port in PowerPort.objects.filter(device=device):
                 if power_port.connected_endpoint is not None:
@@ -498,5 +509,3 @@ class DeviceConnectionsReport(Job):
             else:
                 self.log_success(obj=device)
 ```
-
-

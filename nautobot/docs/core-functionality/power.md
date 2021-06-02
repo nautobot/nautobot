@@ -1,8 +1,14 @@
 # Power Tracking
 
-{!docs/models/dcim/powerpanel.md!}
-{!docs/models/dcim/powerfeed.md!}
+{%
+    include-markdown "../models/dcim/powerpanel.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/dcim/powerfeed.md"
+    heading-offset=1
+%}
 
-# Example Power Topology
+## Example Power Topology
 
 ![Power distribution model](../../media/power_distribution.png)

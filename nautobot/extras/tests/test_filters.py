@@ -1,6 +1,6 @@
 import uuid
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
@@ -24,6 +24,10 @@ from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class ExportTemplateTestCase(TestCase):
@@ -166,6 +170,14 @@ class ConfigContextTestCase(TestCase):
             DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
         )
 
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+
+        device_types = (
+            DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
+            DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturer),
+            DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturer),
+        )
+
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
             Platform.objects.create(name="Platform 2", slug="platform-2"),
@@ -207,6 +219,7 @@ class ConfigContextTestCase(TestCase):
             c.regions.set([regions[i]])
             c.sites.set([sites[i]])
             c.roles.set([device_roles[i]])
+            c.device_types.set([device_types[i]])
             c.platforms.set([platforms[i]])
             c.cluster_groups.set([cluster_groups[i]])
             c.clusters.set([clusters[i]])
@@ -246,6 +259,13 @@ class ConfigContextTestCase(TestCase):
         params = {"role_id": [device_roles[0].pk, device_roles[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"role": [device_roles[0].slug, device_roles[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_type(self):
+        device_types = DeviceType.objects.all()[:2]
+        params = {"device_type_id": [device_types[0].pk, device_types[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"device_type": [device_types[0].slug, device_types[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_platform(self):
@@ -505,7 +525,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -514,7 +534,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -523,7 +543,7 @@ class ObjectChangeTestCase(TestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": ipaddress.address, "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
         )
 
     def test_id(self):

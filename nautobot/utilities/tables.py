@@ -1,4 +1,5 @@
 import django_tables2 as tables
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
@@ -37,7 +38,7 @@ class BaseTable(tables.Table):
 
         # Apply custom column ordering for user
         if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.config.get(f"tables.{self.__class__.__name__}.columns")
+            columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
             if columns:
                 pk = self.base_columns.pop("pk", None)
                 actions = self.base_columns.pop("actions", None)
@@ -151,17 +152,17 @@ class ButtonsColumn(tables.TemplateColumn):
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}
-        <a href="{{% url '{app_label}:{model_name}_changelog' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
+        <a href="{{% url '{prefix}{app_label}:{model_name}_changelog' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
             <i class="mdi mdi-history"></i>
         </a>
     {{% endif %}}
     {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{app_label}:{model_name}_edit' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
+        <a href="{{% url '{prefix}{app_label}:{model_name}_edit' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
             <i class="mdi mdi-pencil"></i>
         </a>
     {{% endif %}}
     {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{app_label}:{model_name}_delete' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
+        <a href="{{% url '{prefix}{app_label}:{model_name}_delete' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
             <i class="mdi mdi-trash-can-outline"></i>
         </a>
     {{% endif %}}
@@ -182,8 +183,12 @@ class ButtonsColumn(tables.TemplateColumn):
             prepend_template = prepend_template.replace("}", "}}")
             self.template_code = prepend_template + self.template_code
 
+        app_label = model._meta.app_label
+        prefix = "plugins:" if app_label in settings.PLUGINS else ""
+
         template_code = self.template_code.format(
-            app_label=model._meta.app_label,
+            prefix=prefix,
+            app_label=app_label,
             model_name=model._meta.model_name,
             pk_field=pk_field,
             buttons=buttons,

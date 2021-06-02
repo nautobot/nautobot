@@ -2,10 +2,11 @@ import datetime
 import json
 import inspect
 from importlib import import_module
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from distutils.util import strtobool
 
+from django.conf import settings
 from django.core.serializers import serialize
 from django.db.models import Count, OuterRef, Subquery, Model
 from django.db.models.functions import Coalesce
@@ -116,8 +117,8 @@ def serialize_object(obj, extra=None, exclude=None):
     data = json.loads(json_str)[0]["fields"]
 
     # Include custom_field_data as "custom_fields"
-    if hasattr(obj, "custom_field_data"):
-        data["custom_fields"] = data.pop("custom_field_data")
+    if hasattr(obj, "_custom_field_data"):
+        data["custom_fields"] = data.pop("_custom_field_data")
 
     # Include any tags. Check for tags cached on the instance; fall back to using the manager.
     if is_taggable(obj):
@@ -375,7 +376,10 @@ def get_filterset_for_model(model):
 
     try:
         filterset_name = f"{model.__name__}FilterSet"
-        return getattr(import_module(f"nautobot.{model._meta.app_label}.filters"), filterset_name)
+        if model._meta.app_label in settings.PLUGINS:
+            return getattr(import_module(f"{model._meta.app_label}.filters"), filterset_name)
+        else:
+            return getattr(import_module(f"nautobot.{model._meta.app_label}.filters"), filterset_name)
     except ModuleNotFoundError:
         # The name of the module is not correct
         pass
@@ -386,16 +390,5 @@ def get_filterset_for_model(model):
     return None
 
 
-def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
-
-    Examples:
-        >>> is_truthy('yes')
-        True
-    Args:
-        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
-        f, false, off and 0. Raises ValueError if val is anything else.
-    """
-    if isinstance(arg, bool):
-        return arg
-    return bool(strtobool(str(arg)))
+# Setup UtilizationData named tuple for use by multiple methods
+UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])

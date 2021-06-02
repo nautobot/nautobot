@@ -1,9 +1,10 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
@@ -70,7 +71,7 @@ class CustomFieldModelForm(forms.ModelForm):
             field_name = "cf_{}".format(cf.name)
             if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
-                self.fields[field_name].initial = self.instance.custom_field_data.get(cf.name)
+                self.fields[field_name].initial = self.instance.cf.get(cf.name)
             else:
                 self.fields[field_name] = cf.to_form_field()
 
@@ -81,7 +82,7 @@ class CustomFieldModelForm(forms.ModelForm):
 
         # Save custom field data on instance
         for cf_name in self.custom_fields:
-            self.instance.custom_field_data[cf_name[3:]] = self.cleaned_data.get(cf_name)
+            self.instance.cf[cf_name[3:]] = self.cleaned_data.get(cf_name)
 
         return super().clean()
 
@@ -203,17 +204,11 @@ class RelationshipFilterForm(BootstrapMixin, forms.Form):
     type = forms.MultipleChoiceField(choices=RelationshipTypeChoices, required=False, widget=StaticSelect2Multiple())
 
     source_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Source Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
     )
 
     destination_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Destination Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
 
@@ -233,73 +228,131 @@ class RelationshipModelForm(forms.ModelForm):
         One form field per side will be added to the list.
         """
         for side, relationships in self.instance.get_relationships().items():
-            for cr, queryset in relationships.items():
-                field_name = f"cr_{cr.slug}__{side}"
+            for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
-                self.fields[field_name] = cr.to_form_field(side=side)
+                # If this model is on the "source" side of the relationship, then the field will be named
+                # cr_relationship-slug__destination since it's used to pick the destination object(s).
+                # Conversely if we're on the "destination" side, the field will be cr_relationship-slug__source.
+                field_name = f"cr_{relationship.slug}__{peer_side}"
+                self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
-                    if cr.has_many(peer_side):
-                        initial = [getattr(cra, peer_side) for cra in queryset.all()]
+                    if relationship.has_many(peer_side):
+                        initial = [getattr(association, peer_side) for association in queryset.all()]
                         self.fields[field_name].initial = initial
                     else:
-                        cra = queryset.first()
-                        if cra:
-                            self.fields[field_name].initial = getattr(cra, peer_side)
+                        association = queryset.first()
+                        if association:
+                            self.fields[field_name].initial = getattr(association, peer_side)
 
                 # Annotate the field in the list of Relationship form fields
                 self.relationships.append(field_name)
 
+    def clean(self):
+        """
+        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
+
+        - For TYPE_ONE_TO_MANY and TYPE_ONE_TO_ONE relations, if the form's object is on the "source" side of
+          the relationship, verify that the requested "destination" object(s) do not already have any existing
+          RelationshipAssociation to a different source object.
+        - For TYPE_ONE_TO_ONE relations, if the form's object is on the "destination" side of the relationship,
+          verify that the requested "source" object does not have an existing RelationshipAssociation to
+          a different destination object.
+        """
+        for side, relationships in self.instance.get_relationships().items():
+            for relationship in relationships:
+                # If this side of the relationship is a "MANY" relation,
+                # we can coexist with other existing RelationshipAssociations and there's nothing to check now.
+                if relationship.has_many(side):
+                    continue
+
+                # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
+                peer_side = RelationshipSideChoices.OPPOSITE[side]
+                field_name = f"cr_{relationship.slug}__{peer_side}"
+
+                # Is the form trying to set this field (create/update a RelationshipAssociation(s))?
+                # If not (that is, clearing the field / deleting RelationshipAssociation(s)), we don't need to check.
+                if field_name not in self.cleaned_data or not self.cleaned_data[field_name]:
+                    continue
+
+                # Are any of the objects we want a relationship with already entangled with another object?
+                if relationship.has_many(peer_side):
+                    target_peers = [item for item in self.cleaned_data[field_name]]
+                else:
+                    target_peers = [self.cleaned_data[field_name]]
+                for target_peer in target_peers:
+                    existing_peer_associations = RelationshipAssociation.objects.filter(
+                        relationship=relationship,
+                        **{
+                            f"{peer_side}_id": target_peer.pk,
+                        },
+                    ).exclude(**{f"{side}_id": self.instance.pk})
+                    if existing_peer_associations.exists():
+                        raise ValidationError(
+                            {field_name: f"{target_peer} is already involved in a {relationship} relationship"}
+                        )
+
+        super().clean()
+
     def _save_relationships(self):
-        """Save all Relationships on form save."""
+        """Update RelationshipAssociations for all Relationships on form save."""
 
         for field_name in self.relationships:
-
-            # Extract the sidefrom the field_name
-            # Based on the side, find the list of existing RelationshipAssociation
-            side = field_name.split("__")[-1]
-            peer_side = RelationshipSideChoices.OPPOSITE[side]
+            # The field name tells us the side of the relationship that it is providing peer objects(s) to link into.
+            peer_side = field_name.split("__")[-1]
+            # Based on the side of the relationship that our local object represents,
+            # find the list of existing RelationshipAssociations it already has for this Relationship.
+            side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
                 "relationship": self.fields[field_name].model,
                 f"{side}_type": self.obj_type,
                 f"{side}_id": self.instance.pk,
             }
-            existing_cras = RelationshipAssociation.objects.filter(**filters)
+            existing_associations = RelationshipAssociation.objects.filter(**filters)
 
-            # Extract the list of ids of the target peers
+            # Get the list of target peer ids (PKs) that are specified in the form
             target_peer_ids = []
             if hasattr(self.cleaned_data[field_name], "__iter__"):
+                # One-to-many or many-to-many association
                 target_peer_ids = [item.pk for item in self.cleaned_data[field_name]]
             elif self.cleaned_data[field_name]:
+                # Many-to-one or one-to-one association
                 target_peer_ids = [self.cleaned_data[field_name].pk]
             else:
-                continue
+                # Unset/delete case
+                target_peer_ids = []
 
-            # Delete all existing CRA that are not in cleaned_data/target_peer_ids list
-            # Remove from target_peer_ids all peers that already exist
-            for cra in existing_cras:
-                found_peer = False
+            # Create/delete RelationshipAssociations as needed to match the target_peer_ids list
+
+            # First, for each existing association, if it's one that's already in target_peer_ids,
+            # we can discard it from target_peer_ids (no update needed to this association).
+            # Conversely, if it's *not* in target_peer_ids, we should delete it.
+            for association in existing_associations:
                 for peer_id in target_peer_ids:
-                    if peer_id == getattr(cra, f"{peer_side}_id"):
-                        found_peer = peer_id
-                if not found_peer:
-                    cra.delete()
+                    if peer_id == getattr(association, f"{peer_side}_id"):
+                        # This association already exists, so we can ignore it
+                        target_peer_ids.remove(peer_id)
+                        break
                 else:
-                    target_peer_ids.remove(found_peer)
+                    # This association is not in target_peer_ids, so delete it
+                    association.delete()
 
-            for cra_peer_id in target_peer_ids:
+            # Anything remaining in target_peer_ids now does not exist yet and needs to be created.
+            for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
-                cra = RelationshipAssociation(
+                association = RelationshipAssociation(
                     relationship=relationship,
+                    **{
+                        f"{side}_type": self.obj_type,
+                        f"{side}_id": self.instance.pk,
+                        f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
+                        f"{peer_side}_id": peer_id,
+                    },
                 )
-                setattr(cra, f"{side}_id", self.instance.pk)
-                setattr(cra, f"{side}_type", self.obj_type)
-                setattr(cra, f"{peer_side}_id", cra_peer_id)
-                setattr(cra, f"{peer_side}_type", getattr(relationship, f"{peer_side}_type"))
 
-                # FIXME Run Clean
-                cra.save()
+                association.clean()
+                association.save()
 
     def save(self, commit=True):
 
@@ -320,17 +373,11 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     )
 
     source_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Source Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Source Type"
     )
 
     destination_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Destination Type",
-        widget=StaticSelect2Multiple(),
+        feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
 
 
@@ -390,6 +437,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
+    device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
@@ -408,6 +456,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
             "regions",
             "sites",
             "roles",
+            "device_types",
             "platforms",
             "cluster_groups",
             "clusters",
@@ -436,6 +485,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
+    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(), to_field_name="slug", required=False
@@ -587,9 +637,8 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(),
     )
     user_id = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
-        display_field="username",
         label="User",
         widget=APISelectMultiple(
             api_url="/api/users/users/",
@@ -598,7 +647,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
     changed_object_type_id = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        display_field="display_name",
         label="Object Type",
         widget=APISelectMultiple(
             api_url="/api/extras/content-types/",
@@ -640,9 +688,8 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
     # FIXME(glenn) Filtering by obj_type?
     name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(
-        queryset=User.objects.all(),
+        queryset=get_user_model().objects.all(),
         required=False,
-        display_field="username",
         label="User",
         widget=APISelectMultiple(
             api_url="/api/users/users/",
@@ -720,11 +767,7 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
-    )
+    content_types = MultipleContentTypeField(feature="webhooks", required=False, label="Content Type(s)")
 
     class Meta:
         model = Webhook
@@ -749,10 +792,8 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
 class WebhookFilterForm(BootstrapMixin, forms.Form):
     model = Webhook
     q = forms.CharField(required=False, label="Search")
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
+    content_types = MultipleContentTypeField(
+        feature="webhooks", choices_as_strings=True, required=False, label="Content Type(s)"
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -769,10 +810,7 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Generic create/update form for `Status` objects."""
 
     slug = SlugField()
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        label="Content type(s)",
-    )
+    content_types = MultipleContentTypeField(feature="statuses", label="Content Type(s)")
 
     class Meta:
         model = Status
@@ -785,7 +823,8 @@ class StatusCSVForm(CustomFieldModelCSVForm):
 
     slug = SlugField()
     content_types = CSVMultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
+        feature="statuses",
+        choices_as_strings=True,
         help_text=mark_safe(
             "The object types to which this status applies. Multiple values "
             "must be comma-separated and wrapped in double quotes. (e.g. "
@@ -808,10 +847,7 @@ class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Status
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content type(s)",
-        widget=StaticSelect2Multiple(),
+        feature="statuses", choices_as_strings=True, required=False, label="Content Type(s)"
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
 
@@ -821,11 +857,7 @@ class StatusBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Status.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = forms.ModelMultipleChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()).order_by("app_label", "model"),
-        label="Content type(s)",
-        required=False,
-    )
+    content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
 
     class Meta:
         nullable_fields = []
@@ -840,7 +872,6 @@ class StatusBulkEditFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            display_field="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -856,7 +887,6 @@ class StatusFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            display_field="name",
             to_field_name="slug",
         )
         self.order_fields(self.field_order)  # Reorder fields again

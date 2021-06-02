@@ -58,7 +58,7 @@ By default, Nautobot stores uploaded files (such as image attachments) in its me
 Execute the following command (which may need to be changed if you're using non-default storage path settings):
 
 ```no-highlight
-tar -czf nautobot_media.tar.gz ~/.nautobot/media/
+tar -czf nautobot_media.tar.gz $NAUTOBOT_ROOT/media/
 ```
 
 ### Restore the Media Directory
@@ -76,5 +76,5 @@ tar -xf nautobot_media.tar.gz
 If you are migrating your instance of Nautobot to a different machine, be sure to first invalidate the cache on the original instance by issuing the `invalidate all` management command (within the Python virtual environment):
 
 ```no-highlight
-(venv) # nautobot-server invalidate all
+$ nautobot-server invalidate all
 ```

@@ -1,11 +1,12 @@
 import json
+from urllib.parse import urljoin
 
 from django import forms
 from django.conf import settings
-from django.contrib.postgres.forms import SimpleArrayField
+from django.urls import get_script_prefix
 
 from nautobot.utilities.choices import ColorChoices
-from .utils import add_blank_choice, parse_numeric_range
+from .utils import add_blank_choice
 
 __all__ = (
     "APISelect",
@@ -15,7 +16,6 @@ __all__ = (
     "ContentTypeSelect",
     "DatePicker",
     "DateTimePicker",
-    "NumericArrayField",
     "SelectWithDisabled",
     "SelectWithPK",
     "SlugWidget",
@@ -30,8 +30,6 @@ class SmallTextarea(forms.Textarea):
     """
     Subclass used for rendering a smaller textarea element.
     """
-
-    pass
 
 
 class SlugWidget(forms.TextInput):
@@ -117,12 +115,6 @@ class ContentTypeSelect(StaticSelect2):
     option_template_name = "widgets/select_contenttype.html"
 
 
-class NumericArrayField(SimpleArrayField):
-    def to_python(self, value):
-        value = ",".join([str(n) for n in parse_numeric_range(value)])
-        return super().to_python(value)
-
-
 class APISelect(SelectWithDisabled):
     """
     A select widget populated via an API call
@@ -135,7 +127,8 @@ class APISelect(SelectWithDisabled):
 
         self.attrs["class"] = "nautobot-select2-api"
         if api_url:
-            self.attrs["data-url"] = "/{}{}".format(settings.BASE_PATH, api_url.lstrip("/"))  # Inject BASE_PATH
+            # Prefix the URL w/ the script prefix (e.g. `/nautobot`)
+            self.attrs["data-url"] = urljoin(get_script_prefix(), api_url.lstrip("/"))
 
     def add_query_param(self, name, value):
         """

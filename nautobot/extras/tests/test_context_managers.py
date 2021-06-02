@@ -1,6 +1,6 @@
 import django_rq
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User
 from django.test import TestCase
 
 from nautobot.dcim.models import Site
@@ -9,7 +9,11 @@ from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ObjectChange, Webhook
 
 
-class web_request_contextTestCase(TestCase):
+# Use the proper swappable User model
+User = get_user_model()
+
+
+class WebRequestContextTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="jacob", email="jacob@example.com", password="top_secret")
 
@@ -30,7 +34,7 @@ class web_request_contextTestCase(TestCase):
         for webhook in webhooks:
             webhook.content_types.set([site_ct])
 
-        self.queue = django_rq.get_queue("default")
+        self.queue = django_rq.get_queue("webhooks")
         self.queue.empty()  # Begin each test with an empty queue
 
     def test_user_object_type_error(self):

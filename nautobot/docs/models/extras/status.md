@@ -2,13 +2,30 @@
 
 Nautobot provides the ability for custom statuses to be defined within an organization to be used on various objects to facilitate business workflows around object statuses.
 
-The value of a `status` field on a model (such as `Device.status`) will be represented as a `Status` object. This is a foreign key relationship that is designed to behave like a regular choice field but constrained to the content-types for the associated models for that status.
+## Status Basics
+
+The value of a `status` field on a model (such as `Device.status`) will be represented as a `nautobot.extras.models.Status` object.
 
 When created, a `Status` can be associated to one or more model content-types using a many-to-many relationship. The relationship to each model is referenced across all user interfaces using the `{app_label}.{model}` naming convention (e.g. `dcim.device`).
 
 Statuses may be managed by navigating to *Organization* > *Statuses* in the navigation menu.
 
-## Status internals
+### Importing Objects with a `status` Field
+
+When using CSV import to reference a `status` field on an object, the `Status.slug` field is used.
+
+For example, the default **Active** status has a slug of `active`, so the `active` value would be used for import.
+
+## Customizing Statuses
+
+With Status as a model, statuses can be customized. This can be as simple as removing the option to configure an existing status with a particular model or to remove that status entirely. 
+
+The real benefit of custom status is adding your own organization status and process names directly to Nautobot. An example of custom statuses would be including End of Life information for your devices. A simple End of Life status could be EOx for a device hitting any end of life milestone; more specific statuses like EOSS (End of Software Support), EOS (End of Sale), and Pre-EOS (for 1 year prior to EOS) to be more specific. Once the end of life information is tracked as a status, developing a report for Devices that have reached EOSS is trivial. 
+
+Another example for sites is tracking the nature of a specific site's installation status. A site that is under construction could received a status like 'Pre Production'.
+
+For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be customized to reflect the specific [Nova virtual machine states](https://docs.openstack.org/nova/latest/reference/vm-states.html).
+## Status Internals
 
 !!! warning
     The section below is largely intended for developers who may need to create

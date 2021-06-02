@@ -1,8 +1,5 @@
 # Deploying Nautobot: Web Service and Worker
 
-!!! warning
-    As of Nautobot v1.0.0b2 these instructions are in a pre-release state and will be evolving rapidly!
-
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
 Nautobot comes preinstalled with [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) to use as the WSGI server, however other WSGI servers are available and should work similarly well. [Gunicorn](http://gunicorn.org/) is a popular alternative.
@@ -17,36 +14,53 @@ $ nautobot-server start --help
 
 ## Configuration
 
-Copy and paste the following into `/opt/nautobot/uwsgi.ini`:
+As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 
 ```ini
 [uwsgi]
 ; The IP address (typically localhost) and port that the WSGI process should listen on
-http-socket = 127.0.0.1:8001
+socket = 127.0.0.1:8001
 
-; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
-processes = 5
+; Fail to start if any parameter in the configuration file isn’t explicitly understood by uWSGI
+strict = true
 
-# Number of threads per worker process
-threads = 3
-
-# Set internal buffer size
-buffer-size = 8192
-
-# Set the socket listen queue size
-listen = 1024
-
-# Enable master process
+; Enable master process to gracefully re-spawn and pre-fork workers
 master = true
 
-# Enable threading
+; Allow Python app-generated threads to run
 enable-threads = true
 
-# Try to remove all of the generated file/sockets
+;Try to remove all of the generated file/sockets during shutdown
 vacuum = true
 
-# Do not use multiple interpreters (where available)
+; Do not use multiple interpreters, allowing only Nautobot to run
 single-interpreter = true
+
+; Shutdown when receiving SIGTERM (default is respawn)
+die-on-term = true
+
+; Prevents uWSGI from starting if it is unable load Nautobot (usually due to errors)
+need-app = true
+
+; By default, uWSGI has rather verbose logging that can be noisy
+disable-logging = true
+
+; Assert that critical 4xx and 5xx errors are still logged
+log-4xx = true
+log-5xx = true
+
+;
+; Advanced settings (disabled by default)
+; Customize these for your environment if and only if you need them.
+; Ref: https://uwsgi-docs.readthedocs.io/en/latest/Options.html
+;
+
+; Number of uWSGI workers to spawn. This should typically be 2n+1, where n is the number of CPU cores present.
+; processes = 5
+
+; If using subdirectory hosting e.g. example.com/nautobot, you must uncomment this line. Otherwise you'll get double paths e.g. example.com/nautobot/nautobot/.
+; See: https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.11.html#fixpathinfo-routing-action
+; route-run = fixpathinfo:
 ```
 
 This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
@@ -67,7 +81,7 @@ First, copy and paste the following into `/etc/systemd/system/nautobot.service`:
 ```
 [Unit]
 Description=Nautobot WSGI Service
-Documentation=https://nautobot.readthedocs.io/
+Documentation=https://nautobot.readthedocs.io/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -81,6 +95,8 @@ PIDFile=/var/tmp/nautobot.pid
 WorkingDirectory=/opt/nautobot
 
 ExecStart=/opt/nautobot/bin/nautobot-server start --pidfile /var/tmp/nautobot.pid --ini /opt/nautobot/uwsgi.ini
+ExecStop=/opt/nautobot/bin/nautobot-server start --stop /var/tmp/nautobot.pid
+ExecReload=/opt/nautobot/bin/nautobot-server start --reload /var/tmp/nautobot.pid
 
 Restart=on-failure
 RestartSec=30
@@ -97,7 +113,7 @@ Next, copy and paste the following into `/etc/systemd/system/nautobot-worker.ser
 ```
 [Unit]
 Description=Nautobot Request Queue Worker
-Documentation=https://nautobot.readthedocs.io/
+Documentation=https://nautobot.readthedocs.io/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -140,7 +156,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
 ● nautobot.service - Nautobot WSGI Service
      Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
      Active: active (running) since Fri 2021-03-05 22:23:33 UTC; 35min ago
-       Docs: https://nautobot.readthedocs.io/en/latest/
+       Docs: https://nautobot.readthedocs.io/en/stable/
    Main PID: 6992 (nautobot-server)
       Tasks: 16 (limit: 9513)
      Memory: 221.1M
@@ -158,3 +174,13 @@ You can use the command `systemctl status nautobot.service` to verify that the W
     may indicate the problem.
 
 Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](../http-server).
+
+## Troubleshooting
+
+### SSL Error
+
+If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI configuration and Nautobot's database settings.
+See [this conversation](https://github.com/nautobot/nautobot/issues/127) for more details.
+
+- Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
+

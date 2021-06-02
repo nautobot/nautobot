@@ -1,3 +1,5 @@
+import inspect
+
 import django_tables2 as tables
 
 from django.conf import settings
@@ -15,7 +17,7 @@ from nautobot.utilities.tables import (
     ContentTypesColumn,
     ToggleColumn,
 )
-from .jobs import get_job_classpaths
+from .jobs import get_job_classpaths, Job
 from .models import (
     ConfigContext,
     CustomLink,
@@ -207,15 +209,14 @@ class GitRepositoryBulkTable(BaseTable):
 
 
 def job_creator_link(value, record):
-    if record.obj_type == ContentType.objects.get(app_label="extras", model="job"):
-        if record.name in get_job_classpaths():
-            return reverse("extras:job", kwargs={"class_path": record.name})
-    else:
-        model_class = record.obj_type.model_class()
-        try:
-            return model_class.objects.get(name=record.name).get_absolute_url()
-        except model_class.DoesNotExist:
-            pass
+    """
+    Get a link to the related object, if any, associated with the given JobResult record.
+    """
+    related_object = record.related_object
+    if inspect.isclass(related_object) and issubclass(related_object, Job):
+        return reverse("extras:job", kwargs={"class_path": related_object.class_path})
+    elif related_object:
+        return related_object.get_absolute_url()
     return None
 
 
@@ -223,6 +224,7 @@ class JobResultTable(BaseTable):
     pk = ToggleColumn()
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
     name = tables.Column(linkify=job_creator_link)
+    job_id = tables.Column(linkify=job_creator_link, verbose_name="Job ID")
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
@@ -246,6 +248,7 @@ class JobResultTable(BaseTable):
             "created",
             "obj_type",
             "name",
+            "job_id",
             "duration",
             "completed",
             "user",
@@ -409,7 +412,7 @@ class RelationshipTable(BaseTable):
 
 class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
-    actions = ButtonsColumn(Relationship, buttons=("delete",))
+    actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
 
     source = tables.Column(linkify=True)
 

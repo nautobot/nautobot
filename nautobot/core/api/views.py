@@ -52,7 +52,7 @@ HTTP_ACTIONS = {
 class BulkUpdateModelMixin:
     """
     Support bulk modification of objects using the list endpoint for a model. Accepts a PATCH action with a list of one
-    or more JSON objects, each specifying the numeric ID of an object to be updated as well as the attributes to be set.
+    or more JSON objects, each specifying the UUID of an object to be updated as well as the attributes to be set.
     For example:
 
     PATCH /api/dcim/sites/
@@ -101,12 +101,12 @@ class BulkUpdateModelMixin:
 class BulkDestroyModelMixin:
     """
     Support bulk deletion of objects using the list endpoint for a model. Accepts a DELETE action with a list of one
-    or more JSON objects, each specifying the numeric ID of an object to be deleted. For example:
+    or more JSON objects, each specifying the UUID of an object to be deleted. For example:
 
     DELETE /api/dcim/sites/
     [
-        {"id": 123},
-        {"id": 456}
+        {"id": "3f01f169-49b9-42d5-a526-df9118635d62"},
+        {"id": "c27d6c5b-7ea8-41e7-b9dd-c065efd5d9cd"}
     ]
     """
 

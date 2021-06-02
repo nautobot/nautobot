@@ -1,3 +1,5 @@
+import inspect
+
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -35,7 +37,7 @@ from .models import (
     TaggedItem,
     Webhook,
 )
-from .jobs import get_job, get_jobs, run_job
+from .jobs import get_job, get_jobs, run_job, Job
 from .datasources import (
     get_datasource_contents,
     enqueue_pull_git_repository_and_refresh_data,
@@ -125,9 +127,9 @@ class ConfigContextView(generic.ObjectView):
         if request.GET.get("format") in ["json", "yaml"]:
             format = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.config.set("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.config.get("extras.configcontext.format", "json")
+            format = request.user.get_config("extras.configcontext.format", "json")
         else:
             format = "json"
 
@@ -169,9 +171,9 @@ class ObjectConfigContextView(generic.ObjectView):
         if request.GET.get("format") in ["json", "yaml"]:
             format = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.config.set("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.config.get("extras.configcontext.format", "json")
+            format = request.user.get_config("extras.configcontext.format", "json")
         else:
             format = "json"
 
@@ -643,17 +645,11 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
 
         associated_record = None
         job = None
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        if job_result.obj_type == job_content_type:
-            job_class = get_job(job_result.name)
-            if job_class is not None:
-                job = job_class()
-        else:
-            model_class = job_result.obj_type.model_class()
-            try:
-                associated_record = model_class.objects.get(name=job_result.name)
-            except model_class.DoesNotExist:
-                pass
+        related_object = job_result.related_object
+        if inspect.isclass(related_object) and issubclass(related_object, Job):
+            job = related_object()
+        elif related_object:
+            associated_record = related_object
 
         return render(
             request,

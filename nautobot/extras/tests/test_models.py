@@ -1,7 +1,9 @@
 import os
 import tempfile
+import uuid
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
@@ -16,7 +18,9 @@ from nautobot.dcim.models import (
     Site,
     Region,
 )
-from nautobot.extras.models import ConfigContext, GitRepository, Status, Tag
+from nautobot.extras.jobs import get_job, Job
+from nautobot.extras.models import ConfigContext, GitRepository, JobResult, Status, Tag
+from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import (
@@ -281,6 +285,67 @@ class GitRepositoryTest(TransactionTestCase):
                 self.assertTrue(os.path.isdir(new_path))
 
 
+class JobResultTest(TestCase):
+    """
+    Tests for the `JobResult` model class.
+    """
+
+    def test_related_object(self):
+        """Test that the `related_object` property is computed properly."""
+        # Case 1: Job, identified by class_path.
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            job_class = get_job("local/test_pass/TestPass")
+            job_result = JobResult(
+                name=job_class.class_path,
+                obj_type=ContentType.objects.get(app_label="extras", model="job"),
+                job_id=uuid.uuid4(),
+            )
+
+            # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
+            self.assertEqual(type(job_result.related_object), type)
+            self.assertTrue(issubclass(job_result.related_object, Job))
+            self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
+
+            job_result.name = "local/no_such_job/NoSuchJob"
+            self.assertIsNone(job_result.related_object)
+
+            job_result.name = "not-a-class-path"
+            self.assertIsNone(job_result.related_object)
+
+        # Case 2: GitRepository, identified by name.
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+
+        job_result = JobResult(
+            name=repo.name,
+            obj_type=ContentType.objects.get_for_model(repo),
+            job_id=uuid.uuid4(),
+        )
+
+        self.assertEqual(job_result.related_object, repo)
+
+        job_result.name = "No such GitRepository"
+        self.assertIsNone(job_result.related_object)
+
+        # Case 3: Related object with no name, identified by PK/ID
+        ip_address = IPAddress.objects.create(address="1.1.1.1/32")
+        job_result = JobResult(
+            name="irrelevant",
+            obj_type=ContentType.objects.get_for_model(ip_address),
+            job_id=ip_address.pk,
+        )
+
+        self.assertEqual(job_result.related_object, ip_address)
+
+        job_result.job_id = uuid.uuid4()
+        self.assertIsNone(job_result.related_object)
+
+
 class StatusTest(TestCase):
     """
     Tests for the `Status` model class.
@@ -334,6 +399,7 @@ class StatusTest(TestCase):
     def test_name(self):
         # Test a bunch of wackado names.
         tests = [
+            "CAPSLOCK",
             "---;;a;l^^^2ZSsljk¡",
             "-42",
             "392405834ioafdjskl;ajr30894fjakl;fs___π",
@@ -342,3 +408,4 @@ class StatusTest(TestCase):
             self.status.name = test
             self.status.clean()
             self.status.save()
+            self.assertEquals(str(self.status), test)

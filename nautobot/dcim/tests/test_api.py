@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 
@@ -42,6 +42,10 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class AppTest(APITestCase):
@@ -88,7 +92,7 @@ class Mixins:
 
 class RegionTest(APIViewTestCases.APIViewTestCase):
     model = Region
-    brief_fields = ["_depth", "id", "name", "site_count", "slug", "url"]
+    brief_fields = ["_depth", "display", "id", "name", "site_count", "slug", "url"]
     create_data = [
         {
             "name": "Region 4",
@@ -117,7 +121,7 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
 
 class SiteTest(APIViewTestCases.APIViewTestCase):
     model = Site
-    brief_fields = ["id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "slug", "url"]
     bulk_update_data = {
         "status": "planned",
     }
@@ -166,7 +170,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
-    brief_fields = ["_depth", "id", "name", "rack_count", "slug", "url"]
+    brief_fields = ["_depth", "display", "id", "name", "rack_count", "slug", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -227,7 +231,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
 class RackRoleTest(APIViewTestCases.APIViewTestCase):
     model = RackRole
-    brief_fields = ["id", "name", "rack_count", "slug", "url"]
+    brief_fields = ["display", "id", "name", "rack_count", "slug", "url"]
     create_data = [
         {
             "name": "Rack Role 4",
@@ -259,7 +263,7 @@ class RackRoleTest(APIViewTestCases.APIViewTestCase):
 
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
-    brief_fields = ["device_count", "display_name", "id", "name", "url"]
+    brief_fields = ["device_count", "display", "id", "name", "url"]
     bulk_update_data = {
         "status": "planned",
     }
@@ -386,7 +390,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
-    brief_fields = ["id", "units", "url", "user"]
+    brief_fields = ["display", "id", "units", "url", "user"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -433,7 +437,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["devicetype_count", "id", "name", "slug", "url"]
+    brief_fields = ["devicetype_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Manufacturer 4",
@@ -464,7 +468,7 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     model = DeviceType
     brief_fields = [
         "device_count",
-        "display_name",
+        "display",
         "id",
         "manufacturer",
         "model",
@@ -508,7 +512,7 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
 
 class ConsolePortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ConsolePortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -540,7 +544,7 @@ class ConsolePortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class ConsoleServerPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ConsoleServerPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -572,7 +576,7 @@ class ConsoleServerPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = PowerPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -604,7 +608,7 @@ class PowerPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class PowerOutletTemplateTest(APIViewTestCases.APIViewTestCase):
     model = PowerOutletTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -636,7 +640,7 @@ class PowerOutletTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class InterfaceTemplateTest(APIViewTestCases.APIViewTestCase):
     model = InterfaceTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -671,7 +675,7 @@ class InterfaceTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = FrontPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -760,7 +764,7 @@ class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class RearPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = RearPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -807,7 +811,7 @@ class RearPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceBayTemplateTest(APIViewTestCases.APIViewTestCase):
     model = DeviceBayTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -844,7 +848,7 @@ class DeviceBayTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRole
-    brief_fields = ["device_count", "id", "name", "slug", "url", "virtualmachine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
     create_data = [
         {
             "name": "Device Role 4",
@@ -876,7 +880,7 @@ class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "id", "name", "slug", "url", "virtualmachine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
     create_data = [
         {
             "name": "Platform 4",
@@ -905,7 +909,7 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
-    brief_fields = ["display_name", "id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "status": "failed",
     }
@@ -1054,7 +1058,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
 class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = ConsolePort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1090,7 +1094,7 @@ class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
 
 class ConsoleServerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = ConsoleServerPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1126,7 +1130,7 @@ class ConsoleServerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIView
 
 class PowerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = PowerPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1162,7 +1166,7 @@ class PowerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
 
 class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = PowerOutlet
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1198,7 +1202,7 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
 
 class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = Interface
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1252,7 +1256,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
 
 class FrontPortTest(APIViewTestCases.APIViewTestCase):
     model = FrontPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1321,7 +1325,7 @@ class FrontPortTest(APIViewTestCases.APIViewTestCase):
 
 class RearPortTest(APIViewTestCases.APIViewTestCase):
     model = RearPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1360,7 +1364,7 @@ class RearPortTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceBayTest(APIViewTestCases.APIViewTestCase):
     model = DeviceBay
-    brief_fields = ["device", "id", "name", "url"]
+    brief_fields = ["device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1438,7 +1442,7 @@ class DeviceBayTest(APIViewTestCases.APIViewTestCase):
 
 class InventoryItemTest(APIViewTestCases.APIViewTestCase):
     model = InventoryItem
-    brief_fields = ["_depth", "device", "id", "name", "url"]
+    brief_fields = ["_depth", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1476,7 +1480,7 @@ class InventoryItemTest(APIViewTestCases.APIViewTestCase):
 
 class CableTest(APIViewTestCases.APIViewTestCase):
     model = Cable
-    brief_fields = ["id", "label", "url"]
+    brief_fields = ["display", "id", "label", "url"]
     bulk_update_data = {
         "length": 100,
         "length_unit": "m",
@@ -1628,7 +1632,7 @@ class ConnectedDeviceTest(APITestCase):
 
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     model = VirtualChassis
-    brief_fields = ["id", "master", "member_count", "name", "url"]
+    brief_fields = ["display", "id", "master", "member_count", "name", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1769,7 +1773,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    brief_fields = ["id", "name", "powerfeed_count", "url"]
+    brief_fields = ["display", "id", "name", "powerfeed_count", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1812,7 +1816,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    brief_fields = ["cable", "id", "name", "url"]
+    brief_fields = ["cable", "display", "id", "name", "url"]
     bulk_update_data = {
         "status": "planned",
     }
