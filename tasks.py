@@ -299,13 +299,13 @@ def cli(context):
     }
 )
 def createsuperuser(context, user="admin"):
-    """Create a new Nautobot superuser account (default: admin), will prompt for password."""
+    """Create a new Nautobot superuser account (default: "admin"), will prompt for password."""
     command = f"nautobot-server createsuperuser --username {user}"
 
     run_command(context, command)
 
 
-@task(help={"name": "Use this name for migration file(s). If unspecified, a name will be generated." ""})
+@task(help={"name": "Use this name for migration file(s). If unspecified, a name will be generated."})
 def makemigrations(context, name=""):
     """Perform makemigrations operation in Django."""
     command = "nautobot-server makemigrations"
@@ -405,7 +405,7 @@ def check_migrations(context):
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
-        "verbose": "Toggle verbose test output.",
+        "verbose": "Enable verbose test output.",
     }
 )
 def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=True, verbose=False):
@@ -437,7 +437,7 @@ def unittest_coverage(context):
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
-        "verbose": "Toggle verbose test output.",
+        "verbose": "Enable verbose test output.",
     }
 )
 def integration_test(
