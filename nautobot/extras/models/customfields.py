@@ -359,7 +359,7 @@ class CustomField(BaseModel):
 
         super().delete(*args, **kwargs)
 
-        delete_custom_field_data.delay(self.name, content_types)
+        delete_custom_field_data.delay(self.name, list(content_types))
 
 
 class CustomFieldChoice(BaseModel):

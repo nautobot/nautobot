@@ -647,7 +647,9 @@ class JobResult(BaseModel):
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4())
 
-        func.delay(*args, job_id=str(job_result.job_id), job_result=job_result, **kwargs)
+        kwargs["job_result"] = job_result
+
+        func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id))
 
         return job_result
 

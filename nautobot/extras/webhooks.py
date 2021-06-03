@@ -1,22 +1,11 @@
-import hashlib
-import hmac
-
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
-from django_rq import get_queue
 
 from nautobot.utilities.api import get_serializer_for_model
-from .choices import *
-from .models import Webhook
-from .registry import registry
-
-
-def generate_signature(request_body, secret):
-    """
-    Return a cryptographic signature that can be used to verify the authenticity of webhook data.
-    """
-    hmac_prep = hmac.new(key=secret.encode("utf8"), msg=request_body, digestmod=hashlib.sha512)
-    return hmac_prep.hexdigest()
+from nautobot.extras.choices import *
+from nautobot.extras.models import Webhook
+from nautobot.extras.registry import registry
+from nautobot.extras.tasks import process_webhook
 
 
 def enqueue_webhooks(instance, user, request_id, action):
@@ -48,11 +37,9 @@ def enqueue_webhooks(instance, user, request_id, action):
         serializer = serializer_class(instance, context=serializer_context)
 
         # Enqueue the webhooks
-        webhook_queue = get_queue("webhooks")
         for webhook in webhooks:
-            webhook_queue.enqueue(
-                "nautobot.extras.webhooks_worker.process_webhook",
-                webhook,
+            process_webhook.delay(
+                webhook.pk,
                 serializer.data,
                 instance._meta.model_name,
                 action,

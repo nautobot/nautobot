@@ -8,10 +8,9 @@ from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import View
-from django_rq.queues import get_connection
 from django_tables2 import RequestConfig
-from rq import Worker
 
+from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import (
@@ -548,9 +547,9 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         grouping, module, class_name = class_path.split("/", 2)
         form = job.as_form(request.POST, request.FILES)
 
-        # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection("default")):
-            messages.error(request, "Unable to run job: RQ worker process not running.")
+        # Allow execution only if Celery worker is running
+        if not app.control.inspect().active():
+            messages.error(request, "Unable to run job: no celery workers are running.")
 
         elif form.is_valid():
             # Run the job. A new JobResult is created.
