@@ -3,18 +3,19 @@
 #  only. It is not intended for production use.                   #
 ###################################################################
 
-from nautobot.core.settings import *  # noqa: F401,F403
-from distutils.util import strtobool
-
 import os
+
+from nautobot.core.settings import *  # noqa: F401,F403
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
+
 
 ALLOWED_HOSTS = ["*"]
 
 DATABASES = {
     "default": {
-        "NAME": os.getenv("NAUTOBOT_DATABASE", "nautobot"),
-        "USER": os.getenv("NAUTOBOT_USER", ""),
-        "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
+        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
+        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
+        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": "",
         "CONN_MAX_AGE": 300,
@@ -23,60 +24,32 @@ DATABASES = {
 }
 
 PLUGINS = [
-    "nautobot.extras.tests.dummy_plugin",
+    "dummy_plugin",
 ]
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 
-def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
-    Examples:
-        >>> is_truthy('yes')
-        True
-    Args:
-        arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
-        f, false, off and 0. Raises ValueError if val is anything else.
-    """
-    if isinstance(arg, bool):
-        return arg
-    return bool(strtobool(str(arg)))
+# Redis variables
 
-
-# Here we are setting up a separate DB for the tests to use.
-# This allows us to keep the rqworker running when working
-# through the devcontainer or when using invoke.
-RQ_QUEUES = {
+# The django-redis cache is used to establish concurrent locks using Redis. The
+# django-rq settings will use the same instance/database by default.
+#
+# This "default" server is now used by RQ_QUEUES.
+# >> See: nautobot.core.settings.RQ_QUEUES
+CACHES = {
     "default": {
-        "HOST": os.getenv("REDIS_HOST", "localhost"),
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
-        "DB": 2,
-        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
-        "DEFAULT_TIMEOUT": 300,
-    },
-    "webhooks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
-    },
-    "check_releases": {
-        "HOST": os.getenv("REDIS_HOST", "localhost"),
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
-        "DB": 2,
-        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
-        "DEFAULT_TIMEOUT": 300,
-    },
-    "custom_fields": {
-        "HOST": os.getenv("REDIS_HOST", "localhost"),
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
-        "DB": 2,
-        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
-        "DEFAULT_TIMEOUT": 900,
-    },
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": parse_redis_connection(redis_database=2),
+        "TIMEOUT": 300,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
 }
+
+# RQ_QUEUES is not set here because it just uses the default that gets imported
+# up top via `from nautobot.core.settings import *`.
+
+# REDIS CACHEOPS
+CACHEOPS_REDIS = parse_redis_connection(redis_database=3)

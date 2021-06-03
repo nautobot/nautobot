@@ -90,8 +90,10 @@ class RelationshipTest(RelationshipBaseTest):
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             m2m.clean()
+        expected_errors = {"source_filter": ["Filter for dcim.Site must be a dictionary"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_filter_not_valid(self):
         m2m = Relationship(
@@ -103,8 +105,42 @@ class RelationshipTest(RelationshipBaseTest):
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             m2m.clean()
+        expected_errors = {"source_filter": ["'notvalid' is not a valid filter parameter for dcim.Site object"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        m2m = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=self.site_ct,
+            source_filter={"region": "not a list"},
+            destination_type=self.rack_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+
+        with self.assertRaises(ValidationError) as handler:
+            m2m.clean()
+        expected_errors = {"source_filter": ["'region': Enter a list of values."]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        m2m = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=self.site_ct,
+            source_filter={"region": ["not a valid region"]},
+            destination_type=self.rack_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+
+        with self.assertRaises(ValidationError) as handler:
+            m2m.clean()
+        expected_errors = {
+            "source_filter": [
+                "'region': Select a valid choice. not a valid region is not one of the available choices."
+            ]
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_same_object(self):
         m2m = Relationship(
@@ -123,14 +159,13 @@ class RelationshipTest(RelationshipBaseTest):
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=self.site_ct,
-            source_filter={"region": "myregion"},
+            source_filter={"name": ["site-b"]},
             destination_type=self.rack_ct,
-            destination_filter={"site": "mysite"},
+            destination_filter={"site": ["site-a"]},
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         m2m.clean()
-
         self.assertTrue(True)
 
     def test_get_label_input(self):
@@ -187,14 +222,18 @@ class RelationshipTest(RelationshipBaseTest):
 class RelationshipAssociationTest(RelationshipBaseTest):
     def test_clean_wrong_type(self):
         # Create with the wrong source Type
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.m2m_1, source=self.sites[0], destination=self.vlans[0])
             cra.clean()
+        expected_errors = {"source_type": ["source_type has a different value than defined in Vlan to Rack"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
         # Create with the wrong destination Type
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.racks[0])
             cra.clean()
+        expected_errors = {"destination_type": ["destination_type has a different value than defined in Vlan to Rack"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_o2o(self):
         """Validate that one-to-one relationships can't have more than one relationship association per side. """
@@ -207,13 +246,22 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         cra.clean()
         cra.save()
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[2])
             cra.clean()
 
-        with self.assertRaises(ValidationError):
+        expected_errors = {
+            "source": ["Unable to create more than one Primary Rack per Site association to Rack A (source)"]
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[2], destination=self.sites[0])
             cra.clean()
+        expected_errors = {
+            "destination": ["Unable to create more than one Primary Rack per Site association to Site A (destination)"]
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_o2m(self):
         """Validate that one-to-many relationships can't have more than one relationship association per source. """
@@ -230,9 +278,11 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         cra.clean()
         cra.save()
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2o_1, source=self.sites[2], destination=self.vlans[0])
             cra.clean()
+        expected_errors = {"source_type": ["source_type has a different value than defined in Primary Rack per Site"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_m2m(self):
         """Validate that many-to-many relationship can have many relationship associations."""

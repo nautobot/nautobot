@@ -38,7 +38,6 @@ from nautobot.utilities.forms import (
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import *
 from .constants import *
-from .formfields import IPNetworkFormField
 from .models import (
     Aggregate,
     IPAddress,
@@ -295,6 +294,11 @@ class AggregateBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEd
 
 class AggregateFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
     model = Aggregate
+    field_order = [
+        "q",
+        "rir",
+    ]
+
     q = forms.CharField(required=False, label="Search")
     family = forms.ChoiceField(
         required=False,
@@ -337,12 +341,11 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class PrefixForm(BootstrapMixin, PrefixFieldMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(
@@ -363,7 +366,6 @@ class PrefixForm(PrefixFieldMixin, BootstrapMixin, TenancyForm, CustomFieldModel
         queryset=VLAN.objects.all(),
         required=False,
         label="VLAN",
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "group_id": "$vlan_group",
@@ -458,7 +460,6 @@ class PrefixBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMi
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -559,11 +560,9 @@ class IPAddressForm(
     CustomFieldModelForm,
     RelationshipModelForm,
 ):
-    address = IPNetworkFormField()
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
-        display_field="display_name",
         initial_params={"interfaces": "$interface"},
     )
     interface = DynamicModelChoiceField(
@@ -586,7 +585,6 @@ class IPAddressForm(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     nat_region = DynamicModelChoiceField(
         queryset=Region.objects.all(),
@@ -604,7 +602,6 @@ class IPAddressForm(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
-        display_field="display_name",
         null_option="None",
         query_params={"site_id": "$site"},
     )
@@ -612,7 +609,6 @@ class IPAddressForm(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "rack_id": "$nat_rack",
@@ -631,13 +627,11 @@ class IPAddressForm(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     nat_inside = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,
         label="IP Address",
-        display_field="address",
         query_params={
             "device_id": "$nat_device",
             "virtual_machine_id": "$nat_virtual_machine",
@@ -677,6 +671,7 @@ class IPAddressForm(
         # Initialize helper selectors
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
+
         if instance:
             if type(instance.assigned_object) is Interface:
                 initial["interface"] = instance.assigned_object
@@ -692,8 +687,6 @@ class IPAddressForm(
                 elif type(nat_inside_parent) is VMInterface:
                     initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
                     initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
-            # Address is a computed field, so it must be added to initial.
-            initial["address"] = instance.address
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
@@ -757,7 +750,6 @@ class IPAddressBulkAddForm(BootstrapMixin, TenancyForm, AddressFieldMixin, Custo
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
@@ -887,7 +879,6 @@ class IPAddressBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFor
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
-        display_field="display_name",
     )
     mask_length = forms.IntegerField(
         min_value=IPADDRESS_MASK_LENGTH_MIN,

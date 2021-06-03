@@ -80,6 +80,7 @@ class BaseJob:
         - name (str)
         - description (str)
         - commit_default (bool)
+        - field_order (list)
         """
 
         pass
@@ -264,6 +265,11 @@ class BaseJob:
 
         # Set initial "commit" checkbox state based on the Meta parameter
         form.fields["_commit"].initial = getattr(self.Meta, "commit_default", True)
+
+        field_order = getattr(self.Meta, "field_order", None)
+
+        if field_order:
+            form.order_fields(field_order)
 
         return form
 
@@ -515,7 +521,7 @@ class ObjectVar(ScriptVariable):
         self,
         model=None,
         queryset=None,
-        display_field="name",
+        display_field="display",
         query_params=None,
         null_option=None,
         *args,

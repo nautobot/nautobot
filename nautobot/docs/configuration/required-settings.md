@@ -2,6 +2,8 @@
 
 ## ALLOWED_HOSTS
 
+Environment Variable: `NAUTOBOT_ALLOWED_HOSTS` specified as a space-separated quoted string (e.g. `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 example.com"`).
+
 This is a list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the Nautobot service. Usually this is the same as the hostname for the Nautobot server, but can also be different; for example, when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the Nautobot server. To help guard against [HTTP Host header attacks](https://docs.djangoproject.com/en/stable/topics/security/#host-headers-virtual-hosting), Nautobot will not permit access to the server via any other hostnames (or IPs).
 
 Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs.djangoproject.com/en/stable/ref/settings/#use-x-forwarded-host) to `True`, which means that if you're using a reverse proxy, the FQDN used to reach that reverse proxy needs to be in this list.
@@ -40,6 +42,15 @@ Nautobot requires access to a PostgreSQL 9.6 or later database service to store 
 * `PORT` - TCP port of the PostgreSQL service; leave blank for default port (TCP/5432)
 * `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
 
+The following environment variables may also be set for each of the above values:
+
+* `NAUTOBOT_DB_NAME`
+* `NAUTOBOT_DB_USER`
+* `NAUTOBOT_DB_PASSWORD`
+* `NAUTOBOT_DB_HOST`
+* `NAUTOBOT_DB_PORT`
+* `NAUTOBOT_DB_TIMEOUT`
+
 !!! warning
     Nautobot only supports PostgreSQL as a database backend. Do not modify the `ENGINE` setting or you
     will be unable to connect to the database.
@@ -72,10 +83,7 @@ caching, task queueing, and webhook features. The connection settings are explai
 to different Redis instances/databases per feature.
 
 !!! warning
-    It is highly recommended to keep the Redis databases for caching and tasks separate. Using the same database number on the
-    same Redis instance for both may result in queued background tasks being lost during cache flushing events.
-
-    For this reason, the default settings utilize database `1` for caching and database `0` for tasks.
+    It is highly recommended to keep the Redis databases for caching and tasks separate. Using the same database number on the same Redis instance for both may result in queued background tasks being lost during cache flushing events. For this reason, the default settings utilize database `1` for caching and database `0` for tasks.
 
 !!! tip
     The default Redis settings in your `nautobot_config.py` should be suitable for most deployments and should only require customization for more advanced configurations.
@@ -89,9 +97,14 @@ Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) settin
 
 For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
 
+!!! important
+    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching, as `django-cacheops` takes its place.
+
 #### CACHEOPS_REDIS
 
 Default: `"redis://localhost:6379/1"`
+
+Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
 
 If you wish to use SSL, you may set the URL scheme to `rediss://`, for example:
 
@@ -105,12 +118,10 @@ This setting may also be a dictionary style, but that is not covered here. Pleas
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the
-[`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).
 
 !!! warning
-    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will
-    result in an error if both are set.
+    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
 Example:
 
@@ -135,11 +146,60 @@ setup](https://github.com/Suor/django-cacheops#setup).
 
 ### Task Queuing
 
-Task queues are configured by defining the `RQ_QUEUES` setting. Nautobot's core functionality relies on four distinct queues and these represent the minimum required set of queues that must be defined. By default, these are identical. It is up to you to modify them for your environment and know that other use cases like specific plugins may require additional queues to be defined.
+Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting. 
+
+Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
+
+In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined. 
+
+#### CACHES
+
+The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
+
+!!! important
+    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
+
+Default:
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://localhost:6379/0",
+        "TIMEOUT": 300,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+```
 
 #### RQ_QUEUES
 
+The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
+
+Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
+
 Default:
+
+```python
+RQ_QUEUES = {
+    "default": {
+        "USE_REDIS_CACHE": "default",
+    },
+    "check_releases": {
+        "USE_REDIS_CACHE": "default",
+    },
+    "custom_fields": {
+        "USE_REDIS_CACHE": "default",
+    },
+    "webhooks": {
+        "USE_REDIS_CACHE": "default",
+    },
+}
+```
+
+More verbose dictionary-style configuration is still supported, but is not required unless you absolutely need more advanced task queuing configuration. An example configuration follows:
 
 ```python
 RQ_QUEUES = {
@@ -178,18 +238,30 @@ RQ_QUEUES = {
 }
 ```
 
-- `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
-- `PORT` - TCP port of the Redis service; leave blank for default port (6379)
-- `PASSWORD` - Redis password (if set)
+* `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
+* `PORT` - TCP port of the Redis service; leave blank for default port (6379)
+* `PASSWORD` - Redis password (if set)
 * `DB` - Numeric database ID
-- `SSL` - Use SSL connection to Redis
-- `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
+* `SSL` - Use SSL connection to Redis
+* `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
+
+The following environment variables may also be set for some of the above values:
+
+* `NAUTOBOT_REDIS_HOST`
+* `NAUTOBOT_REDIS_PORT`
+* `NAUTOBOT_REDIS_PASSWORD`
+* `NAUTOBOT_REDIS_USERNAME`
+* `NAUTOBOT_REDIS_SSL`
+* `NAUTOBOT_REDIS_TIMEOUT`
+
+!!! note
+    If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
+
+For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
 #### Using Redis Sentinel
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must modify the
-connection settings. It requires the removal of the `HOST`, `PORT`, and `DEFAULT_TIMEOUT` keys from above and the
-addition of three new keys.
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must be using dictionary-style settings, and modify the connection settings. This requires the removal of the `HOST`, `PORT`, and `DEFAULT_TIMEOUT` keys from the example above and the addition of three new keys.
 
 * `SENTINELS`: List of tuples or tuple of tuples with each inner tuple containing the name or IP address
 of the Redis server and port for each sentinel instance to connect to
@@ -235,12 +307,13 @@ RQ_QUEUES = {
 !!! note
     It is permissible to use Sentinel for only one database and not the other.
 
-For more details on configuring RQ, please see the documentation for [Django RQ
-installation](https://github.com/rq/django-rq#installation).
+For more details on configuring RQ with Redis Sentinel, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
 ---
 
 ## SECRET_KEY
+
+Environment Variable: `NAUTOBOT_SECRET_KEY`
 
 This is a secret, random string used to assist in the creation new cryptographic hashes for passwords and HTTP cookies. The key defined here should not be shared outside of the configuration file. `SECRET_KEY` can be changed at any time, however be aware that doing so will invalidate all existing sessions.
 
@@ -254,7 +327,7 @@ Please note that this key is **not** used directly for hashing user passwords or
 You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
 ```no-highlight
-$ nautobot-server generate_secret_key.py
+$ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 

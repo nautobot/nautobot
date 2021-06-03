@@ -1,12 +1,12 @@
 from django.http import QueryDict
 from django.test import TestCase
 
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.utils import (
     get_filterset_for_model,
     deepmerge,
     dict_to_filter_params,
     normalize_querydict,
-    is_truthy,
 )
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet

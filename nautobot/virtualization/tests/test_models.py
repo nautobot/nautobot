@@ -10,7 +10,7 @@ class VirtualMachineTestCase(TestCase):
     def setUp(self):
         statuses = Status.objects.get_for_model(VirtualMachine)
 
-        cluster_type = ClusterType.objects.create(name="Test Cluster Type 1", slug="Test Cluster Type 1")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
         self.cluster = Cluster.objects.create(name="Test Cluster 1", type=cluster_type)
         self.status = statuses.get(slug="active")
 

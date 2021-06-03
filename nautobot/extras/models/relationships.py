@@ -93,15 +93,17 @@ class RelationshipModel(models.Model):
             response {
                 "source": {
                     <relationship #1>: {
-                        "label": <>,
-                        "value": <>,
-                        "url": <>,
+                        "label": "...",
+                        "peer_type": <ContentType>,
                         "has_many": False,
+                        "value": <model>,
+                        "url": "...",
                     },
                     <relationship #2>: {
-                        "label": <>,
-                        "value": <>,
+                        "label": "...",
+                        "peer_type": <ContentType>,
                         "has_many": True,
+                        "value": None,
                         "queryset": <queryset #2>
                     },
                 },
@@ -124,6 +126,7 @@ class RelationshipModel(models.Model):
 
                 resp[side][relationship] = {
                     "label": relationship.get_label(side),
+                    "peer_type": getattr(relationship, f"{peer_side}_type"),
                     "value": None,
                 }
 
@@ -232,7 +235,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name.replace("_", " ").capitalize()
+        return self.name.replace("_", " ")
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.
@@ -329,16 +332,29 @@ class Relationship(BaseModel, ChangeLoggedModel):
             side_model = getattr(self, f"{side}_type").model_class()
             model_name = side_model._meta.label
             if not isinstance(filter, dict):
-                raise ValidationError(f"Filter for {model_name} must be a dictionary")
+                raise ValidationError({f"{side}_filter": f"Filter for {model_name} must be a dictionary"})
 
-            filterset = get_filterset_for_model(side_model)
-            if not filterset:
-                raise ValidationError(f"Filter are not supported for {model_name} object (Unable to find a FilterSet)")
+            filterset_class = get_filterset_for_model(side_model)
+            if not filterset_class:
+                raise ValidationError(
+                    {
+                        f"{side}_filter": f"Filters are not supported for {model_name} object (Unable to find a FilterSet)"
+                    }
+                )
+            filterset = filterset_class(filter, side_model.objects.all())
+
+            error_messages = []
+            if filterset.errors:
+                for key in filterset.errors:
+                    error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
 
             filterset_params = set(filterset.get_filters().keys())
             for key in filter.keys():
                 if key not in filterset_params:
-                    raise ValidationError(f"'{key}' is not a valid filter parameter for {model_name} object")
+                    error_messages.append(f"'{key}' is not a valid filter parameter for {model_name} object")
+
+            if error_messages:
+                raise ValidationError({f"{side}_filter": error_messages})
 
         # If the model already exist, ensure that it's not possible to modify the source or destination type
         if self.present_in_database:

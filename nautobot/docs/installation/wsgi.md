@@ -1,8 +1,5 @@
 # Deploying Nautobot: Web Service and Worker
 
-!!! warning
-    As of Nautobot v1.0.0b3 these instructions are in a pre-release state and will be evolving rapidly!
-
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
 Nautobot comes preinstalled with [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) to use as the WSGI server, however other WSGI servers are available and should work similarly well. [Gunicorn](http://gunicorn.org/) is a popular alternative.
@@ -17,7 +14,7 @@ $ nautobot-server start --help
 
 ## Configuration
 
-Copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
+As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
 
 ```ini
 [uwsgi]
@@ -84,7 +81,7 @@ First, copy and paste the following into `/etc/systemd/system/nautobot.service`:
 ```
 [Unit]
 Description=Nautobot WSGI Service
-Documentation=https://nautobot.readthedocs.io/
+Documentation=https://nautobot.readthedocs.io/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -116,7 +113,7 @@ Next, copy and paste the following into `/etc/systemd/system/nautobot-worker.ser
 ```
 [Unit]
 Description=Nautobot Request Queue Worker
-Documentation=https://nautobot.readthedocs.io/
+Documentation=https://nautobot.readthedocs.io/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -159,7 +156,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
 ● nautobot.service - Nautobot WSGI Service
      Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
      Active: active (running) since Fri 2021-03-05 22:23:33 UTC; 35min ago
-       Docs: https://nautobot.readthedocs.io/en/latest/
+       Docs: https://nautobot.readthedocs.io/en/stable/
    Main PID: 6992 (nautobot-server)
       Tasks: 16 (limit: 9513)
      Memory: 221.1M

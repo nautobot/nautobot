@@ -148,9 +148,11 @@ Available tasks:
   build               Build all docker images.
   cli                 Launch a bash shell inside the running Nautobot container.
   createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
+  dumpdata            Dump database data into file, only for development environment use.
   debug               Start Nautobot and its dependencies in debug mode.
   destroy             Destroy all containers and volumes.
   flake8              Check for PEP8 compliance and other style issues.
+  loaddata            Load data from file into database, only for development environment use.
   makemigrations      Perform makemigrations operation in Django.
   migrate             Perform migrate operation in Django.
   nbshell             Launch an interactive nbshell session.
@@ -177,25 +179,46 @@ Additional useful commands for the development environment:
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
 - `invoke stop` - Stops all containers created by `invoke start`
 
-!!! info
-    By default the Nautobot docker images for development are built with Python 3.7. If you wish to build them with a different Python version, stop any running containers, then set the environment variable `PYTHON_VER` to the desired version (for example, `export PYTHON_VER=3.8`) and rerun the `invoke build` command. As long as `PYTHON_VER` remains set, all other `invoke` tasks will use the containers built for this version instead of the default.
+#### Invoke Configuration
+
+The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html) which you may want to override. Configuration properties include:
+
+- `python_ver`: the Python version which is used to build the Docker container (default: `3.7`)
+- `local`: run the commands in the local environment vs the Docker container (default: `False`)
+- `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
+- `compose_file`: the Docker Compose YAML file to use (default: `"docker-compose.yml"`)
+- `compose_override_file`: the default Docker Compose override file to use if it exists (default: `"docker-compose.override.yml"`)
+
+These setting may be overridden several different ways (from highest to lowest precedence):
+
+- Command line argument on the individual commands (see `invoke $command --help`) if available
+- Using environment variables such as `INVOKE_NAUTOBOT_PYTHON_VER`; the variables are prefixed with `INVOKE_NAUTOBOT_` and must be uppercase
+- Using an `invoke.yml` file (see `invoke.yml.example`)
 
 #### Working with Docker Compose
 
-The files related to the Docker container environment used for development can be found inside of the `development` directory at the root of the project.
+The files related to the Docker development environment can be found inside of the `development` directory at the root of the project.
 
 In this directory you'll find the following core files:
 
-- `Dockerfile` - Docker container definition for Nautobot
-
+- `docker-compose.build.yml` - Docker compose override file used to start/build the production docker images for local testing.
+- `docker-compose.debug.yml` - Docker compose override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
+- `docker-compose.dev.yml` - Docker compose override file used to mount the Nautobot source code inside the container at `/source` and the `nautobot_config.py` from the same directory as `/opt/nautobot/nautobot_config.py` for the active configuration.
 - `docker-compose.yml` - Docker service containers and their relationships to the Nautobot container
-- `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
 - `dev.env` - Environment variables used to setup the container services
 - `nautobot_config.py` - Nautobot configuration file
 
+In addition to the development environment the `Dockerfile` which is used to build the Nautobot containers is located in the `docker` directory at the root of the project.  The development container is actually used to install the development tools necessary to build the packages which are used to install Nautobot in the production image as a separate build stage.
+
+In the `docker` directory you will find the following files:
+
+- `Dockerfile` - Docker container definition for Nautobot containers
+- `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
+- `uwsgi.ini` - The [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) ini file used in the production docker container
+
 #### Docker-Compose Overrides
 
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml```.
+If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the```development``` directory called ```docker-compose.override.yml``` and set the environment variable `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.override.yml`.
 
 This file will override any configuration in the main `docker-compose.yml` file, without making changes to the repository.
 
@@ -289,6 +312,14 @@ $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-po
 ```
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
+
+#### Install Hadolint
+
+[Hadolint](https://github.com/hadolint/hadolint) is a tool used to validate and lint Dockerfiles to ensure we are following best practices. On macOS with [Homebrew](https://brew.sh/) you can install Hadolint by running:
+
+```no-highlight
+$ brew install hadolint
+```
 
 #### Creating a Python Virtual Environment
 
@@ -416,7 +447,7 @@ Performing system checks...
 System check identified no issues (0 silenced).
 November 18, 2020 - 15:52:31
 Django version 3.1, using settings 'nautobot.core.settings'
-Starting development server at http://127.0.0.1:8000/
+Starting development server at http://127.0.0.1:8080/
 Quit the server with CONTROL-C.
 ```
 
@@ -491,6 +522,9 @@ Throughout the course of development, it's a good idea to occasionally run Nauto
 | Docker Compose Workflow | Virtual Environment Workflow                                           |
 |-------------------------|------------------------------------------------------------------------|
 | `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
+
+!!! info
+    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.  See the [Invoke configuration](#invoke-configuration) for more information.
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 

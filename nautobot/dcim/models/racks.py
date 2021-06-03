@@ -278,7 +278,7 @@ class Rack(PrimaryModel, StatusModel):
         )
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("dcim:rack", args=[self.pk])
@@ -343,7 +343,7 @@ class Rack(PrimaryModel, StatusModel):
             return reversed(range(1, self.u_height + 1))
 
     @property
-    def display_name(self):
+    def display(self):
         if self.facility_id:
             return f"{self.name} ({self.facility_id})"
         return self.name

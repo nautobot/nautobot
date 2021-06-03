@@ -40,7 +40,7 @@ Every minor version release should refresh `poetry.lock`, so that it lists the m
 5. Run all tests and check that the UI and API function as expected.
 
 !!! hint
-    You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are avaiable and the versions it would upgrade.
+    You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are available and the versions it would upgrade.
 
 ### Update Static Libraries
 
@@ -163,6 +163,37 @@ Next, publish to PyPI using the username `__token__` and the Nautobot PyPI API t
 
 ```
 $ poetry publish --username __token__ --password <api_token>
+```
+
+### Publish Docker Images
+
+Build the images locally:
+
+```no-highlight
+for ver in 3.6 3.7 3.8 3.9; do
+  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+  invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+  invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+done
+```
+
+Test the images locally:
+```no-highlight
+for ver in 3.6 3.7 3.8 3.9; do
+  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+  INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml invoke stop
+  INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml invoke integration-tests
+done
+```
+
+Push the images to GitHub Container Registry and Docker Hub
+```no-highlight
+docker login
+docker login ghcr.io
+for ver in 3.6 3.7 3.8 3.9; do
+  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+  invoke docker-push main
+done
 ```
 
 ### Bump the Development Version
