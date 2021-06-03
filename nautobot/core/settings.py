@@ -120,6 +120,9 @@ SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
 
+# Test runner that is aware of our use of "integration" tags and only runs
+# integration tests if explicitly passed in with `nautobot-server test --tag integration`.
+TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 
 #
 # Django cryptography

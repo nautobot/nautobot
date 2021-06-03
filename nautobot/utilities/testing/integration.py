@@ -1,8 +1,8 @@
 import os
-from unittest import skipIf
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
+from django.test import tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
@@ -13,7 +13,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
 
 # Hostname used by Selenium client to talk to Nautobot
-SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "localhost")
+SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "host.docker.internal")
 
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
@@ -31,10 +31,7 @@ class NautobotRemote(webdriver.Remote):
         return self.find_element_by_xpath(f'//button[text()="{button_text}"]')
 
 
-@skipIf(
-    "NAUTOBOT_INTEGRATION_TEST" not in os.environ,
-    "NAUTOBOT_INTEGRATION_TEST environment variable not set",
-)
+@tag("integration")
 class SeleniumTestCase(StaticLiveServerTestCase):
     """
     Base test case for Selenium integration testing with custom helper methods.
@@ -44,7 +41,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
     """
 
     host = "0.0.0.0"  # Always listen publicly
-    selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `localhost`
+    selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
 
     @classmethod
     def setUpClass(cls):

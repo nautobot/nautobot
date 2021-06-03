@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
-from django.test import override_settings
+from django.test import override_settings, tag
 from rest_framework import status
 from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
@@ -63,6 +63,7 @@ class APITestCase(ModelTestCase):
         return reverse(viewname)
 
 
+@tag("unit")
 class APIViewTestCases:
     class GetObjectViewTestCase(APITestCase):
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -427,6 +428,7 @@ class APIViewTestCases:
         pass
 
 
+@tag("unit")
 class APITransactionTestCase(_APITransactionTestCase):
     def setUp(self):
         """

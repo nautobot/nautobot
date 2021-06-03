@@ -420,6 +420,12 @@ def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=Tru
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+
+    # Append any extra args that were passed in from the `context`. Currently
+    # this is coming from `integration_test` to avoid duplicating the `unitest`
+    # code just for this. If `extra_args` aren't set, it's a noop.
+    command += getattr(context, "extra_args", "")
+
     run_command(context, command)
 
 
@@ -444,7 +450,8 @@ def integration_test(
     context, keepdb=False, label="nautobot.core.tests.integration", failfast=False, buffer=True, verbose=False
 ):
     """Run Nautobot integration tests."""
-    os.environ["NAUTOBOT_INTEGRATION_TEST"] = "True"
+    # Append extra args to the context that will be picked up by the `unittest` task.
+    context.extra_args = " --tag integration"
     unittest(context, keepdb=keepdb, label=label, failfast=failfast, buffer=buffer, verbose=verbose)
 
 
