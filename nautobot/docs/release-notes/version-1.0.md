@@ -186,6 +186,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Fixed
 
 - [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
+- [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
 
 ### Removed
 
