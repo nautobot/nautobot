@@ -53,7 +53,7 @@ if [[ ! -z $SYNTAX ]]; then
 	exit 1
 fi
 
-echo -e "\n>> Starting Selenium in background..."
+echo -e "\n>> Starting Selenium container in background..."
 invoke start --service selenium
 RC=$?
 if [[ $RC != 0 ]]; then
@@ -70,7 +70,7 @@ if [[ $RC != 0 ]]; then
 fi
 
 echo -e "\n>> Running integration tests..."
-invoke integration-test --failfast --keepdb
+invoke integration-test --failfast --keepdb --append
 RC=$?
 if [[ $RC != 0 ]]; then
 	echo -e "\n$(info) one or more integration tests failed, failing build."

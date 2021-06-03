@@ -405,13 +405,28 @@ def check_migrations(context):
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
+        "tag": "Run only tests with the specified tag. Can be used multiple times.",
+        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
-    }
+        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+    },
+    iterable=["tag", "exclude_tag"],
 )
-def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=True, verbose=False):
+def unittest(
+    context,
+    keepdb=False,
+    label="nautobot",
+    failfast=False,
+    buffer=True,
+    exclude_tag=None,
+    tag=None,
+    verbose=False,
+    append=False,
+):
     """Run Nautobot unit tests."""
-    command = f"coverage run --module nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
 
+    append_arg = " --append" if append else ""
+    command = f"coverage run{append_arg} --module nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
     if keepdb:
         command += " --keepdb"
     if failfast:
@@ -420,11 +435,10 @@ def unittest(context, keepdb=False, label="nautobot", failfast=False, buffer=Tru
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-
-    # Append any extra args that were passed in from the `context`. Currently
-    # this is coming from `integration_test` to avoid duplicating the `unitest`
-    # code just for this. If `extra_args` aren't set, it's a noop.
-    command += getattr(context, "extra_args", "")
+    if tag is not None:
+        command += " --tag ".join([" "] + tag)
+    if exclude_tag is not None:
+        command += " --exclude-tag ".join([" "] + exclude_tag)
 
     run_command(context, command)
 
@@ -443,16 +457,40 @@ def unittest_coverage(context):
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
+        "tag": "Run only tests with the specified tag. Can be used multiple times.",
+        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
-    }
+        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+    },
+    iterable=["tag", "exclude_tag"],
 )
 def integration_test(
-    context, keepdb=False, label="nautobot.core.tests.integration", failfast=False, buffer=True, verbose=False
+    context,
+    keepdb=False,
+    label="nautobot",
+    failfast=False,
+    buffer=True,
+    tag=None,
+    exclude_tag=None,
+    verbose=False,
+    append=False,
 ):
     """Run Nautobot integration tests."""
-    # Append extra args to the context that will be picked up by the `unittest` task.
-    context.extra_args = " --tag integration"
-    unittest(context, keepdb=keepdb, label=label, failfast=failfast, buffer=buffer, verbose=verbose)
+
+    # Enforce "integration" tag
+    tag.append("integration")
+
+    unittest(
+        context,
+        keepdb=keepdb,
+        label=label,
+        failfast=failfast,
+        buffer=buffer,
+        tag=tag,
+        exclude_tag=exclude_tag,
+        verbose=verbose,
+        append=append,
+    )
 
 
 @task(

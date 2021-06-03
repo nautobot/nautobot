@@ -612,7 +612,7 @@ Integration tests are run using the `invoke integration-test` command. All integ
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                             |
 |---------------------------|------------------------------------------------------------------------------------------|
-| `invoke integration-test` | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py --tag integration `|
+| `invoke integration-test` | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py --tag integration` |
 
 !!! info
     The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag. 
