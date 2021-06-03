@@ -470,7 +470,7 @@ CACHES = {
 }
 
 #
-# Django RQ (Webhooks backend)
+# Django RQ (used for legacy background processesing)
 #
 
 # These defaults utilize the Django caches setting defined for django-redis.
@@ -489,3 +489,11 @@ RQ_QUEUES = {
         "USE_REDIS_CACHE": "default",
     },
 }
+
+#
+# Celery (used for background processesing)
+#
+
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_BROKER_URL = CACHES["default"]["LOCATION"]
