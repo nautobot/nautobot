@@ -560,7 +560,7 @@ Before running integration tests, the `selenium` container must be running. If y
 |---------------------------|-----------------------------------|
 | (automatic)               | `invoke start --service selenium` |
 
-Integration tests are run using the `invoke integration_test` command.
+Integration tests are run using the `invoke integration-test` command.
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                                           |
 |---------------------------|--------------------------------------------------------------------------------------------------------|
