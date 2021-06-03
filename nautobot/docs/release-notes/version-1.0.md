@@ -177,7 +177,19 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
-## Unreleased (2021-05-27)
+## Unreleased (2021-MM-DD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
+
+### Removed
+
+## v1.0.2 (2021-05-27)
 
 ### Added
 
