@@ -983,6 +983,8 @@ class VLANGroup(OrganizationalModel):
         null=True,
     )
     description = models.CharField(max_length=200, blank=True)
+    min_vid = models.PositiveIntegerField(verbose_name="Minimum VLAN ID", default=1)
+    max_vid = models.PositiveIntegerField(verbose_name="Maximum VLAN ID", default=4094)
 
     csv_headers = ["name", "slug", "site", "description"]
 
@@ -1010,6 +1012,8 @@ class VLANGroup(OrganizationalModel):
             self.slug,
             self.site.name if self.site else None,
             self.description,
+            self.min_vid,
+            self.max_vid,
         )
 
     def get_next_available_vid(self):
@@ -1017,7 +1021,7 @@ class VLANGroup(OrganizationalModel):
         Return the first available VLAN ID (1-4094) in the group.
         """
         vlan_ids = VLAN.objects.filter(group=self).values_list("vid", flat=True)
-        for i in range(1, 4095):
+        for i in range(self.min_vid, self.max_vid+1):
             if i not in vlan_ids:
                 return i
         return None
@@ -1121,6 +1125,12 @@ class VLAN(PrimaryModel, StatusModel):
         # Validate VLAN group
         if self.group and self.group.site != self.site:
             raise ValidationError({"group": "VLAN group must belong to the assigned site ({}).".format(self.site)})
+
+        if self.group and self.group.min_vid > self.vid:
+            raise ValidationError({"group": "VLAN vid ({}) must be between min ({}) and max ({}) VLAN IDs assigned to the group.".format(self.vid, self.group.min_vid, self.group.max_vid)})
+
+        if self.group and self.group.max_vid < self.vid:
+            raise ValidationError({"group": "VLAN vid ({}) must be between min ({}) and max ({}) VLAN IDs assigned to the group.".format(self.vid, self.group.min_vid, self.group.max_vid)})
 
     def to_csv(self):
         return (

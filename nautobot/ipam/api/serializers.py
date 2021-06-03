@@ -202,6 +202,8 @@ class VLANGroupSerializer(CustomFieldModelSerializer):
             "site",
             "description",
             "vlan_count",
+            "min_vid",
+            "max_vid",
             "custom_fields",
             "created",
             "last_updated",

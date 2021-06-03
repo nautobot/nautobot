@@ -987,6 +987,8 @@ class VLANGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm)
             "name",
             "slug",
             "description",
+            "min_vid",
+            "max_vid"
         ]
 
 

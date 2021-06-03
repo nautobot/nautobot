@@ -82,8 +82,16 @@
                 <tr>
                     <td>VLANs</td>
                     <td>
-                        <a href="{% url 'ipam:vlan_list' %}?group={{ object.pk }}">{{ vlan_table.rows|length }}</a>
+                        <a href="{% url 'ipam:vlan_list' %}?group={{ object.pk }}">{{ vlan_table.rows|length|add:"-1" }}</a>
                     </td>
+                </tr>
+                <tr>
+                    <td>Minimum VLAN #</td>
+                    <td>{{ object.min_vid }}</td>
+                </tr>
+                <tr>
+                    <td>Maximum VLAN #</td>
+                    <td>{{ object.max_vid }}</td>
                 </tr>
             </table>
         </div>

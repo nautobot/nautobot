@@ -106,7 +106,7 @@ class NestedVLANGroupSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.VLANGroup
-        fields = ["id", "url", "name", "slug", "vlan_count"]
+        fields = ["id", "url", "name", "slug", "vlan_count", "min_vid", "max_vid"]
 
 
 class NestedVLANSerializer(WritableNestedSerializer):
