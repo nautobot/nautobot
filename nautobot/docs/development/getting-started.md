@@ -567,7 +567,7 @@ Integration tests are run using the `invoke integration-test` command.
 | `invoke integration-test` | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py nautobot.core.tests.integration` |
 
 !!! info
-    The same arguments supported by `invoke unittest` are supported by `invoke integration_test`. The key difference being the dependency upon the Selenium container, and a different default test label. Additionally, you may also use `invoke integration-test` in the Virtual Environment workflow given that the container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
+    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and a different default test label. Additionally, you may also use `invoke integration-test` in the Virtual Environment workflow given that the container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
 
 Unlike unit tests, where the tests live adjacent to each inner application within the Nautobot code, integration tests must only ever be defined in `nautobot.core.tests.integration`. The reason for this is that integration tests are designed to test the core application and all of its functionality in one place. Integration tests must never be added anywhere but `nautobot.core.tests.integration`. We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and managable continuous development cycle.
 
