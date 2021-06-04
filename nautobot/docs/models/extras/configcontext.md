@@ -5,6 +5,7 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Region
 * Site
 * Role
+* Device type
 * Platform
 * Cluster group
 * Cluster
