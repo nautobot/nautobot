@@ -72,12 +72,13 @@ def register_menu_items(tab_list):
 
             group_perms = []
             for item in group.items:
-                registry_groups[group.name]["items"][item.link] = {
-                    "link_text": item.link_text,
-                    "weight": item.weight,
-                    "buttons": item.buttons,
-                    "permissions": item.permissions,
-                }
+                if item.link not in registry_groups[group.name]["items"]:
+                    registry_groups[group.name]["items"][item.link] = {
+                        "link_text": item.link_text,
+                        "weight": item.weight,
+                        "buttons": item.buttons,
+                        "permissions": item.permissions,
+                    }
 
                 group_perms += item.permissions
 
@@ -131,7 +132,7 @@ class NavMenuTab(PermissionsMixin):
         self.name = name
         self.weight = weight
         if groups is not None:
-            if type(groups) not in (list, tuple):
+            if not isinstance(groups, (list, tuple)):
                 raise TypeError("Groups must be passed as a tuple or list.")
             elif not all(isinstance(group, NavMenuGroup) for group in groups):
                 raise TypeError("All groups defined in a tab must be an instance of NavMenuGroup")
@@ -155,7 +156,7 @@ class NavMenuGroup(PermissionsMixin):
         self.name = name
         self.weight = weight
 
-        if items is not None and type(items) not in (list, tuple):
+        if items is not None and not isinstance(items, (list, tuple)):
             raise TypeError("Items must be passed as a tuple or list.")
         elif not all(isinstance(item, NavMenuItem) for item in items):
             raise TypeError("All items defined in a group must be an instance of NavMenuItem")
@@ -179,10 +180,12 @@ class NavMenuItem(PermissionsMixin):
         self.link_text = link_text
         self.weight = weight
 
-        if buttons is not None and type(buttons) not in (list, tuple):
+        if buttons is not None and not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
-        elif not all(isinstance(button, NavMenuButton) for button in buttons) and not all(
-            issubclass((button, NavMenuButton) for button in buttons)
+        elif not all(
+            isinstance(button, NavMenuButton)
+            or issubclass(button, NavMenuButton)
+            for button in buttons
         ):
             raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
         self.buttons = buttons

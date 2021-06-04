@@ -183,4 +183,5 @@ class ButtonActionColorChoices(ChoiceSet):
         (EXPORT, "Export"),
         (IMPORT, "Import"),
         (INFO, "Info"),
+        (SUBMIT, "Submit"),
     )
