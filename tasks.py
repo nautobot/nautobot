@@ -427,6 +427,7 @@ def unittest(
 
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
+    # booleans
     if keepdb:
         command += " --keepdb"
     if failfast:
@@ -435,10 +436,14 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-    if tag is not None:
-        command += " --tag ".join([" "] + tag)
-    if exclude_tag is not None:
-        command += " --exclude-tag ".join([" "] + exclude_tag)
+
+    # lists
+    if tag:
+        for individual_tag in tag:
+            command += f" --tag {individual_tag}"
+    if exclude_tag:
+        for individual_exclude_tag in exclude_tag:
+            command += f" --tag {individual_exclude_tag}"
 
     run_command(context, command)
 
