@@ -12,8 +12,9 @@ from rest_framework import status
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import Status, Webhook
-from nautobot.extras.webhooks import enqueue_webhooks, generate_signature
-from nautobot.extras.webhooks_worker import process_webhook
+from nautobot.extras.webhooks import enqueue_webhooks
+from nautobot.extras.tasks import process_webhook
+from nautobot.extras.utils import generate_signature
 from nautobot.utilities.testing import APITestCase
 
 

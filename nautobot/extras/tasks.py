@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 from logging import getLogger
 
 import requests
@@ -9,6 +7,7 @@ from jinja2.exceptions import TemplateError
 
 from nautobot.core.celery import app
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
+from nautobot.extras.utils import generate_signature
 
 
 logger = getLogger("nautobot.extras.tasks")
@@ -100,14 +99,6 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
     """
     Make a POST request to the defined Webhook
     """
-
-    def generate_signature(request_body, secret):
-        """
-        Return a cryptographic signature that can be used to verify the authenticity of webhook data.
-        """
-        hmac_prep = hmac.new(key=secret.encode("utf8"), msg=request_body, digestmod=hashlib.sha512)
-        return hmac_prep.hexdigest()
-
     from nautobot.extras.models import Webhook  # avoiding circular import
 
     webhook = Webhook.objects.get(pk=webhook_pk)
