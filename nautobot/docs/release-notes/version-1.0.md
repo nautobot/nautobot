@@ -181,6 +181,8 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Added
 
+- [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
+
 ### Changed
 
 ### Fixed
