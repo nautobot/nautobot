@@ -81,6 +81,7 @@ class BaseJob:
         - description (str)
         - commit_default (bool)
         - field_order (list)
+        - read_only (bool)
         """
 
         pass
@@ -175,6 +176,10 @@ class BaseJob:
     def description(cls):
         return getattr(cls.Meta, "description", "")
 
+    @classproperty
+    def read_only(cls):
+        return getattr(cls.Meta, "read_only", False)
+
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
@@ -263,8 +268,13 @@ class BaseJob:
 
         form = FormClass(data, files, initial=initial)
 
-        # Set initial "commit" checkbox state based on the Meta parameter
-        form.fields["_commit"].initial = getattr(self.Meta, "commit_default", True)
+        if self.read_only:
+            # Hide the commit field for read only jobs
+            form.fields["_commit"].widget = forms.HiddenInput()
+            form.fields["_commit"].initial = False
+        else:
+            # Set initial "commit" checkbox state based on the Meta parameter
+            form.fields["_commit"].initial = getattr(self.Meta, "commit_default", True)
 
         field_order = getattr(self.Meta, "field_order", None)
 
@@ -801,6 +811,10 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
     job = job_class()
     job.job_result = job_result
 
+    if job.read_only:
+        # Force commit to false for read only jobs.
+        commit = False
+
     # TODO: validate that all args required by this job are set in the data or else log helpful errors?
 
     job.logger.info(f"Running job (commit={commit})")
@@ -823,6 +837,9 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
 
         We capture this within a subfunction to allow for conditionally wrapping it with the change_logging
         context manager (which is only relevant if commit == True).
+
+        If the job is marked as read_only == True, then commit is forced to False and no log messages will be
+        emitted related to reverting database changes.
         """
         job.results["output"] = ""
         try:
@@ -851,12 +868,14 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
                     raise AbortTransaction()
 
         except AbortTransaction:
-            job.log_info(message="Database changes have been reverted automatically.")
+            if not job.read_only:
+                job.log_info(message="Database changes have been reverted automatically.")
 
         except Exception as exc:
             stacktrace = traceback.format_exc()
             job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
-            job.log_info(message="Database changes have been reverted due to error.")
+            if not job.read_only:
+                job.log_info(message="Database changes have been reverted due to error.")
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
         finally:
