@@ -3,9 +3,7 @@ from django.conf.urls import include
 from django.urls import path
 from django.views.static import serve
 
-from nautobot.core.api.views import GraphQLDRFAPIView
 from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView
-
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
