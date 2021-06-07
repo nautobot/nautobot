@@ -8,7 +8,10 @@ addons:
   postgresql: "9.6"
 language: python
 env:
-  - INVOKE_NAUTOBOT_LOCAL=True
+  global:
+    - INVOKE_NAUTOBOT_LOCAL=True
+    - NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub
+    - NAUTOBOT_SELENIUM_HOST=$(hostname -f)
 jobs:
   fast_finish: true
   include:
@@ -32,8 +35,7 @@ install:
   - poetry config installer.parallel false
   - poetry install
 before_script:
-  - psql --version
-  - psql -U postgres -c 'SELECT version();'
   - psql -U postgres -c 'create database nautobot;'
+  - pip install docker-compose
 script:
   - poetry run ./scripts/cibuild.sh

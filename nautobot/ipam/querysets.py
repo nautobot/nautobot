@@ -22,48 +22,54 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 
 class NetworkQuerySet(QuerySet):
     @staticmethod
-    def _get_broadcast(prefix):
-        return prefix.broadcast if prefix.broadcast else prefix.network
+    def _get_last_ip(prefix):
+        """
+        Get the last IP address in the given prefix.
+
+        This is distinct from prefix.broadcast in the case of point-to-point or host network prefixes
+        (neither of which technically have a "broadcast" address).
+        """
+        return prefix.broadcast if prefix.broadcast else prefix[-1]
 
     def net_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
-        broadcast = self._get_broadcast(prefix)
-        return self.filter(prefix_length=prefix.prefixlen, network=prefix.network, broadcast=broadcast)
+        last_ip = self._get_last_ip(prefix)
+        return self.filter(prefix_length=prefix.prefixlen, network=prefix.network, broadcast=last_ip)
 
     def net_contained(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
-        broadcast = self._get_broadcast(prefix)
+        last_ip = self._get_last_ip(prefix)
         return self.filter(
             prefix_length__gt=prefix.prefixlen,
             network__gte=prefix.network,
-            broadcast__lte=broadcast,
+            broadcast__lte=last_ip,
         )
 
     def net_contained_or_equal(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
-        broadcast = self._get_broadcast(prefix)
+        last_ip = self._get_last_ip(prefix)
         return self.filter(
             prefix_length__gte=prefix.prefixlen,
             network__gte=prefix.network,
-            broadcast__lte=broadcast,
+            broadcast__lte=last_ip,
         )
 
     def net_contains(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
-        broadcast = self._get_broadcast(prefix)
+        last_ip = self._get_last_ip(prefix)
         return self.filter(
             prefix_length__lt=prefix.prefixlen,
             network__lte=prefix.network,
-            broadcast__gte=broadcast,
+            broadcast__gte=last_ip,
         )
 
     def net_contains_or_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
-        broadcast = self._get_broadcast(prefix)
+        last_ip = self._get_last_ip(prefix)
         return self.filter(
             prefix_length__lte=prefix.prefixlen,
             network__lte=prefix.network,
-            broadcast__gte=broadcast,
+            broadcast__gte=last_ip,
         )
 
     def get(self, *args, prefix=None, **kwargs):
@@ -74,10 +80,10 @@ class NetworkQuerySet(QuerySet):
             _prefix = netaddr.IPNetwork(prefix)
             if str(_prefix) != prefix:
                 raise self.model.DoesNotExist()
-            broadcast = self._get_broadcast(_prefix)
+            last_ip = self._get_last_ip(_prefix)
             kwargs["prefix_length"] = _prefix.prefixlen
             kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
-            kwargs["broadcast"] = broadcast
+            kwargs["broadcast"] = last_ip
         return super().get(*args, **kwargs)
 
     def filter(self, *args, prefix=None, **kwargs):
@@ -86,10 +92,10 @@ class NetworkQuerySet(QuerySet):
         """
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
-            broadcast = self._get_broadcast(_prefix)
+            last_ip = self._get_last_ip(_prefix)
             kwargs["prefix_length"] = _prefix.prefixlen
             kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
-            kwargs["broadcast"] = broadcast
+            kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
 
 
@@ -177,8 +183,14 @@ class IPAddressQuerySet(RestrictedQuerySet):
     RE_HEXTET = re.compile("^[a-f0-9]{4}$")
 
     @staticmethod
-    def _get_broadcast(network):
-        return network.broadcast if network.broadcast else network.network
+    def _get_last_ip(network):
+        """
+        Get the last IP address in the given network.
+
+        This is distinct from network.broadcast in the case of point-to-point or host networks
+        (neither of which technically have a "broadcast" address).
+        """
+        return network.broadcast if network.broadcast else network[-1]
 
     def get_queryset(self):
         """
@@ -198,11 +210,11 @@ class IPAddressQuerySet(RestrictedQuerySet):
             return self.none()
 
         network = self._parse_as_network_string(search)
-        broadcast = self._get_broadcast(network)
+        last_ip = self._get_last_ip(network)
         return self.filter(
             Q(dns_name__icontains=search)
             | Q(description__icontains=search)
-            | Q(host__lte=broadcast, host__gte=network.network)  # same as `net_host_contained()`
+            | Q(host__lte=last_ip, host__gte=network.network)  # same as `net_host_contained()`
         )
 
     def _parse_as_network_string(self, search):
@@ -293,9 +305,9 @@ class IPAddressQuerySet(RestrictedQuerySet):
         # consider only host ip address when
         # filtering for membership in |network|
         network = netaddr.IPNetwork(network)
-        broadcast = self._get_broadcast(network)
+        last_ip = self._get_last_ip(network)
         return self.filter(
-            host__lte=broadcast,
+            host__lte=last_ip,
             host__gte=network.network,
         )
 
@@ -313,10 +325,10 @@ class IPAddressQuerySet(RestrictedQuerySet):
         """
         if address:
             address = netaddr.IPNetwork(address)
-            broadcast = self._get_broadcast(address)
+            last_ip = self._get_last_ip(address)
             kwargs["prefix_length"] = address.prefixlen
             kwargs["host"] = address.ip
-            kwargs["broadcast"] = broadcast
+            kwargs["broadcast"] = last_ip
         return super().get(*args, **kwargs)
 
     def filter(self, *args, address=None, **kwargs):
@@ -325,8 +337,8 @@ class IPAddressQuerySet(RestrictedQuerySet):
         """
         if address:
             address = netaddr.IPNetwork(address)
-            broadcast = self._get_broadcast(address)
+            last_ip = self._get_last_ip(address)
             kwargs["prefix_length"] = address.prefixlen
             kwargs["host"] = address.ip
-            kwargs["broadcast"] = broadcast
+            kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)

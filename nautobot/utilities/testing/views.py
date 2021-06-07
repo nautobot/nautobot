@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
-from django.test import Client, TestCase as _TestCase, override_settings
+from django.test import Client, TestCase as _TestCase, override_settings, tag
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from netaddr import IPNetwork
@@ -33,7 +33,10 @@ __all__ = (
 User = get_user_model()
 
 
+@tag("unit")
 class TestCase(_TestCase):
+    """Base class for all Nautobot-specific unit tests."""
+
     user_permissions = ()
 
     def setUp(self):
@@ -252,6 +255,7 @@ class ModelViewTestCase(ModelTestCase):
         return reverse(url_format.format(action), kwargs={"pk": instance.pk})
 
 
+@tag("unit")
 class ViewTestCases:
     """
     We keep any TestCases with test_* methods inside a class to prevent unittest from trying to run them.

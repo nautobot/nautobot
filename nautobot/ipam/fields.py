@@ -24,8 +24,7 @@ class VarbinaryIPField(models.BinaryField):
             return "bytea"
 
         # Or 'varbinary' for everyone else.
-        max_length = DictWrapper(self.__dict__, connection.ops.quote_name, "qn_")
-        return "varbinary(%(max_length)s)" % max_length
+        return "varbinary(16)"
 
     def value_to_string(self, obj):
         """IPField is serialized as str(IPAddress())"""
