@@ -14,10 +14,12 @@
         <div class="col-md-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
-                {% if associated_record %}
+                {% if associated_record and associated_record.name %}
                     <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
                         {{ associated_record.name }}
                     </a></li>
+                {% elif associated_record %}
+                    <li>{{ associated_record }}</li>
                 {% elif job %}
                     <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
                         {{ job.class_path }}

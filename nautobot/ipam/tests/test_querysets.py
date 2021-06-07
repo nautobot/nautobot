@@ -95,6 +95,7 @@ class IPAddressQuerySet(TestCase):
     def test_net_host_contained(self):
         self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/24")).count(), 5)
         self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/30")).count(), 4)
+        self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/31")).count(), 2)
         self.assertEqual(self.queryset.net_host_contained(netaddr.IPNetwork("10.0.10.0/24")).count(), 0)
 
     def test_net_in(self):
