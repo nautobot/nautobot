@@ -33,7 +33,7 @@
                                                         <div class="buttons pull-right">
                                                             {% for button_title, button_details in item_details.buttons.items %}
                                                                 {% if request.user|has_perms:button_details.permissions %}
-                                                                    <a href="{% url button_details.link %}" class="btn btn-xs btn-{{ button_details.button_class }}" title="{{ button_title }}"><i class="{{ button_details.icon_class }}"></i></a>
+                                                                    <a href="{% url button_details.link %}" class="btn btn-xs btn-{{ button_details.button_class }}" title="{{ button_title }}"><i class="mdi {{ button_details.icon_class }}"></i></a>
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>

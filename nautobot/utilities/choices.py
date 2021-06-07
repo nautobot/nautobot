@@ -185,3 +185,41 @@ class ButtonActionColorChoices(ChoiceSet):
         (INFO, "Info"),
         (SUBMIT, "Submit"),
     )
+
+
+class ButtonActionIconChoices(ChoiceSet):
+    """
+    Map standard button actions to Material Design Icons classes.
+    """
+
+    ADD = "mdi-plus-thick"
+    ALERT = "mdi-alert"
+    ARROW_DOWN = "mdi-arrow-down-bold"
+    ARROW_UP = "mdi-arrow-up-bold"
+    CONNECT = "mdi-ethernet-cable"
+    DISCONNECT = "mdi-ethernet-cable-off"
+    EDIT = "mdi-pencil"
+    HELP = "mdi-help-circle"
+    IMPORT = "mdi-database-import-outline"
+    LOCK = "mdi-lock"
+    MAGNIFY = "mdi-magnify"
+    NOTE = "mdi-note-text"
+    SWAP = "mdi-swap-vertical"
+    TRASH = "mdi-trash-can-outline"
+
+    CHOICES = (
+        (ADD, "Add"),
+        (ALERT, "Alert"),
+        (ARROW_DOWN, "Arrow Down"),
+        (ARROW_UP, "Arrow Up"),
+        (CONNECT, "Connect"),
+        (DISCONNECT, "Disconnect"),
+        (EDIT, "Edit"),
+        (HELP, "Help"),
+        (IMPORT, "Import"),
+        (LOCK, "Lock"),
+        (MAGNIFY, "Magnify"),
+        (NOTE, "Note"),
+        (SWAP, "Swap"),
+        (TRASH, "Trash"),
+    )

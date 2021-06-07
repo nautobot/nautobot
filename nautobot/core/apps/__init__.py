@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
-from nautobot.utilities.choices import ButtonActionColorChoices
+from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
 
 
 registry["nav_menu"] = {"tabs": {}}
@@ -66,16 +66,16 @@ def register_menu_items(tab_list):
                         "permissions": item.permissions,
                     }
 
-                    registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
-                    for button in item.buttons:
-                        if button.title not in registry_buttons:
-                            registry_buttons[button.title] = {
-                                "button_class": button.button_class,
-                                "icon_class": button.icon_class,
-                                "link": button.link,
-                                "permissions": button.permissions,
-                                "weight": button.weight,
-                            }
+                registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
+                for button in item.buttons:
+                    if button.title not in registry_buttons:
+                        registry_buttons[button.title] = {
+                            "button_class": button.button_class,
+                            "icon_class": button.icon_class,
+                            "link": button.link,
+                            "permissions": button.permissions,
+                            "weight": button.weight,
+                        }
 
                     # Add sorted buttons to group registry dict
                     registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
@@ -121,7 +121,6 @@ class NavMenuTab(PermissionsMixin):
     Ths class represents a navigation menu tab. This is built up from a name and a weight value. The name is
     the display text and the weight defines its position in the navbar.
 
-    Links are specified as Django reverse URL strings.
     Groups are each specified as a list of NavMenuGroup instances.
     """
 
@@ -146,7 +145,6 @@ class NavMenuGroup(PermissionsMixin):
     Ths class represents a navigation menu group. This is built up from a name and a weight value. The name is
     the display text and the weight defines its position in the navbar.
 
-    Links are specified as Django reverse URL strings.
     Items are each specified as a list of NavMenuItem instances.
     """
 
@@ -177,6 +175,7 @@ class NavMenuItem(PermissionsMixin):
     def __init__(self, link, link_text, permissions=None, buttons=None, weight=1000):
         """Ensure item properties."""
         super().__init__(permissions)
+        # Reverse lookup sanity check
         reverse(link)
         self.link = link
         self.link_text = link_text
@@ -184,7 +183,7 @@ class NavMenuItem(PermissionsMixin):
 
         if buttons is not None and not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
-        elif not all(isinstance(button, NavMenuButton) or issubclass(button, NavMenuButton) for button in buttons):
+        elif not all(isinstance(button, NavMenuButton) for button in buttons):
             raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
         self.buttons = buttons
 
@@ -206,14 +205,12 @@ class NavMenuButton(PermissionsMixin):
     ):
         """Ensure button properties."""
         super().__init__(permissions)
+        # Reverse lookup sanity check
         reverse(link)
         self.link = link
         self.title = title
         self.icon_class = icon_class
         self.weight = weight
-
-        if button_class is not None and button_class not in ButtonActionColorChoices.values():
-            raise ValueError("Button color must be a choice within ButtonColorChoices.")
         self.button_class = button_class
 
 
@@ -225,8 +222,8 @@ class NavMenuAddButton(NavMenuButton):
         if "title" not in kwargs:
             kwargs["title"] = "Add"
         if "icon_class" not in kwargs:
-            kwargs["icon_class"] = "mdi mdi-plus-thick"
-        if "button_classs" not in kwargs:
+            kwargs["icon_class"] = ButtonActionIconChoices.ADD
+        if "button_class" not in kwargs:
             kwargs["button_class"] = ButtonActionColorChoices.ADD
         if "weight" not in kwargs:
             kwargs["weight"] = 100
@@ -241,7 +238,7 @@ class NavMenuImportButton(NavMenuButton):
         if "title" not in kwargs:
             kwargs["title"] = "Import"
         if "icon_class" not in kwargs:
-            kwargs["icon_class"] = "mdi mdi-database-import-outline"
+            kwargs["icon_class"] = ButtonActionIconChoices.IMPORT
         if "button_class" not in kwargs:
             kwargs["button_class"] = ButtonActionColorChoices.IMPORT
         if "weight" not in kwargs:

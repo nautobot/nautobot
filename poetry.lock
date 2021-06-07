@@ -1244,7 +1244,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "37585580e2663411a583b77fe2165e0eb5ed054ffbcb57b830a3c66a69b93dba"
+content-hash = "e28f4bef0a9f0e4cbc0c4c5bd457aef7c9a5fbe879fa6506bb04bc8eb688cfa7"
 
 [metadata.files]
 aniso8601 = [
@@ -1264,7 +1264,6 @@ attrs = [
     {file = "attrs-21.2.0.tar.gz", hash = "sha256:ef6aaac3ca6cd92904cdd0d83f629a15f18053ec84e6432106f7a4d04ae4f5fb"},
 ]
 black = [
-    {file = "black-20.8b1-py3-none-any.whl", hash = "sha256:70b62ef1527c950db59062cda342ea224d772abdf6adc58b86a45421bab20a6b"},
     {file = "black-20.8b1.tar.gz", hash = "sha256:1c02557aa099101b9d21496f8a914e9ed2222ef70336404eeeac8edba836fbea"},
 ]
 certifi = [
