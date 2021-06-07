@@ -37,7 +37,7 @@ class GitRepo:
         if commit_hexsha and commit_hexsha == self.repo.head.commit.hexsha:
             logger.debug(f"Commit {commit_hexsha} is already checked out.")
             return commit_hexsha
-        
+
         self.fetch()
         if commit_hexsha:
             # Sanity check - GitPython doesn't provide a handy API for this so we just call a raw Git command:
