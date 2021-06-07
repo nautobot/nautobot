@@ -18,22 +18,22 @@
             {% if request.user.is_authenticated %}
                 <ul class="nav navbar-nav">
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
-                        {% if request.user|has_perms:tab_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                        {% if request.user|has_one_or_more_perms:tab_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     {{ tab_name }} <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
                                     {% for group_name, group_details in tab_details.groups.items %}
-                                        {% if request.user|has_perms:group_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                                        {% if request.user|has_one_or_more_perms:group_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                                             <li class="dropdown-header">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
-                                                {% if request.user|has_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                                                {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                                                     <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
                                                         <div class="buttons pull-right">
-                                                            {% for button in item_details.buttons %}
-                                                                {% if not button.permissions or request.user|has_perms:button.permissions %}
-                                                                    <a href="{% url button.link %}" class="btn btn-xs btn-{{ button.button_class }}" title="{{ button.title }}"><i class="{{ button.icon_class }}"></i></a>
+                                                            {% for button_title, button_details in item_details.buttons.items %}
+                                                                {% if request.user|has_perms:button_details.permissions %}
+                                                                    <a href="{% url button_details.link %}" class="btn btn-xs btn-{{ button_details.button_class }}" title="{{ button_title }}"><i class="{{ button_details.icon_class }}"></i></a>
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>
@@ -50,14 +50,11 @@
                             </li>
                         {% endif %}
                     {% endfor %}
+                    {% if registry.plugin_menu_items %}
+                        {% include 'inc/plugin_menu_items.html' %}
+                    {% endif %}
                 </ul>
             {% endif %}
-
-            <ul class="nav navbar-nav">
-                {% if registry.plugin_menu_items %}
-                    {% include 'inc/plugin_menu_items.html' %}
-                {% endif %}
-            </ul>
 
             <ul class="nav navbar-nav navbar-right">
                 {% if request.user.is_authenticated %}

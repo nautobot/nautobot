@@ -24,22 +24,8 @@ class NautobotConfig(AppConfig):
     def ready(self):
         """
         Ready function initiates the import application.
-
-        As the application can be loaded from either the root of the app or `apps.py`, the __module__
-        name needs to be modified to all the ready function to import the menu items.
-
-        To import the menu items the `.apps` needs to be removed from the __module__ name if it
-        exists.
-
-        Examples:
-            Loaded from application root:   `nautobot.circuits`
-            Loaded from `app.py`:           `nautobot.circuits.apps`
         """
-        if self.__module__.endswith(".apps"):
-            module_location = self.__module__[:-5]
-        else:
-            module_location = self.__module__
-        menu_items = import_object(f"{module_location}.{self.menu_tabs}")
+        menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
             register_menu_items(menu_items)
 
@@ -76,9 +62,25 @@ def register_menu_items(tab_list):
                     registry_groups[group.name]["items"][item.link] = {
                         "link_text": item.link_text,
                         "weight": item.weight,
-                        "buttons": item.buttons,
+                        "buttons": {},
                         "permissions": item.permissions,
                     }
+
+                    registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
+                    for button in item.buttons:
+                        if button.title not in registry_buttons:
+                            registry_buttons[button.title] = {
+                                "button_class": button.button_class,
+                                "icon_class": button.icon_class,
+                                "link": button.link,
+                                "permissions": button.permissions,
+                                "weight": button.weight,
+                            }
+
+                    # Add sorted buttons to group registry dict
+                    registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
+                        sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                    )
 
                 group_perms += item.permissions
 
@@ -182,11 +184,7 @@ class NavMenuItem(PermissionsMixin):
 
         if buttons is not None and not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
-        elif not all(
-            isinstance(button, NavMenuButton)
-            or issubclass(button, NavMenuButton)
-            for button in buttons
-        ):
+        elif not all(isinstance(button, NavMenuButton) or issubclass(button, NavMenuButton) for button in buttons):
             raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
         self.buttons = buttons
 
@@ -230,6 +228,8 @@ class NavMenuAddButton(NavMenuButton):
             kwargs["icon_class"] = "mdi mdi-plus-thick"
         if "button_classs" not in kwargs:
             kwargs["button_class"] = ButtonActionColorChoices.ADD
+        if "weight" not in kwargs:
+            kwargs["weight"] = 100
         super().__init__(*args, **kwargs)
 
 
@@ -244,4 +244,6 @@ class NavMenuImportButton(NavMenuButton):
             kwargs["icon_class"] = "mdi mdi-database-import-outline"
         if "button_class" not in kwargs:
             kwargs["button_class"] = ButtonActionColorChoices.IMPORT
+        if "weight" not in kwargs:
+            kwargs["weight"] = 200
         super().__init__(*args, **kwargs)
