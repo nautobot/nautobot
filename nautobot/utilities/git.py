@@ -33,12 +33,13 @@ class GitRepo:
         """
         Check out the given branch, and optionally the specified commit within that branch.
         """
+        # Short-circuit logic - do we already have this commit checked out?
+        if commit_hexsha and commit_hexsha == self.repo.head.commit.hexsha:
+            logger.debug(f"Commit {commit_hexsha} is already checked out.")
+            return commit_hexsha
+        
         self.fetch()
         if commit_hexsha:
-            # Short-circuit logic - do we already have this commit checked out?
-            if commit_hexsha == self.repo.head.commit.hexsha:
-                logger.debug(f"Commit {commit_hexsha} is already checked out.")
-                return commit_hexsha
             # Sanity check - GitPython doesn't provide a handy API for this so we just call a raw Git command:
             # $ git branch <branch> --contains <commit>
             # prints the branch name if it DOES contain the commit, and nothing if it DOES NOT contain the commit.
