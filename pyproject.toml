@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.0.2"
+version = "1.0.3-beta.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -32,7 +32,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.6"
 # Fundamental web framework for Nautobot
-Django = "~3.1.8"
+Django = "~3.1.12"
 # Caching with Redis
 django-cacheops = "~5.1"
 # Permit cross-domain API requests
@@ -109,6 +109,8 @@ mkdocs-include-markdown-plugin = "~3.0.1"
 mkdocs = "~1.1.2"
 # Integration Tests
 requests = "~2.25.1"
+# Selenium web drivers for live integration testing
+selenium = "~3.141.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
