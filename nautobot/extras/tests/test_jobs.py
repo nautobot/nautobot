@@ -36,7 +36,8 @@ class JobTest(TestCase):
                 job_id=uuid.uuid4(),
             )
 
-            run_job(data={}, request=None, commit=False, job_result=job_result)
+            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
 
     def test_job_fail(self):
@@ -55,7 +56,8 @@ class JobTest(TestCase):
                 user=None,
                 job_id=uuid.uuid4(),
             )
-            run_job(data={}, request=None, commit=False, job_result=job_result)
+            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
     def test_field_order(self):
@@ -126,7 +128,8 @@ class JobTest(TestCase):
                 job_id=uuid.uuid4(),
             )
 
-            run_job(data={}, request=None, commit=False, job_result=job_result)
+            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
             self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
 
@@ -146,7 +149,8 @@ class JobTest(TestCase):
                 user=None,
                 job_id=uuid.uuid4(),
             )
-            run_job(data={}, request=None, commit=False, job_result=job_result)
+            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
             self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
             # Also ensure the standard log message about aborting the transaction is *not* present

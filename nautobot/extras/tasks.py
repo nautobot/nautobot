@@ -120,14 +120,14 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
         headers.update(webhook.render_headers(context))
     except (TemplateError, ValueError) as e:
         logger.error("Error parsing HTTP headers for webhook {}: {}".format(webhook, e))
-        raise e
+        raise
 
     # Render the request body
     try:
         body = webhook.render_body(context)
     except TemplateError as e:
-        logger.error("Error rendering request body for webhook {}: {}".format(webhook, e))
-        raise e
+        logger.error("Error rendering request body for webhook %s: %s", webhook, e)
+        raise
 
     # Prepare the HTTP request
     params = {
@@ -139,12 +139,12 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
     logger.info(
         "Sending {} request to {} ({} {})".format(params["method"], params["url"], context["model"], context["event"])
     )
-    logger.debug(params)
+    logger.debug("%s", params)
     try:
         prepared_request = requests.Request(**params).prepare()
     except requests.exceptions.RequestException as e:
         logger.error("Error forming HTTP request: {}".format(e))
-        raise e
+        raise
 
     # If a secret key is defined, sign the request with a hash of the key and its content
     if webhook.secret != "":

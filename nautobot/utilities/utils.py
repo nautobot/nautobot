@@ -1,4 +1,6 @@
+import copy
 import datetime
+import importlib
 import json
 import inspect
 from importlib import import_module
@@ -8,6 +10,7 @@ from distutils.util import strtobool
 
 from django.conf import settings
 from django.core.serializers import serialize
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, OuterRef, Subquery, Model
 from django.db.models.functions import Coalesce
 from jinja2 import Environment
@@ -333,6 +336,25 @@ class NautobotFakeRequest:
 
     def __init__(self, _dict):
         self.__dict__ = _dict
+
+    def nautobot_serialize(self):
+        """
+        Serialize a json representation that is safe to pass to celery
+        """
+        data = copy.deepcopy(self.__dict__)
+        data["user"] = data["user"].pk
+        return data
+
+    @classmethod
+    def nautobot_deserialize(cls, data):
+        """
+        Deserialize a json representation that is safe to pass to celery and return an actual instance
+        """
+        from nautobot.users.models import User  # avoiding circular import
+
+        obj = cls(data)
+        obj.user = User.objects.get(pk=obj.user)
+        return obj
 
 
 def copy_safe_request(request):

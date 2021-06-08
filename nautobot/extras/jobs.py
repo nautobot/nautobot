@@ -1,4 +1,5 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
+import importlib
 import inspect
 import json
 import logging
@@ -13,13 +14,13 @@ import yaml
 
 from django import forms
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.utils import timezone
 from django.utils.functional import classproperty
 
 from cacheops import cached
-from django_rq import job
 
 from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
@@ -797,6 +798,10 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
 
     This gets around the inability to pickle an instance method for queueing into the background processor.
     """
+    from nautobot.extras.models import JobResult  # avoid circular import
+
+    job_result = JobResult.objects.get(pk=job_result)
+
     job_class = get_job(job_result.name)
     if not job_class:
         job_result.log(

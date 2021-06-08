@@ -547,11 +547,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         grouping, module, class_name = class_path.split("/", 2)
         form = job.as_form(request.POST, request.FILES)
 
-        # Allow execution only if Celery worker is running
-        if not app.control.inspect().active():
-            messages.error(request, "Unable to run job: no celery workers are running.")
-
-        elif form.is_valid():
+        if form.is_valid():
             # Run the job. A new JobResult is created.
             commit = form.cleaned_data.pop("_commit")
 
