@@ -27,6 +27,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     ObjectChange,
     JobResult,
@@ -835,3 +836,29 @@ class RelationshipAssociationListView(generic.ObjectListView):
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
     queryset = RelationshipAssociation.objects.all()
+
+
+class GraphQLQueryListView(generic.ObjectListView):
+    queryset = GraphQLQuery.objects.all()
+    table = tables.GraphQLQueryTable
+    filterset = filters.GraphQLQueryFilterSet
+    filterset_form = forms.GraphQLQueryFilterForm
+    action_buttons = ("add",)
+
+
+class GraphQLQueryView(generic.ObjectView):
+    queryset = GraphQLQuery.objects.all()
+
+
+class GraphQLQueryEditView(generic.ObjectEditView):
+    queryset = GraphQLQuery.objects.all()
+    model_form = forms.GraphQLQueryForm
+
+
+class GraphQLQueryDeleteView(generic.ObjectDeleteView):
+    queryset = GraphQLQuery.objects.all()
+
+
+class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
+    queryset = GraphQLQuery.objects.all()
+    table = tables.GraphQLQueryTable

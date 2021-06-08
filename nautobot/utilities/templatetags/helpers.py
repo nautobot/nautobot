@@ -331,3 +331,36 @@ def table_config_form(table, table_name=None):
         "table_name": table_name or table.__class__.__name__,
         "table_config_form": TableConfigForm(table=table),
     }
+
+
+@register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
+def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
+    """Generate a form in a modal view.
+
+    Create an overlaying modal view which holds a Django form.
+
+    Inside of the template the template tag needs to be used with the correct inputs. A button will
+    also need to be create to open and close the modal. See below for an example:
+
+    ```
+    {% modal_form_as_dialog form editing=False form_name="CreateDevice" obj=obj obj_type="Device" %}
+    <a class="btn btn-primary" data-toggle="modal" data-target="#CreateDevice_form" title="Query Form">Create Device</a>
+    ```
+    Args:
+        form (django.form.Forms): Django form object.
+        editing (bool, optional): Is the form creating or editing an object? Defaults to False for create.
+        form_name ([type], optional): Name of form. Defaults to None. If None get name from class name.
+        obj (django.model.Object, optional): If editing an existing model object, the object needs to be passed in. Defaults to None.
+        obj_type (string, optional): Used in title of form to display object type. Defaults to None.
+
+    Returns:
+        dict: Passed in values used to render HTML.
+    """
+    return {
+        "editing": editing,
+        "form": form,
+        "form_action_url": form.get_action_url(),
+        "form_name": form_name or form.__class__.__name__,
+        "obj": obj,
+        "obj_type": obj_type,
+    }

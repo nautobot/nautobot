@@ -364,7 +364,7 @@ A URL pattern has three components:
 
 This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
 
-## GraphQL Types
+## Integrating with GraphQL
 
 Plugins can optionally expose their models via the GraphQL interface to allow the models to be part of the Graph and to be queried easily. There are two mutually exclusive ways to expose a model to the GraphQL interface.
 
@@ -426,6 +426,53 @@ class AnimalType(DjangoObjectType):
 
 
 graphql_types = [AnimalType]
+```
+
+### Using GraphQL ORM Utility
+
+GraphQL utility functions:
+
+1) `execute_query()`: Runs string as a query against GraphQL.
+2) `execute_saved_query()`: Execute a saved query from Nautobot database.
+
+Both functions have the same arguments other than `execute_saved_query()` which requires a slug to identify the saved query rather than a string holding a query.
+
+For authentication either a request object or user object needs to be passed in. If there is none, the function will error out.
+
+Arguments:
+
+* `execute_query()`:
+  * query (str): String with GraphQL query.
+  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * request (django.test.client.RequestFactory, optional): Used to authenticate.
+  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+* `execute_saved_query()`:
+  * saved_query_slug (str): Slug of a saved GraphQL query.
+  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * request (django.test.client.RequestFactory, optional): Used to authenticate.
+  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+
+Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
+
+Usage in a view:
+
+``` python
+from nautobot.core.graphql import execute_saved_query
+
+
+class GraphQLModelView(ModelViewSet):
+    queryset = GraphQLModelQuery.objects.all()
+
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        try:
+            result = execute_saved_query(pk, variable=request.data, request=request).to_dict()
+            return Response(result)
+        except GraphQLError as error:
+            return Response(
+                {"errors": [GraphQLView.format_error(error)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 ```
 
 ## REST API Endpoints

@@ -690,7 +690,7 @@
                 </li>
             {% endif %}
 
-            {% if perms.extras.view_objectchange or perms.extras.view_jobresult or perms.extras.view_gitrepository or perms.extras.view_relationship or perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
+            {% if perms.extras.view_objectchange or perms.extras.view_jobresult or perms.extras.view_gitrepository or perms.extras.view_graphqlquery or perms.extras.view_relationship or perms.extras.view_configcontext or perms.extras.view_exporttemplate or perms.extras.view_job or perms.extras.view_webhook or perms.extras.view_customlink or not settings.HIDE_RESTRICTED_UI %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extensibility <span class="caret"></span></a>
                     <ul class="dropdown-menu">
@@ -723,7 +723,7 @@
                         </li>
                 {% endif %}
 
-                {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
+                {% if perms.extras.view_graphqlquery or perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
                         <li class="divider"></li>
                         <li class="dropdown-header">Data Management</li>
                     {% if perms.extras.view_relationship or not settings.HIDE_RESTRICTED_UI %}
@@ -734,6 +734,16 @@
                                 </div>
                             {% endif %}
                             <a href="{% url 'extras:relationship_list' %}">Relationships</a>
+                        </li>
+                    {% endif %}
+                    {% if perms.extras.view_graphqlquery or not settings.HIDE_RESTRICTED_UI %}
+                        <li{% if not perms.extras.view_graphqlquery %} class="disabled"{% endif %}>
+                            {% if perms.extras.add_graphqlquery %}
+                                <div class="buttons pull-right">
+                                    <a href="{% url 'extras:graphqlquery_add' %}" class="btn btn-xs btn-success" title="Add"><i class="mdi mdi-plus-thick"></i></a>
+                                </div>
+                            {% endif %}
+                            <a href="{% url 'extras:graphqlquery_list' %}">GraphQL Queries</a>
                         </li>
                     {% endif %}
                 {% endif %}
@@ -837,6 +847,43 @@
                     </span>
                 </div>
             </form>
+            {% comment %}
+            The following if statement means the Query tab is only rendered when the GraphiQL
+            is rendered.
+            {% endcomment %}
+            {% if  graphiql and perms.extras.view_graphqlquery %}
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                            <span>Queries </span>
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu" id="graphql-queries-menu">
+                            <li class="dropdown-header">Saved Queries</li>
+                            {% for query in saved_graphiql_queries %}
+                                <li>
+                                    {% if request.GET.id|slugify == query.id|slugify %}
+                                        <div class="buttons pull-right">
+                                            <button type="button" class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</button>
+                                        </div>
+                                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                                            <strong>{{ query.name }}</strong>
+                                        </a>
+                                    {% else %}
+                                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                            <li class="divider" role="separator"></li>
+                            <li>
+                                <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
+                            </li>
+                        </ul>
+                    <li>
+                </ul>
+
+            {% endif %}
         </div>
     </div>
 </nav>

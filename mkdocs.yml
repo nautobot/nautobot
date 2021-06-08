@@ -96,3 +96,4 @@ nav:
         - Release Checklist: 'development/release-checklist.md'
     - Release Notes:
         - Version 1.0: 'release-notes/version-1.0.md'
+        - Version 1.1: 'release-notes/version-1.1.md'
