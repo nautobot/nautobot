@@ -77,12 +77,13 @@ def register_menu_items(tab_list):
                             "weight": button.weight,
                         }
 
-                    # Add sorted buttons to group registry dict
-                    registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
-                        sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
-                    )
+                # Add sorted buttons to group registry dict
+                registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
+                    sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                )
 
                 group_perms += item.permissions
+                group_perms = list(dict.fromkeys(group_perms))
 
             # Add sorted items to group registry dict
             registry_groups[group.name]["items"] = OrderedDict(
@@ -92,6 +93,7 @@ def register_menu_items(tab_list):
             registry_groups[group.name]["permissions"] = group_perms
             # Add collected permissions to tab
             tab_perms += group_perms
+            group_perms = list(dict.fromkeys(tab_perms))
 
         # Add sorted groups to tab dict
         registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
@@ -99,6 +101,9 @@ def register_menu_items(tab_list):
         )
         # Add collected permissions to tab dict
         registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] += tab_perms
+        registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] = list(
+            dict.fromkeys(registry["nav_menu"]["tabs"][nav_tab.name]["permissions"])
+        )
 
     # Order all tabs in dict
     registry["nav_menu"]["tabs"] = OrderedDict(
