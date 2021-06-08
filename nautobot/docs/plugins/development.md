@@ -428,7 +428,7 @@ class AnimalType(DjangoObjectType):
 graphql_types = [AnimalType]
 ```
 
-#### Using GraphQL ORM Utility
+### Using GraphQL ORM Utility
 
 GraphQL utility functions:
 

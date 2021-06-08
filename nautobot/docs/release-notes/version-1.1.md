@@ -10,7 +10,7 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 #### GraphQL ORM Functions
 
-Two new [GraphQL utility functions](../plugins/development.md) have been added to allow easy access to the GraphQL system from source code. Both can be access throughout Nautobot and plugins by using `from nautobot.core.graphql import execute_saved_query, execute_query`.
+Two new [GraphQL utility functions](../plugins/development.md) have been added to allow easy access to the GraphQL system from source code. Both can be accessed by using `from nautobot.core.graphql import execute_saved_query, execute_query`.
 
 1) `execute_query()`: Runs string as a query against GraphQL.
 2) `execute_saved_query()`: Execute a saved query from Nautobot database.
