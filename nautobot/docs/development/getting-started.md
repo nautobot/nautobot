@@ -271,7 +271,7 @@ After opening the project directory in VS Code in a supported environment, you w
 To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
 
 !!! note
-    You can run tests with `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` while inside the Container.
+    You can run tests with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test` while inside the Container.
 
 ##### Special Workflow for Containers on Remote Servers
 
@@ -550,7 +550,7 @@ Unit tests are run using the `invoke unittest` command (if using the Docker deve
 
 | Docker Compose Workflow | Virtual Environment Workflow                                           |
 |-------------------------|------------------------------------------------------------------------|
-| `invoke unittest`       | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py` |
+| `invoke unittest`       | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test` |
 
 !!! info
     By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.  See the [Invoke configuration](#invoke-configuration) for more information.
@@ -559,7 +559,7 @@ In cases where you haven't made any changes to the database (which is most of th
 
 | Docker Compose Workflow    | Virtual Environment Workflow                                                    |
 |----------------------------|---------------------------------------------------------------------------------|
-| `invoke unittest --keepdb` | `nautobot-server test --keepdb --config=nautobot/core/tests/nautobot_config.py` |
+| `invoke unittest --keepdb` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --keepdb` |
 
 !!! note
     Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
@@ -612,7 +612,7 @@ Integration tests are run using the `invoke integration-test` command. All integ
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                             |
 |---------------------------|------------------------------------------------------------------------------------------|
-| `invoke integration-test` | `nautobot-server test --config=nautobot/core/tests/nautobot_config.py --tag integration` |
+| `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration` |
 
 !!! info
     The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag. 
