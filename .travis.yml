@@ -37,5 +37,6 @@ install:
 before_script:
   - psql -U postgres -c 'create database nautobot;'
   - pip install docker-compose
+  - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin || travis_terminate 1
 script:
   - poetry run ./scripts/cibuild.sh
