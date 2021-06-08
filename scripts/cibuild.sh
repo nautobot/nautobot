@@ -53,6 +53,11 @@ if [[ ! -z $SYNTAX ]]; then
 	exit 1
 fi
 
+if [[ -n "$DOCKER_HUB_PASSWORD" ]]; then
+    echo -e "\n>> Attempting login to Docker Hub..."
+    echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+fi
+
 echo -e "\n>> Starting Selenium container in background..."
 invoke start --service selenium
 RC=$?
