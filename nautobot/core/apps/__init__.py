@@ -1,3 +1,4 @@
+import logging
 from django.apps import AppConfig
 from django.urls import reverse
 from operator import getitem
@@ -8,6 +9,7 @@ from nautobot.extras.registry import registry
 from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
 
 
+logger = logging.getLogger("nautobot.core.apps")
 registry["nav_menu"] = {"tabs": {}}
 
 
@@ -45,6 +47,18 @@ def register_menu_items(tab_list):
                 "groups": {},
                 "permissions": [],
             }
+        else:
+            for key, new_value in (
+                ("weight", nav_tab.weight),
+            ):
+                if registry["nav_menu"]["tabs"][nav_tab.name][key] != new_value:
+                    logger.error(
+                        "Unable to redefine %s on %s from %s to %s",
+                        key,
+                        nav_tab.name,
+                        registry["nav_menu"]["tabs"][nav_tab.name][key],
+                        new_value,
+                    )
 
         tab_perms = []
         registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
@@ -55,6 +69,20 @@ def register_menu_items(tab_list):
                     "items": {},
                     "permissions": [],
                 }
+            else:
+                for key, new_value in (
+                    ("weight", group.weight),
+                    ("permissions", group.permissions),
+                ):
+                    if registry_groups[group.name][key] != new_value:
+                        logger.error(
+                            "Unable to redefine %s on %s -> %s from %s to %s",
+                            key,
+                            nav_tab.name,
+                            group.name,
+                            registry_groups[group.name][key],
+                            new_value,
+                        )
 
             group_perms = []
             for item in group.items:
@@ -65,6 +93,22 @@ def register_menu_items(tab_list):
                         "buttons": {},
                         "permissions": item.permissions,
                     }
+                else:
+                    for key, new_value in (
+                        ("link_text", item.link_text),
+                        ("weight", item.weight),
+                        ("permissions", item.permissions),
+                    ):
+                        if registry_groups[group.name]["items"][item.link][key] != new_value:
+                            logger.error(
+                                "Unable to redefine %s on %s -> %s -> %s from %s to %s",
+                                key,
+                                nav_tab.name,
+                                group.name,
+                                item.link,
+                                registry_groups[group.name]["items"][item.link][key],
+                                new_value,
+                            )
 
                 registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
                 for button in item.buttons:
@@ -76,6 +120,25 @@ def register_menu_items(tab_list):
                             "permissions": button.permissions,
                             "weight": button.weight,
                         }
+                    else:
+                        for key, new_value in (
+                            ("button_class", button.button_class),
+                            ("icon_class", button.icon_class),
+                            ("link", button.link),
+                            ("permissions", button.permissions),
+                            ("weight", button.weight),
+                        ):
+                            if registry_groups[group.name]["items"][item.link]["buttons"][button.title][key] != new_value:
+                                logger.error(
+                                    "Unable to redefine %s on %s -> %s -> %s -> %s from %s to %s",
+                                    key,
+                                    nav_tab.name,
+                                    group.name,
+                                    item.link,
+                                    button.link,
+                                    registry_groups[group.name]["items"][item.link]["buttons"][button.title][key],
+                                    new_value,
+                                )
 
                 # Add sorted buttons to group registry dict
                 registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
