@@ -32,9 +32,10 @@ class AddressFieldMixin(forms.ModelForm):
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
+        # If we're creating a new ip from prefix, initial address will be filled in.
         # If we're editing an object with a `address` field, we need to patch initial to include
         # `address` because it is a computed field.
-        if instance is not None:
+        if initial.get("address", None) is None and instance is not None:
             initial["address"] = instance.address
 
         kwargs["initial"] = initial
@@ -151,9 +152,10 @@ class PrefixFieldMixin(forms.ModelForm):
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
+        # If we're creating a new prefix from prefix, initial prefix will be filled in.
         # If we're editing an object with a `prefix` field, we need to patch initial to include
         # `prefix` because it is a computed field.
-        if instance is not None:
+        if initial.get("prefix", None) is None and instance is not None:
             initial["prefix"] = instance.prefix
 
         kwargs["initial"] = initial
