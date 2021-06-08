@@ -28,3 +28,17 @@ Saved queries can easily be imported into the GraphiQL interface by using the ne
 ### Changed
 
 ### Removed
+
+
+## v1.1.0 (2021-MM-DD)
+
+### Added
+
+- [#3](https://github.com/nautobot/nautobot/issues/3) - GraphQL queries can now be saved for later execution
+- [#200](https://github.com/nautobot/nautobot/issues/200) - Jobs can be marked as read-only
+
+### Changed
+
+### Fixed
+
+### Removed
