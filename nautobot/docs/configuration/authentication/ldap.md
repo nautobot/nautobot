@@ -91,6 +91,8 @@ STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the
 Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`. 
 
 ```
+AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
+AUTH_LDAP_START_TLS = True
 # Set the path to the trusted CA certificates and create a new internal SSL context.
 AUTH_LDAP_CONNECTION_OPTIONS = {
     ldap.OPT_X_TLS_CACERTFILE: "/path/to/ca.pem",
