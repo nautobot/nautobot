@@ -185,10 +185,16 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Changed
 
+- [#537](https://github.com/nautobot/nautobot/issues/537) - To mitigate CVE-2021-31542, the minimum supported Django version is now 3.1.12.
+
 ### Fixed
 
 - [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
 - [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
+- [#513](https://github.com/nautobot/nautobot/issues/513) - Fixed inadvertent omission of "Search" box from ReadTheDocs.
+- [#528](https://github.com/nautobot/nautobot/pull/528) - Fixed an ordering issue in the `test_EXTERNAL_AUTH_DEFAULT_groups` test case.
+- [#540](https://github.com/nautobot/nautobot/pull/540) - Fixed intermittent CI failures due to DockerHub rate limits.
+- [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
 
 ### Removed
 
