@@ -132,7 +132,7 @@ TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 # CRYPTOGRAPHY_DIGEST = cryptography.hazmat.primitives.hashes.SHA256
 # CRYPTOGRAPHY_KEY defaults to SECRET_KEY if unset;
 # this is undesirable, see https://github.com/nautobot/nautobot/issues/502
-CRYPTOGRAPHY_KEY = os.getenv("CRYPTOGRAPHY_KEY")
+CRYPTOGRAPHY_KEY = os.getenv("NAUTOBOT_CRYPTOGRAPHY_KEY")
 CRYPTOGRAPHY_SALT = "nautobot-cryptography"
 
 
