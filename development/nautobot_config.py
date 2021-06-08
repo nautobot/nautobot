@@ -92,6 +92,8 @@ CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 
 HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
 
+CRYPTOGRAPHY_KEY = os.environ.get("NAUTOBOT_CRYPTOGRAPHY_KEY")
+
 SECRET_KEY = os.environ.get("NAUTOBOT_SECRET_KEY", "")
 
 # Django Debug Toolbar
