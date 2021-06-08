@@ -48,9 +48,7 @@ def register_menu_items(tab_list):
                 "permissions": [],
             }
         else:
-            for key, new_value in (
-                ("weight", nav_tab.weight),
-            ):
+            for key, new_value in (("weight", nav_tab.weight),):
                 if registry["nav_menu"]["tabs"][nav_tab.name][key] != new_value:
                     logger.error(
                         "Unable to redefine %s on %s from %s to %s",
@@ -128,7 +126,10 @@ def register_menu_items(tab_list):
                             ("permissions", button.permissions),
                             ("weight", button.weight),
                         ):
-                            if registry_groups[group.name]["items"][item.link]["buttons"][button.title][key] != new_value:
+                            if (
+                                registry_groups[group.name]["items"][item.link]["buttons"][button.title][key]
+                                != new_value
+                            ):
                                 logger.error(
                                     "Unable to redefine %s on %s -> %s -> %s -> %s from %s to %s",
                                     key,
