@@ -1,4 +1,4 @@
-"""Additional functions to process an OKTA user."""
+"""Additional functions to process an Okta user."""
 import logging
 from django.contrib.auth.models import Group
 

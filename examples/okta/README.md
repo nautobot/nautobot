@@ -23,4 +23,4 @@ SOCIAL_AUTH_PIPELINE = (
 )
 ```
 
-If the name of the claim from okta is different both the `SOCIAL_AUTH_OKTA_OAUTH2_SCOPE` and the script will need to be modified.  This example is provided as is and may very well be unique for your okta deployment.
+If the name of the claim from Okta is different both the `SOCIAL_AUTH_OKTA_OAUTH2_SCOPE` and the script will need to be modified.  This example is provided "as is" and may very well be unique for your Okta deployment.

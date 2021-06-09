@@ -122,7 +122,7 @@ The following guides are provided for some of the most common authentication met
     * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
     * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
 
-3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC).  When using the organizations authentication server OAuth2 is preferred, with custom Okta authentication backends use OIDC.
+3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC).  When using an organization's authentication server OAuth2 is preferred; with custom Okta authentication backends, use OIDC.
 
 #### Okta - OAuth2
 
