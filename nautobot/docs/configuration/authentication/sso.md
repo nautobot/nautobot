@@ -170,7 +170,9 @@ for OpenID:
 SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ['groups']
 ```
 
-In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [python social auth core pipeline](https://python-social-auth.readthedocs.io/en/stable/pipeline.html) documentation.  An example to sync groups with Okta is provided in the [`/examples/okta`](https://github.com/nautobot/nautobot/tree/develop/examples/okta) folder.
+In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [`python-social-auth` authentication pipeline documentation](https://python-social-auth.readthedocs.io/en/stable/pipeline.html).
+
+An example to sync groups with Okta is provided in the [`examples/okta`](https://github.com/nautobot/nautobot/tree/develop/examples/okta) folder in the root of the Nautobot repository.
 
 ### Google - OAuth2
 
