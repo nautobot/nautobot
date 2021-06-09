@@ -463,6 +463,7 @@ class PrefixFieldMixinTest(TestCase):
     """Test cases for the PrefixFieldMixin."""
 
     def setUp(self):
+        """Setting up shared variables for the PrefixFieldMixin."""
         self.prefix = Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"))
         self.initial = {"prefix": self.prefix.prefix}
 
