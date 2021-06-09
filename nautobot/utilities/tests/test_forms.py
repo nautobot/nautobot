@@ -441,24 +441,22 @@ class AddressFieldMixinTest(TestCase):
     def setUp(self):
         """Setting up shared variables for the AddressFieldMixin."""
         self.ip = IPAddress.objects.create(address="10.0.0.1/24")
-        self.initial = {"address": self.ip}
+        self.initial = {"address": self.ip.address}
 
     def test_address_initial(self):
         """Ensure initial kwargs for address is passed in."""
         with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
-            AddressFieldMixin(initial=self.initial, instance={})
-            mock_init.assert_called_with(initial=self.initial, instance=mock.ANY)
+            ip_none = IPAddress()
+            AddressFieldMixin(initial=self.initial, instance=ip_none)
+            mock_init.assert_called_with(initial=self.initial, instance=ip_none)
 
     def test_address_instance(self):
         """Ensure override with computed field when initial kwargs for address is not passed in."""
 
-        class DummyInstance:
-            address = self.ip
-
         # Mock the django.forms.ModelForm __init__ function used in nautobot.utilities.forms.forms
         with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
-            AddressFieldMixin(instance=DummyInstance())
-            mock_init.assert_called_with(initial=self.initial, instance=mock.ANY)
+            AddressFieldMixin(instance=self.ip)
+            mock_init.assert_called_with(initial=self.initial, instance=self.ip)
 
 
 class PrefixFieldMixinTest(TestCase):
@@ -466,21 +464,19 @@ class PrefixFieldMixinTest(TestCase):
 
     def setUp(self):
         self.prefix = Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"))
-        self.initial = {"prefix": self.prefix}
+        self.initial = {"prefix": self.prefix.prefix}
 
     def test_prefix_initial(self):
         """Ensure initial kwargs for prefix is passed through."""
         with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
-            PrefixFieldMixin(initial=self.initial, instance={})
-            mock_init.assert_called_with(initial=self.initial, instance=mock.ANY)
+            prefix_none = Prefix()
+            PrefixFieldMixin(initial=self.initial, instance=prefix_none)
+            mock_init.assert_called_with(initial=self.initial, instance=prefix_none)
 
     def test_prefix_instance(self):
         """Ensure override with computed field when initial kwargs for prefix is not passed in."""
 
-        class DummyInstance:
-            prefix = self.prefix
-
         # Mock the django.forms.ModelForm __init__ function used in nautobot.utilities.forms.forms
         with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
-            PrefixFieldMixin(instance=DummyInstance())
-            mock_init.assert_called_with(initial=self.initial, instance=mock.ANY)
+            PrefixFieldMixin(instance=self.prefix)
+            mock_init.assert_called_with(initial=self.initial, instance=self.prefix)
