@@ -1,6 +1,6 @@
 ---
-name: ✨ Feature Request - (Coming July 2021)
-about: [BETA] Propose a new Nautobot feature or enhancement
+name: "✨ Feature Request - (Coming July 2021)"
+about: "[BETA] Propose a new Nautobot feature or enhancement"
 
 ---
 
