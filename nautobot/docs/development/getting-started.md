@@ -660,7 +660,7 @@ Below are common issues you might encounter in your development environment and 
 
 When using `nautobot-server runserver` to do development you might run into a traceback that looks something like this:
 
-```python
+```no-highlight
 Exception Type: OperationalError at /extras/tags/
 Exception Value: FATAL:  sorry, too many clients already
 ```
