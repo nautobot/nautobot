@@ -32,6 +32,15 @@ class NautobotConfig(AppConfig):
             register_menu_items(menu_items)
 
 
+def create_or_check_entry(grouping, record, key, path):
+    if key not in grouping:
+        grouping[key] = record.initial_dict
+    else:
+        for attr, value in record.fixed_fields:
+            if grouping[key][attr] != value:
+                logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
+
+
 def register_menu_items(tab_list):
     """
     Using the imported object a dictionary is either created or updated with objects to create
@@ -41,113 +50,37 @@ def register_menu_items(tab_list):
     NavMenuButton. The Django template then uses this dictionary to generate the navbar HTML.
     """
     for nav_tab in tab_list:
-        if nav_tab.name not in registry["nav_menu"]["tabs"]:
-            registry["nav_menu"]["tabs"][nav_tab.name] = {
-                "weight": nav_tab.weight,
-                "groups": {},
-                "permissions": [],
-            }
-        else:
-            for key, new_value in (("weight", nav_tab.weight),):
-                if registry["nav_menu"]["tabs"][nav_tab.name][key] != new_value:
-                    logger.error(
-                        "Unable to redefine %s on %s from %s to %s",
-                        key,
-                        nav_tab.name,
-                        registry["nav_menu"]["tabs"][nav_tab.name][key],
-                        new_value,
-                    )
+        create_or_check_entry(registry["nav_menu"]["tabs"], nav_tab, nav_tab.name, f"{nav_tab.name}")
 
-        tab_perms = []
+        tab_perms = set()
         registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
         for group in nav_tab.groups:
-            if group.name not in registry_groups:
-                registry_groups[group.name] = {
-                    "weight": group.weight,
-                    "items": {},
-                    "permissions": [],
-                }
-            else:
-                for key, new_value in (
-                    ("weight", group.weight),
-                    ("permissions", group.permissions),
-                ):
-                    if registry_groups[group.name][key] != new_value:
-                        logger.error(
-                            "Unable to redefine %s on %s -> %s from %s to %s",
-                            key,
-                            nav_tab.name,
-                            group.name,
-                            registry_groups[group.name][key],
-                            new_value,
-                        )
+            create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
 
-            group_perms = []
+            group_perms = set()
             for item in group.items:
-                if item.link not in registry_groups[group.name]["items"]:
-                    registry_groups[group.name]["items"][item.link] = {
-                        "link_text": item.link_text,
-                        "weight": item.weight,
-                        "buttons": {},
-                        "permissions": item.permissions,
-                    }
-                else:
-                    for key, new_value in (
-                        ("link_text", item.link_text),
-                        ("weight", item.weight),
-                        ("permissions", item.permissions),
-                    ):
-                        if registry_groups[group.name]["items"][item.link][key] != new_value:
-                            logger.error(
-                                "Unable to redefine %s on %s -> %s -> %s from %s to %s",
-                                key,
-                                nav_tab.name,
-                                group.name,
-                                item.link,
-                                registry_groups[group.name]["items"][item.link][key],
-                                new_value,
-                            )
+                create_or_check_entry(
+                    registry_groups[group.name]["items"],
+                    item,
+                    item.link,
+                    f"{nav_tab.name} -> {group.name} -> {item.link}",
+                )
 
                 registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
                 for button in item.buttons:
-                    if button.title not in registry_buttons:
-                        registry_buttons[button.title] = {
-                            "button_class": button.button_class,
-                            "icon_class": button.icon_class,
-                            "link": button.link,
-                            "permissions": button.permissions,
-                            "weight": button.weight,
-                        }
-                    else:
-                        for key, new_value in (
-                            ("button_class", button.button_class),
-                            ("icon_class", button.icon_class),
-                            ("link", button.link),
-                            ("permissions", button.permissions),
-                            ("weight", button.weight),
-                        ):
-                            if (
-                                registry_groups[group.name]["items"][item.link]["buttons"][button.title][key]
-                                != new_value
-                            ):
-                                logger.error(
-                                    "Unable to redefine %s on %s -> %s -> %s -> %s from %s to %s",
-                                    key,
-                                    nav_tab.name,
-                                    group.name,
-                                    item.link,
-                                    button.link,
-                                    registry_groups[group.name]["items"][item.link]["buttons"][button.title][key],
-                                    new_value,
-                                )
+                    create_or_check_entry(
+                        registry_buttons,
+                        button,
+                        button.title,
+                        f"{nav_tab.name} -> {group.name} -> {item.link} -> {button.title}",
+                    )
 
                 # Add sorted buttons to group registry dict
                 registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
                     sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
                 )
 
-                group_perms += item.permissions
-                group_perms = list(dict.fromkeys(group_perms))
+                group_perms = group_perms | set(perms for perms in item.permissions)
 
             # Add sorted items to group registry dict
             registry_groups[group.name]["items"] = OrderedDict(
@@ -156,23 +89,33 @@ def register_menu_items(tab_list):
             # Add collected permissions to group
             registry_groups[group.name]["permissions"] = group_perms
             # Add collected permissions to tab
-            tab_perms += group_perms
-            group_perms = list(dict.fromkeys(tab_perms))
+            tab_perms = tab_perms | group_perms
 
         # Add sorted groups to tab dict
         registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
             sorted(registry_groups.items(), key=lambda kv_pair: kv_pair[1]["weight"])
         )
         # Add collected permissions to tab dict
-        registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] += tab_perms
-        registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] = list(
-            dict.fromkeys(registry["nav_menu"]["tabs"][nav_tab.name]["permissions"])
+        registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] = (
+            registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] | tab_perms
         )
 
     # Order all tabs in dict
     registry["nav_menu"]["tabs"] = OrderedDict(
         sorted(registry["nav_menu"]["tabs"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
     )
+
+
+class NavMenuMixin:  # replaces PermissionsMixin
+    """Base class for navigation classes."""
+
+    @property
+    def initial_dict(self):  # to be implemented by each subclass
+        return {}
+
+    @property
+    def fixed_fields(self):  # to be implemented by subclass
+        return ()
 
 
 class PermissionsMixin:
@@ -185,7 +128,7 @@ class PermissionsMixin:
         self.permissions = permissions
 
 
-class NavMenuTab(PermissionsMixin):
+class NavMenuTab(NavMenuMixin, PermissionsMixin):
     """
     Ths class represents a navigation menu tab. This is built up from a name and a weight value. The name is
     the display text and the weight defines its position in the navbar.
@@ -195,6 +138,18 @@ class NavMenuTab(PermissionsMixin):
 
     permissions = []
     groups = []
+
+    @property
+    def initial_dict(self):
+        return {
+            "weight": self.weight,
+            "groups": {},
+            "permissions": set(),
+        }
+
+    @property
+    def fixed_fields(self):
+        return (("weight", self.weight),)
 
     def __init__(self, name, permissions=None, groups=None, weight=1000):
         """Ensure tab properties."""
@@ -209,7 +164,7 @@ class NavMenuTab(PermissionsMixin):
             self.groups = groups
 
 
-class NavMenuGroup(PermissionsMixin):
+class NavMenuGroup(NavMenuMixin, PermissionsMixin):
     """
     Ths class represents a navigation menu group. This is built up from a name and a weight value. The name is
     the display text and the weight defines its position in the navbar.
@@ -219,6 +174,17 @@ class NavMenuGroup(PermissionsMixin):
 
     permissions = []
     items = []
+
+    @property
+    def initial_dict(self):
+        return {
+            "weight": self.weight,
+            "items": {},
+        }
+
+    @property
+    def fixed_fields(self):
+        return (("weight", self.weight),)
 
     def __init__(self, name, items=None, weight=1000):
         """Ensure group properties."""
@@ -232,7 +198,7 @@ class NavMenuGroup(PermissionsMixin):
         self.items = items
 
 
-class NavMenuItem(PermissionsMixin):
+class NavMenuItem(NavMenuMixin, PermissionsMixin):
     """
     This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
     specifying additional link buttons that appear to the right of the item in the nav menu.
@@ -240,6 +206,26 @@ class NavMenuItem(PermissionsMixin):
     Links are specified as Django reverse URL strings.
     Buttons are each specified as a list of NavMenuButton instances.
     """
+
+    @property
+    def initial_dict(self):
+        return {
+            "link_text": self.link_text,
+            "weight": self.weight,
+            "buttons": {},
+            "permissions": self.permissions,
+        }
+
+    @property
+    def fixed_fields(self):
+        return (
+            ("link_text", self.link_text),
+            ("permissions", self.permissions),
+            ("weight", self.weight),
+        )
+
+    permissions = []
+    buttons = []
 
     def __init__(self, link, link_text, permissions=None, buttons=None, weight=1000):
         """Ensure item properties."""
@@ -257,11 +243,32 @@ class NavMenuItem(PermissionsMixin):
         self.buttons = buttons
 
 
-class NavMenuButton(PermissionsMixin):
+class NavMenuButton(NavMenuMixin, PermissionsMixin):
     """
     This class represents a button within a PluginMenuItem. Note that button colors should come from
     ButtonColorChoices.
     """
+
+    @property
+    def initial_dict(self):
+        return {
+            "link": self.link,
+            "icon_class": self.icon_class,
+            "button_class": self.button_class,
+            "weight": self.weight,
+            "buttons": {},
+            "permissions": self.permissions,
+        }
+
+    @property
+    def fixed_fields(self):
+        return (
+            ("button_class", self.button_class),
+            ("icon_class", self.icon_class),
+            ("link", self.link),
+            ("permissions", self.permissions),
+            ("weight", self.weight),
+        )
 
     def __init__(
         self,

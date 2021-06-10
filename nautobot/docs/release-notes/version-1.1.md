@@ -8,6 +8,10 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 ### Added
 
+#### App Defined Navigation [#485](https://github.com/nautobot/nautobot/issues/485)
+
+Applications can now define top, group, item and button level attributes in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](https://nautobot.readthedocs.io/en/latest/development/application-registry/)
+
 #### Read Only Jobs [#200](https://github.com/nautobot/nautobot/issues/200)
 
 Jobs may be optionally marked as read only by setting the `read_only = True` meta attribute. This prevents the job from making any changes to nautobot data and suppresses certain log messages. Read only jobs can be a great way to safely develop new jobs, and for working with reporting use cases. Please see the [Jobs documentation](https://nautobot.readthedocs.io/en/latest/additional-features/jobs/) for more details.
