@@ -182,6 +182,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Added
 
 - [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
+- [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
 
 ### Changed
 
