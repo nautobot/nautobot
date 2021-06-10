@@ -191,6 +191,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Fixed
 
+- [#220](https://github.com/nautobot/nautobot/issues/220) - Added a troubleshooting section to the development guide for issues encountered when using the multi-threaded development server
 - [#389](https://github.com/nautobot/nautobot/issues/389) - Fixed incorrect TaggedItem base class that caused tag issues on MySQL.
 - [#452](https://github.com/nautobot/nautobot/issues/452) - Fixed `api/dcim/cables` `OPTIONS` response not including the `status` field.
 - [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
