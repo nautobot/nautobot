@@ -622,7 +622,6 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 
 
 class CableViewSet(StatusViewSetMixin, ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = Cable.objects.prefetch_related("status", "termination_a", "termination_b")
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet

@@ -177,7 +177,34 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
-## Unreleased (2021-05-27)
+## Unreleased (2021-MM-DD)
+
+### Added
+
+- [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
+- [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
+
+### Changed
+
+- [#502](https://github.com/nautobot/nautobot/issues/502) - The `CRYPTOGRAPHY_KEY` configuration setting now must be set to a value that is neither `None` nor the same as `SECRET_KEY`.
+- [#537](https://github.com/nautobot/nautobot/issues/537) - To mitigate CVE-2021-31542, the minimum supported Django version is now 3.1.12.
+
+### Fixed
+
+- [#389](https://github.com/nautobot/nautobot/issues/389) - Fixed incorrect TaggedItem base class that caused tag issues on MySQL.
+- [#452](https://github.com/nautobot/nautobot/issues/452) - Fixed `api/dcim/cables` `OPTIONS` response not including the `status` field.
+- [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
+- [#501](https://github.com/nautobot/nautobot/issues/501) - Fixed missing prepopulation of address/prefix value into the form when adding an address or prefix under a parent prefix.
+- [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
+- [#513](https://github.com/nautobot/nautobot/issues/513) - Fixed inadvertent omission of "Search" box from ReadTheDocs.
+- [#528](https://github.com/nautobot/nautobot/pull/528) - Fixed an ordering issue in the `test_EXTERNAL_AUTH_DEFAULT_groups` test case.
+- [#540](https://github.com/nautobot/nautobot/pull/540) - Fixed intermittent CI failures due to DockerHub rate limits.
+- [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
+- [#549](https://github.com/nautobot/nautobot/pull/549) - Fixed CI errors on pull requests due to missing DockerHub credentials.
+
+### Removed
+
+## v1.0.2 (2021-05-27)
 
 ### Added
 
