@@ -296,6 +296,9 @@ To use a Device Type:
 Clicking the `Create` button will take you back to the home screen for the Device Type you are editing. There, you will
 see that the **Interfaces** tab now has the expected 21 Interfaces listed.
 
+> NOTE: As of this writing (Nautobot 1.0.3), Interfaces cannot be assigned in to a LAG in the Device Type template; component
+> Interfaces must be designated in the specific instantiation of s Device created from the Device Type 
+
 ![](images/getting-started-nautobot-ui/17-templated-interfaces.png)
 
 ### Create a New Device Using the Device Type
@@ -305,13 +308,21 @@ you will see an **Interfaces** tab with the expected Interfaces from the Device 
 
 ![](images/getting-started-nautobot-ui/18-assign-device-type.png)
 
+> NOTE: **Device Type** properties only apply to **new** instantiations of Devices from the Type; 
+> Devices created prior to a modification of the Device Type will not inherit the changes retroactively
+
 ### Specify the LAG Components on the Device
 
+As of this writing (Nautobot 1.0.3), LAG component Interfaces cannot be assigned in the Device Type template, so we will
+edit this new Device, specifying the component `ae0` Interfaces.
 
-
+1. On the new Device's main page, select the appropriate Interfaces (`xe-0/0/9` and `xe-1/0/9`) to be added to `ae0` and click on the `Edit` button
+2. On the `Editing Interfaces` form, select `ae0` in the **Parent LAG** drop-down selector
+3. Click on `Apply`; you will be taken back to the main page for the Device
 
 ![](images/getting-started-nautobot-ui/19-edit-ints-for-lag.png)
 
+On the Device's main page, notice that `xe-0/0/9` and `xe-1/0/9` are now assigned to the `ae0` LAG
 
 ![](images/getting-started-nautobot-ui/20-ints-int-lag.png)
 
