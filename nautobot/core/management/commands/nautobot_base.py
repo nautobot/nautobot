@@ -2,6 +2,7 @@ from django.core.management import BaseCommand
 from django.core.exceptions import ImproperlyConfigured
 from django.db import DEFAULT_DB_ALIAS, connections
 
+
 class NautobotBase(BaseCommand):
     migration_notice = "Run 'nautobot-server migrate' to apply them."
 
@@ -11,6 +12,7 @@ class NautobotBase(BaseCommand):
         migrations in the database.
         """
         from django.db.migrations.executor import MigrationExecutor
+
         try:
             executor = MigrationExecutor(connections[DEFAULT_DB_ALIAS])
         except ImproperlyConfigured:
@@ -24,7 +26,8 @@ class NautobotBase(BaseCommand):
                 self.style.NOTICE(
                     "\nYou have %(unapplied_migration_count)s unapplied migration(s). "
                     "Your project may not work properly until you apply the "
-                    "migrations for app(s): %(apps_waiting_migration)s." % {
+                    "migrations for app(s): %(apps_waiting_migration)s."
+                    % {
                         "unapplied_migration_count": len(plan),
                         "apps_waiting_migration": ", ".join(apps_waiting_migration),
                     }

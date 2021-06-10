@@ -315,7 +315,7 @@ INSTALLED_APPS = [
     "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
-    "django.contrib.staticfiles", # Must come after nautobot.core to allow overriding management commands
+    "django.contrib.staticfiles",  # Must come after nautobot.core to allow overriding management commands
     "drf_yasg",
     "graphene_django",
 ]
