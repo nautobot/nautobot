@@ -107,7 +107,7 @@ On the `Add a new device` form:
 Regions are administrative domains, used to organize Sites and other Regions. They can be nested recursively.
 A Region might represent a continent, country, city, campus, or other area. A Region can contain Sites and other Regions.
 
-Additional information on Regions is in the ['Regions' section of the Nautobot documentation](https://nautobot.readthedocs.io/en/latest/models/dcim/region/).
+Additional information on Regions is in the [Regions section of the Nautobot documentation](https://nautobot.readthedocs.io/en/latest/models/dcim/region/).
 
 In the following exercise, we will create three Regions:
 * North America
@@ -152,7 +152,7 @@ Vancouver:
 It's quite easy to add an existing Site to a Region.
 
 To access the page where you can modify a Site:
-1. Click on **Organization** on the top navigation menu
+1. Click on **Organization** in the top navigation menu
 2. Click on **Sites** in the drop-down menu
 3. The **Sites** page will appear; click on the specific Site you want to modify (`Vancouver 1` in this example shown).
 4. On the page for the Site, click on the `Edit` button 
@@ -175,8 +175,77 @@ The page for the Site you updated will appear again, showing the updated Region 
 
 A Platform object can hold various information about a device, such as the OS, OS version, and NAPALM driver.
 
+Further information is available in the [Platforms](https://nautobot.readthedocs.io/en/latest/models/dcim/platform/) section of the Nautobot docs.
+
 While use of Platforms is optional, they provide great value in many use cases.
+
+To add a Platform:
+1. Click on **Devices** in the top navigation menu
+2. Find **Platforms** and click on the `+` icon in the menu
+
+Once on the `Add a new platform` form:
+3. Provide a Name (required)
+4. The Slug will auto-populate based on the Name you provide; you may override this if necessary
+5. Select a Manufacturer from the drop-down selector (optional)
+6. Provide the name of the NAPALM driver ** (optional) (Note: this must be the exact name of the NAPALM driver)
+7. Provide NAPALM arguments (optional)
+8. Provide description (optional)
+9. Click on the `Create` button
+
+> TIP: NAPALM Driver Options include:
+> - eos (Arista)
+> - ios (Cisco)
+> - nxos (used with nxapi feature)
+> - nxos_ssh (used for ssh login)
+> - junos 
 
 ![](images/getting-started-nautobot-ui/10-add-platform.png)
 
+Once completed, you will be sent to the Platforms page, where all the Platform variants are shown.
+
+> TIP: Different use cases for Platforms may require different information. For example, to use a specific Platform with 
+> the Device Onboarding Plugin, you may be required to override the default Slug value with that of the 
+> Netmiko [device_type](https://github.com/ktbyers/netmiko/blob/2dc032b64c3049d3048966441ee30a0139bebc81/netmiko/ssh_autodetect.py#L50)
+
 ![](images/getting-started-nautobot-ui/11-platforms-page.png)
+
+## Tenants
+
+A 'Tenant' signifies ownership of an object in Nautobot and as such, any object may only have a single Tenant assigned.
+
+More information on Tenants can be found in the [Tenants](https://nautobot.readthedocs.io/en/latest/models/tenancy/tenant/) section of the Nautobot docs.
+
+To create a Tenant:
+1. Click on **Devices** on the top navigation menu
+2. Find **Platforms** and click on the `+`
+3. Populate the Name
+4. The Slug will auto-populate based on the Name you provide, but this can be manually overwritten
+5. Click the `Create` button
+
+![](images/getting-started-nautobot-ui/12-add-tenant.png)
+
+### Assigning a Tenant to an Object
+
+It is simple to assign a Tenant to an existing object. This next example will add a Tenant to an existing Device.
+
+1. Click on **Devices** in the top navigation menu
+2. Look for the **Devices** option and click on it; this will take you to the Devices page
+3. Click on the specific Device you want to add the Tenant to; this will take you to the main page for that Device
+4. On the specific Device page, click on the `Edit` button
+
+![](images/getting-started-nautobot-ui/13-assign-tenant-to-device.png)
+
+Once on the page to edit the Device:
+1. Make a selection from the **Tenant** drop-down menu selector
+2. Click the `Update` button
+
+This will take you back to the main page for the Device.
+
+![](images/getting-started-nautobot-ui/14-assign-tenant-to-device-2.png)
+
+Notice that the **Tenant** field is now populated/updated.
+
+
+
+
+
