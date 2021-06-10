@@ -201,9 +201,12 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#528](https://github.com/nautobot/nautobot/pull/528) - Fixed an ordering issue in the `test_EXTERNAL_AUTH_DEFAULT_groups` test case.
 - [#540](https://github.com/nautobot/nautobot/pull/540) - Fixed intermittent CI failures due to DockerHub rate limits.
 - [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
-- [#549](https://github.com/nautobot/nautobot/pull/549) - Fixed CI errors on pull requests due to missing DockerHub credentials.
 
 ### Removed
+
+### Security
+
+- [#418](https://github.com/nautobot/nautobot/issues/418) - Removed unused JQuery-UI component flagged by vulnerability scanner (CVE-2020-7729)
 
 ## v1.0.2 (2021-05-27)
 
