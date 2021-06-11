@@ -384,12 +384,19 @@ On the `Add a new VLAN` form:
 1. Populate **ID** with `100`
 2. Populate **Name** with `vlan 100`
 3. Select **Status** as `Active`
-4. Select `Vancouver`/`Ottawa` from the **Region** selector drop-down
-5. Select `Vancouver 1`/`Ottawa 1` from the **Site** selector drop-down
-6. Click on the `Create and Add Another` to create the next instance of the VLAN or `Create` when complete with the second instance.
+4. Select `Vancouver` from the **Region** selector drop-down
+5. Select `Vancouver 1` from the **Site** selector drop-down
+6. Click on the `Create and Add Another` button
 
 > NOTE: The **Region** drop-down selection in step 4 is optional and only meant to narrow down the options presented in the **Site** drop-down selector in Step 5.
 > A VLAN cannot be assigned to a Region.
+
+1. Populate **ID** with `100`
+2. Populate **Name** with `vlan 100`
+3. Select **Status** as `Active`
+4. Select `Ottawa` from the **Region** selector drop-down
+5. Select `Ottawa 1` from the **Site** selector drop-down
+6. Click on the `Create` button when complete with the second instance
 
 ![](images/getting-started-nautobot-ui/23-create-vlans-2.png)
 
@@ -415,6 +422,79 @@ To assign a VLAN to an Interface:
     * The `vlan 100` choice that is assigned to the `Ottawa 1` Site does not show up as an option
 
 ![](images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)
+
+## IP Address Management
+
+This next section will demonstrate how to 
+- Create a Regional Internet Registry
+- Create an aggregate  
+- Create assignable IP addresses
+- Assign an IP address to an Interface on a Device
+
+These type of operations fall under an umbrella called IP Address Management (IPAM). 
+The Nautobot documentation [IPAM section](https://nautobot.readthedocs.io/en/latest/core-functionality/ipam/) has more detail on IPAM and each operation.
+
+### Create a Regional Internet Registry (RIR)
+
+A RIR allocates globally-routable IP address space. There are five RIRs, each responsible for a particular section of the globe.
+Nautobot also considers RFCs 1918 and 6589 to be RIR-like because they allocate private IP space.
+
+Nautobot requires any IP allocation be attributed to a RIR.
+
+To create a RIR:
+1. Click on **IPAM** in the top level navigation menu
+2. Find **RIRs** and click on the `+`; this takes you to the `Add a new RIR` form
+3. Specify the RIR Name
+4. The Slug will auto-populate based on the Name you provide, but this default can be manually overwritten
+5. There is a checkbox to flag Private (internal use) only
+6. Click on the `Create` button
+
+![](images/getting-started-nautobot-ui/27-add-rir.png)
+
+### Create an Aggregate
+
+An aggregate is a consolidated allocation of IP address space, whether it is public or private. An aggregate must map back to a RIR that has allocated the space.
+
+To create an Aggregate:
+1. Click on **IPAM** in the top level navigation menu
+2. Find **Aggregates** and click on the `+`; this takes you to the `Add a new aggregate` form
+3. Specify the prefix and mask in a `prefix/mask` format
+4. Select a **RIR** from the drop-down selector
+5. Click the `Create` button
+
+![](images/getting-started-nautobot-ui/28-add-aggregate.png)
+
+You will then be taken to the `Aggregates` main page, where you will see the Aggregate you just created.
+
+![](images/getting-started-nautobot-ui/29-view-aggregates.png)
+
+### Creating a Prefix
+
+A Prefix is an IPv4 or IPv6 network and mask expressed in CIDR notation (e.g. 192.0.2.0/24). 
+Prefixes are automatically organized by their parent Aggregates. 
+Additionally, each Prefix can be assigned to a particular Site and virtual routing and forwarding instance (VRF). 
+
+To create a prefix:
+1. 
+
+![](images/getting-started-nautobot-ui/30-add-prefix.png)
+
+![](images/getting-started-nautobot-ui/31-view-aggregates-again.png)
+
+![](images/getting-started-nautobot-ui/32-add-ip-addr.png)
+
+![](images/getting-started-nautobot-ui/33-assign-address.png)
+
+![](images/getting-started-nautobot-ui/34-assign-address-2.png)
+
+![](images/getting-started-nautobot-ui/35-assign-address-3.png)
+
+![](images/getting-started-nautobot-ui/36-verify-address.png)
+
+![](images/getting-started-nautobot-ui/37-verify-prefix.png)
+
+![](images/getting-started-nautobot-ui/38-verify-prefix2.png)
+
 
 
 
