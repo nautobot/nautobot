@@ -81,7 +81,14 @@
             {% delete_button object %}
         {% endif %}
     </div>
-    <span class="hover_copy"><h1 id="devicename">{{ object }}<button class="btn btn-xs btn-default hover_copy_button" data-clipboard-target="#devicename"><span class="mdi mdi-content-copy"></span></button></h1></span>
+    <span class="hover_copy">
+        <h1 id="devicename">
+            {{ object }}
+            <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-target="#devicename">
+                <span class="mdi mdi-content-copy"></span>
+            </button>
+        </h1>
+    </span>
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">
         {% custom_links object %}
