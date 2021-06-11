@@ -409,7 +409,7 @@ you'll see the three VLANs and the Site assignment for each one. Each `vlan 100`
 #### Assigning VLANs to an Interface
 
 To assign a VLAN to an Interface:
-1. Click on **IPAM** on the top level navigation menu
+1. Click on **IPAM** on the top-level navigation menu
 2. Select **Devices** to go to the Devices main page
 3. Click on the name of the Device you wish to add a VLAN to (`edge2.van1`) in this example
 4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
@@ -442,7 +442,7 @@ Nautobot also considers RFCs 1918 and 6589 to be RIR-like because they allocate 
 Nautobot requires any IP allocation be attributed to a RIR.
 
 To create a RIR:
-1. Click on **IPAM** in the top level navigation menu
+1. Click on **IPAM** in the top-level navigation menu
 2. Find **RIRs** and click on the `+`; this takes you to the `Add a new RIR` form
 3. Specify the RIR Name
 4. The Slug will auto-populate based on the Name you provide, but this default can be manually overwritten
@@ -456,10 +456,10 @@ To create a RIR:
 An aggregate is a consolidated allocation of IP address space, whether it is public or private. An aggregate must map back to a RIR that has allocated the space.
 
 To create an Aggregate:
-1. Click on **IPAM** in the top level navigation menu
+1. Click on **IPAM** in the top-level navigation menu
 2. Find **Aggregates** and click on the `+`; this takes you to the `Add a new aggregate` form
 3. Specify the prefix and mask in a `prefix/mask` format
-4. Select a **RIR** from the drop-down selector
+4. Select a RIR from the drop-down selector
 5. Click the `Create` button
 
 ![](images/getting-started-nautobot-ui/28-add-aggregate.png)
@@ -475,24 +475,91 @@ Prefixes are automatically organized by their parent Aggregates.
 Additionally, each Prefix can be assigned to a particular Site and virtual routing and forwarding instance (VRF). 
 
 To create a prefix:
-1. 
+1. Click on **IPAM** in the top-level navigation menu
+2. Look for **Prefixes** and click on the `+`; this will take you to the `Add a new prefix` form
+3. Populate the Prefix in CIDR notation
+4. Select a Status from the drop-down selector
+5. If all addresses in the Prefix are usable, check the `Is a pool` flag
+6. Click on the `Create` button (not shown)
 
 ![](images/getting-started-nautobot-ui/30-add-prefix.png)
 
+### Verify a Prefix in an Aggregate
+
+To view the Prefixes in an Aggregate:
+1. Click on **IPAM** in the top-level navigation menu
+2. Click on **Aggregates** to go to the Aggregates main page
+3. Find the Aggregate you are interested in and click on it
+4. On the main page for the specific Aggregate, look for a specific Prefix (`10.10.10.0/24` in this example)
+
+> NOTE: Nautobot will break an Aggregate into the highest-level child Prefixes to carve out user-defined Prefixes
+
 ![](images/getting-started-nautobot-ui/31-view-aggregates-again.png)
+
+### Create IP Addresses
+
+To create an IP address:
+1. Click on **IPAM** in the top-level navigation menu
+2. Find **IP Addresses** and click on the `+`; this will take you to the `Add a new IP address` form
+3. In this example, we are going to create multiple individual addresses, so click on the `Bulk Create` tab
+4. Populate an Address pattern
+    * This example uses `10.10.10.[0-1,2-3,6-7]/31` to create 3 non-contiguous /31's 
+    * The specified mask should be exactly as would be configured on the Device's Interface 
+5. Select Active for Status from the drop-down selector   
+6. Click on the `Create` button
 
 ![](images/getting-started-nautobot-ui/32-add-ip-addr.png)
 
+### Assigning IP Addresses
+
+To assign an IP Address:
+1. Click on **IPAM** in the top-level navigation menu
+2. Click on **IP Addresses** to go to the main IP Addresses page
+3. Find the IP address you wish to assign to an Interface and click on it
+
 ![](images/getting-started-nautobot-ui/33-assign-address.png)
+
+4. On the main page for the Address, click on the `Edit` button to go to the `Editing IP address` page
 
 ![](images/getting-started-nautobot-ui/34-assign-address-2.png)
 
+Once on the `Editing IP address` page:
+1. Select a Device from the drop-down selector
+2. Select an Interface on the Device
+3. Click on the `Update` button
+    * This will take you back to the main page for the IP Address, where you will see the `device (interface)` assignment
+
 ![](images/getting-started-nautobot-ui/35-assign-address-3.png)
+
+
+### The Search Bar
+
+The next few sections walk you through finding different objects and verifying information about the objects. 
+The instructions will walk you through how to **navigate** to the main page for the proper object. 
+
+You can also use the search bar to get to the desired main page.
+
+
+
+### Finding an IP Address for an Interface
+
+1. Click on **Devices** on the top-level navigation menu
+2. Click on **Devices** to go to the main page for Devices
+3. Search for the Device you are interested in and click on the link to go to the main page for the Device
+4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in; find the IP Address(es) in the **IP Addresses** column in the row
 
 ![](images/getting-started-nautobot-ui/36-verify-address.png)
 
+### Finding IP Addresses in a Prefix 
+
+To find information on a particular Prefix:
+1. Click on **IPAM** in the top-level drop-down menu
+2. Click on **Prefixes** to get to the Prefixes main page 
+3. Find the Prefix you are interested in and click on the link
+
 ![](images/getting-started-nautobot-ui/37-verify-prefix.png)
 
+4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab
 ![](images/getting-started-nautobot-ui/38-verify-prefix2.png)
 
 
