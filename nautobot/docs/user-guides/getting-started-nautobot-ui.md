@@ -268,10 +268,11 @@ because the **Device Type** object also serves as a template. This templating fe
 To use a Device Type:
 1. Click on **Devices** in the top navigation menu
 2. Click on the **Device Types** option in the drop-down menu
-3. On the Device Types page, either `Add +` a new Device Type or `Edit` an existing Device Type
+3. On the Device Types page `Add +` a new Device Type
     * Creating a Device Type is very similar to [creating a Device](#creating-a-device)
     * A Device Type requires a **Manufacturer** object to be created prior to creating the Device Type
     * Device Type requires Manufacturer, Model, Slug, and Height values at creation.
+    * In this example, name the Device Type `MX240-edge`
     
 ![](images/getting-started-nautobot-ui/21-device-type.png)
       
@@ -279,6 +280,7 @@ To use a Device Type:
 
 ![](images/getting-started-nautobot-ui/15-create-device-type.png)
 
+You will now see the `Interface Template` form:
 1. Add the `ae0` Interface Template
    * `Manufacturer` will auto-populate to the Manufacturer of the Device Type you are editing
    * `Device Type` will auto-populate to the Device Type you are editing
@@ -303,8 +305,13 @@ see that the **Interfaces** tab now has the expected 21 Interfaces listed.
 
 ### Create a New Device Using the Device Type
 
-Create a new Device, specifying the Device Type with the templated Interfaces. On the main screen for the new Device, 
-you will see an **Interfaces** tab with the expected Interfaces from the Device Type template:
+Create a new Device with these attributes:
+* **Name** = `edge2.van1`
+* **Device role** select `Customer Edge`
+* **Device type** select `Juniper MX240-edge` (this will show up as a fusion of the **Manufacturer** (`Juniper`) for the Device Type and the Device Type (`MX240-edge`) Names)
+* **Site** = `Vancouver 1`
+
+On the main screen for the new Device, you will see an **Interfaces** tab with the expected Interfaces from the Device Type template:
 
 ![](images/getting-started-nautobot-ui/18-assign-device-type.png)
 
@@ -325,5 +332,89 @@ edit this new Device, specifying the component `ae0` Interfaces.
 On the Device's main page, notice that `xe-0/0/9` and `xe-1/0/9` are now assigned to the `ae0` LAG
 
 ![](images/getting-started-nautobot-ui/20-ints-int-lag.png)
+
+## VLANS and VLAN Groups
+
+Each VLAN may be assigned to a site, tenant, and/or VLAN group.
+
+Each VLAN must be assigned a status. The following statuses are available by default:
+- Active
+- Reserved
+- Deprecated
+
+In general, VLANs can have overlapping names and IDs. The exception to this is VLANs within a VLAN Group: each VLAN within a group must have a unique ID and name.  
+A VLAN Group may be assigned to a specific site, but a group cannot belong to multiple sites. VLANs may be assigned to a specific site as well.
+
+The Nautobot documentation has more info about [VLANs and VLAN Groups](https://nautobot.readthedocs.io/en/latest/core-functionality/vlans/#vlan-management).
+
+### VLAN Example
+
+In the following example, we will create two VLANs with overlapping Names and IDs: ID = `100` and Name = `vlan 100`.
+Neither of the vlan 100 instances is assigned to a group, but each of these VLANs is assigned to a different site. 
+Assigning a VLAN to a specific site restricts use of that VLAN to the assigned site.
+
+We’ll also create a vlan 200 without a site assignment.
+
+> NOTE: this example will require a Site (`Ottawa 1`) within a Region (`Ottawa`) in the `North America` Region in addition to the `Vancouver 1` Site and `Vancouver` Region created prior. 
+> Refer back to the [Create a Site](#create-a-site) and [Create a Region](#creating-regions) sections to do so.
+
+The following example will show:
+* Creating a `vlan 200` without a site assignment (*global* scope)
+* Creating two VLANs, each with overlapping Names and IDs: ID = `100` and Name = `vlan 100`
+  * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different site (*site-specific* scope)
+* How the *site-specific* and *global* scopes affect which VLANs can be assigned on which Devices
+
+#### Creating the VLANs
+
+1. Click on **IPAM** in the top navigation menu
+2. Look for the **VLANS** option and click on the `+` to go to the `Add a new VLAN` form
+3. Populate **ID** with `200`
+4. Populate **Name** with `vlan 200`
+5. Select **Status** as `Active`
+6. Click on `Create and Add Another` to save and to go to the `Add a new VLAN` form
+
+> NOTE: The required parameters to create a new VLAN are bolded in the `Add a new VLAN` form: **ID**, **Name**, and **Status**
+
+![](images/getting-started-nautobot-ui/22-create-vlans.png)
+
+Now we'll create two instances of VLANs, each with **ID** = `100` and **Name** = `vlan 100` and an `Active` **Status**.
+The differentiator will be that one instance will be assigned to the `Vancouver 1` Site and the other to the `Ottawa 1` Site.
+
+On the `Add a new VLAN` form:
+1. Populate **ID** with `100`
+2. Populate **Name** with `vlan 100`
+3. Select **Status** as `Active`
+4. Select `Vancouver`/`Ottawa` from the **Region** selector drop-down
+5. Select `Vancouver 1`/`Ottawa 1` from the **Site** selector drop-down
+6. Click on the `Create and Add Another` to create the next instance of the VLAN or `Create` when complete with the second instance.
+
+> NOTE: The **Region** drop-down selection in step 4 is optional and only meant to narrow down the options presented in the **Site** drop-down selector in Step 5.
+> A VLAN cannot be assigned to a Region.
+
+![](images/getting-started-nautobot-ui/23-create-vlans-2.png)
+
+Once you've created the three VLANs and then hit the `Create` button, you will be taken to the **VLANs** main page. On that page, 
+you'll see the three VLANs and the Site assignment for each one. Each `vlan 100` instance will have a Site assignment, while
+`vlan 200` will not:
+
+![](images/getting-started-nautobot-ui/24-vlan-main-page.png)
+
+#### Assigning VLANs to an Interface
+
+To assign a VLAN to an Interface:
+1. Click on **IPAM** on the top level navigation menu
+2. Select **Devices** to go to the Devices main page
+3. Click on the name of the Device you wish to add a VLAN to (`edge2.van1`) in this example
+4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
+
+![](images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
+
+5. On the `Editing interface xe-0/0/0` page, set **802.1Q** Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
+    * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Site
+    * The other choice is `vlan 200`, which was not assigned to a Site, and thus has a global scope
+    * The `vlan 100` choice that is assigned to the `Ottawa 1` Site does not show up as an option
+
+![](images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)
+
 
 
