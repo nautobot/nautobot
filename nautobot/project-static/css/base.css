@@ -475,3 +475,10 @@ textarea {
     line-height: 12px;
     top: 0;
 }
+
+span.hover_copy .hover_copy_button {
+    display: none;
+}
+span.hover_copy:hover .hover_copy_button {
+    display: inline;
+}
