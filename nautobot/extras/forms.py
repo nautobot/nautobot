@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields import TextField
+from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
@@ -35,6 +37,7 @@ from .models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -900,3 +903,24 @@ class StatusModelCSVFormMixin(CSVModelForm):
         to_field_name="slug",
         help_text="Operational status",
     )
+
+
+class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
+    slug = SlugField()
+    query = TextField()
+
+    class Meta:
+        model = GraphQLQuery
+        fields = (
+            "name",
+            "slug",
+            "query",
+        )
+
+    def get_action_url(self):
+        return reverse("extras:graphqlquery_add")
+
+
+class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):
+    model = GraphQLQuery
+    q = forms.CharField(required=False, label="Search")

@@ -125,9 +125,25 @@ menu_tabs = (
                 weight=300,
                 items=(
                     NavMenuItem(
+                        link="extras:graphqlquery_list",
+                        link_text="GraphQL Queries",
+                        weight=100,
+                        permissions=[
+                            "extras.view_graphqlquery",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:graphqlquery_add",
+                                permissions=[
+                                    "extras.add_graphqlquery",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="extras:relationship_list",
                         link_text="Relationships",
-                        weight=100,
+                        weight=200,
                         permissions=[
                             "extras.view_relationship",
                         ],

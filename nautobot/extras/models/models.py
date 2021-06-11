@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import uuid
 from collections import OrderedDict
 
@@ -12,6 +13,10 @@ from django.db import models
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend
+from graphql.error import GraphQLSyntaxError
+from graphql.language.ast import OperationDefinition
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.extras.choices import *
@@ -723,3 +728,54 @@ class JobResult(BaseModel):
             else:
                 log_level = logging.INFO
             logger.log(log_level, str(message))
+
+
+@extras_features("graphql")
+class GraphQLQuery(BaseModel, ChangeLoggedModel):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.CharField(max_length=100, unique=True)
+    query = models.TextField()
+    variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+
+    class Meta:
+        ordering = ("slug",)
+        verbose_name = "GraphQL query"
+        verbose_name_plural = "GraphQL queries"
+
+    def get_absolute_url(self):
+        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
+
+    def save(self, *args, **kwargs):
+        variables = {}
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        # Load query into GraphQL backend
+        document = backend.document_from_string(schema, self.query)
+
+        # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
+        # that define one or more variables. For each operation and variable definition, store the variable's
+        # default value (if any) into our own "variables" dict.
+        definitions = [
+            d
+            for d in document.document_ast.definitions
+            if isinstance(d, OperationDefinition) and d.variable_definitions
+        ]
+        for definition in definitions:
+            for variable_definition in definition.variable_definitions:
+                default = variable_definition.default_value.value if variable_definition.default_value else ""
+                variables[variable_definition.variable.name.value] = default
+
+        self.variables = variables
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        try:
+            backend.document_from_string(schema, self.query)
+        except GraphQLSyntaxError as error:
+            raise ValidationError({"query": error})
+
+    def __str__(self):
+        return self.name

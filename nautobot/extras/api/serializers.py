@@ -1,6 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_serializer_method
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend
+from graphql.error import GraphQLSyntaxError
 from rest_framework import serializers
 
 from nautobot.core.api import (
@@ -28,6 +31,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -679,3 +683,24 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
             "destination_type",
             "destination_id",
         ]
+
+
+#
+# GraphQL Queries
+#
+
+
+class GraphQLQuerySerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
+    variables = serializers.DictField(allow_null=True, default={})
+
+    class Meta:
+        model = GraphQLQuery
+        fields = (
+            "id",
+            "url",
+            "name",
+            "slug",
+            "query",
+            "variables",
+        )
