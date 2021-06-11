@@ -5,7 +5,7 @@ from netaddr import IPNetwork
 
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm
 from nautobot.ipam.models import IPAddress, Prefix
-from nautobot.utilities.forms.fields import CSVDataField, NumericArrayField
+from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField, NumericArrayField
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
@@ -409,6 +409,44 @@ class CSVDataFieldTest(TestCase):
         """
         with self.assertRaises(forms.ValidationError):
             self.field.clean(input)
+
+
+class DynamicModelMultipleChoiceFieldTest(TestCase):
+    """Tests for DynamicModelMultipleChoiceField."""
+
+    def setUp(self):
+        self.field = DynamicModelMultipleChoiceField(queryset=IPAddress.objects.all())
+
+    def test_prepare_value_single_str(self):
+        """A single string (UUID) value should be treated as a single-entry list."""
+        self.assertEqual(
+            self.field.prepare_value("c671a001-4c17-4ca1-80fd-fe1609bcadec"),
+            ["c671a001-4c17-4ca1-80fd-fe1609bcadec"],
+        )
+
+    def test_prepare_value_multiple_str(self):
+        """A list of string (UUID) values should be handled as-is."""
+        self.assertEqual(
+            self.field.prepare_value(["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]),
+            ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"],
+        )
+
+    def test_prepare_value_single_object(self):
+        """A single object value should be translated to its corresponding PK."""
+        address = IPAddress.objects.create(address="10.1.1.1/24")
+        self.assertEqual(
+            self.field.prepare_value(address),
+            address.pk,
+        )
+
+    def test_prepare_value_multiple_object(self):
+        """A list of object values should be translated to a list of PKs."""
+        address_1 = IPAddress.objects.create(address="10.1.1.1/24")
+        address_2 = IPAddress.objects.create(address="10.1.1.2/24")
+        self.assertEqual(
+            self.field.prepare_value([address_1, address_2]),
+            [address_1.pk, address_2.pk],
+        )
 
 
 class NumericArrayFieldTest(TestCase):
