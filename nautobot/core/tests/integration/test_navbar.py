@@ -1,6 +1,6 @@
-from django.contrib.auth.models import Permission
+from django.test.utils import override_settings
+from selenium.common.exceptions import NoSuchElementException
 
-from nautobot.users.models import User
 from nautobot.utilities.testing.integration import SeleniumTestCase
 from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
 
@@ -40,13 +40,23 @@ class NavBarTestCase(SeleniumTestCase):
         },
     }
 
+    def setUp(self):
+        super().setUp()
+        self.login(self.user.username, self.password)
+
+    def tearDown(self):
+        self.logout()
+        super().tearDown()
+
+    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_navbar_render_superuser(self):
         """
         Render navbar from home page with superuser.
         """
+        # Set test user to admin
+        self.user.is_superuser = True
+        self.user.save()
 
-        # Login
-        self.login("bob", "bob")
         # Retrieve home page
         self.selenium.get(f"{self.live_server_url}")
         self.selenium.wait_for_html("body")
@@ -70,7 +80,6 @@ class NavBarTestCase(SeleniumTestCase):
 
                     for button_name in item_details["buttons"]:
                         button = item.find_element_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
-
                         # Ensure button has matching class for its name
                         button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
                         if button_class:
@@ -83,15 +92,15 @@ class NavBarTestCase(SeleniumTestCase):
                             rendered_button_icon = icon.get_attribute("class").split(" ")[-1]
                             self.assertEquals(button_icon, rendered_button_icon)
 
+    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_navbar_render_limit_permissions(self):
         """
         Render navbar from home page with limited permissions.
         """
-        user = User.objects.get(username="alice")
-        user.user_permissions.add(Permission.objects.get(codename="view_site"))
-        user.user_permissions.add(Permission.objects.get(codename="view_relationship"))
-        user_permissions = user.get_user_permissions()
-        self.login("alice", "bob")
+        self.add_permissions("dcim.view_site")
+        self.add_permissions("extras.view_relationship")
+        user_permissions = self.user.get_all_permissions()
+
         self.selenium.get(f"{self.live_server_url}")
         self.selenium.wait_for_html("body")
 
@@ -120,11 +129,11 @@ class NavBarTestCase(SeleniumTestCase):
                             item.get_attribute("class"), "disabled", f"Item `{item_name}` should be disabled."
                         )
 
+    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_navbar_render_no_permissions(self):
         """
         Render navbar from home page with no permissions.
         """
-        self.login("charlie", "bob")
         self.selenium.get(f"{self.live_server_url}")
         self.selenium.wait_for_html("body")
 
@@ -145,3 +154,20 @@ class NavBarTestCase(SeleniumTestCase):
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     item = group.find_element_by_xpath(item_xpath)
                     self.assertEquals(item.get_attribute("class"), "disabled", f"Item `{item_name}` should be disabled.")
+
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_navbar_render_restricted_ui(self):
+        """
+        Render navbar from home page with restricted UI set to True.
+        """
+        self.selenium.get(f"{self.live_server_url}")
+        self.selenium.wait_for_html("body")
+
+        for tab_name, _ in self.navbar.items():
+            # XPath to find tabs using the tab name
+            tab_xpath = f"//*[@id='navbar']//*[contains(text(), '{tab_name}')]"
+            try:
+                self.selenium.find_element_by_xpath(tab_xpath)
+                raise Exception(f"Tab element {tab_name} should not exist.")
+            except NoSuchElementException:
+                pass
