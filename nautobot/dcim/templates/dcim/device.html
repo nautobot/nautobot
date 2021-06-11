@@ -79,7 +79,16 @@
                                     </tr>
                                     <tr>
                                         <td>Serial Number</td>
-                                        <td><span class="hover_copy"><span id="serial_number">{{ object.serial|placeholder }}</span>{% if object.serial %} <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#serial_number"><span class="mdi mdi-content-copy"></span></button></span>{% endif %}</td>
+                                        <td>
+                                            <span class="hover_copy">
+                                                <span id="serial_number">{{ object.serial|placeholder }}</span>
+                                                {% if object.serial %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#serial_number">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                {% endif %}
+                                            </span>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td>Asset Tag</td>
