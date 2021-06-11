@@ -167,13 +167,16 @@
                                         <td>
                                             {% if object.primary_ip6 %}
                                                 <span class="hover_copy">
-                                                <a href="{% url 'ipam:ipaddress' pk=object.primary_ip6.pk %}" id="ipv6">{{ object.primary_ip6.address.ip }}</a>
-                                                {% if object.primary_ip6.nat_inside %}
-                                                    <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                                                {% elif object.primary_ip6.nat_outside %}
-                                                    <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
-                                                {% endif %}
-                                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6"><span class="mdi mdi-content-copy"></span></button></span>
+                                                    <a href="{% url 'ipam:ipaddress' pk=object.primary_ip6.pk %}" id="ipv6">{{ object.primary_ip6.address.ip }}</a>
+                                                    {% if object.primary_ip6.nat_inside %}
+                                                        <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
+                                                    {% elif object.primary_ip6.nat_outside %}
+                                                        <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
+                                                    {% endif %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                </span>
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
