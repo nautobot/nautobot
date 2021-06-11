@@ -162,14 +162,24 @@ class NavBarTestCase(SeleniumTestCase):
         """
         Render navbar from home page with restricted UI set to True.
         """
+
+        self.add_permissions("extras.view_relationship")
+        user_permissions = self.user.get_all_permissions()
+
         self.selenium.get(f"{self.live_server_url}")
         self.selenium.wait_for_html("body")
 
-        for tab_name, _ in self.navbar.items():
+        for tab_name, groups in self.navbar.items():
+            tab_flag = False
+            for _, items in groups.items():
+                for _, item_details in items.items():
+                    if item_details["permission"] in user_permissions:
+                        tab_flag = True
+
             # XPath to find tabs using the tab name
             tab_xpath = f"//*[@id='navbar']//*[contains(text(), '{tab_name}')]"
-            try:
+            if tab_flag:
                 self.selenium.find_element_by_xpath(tab_xpath)
-                raise Exception(f"Tab element {tab_name} should not exist.")
-            except NoSuchElementException:
-                pass
+            else:
+                with self.assertRaises(NoSuchElementException):
+                    self.selenium.find_element_by_xpath(tab_xpath)

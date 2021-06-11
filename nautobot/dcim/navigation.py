@@ -429,7 +429,7 @@ menu_tabs = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:consoleport_list",
+                        link="dcim:consoleserverport_list",
                         link_text="Console Server Ports",
                         weight=500,
                         permissions=[
