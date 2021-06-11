@@ -153,7 +153,9 @@ class NavBarTestCase(SeleniumTestCase):
                 for item_name, _ in items.items():
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     item = group.find_element_by_xpath(item_xpath)
-                    self.assertEquals(item.get_attribute("class"), "disabled", f"Item `{item_name}` should be disabled.")
+                    self.assertEquals(
+                        item.get_attribute("class"), "disabled", f"Item `{item_name}` should be disabled."
+                    )
 
     @override_settings(HIDE_RESTRICTED_UI=True)
     def test_navbar_render_restricted_ui(self):
