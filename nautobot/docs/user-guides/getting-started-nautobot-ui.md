@@ -537,8 +537,34 @@ Once on the `Editing IP address` page:
 The next few sections walk you through finding different objects and verifying information about the objects. 
 The instructions will walk you through how to **navigate** to the main page for the proper object. 
 
-You can also use the search bar to get to the desired main page.
+You can also use the search bar to get to find the desired object's page.
 
+We will show two quick examples.
+
+Example 1: 
+1. Type in `10.10.10.0` in the Search Bar and click on `Search`
+2. **Aggregate** search result `10.0.0.0/8`
+3. **Prefix** search result `10.10.10.0/24`
+4. **IP Address** search result `10.10.10.0/31`
+5. Interface related to `10.10.10.0/31` 
+6. Interface Parent for `10.10.10.0/31`
+
+Clicking on any of these objects takes you to the main page for that object.
+This example shows the result of clicking on the **IP Address** object (4).
+
+![](images/getting-started-nautobot-ui/42-address-search-v2.png)
+
+Example shows a Device-specific search:
+1. Search for `edge`
+2. In the drop-down selector to the right, select **Device**
+3. Devices with `edge` in the name
+4. Tenants for each Device 
+5. Device Type for each Device
+6. Site for each Device
+
+Clicking on 
+
+![](images/getting-started-nautobot-ui/41-device%20search%20results.png)
 
 
 ### Finding an IP Address for an Interface
