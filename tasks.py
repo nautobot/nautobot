@@ -507,6 +507,6 @@ def tests(context, lint_only=False):
     black(context)
     flake8(context)
     hadolint(context)
-    check_migrations(context)
     if not lint_only:
+        check_migrations(context)
         unittest(context)
