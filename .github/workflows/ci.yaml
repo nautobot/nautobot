@@ -6,41 +6,41 @@ on:
   pull_request:
     branches: ["develop"]
 jobs:
-  Linting:
-    runs-on: "ubuntu-latest"
-    env:
-      INVOKE_NAUTOBOT_LOCAL: "True"
-    steps:
-      # ----------------------------------------------
-      #       check-out repo and set-up python
-      # ----------------------------------------------
-      - uses: "actions/checkout@v2"
-      - uses: "actions/setup-python@v2"
-        with:
-          python-version: 3.9
-      # ----------------------------------------------
-      #        load pip cache if cache exists
-      # ----------------------------------------------
-      - uses: "actions/cache@v2"
-        with:
-          path: "~/.cache/pip"
-          key: "${{ runner.os }}-pip"
-          restore-keys: "${{ runner.os }}-pip"
-      # ----------------------------------------------
-      #          install and run linters
-      # ----------------------------------------------
-      - run: "python -m pip install --upgrade pip wheel"
-      - run: "python -m pip install invoke black=='20.8b1' flake8=='3.9.2'"  # Until there is a poetry install --dev-only (poetry 1.2) install the linting tools here to speed up this step
-      - name: Setup Hadolint
-        run: |
-          mkdir -p $HOME/.local/bin
-          curl -Lo $HOME/.local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
-          chmod +x $HOME/.local/bin/hadolint
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - run: "invoke tests --lint-only"
+  # Linting:
+  #   runs-on: "ubuntu-latest"
+  #   env:
+  #     INVOKE_NAUTOBOT_LOCAL: "True"
+  #   steps:
+  #     # ----------------------------------------------
+  #     #       check-out repo and set-up python
+  #     # ----------------------------------------------
+  #     - uses: "actions/checkout@v2"
+  #     - uses: "actions/setup-python@v2"
+  #       with:
+  #         python-version: 3.9
+  #     # ----------------------------------------------
+  #     #        load pip cache if cache exists
+  #     # ----------------------------------------------
+  #     - uses: "actions/cache@v2"
+  #       with:
+  #         path: "~/.cache/pip"
+  #         key: "${{ runner.os }}-pip"
+  #         restore-keys: "${{ runner.os }}-pip"
+  #     # ----------------------------------------------
+  #     #          install and run linters
+  #     # ----------------------------------------------
+  #     - run: "python -m pip install --upgrade pip wheel"
+  #     - run: "python -m pip install invoke black=='20.8b1' flake8=='3.9.2'"  # Until there is a poetry install --dev-only (poetry 1.2) install the linting tools here to speed up this step
+  #     - name: Setup Hadolint
+  #       run: |
+  #         mkdir -p $HOME/.local/bin
+  #         curl -Lo $HOME/.local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+  #         chmod +x $HOME/.local/bin/hadolint
+  #         echo "$HOME/.local/bin" >> $GITHUB_PATH
+  #     - run: "invoke tests --lint-only"
 
   Test:
-    needs: Linting
+    # needs: Linting
     strategy:
       fail-fast: true
       matrix:
@@ -48,6 +48,36 @@ jobs:
         python-version: [ "3.6", "3.7", "3.8", "3.9" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_SELENIUM_URL: http://selenium:4444/wd/hub 
+      NAUTOBOT_SELENIUM_HOST: $(hostname -f)
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres:13
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: decinablesprewad
+          POSTGRES_DB: nautobot
+          POSTGRES_USER: nautobot
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:6-alpine
+        env:
+          REDIS_PASSWORD: decinablesprewad
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      selenium:
+        image: selenium/standalone-firefox:latest
     # The type of runner that the job will run on
     runs-on: "${{ matrix.os }}"
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -90,6 +120,8 @@ jobs:
       - name: Unit Tests
         run: poetry run invoke unittest --failfast --keepdb
       - name: Integration Tests
+        env:
+          NAUTOBOT_INTEGRATION_TEST: True
         run: poetry run invoke integration-test --failfast --keepdb --append
       - name: Coverage
         run: poetry run invoke unittest-coverage
