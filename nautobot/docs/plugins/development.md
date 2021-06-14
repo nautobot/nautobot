@@ -149,6 +149,7 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
 | `max_version` | Maximum version of Nautobot with which the plugin is compatible |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
+| `menu_tabs` | The dotted path to the list of menu tab items provided by the plugin (default: `navigation.menu_tabs`) |
 | `middleware` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | Minimum version of Nautobot with which the plugin is compatible |
 | `name` | Raw plugin name; same as the plugin's source directory |
@@ -573,6 +574,134 @@ A `PluginMenuButton` has the following attributes:
 
 !!! note
     Any buttons associated within a menu item will be shown only if the user has permission to view the link, regardless of what permissions are set on the buttons.
+
+## Navigation Menu Tabs
+
+Plugins can modify the existing navigation bar layout by using `nav_tabs` inside of `navigation.py`. Using the key and weight system, a developer can modify existing tabs, groups, items and buttons.
+
+### Adding a new tab
+
+The code below shows how to add a new tab to the navbar. A tab is defined by a `NavMenuTab` object. Similarly a group is defined using `NavMenuGroup`. Both of these objects are used as containers for actual items.
+
+The position in the navigation menu is defined by the weight. The lower the weight the closer to the same the object will be. All core objects have weights in multiples of 100., meaning there is plenty of space around the objects for plugins to customize.
+
+Below you can see `Dummy Tab` has a weight value of `150`. This means the tab will appear between `Organization` and `Devices`.
+
+``` python
+from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
+
+menu_tabs = (
+    NavMenuTab(
+        name="Dummy Tab",
+        weight=150,
+        groups=(
+            NavMenuGroup(
+                name="Dummy Group 1",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="plugins:dummy_plugin:dummymodel_list",
+                        link_text="Dummy Model",
+                        permissions=[
+                            "dummy_plugin.view_dummymodel"
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="plugins:dummy_plugin:dummymodel_add",
+                                permissions=[
+                                    "dummy_plugin.add_dummymodel",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="plugins:dummy_plugin:dummymodel_import",
+                                permissions=[
+                                    "dummy_plugin.add_dummymodel"
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+```
+
+### Modifying existing tab
+
+By defining an object with the same identifier, a developer can modify existing objects. The example below shows modifying an existing tab to have a new group.
+
+A tab object is being created with the same identifer as an existing object using the `name` attribute. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
+
+This pattern works for modifying all objects in the tree. New items can be added to groups and new buttons can be added to items.
+
+``` python
+menu_tabs = (
+    NavMenuTab(
+        name="Circuits",
+        groups=(
+            NavMenuGroup(
+                name="Dummy Circuit Group",
+                weight=150,
+                items=(
+                    NavMenuItem(
+                        link="plugins:dummy_plugin:dummymodel_list",
+                        link_text="Dummy Model",
+                        permissions=[
+                            "dummy_plugin.view_dummymodel"
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="plugins:dummy_plugin:dummymodel_add",
+                                permissions=[
+                                    "dummy_plugin.add_dummymodel",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="plugins:dummy_plugin:dummymodel_import",
+                                permissions=[
+                                    "dummy_plugin.add_dummymodel"
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+```
+
+### Classes and Attributes
+
+A `NavMenuGroup` has the following attributes:
+
+* `name` - Display name to be shown in navigation menu. Identifier for this object type
+* `weight` - Defines the position the object should be displayed at (optional)
+* `groups` - List or tuple of `NavMenuGroup`
+
+A `NavMenuGroup` has the following attributes:
+
+* `name` - Display name to be shown in navigation menu. Identifier for this object type
+* `weight` - Defines the position the object should be displayed at (optional)
+* `items` - List or tuple of `NavMenuItem`
+
+A `NavMenuItem` has the following attributes:
+
+* `link` - The name of the URL path to which this menu item links. Identifier for this object type
+* `link_text` - The text presented to the user
+* `weight` - Defines the position the object should be displayed at (optional)
+* `permissions` - A list of permissions required to display this link (optional)
+* `buttons` - An iterable of NavMenuButton instances to display (optional)
+
+A `NavMenuButton` has the following attributes:
+
+* `title` - The tooltip text (displayed when the mouse hovers over the button). Identifier for this object type
+* `link` - The name of the URL path to which this button links
+* `weight` - Defines the position the object should be displayed at (optional)
+* `icon_class` - Button icon CSS classes (Nautobot currently supports [Material Design Icons](https://materialdesignicons.com) or one of the choices provided by `ButtonActionIconChoices`)
+* `button_class` - One of the choices provided by `ButtonActionColorChoices` (optional)
+* `permissions` - A list of permissions required to display this button (optional)
 
 ## Extending Core Templates
 

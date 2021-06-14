@@ -2,10 +2,10 @@ import collections
 import inspect
 from packaging import version
 
-from django.apps import AppConfig
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 
+from nautobot.core.apps import NautobotConfig, register_menu_items
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
@@ -26,7 +26,7 @@ registry["plugin_template_extensions"] = collections.defaultdict(list)
 #
 
 
-class PluginConfig(AppConfig):
+class PluginConfig(NautobotConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
@@ -68,7 +68,8 @@ class PluginConfig(AppConfig):
     datasource_contents = "datasources.datasource_contents"
     graphql_types = "graphql.types.graphql_types"
     jobs = "jobs.jobs"
-    menu_items = "navigation.menu_items"
+    menu_plugin_items = "navigation.menu_items"
+    menu_tabs = "navigation.menu_tabs"
     template_extensions = "template_content.template_extensions"
 
     def ready(self):
@@ -93,10 +94,15 @@ class PluginConfig(AppConfig):
         if jobs is not None:
             register_jobs(jobs)
 
-        # Register navigation menu items (if defined)
-        menu_items = import_object(f"{self.__module__}.{self.menu_items}")
-        if menu_items is not None:
-            register_menu_items(self.verbose_name, menu_items)
+        # Register plugin navigation menu items (if defined)
+        menu_plugin_items = import_object(f"{self.__module__}.{self.menu_plugin_items}")
+        if menu_plugin_items is not None:
+            register_plugin_menu_items(self.verbose_name, menu_plugin_items)
+
+        # Register plugin navigation menu items (if defined)
+        menu_tabs = import_object(f"{self.__module__}.{self.menu_tabs}")
+        if menu_tabs is not None:
+            register_menu_items(menu_tabs)
 
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
@@ -322,7 +328,7 @@ class PluginMenuButton:
             self.color = color
 
 
-def register_menu_items(section_name, class_list):
+def register_plugin_menu_items(section_name, class_list):
     """
     Register a list of PluginMenuItem instances for a given menu section (e.g. plugin name)
     """

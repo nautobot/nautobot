@@ -235,7 +235,7 @@ class PluginTest(TestCase):
 
     def test_installed_apps(self):
         """
-        Validate that plugin installed apps and dependencies are are registerd.
+        Validate that plugin installed apps and dependencies are are registered.
         """
         self.assertIn(
             "dummy_plugin.DummyPluginConfig",
@@ -250,6 +250,14 @@ class PluginTest(TestCase):
         # Validation should fail when a installed_apps is not a list
         with self.assertRaises(PluginImproperlyConfigured):
             DummyConfigWithInstalledApps.validate({}, settings.VERSION)
+
+    def test_registry_nav_menu_dict(self):
+        """
+        Validate that dummy plugin is adding new items to `registry["nav_menu"]`.
+        """
+        self.assertTrue(registry["nav_menu"]["tabs"].get("Dummy Tab"))
+        self.assertTrue(registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"].get("Dummy Group 1"))
+        self.assertTrue(registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"]["Dummy Group 1"]["items"].get("plugins:dummy_plugin:dummymodel_list"))
 
 
 @skipIf(
