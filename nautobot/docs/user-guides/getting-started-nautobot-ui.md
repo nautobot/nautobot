@@ -97,7 +97,10 @@ Then, on the `Add a new site` form:
 To create a new Device:
 1. Click on **Devices** in the top navigation menu
 2. Find **Devices**
-3. Select `+`; this will take you to the `Add a new device` form
+3. Select `+`
+
+Then, on the `Add a new device` form:
+
 4. Populate the Name
 5. Select the Device Role from the drop-down selector
 6. Select the Device Type from the down-down selector
