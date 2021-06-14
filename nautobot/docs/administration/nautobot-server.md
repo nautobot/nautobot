@@ -97,10 +97,7 @@ e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
 
 `nautobot-server init [config_path]`
 
-Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../../configuration/required-settings/#secret_key) and [`CRYPTOGRAPHY_KEY`](../../configuration/required-settings#cryptography_key).
-
-!!! warning
-    Once you have any encrypted data in the Nautobot database (such as Git repository access tokens), you must **not** change any existing `CRYPTOGRAPHY_KEY` in your configuration. If you use this command to generate a new configuration, you **must** copy over the existing `CRYPTOGRAPHY_KEY` from your previous configuration, as rotation of `CRYPTOGRAPHY_KEY` is not currently supported.
+Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../../configuration/required-settings/#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
