@@ -1,6 +1,7 @@
 # Getting Nautobot Up and Running in the Web UI
 
 ## Introduction and Scope
+
 The audience for this user guide is a user new to Nautobot. 
 It is intended to assist the user with:
 * Understanding the prerequisites to adding a new Device
@@ -12,9 +13,11 @@ It is intended to assist the user with:
 * Adding and Interfaces to a Device
 * Adding VLANs and Understanding VLAN Groups
 * Understanding IP Address Management (IPAM) in Nautobot
-
+* How to navigate to the object you are interested in
+* How to use the Search Bar to find the object you are interested in
 
 ## Requirements
+
 1. A functional Nautobot installation
 2. Administrative rights in the Nautobot Web UI
 
@@ -30,6 +33,7 @@ Looking at the list above, there are four objects in Nautobot that must be prese
 The following sections will guide you through how to create each object type.
 
 ### Creating a Device Role
+
 To create a new Device, you will need an existing Device Role or need to create a new Device Role instance.
 
 To create a new Device Role:
@@ -43,6 +47,7 @@ To create a new Device Role:
 ![](images/getting-started-nautobot-ui/3-create%20role.png)
 
 ### Creating a Manufacturer
+
 To create a new Device Type, you will need an existing Manufacturer or need to create a new Manufacturer instance.
 
 To create a new Manufacturer:
@@ -56,6 +61,7 @@ To create a new Manufacturer:
 ![](images/getting-started-nautobot-ui/2-create%20manufacturer.png)
 
 ### Create a Device Type
+
 To create a new Device, you will need an existing Device Type or need to create a new Device Type instance.
 
 To create a new Device Type:
@@ -71,6 +77,7 @@ On the `Add a new device type` form
 ![](images/getting-started-nautobot-ui/4-create%20device%20type.png)
 
 ### Create a Site
+
 To create a new Device, you will need an existing Site or need to create a new Site instance.
 
 To create a new Site:
@@ -87,6 +94,7 @@ On the `Add a new site` form:
 ![](images/getting-started-nautobot-ui/1-create-site.png)
 
 ### Creating a Device
+
 To create a new Device:
 1. Click on **Devices** in the top navigation menu
 2. Find **Devices**
@@ -531,7 +539,6 @@ Once on the `Editing IP address` page:
 
 ![](images/getting-started-nautobot-ui/35-assign-address-3.png)
 
-
 ### The Search Bar
 
 The next few sections walk you through finding different objects and verifying information about the objects. 
@@ -541,7 +548,7 @@ You can also use the search bar to get to find the desired object's page.
 
 We will show two quick examples.
 
-Example 1: 
+Example one: 
 1. Type in `10.10.10.0` in the Search Bar and click on `Search`
 2. **Aggregate** search result `10.0.0.0/8`
 3. **Prefix** search result `10.10.10.0/24`
@@ -554,24 +561,24 @@ This example shows the result of clicking on the **IP Address** object (4).
 
 ![](images/getting-started-nautobot-ui/42-address-search-v2.png)
 
-Example shows a Device-specific search:
+Example two shows a Device-specific search:
 1. Search for `edge`
-2. In the drop-down selector to the right, select **Device**
+2. In the drop-down selector to the right, select **Devices**
 3. Devices with `edge` in the name
-4. Tenants for each Device 
-5. Device Type for each Device
-6. Site for each Device
+4. *Tenants* for each Device 
+5. *Device Type* for each Device
+6. *Site* for each Device
 
-Clicking on 
+Clicking on the `Vancouver 1` Site takes you to the main page for the Site.
+Clicking on the `edge2.van1` Device takes you to the main page for the Device
 
 ![](images/getting-started-nautobot-ui/41-device%20search%20results.png)
-
 
 ### Finding an IP Address for an Interface
 
 1. Click on **Devices** on the top-level navigation menu
 2. Click on **Devices** to go to the main page for Devices
-3. Search for the Device you are interested in and click on the link to go to the main page for the Device
+3. Search for the Device you are interested in (`edge2.van1` in this example) and click on the link to go to the main page for the Device
 4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in; find the IP Address(es) in the **IP Addresses** column in the row
 
 ![](images/getting-started-nautobot-ui/36-verify-address.png)
