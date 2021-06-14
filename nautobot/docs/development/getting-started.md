@@ -654,3 +654,22 @@ Once submitted, a maintainer will review your pull request and either merge it o
 
 !!! note
     Remember, pull requests are entertained only for **accepted** issues. If an issue you want to work on hasn't been approved by a maintainer yet, it's best to avoid risking your time and effort on a change that might not be accepted.
+
+## Troubleshooting
+
+Below are common issues you might encounter in your development environment and how to address them.
+
+### FATAL: sorry, too many clients already
+
+When using `nautobot-server runserver` to do development you might run into a traceback that looks something like this:
+
+```no-highlight
+Exception Type: OperationalError at /extras/tags/
+Exception Value: FATAL:  sorry, too many clients already
+```
+
+The `runserver` development server is multi-threaded by default, which means that every request is creating its own connection. If you are doing some local testing or development that is resulting in a lot of connections to the database, pass `--nothreading` to the runserver command to disable threading:
+
+```no-highlight
+$ nautobot-server runserver --nothreading
+```
