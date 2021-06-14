@@ -109,8 +109,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
             raise Exception(f"Unable to login in with username {username}")
 
     def logout(self):
-        self.selenium.get(f"{self.live_server_url}/logout")
-        self.selenium.wait_for_html("body")
+        self.load_page(f"{self.live_server_url}/logout")
 
     def load_page(self, url):
         self.selenium.get(url)

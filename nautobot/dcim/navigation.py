@@ -324,7 +324,7 @@ menu_tabs = (
                             NavMenuImportButton(
                                 link="dcim:cable_import",
                                 permissions=[
-                                    "dcim.add_cables",
+                                    "dcim.add_cable",
                                 ],
                             ),
                         ),

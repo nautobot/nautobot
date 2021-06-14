@@ -6,7 +6,7 @@ from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIco
 
 
 class NavBarTestCase(SeleniumTestCase):
-    """Integration test the naviagation menu."""
+    """Integration test the navigation menu."""
 
     fixtures = ["user-data.json"]
     navbar = {
