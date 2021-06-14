@@ -40,9 +40,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="plugins:dummy_plugin:dummymodel_list",
                         link_text="Dummy Model",
-                        permissions=[
-                            "dummy_plugin.view_dummymodel"
-                        ],
+                        permissions=["dummy_plugin.view_dummymodel"],
                         buttons=(
                             NavMenuAddButton(
                                 link="plugins:dummy_plugin:dummymodel_add",
@@ -52,9 +50,7 @@ menu_tabs = (
                             ),
                             NavMenuImportButton(
                                 link="plugins:dummy_plugin:dummymodel_import",
-                                permissions=[
-                                    "dummy_plugin.add_dummymodel"
-                                ],
+                                permissions=["dummy_plugin.add_dummymodel"],
                             ),
                         ),
                     ),
@@ -72,9 +68,7 @@ menu_tabs = (
                     NavMenuItem(
                         link="plugins:dummy_plugin:dummymodel_list",
                         link_text="Dummy Model",
-                        permissions=[
-                            "dummy_plugin.view_dummymodel"
-                        ],
+                        permissions=["dummy_plugin.view_dummymodel"],
                         buttons=(
                             NavMenuAddButton(
                                 link="plugins:dummy_plugin:dummymodel_add",
@@ -84,9 +78,7 @@ menu_tabs = (
                             ),
                             NavMenuImportButton(
                                 link="plugins:dummy_plugin:dummymodel_import",
-                                permissions=[
-                                    "dummy_plugin.add_dummymodel"
-                                ],
+                                permissions=["dummy_plugin.add_dummymodel"],
                             ),
                         ),
                     ),

@@ -257,7 +257,11 @@ class PluginTest(TestCase):
         """
         self.assertTrue(registry["nav_menu"]["tabs"].get("Dummy Tab"))
         self.assertTrue(registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"].get("Dummy Group 1"))
-        self.assertTrue(registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"]["Dummy Group 1"]["items"].get("plugins:dummy_plugin:dummymodel_list"))
+        self.assertTrue(
+            registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"]["Dummy Group 1"]["items"].get(
+                "plugins:dummy_plugin:dummymodel_list"
+            )
+        )
 
 
 @skipIf(
