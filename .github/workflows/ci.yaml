@@ -116,12 +116,20 @@ jobs:
         run: poetry install --no-interaction
       - name: Check migrations
         if: matrix.python-version == '3.6'
-        run: poetry run invoke check-migrations
+        run: |
+          export $(cat development/dev.env | xargs)
+          poetry run invoke check-migrations
       - name: Unit Tests
-        run: poetry run invoke unittest --failfast --keepdb
+        run: |
+          export $(cat development/dev.env | xargs)
+          poetry run invoke unittest --failfast --keepdb
       - name: Integration Tests
         env:
           NAUTOBOT_INTEGRATION_TEST: True
-        run: poetry run invoke integration-test --failfast --keepdb --append
+        run: |
+          export $(cat development/dev.env | xargs)
+          poetry run invoke integration-test --failfast --keepdb --append
       - name: Coverage
-        run: poetry run invoke unittest-coverage
+        run: | 
+          export $(cat development/dev.env | xargs)
+          poetry run invoke unittest-coverage
