@@ -10,7 +10,7 @@ It is intended to assist the user with:
 * Adding and understanding Regions
 * Adding and Understanding Platforms
 * Adding and Understanding Tenants and Tenant Groups
-* Adding and Interfaces to a Device
+* Adding Interfaces to a Device
 * Adding VLANs and Understanding VLAN Groups
 * Understanding IP Address Management (IPAM) in Nautobot
 * How to navigate to the object you are interested in
@@ -19,7 +19,6 @@ It is intended to assist the user with:
 ## Requirements
 
 1. A functional Nautobot installation
-2. Administrative rights in the Nautobot Web UI
 
 ## Creating Devices in Nautobot
 
@@ -52,7 +51,7 @@ To create a new Device Type, you will need an existing Manufacturer or need to c
 
 To create a new Manufacturer:
 1. Click on **Devices** in the top navigation menu
-2. Find **Manufacturers** on the drop-down selector
+2. Find **Manufacturers** on the drop-down
 3. Select `+`
 4. In the `Add a new manufacturer` form, populate the Name
      * The Slug will auto-populate based on the Name, but can be manually overwritten
@@ -69,7 +68,8 @@ To create a new Device Type:
 2. Find **Device Types**
 3. Select `+`
 
-On the `Add a new device type` form
+
+Then, on the `Add a new device type` form:
 4. Select the Manufacturer from the drop-down selector
 5. Select the Model from the drop-down selector
 6. Click on **Create**
@@ -85,7 +85,8 @@ To create a new Site:
 2. Find **Sites**
 3. Select `+`
 
-On the `Add a new site` form:
+
+Then, on the `Add a new site` form:
 4. Populate the Site's Name
     * The Slug will auto-populate based on the Name, but can be manually overwritten
 5. Set the Status to `Active` in the drop-down selector
@@ -100,7 +101,8 @@ To create a new Device:
 2. Find **Devices**
 3. Select `+`
 
-On the `Add a new device` form:
+
+Then, on the `Add a new device` form:
 4. Populate the Name
 5. Select the Device Role from the drop-down selector
 6. Select the Device Type from the down-down selector
@@ -125,7 +127,7 @@ In the following exercise, we will create three Regions:
 * Vancouver
   * Intended to hold Sites within the Vancouver market
     
-To view existing Regions:
+To create a Region:
 1. Click on **Organization** in the top memu
 2. Click on **Regions** in the **Organization** drop-down menu
     * From this page you can view any existing Regions
@@ -137,21 +139,21 @@ The screenshots below show the creation of each Region.
 
 North America:
 1. Leave the Parent blank; **North America** will be a top-tier Region
-2. Populate the Name
+2. Populate the Name as `North America`
     * The Slug will auto-populate based on the Name, but can be manually overwritten
-3. Click on the `Create` or `Create and Add Another` button
+3. Click on the `Create and Add Another` button
 
 Canada:
 1. Select **North America** as the Parent from the drop-down menu selector
-2. Populate the Name
+2. Populate the Name as `Canada`
     * The Slug will auto-populate based on the Name, but can be manually overwritten   
-3. Click on the `Create` or `Create and Add Another` button
+3. Click on the `Create and Add Another` button
 
 Vancouver:
 1. Select **Canada** as the Parent from the drop-down menu selector
-2. Populate the Name
+2. Populate the Name as `Vancouver`
     * The Slug will auto-populate based on the Name, but can be manually overwritten
-3. Click on the `Create` or `Create and Add Another` button
+3. Click on the `Create` button
 
 ![](images/getting-started-nautobot-ui/6-create-region.png)
 
@@ -191,6 +193,7 @@ To add a Platform:
 1. Click on **Devices** in the top navigation menu
 2. Find **Platforms** and click on the `+` icon in the menu
 
+
 Once on the `Add a new platform` form:
 3. Provide a Name (required)
 4. The Slug will auto-populate based on the Name you provide; you may override this if necessary
@@ -203,7 +206,7 @@ Once on the `Add a new platform` form:
 > TIP: NAPALM Driver Options include:
 > - eos (Arista)
 > - ios (Cisco)
-> - nxos (used with nxapi feature)
+> - nxos (used with `nxapi` feature)
 > - nxos_ssh (used for ssh login)
 > - junos 
 
@@ -212,7 +215,7 @@ Once on the `Add a new platform` form:
 Once completed, you will be sent to the Platforms page, where all the Platform variants are shown.
 
 > TIP: Different use cases for Platforms may require different information. For example, to use a specific Platform with 
-> the Device Onboarding Plugin, you may be required to override the default Slug value with that of the 
+> the **Device Onboarding Plugin**, you may be required to override the default Slug value with that of the 
 > Netmiko [device_type](https://github.com/ktbyers/netmiko/blob/2dc032b64c3049d3048966441ee30a0139bebc81/netmiko/ssh_autodetect.py#L50)
 
 ![](images/getting-started-nautobot-ui/11-platforms-page.png)
@@ -255,12 +258,12 @@ Notice that the **Tenant** field is now populated/updated.
 
 ## Interfaces
 
-Interfaces can be added at the **Device** or the **Device Type** level.  Which one you choose depends on your intent.
+Interfaces can be added at the **Device** or the **Device Type** level.  Which one you choose depends on your use case.
 
 Interfaces added to an individual Device are for that Device only.
 Interfaces added to the Device Type will be applied to all NEW implementations of that Device Type (not existing implementations).  
 
-Which one you select depends on your use case, and in some instances you will need to use both.
+Which one you select depends on your use case; in some instances you will need to use both, as in the example below.
 
 ### Interface Add Example
 
@@ -273,17 +276,19 @@ The following ports will be part of `ae0`: `xe-0/0/9`, `xe-1/0/9`
 We are going to use the **Device Type** to achieve part of this goal. Using the **Device Type** will also provide repeatability
 because the **Device Type** object also serves as a template. This templating feature is demonstrated in this example.
 
-To use a Device Type:
+Device Types can serve as templates for Devices, and as such the two are very similar. Here is a screenshot shot of a Device Type:
+
+![](images/getting-started-nautobot-ui/21-device-type.png)
+
+Creating a Device Type is very similar to [creating a Device](#creating-a-device):
+
+To create a Device Type:
 1. Click on **Devices** in the top navigation menu
 2. Click on the **Device Types** option in the drop-down menu
 3. On the Device Types page `Add +` a new Device Type
-    * Creating a Device Type is very similar to [creating a Device](#creating-a-device)
     * A Device Type requires a **Manufacturer** object to be created prior to creating the Device Type
-    * Device Type requires Manufacturer, Model, Slug, and Height values at creation.
+    * Device Type requires **Manufacturer**, **Model**, **Slug**, and **Height** values at creation.
     * In this example, name the Device Type `MX240-edge`
-    
-![](images/getting-started-nautobot-ui/21-device-type.png)
-      
 4. On the home page for the specific Device Type, click on `+Add Components` and select `Interfaces`    
 
 ![](images/getting-started-nautobot-ui/15-create-device-type.png)
@@ -297,7 +302,7 @@ You will now see the `Interface Template` form:
    * Add a `Description` and Label (optional)
 2. Click `Create and Add More`
 3. Create the `xe-` Interfaces
-   * This example shows bulk creation using ranges in Name
+   * This example shows bulk creation using a range (`xe-[0-1]/0/[0-9]`) in Name 
    * Select the appropriate Type from the drop-down selector
 4. Click on `Create`    
 
@@ -317,9 +322,9 @@ Create a new Device with these attributes:
 * **Name** = `edge2.van1`
 * **Device role** select `Customer Edge`
 * **Device type** select `Juniper MX240-edge` (this will show up as a fusion of the **Manufacturer** (`Juniper`) for the Device Type and the Device Type (`MX240-edge`) Names)
-* **Site** = `Vancouver 1`
+* **Site** select `Vancouver 1`
 
-On the main screen for the new Device, you will see an **Interfaces** tab with the expected Interfaces from the Device Type template:
+On the main screen for the new *Device*, you will see an **Interfaces** tab with the expected Interfaces from the *Device Type* template:
 
 ![](images/getting-started-nautobot-ui/18-assign-device-type.png)
 
@@ -351,15 +356,14 @@ Each VLAN must be assigned a status. The following statuses are available by def
 - Deprecated
 
 In general, VLANs can have overlapping names and IDs. The exception to this is VLANs within a VLAN Group: each VLAN within a group must have a unique ID and name.  
-A VLAN Group may be assigned to a specific site, but a group cannot belong to multiple sites. VLANs may be assigned to a specific site as well.
+A VLAN Group may be assigned to a specific site, but a Group cannot belong to multiple sites. VLANs may be assigned to a specific site as well.
 
 The Nautobot documentation has more info about [VLANs and VLAN Groups](https://nautobot.readthedocs.io/en/latest/core-functionality/vlans/#vlan-management).
 
 ### VLAN Example
 
-In the following example, we will create two VLANs with overlapping Names and IDs: ID = `100` and Name = `vlan 100`.
-Neither of the vlan 100 instances is assigned to a group, but each of these VLANs is assigned to a different site. 
-Assigning a VLAN to a specific site restricts use of that VLAN to the assigned site.
+In the following example, we will create two VLANs with overlapping Names and IDs. Neither of the vlan 100 instances is assigned to a group, 
+but each of these VLANs will be assigned to a different Site.
 
 We’ll also create a vlan 200 without a site assignment.
 
@@ -435,7 +439,7 @@ To assign a VLAN to an Interface:
 
 This next section will demonstrate how to 
 - Create a Regional Internet Registry
-- Create an aggregate  
+- Create an Aggregate  
 - Create assignable IP addresses
 - Assign an IP address to an Interface on a Device
 
@@ -444,7 +448,7 @@ The Nautobot documentation [IPAM section](https://nautobot.readthedocs.io/en/lat
 
 ### Create a Regional Internet Registry (RIR)
 
-A RIR allocates globally-routable IP address space. There are five RIRs, each responsible for a particular section of the globe.
+A RIR allocates globally-routable IP address space. There are five top-level RIRs, each responsible for a particular section of the globe.
 Nautobot also considers RFCs 1918 and 6589 to be RIR-like because they allocate private IP space.
 
 Nautobot requires any IP allocation be attributed to a RIR.
@@ -539,22 +543,22 @@ Once on the `Editing IP address` page:
 
 ![](images/getting-started-nautobot-ui/35-assign-address-3.png)
 
-### The Search Bar
+## The Search Bar
 
-The next few sections walk you through finding different objects and verifying information about the objects. 
-The instructions will walk you through how to **navigate** to the main page for the proper object. 
+The next couple sections walk you through finding different objects and verifying information about the objects. 
+The instructions in those sections will walk you through how to **navigate** to the main page for the proper object. 
 
-You can also use the search bar to get to find the desired object's page.
+You can also use the search bar to find the desired object's page.
 
 We will show two quick examples.
 
 Example one: 
-1. Type in `10.10.10.0` in the Search Bar and click on `Search`
-2. **Aggregate** search result `10.0.0.0/8`
+1. Type in `10.10.10.0` in the Search Bar and click on `Search`; this takes you to a search results page
+2. **Aggregate** search result `10.0.0.0/8` (this is the Aggregate for the Prefix `10.10.10.0/24`)
 3. **Prefix** search result `10.10.10.0/24`
 4. **IP Address** search result `10.10.10.0/31`
 5. Interface related to `10.10.10.0/31` 
-6. Interface Parent for `10.10.10.0/31`
+6. Interface Parent (Device) for `10.10.10.0/31`
 
 Clicking on any of these objects takes you to the main page for that object.
 This example shows the result of clicking on the **IP Address** object (4).
@@ -562,15 +566,16 @@ This example shows the result of clicking on the **IP Address** object (4).
 ![](images/getting-started-nautobot-ui/42-address-search-v2.png)
 
 Example two shows a Device-specific search:
-1. Search for `edge`
+1. Search for `edge`; this takes you to a search results page
 2. In the drop-down selector to the right, select **Devices**
-3. Devices with `edge` in the name
-4. *Tenants* for each Device 
+3. Search results for Devices with `edge` in the name
+4. *Tenants* for each Device (if applicable) 
 5. *Device Type* for each Device
 6. *Site* for each Device
 
-Clicking on the `Vancouver 1` Site takes you to the main page for the Site.
-Clicking on the `edge2.van1` Device takes you to the main page for the Device
+Clicking on an of the links for the results takes you to the main page for that object. For example:
+* Clicking on the `Vancouver 1` Site takes you to the main page for the Site.
+* Clicking on the `edge2.van1` Device takes you to the main page for the Device
 
 ![](images/getting-started-nautobot-ui/41-device%20search%20results.png)
 
