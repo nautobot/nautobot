@@ -277,11 +277,11 @@ Let’s take an example:
 We are going to use the **Device Type** to achieve part of this goal. Using the **Device Type** will also provide repeatability
 because the **Device Type** object also serves as a template. This templating feature is demonstrated in this example.
 
-Device Types can serve as templates for Devices, and as such the two are very similar. Here is a screenshot shot of a Device Type:
+Device Types can serve as templates for Devices, and as such the two are very similar. Here is a screenshot of a Device Type:
 
 ![](images/getting-started-nautobot-ui/21-device-type.png)
 
-Creating a Device Type is very similar to [creating a Device](#creating-a-device):
+Creating a Device Type is very similar to [creating a Device](#creating-a-device).
 
 To create a Device Type:
 1. Click on **Devices** in the top navigation menu
@@ -580,7 +580,7 @@ Clicking on an of the links for the results takes you to the main page for that 
 
 ![](images/getting-started-nautobot-ui/41-device%20search%20results.png)
 
-### Finding an IP Address for an Interface
+## Finding an IP Address for an Interface
 
 1. Click on **Devices** on the top-level navigation menu
 2. Click on **Devices** to go to the main page for Devices
@@ -589,7 +589,7 @@ Clicking on an of the links for the results takes you to the main page for that 
 
 ![](images/getting-started-nautobot-ui/36-verify-address.png)
 
-### Finding IP Addresses in a Prefix 
+## Finding IP Addresses in a Prefix 
 
 To find information on a particular Prefix:
 1. Click on **IPAM** in the top-level drop-down menu
