@@ -66,7 +66,10 @@ To create a new Device, you will need an existing Device Type or need to create 
 To create a new Device Type:
 1. Click on **Devices** in the top navigation menu
 2. Find **Device Types**
-3. Select `+`; this will taek you to the `Add a new device type` form:
+3. Select `+` 
+   
+Once on the `Add a new device type` form:
+
 4. Select the Manufacturer from the drop-down selector
 5. Select the Model from the drop-down selector
 6. Click on **Create**
@@ -81,7 +84,6 @@ To create a new Site:
 1. Click on **Organization** in the top navigation menu
 2. Find **Sites**
 3. Select `+`
-
 
 Then, on the `Add a new site` form:
 
@@ -189,7 +191,10 @@ While use of Platforms is optional, they provide great value in many use cases.
 
 To add a Platform:
 1. Click on **Devices** in the top navigation menu
-2. Find **Platforms** and click on the `+` icon in the menu; this takes you to the `Add a new platform` form
+2. Find **Platforms** and click on the `+` icon in the menu
+   
+Once on the the `Add a new platform` form:
+
 3. Provide a Name (required)
 4. The Slug will auto-populate based on the Name you provide; you may override this if necessary
 5. Select a Manufacturer from the drop-down selector (optional)
@@ -235,7 +240,7 @@ To create a Tenant:
 It is simple to assign a Tenant to an existing object. This next example will add a Tenant to an existing Device.
 
 1. Click on **Devices** in the top navigation menu
-2. Look for the **Devices** option and click on it; this will take you to the Devices page
+2. Look for the **Devices** option and click on it; this will take you to the *Devices* page
 3. Click on the specific Device you want to add the Tenant to; this will take you to the main page for that Device
 4. On the specific Device page, click on the `Edit` button
 
