@@ -51,6 +51,10 @@ jobs:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_SELENIUM_URL: http://selenium:4444/wd/hub 
       NAUTOBOT_SELENIUM_HOST: $(hostname -f)
+      NAUTOBOT_DB_HOST: postgres
+      NAUTOBOT_REDIS_HOST: redis
+      NAUTOBOT_DB_PASSWORD: decinablesprewad
+      NAUTOBOT_DB_USER: nautobot
     services:
       # Label used to access the service container
       postgres:
@@ -116,20 +120,12 @@ jobs:
         run: poetry install --no-interaction
       - name: Check migrations
         if: matrix.python-version == '3.6'
-        run: |
-          export $(cat development/dev.env | xargs)
-          poetry run invoke check-migrations
+        run: poetry run invoke check-migrations
       - name: Unit Tests
-        run: |
-          export $(cat development/dev.env | xargs)
-          poetry run invoke unittest --failfast --keepdb
+        run: poetry run invoke unittest --failfast --keepdb
       - name: Integration Tests
         env:
           NAUTOBOT_INTEGRATION_TEST: True
-        run: |
-          export $(cat development/dev.env | xargs)
-          poetry run invoke integration-test --failfast --keepdb --append
+        run: poetry run invoke integration-test --failfast --keepdb --append
       - name: Coverage
-        run: | 
-          export $(cat development/dev.env | xargs)
-          poetry run invoke unittest-coverage
+        run: poetry run invoke unittest-coverage
