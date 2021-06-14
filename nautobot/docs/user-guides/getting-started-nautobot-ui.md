@@ -267,9 +267,10 @@ Which one you select depends on your use case; in some instances you will need t
 
 ### Interface Add Example
 
-Let’s take an example: We want to define a Device Type of MX240-edge.  
-This Device Type will have 20x10G (`xe[0-1]/0/[0-9]`) ports and one LAG (`ae0`).  
-The following ports will be part of `ae0`: `xe-0/0/9`, `xe-1/0/9`
+Let’s take an example:
+* We want to define a Device Type of `MX240-edge`
+* This Device Type will have 20x10G (`xe[0-1]/0/[0-9]`) ports and one LAG (`ae0`)
+* The following ports will be part of `ae0`: `xe-0/0/9`, `xe-1/0/9`
 
 ### Create a Device Type
 
