@@ -59,7 +59,7 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
 
 ### `nav_menu`
 
-Navigation menu items provided by Nautobot applications. Each app must register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other application and plugins. The `nav_menu` dict should never be modified directly.
+Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other application and plugins. The `nav_menu` dict should never be modified directly.
 
 Example:
 
