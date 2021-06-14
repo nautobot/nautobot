@@ -87,6 +87,7 @@ To create a new Site:
 
 
 Then, on the `Add a new site` form:
+
 4. Populate the Site's Name
     * The Slug will auto-populate based on the Name, but can be manually overwritten
 5. Set the Status to `Active` in the drop-down selector
