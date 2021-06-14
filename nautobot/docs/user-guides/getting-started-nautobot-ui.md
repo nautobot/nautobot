@@ -66,10 +66,7 @@ To create a new Device, you will need an existing Device Type or need to create 
 To create a new Device Type:
 1. Click on **Devices** in the top navigation menu
 2. Find **Device Types**
-3. Select `+`
-
-Then, on the `Add a new device type` form:
-
+3. Select `+`; this will taek you to the `Add a new device type` form:
 4. Select the Manufacturer from the drop-down selector
 5. Select the Model from the drop-down selector
 6. Click on **Create**
@@ -100,11 +97,7 @@ Then, on the `Add a new site` form:
 To create a new Device:
 1. Click on **Devices** in the top navigation menu
 2. Find **Devices**
-3. Select `+`
-
-
-Then, on the `Add a new device` form:
-
+3. Select `+`; this will take you to the `Add a new device` form
 4. Populate the Name
 5. Select the Device Role from the drop-down selector
 6. Select the Device Type from the down-down selector
@@ -193,10 +186,7 @@ While use of Platforms is optional, they provide great value in many use cases.
 
 To add a Platform:
 1. Click on **Devices** in the top navigation menu
-2. Find **Platforms** and click on the `+` icon in the menu
-
-Once on the `Add a new platform` form:
-
+2. Find **Platforms** and click on the `+` icon in the menu; this takes you to the `Add a new platform` form
 3. Provide a Name (required)
 4. The Slug will auto-populate based on the Name you provide; you may override this if necessary
 5. Select a Manufacturer from the drop-down selector (optional)
