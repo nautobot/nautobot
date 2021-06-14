@@ -13,7 +13,7 @@ These instructions will guide you through the following actions:
 - Verify the installation using the development/test server
 
 !!! important
-    PostgreSQL and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
+    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
 
 ## Choose your `NAUTOBOT_ROOT`
 
@@ -136,6 +136,20 @@ Use Pip to install Nautobot:
 $ pip3 install nautobot
 ```
 
+!!! hint 
+    If you are using MySQL as your database backend, use `pip3 install nautobot[mysql]` to install Nautobot and the `mysqlclient` library together!
+
+### Install MySQL client library
+
+If you are using MySQL as your database server you must install the `mysqlclient` database client for Python. 
+
+!!! warning
+    Nautobot **will not work** without this client library. You cannot skip this step.
+    
+```no-highlight
+$ pip3 install mysqlclient
+```
+
 Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
 
 ## Verify your Nautobot Installation
@@ -168,11 +182,14 @@ Your `nautobot_config.py` provides sane defaults for all of the configuration se
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
 * [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-* [`DATABASES`](../../configuration/required-settings/#databases): PostgreSQL database connection parameters. If you installed PostgreSQL on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here.
+* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll need to update the `ENGINE` field as well.
 * **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
+
+!!! warning
+    If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 

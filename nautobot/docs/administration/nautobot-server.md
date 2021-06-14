@@ -62,7 +62,7 @@ Superuser created successfully.
 
 `nautobot-server dbshell`
 
-A shell for your PostgreSQL database. This can be very useful in troubleshooting raw database issues.
+A shell for your database. This can be very useful in troubleshooting raw database issues.
 
 !!! danger
     This is an advanced feature that gives you direct access to run raw SQL queries. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
