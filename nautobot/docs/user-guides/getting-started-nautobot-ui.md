@@ -68,8 +68,8 @@ To create a new Device Type:
 2. Find **Device Types**
 3. Select `+`
 
-
 Then, on the `Add a new device type` form:
+
 4. Select the Manufacturer from the drop-down selector
 5. Select the Model from the drop-down selector
 6. Click on **Create**
@@ -104,6 +104,7 @@ To create a new Device:
 
 
 Then, on the `Add a new device` form:
+
 4. Populate the Name
 5. Select the Device Role from the drop-down selector
 6. Select the Device Type from the down-down selector
@@ -194,8 +195,8 @@ To add a Platform:
 1. Click on **Devices** in the top navigation menu
 2. Find **Platforms** and click on the `+` icon in the menu
 
-
 Once on the `Add a new platform` form:
+
 3. Provide a Name (required)
 4. The Slug will auto-populate based on the Name you provide; you may override this if necessary
 5. Select a Manufacturer from the drop-down selector (optional)
