@@ -164,21 +164,26 @@ class ButtonActionColorChoices(ChoiceSet):
     CANCEL = "default"
     CLONE = "success"
     CONFIGURE = "default"
+    CONNECT = "success"
     DEFAULT = "default"
     DELETE = "danger"
+    DISCONNECT = "info"
     EDIT = "warning"
     EXPORT = "success"
     IMPORT = "primary"
     INFO = "info"
     SUBMIT = "primary"
+    SWAP = "primary"
 
     CHOICES = (
         (ADD, "Add"),
         (CANCEL, "Cancel"),
         (CLONE, "Clone"),
         (CONFIGURE, "Configure"),
+        (CONNECT, "Connect"),
         (DEFAULT, "Default"),
         (DELETE, "Delete"),
+        (DISCONNECT, "Disconnect"),
         (EDIT, "Edit"),
         (EXPORT, "Export"),
         (IMPORT, "Import"),
@@ -196,10 +201,14 @@ class ButtonActionIconChoices(ChoiceSet):
     ALERT = "mdi-alert"
     ARROW_DOWN = "mdi-arrow-down-bold"
     ARROW_UP = "mdi-arrow-up-bold"
+    CONFIGURE = "mdi-cogs"
     CONNECT = "mdi-ethernet-cable"
+    DELETE = "mdi-trash-can-outline"
     DISCONNECT = "mdi-ethernet-cable-off"
     EDIT = "mdi-pencil"
+    EXPORT = "mdi-database-export-outline"
     HELP = "mdi-help-circle"
+    INFO = "mdi-help-circle"
     IMPORT = "mdi-database-import-outline"
     LOCK = "mdi-lock"
     MAGNIFY = "mdi-magnify"
@@ -212,10 +221,14 @@ class ButtonActionIconChoices(ChoiceSet):
         (ALERT, "Alert"),
         (ARROW_DOWN, "Arrow Down"),
         (ARROW_UP, "Arrow Up"),
+        (CONFIGURE, "Configure"),
         (CONNECT, "Connect"),
+        (DELETE, "Delete"),
         (DISCONNECT, "Disconnect"),
         (EDIT, "Edit"),
+        (EXPORT, "Export"),
         (HELP, "Help"),
+        (INFO, "Info"),
         (IMPORT, "Import"),
         (LOCK, "Lock"),
         (MAGNIFY, "Magnify"),

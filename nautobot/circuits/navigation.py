@@ -37,7 +37,7 @@ menu_tabs = (
                         link_text="Circuit Types",
                         weight=200,
                         permissions=[
-                            "circuits.view_circuittypes",
+                            "circuits.view_circuittype",
                         ],
                         buttons=(
                             NavMenuAddButton(
@@ -65,7 +65,7 @@ menu_tabs = (
                         link_text="Providers",
                         weight=100,
                         permissions=[
-                            "circuits.view_providers",
+                            "circuits.view_provider",
                         ],
                         buttons=(
                             NavMenuAddButton(

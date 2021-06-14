@@ -68,10 +68,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
     def setUp(self):
         # Setup test user
-        try:
-            self.user = User.objects.create_user(username="testuser")
-        except IntegrityError:
-            self.user = User.objects.get(username="testuser")
+        self.user, _ = User.objects.get_or_create(username="testuser")
 
         self.password = "testpassword"
         self.user.set_password(self.password)
@@ -113,6 +110,10 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
     def logout(self):
         self.selenium.get(f"{self.live_server_url}/logout")
+        self.selenium.wait_for_html("body")
+
+    def load_page(self, url):
+        self.selenium.get(url)
         self.selenium.wait_for_html("body")
 
     @classmethod

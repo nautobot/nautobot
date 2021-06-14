@@ -1,4 +1,6 @@
 import logging
+
+from abc import ABC, abstractproperty
 from django.apps import AppConfig
 from django.urls import reverse
 from operator import getitem
@@ -104,14 +106,14 @@ def register_menu_items(tab_list):
     )
 
 
-class NavMenuMixin:  # replaces PermissionsMixin
+class NavMenuBase(ABC):  # replaces PermissionsMixin
     """Base class for navigation classes."""
 
-    @property
+    @abstractproperty
     def initial_dict(self):  # to be implemented by each subclass
         return {}
 
-    @property
+    @abstractproperty
     def fixed_fields(self):  # to be implemented by subclass
         return ()
 
@@ -126,7 +128,7 @@ class PermissionsMixin:
         self.permissions = permissions
 
 
-class NavMenuTab(NavMenuMixin, PermissionsMixin):
+class NavMenuTab(NavMenuBase, PermissionsMixin):
     """
     Ths class represents a navigation menu tab. This is built up from a name and a weight value. The name is
     the display text and the weight defines its position in the navbar.
@@ -162,7 +164,7 @@ class NavMenuTab(NavMenuMixin, PermissionsMixin):
             self.groups = groups
 
 
-class NavMenuGroup(NavMenuMixin, PermissionsMixin):
+class NavMenuGroup(NavMenuBase, PermissionsMixin):
     """
     Ths class represents a navigation menu group. This is built up from a name and a weight value. The name is
     the display text and the weight defines its position in the navbar.
@@ -196,7 +198,7 @@ class NavMenuGroup(NavMenuMixin, PermissionsMixin):
         self.items = items
 
 
-class NavMenuItem(NavMenuMixin, PermissionsMixin):
+class NavMenuItem(NavMenuBase, PermissionsMixin):
     """
     This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
     specifying additional link buttons that appear to the right of the item in the nav menu.
@@ -241,7 +243,7 @@ class NavMenuItem(NavMenuMixin, PermissionsMixin):
         self.buttons = buttons
 
 
-class NavMenuButton(NavMenuMixin, PermissionsMixin):
+class NavMenuButton(NavMenuBase, PermissionsMixin):
     """
     This class represents a button within a PluginMenuItem. Note that button colors should come from
     ButtonColorChoices.

@@ -37,7 +37,7 @@ menu_tabs = (
                         link_text="Interfaces",
                         weight=200,
                         permissions=[
-                            "virtualization.view_interface",
+                            "virtualization.view_vminterface",
                         ],
                         buttons=(
                             NavMenuImportButton(

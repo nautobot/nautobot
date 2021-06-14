@@ -58,8 +58,7 @@ class NavBarTestCase(SeleniumTestCase):
         self.user.save()
 
         # Retrieve home page
-        self.selenium.get(f"{self.live_server_url}")
-        self.selenium.wait_for_html("body")
+        self.load_page(self.live_server_url)
 
         for tab_name, groups in self.navbar.items():
             # XPath to find tabs using the tab name
@@ -101,8 +100,7 @@ class NavBarTestCase(SeleniumTestCase):
         self.add_permissions("extras.view_relationship")
         user_permissions = self.user.get_all_permissions()
 
-        self.selenium.get(f"{self.live_server_url}")
-        self.selenium.wait_for_html("body")
+        self.load_page(self.live_server_url)
 
         for tab_name, groups in self.navbar.items():
             # XPath to find tabs using the tab name
@@ -134,8 +132,7 @@ class NavBarTestCase(SeleniumTestCase):
         """
         Render navbar from home page with no permissions.
         """
-        self.selenium.get(f"{self.live_server_url}")
-        self.selenium.wait_for_html("body")
+        self.load_page(self.live_server_url)
 
         for tab_name, groups in self.navbar.items():
             # XPath to find tabs using the tab name
@@ -166,8 +163,7 @@ class NavBarTestCase(SeleniumTestCase):
         self.add_permissions("extras.view_relationship")
         user_permissions = self.user.get_all_permissions()
 
-        self.selenium.get(f"{self.live_server_url}")
-        self.selenium.wait_for_html("body")
+        self.load_page(self.live_server_url)
 
         for tab_name, groups in self.navbar.items():
             tab_flag = False

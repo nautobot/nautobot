@@ -25,7 +25,7 @@ menu_tabs = (
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="dcim:site_add",
+                                link="dcim:site_import",
                                 permissions=[
                                     "dcim.add_site",
                                 ],
@@ -47,7 +47,7 @@ menu_tabs = (
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="dcim:region_add",
+                                link="dcim:region_import",
                                 permissions=[
                                     "dcim.add_region",
                                 ],
@@ -153,7 +153,7 @@ menu_tabs = (
                         link_text="Elevations",
                         weight=500,
                         permissions=[
-                            "dcim.view_elevation",
+                            "dcim.view_rack",
                         ],
                         buttons=(),
                     ),
@@ -439,7 +439,7 @@ menu_tabs = (
                             NavMenuImportButton(
                                 link="dcim:consoleserverport_import",
                                 permissions=[
-                                    "dcim.add_serverport",
+                                    "dcim.add_consoleserverport",
                                 ],
                             ),
                         ),

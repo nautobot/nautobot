@@ -25,7 +25,7 @@ menu_tabs = (
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="extras:tag_add",
+                                link="extras:tag_import",
                                 permissions=[
                                     "extras.add_tag",
                                 ],

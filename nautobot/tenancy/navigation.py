@@ -41,15 +41,15 @@ menu_tabs = (
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="tenancy:tenant_add",
+                                link="tenancy:tenantgroup_add",
                                 permissions=[
-                                    "tenancy.add_tenant",
+                                    "tenancy.add_tenantgroup",
                                 ],
                             ),
                             NavMenuImportButton(
                                 link="tenancy:tenantgroup_import",
                                 permissions=[
-                                    "tenancy.add_tenant",
+                                    "tenancy.add_tenantgroup",
                                 ],
                             ),
                         ),
