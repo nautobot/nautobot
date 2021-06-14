@@ -1,0 +1,88 @@
+---
+name: "CI"
+on:
+  push:
+    branches: ["develop"]
+  pull_request:
+    branches: ["develop"]
+jobs:
+  Linting:
+    runs-on: "ubuntu-latest"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      # ----------------------------------------------
+      #       check-out repo and set-up python
+      # ----------------------------------------------
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: 3.9
+      # ----------------------------------------------
+      #        load pip cache if cache exists
+      # ----------------------------------------------
+      - uses: "actions/cache@v2"
+        with:
+          path: "~/.cache/pip"
+          key: "${{ runner.os }}-pip"
+          restore-keys: "${{ runner.os }}-pip"
+      # ----------------------------------------------
+      #          install and run linters
+      # ----------------------------------------------
+      - run: "python -m pip install --upgrade pip wheel"
+      - run: "python -m pip install invoke black=='20.8b1' flake8=='3.9.2'"  # Until there is a poetry install --dev-only (poetry 1.2) install the linting tools here to speed up this step
+      - run: "curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64"
+      - run: "chmod +x /home/travis/bin/hadolint"
+      - run: "invoke tests --lint-only"
+
+  Test:
+    needs: Linting
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: [ "3.6", "3.7", "3.8", "3.9" ]
+    env:
+      INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
+    # The type of runner that the job will run on
+    runs-on: "${{ matrix.os }}"
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: "actions/checkout@v2"
+      # ----------------------------------------------
+      # Setup Python
+      # ----------------------------------------------
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: ${{ matrix.python-version }}
+      # ----------------------------------------------
+      # install & configure poetry
+      # ----------------------------------------------
+      - name: "Install Poetry"
+        uses: "snok/install-poetry@v1.1.6"
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      # ----------------------------------------------
+      # load cached venv if cache exists
+      # ----------------------------------------------
+      - name: "Load cached venv"
+        id: "cached-poetry-dependencies"
+        uses: "actions/cache@v2"
+        with:
+          path: ".venv"
+          key: "venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}"
+      # ----------------------------------------------
+      # install dependencies if cache does not exist
+      # ----------------------------------------------
+      - name: "Install dependencies"
+        if: "steps.cached-poetry-dependencies.outputs.cache-hit != 'true'"
+        run: "poetry install --no-interaction --no-root"
+      - name: Install Nautobot
+        run: poetry install --no-interaction
+      - name: Unit Tests
+        run: invoke unittest --failfast --keepdb
+      - name: Integration Tests
+        run: invoke integration-test --failfast --keepdb --append
+      - name: Coverage
+        run: invoke unittest-coverage
