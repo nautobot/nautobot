@@ -200,6 +200,17 @@ def has_perms(user, permissions_list):
 
 
 @register.filter()
+def has_one_or_more_perms(user, permissions_list):
+    """
+    Return True if the user has *at least one* permissions in the list.
+    """
+    for permission in permissions_list:
+        if user.has_perm(permission):
+            return True
+    return False
+
+
+@register.filter()
 def split(string, sep=","):
     """
     Split a string by the given value (default: comma)

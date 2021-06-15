@@ -1,13 +1,21 @@
 import os
 
+from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
-from django.test import tag
+from django.db.utils import IntegrityError
+from django.test import Client, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 
+from nautobot.users.models import ObjectPermission
+from nautobot.utilities.permissions import resolve_permission_ct
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
@@ -42,6 +50,7 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
     host = "0.0.0.0"  # Always listen publicly
     selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
+    user_permissions = ()
 
     @classmethod
     def setUpClass(cls):
@@ -56,6 +65,25 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
         # Wait for the DOM in case an element is not yet rendered.
         cls.selenium.implicitly_wait(10)
+
+    def setUp(self):
+        # Setup test user
+        self.user, _ = User.objects.get_or_create(username="testuser")
+
+        self.password = "testpassword"
+        self.user.set_password(self.password)
+        self.user.save()
+
+    def add_permissions(self, *names):
+        """
+        Assign a set of permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
+        """
+        for name in names:
+            ct, action = resolve_permission_ct(name)
+            obj_perm = ObjectPermission(name=name, actions=[action])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ct)
 
     @classproperty
     def live_server_url(cls):
@@ -76,6 +104,16 @@ class SeleniumTestCase(StaticLiveServerTestCase):
         self.selenium.find_element_by_name("username").send_keys(username)
         self.selenium.find_element_by_name("password").send_keys(password)
         self.selenium.find_button(button_text).click()
+
+        if "Please enter a correct username and password." in self.selenium.page_source:
+            raise Exception(f"Unable to login in with username {username}")
+
+    def logout(self):
+        self.load_page(f"{self.live_server_url}/logout")
+
+    def load_page(self, url):
+        self.selenium.get(url)
+        self.selenium.wait_for_html("body")
 
     @classmethod
     def _create_firefox_options(cls):
