@@ -240,7 +240,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["tags"], ["Tag 3"])
 
     def test_partial_update_object(self):
-        """Test PATCH w/ changelogs."""
+        """Test PATCH with changelogs."""
         site = Site.objects.create(
             name="Test Site 1",
             slug="test-site-1",
