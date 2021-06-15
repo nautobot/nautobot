@@ -195,6 +195,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#389](https://github.com/nautobot/nautobot/issues/389) - Fixed incorrect TaggedItem base class that caused tag issues on MySQL.
 - [#452](https://github.com/nautobot/nautobot/issues/452) - Fixed `api/dcim/cables` `OPTIONS` response not including the `status` field.
 - [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
+- [#499](https://github.com/nautobot/nautobot/issues/499) - Fixed object's changelog showing incorrect information about its tags on partial (PATCH) updates using API
 - [#501](https://github.com/nautobot/nautobot/issues/501) - Fixed missing prepopulation of address/prefix value into the form when adding an address or prefix under a parent prefix.
 - [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
 - [#512](https://github.com/nautobot/nautobot/issues/512) - Fixed ServerError when cloning a record with exactly one `Tag` applied to it.
