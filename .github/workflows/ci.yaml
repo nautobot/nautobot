@@ -117,11 +117,11 @@ jobs:
       # ----------------------------------------------
       # install dependencies if cache does not exist
       # ----------------------------------------------
-      - name: "Install dependencies"
-        if: "steps.cached-poetry-dependencies.outputs.cache-hit != 'true'"
-        run: "poetry install --no-interaction --no-root"
-      - name: Install Nautobot
-        run: poetry install --no-interaction
+      # - name: "Install dependencies"
+      #   if: "steps.cached-poetry-dependencies.outputs.cache-hit != 'true'"
+      #   run: "poetry install --no-interaction --no-root"
+      # - name: Install Nautobot
+      #   run: poetry install --no-interaction
       # - name: Check migrations
       #   if: matrix.python-version == '3.6'
       #   run: poetry run invoke check-migrations
@@ -134,7 +134,7 @@ jobs:
           ip addr list
           docker ps
           docker network list
-          docker inspect selenium
+          docker inspect `docker ps | grep thanos | awk '{print $1}'`
           poetry run invoke integration-test --failfast --keepdb --append
       - name: Coverage
         run: poetry run invoke unittest-coverage
