@@ -50,7 +50,7 @@ jobs:
       INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_SELENIUM_URL: http://localhost:4444/wd/hub 
-      NAUTOBOT_SELENIUM_HOST: localhost
+      NAUTOBOT_SELENIUM_HOST: 172.17.0.1
       NAUTOBOT_DB_HOST: localhost
       NAUTOBOT_REDIS_HOST: localhost
       NAUTOBOT_DB_PASSWORD: decinablesprewad
@@ -122,14 +122,19 @@ jobs:
         run: "poetry install --no-interaction --no-root"
       - name: Install Nautobot
         run: poetry install --no-interaction
-      - name: Check migrations
-        if: matrix.python-version == '3.6'
-        run: poetry run invoke check-migrations
-      - name: Unit Tests
-        run: poetry run invoke unittest --failfast --keepdb
+      # - name: Check migrations
+      #   if: matrix.python-version == '3.6'
+      #   run: poetry run invoke check-migrations
+      # - name: Unit Tests
+      #   run: poetry run invoke unittest --failfast --keepdb
       - name: Integration Tests
         env:
           NAUTOBOT_INTEGRATION_TEST: True
-        run: poetry run invoke integration-test --failfast --keepdb --append
+        run: |
+          ip addr list
+          docker ps
+          docker network list
+          docker inspect selenium
+          poetry run invoke integration-test --failfast --keepdb --append
       - name: Coverage
         run: poetry run invoke unittest-coverage
