@@ -65,6 +65,8 @@ jobs:
           POSTGRES_PASSWORD: decinablesprewad
           POSTGRES_DB: nautobot
           POSTGRES_USER: nautobot
+        ports:
+          - 5432:5432
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
@@ -73,8 +75,8 @@ jobs:
           --health-retries 5
       redis:
         image: redis:6-alpine
-        env:
-          REDIS_PASSWORD: decinablesprewad
+        ports:
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
