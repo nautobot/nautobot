@@ -71,6 +71,8 @@ importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 Jinja2 = "~2.11.3"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.4"
+# MySQL database adapter
+mysqlclient = {version = "~2.0.3", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Image processing library
@@ -87,6 +89,9 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+
+[tool.poetry.extras]
+mysql = ["mysqlclient"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement

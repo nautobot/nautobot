@@ -31,30 +31,17 @@ ALLOWED_HOSTS = ['*']
 
 ---
 
-## CRYPTOGRAPHY_KEY
-
-Environment Variable: `NAUTOBOT_CRYPTOGRAPHY_KEY`
-
-This is a secret, random string used in the encryption and decryption of sensitive database fields such as Git repository access tokens. The key defined here should not be shared outside of the configuration file.
-
-!!! warning
-    Do not change this value once set, as it will cause decryption of any existing encrypted database fields to fail. Rotation of this key is currently not supported.
-
-!!! note
-    A unique `CRYPTOGRAPHY_KEY` is generated for you automatically when you use `nautobot-server init` to create a new `nautobot_config.py`.
-
----
-
 ## DATABASES
 
-Nautobot requires access to a PostgreSQL 9.6 or later database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
+Nautobot requires access to a supported database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
 
 * `NAME` - Database name
-* `USER` - PostgreSQL username
-* `PASSWORD` - PostgreSQL password
+* `USER` - Database username
+* `PASSWORD` - Database password
 * `HOST` - Name or IP address of the database server (use `localhost` if running locally)
-* `PORT` - TCP port of the PostgreSQL service; leave blank for default port (TCP/5432)
+* `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
 * `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
+* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
 
 The following environment variables may also be set for each of the above values:
 
@@ -64,10 +51,10 @@ The following environment variables may also be set for each of the above values
 * `NAUTOBOT_DB_HOST`
 * `NAUTOBOT_DB_PORT`
 * `NAUTOBOT_DB_TIMEOUT`
+* `NAUTOBOT_DB_ENGINE`
 
 !!! warning
-    Nautobot only supports PostgreSQL as a database backend. Do not modify the `ENGINE` setting or you
-    will be unable to connect to the database.
+    Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
 
 Example:
 
@@ -75,18 +62,18 @@ Example:
 DATABASES = {
     'default': {
         'NAME': 'nautobot',                         # Database name
-        'USER': 'nautobot',                         # PostgreSQL username
-        'PASSWORD': 'awesome_password',             # PostgreSQL password
+        'USER': 'nautobot',                         # Database username
+        'PASSWORD': 'awesome_password',             # Database password
         'HOST': 'localhost',                        # Database server
         'PORT': '',                                 # Database port (leave blank for default)
         'CONN_MAX_AGE': 300,                        # Max database connection age
-        'ENGINE': 'django.db.backends.postgresql',  # Database driver (Do not change this!)
+        'ENGINE': 'django.db.backends.postgresql',  # Database driver ("mysql" or "postgresql")
     }
 }
 ```
 
 !!! note
-    Nautobot supports all PostgreSQL database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
+    Nautobot supports all database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
 
 ---
 

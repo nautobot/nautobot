@@ -14,8 +14,8 @@ DATABASES = {
         "PASSWORD": os.environ.get("NAUTOBOT_DB_PASSWORD", ""),
         "HOST": os.environ.get("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.environ.get("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": 300,
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
@@ -91,8 +91,6 @@ CACHES = {
 CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 
 HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
-
-CRYPTOGRAPHY_KEY = os.environ.get("NAUTOBOT_CRYPTOGRAPHY_KEY")
 
 SECRET_KEY = os.environ.get("NAUTOBOT_SECRET_KEY", "")
 

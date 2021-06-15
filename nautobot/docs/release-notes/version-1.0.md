@@ -187,7 +187,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Changed
 
-- [#502](https://github.com/nautobot/nautobot/issues/502) - The `CRYPTOGRAPHY_KEY` configuration setting now must be set to a value that is neither `None` nor the same as `SECRET_KEY`.
 - [#537](https://github.com/nautobot/nautobot/issues/537) - To mitigate CVE-2021-31542, the minimum supported Django version is now 3.1.12.
 
 ### Fixed

@@ -26,7 +26,9 @@ DATABASES = {
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),  # Database server
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),  # Database timeout
-        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postgres only supported!)
+        "ENGINE": os.getenv(
+            "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
+        ),  # Database driver ("mysql" or "postgresql")
     }
 }
 
@@ -65,10 +67,6 @@ CACHES = {
         },
     }
 }
-
-# This key is used for encryption of sensitive database fields such as Git authentication tokens.
-# It must never be exposed outside of this file.
-CRYPTOGRAPHY_KEY = os.getenv("NAUTOBOT_CRYPTOGRAPHY_KEY", "{{ cryptography_key }}")
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
 # For optimal security, SECRET_KEY should be at least 50 characters in length and contain a mix of letters, numbers, and

@@ -2,9 +2,6 @@ from django.conf import settings
 from django.core.checks import register, Error, Tags, Warning
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
-from django.utils.encoding import force_bytes
-
-from cryptography.hazmat.primitives.kdf import pbkdf2
 
 
 E001 = Error(
@@ -42,17 +39,6 @@ class E006(Error):
     msg = "RQ_QUEUES must define at least the minimum set of required queues"
     id = "nautobot.core.E006"
     obj = settings
-
-
-E007 = Error(
-    "CRYPTOGRAPHY_KEY must be set to a non-null value that differs from SECRET_KEY."
-    "\nIf you already have encrypted data in your database (such as Git repository access tokens), to avoid errors, "
-    "you should make the following changes:"
-    "\n1. Set CRYPTOGRAPHY_KEY to the current value of SECRET_KEY."
-    "\n2. Generate a new SECRET_KEY value with 'nautobot-server generate_secret_key' and update your configuration.",
-    id="nautobot.core.E007",
-    obj=settings,
-)
 
 
 @register(Tags.caches)
@@ -109,29 +95,3 @@ def check_minimum_rq_queues(app_configs, **kwargs):
                 )
             )
     return errors
-
-
-@register(Tags.security)
-def check_cryptography_key_set(app_configs, **kwargs):
-    # This is a bit ugly, because django-cryptography actually overwrites the CRYPTOGRAPHY_KEY setting
-    # with a derived value at loading time. So even if it was initially None, it won't be by the time we check it here.
-    # What we can do is re-derive a key value from SECRET_KEY (which is the value django-cryptography uses if
-    # CRYPTOGRAPHY_KEY is unset) and check to see if it matches.
-    #
-    # The below code is based on django_cryptography.conf CryptographyConf.configure()
-    backend = settings.CRYPTOGRAPHY_BACKEND
-    digest = settings.CRYPTOGRAPHY_DIGEST
-    salt = settings.CRYPTOGRAPHY_SALT
-    # Key Derivation Function
-    kdf = pbkdf2.PBKDF2HMAC(
-        algorithm=digest,
-        length=digest.digest_size,
-        salt=salt,
-        iterations=30000,
-        backend=backend,
-    )
-    derived_key = kdf.derive(force_bytes(settings.SECRET_KEY))
-
-    if derived_key == settings.CRYPTOGRAPHY_KEY:
-        return [E007]
-    return []

@@ -130,9 +130,7 @@ TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 
 # CRYPTOGRAPHY_BACKEND = cryptography.hazmat.backends.default_backend()
 # CRYPTOGRAPHY_DIGEST = cryptography.hazmat.primitives.hashes.SHA256
-# CRYPTOGRAPHY_KEY defaults to SECRET_KEY if unset;
-# this is undesirable, see https://github.com/nautobot/nautobot/issues/502
-CRYPTOGRAPHY_KEY = os.getenv("NAUTOBOT_CRYPTOGRAPHY_KEY")
+CRYPTOGRAPHY_KEY = None  # Defaults to SECRET_KEY if unset
 CRYPTOGRAPHY_SALT = "nautobot-cryptography"
 
 
@@ -246,8 +244,8 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
