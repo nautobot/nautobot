@@ -19,7 +19,7 @@ Nautobot v1.0.0 and later requires the following:
 
 Nautobot v1.1.0 and later can optionally support the following:
 
-> *Nautobot v1.0.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL.*
+> *Nautobot v1.1.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL.*
 
 | Dependency | Minimum Version |
 |------------|-----------------|

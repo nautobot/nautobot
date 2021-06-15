@@ -20,7 +20,7 @@ $ sudo dnf install -y git python38 python38-devel python38-pip redis
 
 ## Database Setup
 
-In this step you'll setup your database server, create a database and database user for use by Nautobot, and verify your connection to the database.
+In this step you'll set up your database server, create a database and database user for use by Nautobot, and verify your connection to the database.
 
 You must select either MySQL or PostgreSQL. PostgreSQL is used by default with Nautobot, so if you just want to get started or don't have a preference, please stick with PostgreSQL.
 

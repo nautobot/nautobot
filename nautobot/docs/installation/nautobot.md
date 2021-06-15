@@ -144,7 +144,7 @@ $ pip3 install nautobot
 If you are using MySQL as your database server you must install the `mysqlclient` database client for Python. 
 
 !!! warning
-    Nautobot **will not work** without this client library. You cannot skip this step.
+    If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
     
 ```no-highlight
 $ pip3 install mysqlclient
@@ -182,7 +182,7 @@ Your `nautobot_config.py` provides sane defaults for all of the configuration se
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
 * [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll need to update the `ENGINE` field as well.
+* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
 * **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important

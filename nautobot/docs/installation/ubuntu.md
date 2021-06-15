@@ -20,7 +20,7 @@ $ sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-ser
 
 ## Database Setup
 
-In this step you'll setup your database server, create a database and database user for use by Nautobot, and verify your connection to the database.
+In this step you'll set up your database server, create a database and database user for use by Nautobot, and verify your connection to the database.
 
 You must select either MySQL or PostgreSQL. PostgreSQL is used by default with Nautobot, so if you just want to get started or don't have a preference, please stick with PostgreSQL.
 
