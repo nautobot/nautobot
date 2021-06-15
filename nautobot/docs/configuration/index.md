@@ -4,7 +4,7 @@ This section describes how to get started with configuring Nautobot.
 
 ## Initializing the Configuration
 
-An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](required-settings.md#secret_key) and [`CRYPTOGRAPHY_KEY`](required-settings.md#cryptography_key).
+An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](required-settings.md#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 

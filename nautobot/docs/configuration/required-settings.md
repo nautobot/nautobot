@@ -31,20 +31,6 @@ ALLOWED_HOSTS = ['*']
 
 ---
 
-## CRYPTOGRAPHY_KEY
-
-Environment Variable: `NAUTOBOT_CRYPTOGRAPHY_KEY`
-
-This is a secret, random string used in the encryption and decryption of sensitive database fields such as Git repository access tokens. The key defined here should not be shared outside of the configuration file.
-
-!!! warning
-    Do not change this value once set, as it will cause decryption of any existing encrypted database fields to fail. Rotation of this key is currently not supported.
-
-!!! note
-    A unique `CRYPTOGRAPHY_KEY` is generated for you automatically when you use `nautobot-server init` to create a new `nautobot_config.py`.
-
----
-
 ## DATABASES
 
 Nautobot requires access to a supported database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:

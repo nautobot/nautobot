@@ -70,13 +70,12 @@ def generate_settings(config_template=CONFIG_TEMPLATE, **kwargs):
     settings file.
     """
     secret_key = get_random_secret_key()
-    cryptography_key = get_random_secret_key()
 
     with open(config_template) as fh:
         environment = Environment(loader=BaseLoader, keep_trailing_newline=True)
         config = environment.from_string(fh.read())
 
-    return config.render(secret_key=secret_key, cryptography_key=cryptography_key)
+    return config.render(secret_key=secret_key)
 
 
 def _configure_settings(config):
