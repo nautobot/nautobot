@@ -182,15 +182,34 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Added
 
 - [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
+- [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
+- [#523](https://github.com/nautobot/nautobot/issues/523) - Added instructions for using LDAP TLS Options to SSO documentation
 
 ### Changed
 
+- [#502](https://github.com/nautobot/nautobot/issues/502) - The `CRYPTOGRAPHY_KEY` configuration setting now must be set to a value that is neither `None` nor the same as `SECRET_KEY`.
+- [#537](https://github.com/nautobot/nautobot/issues/537) - To mitigate CVE-2021-31542, the minimum supported Django version is now 3.1.12.
+
 ### Fixed
 
+- [#220](https://github.com/nautobot/nautobot/issues/220) - Added a troubleshooting section to the development guide for issues encountered when using the multi-threaded development server
+- [#389](https://github.com/nautobot/nautobot/issues/389) - Fixed incorrect TaggedItem base class that caused tag issues on MySQL.
+- [#452](https://github.com/nautobot/nautobot/issues/452) - Fixed `api/dcim/cables` `OPTIONS` response not including the `status` field.
 - [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
+- [#501](https://github.com/nautobot/nautobot/issues/501) - Fixed missing prepopulation of address/prefix value into the form when adding an address or prefix under a parent prefix.
 - [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
+- [#512](https://github.com/nautobot/nautobot/issues/512) - Fixed ServerError when cloning a record with exactly one `Tag` applied to it.
+- [#513](https://github.com/nautobot/nautobot/issues/513) - Fixed inadvertent omission of "Search" box from ReadTheDocs.
+- [#528](https://github.com/nautobot/nautobot/pull/528) - Fixed an ordering issue in the `test_EXTERNAL_AUTH_DEFAULT_groups` test case.
+- [#540](https://github.com/nautobot/nautobot/pull/540) - Fixed intermittent CI failures due to DockerHub rate limits.
+- [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
+- [#564](https://github.com/nautobot/nautobot/pull/564) - Fixed incorrect docstring on `nautobot.utilities.tables.ButtonsColumn`.
 
 ### Removed
+
+### Security
+
+- [#418](https://github.com/nautobot/nautobot/issues/418) - Removed unused JQuery-UI component flagged by vulnerability scanner (CVE-2020-7729)
 
 ## v1.0.2 (2021-05-27)
 
