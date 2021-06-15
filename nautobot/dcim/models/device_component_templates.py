@@ -4,7 +4,7 @@ from django.db import models
 
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
-from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel
+from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel, ComputedFieldModelMixin
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import NaturalOrderingField
@@ -34,7 +34,7 @@ __all__ = (
 )
 
 
-class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
+class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel, ComputedFieldModelMixin):
     device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.CASCADE, related_name="%(class)ss")
     name = models.CharField(max_length=64)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
@@ -71,11 +71,7 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         )
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
 class ConsolePortTemplate(ComponentTemplateModel):
     """
     A template for a ConsolePort to be created for a new Device.
@@ -111,11 +107,7 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         return ConsoleServerPort(device=device, name=self.name, label=self.label, type=self.type)
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
 class PowerPortTemplate(ComponentTemplateModel):
     """
     A template for a PowerPort to be created for a new Device.
@@ -159,11 +151,7 @@ class PowerPortTemplate(ComponentTemplateModel):
                 )
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
 class PowerOutletTemplate(ComponentTemplateModel):
     """
     A template for a PowerOutlet to be created for a new Device.
@@ -214,6 +202,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
     "custom_fields",
     "custom_validators",
     "relationships",
+    "computed_fields",
 )
 class InterfaceTemplate(ComponentTemplateModel):
     """
@@ -244,11 +233,7 @@ class InterfaceTemplate(ComponentTemplateModel):
         )
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
 class FrontPortTemplate(ComponentTemplateModel):
     """
     Template for a pass-through port on the front of a new Device.
@@ -344,6 +329,7 @@ class RearPortTemplate(ComponentTemplateModel):
     "custom_fields",
     "custom_validators",
     "relationships",
+    "computed_fields",
 )
 class DeviceBayTemplate(ComponentTemplateModel):
     """

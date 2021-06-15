@@ -30,6 +30,7 @@ from nautobot.extras.models import (
     Tag,
     TaggedItem,
     Webhook,
+    ComputedField,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, get_jobs, run_job
@@ -408,3 +409,18 @@ class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
+
+
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldViewSet(ModelViewSet):
+    """
+    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = ComputedField.objects.all()
+    serializer_class = serializers.ComputedFieldSerializer
+    filterset_class = filters.ComputedFieldFilterSet

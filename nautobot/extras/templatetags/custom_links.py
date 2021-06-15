@@ -5,8 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.models import CustomLink
-from nautobot.utilities.utils import render_jinja2
-
+from nautobot.extras.utils import TemplateRenderer
 
 register = template.Library()
 
@@ -42,6 +41,7 @@ def custom_links(context, obj):
     }
     template_code = ""
     group_names = OrderedDict()
+    template_renderer = TemplateRenderer()
 
     for cl in custom_links:
 
@@ -54,9 +54,9 @@ def custom_links(context, obj):
         # Add non-grouped links
         else:
             try:
-                text_rendered = render_jinja2(cl.text, link_context)
+                text_rendered = template_renderer.render_jinja2(cl.text, link_context)
                 if text_rendered:
-                    link_rendered = render_jinja2(cl.target_url, link_context)
+                    link_rendered = template_renderer.render_jinja2(cl.target_url, link_context)
                     link_target = ' target="_blank"' if cl.new_window else ""
                     template_code += LINK_BUTTON.format(link_rendered, link_target, cl.button_class, text_rendered)
             except Exception as e:
@@ -72,10 +72,10 @@ def custom_links(context, obj):
 
         for cl in links:
             try:
-                text_rendered = render_jinja2(cl.text, link_context)
+                text_rendered = template_renderer.render_jinja2(cl.text, link_context)
                 if text_rendered:
                     link_target = ' target="_blank"' if cl.new_window else ""
-                    link_rendered = render_jinja2(cl.target_url, link_context)
+                    link_rendered = template_renderer.render_jinja2(cl.target_url, link_context)
                     links_rendered.append(GROUP_LINK.format(link_rendered, link_target, text_rendered))
             except Exception as e:
                 links_rendered.append(

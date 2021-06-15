@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
+from nautobot.core.api.serializers import ComputedFieldModelSerializer
 
 __all__ = [
     "NestedCableSerializer",
@@ -44,22 +45,24 @@ __all__ = [
 #
 
 
-class NestedRegionSerializer(WritableNestedSerializer):
+class NestedRegionSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
     site_count = serializers.IntegerField(read_only=True)
     _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = models.Region
-        fields = ["id", "url", "name", "slug", "site_count", "_depth"]
+        fields = ["id", "url", "name", "slug", "site_count", "_depth", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedSiteSerializer(WritableNestedSerializer):
+class NestedSiteSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
 
     class Meta:
         model = models.Site
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name", "slug", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -67,41 +70,45 @@ class NestedSiteSerializer(WritableNestedSerializer):
 #
 
 
-class NestedRackGroupSerializer(WritableNestedSerializer):
+class NestedRackGroupSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
     rack_count = serializers.IntegerField(read_only=True)
     _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = models.RackGroup
-        fields = ["id", "url", "name", "slug", "rack_count", "_depth"]
+        fields = ["id", "url", "name", "slug", "rack_count", "_depth", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedRackRoleSerializer(WritableNestedSerializer):
+class NestedRackRoleSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackrole-detail")
     rack_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.RackRole
-        fields = ["id", "url", "name", "slug", "rack_count"]
+        fields = ["id", "url", "name", "slug", "rack_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedRackSerializer(WritableNestedSerializer):
+class NestedRackSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     device_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.Rack
-        fields = ["id", "url", "name", "device_count"]
+        fields = ["id", "url", "name", "device_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedRackReservationSerializer(WritableNestedSerializer):
+class NestedRackReservationSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackreservation-detail")
     user = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = models.RackReservation
-        fields = ["id", "url", "user", "units"]
+        fields = ["id", "url", "user", "units", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
     def get_user(self, obj):
         return obj.user.username
@@ -112,38 +119,34 @@ class NestedRackReservationSerializer(WritableNestedSerializer):
 #
 
 
-class NestedManufacturerSerializer(WritableNestedSerializer):
+class NestedManufacturerSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:manufacturer-detail")
     devicetype_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.Manufacturer
-        fields = ["id", "url", "name", "slug", "devicetype_count"]
+        fields = ["id", "url", "name", "slug", "devicetype_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedDeviceTypeSerializer(WritableNestedSerializer):
+class NestedDeviceTypeSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicetype-detail")
     manufacturer = NestedManufacturerSerializer(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.DeviceType
-        fields = [
-            "id",
-            "url",
-            "manufacturer",
-            "model",
-            "slug",
-            "device_count",
-        ]
+        fields = ["id", "url", "manufacturer", "model", "slug", "device_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedConsolePortTemplateSerializer(WritableNestedSerializer):
+class NestedConsolePortTemplateSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleporttemplate-detail")
 
     class Meta:
         model = models.ConsolePortTemplate
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 class NestedConsoleServerPortTemplateSerializer(WritableNestedSerializer):
@@ -154,28 +157,31 @@ class NestedConsoleServerPortTemplateSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name"]
 
 
-class NestedPowerPortTemplateSerializer(WritableNestedSerializer):
+class NestedPowerPortTemplateSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerporttemplate-detail")
 
     class Meta:
         model = models.PowerPortTemplate
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedPowerOutletTemplateSerializer(WritableNestedSerializer):
+class NestedPowerOutletTemplateSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlettemplate-detail")
 
     class Meta:
         model = models.PowerOutletTemplate
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedInterfaceTemplateSerializer(WritableNestedSerializer):
+class NestedInterfaceTemplateSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfacetemplate-detail")
 
     class Meta:
         model = models.InterfaceTemplate
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 class NestedRearPortTemplateSerializer(WritableNestedSerializer):
@@ -186,20 +192,22 @@ class NestedRearPortTemplateSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name"]
 
 
-class NestedFrontPortTemplateSerializer(WritableNestedSerializer):
+class NestedFrontPortTemplateSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontporttemplate-detail")
 
     class Meta:
         model = models.FrontPortTemplate
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedDeviceBayTemplateSerializer(WritableNestedSerializer):
+class NestedDeviceBayTemplateSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebaytemplate-detail")
 
     class Meta:
         model = models.DeviceBayTemplate
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -207,114 +215,126 @@ class NestedDeviceBayTemplateSerializer(WritableNestedSerializer):
 #
 
 
-class NestedDeviceRoleSerializer(WritableNestedSerializer):
+class NestedDeviceRoleSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.DeviceRole
-        fields = ["id", "url", "name", "slug", "device_count", "virtualmachine_count"]
+        fields = ["id", "url", "name", "slug", "device_count", "virtualmachine_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedPlatformSerializer(WritableNestedSerializer):
+class NestedPlatformSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.Platform
-        fields = ["id", "url", "name", "slug", "device_count", "virtualmachine_count"]
+        fields = ["id", "url", "name", "slug", "device_count", "virtualmachine_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedDeviceSerializer(WritableNestedSerializer):
+class NestedDeviceSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
 
     class Meta:
         model = models.Device
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedConsoleServerPortSerializer(WritableNestedSerializer):
+class NestedConsoleServerPortSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleserverport-detail")
     device = NestedDeviceSerializer(read_only=True)
 
     class Meta:
         model = models.ConsoleServerPort
-        fields = ["id", "url", "device", "name", "cable"]
+        fields = ["id", "url", "device", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedConsolePortSerializer(WritableNestedSerializer):
+class NestedConsolePortSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleport-detail")
     device = NestedDeviceSerializer(read_only=True)
 
     class Meta:
         model = models.ConsolePort
-        fields = ["id", "url", "device", "name", "cable"]
+        fields = ["id", "url", "device", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedPowerOutletSerializer(WritableNestedSerializer):
+class NestedPowerOutletSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlet-detail")
     device = NestedDeviceSerializer(read_only=True)
 
     class Meta:
         model = models.PowerOutlet
-        fields = ["id", "url", "device", "name", "cable"]
+        fields = ["id", "url", "device", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedPowerPortSerializer(WritableNestedSerializer):
+class NestedPowerPortSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerport-detail")
     device = NestedDeviceSerializer(read_only=True)
 
     class Meta:
         model = models.PowerPort
-        fields = ["id", "url", "device", "name", "cable"]
+        fields = ["id", "url", "device", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedInterfaceSerializer(WritableNestedSerializer):
+class NestedInterfaceSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     device = NestedDeviceSerializer(read_only=True)
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
 
     class Meta:
         model = models.Interface
-        fields = ["id", "url", "device", "name", "cable"]
+        fields = ["id", "url", "device", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedRearPortSerializer(WritableNestedSerializer):
+class NestedRearPortSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     device = NestedDeviceSerializer(read_only=True)
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearport-detail")
 
     class Meta:
         model = models.RearPort
-        fields = ["id", "url", "device", "name", "cable"]
+        fields = ["id", "url", "device", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedFrontPortSerializer(WritableNestedSerializer):
+class NestedFrontPortSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     device = NestedDeviceSerializer(read_only=True)
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontport-detail")
 
     class Meta:
         model = models.FrontPort
-        fields = ["id", "url", "device", "name", "cable"]
+        fields = ["id", "url", "device", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedDeviceBaySerializer(WritableNestedSerializer):
+class NestedDeviceBaySerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebay-detail")
     device = NestedDeviceSerializer(read_only=True)
 
     class Meta:
         model = models.DeviceBay
-        fields = ["id", "url", "device", "name"]
+        fields = ["id", "url", "device", "name", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedInventoryItemSerializer(WritableNestedSerializer):
+class NestedInventoryItemSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
     device = NestedDeviceSerializer(read_only=True)
     _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = models.InventoryItem
-        fields = ["id", "url", "device", "name", "_depth"]
+        fields = ["id", "url", "device", "name", "_depth", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -322,7 +342,7 @@ class NestedInventoryItemSerializer(WritableNestedSerializer):
 #
 
 
-class NestedCableSerializer(BaseModelSerializer):
+class NestedCableSerializer(BaseModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
 
     class Meta:
@@ -335,14 +355,15 @@ class NestedCableSerializer(BaseModelSerializer):
 #
 
 
-class NestedVirtualChassisSerializer(WritableNestedSerializer):
+class NestedVirtualChassisSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:virtualchassis-detail")
     master = NestedDeviceSerializer()
     member_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.VirtualChassis
-        fields = ["id", "name", "url", "master", "member_count"]
+        fields = ["id", "name", "url", "master", "member_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -350,18 +371,20 @@ class NestedVirtualChassisSerializer(WritableNestedSerializer):
 #
 
 
-class NestedPowerPanelSerializer(WritableNestedSerializer):
+class NestedPowerPanelSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
     powerfeed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.PowerPanel
-        fields = ["id", "url", "name", "powerfeed_count"]
+        fields = ["id", "url", "name", "powerfeed_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedPowerFeedSerializer(WritableNestedSerializer):
+class NestedPowerFeedSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerfeed-detail")
 
     class Meta:
         model = models.PowerFeed
-        fields = ["id", "url", "name", "cable"]
+        fields = ["id", "url", "name", "cable", "computed_fields"]
+        opt_in_fields = ["computed_fields"]

@@ -38,12 +38,7 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
+    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "webhooks", "computed_fields"
 )
 class Manufacturer(OrganizationalModel):
     """
@@ -77,6 +72,7 @@ class Manufacturer(OrganizationalModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class DeviceType(PrimaryModel):
     """
@@ -318,7 +314,7 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features("custom_fields", "custom_validators", "relationships", "graphql", "computed_fields")
 class DeviceRole(OrganizationalModel):
     """
     Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
@@ -360,7 +356,7 @@ class DeviceRole(OrganizationalModel):
         )
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features("custom_fields", "custom_validators", "relationships", "graphql", "computed_fields")
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
@@ -431,6 +427,7 @@ class Platform(OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class Device(PrimaryModel, ConfigContextModel, StatusModel):
     """
@@ -842,6 +839,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class VirtualChassis(PrimaryModel):
     """

@@ -1,18 +1,14 @@
 from taggit.managers import TaggableManager
 
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.models.computed_fields import ComputedFieldModelMixin
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.tags import TaggedItem
 from nautobot.core.models import BaseModel
 
 
-class OrganizationalModel(
-    BaseModel,
-    ChangeLoggedModel,
-    CustomFieldModel,
-    RelationshipModel,
-):
+class OrganizationalModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, ComputedFieldModelMixin):
     """
     Base abstract model for all organizational models.
 
@@ -27,12 +23,7 @@ class OrganizationalModel(
         abstract = True
 
 
-class PrimaryModel(
-    BaseModel,
-    ChangeLoggedModel,
-    CustomFieldModel,
-    RelationshipModel,
-):
+class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, ComputedFieldModelMixin):
     """
     Base abstract model for all primary models.
 

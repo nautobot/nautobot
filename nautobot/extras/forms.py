@@ -43,6 +43,7 @@ from .models import (
     Status,
     Tag,
     Webhook,
+    ComputedField,
 )
 from .utils import FeatureQuery
 
@@ -89,7 +90,6 @@ class CustomFieldModelForm(forms.ModelForm):
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
     def _append_customfield_fields(self):
-
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
             field_name = "cf_{}".format(cf.name)
@@ -136,7 +136,6 @@ class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
 
 class CustomFieldFilterForm(forms.Form):
     def __init__(self, *args, **kwargs):
-
         self.obj_type = ContentType.objects.get_for_model(self.model)
 
         super().__init__(*args, **kwargs)
@@ -156,7 +155,6 @@ class CustomFieldFilterForm(forms.Form):
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
-
     slug = SlugField()
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
@@ -191,7 +189,6 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
         ]
 
     def save(self, commit=True):
-
         # TODO add support for owner when a CR is created in the UI
         obj = super().save(commit)
 
@@ -536,7 +533,6 @@ class PasswordInputWithPlaceholder(forms.PasswordInput):
 
 
 class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
-
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
     remote_url = forms.URLField(
@@ -899,4 +895,38 @@ class StatusModelCSVFormMixin(CSVModelForm):
         queryset=Status.objects.all(),
         to_field_name="slug",
         help_text="Operational status",
+    )
+
+
+# Computed Fields
+
+
+class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("computed_fields").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Types",
+    )
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "content_type",
+            "name",
+            "label",
+            "description",
+            "template",
+            "fallback_value",
+            "weight",
+        )
+
+
+class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
+    model = ComputedField
+    q = forms.CharField(required=False, label="Search")
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("computed_fields").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Types",
     )

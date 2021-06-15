@@ -45,6 +45,7 @@ __all__ = (
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class VRF(PrimaryModel):
     """
@@ -120,6 +121,7 @@ class VRF(PrimaryModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class RouteTarget(PrimaryModel):
     """
@@ -159,12 +161,7 @@ class RouteTarget(PrimaryModel):
         )
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
 class RIR(OrganizationalModel):
     """
     A Regional Internet Registry (RIR) is responsible for the allocation of a large portion of the global IP address
@@ -210,6 +207,7 @@ class RIR(OrganizationalModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class Aggregate(PrimaryModel):
     """
@@ -368,12 +366,7 @@ class Aggregate(PrimaryModel):
         return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
 class Role(OrganizationalModel):
     """
     A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
@@ -417,6 +410,7 @@ class Role(OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class Prefix(PrimaryModel, StatusModel):
     """
@@ -730,6 +724,7 @@ class Prefix(PrimaryModel, StatusModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class IPAddress(PrimaryModel, StatusModel):
     """
@@ -980,12 +975,7 @@ class IPAddress(PrimaryModel, StatusModel):
         return IPAddressRoleChoices.CSS_CLASSES.get(self.role)
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
 class VLANGroup(OrganizationalModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
@@ -1050,6 +1040,7 @@ class VLANGroup(OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class VLAN(PrimaryModel, StatusModel):
     """
@@ -1173,6 +1164,7 @@ class VLAN(PrimaryModel, StatusModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class Service(PrimaryModel):
     """

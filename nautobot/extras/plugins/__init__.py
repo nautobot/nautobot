@@ -19,6 +19,7 @@ registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_menu_items"] = {}
 registry["plugin_template_extensions"] = collections.defaultdict(list)
+registry["plugin_jinja_filters"] = {}
 
 
 #
@@ -70,6 +71,7 @@ class PluginConfig(AppConfig):
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
     template_extensions = "template_content.template_extensions"
+    jinja_filters = "jinja_filters.jinja_filters"
 
     def ready(self):
 
@@ -102,6 +104,11 @@ class PluginConfig(AppConfig):
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+
+        # Register custom jinja filters (if defined)
+        jinja_filters = import_object(f"{self.__module__}.{self.jinja_filters}")
+        if jinja_filters is not None:
+            register_jinja_filters(jinja_filters)
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -389,3 +396,27 @@ def register_custom_validators(class_list):
             raise TypeError(f"PluginCustomValidator class {custom_validator} does not define a valid model!")
 
         registry["plugin_custom_validators"][custom_validator.model].append(custom_validator)
+
+
+class PluginJinjaFilter:
+
+    filter_name = None
+
+    @staticmethod
+    def filter(args, **kwargs):
+        raise NotImplementedError
+
+
+def register_jinja_filters(class_list):
+    """
+    Register a list of PluginCustomValidator classes
+    """
+    for custom_jinja_filter in class_list:
+        if not inspect.isclass(custom_jinja_filter):
+            raise TypeError(f"PluginJinjaFilter class {custom_jinja_filter} was passed as an instance!")
+        if not issubclass(custom_jinja_filter, PluginJinjaFilter):
+            raise TypeError(f"{custom_jinja_filter} is not a subclass of extras.plugins.PluginJinjaFilter!")
+        if custom_jinja_filter.filter_name is None:
+            raise TypeError(f"PluginJinjaFilter class {custom_jinja_filter} does not define a filter_name!")
+
+        registry["plugin_jinja_filters"][custom_jinja_filter.filter_name] = custom_jinja_filter.filter

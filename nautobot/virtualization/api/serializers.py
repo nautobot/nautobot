@@ -37,9 +37,10 @@ from .nested_serializers import *
 #
 # Clusters
 #
+from ...core.api.serializers import ComputedFieldModelSerializer
 
 
-class ClusterTypeSerializer(CustomFieldModelSerializer):
+class ClusterTypeSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustertype-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
@@ -55,10 +56,12 @@ class ClusterTypeSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
-class ClusterGroupSerializer(CustomFieldModelSerializer):
+class ClusterGroupSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustergroup-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
@@ -74,10 +77,12 @@ class ClusterGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
-class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:cluster-detail")
     type = NestedClusterTypeSerializer()
     group = NestedClusterGroupSerializer(required=False, allow_null=True)
@@ -103,7 +108,9 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "last_updated",
             "device_count",
             "virtualmachine_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -111,7 +118,9 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 #
 
 
-class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
+class VirtualMachineSerializer(
+    TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer, ComputedFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     site = NestedSiteSerializer(read_only=True)
     cluster = NestedClusterSerializer()
@@ -146,8 +155,10 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         validators = []
+        opt_in_fields = ["computed_fields"]
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
@@ -189,7 +200,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 #
 
 
-class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
+class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
@@ -216,7 +227,9 @@ class VMInterfaceSerializer(TaggedObjectSerializer, ValidatedModelSerializer):
             "untagged_vlan",
             "tagged_vlans",
             "tags",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
 

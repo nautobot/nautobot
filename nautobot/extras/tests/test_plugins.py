@@ -24,7 +24,6 @@ from dummy_plugin.datasources import refresh_git_text_files
 )
 class PluginTest(TestCase):
     def test_config(self):
-
         self.assertIn(
             "dummy_plugin.DummyPluginConfig",
             settings.INSTALLED_APPS,
@@ -43,7 +42,6 @@ class PluginTest(TestCase):
         self.assertIsNone(instance.pk)
 
     def test_admin(self):
-
         # Test admin view URL resolution
         url = reverse("admin:dummy_plugin_dummymodel_add")
         self.assertEqual(url, "/admin/dummy_plugin/dummymodel/add/")
@@ -74,6 +72,16 @@ class PluginTest(TestCase):
         )
 
         self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
+
+    def test_jinja_filter_registration(self):
+        """
+        Check that plugin custom jinja filters are registered correctly.
+        """
+        from dummy_plugin.jinja_filters import LeetSpeakJinjaFilter
+
+        self.assertEqual(
+            LeetSpeakJinjaFilter.filter, registry["plugin_jinja_filters"][LeetSpeakJinjaFilter.filter_name]
+        )
 
     def test_graphql_types(self):
         """
@@ -342,7 +350,6 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-
         site = Site(name="this site has a matching name", slug="site1")
 
         with self.assertRaises(ValidationError):

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from nautobot.circuits.models import Provider, Circuit, CircuitTermination, CircuitType
 from nautobot.core.api import WritableNestedSerializer
+from nautobot.core.api.serializers import ComputedFieldModelSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedCableSerializer,
     NestedInterfaceSerializer,
@@ -25,7 +26,7 @@ from .nested_serializers import *
 #
 
 
-class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:provider-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
@@ -47,7 +48,9 @@ class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "created",
             "last_updated",
             "circuit_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -55,7 +58,7 @@ class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 #
 
 
-class CircuitTypeSerializer(CustomFieldModelSerializer):
+class CircuitTypeSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittype-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
@@ -71,7 +74,9 @@ class CircuitTypeSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
@@ -92,7 +97,9 @@ class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
         ]
 
 
-class CircuitSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
+class CircuitSerializer(
+    TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer, ComputedFieldModelSerializer
+):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuit-detail")
     provider = NestedProviderSerializer()
     type = NestedCircuitTypeSerializer()
@@ -120,7 +127,9 @@ class CircuitSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cust
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class CircuitTerminationSerializer(CableTerminationSerializer, ConnectedEndpointSerializer):

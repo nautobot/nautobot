@@ -38,11 +38,7 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
+    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "computed_fields"
 )
 class RackGroup(MPTTModel, OrganizationalModel):
     """
@@ -110,12 +106,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
             raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
 class RackRole(OrganizationalModel):
     """
     Racks can be organized by functional role, similar to Devices.
@@ -158,6 +149,7 @@ class RackRole(OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class Rack(PrimaryModel, StatusModel):
     """
@@ -382,13 +374,7 @@ class Rack(PrimaryModel, StatusModel):
         if self.present_in_database:
 
             # Retrieve all devices installed within the rack
-            queryset = (
-                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
-                .annotate(devicebay_count=Count("devicebays"))
-                .exclude(pk=exclude)
-                .filter(rack=self, position__gt=0, device_type__u_height__gt=0)
-                .filter(Q(face=face) | Q(device_type__is_full_depth=True))
-            )
+            queryset = Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
 
             # Determine which devices the user has permission to view
             permitted_device_ids = []
@@ -542,6 +528,7 @@ class Rack(PrimaryModel, StatusModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class RackReservation(PrimaryModel):
     """

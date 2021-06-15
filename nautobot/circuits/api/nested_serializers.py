@@ -14,15 +14,17 @@ __all__ = [
 #
 # Providers
 #
+from nautobot.core.api.serializers import ComputedFieldModelSerializer
 
 
-class NestedProviderSerializer(WritableNestedSerializer):
+class NestedProviderSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:provider-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Provider
-        fields = ["id", "url", "name", "slug", "circuit_count"]
+        fields = ["id", "url", "name", "slug", "circuit_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -30,21 +32,23 @@ class NestedProviderSerializer(WritableNestedSerializer):
 #
 
 
-class NestedCircuitTypeSerializer(WritableNestedSerializer):
+class NestedCircuitTypeSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittype-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = CircuitType
-        fields = ["id", "url", "name", "slug", "circuit_count"]
+        fields = ["id", "url", "name", "slug", "circuit_count", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
-class NestedCircuitSerializer(WritableNestedSerializer):
+class NestedCircuitSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuit-detail")
 
     class Meta:
         model = Circuit
-        fields = ["id", "url", "cid"]
+        fields = ["id", "url", "cid", "computed_fields"]
+        opt_in_fields = ["computed_fields"]
 
 
 class NestedCircuitTerminationSerializer(WritableNestedSerializer):

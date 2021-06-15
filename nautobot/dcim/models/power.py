@@ -30,6 +30,7 @@ __all__ = (
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class PowerPanel(PrimaryModel):
     """
@@ -80,6 +81,7 @@ class PowerPanel(PrimaryModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     """

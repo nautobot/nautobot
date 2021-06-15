@@ -1,6 +1,7 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
 from .statuses import Status, StatusField, StatusModel
 from .customfields import CustomField, CustomFieldChoice, CustomFieldModel
+from .computed_fields import ComputedField, ComputedFieldModelMixin
 from .datasources import GitRepository
 from .relationships import Relationship, RelationshipModel, RelationshipAssociation
 from .models import (
@@ -24,6 +25,8 @@ __all__ = (
     "StatusModel",
     "CustomField",
     "CustomFieldChoice",
+    "ComputedField",
+    "ComputedFieldModelMixin",
     "CustomFieldModel",
     "CustomLink",
     "ExportTemplate",

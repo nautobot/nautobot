@@ -19,8 +19,8 @@ from nautobot.dcim.models import (
     Region,
 )
 from nautobot.extras.jobs import get_job, Job
-from nautobot.extras.models import ConfigContext, GitRepository, JobResult, Status, Tag
 from nautobot.ipam.models import IPAddress
+from nautobot.extras.models import ConfigContext, GitRepository, JobResult, Status, Tag, ComputedField
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.virtualization.models import (
@@ -409,3 +409,78 @@ class StatusTest(TestCase):
             self.status.clean()
             self.status.save()
             self.assertEquals(str(self.status), test)
+
+
+class ComputedFieldTest(TestCase):
+    """
+    Tests for the `ComputedField` Model
+    """
+
+    def setUp(self):
+        self.good_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            name="good_computed_field",
+            label="Good Computed Field",
+            template="{{ obj.name }} is awesome!",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            name="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ not_in_context | not_a_filter }} is horrible!",
+            fallback_value="An error occurred while rendering this template.",
+            weight=50,
+        )
+        self.site1 = Site.objects.create(name="NYC")
+
+    def test_render_method(self):
+        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+
+    def test_render_method_bad_template(self):
+        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+
+class ComputedFieldModelMixinTest(TestCase):
+    """
+    Tests for the `ComputedFieldModelMixin` Mixin.
+    """
+
+    def setUp(self):
+        self.site1 = Site.objects.create(name="NYC")
+        self.computed_field_one = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            name="computed_field_one",
+            label="Computed Field One",
+            template="{{ obj.name }} is the name of this site.",
+            fallback_value="An error occurred while rendering this template.",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            name="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+
+    def test_get_computed_field_method(self):
+        self.assertEqual(
+            self.site1.get_computed_field("computed_field_one"), f"{self.site1.name} is the name of this site."
+        )
+
+    def test_get_computed_field_method_render_false(self):
+        self.assertEqual(
+            self.site1.get_computed_field("computed_field_one", render=False), self.computed_field_one.template
+        )
+
+    def test_get_computed_fields_method(self):
+        expected_renderings = {
+            "computed_field_one": f"{self.site1.name} is the name of this site.",
+            "bad_computed_field": self.bad_computed_field.fallback_value,
+        }
+        self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)

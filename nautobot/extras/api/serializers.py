@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Webhook,
+    ComputedField,
 )
 from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.utils import FeatureQuery
@@ -59,6 +60,7 @@ from .nested_serializers import *
 #
 # Custom fields
 #
+from ...core.api.serializers import ComputedFieldModelSerializer
 
 
 class CustomFieldSerializer(ValidatedModelSerializer):
@@ -204,7 +206,7 @@ class TaggedObjectSerializer(serializers.Serializer):
 #
 
 
-class GitRepositorySerializer(CustomFieldModelSerializer):
+class GitRepositorySerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
     """Git repositories defined as a data source."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
@@ -232,7 +234,9 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
             "created",
             "last_updated",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
         """
@@ -658,7 +662,6 @@ class RelationshipSerializer(serializers.ModelSerializer):
 
 
 class RelationshipAssociationSerializer(serializers.ModelSerializer):
-
     source_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()),
     )
@@ -679,3 +682,27 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
             "destination_type",
             "destination_id",
         ]
+
+
+# Computed Fields
+
+
+class ComputedFieldSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("computed_fields").get_query()).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "id",
+            "url",
+            "name",
+            "label",
+            "description",
+            "content_type",
+            "template",
+            "fallback_value",
+            "weight",
+        )

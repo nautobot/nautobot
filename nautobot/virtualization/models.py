@@ -12,6 +12,7 @@ from nautobot.extras.models import (
     ObjectChange,
     StatusModel,
     TaggedItem,
+    ComputedFieldModelMixin,
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
@@ -37,12 +38,7 @@ __all__ = (
 #
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
 class ClusterType(OrganizationalModel):
     """
     A type of Cluster.
@@ -76,12 +72,7 @@ class ClusterType(OrganizationalModel):
 #
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
 class ClusterGroup(OrganizationalModel):
     """
     An organizational group of Clusters.
@@ -123,6 +114,7 @@ class ClusterGroup(OrganizationalModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class Cluster(PrimaryModel):
     """
@@ -211,6 +203,7 @@ class Cluster(PrimaryModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     """
@@ -375,8 +368,9 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
-class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
+class VMInterface(BaseModel, BaseInterface, CustomFieldModel, ComputedFieldModelMixin):
     virtual_machine = models.ForeignKey(
         to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,

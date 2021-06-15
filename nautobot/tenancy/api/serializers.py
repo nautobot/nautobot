@@ -9,9 +9,10 @@ from .nested_serializers import *
 #
 # Tenants
 #
+from ...core.api.serializers import ComputedFieldModelSerializer
 
 
-class TenantGroupSerializer(CustomFieldModelSerializer):
+class TenantGroupSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenantgroup-detail")
     parent = NestedTenantGroupSerializer(required=False, allow_null=True)
     tenant_count = serializers.IntegerField(read_only=True)
@@ -31,10 +32,12 @@ class TenantGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
-class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
     group = NestedTenantGroupSerializer(required=False)
     circuit_count = serializers.IntegerField(read_only=True)
@@ -72,4 +75,6 @@ class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "vlan_count",
             "vrf_count",
             "cluster_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]

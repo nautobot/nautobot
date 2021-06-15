@@ -19,6 +19,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Webhook,
+    ComputedField,
 )
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body
@@ -499,3 +500,60 @@ class RelationshipAssociationTestCase(
             destination_type=vlan_type,
             destination_id=vlans[2].pk,
         )
+
+
+class ComputedFieldTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ComputedField
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        computed_fields = (
+            ComputedField(
+                content_type=obj_type,
+                label="Computed Field One",
+                name="computed_field_one",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+            ComputedField(
+                content_type=obj_type,
+                name="computed_field_two",
+                label="Computed Field Two",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+            ComputedField(
+                content_type=obj_type,
+                name="computed_field_three",
+                label="Computed Field Three",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+        )
+
+        cls.site1 = Site(name="NYC")
+        cls.site1.save()
+
+        for cf in computed_fields:
+            cf.save()
+
+        cls.form_data = {
+            "content_type": obj_type.pk,
+            "name": "computed_field_four",
+            "label": "Computed Field Four",
+            "template": "{{ obj.name }} is the best Site!",
+            "fallback_value": ":skull:",
+            "weight": 100,
+        }

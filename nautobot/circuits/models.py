@@ -27,6 +27,7 @@ __all__ = (
     "graphql",
     "relationships",
     "webhooks",
+    "computed_fields",
 )
 class Provider(PrimaryModel):
     """
@@ -88,12 +89,7 @@ class Provider(PrimaryModel):
         )
 
 
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
 class CircuitType(OrganizationalModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
@@ -135,6 +131,7 @@ class CircuitType(OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class Circuit(PrimaryModel, StatusModel):
     """

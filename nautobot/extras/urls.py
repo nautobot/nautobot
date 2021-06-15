@@ -9,6 +9,7 @@ from nautobot.extras.models import (
     Tag,
     Status,
     Webhook,
+    ComputedField,
 )
 
 
@@ -295,5 +296,30 @@ urlpatterns = [
         "relationships/associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
+    ),
+    # Computed Fields
+    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
+    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
+    path(
+        "computed-fields/delete/",
+        views.ComputedFieldBulkDeleteView.as_view(),
+        name="computedfield_bulk_delete",
+    ),
+    path("computed-fields/<uuid:pk>/", views.ComputedFieldView.as_view(), name="computedfield"),
+    path(
+        "computed-fields/<uuid:pk>/edit/",
+        views.ComputedFieldEditView.as_view(),
+        name="computedfield_edit",
+    ),
+    path(
+        "computed-fields/<uuid:pk>/delete/",
+        views.ComputedFieldDeleteView.as_view(),
+        name="computedfield_delete",
+    ),
+    path(
+        "computed-fields/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="computedfield_changelog",
+        kwargs={"model": ComputedField},
     ),
 ]

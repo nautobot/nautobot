@@ -40,6 +40,6 @@ def wrap_model_clean_methods():
     """
     Helper function that wraps plugin model validator registered clean methods for all applicable models
     """
-    for model in ContentType.objects.filter(FeatureQuery("custom_validators").get_query()):
+    for model in ContentType.objects.filter():
         model_class = model.model_class()
         model_class.clean = custom_validator_clean(model_class.clean)

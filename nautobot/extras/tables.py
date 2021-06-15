@@ -31,6 +31,7 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
+    ComputedField,
 )
 
 TAGGED_ITEM = """
@@ -421,3 +422,22 @@ class RelationshipAssociationTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
         fields = ("relationship", "source", "destination", "actions")
+
+
+class ComputedFieldTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = ComputedField
+        fields = (
+            "pk",
+            "name",
+            "template",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "template" "weight",
+        )

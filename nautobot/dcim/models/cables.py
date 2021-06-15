@@ -45,6 +45,7 @@ __all__ = (
     "relationships",
     "statuses",
     "webhooks",
+    "computed_fields",
 )
 class Cable(PrimaryModel, StatusModel):
     """

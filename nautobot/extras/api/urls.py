@@ -49,5 +49,8 @@ router.register("statuses", views.StatusViewSet)
 router.register("relationships", views.RelationshipViewSet)
 router.register("relationship-associations", views.RelationshipAssociationViewSet)
 
+# Computed Fields
+router.register("computed-fields", views.ComputedFieldViewSet)
+
 app_name = "extras-api"
 urlpatterns = router.urls

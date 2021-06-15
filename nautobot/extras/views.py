@@ -36,6 +36,7 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
+    ComputedField,
 )
 from .jobs import get_job, get_jobs, run_job, Job
 from .datasources import (
@@ -835,3 +836,29 @@ class RelationshipAssociationListView(generic.ObjectListView):
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
     queryset = RelationshipAssociation.objects.all()
+
+
+class ComputedFieldListView(generic.ObjectListView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
+    filterset_form = forms.ComputedFieldFilterForm
+    action_buttons = ("add",)
+
+
+class ComputedFieldView(generic.ObjectView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldEditView(generic.ObjectEditView):
+    queryset = ComputedField.objects.all()
+    model_form = forms.ComputedFieldForm
+
+
+class ComputedFieldDeleteView(generic.ObjectDeleteView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable

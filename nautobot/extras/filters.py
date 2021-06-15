@@ -30,6 +30,7 @@ from .models import (
     Status,
     Tag,
     Webhook,
+    ComputedField,
 )
 
 
@@ -622,3 +623,32 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
     class Meta:
         model = RelationshipAssociation
         fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]
+
+
+class ComputedFieldFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    content_type = ContentTypeFilter()
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "content_type",
+            "name",
+            "template",
+            "fallback_value",
+            "weight",
+        )
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(target_url__icontains=value)
+            | Q(text__icontains=value)
+            | Q(content_type__app_label__icontains=value)
+            | Q(content_type__model__icontains=value)
+        )
