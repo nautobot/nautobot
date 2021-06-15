@@ -204,7 +204,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc_list[1].object_data["tags"], ["Tag 1", "Tag 2"])
 
     def test_update_object(self):
-        """Test PUT wi/ changelogs."""
+        """Test PUT with changelogs."""
         site = Site.objects.create(
             name="Test Site 1",
             slug="test-site-1",
