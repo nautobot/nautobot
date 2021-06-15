@@ -45,7 +45,7 @@ jobs:
       fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
-        python-version: [ "3.6", "3.7", "3.8", "3.9" ]
+        python-version: [ "3.6" ]  #, "3.7", "3.8", "3.9" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -100,23 +100,23 @@ jobs:
       # ----------------------------------------------
       # install & configure poetry
       # ----------------------------------------------
-      - name: "Install Poetry"
-        uses: "snok/install-poetry@v1.1.6"
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-      # ----------------------------------------------
-      # load cached venv if cache exists
-      # ----------------------------------------------
-      - name: "Load cached venv"
-        id: "cached-poetry-dependencies"
-        uses: "actions/cache@v2"
-        with:
-          path: ".venv"
-          key: "venv-${{ runner.os }}--${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}"
-      # ----------------------------------------------
-      # install dependencies if cache does not exist
-      # ----------------------------------------------
+      # - name: "Install Poetry"
+      #   uses: "snok/install-poetry@v1.1.6"
+      #   with:
+      #     virtualenvs-create: true
+      #     virtualenvs-in-project: true
+      # # ----------------------------------------------
+      # # load cached venv if cache exists
+      # # ----------------------------------------------
+      # - name: "Load cached venv"
+      #   id: "cached-poetry-dependencies"
+      #   uses: "actions/cache@v2"
+      #   with:
+      #     path: ".venv"
+      #     key: "venv-${{ runner.os }}--${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}"
+      # # ----------------------------------------------
+      # # install dependencies if cache does not exist
+      # # ----------------------------------------------
       # - name: "Install dependencies"
       #   if: "steps.cached-poetry-dependencies.outputs.cache-hit != 'true'"
       #   run: "poetry install --no-interaction --no-root"
@@ -132,9 +132,10 @@ jobs:
           NAUTOBOT_INTEGRATION_TEST: True
         run: |
           ip addr list
+          env
           docker ps
           docker network list
-          docker inspect `docker ps | grep thanos | awk '{print $1}'`
+          docker inspect `docker ps | grep selenium | awk '{print $1}'`
           poetry run invoke integration-test --failfast --keepdb --append
       - name: Coverage
         run: poetry run invoke unittest-coverage
