@@ -324,8 +324,11 @@ class PrefixFilterSet(
 
     def search(self, queryset, name, value):
         value = value.strip()
+
         if not value:
             return queryset
+
+        """
         qs_filter = Q(description__icontains=value)
         try:
             # filter for Prefixes containing |value|
@@ -338,6 +341,8 @@ class PrefixFilterSet(
         except (AddrFormatError, ValueError):
             pass
         return queryset.filter(qs_filter)
+        """
+        return queryset.string_search(value)
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
