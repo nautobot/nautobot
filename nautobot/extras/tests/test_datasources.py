@@ -157,10 +157,11 @@ class GitTest(TestCase):
                         yaml.dump(
                             {
                                 "_metadata": {
-                                    "name": "Region NYC servers",
+                                    "name": "Frobozz 1000 NTP servers",
                                     "weight": 1500,
-                                    "description": "NTP servers for region NYC",
+                                    "description": "NTP servers for Frobozz 1000 devices **only**",
                                     "is_active": True,
+                                    "device_types": [{"slug": self.device_type.slug}],
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
                             },
@@ -191,14 +192,15 @@ class GitTest(TestCase):
 
                 # Make sure ConfigContext was successfully loaded from file
                 config_context = ConfigContext.objects.get(
-                    name="Region NYC servers",
+                    name="Frobozz 1000 NTP servers",
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
                 self.assertIsNotNone(config_context)
                 self.assertEqual(1500, config_context.weight)
-                self.assertEqual("NTP servers for region NYC", config_context.description)
+                self.assertEqual("NTP servers for Frobozz 1000 devices **only**", config_context.description)
                 self.assertTrue(config_context.is_active)
+                self.assertEqual(list(config_context.device_types.all()), [self.device_type])
                 self.assertEqual(
                     {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
                     config_context.data,
