@@ -50,7 +50,7 @@ jobs:
       INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_SELENIUM_URL: http://localhost:4444/wd/hub 
-      NAUTOBOT_SELENIUM_HOST: $(hostname -f)
+      NAUTOBOT_SELENIUM_HOST: localhost
       NAUTOBOT_DB_HOST: localhost
       NAUTOBOT_REDIS_HOST: localhost
       NAUTOBOT_DB_PASSWORD: decinablesprewad
