@@ -22,6 +22,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
 
+# Set the default AutoField for 3rd party apps
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
 ###############################################################
 # NAUTOBOT - Settings for Nautobot internals/plugins/defaults #
@@ -315,6 +318,7 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "django_celery_beat",
 ]
 
 # Middleware

@@ -27,6 +27,7 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     TaggedItem,
@@ -256,6 +257,18 @@ class JobResultTable(BaseTable):
             "data",
         )
         default_columns = ("pk", "created", "name", "user", "status", "data")
+
+
+class ScheduledJobsTable(BaseTable):
+    pk = ToggleColumn()
+    job_class = tables.Column(verbose_name="Job")
+    interval = tables.Column(verbose_name="Execution Type")
+    start_time = tables.Column(verbose_name="First Run")
+    last_run_at = tables.Column(verbose_name="Last Run")
+
+    class Meta(BaseTable.Meta):
+        model = ScheduledJob
+        fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
 
 
 class ObjectChangeTable(BaseTable):

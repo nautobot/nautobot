@@ -149,6 +149,7 @@ urlpatterns = [
         views.JobJobResultView.as_view(),
         name="job_jobresult",
     ),
+    path("jobs/schedules/", views.ScheduledJobListView.as_view(), name="scheduled_jobs_list"),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),

@@ -1,7 +1,8 @@
 from django.db.models import OuterRef, Subquery, Q
+from django_celery_beat.managers import ExtendedQuerySet
 
 from nautobot.extras.models.tags import TaggedItem
-from nautobot.utilities.query_functions import EmptyGroupByJSONBAgg, OrderableJSONBAgg
+from nautobot.utilities.query_functions import EmptyGroupByJSONBAgg
 from nautobot.utilities.querysets import RestrictedQuerySet
 
 
@@ -127,3 +128,15 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         )
 
         return base_query
+
+
+class ScheduledJobExtendedQuerySet(RestrictedQuerySet, ExtendedQuerySet):
+    """
+    Base queryset used for the ScheduledJob class
+    """
+
+    def enabled(self):
+        """
+        Return only ScheduledJob instances that are enabled
+        """
+        return self.filter(enabled=True)

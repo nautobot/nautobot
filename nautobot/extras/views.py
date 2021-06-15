@@ -1,4 +1,6 @@
 import inspect
+import json
+from datetime import datetime
 
 from django import template
 from django.contrib import messages
@@ -7,6 +9,7 @@ from django.db.models import Q
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.timezone import make_aware
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
@@ -31,6 +34,7 @@ from .models import (
     JobResult,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     TaggedItem,
@@ -41,6 +45,7 @@ from .datasources import (
     get_datasource_contents,
     enqueue_pull_git_repository_and_refresh_data,
 )
+from nautobot.extras import choices
 
 
 #
@@ -523,7 +528,8 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
-        form = job.as_form(initial=request.GET)
+        job_form = job.as_form(initial=request.GET)
+        schedule_form = forms.JobScheduleForm(initial=request.GET)
 
         return render(
             request,
@@ -532,7 +538,8 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 "grouping": grouping,
                 "module": module,
                 "job": job,
-                "form": form,
+                "job_form": job_form,
+                "schedule_form": schedule_form,
             },
         )
 
@@ -545,24 +552,58 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             raise Http404
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
-        form = job.as_form(request.POST, request.FILES)
+        job_form = job.as_form(request.POST, request.FILES)
+        schedule_form = forms.JobScheduleForm(request.POST)
 
-        if form.is_valid():
+        if job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
-            commit = form.cleaned_data.pop("_commit")
+            commit = job_form.cleaned_data.pop("_commit")
+            schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
-            job_result = JobResult.enqueue_job(
-                run_job,
-                job.class_path,
-                job_content_type,
-                request.user,
-                data=form.cleaned_data,
-                request=copy_safe_request(request),
-                commit=commit,
-            )
+            if schedule_type in choices.JobExecutionType.SCHEDULE_CHOICES:
+                # Schedule the job instead of running it now
+                schedule_name = schedule_form.cleaned_data["_schedule_name"]
+                schedule_start_date = schedule_form.cleaned_data["_schedule_start_date"]
+                schedule_start_time = schedule_form.cleaned_data["_schedule_start_time"]
+                schedule_datetime = make_aware(datetime.combine(schedule_start_date, schedule_start_time))
 
-            return redirect("extras:job_jobresult", pk=job_result.pk)
+                kwargs = {
+                    "data": job_form.cleaned_data,
+                    "request": copy_safe_request(request),
+                    "user": request.user.pk,
+                    "commit": commit,
+                    "name": job.class_path,
+                }
+
+                scheduled_job = ScheduledJob(
+                    name=schedule_name,
+                    task="nautobot.extras.jobs.scheduled_job_handler",
+                    job_class=job.class_path,
+                    start_time=schedule_datetime,
+                    description=f"Nautobot job scheduled by {request.user} on {schedule_datetime}",
+                    kwargs=kwargs,
+                    interval=schedule_type,
+                    one_off=schedule_type == choices.JobExecutionType.TYPE_FUTURE,
+                )
+
+                scheduled_job.save()
+
+                return redirect("extras:scheduled_jobs_list")
+
+            else:
+                # Enqueue job for immediate execution
+                job_content_type = ContentType.objects.get(app_label="extras", model="job")
+                job_result = JobResult.enqueue_job(
+                    run_job,
+                    job.class_path,
+                    job_content_type,
+                    request.user,
+                    data=job_form.cleaned_data,
+                    request=copy_safe_request(request),
+                    commit=commit,
+                )
+
+                return redirect("extras:job_jobresult", pk=job_result.pk)
 
         return render(
             request,
@@ -571,7 +612,8 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 "grouping": grouping,
                 "module": module,
                 "job": job,
-                "form": form,
+                "job_form": job_form,
+                "schedule_form": schedule_form,
             },
         )
 
@@ -599,6 +641,12 @@ class JobJobResultView(ContentTypePermissionRequiredMixin, View):
                 "result": job_result,
             },
         )
+
+
+class ScheduledJobListView(generic.ObjectListView):
+    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler")
+    table = tables.ScheduledJobsTable
+    action_buttons = ()
 
 
 #

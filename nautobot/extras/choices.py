@@ -180,6 +180,47 @@ class JobResultStatusChoices(ChoiceSet):
 
 
 #
+# JobExecutionType
+#
+
+
+class JobExecutionType(ChoiceSet):
+
+    TYPE_IMMEDIATELY = "immediately"
+    TYPE_FUTURE = "future"
+    TYPE_HOURLY = "hourly"
+    TYPE_DAILY = "daily"
+    TYPE_WEEKLY = "weekly"
+
+    CHOICES = (
+        (TYPE_IMMEDIATELY, "Once immediately"),
+        (TYPE_FUTURE, "Once in the future"),
+        (TYPE_HOURLY, "Reccuring hourly"),
+        (TYPE_DAILY, "Reccuring daily"),
+        (TYPE_WEEKLY, "Recurring weekly"),
+    )
+
+    SCHEDULE_CHOICES = (
+        TYPE_FUTURE,
+        TYPE_HOURLY,
+        TYPE_DAILY,
+        TYPE_WEEKLY,
+    )
+
+    RECURRING_CHOICES = (
+        TYPE_HOURLY,
+        TYPE_DAILY,
+        TYPE_WEEKLY,
+    )
+
+    CELERY_INTERVAL_MAP = {
+        TYPE_HOURLY: "hours",
+        TYPE_DAILY: "days",
+        TYPE_WEEKLY: "days",  # a week is expressed as 7 days
+    }
+
+
+#
 # Webhooks
 #
 

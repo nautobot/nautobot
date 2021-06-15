@@ -11,6 +11,8 @@ from .models import (
     ImageAttachment,
     Job,
     JobResult,
+    ScheduledJob,
+    ScheduledJobs,
     Webhook,
 )
 from .tags import Tag, TaggedItem
@@ -35,6 +37,8 @@ __all__ = (
     "Relationship",
     "RelationshipModel",
     "RelationshipAssociation",
+    "ScheduledJob",
+    "ScheduledJobs",
     "Tag",
     "TaggedItem",
     "Webhook",

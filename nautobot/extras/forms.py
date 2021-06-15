@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
@@ -16,6 +17,7 @@ from nautobot.utilities.forms import (
     CSVModelChoiceField,
     CSVModelForm,
     CSVMultipleContentTypeField,
+    DatePicker,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -24,6 +26,7 @@ from nautobot.utilities.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
+    TimePicker,
     BOOLEAN_WITH_BLANK_CHOICES,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -40,11 +43,13 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     Webhook,
 )
 from .utils import FeatureQuery
+from nautobot.extras import choices
 
 
 #
@@ -660,6 +665,11 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 class JobForm(BootstrapMixin, forms.Form):
+    """
+    This form is used to render the user input fields for a Job class. Its fields are dynamically
+    controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
+    """
+
     _commit = forms.BooleanField(
         required=False,
         initial=True,
@@ -680,6 +690,63 @@ class JobForm(BootstrapMixin, forms.Form):
         A boolean indicating whether the form requires user input (ignore the _commit field).
         """
         return bool(len(self.fields) > 1)
+
+
+class JobScheduleForm(BootstrapMixin, forms.Form):
+    """
+    This form is rendered along side the JobForm but deals specifically with the fields needed to either
+    execute the job immediately, or schedule it for later. Each field name is prefixed with and underscore
+    because in the POST body, they share a namespace with the JobForm which includes fields defined by the
+    job author.
+    """
+
+    _schedule_type = forms.ChoiceField(
+        choices=choices.JobExecutionType,
+        help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
+        label="Type",
+    )
+    _schedule_name = forms.CharField(
+        required=False,
+        label="Schedule name",
+        help_text="Name for the job schedule.",
+    )
+    _schedule_start_date = forms.DateField(
+        required=False,
+        label="Schedule start date",
+        help_text="Date to schedule the job for execution.",
+        widget=DatePicker(),
+    )
+    _schedule_start_time = forms.TimeField(
+        required=False,
+        label="Schedule start time",
+        help_text="Time to schedule the job for execution.",
+        widget=TimePicker(),
+    )
+
+    def clean(self):
+        """
+        Validate all required information is present if the job needs to be scheduled
+        """
+        cleaned_data = super().clean()
+
+        if cleaned_data["_schedule_type"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+            if not cleaned_data["_schedule_name"]:
+                raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
+
+            if ScheduledJob.objects.filter(name=cleaned_data["_schedule_name"]).exists():
+                # django_celery_beat.models.PeriodicTask enforces unique values for the name field, so we need to check
+                # for existing instances with the same name.
+                raise ValidationError({"_schedule_name": "Scheduled job with this name already exists!"})
+
+            if not cleaned_data["_schedule_start_date"] or cleaned_data["_schedule_start_date"] < timezone.now().date():
+                raise ValidationError(
+                    {"_schedule_start_date": "Please enter a valid date greater than or equal to the current date."}
+                )
+
+            if not cleaned_data["_schedule_start_time"] or cleaned_data["_schedule_start_time"] < timezone.now().time():
+                raise ValidationError(
+                    {"_schedule_start_time": "Please enter a valid time greater than or equal to the current time."}
+                )
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):

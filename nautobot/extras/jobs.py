@@ -1,5 +1,4 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
-import importlib
 import inspect
 import json
 import logging
@@ -36,6 +35,7 @@ from nautobot.ipam.validators import (
     MinPrefixLengthValidator,
     prefix_validator,
 )
+from nautobot.users.models import User
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
@@ -905,3 +905,21 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
             _run_job()
     else:
         _run_job()
+
+
+@app.task()
+def scheduled_job_handler(*args, **kwargs):
+    """
+    A thin wrapper around JobResult.enqueue_job() that allows for it to be called as an async task
+    for the purposes of enqueuing scheduled jobs at their recurring intervals. Thus, JobResult.enqueue_job()
+    is responsible for enqueuing the actual job for execution and this method is the task executed
+    by the schedular to kick off the job execution on a recurring interval.
+    """
+    from nautobot.extras.models import JobResult  # avoid circular import
+
+    user_pk = kwargs.pop("user")
+    user = User.objects.get(pk=user_pk)
+    name = kwargs.pop("name")
+
+    job_content_type = ContentType.objects.get(app_label="extras", model="job")
+    JobResult.enqueue_job(run_job, name, job_content_type, user, **kwargs)

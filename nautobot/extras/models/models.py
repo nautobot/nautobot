@@ -2,25 +2,31 @@ import json
 import logging
 import uuid
 from collections import OrderedDict
+from datetime import timedelta
 
+from celery import schedules
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError
 from django.db import models
+from django.db.models import signals
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from django_celery_beat.clockedschedule import clocked
+from django_celery_beat.managers import ExtendedManager
 from rest_framework.utils.encoders import JSONEncoder
 
+from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.models import BaseModel
 from nautobot.extras.choices import *
 from nautobot.extras.constants import *
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.querysets import ConfigContextQuerySet
+from nautobot.extras.querysets import ConfigContextQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-from nautobot.core.models import BaseModel
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
@@ -725,3 +731,133 @@ class JobResult(BaseModel):
             else:
                 log_level = logging.INFO
             logger.log(log_level, str(message))
+
+
+class ScheduledJobs(models.Model):
+    """Helper table for tracking updates to scheduled tasks.
+    This stores a single row with ident=1.  last_update is updated
+    via django signals whenever anything is changed in the ScheduledTask model.
+    Basically this acts like a DB data audit trigger.
+    Doing this so we also track deletions, and not just insert/update.
+    """
+
+    ident = models.SmallIntegerField(default=1, primary_key=True, unique=True)
+    last_update = models.DateTimeField(null=False)
+
+    objects = ExtendedManager()
+
+    @classmethod
+    def changed(cls, instance, **kwargs):
+        if not instance.no_changes:
+            cls.update_changed()
+
+    @classmethod
+    def update_changed(cls, **kwargs):
+        cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
+
+    @classmethod
+    def last_change(cls):
+        try:
+            return cls.objects.get(ident=1).last_update
+        except cls.DoesNotExist:
+            pass
+
+
+class ScheduledJob(BaseModel):
+    """Model representing a periodic task."""
+
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        verbose_name="Name",
+        help_text="Short Description For This Task",
+    )
+    task = models.CharField(
+        max_length=200,
+        verbose_name="Task Name",
+        help_text='The Name of the Celery Task that Should be Run. (Example: "proj.tasks.import_contacts")',
+    )
+    job_class = models.CharField(
+        max_length=255, verbose_name="Job Class", help_text="Name of the fully qualified Nautobot Job class"
+    )
+    interval = models.CharField(choices=JobExecutionType, max_length=255)
+    args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
+    kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+    queue = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        default=None,
+        verbose_name="Queue Override",
+        help_text="Queue defined in CELERY_TASK_QUEUES. Leave None for default queuing.",
+    )
+    one_off = models.BooleanField(
+        default=False,
+        verbose_name="One-off Task",
+        help_text="If True, the schedule will only run the task a single time",
+    )
+    start_time = models.DateTimeField(
+        verbose_name="Start Datetime",
+        help_text="Datetime when the schedule should begin triggering the task to run",
+    )
+    enabled = models.BooleanField(
+        default=True,
+        verbose_name="Enabled",
+        help_text="Set to False to disable the schedule",
+    )
+    last_run_at = models.DateTimeField(
+        auto_now=False,
+        auto_now_add=False,
+        editable=False,
+        blank=True,
+        null=True,
+        verbose_name="Last Run Datetime",
+        help_text="Datetime that the schedule last triggered the task to run. "
+        "Reset to None if enabled is set to False.",
+    )
+    total_run_count = models.PositiveIntegerField(
+        default=0,
+        editable=False,
+        verbose_name="Total Run Count",
+        help_text="Running count of how many times the schedule has triggered the task",
+    )
+    date_changed = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Last Modified",
+        help_text="Datetime that this PeriodicTask was last modified",
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Description",
+        help_text="Detailed description about the details of this Periodic Task",
+    )
+
+    objects = ScheduledJobExtendedQuerySet.as_manager()
+    no_changes = False
+
+    def save(self, *args, **kwargs):
+        self.queue = self.queue or None
+        if not self.enabled:
+            self.last_run_at = None
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "{0.name}: {0.interval}".format(self)
+
+    @property
+    def schedule(self):
+        if self.interval == JobExecutionType.TYPE_FUTURE:
+            # This is one-time clocked task
+            return clocked(clocked_time=self.start_time)
+
+        # A week is 7 days, otherwise the iteration is set to 1
+        every = 7 if self.interval == JobExecutionType.TYPE_WEEKLY else 1
+        return schedules.schedule(
+            timedelta(**{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: every}),
+            nowfun=lambda: timezone.make_aware(timezone.now()),
+        )
+
+
+signals.pre_delete.connect(ScheduledJobs.changed, sender=ScheduledJob)
+signals.pre_save.connect(ScheduledJobs.changed, sender=ScheduledJob)
+signals.post_save.connect(ScheduledJobs.update_changed, sender=ScheduledJob)
