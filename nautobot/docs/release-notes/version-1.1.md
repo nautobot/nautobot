@@ -8,7 +8,7 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 ### Added
 
-#### App Defined Navigation [#485](https://github.com/nautobot/nautobot/issues/485)
+#### App Defined Navigation [#12](https://github.com/nautobot/nautobot/pull/485)
 
 Applications can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/application-registry.md) for more details.
 
@@ -33,13 +33,13 @@ Saved queries can easily be imported into the GraphiQL interface by using the ne
 
 ### Removed
 
-
 ## v1.1.0 (2021-MM-DD)
 
 ### Added
 
 - [#3](https://github.com/nautobot/nautobot/issues/3) - GraphQL queries can now be saved for later execution
 - [#200](https://github.com/nautobot/nautobot/issues/200) - Jobs can be marked as read-only
+- [#485](https://github.com/nautobot/nautobot/pulls/485) - Applications can define navbar properties through `navigation.py`
 
 ### Changed
 
