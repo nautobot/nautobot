@@ -49,10 +49,10 @@ jobs:
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
       INVOKE_NAUTOBOT_LOCAL: "True"
-      NAUTOBOT_SELENIUM_URL: http://selenium:4444/wd/hub 
+      NAUTOBOT_SELENIUM_URL: http://localhost:4444/wd/hub 
       NAUTOBOT_SELENIUM_HOST: $(hostname -f)
-      NAUTOBOT_DB_HOST: postgres
-      NAUTOBOT_REDIS_HOST: redis
+      NAUTOBOT_DB_HOST: localhost
+      NAUTOBOT_REDIS_HOST: localhost
       NAUTOBOT_DB_PASSWORD: decinablesprewad
       NAUTOBOT_DB_USER: nautobot
     services:
@@ -82,6 +82,8 @@ jobs:
           --health-retries 5
       selenium:
         image: selenium/standalone-firefox:latest
+        ports:
+          - 4444:4444
     # The type of runner that the job will run on
     runs-on: "${{ matrix.os }}"
     # Steps represent a sequence of tasks that will be executed as part of the job
