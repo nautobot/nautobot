@@ -130,6 +130,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "staged",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -231,6 +232,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["mode"]
 
     @classmethod
     def setUpTestData(cls):
