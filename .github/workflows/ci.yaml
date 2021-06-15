@@ -6,46 +6,46 @@ on:
   pull_request:
     branches: ["develop"]
 jobs:
-  # Linting:
-  #   runs-on: "ubuntu-latest"
-  #   env:
-  #     INVOKE_NAUTOBOT_LOCAL: "True"
-  #   steps:
-  #     # ----------------------------------------------
-  #     #       check-out repo and set-up python
-  #     # ----------------------------------------------
-  #     - uses: "actions/checkout@v2"
-  #     - uses: "actions/setup-python@v2"
-  #       with:
-  #         python-version: 3.9
-  #     # ----------------------------------------------
-  #     #        load pip cache if cache exists
-  #     # ----------------------------------------------
-  #     - uses: "actions/cache@v2"
-  #       with:
-  #         path: "~/.cache/pip"
-  #         key: "${{ runner.os }}-pip"
-  #         restore-keys: "${{ runner.os }}-pip"
-  #     # ----------------------------------------------
-  #     #          install and run linters
-  #     # ----------------------------------------------
-  #     - run: "python -m pip install --upgrade pip wheel"
-  #     - run: "python -m pip install invoke black=='20.8b1' flake8=='3.9.2'"  # Until there is a poetry install --dev-only (poetry 1.2) install the linting tools here to speed up this step
-  #     - name: Setup Hadolint
-  #       run: |
-  #         mkdir -p $HOME/.local/bin
-  #         curl -Lo $HOME/.local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
-  #         chmod +x $HOME/.local/bin/hadolint
-  #         echo "$HOME/.local/bin" >> $GITHUB_PATH
-  #     - run: "invoke tests --lint-only"
+  Linting:
+    runs-on: "ubuntu-latest"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      # ----------------------------------------------
+      #       check-out repo and set-up python
+      # ----------------------------------------------
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: 3.9
+      # ----------------------------------------------
+      #        load pip cache if cache exists
+      # ----------------------------------------------
+      - uses: "actions/cache@v2"
+        with:
+          path: "~/.cache/pip"
+          key: "${{ runner.os }}-pip"
+          restore-keys: "${{ runner.os }}-pip"
+      # ----------------------------------------------
+      #          install and run linters
+      # ----------------------------------------------
+      - run: "python -m pip install --upgrade pip wheel"
+      - run: "python -m pip install invoke black=='20.8b1' flake8=='3.9.2'"  # Until there is a poetry install --dev-only (poetry 1.2) install the linting tools here to speed up this step
+      - name: Setup Hadolint
+        run: |
+          mkdir -p $HOME/.local/bin
+          curl -Lo $HOME/.local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+          chmod +x $HOME/.local/bin/hadolint
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - run: "invoke tests --lint-only"
 
   Test:
-    # needs: Linting
+    needs: Linting
     strategy:
       fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
-        python-version: [ "3.6" ]  #, "3.7", "3.8", "3.9" ]
+        python-version: [ "3.6", "3.7", "3.8", "3.9" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -122,20 +122,14 @@ jobs:
         run: "poetry install --no-interaction --no-root"
       - name: Install Nautobot
         run: poetry install --no-interaction
-      # - name: Check migrations
-      #   if: matrix.python-version == '3.6'
-      #   run: poetry run invoke check-migrations
-      # - name: Unit Tests
-      #   run: poetry run invoke unittest --failfast --keepdb
+      - name: Check migrations
+        if: matrix.python-version == '3.6'
+        run: poetry run invoke check-migrations
+      - name: Unit Tests
+        run: poetry run invoke unittest --failfast --keepdb
       - name: Integration Tests
         env:
           NAUTOBOT_INTEGRATION_TEST: True
-        run: |
-          ip addr list
-          env
-          docker ps
-          docker network list
-          docker inspect `docker ps | grep selenium | awk '{print $1}'`
-          poetry run invoke integration-test --failfast --keepdb --append
+        run: poetry run invoke integration-test --failfast --keepdb --append
       - name: Coverage
         run: poetry run invoke unittest-coverage
