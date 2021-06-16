@@ -1,17 +1,30 @@
 # Linting/Testing available at https://config.travis-ci.com/explore
 os: linux
 dist: xenial
+
 services:
   - postgresql
   - redis
+
 addons:
   postgresql: "9.6"
+
 language: python
+
+# Cache settings to explicitly cache Pip & Poetry files
+cache:
+  pip: true
+  directories:
+    - ~/.cache/pypoetry
+
+# Environment variables passed to the job nodes
 env:
+  # Environment variables passed to all jobs
   global:
     - INVOKE_NAUTOBOT_LOCAL=True
     - NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub
     - NAUTOBOT_SELENIUM_HOST=$(hostname -f)
+
 jobs:
   fast_finish: true
   include:
@@ -22,10 +35,14 @@ jobs:
     - python: "3.9"
   allow_failures:
     - python: "3.9"
+
+# Things to do before the install phase
 before_install:
   - pip install poetry
   - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
   - chmod +x /home/travis/bin/hadolint
+
+# Install phase
 install:
   - poetry config virtualenvs.create false
   # Poetry 1.1.0 added parallel installation as an option;
@@ -34,8 +51,12 @@ install:
   # For now we disable it.
   - poetry config installer.parallel false
   - poetry install
+
+# Things to do before the script phase
 before_script:
   - psql -U postgres -c 'create database nautobot;'
   - pip install docker-compose
+
+# Script phase
 script:
   - poetry run ./scripts/cibuild.sh
