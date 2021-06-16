@@ -61,6 +61,7 @@ jobs:
           MYSQL_USER: nautobot
           MYSQL_PASSWORD: decinablesprewad
           MYSQL_DATABASE: nautobot
+          MYSQL_RANDOM_ROOT_PASSWORD: true
         ports:
           - 3306:3306
         options: >-
