@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import logging
+import mimetypes
 import os
 import re
 from urllib.parse import quote
@@ -631,8 +632,12 @@ def update_git_export_templates(repository_record, job_result):
                 template_record.template_code = template_content
                 modified = True
 
-            if template_record.mime_type != "text/plain":
-                template_record.mime_type = "text/plain"
+            # mimetypes.guess_type returns a tuple (type, encoding)
+            mime_type = mimetypes.guess_type(file_path)[0]
+            if mime_type is None:
+                mime_type = "text/plain"
+            if template_record.mime_type != mime_type:
+                template_record.mime_type = mime_type
                 modified = True
 
             if template_record.file_extension != file_name.rsplit(os.extsep, 1)[-1]:

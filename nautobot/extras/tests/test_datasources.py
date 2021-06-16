@@ -176,6 +176,11 @@ class GitTest(TestCase):
                         "w",
                     ) as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    with open(
+                        os.path.join(path, "export_templates", "dcim", "device", "template2.html"),
+                        "w",
+                    ) as fd:
+                        fd.write("<!DOCTYPE html>/n{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
@@ -218,12 +223,23 @@ class GitTest(TestCase):
                     name="template.j2",
                 )
                 self.assertIsNotNone(export_template)
+                self.assertEqual(export_template.mime_type, "text/plain")
+
+                export_template_html = ExportTemplate.objects.get(
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    content_type=ContentType.objects.get_for_model(Device),
+                    name="template2.html",
+                )
+                self.assertIsNotNone(export_template_html)
+                self.assertEqual(export_template_html.mime_type, "text/html")
 
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 def empty_repo(path, url):
                     os.remove(os.path.join(path, "config_contexts", "context.yaml"))
                     os.remove(os.path.join(path, "config_contexts", "devices", "test-device.json"))
                     os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))
+                    os.remove(os.path.join(path, "export_templates", "dcim", "device", "template2.html"))
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = empty_repo

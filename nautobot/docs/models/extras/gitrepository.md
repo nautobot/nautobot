@@ -119,5 +119,5 @@ Files in a `config_contexts/devices/` and/or `config_contexts/virtual_machines/`
 Export templates may be provided as files located in `/export_templates/<grouping>/<model>/<template_file>`; for example, a JSON export template for Device records might be `/export_templates/dcim/device/mytemplate.json`.
 
 * The name of a discovered export template will be presented in Nautobot as `<repository name>: <filename>`.
-* The MIME type of a file rendered from a discovered export template will always be the default `text/plain`.
+* The MIME type of a file rendered from a discovered export template will try to match the extension to [`IANA's list`](https://www.iana.org/assignments/media-types/media-types.xhtml). If not detected, it will default to `text/plain`.
 * The file extension of a file rendered from a discovered export template will match that of the template itself (so, in the above example, the extension would be `.json`)
