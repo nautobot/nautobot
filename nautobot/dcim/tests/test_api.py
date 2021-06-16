@@ -170,7 +170,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
 
     def test_time_zone_field_post_null(self):
         """
-        Test non-null constraint to time_zone field on site.
+        Test allow_null to time_zone field on site.
 
         See: https://github.com/nautobot/nautobot/issues/342
         """
@@ -185,7 +185,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
 
     def test_time_zone_field_post_blank(self):
         """
-        Test blank time_zone field on site.
+        Test disallowed blank time_zone field on site.
 
         See: https://github.com/nautobot/nautobot/issues/342
         """
