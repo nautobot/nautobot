@@ -22,6 +22,7 @@ from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -196,6 +197,17 @@ class ConfigContextViewSet(ModelViewSet):
     )
     serializer_class = serializers.ConfigContextSerializer
     filterset_class = filters.ConfigContextFilterSet
+
+
+#
+# Config context schemas
+#
+
+
+class ConfigContextSchemaViewSet(ModelViewSet):
+    queryset = ConfigContextSchema.objects.all()
+    serializer_class = serializers.ConfigContextSchemaSerializer
+    filterset_class = filters.ConfigContextSchemaFilterSet
 
 
 #

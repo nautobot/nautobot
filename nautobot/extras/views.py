@@ -24,6 +24,7 @@ from . import filters, forms, tables
 from .choices import JobResultStatusChoices
 from .models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -185,6 +186,63 @@ class ObjectConfigContextView(generic.ObjectView):
             "base_template": self.base_template,
             "active_tab": "config-context",
         }
+
+
+#
+# Config context schemas
+#
+
+# TODO: disallow (or at least warn) user from manually editing config context schemas that
+# have an associated owner, such as a Git repository
+
+
+class ConfigContextSchemaListView(generic.ObjectListView):
+    queryset = ConfigContextSchema.objects.all()
+    filterset = filters.ConfigContextSchemaFilterSet
+    filterset_form = forms.ConfigContextSchemaFilterForm
+    table = tables.ConfigContextSchemaTable
+    action_buttons = ("add",)
+
+
+class ConfigContextSchemaView(generic.ObjectView):
+    queryset = ConfigContextSchema.objects.all()
+
+    def get_extra_context(self, request, instance):
+        # Determine user's preferred output format
+        if request.GET.get("format") in ["json", "yaml"]:
+            format = request.GET.get("format")
+            if request.user.is_authenticated:
+                request.user.set_config("extras.configcontextschema.format", format, commit=True)
+        elif request.user.is_authenticated:
+            format = request.user.get_config("extras.configcontextschema.format", "json")
+        else:
+            format = "json"
+
+        return {
+            "format": format,
+        }
+
+
+class ConfigContextSchemaEditView(generic.ObjectEditView):
+    queryset = ConfigContextSchema.objects.all()
+    model_form = forms.ConfigContextSchemaForm
+    template_name = "extras/configcontextschema_edit.html"
+
+
+class ConfigContextSchemaBulkEditView(generic.BulkEditView):
+    queryset = ConfigContextSchema.objects.all()
+    filterset = filters.ConfigContextSchemaFilterSet
+    table = tables.ConfigContextSchemaTable
+    form = forms.ConfigContextSchemaBulkEditForm
+
+
+class ConfigContextSchemaDeleteView(generic.ObjectDeleteView):
+    queryset = ConfigContextSchema.objects.all()
+
+
+class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
+    queryset = ConfigContextSchema.objects.all()
+    table = tables.ConfigContextSchemaTable
 
 
 #

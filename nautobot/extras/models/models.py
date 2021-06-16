@@ -17,6 +17,8 @@ from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
 from graphql.language.ast import OperationDefinition
+from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
+from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.extras.choices import *
@@ -26,6 +28,7 @@ from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
@@ -363,8 +366,27 @@ class ImageAttachment(BaseModel):
 #
 # Config contexts
 #
+
+
+class ConfigContextSchemaValidationMixin:
+    """
+    Mixin that provides validation of config context data against a json schema.
+    """
+
+    def _validate_with_schema(self, data_field, schema_field):
+        schema = getattr(self, schema_field)
+        data = getattr(self, data_field)
+
+        # If schema is None, then no schema has been specified on the instance and thus no validation should occur.
+        if schema:
+            try:
+                Draft7Validator(schema.data_schema).validate(data)
+            except JSONSchemaValidationError as e:
+                raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
+
+
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel):
+class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
@@ -394,6 +416,13 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
     description = models.CharField(max_length=200, blank=True)
     is_active = models.BooleanField(
         default=True,
+    )
+    schema = models.ForeignKey(
+        to="extras.ConfigContextSchema",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Optional schema to validate the structure of the data",
     )
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
@@ -428,8 +457,11 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
         if type(self.data) is not dict:
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
+        # Validate data against schema
+        self._validate_with_schema("data", "schema")
 
-class ConfigContextModel(models.Model):
+
+class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     """
     A model which includes local configuration context data. This local data will override any inherited data from
     ConfigContexts.
@@ -439,6 +471,13 @@ class ConfigContextModel(models.Model):
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
+    )
+    local_context_schema = models.ForeignKey(
+        to="extras.ConfigContextSchema",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
     local_context_data_owner_content_type = models.ForeignKey(
@@ -483,6 +522,54 @@ class ConfigContextModel(models.Model):
         # Verify that JSON data is provided as an object
         if self.local_context_data and type(self.local_context_data) is not dict:
             raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
+
+        # Validate data against schema
+        self._validate_with_schema("local_context_data", "local_context_schema")
+
+
+@extras_features("graphql")
+class ConfigContextSchema(OrganizationalModel):
+    """
+    This model stores jsonschema documents where are used to optionally validate config context data payloads.
+    """
+
+    name = models.CharField(max_length=200, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    slug = models.SlugField()
+    data_schema = models.JSONField(
+        help_text="A JSON Schema document which is used to validate a config context object."
+    )
+    # A ConfigContextSchema *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("config_context_owners"),
+        default=None,
+        null=True,
+        blank=True,
+    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    owner = GenericForeignKey(
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
+    )
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:configcontextschema", args=[self.slug])
+
+    def clean(self):
+        """
+        Validate the schema
+        """
+        super().clean()
+
+        try:
+            Draft7Validator.check_schema(self.data_schema)
+        except SchemaError as e:
+            raise ValidationError({"data_schema": e.message})
 
 
 #

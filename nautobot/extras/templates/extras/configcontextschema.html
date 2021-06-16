@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:configcontextschema_list' %}">Config Context Schemas</a></li>
+                <li>{{ object }}</li>
+            </ol>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url 'extras:configcontextschema_list' %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="pull-right noprint">
+        <div class="pull-right noprint">
+            {% plugin_buttons object %}
+            {% if perms.extras.add_configcontextschema %}
+                {% clone_button object %}
+            {% endif %}
+            {% if perms.extras.change_configcontextschema %}
+                {% edit_button object %}
+            {% endif %}
+            {% if perms.extras.delete_configcontextschema %}
+                {% delete_button object %}
+            {% endif %}
+        </div>
+    </div>
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Config Context Schema</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:configcontextschema_changelog' slug=object.slug %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Config Context Schema</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            {{ object.name }}
+                        </td>
+                    </tr>
+                    {% if object.owner %}
+                        <tr>
+                            <td>Owner</td>
+                            <td>
+                                <a href="{{ object.owner.get_absolute_url }}">{{ object.owner }}</a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                </table>
+            </div>
+            {% include 'inc/custom_fields_panel.html' %}
+            {% include 'inc/relationships_panel.html' %}
+            {% plugin_left_page object %}
+        </div>
+        <div class="col-md-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Data Schema</strong>
+                    {% include 'extras/inc/json_format.html' %}
+                </div>
+                <div class="panel-body">
+                    {% include 'extras/inc/json_data.html' with data=object.data_schema format=format %}
+                </div>
+            </div>
+            {% plugin_right_page object %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% plugin_full_width_page object %}
+        </div>
+    </div>
+{% endblock %}

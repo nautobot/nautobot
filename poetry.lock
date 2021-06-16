@@ -843,7 +843,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "prometheus-client"
-version = "0.10.1"
+version = "0.11.0"
 description = "Python client for the Prometheus monitoring system."
 category = "main"
 optional = false
@@ -1041,7 +1041,7 @@ redis = ">=3.5.0"
 
 [[package]]
 name = "ruamel.yaml"
-version = "0.17.7"
+version = "0.17.9"
 description = "ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order"
 category = "main"
 optional = false
@@ -1203,7 +1203,7 @@ python-versions = ">= 3.5"
 
 [[package]]
 name = "tqdm"
-version = "4.61.0"
+version = "4.61.1"
 description = "Fast, Extensible Progress Meter"
 category = "dev"
 optional = false
@@ -1269,7 +1269,11 @@ mysql = ["mysqlclient"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
+<<<<<<< Updated upstream
 content-hash = "09487f99572c2cf2d97bccb3313474cc2780f029d7efca1d865ac183259b0b6b"
+=======
+content-hash = "a32d76f1e7ef3d648eee23f238e396484ec4113ae2aba550272f1746ee8c0975"
+>>>>>>> Stashed changes
 
 [metadata.files]
 aniso8601 = [
@@ -1710,8 +1714,8 @@ pillow = [
     {file = "Pillow-8.1.2.tar.gz", hash = "sha256:b07c660e014852d98a00a91adfbe25033898a9d90a8f39beb2437d22a203fc44"},
 ]
 prometheus-client = [
-    {file = "prometheus_client-0.10.1-py2.py3-none-any.whl", hash = "sha256:030e4f9df5f53db2292eec37c6255957eb76168c6f974e4176c711cf91ed34aa"},
-    {file = "prometheus_client-0.10.1.tar.gz", hash = "sha256:b6c5a9643e3545bcbfd9451766cbaa5d9c67e7303c7bc32c750b6fa70ecb107d"},
+    {file = "prometheus_client-0.11.0-py2.py3-none-any.whl", hash = "sha256:b014bc76815eb1399da8ce5fc84b7717a3e63652b0c0f8804092c9363acab1b2"},
+    {file = "prometheus_client-0.11.0.tar.gz", hash = "sha256:3a8baade6cb80bcfe43297e33e7623f3118d660d41387593758e2fb1ea173a86"},
 ]
 promise = [
     {file = "promise-2.3.tar.gz", hash = "sha256:dfd18337c523ba4b6a58801c164c1904a9d4d1b1747c7d5dbf45b693a49d93d0"},
@@ -1924,8 +1928,8 @@ rq = [
     {file = "rq-1.8.1.tar.gz", hash = "sha256:feec0f914e69cae2380e2f46d82901e2abbd6fb09db320acb295f486a338f89f"},
 ]
 "ruamel.yaml" = [
-    {file = "ruamel.yaml-0.17.7-py3-none-any.whl", hash = "sha256:25c3eaf4f0c52bd15c50c39b100a32168891240f4d2177a4690d5d9b85944bbe"},
-    {file = "ruamel.yaml-0.17.7.tar.gz", hash = "sha256:5c3fa739bbedd2f23769656784e671c6335d17a5bf163c3c3901d8663c0af287"},
+    {file = "ruamel.yaml-0.17.9-py3-none-any.whl", hash = "sha256:8873a6f5516e0d848c92418b0b006519c0566b6cd0dcee7deb9bf399e2bd204f"},
+    {file = "ruamel.yaml-0.17.9.tar.gz", hash = "sha256:374373b4743aee9f6d9f40bea600fe020a7ac7ae36b838b4a6a93f72b584a14c"},
 ]
 "ruamel.yaml.clib" = [
     {file = "ruamel.yaml.clib-0.2.2-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:28116f204103cb3a108dfd37668f20abe6e3cafd0d3fd40dba126c732457b3cc"},
@@ -2053,8 +2057,8 @@ tornado = [
     {file = "tornado-6.1.tar.gz", hash = "sha256:33c6e81d7bd55b468d2e793517c909b139960b6c790a60b7991b9b6b76fb9791"},
 ]
 tqdm = [
-    {file = "tqdm-4.61.0-py2.py3-none-any.whl", hash = "sha256:736524215c690621b06fc89d0310a49822d75e599fcd0feb7cc742b98d692493"},
-    {file = "tqdm-4.61.0.tar.gz", hash = "sha256:cd5791b5d7c3f2f1819efc81d36eb719a38e0906a7380365c556779f585ea042"},
+    {file = "tqdm-4.61.1-py2.py3-none-any.whl", hash = "sha256:aa0c29f03f298951ac6318f7c8ce584e48fa22ec26396e6411e43d038243bdb2"},
+    {file = "tqdm-4.61.1.tar.gz", hash = "sha256:24be966933e942be5f074c29755a95b315c69a91f839a29139bf26ffffe2d3fd"},
 ]
 typed-ast = [
     {file = "typed_ast-1.4.3-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:2068531575a125b87a41802130fa7e29f26c09a2833fea68d9a40cf33902eba6"},

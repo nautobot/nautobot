@@ -77,6 +77,16 @@
                         <td>{{ object.description|placeholder }}</td>
                     </tr>
                     <tr>
+                        <td>Schema</td>
+                        <td>
+                            {% if object.schema %}
+                                <a href="{{ object.schema.get_absolute_url }}">{{ object.schema }}</a>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Active</td>
                         <td>
                             {% if object.is_active %}
@@ -244,10 +254,10 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Data</strong>
-                    {% include 'extras/inc/configcontext_format.html' %}
+                    {% include 'extras/inc/json_format.html' %}
                 </div>
                 <div class="panel-body">
-                    {% include 'extras/inc/configcontext_data.html' with data=object.data format=format %}
+                    {% include 'extras/inc/json_data.html' with data=object.data format=format %}
                 </div>
             </div>
         </div>

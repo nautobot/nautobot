@@ -3,6 +3,7 @@ from django.urls import path
 from nautobot.extras import views
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -71,6 +72,48 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="configcontext_changelog",
         kwargs={"model": ConfigContext},
+    ),
+    # Config context schema
+    path(
+        "config-context-schemas/",
+        views.ConfigContextSchemaListView.as_view(),
+        name="configcontextschema_list",
+    ),
+    path(
+        "config-context-schemas/add/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_add",
+    ),
+    path(
+        "config-context-schemas/edit/",
+        views.ConfigContextSchemaBulkEditView.as_view(),
+        name="configcontextschema_bulk_edit",
+    ),
+    path(
+        "config-context-schemas/delete/",
+        views.ConfigContextSchemaBulkDeleteView.as_view(),
+        name="configcontextschema_bulk_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/",
+        views.ConfigContextSchemaView.as_view(),
+        name="configcontextschema",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/edit/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_edit",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/delete/",
+        views.ConfigContextSchemaDeleteView.as_view(),
+        name="configcontextschema_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="configcontextschema_changelog",
+        kwargs={"model": ConfigContextSchema},
     ),
     # Git repositories
     path(

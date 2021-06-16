@@ -20,6 +20,7 @@ from nautobot.utilities.tables import (
 from .jobs import get_job_classpaths, Job
 from .models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -48,6 +49,15 @@ CONFIGCONTEXT_ACTIONS = """
 {% endif %}
 {% if perms.extras.delete_configcontext %}
     <a href="{% url 'extras:configcontext_delete' pk=record.pk %}" class="btn btn-xs btn-danger"><i class="mdi mdi-trash-can-outline" aria-hidden="true"></i></a>
+{% endif %}
+"""
+
+CONFIGCONTEXTSCHEMA_ACTIONS = """
+{% if perms.extras.change_configcontextschema %}
+    <a href="{% url 'extras:configcontext_edit' slug=record.slug %}" class="btn btn-xs btn-warning"><i class="mdi mdi-pencil" aria-hidden="true"></i></a>
+{% endif %}
+{% if perms.extras.delete_configcontextschema %}
+    <a href="{% url 'extras:configcontextschema_delete' slug=record.slug %}" class="btn btn-xs btn-danger"><i class="mdi mdi-trash-can-outline" aria-hidden="true"></i></a>
 {% endif %}
 """
 
@@ -128,6 +138,22 @@ class ConfigContextTable(BaseTable):
             "tenants",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
+
+
+class ConfigContextSchemaTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    owner = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = ConfigContextSchema
+        fields = (
+            "pk",
+            "name",
+            "owner",
+            "description",
+        )
+        default_columns = ("pk", "name", "description")
 
 
 class GitRepositoryTable(BaseTable):
