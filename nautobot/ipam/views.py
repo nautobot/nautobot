@@ -753,6 +753,8 @@ class VLANGroupView(generic.ObjectView):
             .filter(group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
+        
+        vlans_count = vlans.count()
         vlans = add_available_vlans(instance, vlans)
 
         vlan_table = tables.VLANDetailTable(vlans)
@@ -779,6 +781,7 @@ class VLANGroupView(generic.ObjectView):
             "bulk_querystring": f"group_id={instance.pk}",
             "vlan_table": vlan_table,
             "permissions": permissions,
+            "vlans_count": vlans_count,
         }
 
 
