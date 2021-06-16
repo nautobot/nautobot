@@ -2,9 +2,9 @@
 name: "CI"
 on:
   push:
-    branches: ["develop"]
+    branches: ["develop-1.1.0"]
   pull_request:
-    branches: ["develop"]
+    branches: ["develop-1.1.0"]
 jobs:
   Linting:
     runs-on: "ubuntu-latest"
