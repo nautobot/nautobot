@@ -16,8 +16,6 @@ from distutils.util import strtobool
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 import os
-import requests
-from time import sleep
 import toml
 
 
@@ -508,6 +506,6 @@ def tests(context, lint_only=False):
     black(context)
     flake8(context)
     hadolint(context)
-    check_migrations(context)
     if not lint_only:
+        check_migrations(context)
         unittest(context)
