@@ -51,6 +51,7 @@ Saved queries can easily be imported into the GraphiQL interface by using the ne
 - [#17](https://github.com/nautobot/nautobot/issues/17) - MySQL 8.x is now fully supported as a database backend
 - [#200](https://github.com/nautobot/nautobot/issues/200) - Jobs can be marked as read-only
 - [#485](https://github.com/nautobot/nautobot/pulls/485) - Applications can define navbar properties through `navigation.py`
+- [#561](https://github.com/nautobot/nautobot/pulls/561) - Added autodetection of `mime_type` on `export_templates` provided by Git datasources
 
 ### Changed
 
