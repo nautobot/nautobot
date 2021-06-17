@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 import uuid
 from collections import OrderedDict
 
@@ -522,6 +521,9 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         # Verify that JSON data is provided as an object
         if self.local_context_data and type(self.local_context_data) is not dict:
             raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
+
+        if self.local_context_schema and not self.local_context_data:
+            raise ValidationError({"local_context_schema": "Local context data must exist for a schema to be applied."})
 
         # Validate data against schema
         self._validate_with_schema("local_context_data", "local_context_schema")

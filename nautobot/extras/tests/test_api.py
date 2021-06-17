@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.views import JobViewSet
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomField,
     CustomLink,
     ExportTemplate,
@@ -344,6 +345,44 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext6.sites.add(site2)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["bar"], 456)
+
+
+class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
+    model = ConfigContextSchema
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "Schema 4",
+            "slug": "schema-4",
+            "data_schema": {"properties": {"foo": {"type": "string"}}},
+        },
+        {
+            "name": "Schema 5",
+            "slug": "schema-5",
+            "data_schema": {"properties": {"bar": {"type": "string"}}},
+        },
+        {
+            "name": "Schema 6",
+            "slug": "schema-6",
+            "data_schema": {"properties": {"buz": {"type": "string"}}},
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = []
+
+    @classmethod
+    def setUpTestData(cls):
+        ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"properties": {"foo": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"properties": {"bar": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 3", slug="schema-3", data_schema={"properties": {"baz": {"type": "string"}}}
+        ),
 
 
 class JobTest(APITestCase):

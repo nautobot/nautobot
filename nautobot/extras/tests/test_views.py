@@ -10,6 +10,7 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import *
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -100,6 +101,45 @@ class ConfigContextTestCase(
         cls.bulk_edit_data = {
             "weight": 300,
             "is_active": False,
+            "description": "New description",
+        }
+
+
+# This OrganizationalObjectViewTestCase less BulkImportObjectsViewTestCase
+# because it doesn't make sense to support CSV for schemas.
+class ConfigContextSchemaTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
+    model = ConfigContextSchema
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Create three ConfigContextSchema records
+        ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"properties": {"foo": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"properties": {"bar": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 3", slug="schema-3", data_schema={"properties": {"baz": {"type": "string"}}}
+        ),
+
+        cls.form_data = {
+            "name": "Schema X",
+            "slug": "schema-x",
+            "data_schema": '{"properties": {"baz": {"type": "string"}}}',
+        }
+
+        cls.bulk_edit_data = {
             "description": "New description",
         }
 

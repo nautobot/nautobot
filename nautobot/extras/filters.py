@@ -47,7 +47,7 @@ __all__ = (
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
     "JobResultFilterSet",
-    "LocalConfigContextFilterSet",
+    "LocalContextFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
