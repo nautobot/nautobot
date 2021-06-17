@@ -117,7 +117,8 @@ jobs:
       services: []
       addons:
         postgresql: ""
-      before_script: []
+      before_script:
+        - psql -U postgres -c 'CREATE DATABASE nautobot;'
 
       # Python 3.9; lint only
       python: "3.9"
