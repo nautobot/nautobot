@@ -466,7 +466,14 @@ class DynamicModelChoiceField(DynamicModelChoiceMixin, forms.ModelChoiceField):
     rendered only with choices set via bound data. Choices are populated on-demand via the APISelect widget.
     """
 
-    pass
+    def clean(self, value):
+        """
+        When null option is enabled and "None" is sent as part of a form to be submitted, it is sent as the
+        string 'null'.  This will check for that condition and gracefully handle the conversion to a NoneType.
+        """
+        if self.null_option is not None and value == settings.FILTERS_NULL_CHOICE_VALUE:
+            return None
+        return super().clean(value)
 
 
 class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, forms.ModelMultipleChoiceField):
@@ -476,6 +483,20 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, forms.ModelMultip
 
     filter = django_filters.ModelMultipleChoiceFilter
     widget = widgets.APISelectMultiple
+
+    def prepare_value(self, value):
+        """
+        Ensure that a single string value (i.e. UUID) is accurately represented as a list of one item.
+
+        This is necessary because otherwise the superclass will split the string into individual characters,
+        resulting in an error (https://github.com/nautobot/nautobot/issues/512).
+
+        Note that prepare_value() can also be called with an object instance or list of instances; in that case,
+        we do *not* want to convert a single instance to a list of one entry.
+        """
+        if isinstance(value, str):
+            value = [value]
+        return super().prepare_value(value)
 
 
 class LaxURLField(forms.URLField):

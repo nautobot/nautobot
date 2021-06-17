@@ -204,12 +204,12 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc_list[1].object_data["tags"], ["Tag 1", "Tag 2"])
 
     def test_update_object(self):
-        site = Site(
+        """Test PUT with changelogs."""
+        site = Site.objects.create(
             name="Test Site 1",
             slug="test-site-1",
             status=self.statuses.get(slug="planned"),
         )
-        site.save()
 
         data = {
             "name": "Test Site X",
@@ -237,6 +237,44 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
+        self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+
+    def test_partial_update_object(self):
+        """Test PATCH with changelogs."""
+        site = Site.objects.create(
+            name="Test Site 1",
+            slug="test-site-1",
+            status=self.statuses.get(slug="planned"),
+            _custom_field_data={
+                "my_field": "DEF",
+                "my_field_select": "Foo",
+            },
+        )
+        site.tags.add(Tag.objects.get(name="Tag 3"))
+
+        # We only want to update a single field.
+        data = {
+            "description": "new description",
+        }
+
+        self.assertEqual(ObjectChange.objects.count(), 0)
+        self.add_permissions("dcim.change_site", "extras.view_status")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+
+        # Perform a PATCH (partial update)
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        site = Site.objects.get(pk=response.data["id"])
+
+        # Get only the most recent OC
+        oc = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(Site),
+            changed_object_id=site.pk,
+        ).first()
+        self.assertEqual(oc.changed_object, site)
+        self.assertEqual(oc.object_data["description"], data["description"])
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(oc.object_data["custom_fields"], site.custom_field_data)
         self.assertEqual(oc.object_data["tags"], ["Tag 3"])
 
     def test_delete_object(self):
