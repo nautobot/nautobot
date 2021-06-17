@@ -45,7 +45,7 @@ nav:
     - User Guides:
         - Git as a Data Source: 'user-guides/git-data-source.md'
         - GraphQL: 'user-guides/graphql.md'
-        - Getting Started: 'user-guides/getting-started.md'
+        - Getting Started: 'user-guides/getting-started/index.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'

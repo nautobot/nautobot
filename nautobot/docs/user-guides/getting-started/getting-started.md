@@ -46,7 +46,7 @@ To create a new Device Role:
     * The Slug will auto-populate based on the Name, but can be manually overwritten
 5. Click on Create    
 
-![](images/getting-started-nautobot-ui/3-create%20role.png)
+![](../images/getting-started-nautobot-ui/3-create%20role.png)
 
 ### Creating a Manufacturer
 
@@ -61,7 +61,7 @@ To create a new Manufacturer:
      * The Slug will auto-populate based on the Name, but can be manually overwritten
 5. Click on **Create**
 
-![](images/getting-started-nautobot-ui/2-create%20manufacturer.png)
+![](../images/getting-started-nautobot-ui/2-create%20manufacturer.png)
 
 ### Create a Device Type
 
@@ -79,7 +79,7 @@ Once on the `Add a new device type` form:
 5. Select the Model from the drop-down selector
 6. Click on **Create**
 
-![](images/getting-started-nautobot-ui/4-create%20device%20type.png)
+![](../images/getting-started-nautobot-ui/4-create%20device%20type.png)
 
 ### Create a Site
 
@@ -98,7 +98,7 @@ Then, on the `Add a new site` form:
 5. Set the Status to `Active` in the drop-down selector
 6. Click on **Create** at the bottom of the form (not shown)
 
-![](images/getting-started-nautobot-ui/1-create-site.png)
+![](../images/getting-started-nautobot-ui/1-create-site.png)
 
 ### Creating a Device
 
@@ -117,7 +117,7 @@ Then, on the `Add a new device` form:
 8. Set the Status to the appropriate value in the drop-down selector
 9. Click on **Create** at the bottom of the form (not shown)
 
-![](images/getting-started-nautobot-ui/5-create%20device.png)
+![](../images/getting-started-nautobot-ui/5-create%20device.png)
 
 ## Creating Regions
 
@@ -142,7 +142,7 @@ To create a Region:
     * From this page you can view any existing Regions
 3. Click on the blue `+ Add` button    
 
-![](images/getting-started-nautobot-ui/7-region-page.png)
+![](../images/getting-started-nautobot-ui/7-region-page.png)
 
 The screenshots below show the creation of each Region.
 
@@ -167,7 +167,7 @@ Vancouver:
     * The Slug will auto-populate based on the Name, but can be manually overwritten
 3. Click on the `Create` button
 
-![](images/getting-started-nautobot-ui/6-create-region.png)
+![](../images/getting-started-nautobot-ui/6-create-region.png)
 
 ## Adding a Site to a Region
 
@@ -180,7 +180,7 @@ To access the page where you can modify a Site:
 3. The **Sites** page will appear; click on the specific Site you want to modify (`Vancouver 1` in this example shown).
 4. On the page for the Site, click on the `Edit` button 
 
-![](images/getting-started-nautobot-ui/8-add-site-to-region.png)
+![](../images/getting-started-nautobot-ui/8-add-site-to-region.png)
 
 Once you're on the `Editing site` form:
 
@@ -190,7 +190,7 @@ Once you're on the `Editing site` form:
 
 The page for the Site you updated will appear again, showing the updated Region hierarchy for the Site.
 
-![](images/getting-started-nautobot-ui/9-add-site-to-region-step-2.png)
+![](../images/getting-started-nautobot-ui/9-add-site-to-region-step-2.png)
 
 > NOTE: In the example, notice that we assigned the `Vancouver 1` Site to `Vancouver`, which is tier-3 Region. 
 > Notice that the Regional hierarchy is displayed for the `Vancouver 1` Site: `North America/Canada/Vancouver`
@@ -225,7 +225,7 @@ Once on the the `Add a new platform` form:
 > - nxos_ssh (used for ssh login)
 > - junos 
 
-![](images/getting-started-nautobot-ui/10-add-platform.png)
+![](../images/getting-started-nautobot-ui/10-add-platform.png)
 
 Once completed, you will be sent to the Platforms page, where all the Platform variants are shown.
 
@@ -233,7 +233,7 @@ Once completed, you will be sent to the Platforms page, where all the Platform v
 > the **Device Onboarding Plugin**, you may be required to override the default Slug value with that of the 
 > Netmiko [device_type](https://github.com/ktbyers/netmiko/blob/2dc032b64c3049d3048966441ee30a0139bebc81/netmiko/ssh_autodetect.py#L50)
 
-![](images/getting-started-nautobot-ui/11-platforms-page.png)
+![](../images/getting-started-nautobot-ui/11-platforms-page.png)
 
 ## Tenants
 
@@ -249,7 +249,7 @@ To create a Tenant:
 4. The Slug will auto-populate based on the Name you provide, but this can be manually overwritten
 5. Click the `Create` button
 
-![](images/getting-started-nautobot-ui/12-add-tenant.png)
+![](../images/getting-started-nautobot-ui/12-add-tenant.png)
 
 ### Assigning a Tenant to an Object
 
@@ -260,7 +260,7 @@ It is simple to assign a Tenant to an existing object. This next example will ad
 3. Click on the specific Device you want to add the Tenant to; this will take you to the main page for that Device
 4. On the specific Device page, click on the `Edit` button
 
-![](images/getting-started-nautobot-ui/13-assign-tenant-to-device.png)
+![](../images/getting-started-nautobot-ui/13-assign-tenant-to-device.png)
 
 Once on the page to edit the Device:
 
@@ -269,7 +269,7 @@ Once on the page to edit the Device:
 
 This will take you back to the main page for the Device.
 
-![](images/getting-started-nautobot-ui/14-assign-tenant-to-device-2.png)
+![](../images/getting-started-nautobot-ui/14-assign-tenant-to-device-2.png)
 
 Notice that the **Tenant** field is now populated/updated.
 
@@ -297,7 +297,7 @@ because the **Device Type** object also serves as a template. This templating fe
 
 Device Types can serve as templates for Devices, and as such the two are very similar. Here is a screenshot of a Device Type:
 
-![](images/getting-started-nautobot-ui/21-device-type.png)
+![](../images/getting-started-nautobot-ui/21-device-type.png)
 
 Creating a Device Type is very similar to [creating a Device](#creating-a-device).
 
@@ -311,7 +311,7 @@ To create a Device Type:
     * In this example, name the Device Type `MX240-edge`
 4. On the home page for the specific Device Type, click on `+Add Components` and select `Interfaces`    
 
-![](images/getting-started-nautobot-ui/15-create-device-type.png)
+![](../images/getting-started-nautobot-ui/15-create-device-type.png)
 
 You will now see the `Interface Template` form:
 
@@ -327,7 +327,7 @@ You will now see the `Interface Template` form:
    * Select the appropriate Type from the drop-down selector
 4. Click on `Create`    
 
-![](images/getting-started-nautobot-ui/16-interface-templates.png)
+![](../images/getting-started-nautobot-ui/16-interface-templates.png)
 
 Clicking the `Create` button will take you back to the home screen for the Device Type you are editing. There, you will
 see that the **Interfaces** tab now has the expected 21 Interfaces listed.
@@ -335,7 +335,7 @@ see that the **Interfaces** tab now has the expected 21 Interfaces listed.
 > NOTE: As of this writing (Nautobot 1.0.3), Interfaces cannot be assigned in to a LAG in the Device Type template; component
 > Interfaces must be designated in the specific instantiation of s Device created from the Device Type 
 
-![](images/getting-started-nautobot-ui/17-templated-interfaces.png)
+![](../images/getting-started-nautobot-ui/17-templated-interfaces.png)
 
 ### Create a New Device Using the Device Type
 
@@ -348,7 +348,7 @@ Create a new Device with these attributes:
 
 On the main screen for the new *Device*, you will see an **Interfaces** tab with the expected Interfaces from the *Device Type* template:
 
-![](images/getting-started-nautobot-ui/18-assign-device-type.png)
+![](../images/getting-started-nautobot-ui/18-assign-device-type.png)
 
 > NOTE: **Device Type** properties only apply to **new** instantiations of Devices from the Type; 
 > Devices created prior to a modification of the Device Type will not inherit the changes retroactively
@@ -362,11 +362,11 @@ edit this new Device, specifying the component `ae0` Interfaces.
 2. On the `Editing Interfaces` form, select `ae0` in the **Parent LAG** drop-down selector
 3. Click on `Apply`; you will be taken back to the main page for the Device
 
-![](images/getting-started-nautobot-ui/19-edit-ints-for-lag.png)
+![](../images/getting-started-nautobot-ui/19-edit-ints-for-lag.png)
 
 On the Device's main page, notice that `xe-0/0/9` and `xe-1/0/9` are now assigned to the `ae0` LAG
 
-![](images/getting-started-nautobot-ui/20-ints-int-lag.png)
+![](../images/getting-started-nautobot-ui/20-ints-int-lag.png)
 
 ## VLANS and VLAN Groups
 
@@ -411,7 +411,7 @@ The following example will show:
 
 > NOTE: The required parameters to create a new VLAN are bolded in the `Add a new VLAN` form: **ID**, **Name**, and **Status**
 
-![](images/getting-started-nautobot-ui/22-create-vlans.png)
+![](../images/getting-started-nautobot-ui/22-create-vlans.png)
 
 Now we'll create two instances of VLANs, each with **ID** = `100` and **Name** = `vlan 100` and an `Active` **Status**.
 The differentiator will be that one instance will be assigned to the `Vancouver 1` Site and the other to the `Ottawa 1` Site.
@@ -435,13 +435,13 @@ On the `Add a new VLAN` form:
 5. Select `Ottawa 1` from the **Site** selector drop-down
 6. Click on the `Create` button when complete with the second instance
 
-![](images/getting-started-nautobot-ui/23-create-vlans-2.png)
+![](../images/getting-started-nautobot-ui/23-create-vlans-2.png)
 
 Once you've created the three VLANs and then hit the `Create` button, you will be taken to the **VLANs** main page. On that page, 
 you'll see the three VLANs and the Site assignment for each one. Each `vlan 100` instance will have a Site assignment, while
 `vlan 200` will not:
 
-![](images/getting-started-nautobot-ui/24-vlan-main-page.png)
+![](../images/getting-started-nautobot-ui/24-vlan-main-page.png)
 
 #### Assigning VLANs to an Interface
 
@@ -452,14 +452,14 @@ To assign a VLAN to an Interface:
 3. Click on the name of the Device you wish to add a VLAN to (`edge2.van1`) in this example
 4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
 
-![](images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
+![](../images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
 
 5. On the `Editing interface xe-0/0/0` page, set **802.1Q** Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
     * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Site
     * The other choice is `vlan 200`, which was not assigned to a Site, and thus has a global scope
     * The `vlan 100` choice that is assigned to the `Ottawa 1` Site does not show up as an option
 
-![](images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)
+![](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)
 
 ## IP Address Management
 
@@ -489,7 +489,7 @@ To create a RIR:
 5. There is a checkbox to flag Private (internal use) only
 6. Click on the `Create` button
 
-![](images/getting-started-nautobot-ui/27-add-rir.png)
+![](../images/getting-started-nautobot-ui/27-add-rir.png)
 
 ### Create an Aggregate
 
@@ -503,11 +503,11 @@ To create an Aggregate:
 4. Select a RIR from the drop-down selector
 5. Click the `Create` button
 
-![](images/getting-started-nautobot-ui/28-add-aggregate.png)
+![](../images/getting-started-nautobot-ui/28-add-aggregate.png)
 
 You will then be taken to the `Aggregates` main page, where you will see the Aggregate you just created.
 
-![](images/getting-started-nautobot-ui/29-view-aggregates.png)
+![](../images/getting-started-nautobot-ui/29-view-aggregates.png)
 
 ### Creating a Prefix
 
@@ -524,7 +524,7 @@ To create a prefix:
 5. If all addresses in the Prefix are usable, check the `Is a pool` flag
 6. Click on the `Create` button (not shown)
 
-![](images/getting-started-nautobot-ui/30-add-prefix.png)
+![](../images/getting-started-nautobot-ui/30-add-prefix.png)
 
 ### Verify a Prefix in an Aggregate
 
@@ -538,7 +538,7 @@ To view the Prefixes in an Aggregate:
 !!! note 
     Nautobot will break an Aggregate into the highest-level child Prefixes to carve out user-defined Prefixes
 
-![](images/getting-started-nautobot-ui/31-view-aggregates-again.png)
+![](../images/getting-started-nautobot-ui/31-view-aggregates-again.png)
 
 ### Create IP Addresses
 
@@ -553,7 +553,7 @@ To create an IP address:
 5. Select Active for Status from the drop-down selector   
 6. Click on the `Create` button
 
-![](images/getting-started-nautobot-ui/32-add-ip-addr.png)
+![](../images/getting-started-nautobot-ui/32-add-ip-addr.png)
 
 ### Assigning IP Addresses
 
@@ -563,11 +563,11 @@ To assign an IP Address:
 2. Click on **IP Addresses** to go to the main IP Addresses page
 3. Find the IP address you wish to assign to an Interface and click on it
 
-![](images/getting-started-nautobot-ui/33-assign-address.png)
+![](../images/getting-started-nautobot-ui/33-assign-address.png)
 
 4. On the main page for the Address, click on the `Edit` button to go to the `Editing IP address` page
 
-![](images/getting-started-nautobot-ui/34-assign-address-2.png)
+![](../images/getting-started-nautobot-ui/34-assign-address-2.png)
 
 Once on the `Editing IP address` page:
 
@@ -576,7 +576,7 @@ Once on the `Editing IP address` page:
 3. Click on the `Update` button
     * This will take you back to the main page for the IP Address, where you will see the `device (interface)` assignment
 
-![](images/getting-started-nautobot-ui/35-assign-address-3.png)
+![](../images/getting-started-nautobot-ui/35-assign-address-3.png)
 
 ## The Search Bar
 
@@ -599,7 +599,7 @@ Example one:
 Clicking on any of these objects takes you to the main page for that object.
 This example shows the result of clicking on the **IP Address** object (4).
 
-![](images/getting-started-nautobot-ui/42-address-search-v2.png)
+![](../images/getting-started-nautobot-ui/42-address-search-v2.png)
 
 Example two shows a Device-specific search:
 
@@ -615,7 +615,7 @@ Clicking on an of the links for the results takes you to the main page for that 
 * Clicking on the `Vancouver 1` Site takes you to the main page for the Site.
 * Clicking on the `edge2.van1` Device takes you to the main page for the Device
 
-![](images/getting-started-nautobot-ui/41-device%20search%20results.png)
+![](../images/getting-started-nautobot-ui/41-device%20search%20results.png)
 
 ## Finding an IP Address for an Interface
 
@@ -624,7 +624,7 @@ Clicking on an of the links for the results takes you to the main page for that 
 3. Search for the Device you are interested in (`edge2.van1` in this example) and click on the link to go to the main page for the Device
 4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in; find the IP Address(es) in the **IP Addresses** column in the row
 
-![](images/getting-started-nautobot-ui/36-verify-address.png)
+![](../images/getting-started-nautobot-ui/36-verify-address.png)
 
 ## Finding IP Addresses in a Prefix 
 
@@ -634,10 +634,10 @@ To find information on a particular Prefix:
 2. Click on **Prefixes** to get to the Prefixes main page 
 3. Find the Prefix you are interested in and click on the link
 
-![](images/getting-started-nautobot-ui/37-verify-prefix.png)
+![](../images/getting-started-nautobot-ui/37-verify-prefix.png)
 
 4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab
-![](images/getting-started-nautobot-ui/38-verify-prefix2.png)
+![](../images/getting-started-nautobot-ui/38-verify-prefix2.png)
 
 
 
