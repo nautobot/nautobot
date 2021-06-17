@@ -45,7 +45,8 @@ nav:
     - User Guides:
         - Git as a Data Source: 'user-guides/git-data-source.md'
         - GraphQL: 'user-guides/graphql.md'
-        - Getting Started: 'user-guides/getting-started/index.md'
+        - Getting Started:
+            - 'user-guides/getting-started/index.md'
             - Creating Devices: 'user-guides/getting-started/interfaces.md'
             - Regions: 'user-guides/getting-started/regions.md'
             - Platforms: 'user-guides/getting-started/platforms.md'
