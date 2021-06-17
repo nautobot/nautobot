@@ -51,6 +51,9 @@ services:
 addons:
   postgresql: "9.6"
 
+# Things to do before install phase
+before_install:
+  - pip install poetry
 
 # Install phase
 install:
