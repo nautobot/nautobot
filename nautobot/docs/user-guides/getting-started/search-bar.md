@@ -37,27 +37,6 @@ Clicking on an of the links for the results takes you to the main page for that 
 
 ![](../images/getting-started-nautobot-ui/41-device%20search%20results.png)
 
-# Finding an IP Address for an Interface
-
-1. Click on **Devices** on the top-level navigation menu
-2. Click on **Devices** to go to the main page for Devices
-3. Search for the Device you are interested in (`edge2.van1` in this example) and click on the link to go to the main page for the Device
-4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in; find the IP Address(es) in the **IP Addresses** column in the row
-
-![](../images/getting-started-nautobot-ui/36-verify-address.png)
-
-# Finding IP Addresses in a Prefix 
-
-To find information on a particular Prefix:
-
-1. Click on **IPAM** in the top-level drop-down menu
-2. Click on **Prefixes** to get to the Prefixes main page 
-3. Find the Prefix you are interested in and click on the link
-
-![](../images/getting-started-nautobot-ui/37-verify-prefix.png)
-
-4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab
-![](../images/getting-started-nautobot-ui/38-verify-prefix2.png)
 
 
 

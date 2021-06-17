@@ -45,7 +45,16 @@ nav:
     - User Guides:
         - Git as a Data Source: 'user-guides/git-data-source.md'
         - GraphQL: 'user-guides/graphql.md'
-        - Getting Started: 'user-guides/getting-started/index.md'
+        - Getting Started:
+            - Scope and Requirements: 'user-guides/getting-started/index.md'
+            - Creating Devices: 'user-guides/getting-started/interfaces.md'
+            - Regions: 'user-guides/getting-started/regions.md'
+            - Platforms: 'user-guides/getting-started/platforms.md'
+            - Tenants: 'user-guides/getting-started/tenants.md'
+            - Interfaces: 'user-guides/getting-started/interfaces.md'
+            - VLANS and VLAN Groups: 'user-guides/getting-started/vlans-and-vlan-groups.md'
+            - The Search Bar: 'user-guides/getting-started/search-bar.md'
+            - IP Address Management: 'user-guides/getting-started/ipam.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'
