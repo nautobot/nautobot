@@ -409,7 +409,7 @@ class PluginJinjaFilter:
 
 def register_jinja_filters(class_list):
     """
-    Register a list of PluginCustomValidator classes
+    Register a list of PluginJinjaFilter classes
     """
     for custom_jinja_filter in class_list:
         if not inspect.isclass(custom_jinja_filter):

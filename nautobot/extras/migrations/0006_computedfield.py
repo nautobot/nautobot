@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ("name", models.SlugField(max_length=100, unique=True)),
                 ("label", models.CharField(max_length=100)),
                 ("description", models.CharField(blank=True, max_length=200)),
-                ("template", models.CharField(max_length=500)),
+                ("template", models.TextField(max_length=1000)),
                 ("fallback_value", models.CharField(max_length=500)),
                 ("weight", models.PositiveSmallIntegerField(default=100)),
                 (

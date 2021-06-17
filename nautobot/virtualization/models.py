@@ -38,7 +38,13 @@ __all__ = (
 #
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
+@extras_features(
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
+)
 class ClusterType(OrganizationalModel):
     """
     A type of Cluster.
@@ -72,7 +78,13 @@ class ClusterType(OrganizationalModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
+@extras_features(
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
+)
 class ClusterGroup(OrganizationalModel):
     """
     An organizational group of Clusters.
@@ -107,6 +119,7 @@ class ClusterGroup(OrganizationalModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -114,7 +127,6 @@ class ClusterGroup(OrganizationalModel):
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class Cluster(PrimaryModel):
     """
@@ -195,6 +207,7 @@ class Cluster(PrimaryModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -203,7 +216,6 @@ class Cluster(PrimaryModel):
     "relationships",
     "statuses",
     "webhooks",
-    "computed_fields",
 )
 class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     """
@@ -361,6 +373,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -368,7 +381,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class VMInterface(BaseModel, BaseInterface, CustomFieldModel, ComputedFieldModelMixin):
     virtual_machine = models.ForeignKey(

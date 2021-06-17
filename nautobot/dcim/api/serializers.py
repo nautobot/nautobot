@@ -54,7 +54,7 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
     StatusModelSerializerMixin,
 )
-from ...core.api.serializers import ComputedFieldModelSerializer
+from nautobot.core.api.serializers import ComputedFieldModelSerializer
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -1122,8 +1122,8 @@ class CableSerializer(
     TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer, ComputedFieldModelSerializer
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
-    termination_a_type = ContentTypeField(queryset=ContentType.objects.filter())
-    termination_b_type = ContentTypeField(queryset=ContentType.objects.filter())
+    termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
+    termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_a = serializers.SerializerMethodField(read_only=True)
     termination_b = serializers.SerializerMethodField(read_only=True)
     length_unit = ChoiceField(choices=CableLengthUnitChoices, allow_blank=True, required=False)

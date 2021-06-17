@@ -71,7 +71,12 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel, Com
         )
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
+@extras_features(
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "relationships",
+)
 class ConsolePortTemplate(ComponentTemplateModel):
     """
     A template for a ConsolePort to be created for a new Device.
@@ -151,7 +156,12 @@ class PowerPortTemplate(ComponentTemplateModel):
                 )
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
+@extras_features(
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "relationships",
+)
 class PowerOutletTemplate(ComponentTemplateModel):
     """
     A template for a PowerOutlet to be created for a new Device.
@@ -199,10 +209,10 @@ class PowerOutletTemplate(ComponentTemplateModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_validators",
     "relationships",
-    "computed_fields",
 )
 class InterfaceTemplate(ComponentTemplateModel):
     """
@@ -233,7 +243,12 @@ class InterfaceTemplate(ComponentTemplateModel):
         )
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
+@extras_features(
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "relationships",
+)
 class FrontPortTemplate(ComponentTemplateModel):
     """
     Template for a pass-through port on the front of a new Device.
@@ -326,10 +341,10 @@ class RearPortTemplate(ComponentTemplateModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_validators",
     "relationships",
-    "computed_fields",
 )
 class DeviceBayTemplate(ComponentTemplateModel):
     """

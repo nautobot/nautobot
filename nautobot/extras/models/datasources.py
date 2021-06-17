@@ -14,13 +14,13 @@ from nautobot.core.models.generics import PrimaryModel
 
 
 @extras_features(
+    "computed_fields",
     "config_context_owners",
     "custom_fields",
     "export_template_owners",
     "job_results",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""

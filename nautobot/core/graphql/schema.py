@@ -182,7 +182,7 @@ def extend_schema_type_computed_field(schema_type, model):
 
         if hasattr(schema_type, field_name):
             logger.warning(
-                f"Unable to add the custom field {field.name} to {schema_type._meta.name} "
+                f"Unable to add the computed field {field.name} to {schema_type._meta.name} "
                 f"because there is already an attribute with the same name ({field_name})"
             )
             continue

@@ -180,7 +180,13 @@ class PathEndpoint(models.Model):
 
 
 @extras_features(
-    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "webhooks", "computed_fields"
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
     """
@@ -256,13 +262,13 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class PowerPort(CableTermination, PathEndpoint, ComponentModel):
     """
@@ -480,7 +486,13 @@ class BaseInterface(RelationshipModel):
 
 
 @extras_features(
-    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "webhooks", "computed_fields"
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     """
@@ -824,7 +836,13 @@ class DeviceBay(ComponentModel):
 
 
 @extras_features(
-    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "webhooks", "computed_fields"
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class InventoryItem(MPTTModel, ComponentModel):
     """

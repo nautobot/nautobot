@@ -23,6 +23,7 @@ __all__ = (
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -30,7 +31,6 @@ __all__ = (
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class PowerPanel(PrimaryModel):
     """
@@ -73,6 +73,7 @@ class PowerPanel(PrimaryModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -81,7 +82,6 @@ class PowerPanel(PrimaryModel):
     "relationships",
     "statuses",
     "webhooks",
-    "computed_fields",
 )
 class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     """

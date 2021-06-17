@@ -15,7 +15,13 @@ __all__ = (
 )
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
+@extras_features(
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
+)
 class TenantGroup(MPTTModel, OrganizationalModel):
     """
     An arbitrary collection of Tenants.
@@ -68,6 +74,7 @@ class TenantGroup(MPTTModel, OrganizationalModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -75,7 +82,6 @@ class TenantGroup(MPTTModel, OrganizationalModel):
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class Tenant(PrimaryModel):
     """

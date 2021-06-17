@@ -38,7 +38,12 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "computed_fields"
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
 )
 class RackGroup(MPTTModel, OrganizationalModel):
     """
@@ -106,7 +111,13 @@ class RackGroup(MPTTModel, OrganizationalModel):
             raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
+@extras_features(
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
+)
 class RackRole(OrganizationalModel):
     """
     Racks can be organized by functional role, similar to Devices.
@@ -141,6 +152,7 @@ class RackRole(OrganizationalModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -149,7 +161,6 @@ class RackRole(OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
-    "computed_fields",
 )
 class Rack(PrimaryModel, StatusModel):
     """
@@ -521,6 +532,7 @@ class Rack(PrimaryModel, StatusModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -528,7 +540,6 @@ class Rack(PrimaryModel, StatusModel):
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class RackReservation(PrimaryModel):
     """

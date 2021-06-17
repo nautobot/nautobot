@@ -37,6 +37,7 @@ __all__ = (
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -45,7 +46,6 @@ __all__ = (
     "relationships",
     "statuses",
     "webhooks",
-    "computed_fields",
 )
 class Cable(PrimaryModel, StatusModel):
     """

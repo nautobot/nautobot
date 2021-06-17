@@ -38,7 +38,13 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "webhooks", "computed_fields"
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class Manufacturer(OrganizationalModel):
     """
@@ -65,6 +71,7 @@ class Manufacturer(OrganizationalModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -72,7 +79,6 @@ class Manufacturer(OrganizationalModel):
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class DeviceType(PrimaryModel):
     """
@@ -419,6 +425,7 @@ class Platform(OrganizationalModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -427,7 +434,6 @@ class Platform(OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
-    "computed_fields",
 )
 class Device(PrimaryModel, ConfigContextModel, StatusModel):
     """
@@ -832,6 +838,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -839,7 +846,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     "graphql",
     "relationships",
     "webhooks",
-    "computed_fields",
 )
 class VirtualChassis(PrimaryModel):
     """

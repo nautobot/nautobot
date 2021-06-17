@@ -26,7 +26,13 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields", "custom_validators", "export_templates", "graphql", "relationships", "webhooks", "computed_fields"
+    "computed_fields",
+    "custom_fields",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
 )
 class Region(MPTTModel, OrganizationalModel):
     """
@@ -67,7 +73,7 @@ class Region(MPTTModel, OrganizationalModel):
         )
 
     def get_site_count(self):
-        return Site.objects.filter().count()
+        return Site.objects.filter(Q(region=self) | Q(region__in=self.get_descendants())).count()
 
     def to_objectchange(self, action):
         # Remove MPTT-internal fields
@@ -85,6 +91,7 @@ class Region(MPTTModel, OrganizationalModel):
 
 
 @extras_features(
+    "computed_fields",
     "custom_fields",
     "custom_links",
     "export_templates",
@@ -93,7 +100,6 @@ class Region(MPTTModel, OrganizationalModel):
     "relationships",
     "statuses",
     "webhooks",
-    "computed_fields",
 )
 class Site(PrimaryModel, StatusModel):
     """

@@ -5,9 +5,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-
-# from nautobot.extras.models import ComputedField, CustomField
-# from nautobot.extras.models import ComputedField
 from django.urls import reverse
 from jinja2 import TemplateError
 
@@ -22,7 +19,7 @@ class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
     def get_for_model(self, model):
         """
-        Return all CustomFields assigned to the given model.
+        Return all ComputedFiedlds assigned to the given model.
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.get_queryset().filter(content_type=content_type)
@@ -31,8 +28,7 @@ class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 @extras_features("graphql")
 class ComputedField(BaseModel, ChangeLoggedModel):
     """
-    A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
-    code to be rendered with an object as context.
+    Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
 
     content_type = models.ForeignKey(
@@ -43,7 +39,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     name = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
-    template = models.CharField(max_length=500, help_text="Jinja2 template code for field value")
+    template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
     fallback_value = models.CharField(
         max_length=500, help_text="Fallback value to be used for the field in the case of a template rendering error."
     )

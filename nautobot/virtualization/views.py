@@ -33,7 +33,11 @@ class ClusterTypeView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
-        clusters = Cluster.objects.restrict(request.user, "view").prefetch_related("group", "site", "tenant")
+        clusters = (
+            Cluster.objects.restrict(request.user, "view")
+            .filter(type=instance)
+            .prefetch_related("group", "site", "tenant")
+        )
 
         cluster_table = tables.ClusterTable(clusters)
         cluster_table.columns.hide("type")
@@ -85,7 +89,11 @@ class ClusterGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
-        clusters = Cluster.objects.restrict(request.user, "view").prefetch_related("type", "site", "tenant")
+        clusters = (
+            Cluster.objects.restrict(request.user, "view")
+            .filter(group=instance)
+            .prefetch_related("type", "site", "tenant")
+        )
 
         cluster_table = tables.ClusterTable(clusters)
         cluster_table.columns.hide("group")
@@ -141,8 +149,10 @@ class ClusterView(generic.ObjectView):
     queryset = Cluster.objects.all()
 
     def get_extra_context(self, request, instance):
-        devices = Device.objects.restrict(request.user, "view").prefetch_related(
-            "site", "rack", "tenant", "device_type__manufacturer"
+        devices = (
+            Device.objects.restrict(request.user, "view")
+            .filter(cluster=instance)
+            .prefetch_related("site", "rack", "tenant", "device_type__manufacturer")
         )
         device_table = DeviceTable(list(devices), orderable=False)
         if request.user.has_perm("virtualization.change_cluster"):
@@ -296,8 +306,10 @@ class VirtualMachineView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Interfaces
-        vminterfaces = VMInterface.objects.restrict(request.user, "view").prefetch_related(
-            Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user))
+        vminterfaces = (
+            VMInterface.objects.restrict(request.user, "view")
+            .filter(virtual_machine=instance)
+            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
         )
         vminterface_table = tables.VirtualMachineVMInterfaceTable(vminterfaces, user=request.user, orderable=False)
         if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
@@ -306,8 +318,10 @@ class VirtualMachineView(generic.ObjectView):
             vminterface_table.columns.show("pk")
 
         # Services
-        services = Service.objects.restrict(request.user, "view").prefetch_related(
-            Prefetch("ipaddresses", queryset=IPAddress.objects.restrict(request.user))
+        services = (
+            Service.objects.restrict(request.user, "view")
+            .filter(virtual_machine=instance)
+            .prefetch_related(Prefetch("ipaddresses", queryset=IPAddress.objects.restrict(request.user)))
         )
 
         return {
