@@ -1,6 +1,4 @@
-# Getting Nautobot Up and Running in the Web UI
-
-## Introduction and Scope
+# Introduction and Scope
 
 The audience for this user guide is a user new to Nautobot. It will demonstrate how to use Nautobot's Web UI and how to
 perform common operations in the Web UI.
@@ -19,7 +17,7 @@ It is intended to assist the user with:
 * How to navigate to the object you are interested in
 * How to use the Search Bar to find the object you are interested in
 
-## Requirements
+# Requirements
 
 1. A functional Nautobot installation
 
