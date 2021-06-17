@@ -23,12 +23,9 @@ menu_items = (
         ),
     ),
     PluginMenuItem(
-        link="plugins:dummy_plugin:dummymodel_list",
+        link="plugins:dummy_plugin:dummymodel_add",
         link_text="Other Models",
     ),
-)
-
-menu_tabs = (
     NavMenuTab(
         name="Dummy Tab",
         weight=150,

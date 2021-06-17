@@ -1,7 +1,7 @@
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
-menu_tabs = (
+menu_items = (
     NavMenuTab(
         name="Organization",
         weight=100,

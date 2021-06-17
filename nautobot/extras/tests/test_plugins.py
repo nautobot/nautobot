@@ -48,15 +48,6 @@ class PluginTest(TestCase):
         url = reverse("admin:dummy_plugin_dummymodel_add")
         self.assertEqual(url, "/admin/dummy_plugin/dummymodel/add/")
 
-    def test_menu_items(self):
-        """
-        Check that plugin MenuItems and MenuButtons are registered.
-        """
-        self.assertIn("Dummy plugin", registry["plugin_menu_items"])
-        menu_items = registry["plugin_menu_items"]["Dummy plugin"]
-        self.assertEqual(len(menu_items), 2)
-        self.assertEqual(len(menu_items[0].buttons), 2)
-
     def test_template_extensions(self):
         """
         Check that plugin TemplateExtensions are registered.

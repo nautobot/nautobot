@@ -149,7 +149,6 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
 | `max_version` | Maximum version of Nautobot with which the plugin is compatible |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
-| `menu_tabs` | The dotted path to the list of menu tab items provided by the plugin (default: `navigation.menu_tabs`) |
 | `middleware` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | Minimum version of Nautobot with which the plugin is compatible |
 | `name` | Raw plugin name; same as the plugin's source directory |
@@ -577,20 +576,20 @@ A `PluginMenuButton` has the following attributes:
 
 ## Navigation Menu Tabs
 
-Plugins can modify the existing navigation bar layout by using `nav_tabs` inside of `navigation.py`. Using the key and weight system, a developer can modify existing tabs, groups, items and buttons.
+Plugins can modify the existing navigation bar layout by using `nav_tabs` inside of `navigation.py`. Using the key and weight system, a developer can integrate the plugin amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
 
 ### Adding a new tab
 
 The code below shows how to add a new tab to the navbar. A tab is defined by a `NavMenuTab` object. Similarly a group is defined using `NavMenuGroup`. Both of these objects are used as containers for actual items.
 
-The position in the navigation menu is defined by the weight. The lower the weight the closer to the same the object will be. All core objects have weights in multiples of 100., meaning there is plenty of space around the objects for plugins to customize.
+The position in the navigation menu is defined by the weight. The lower the weight the closer to the start of the menus the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
 
 Below you can see `Dummy Tab` has a weight value of `150`. This means the tab will appear between `Organization` and `Devices`.
 
 ``` python
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
-menu_tabs = (
+menu_items = (
     NavMenuTab(
         name="Dummy Tab",
         weight=150,
@@ -632,6 +631,8 @@ menu_tabs = (
 By defining an object with the same identifier, a developer can modify existing objects. The example below shows modifying an existing tab to have a new group.
 
 A tab object is being created with the same identifer as an existing object using the `name` attribute. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
+
+Weights for already existing items can be found in the nautobot source code (in `navigation.py`) or with a web session open to your nautobot instance, you can inspect an element of the navbar using the developer tools. Each type of element will have an attribute `data-{type}-weight`. The type can be `tab`, `group`, `item` or `button`.
 
 This pattern works for modifying all objects in the tree. New items can be added to groups and new buttons can be added to items.
 
