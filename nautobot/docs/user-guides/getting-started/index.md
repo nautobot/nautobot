@@ -2,7 +2,9 @@
 
 ## Introduction and Scope
 
-The audience for this user guide is a user new to Nautobot. 
+The audience for this user guide is a user new to Nautobot. It will demonstrate how to use Nautobot's Web UI and how to
+perform common operations in the Web UI.
+
 It is intended to assist the user with:
 
 * Understanding the prerequisites to adding a new Device
@@ -21,5 +23,3 @@ It is intended to assist the user with:
 
 1. A functional Nautobot installation
 
-
-## Table of Contents
