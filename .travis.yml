@@ -81,6 +81,8 @@ before_script:
   - sh -c "if [ '$DB' = 'mysql' ]; then mysql --version; fi"
   - sh -c "if [ '$DB' = 'mysql' ]; then echo 'Creating MySQL database...'; fi"
   - sh -c "if [ '$DB' = 'mysql' ]; then mysql -e 'CREATE DATABASE IF NOT EXISTS nautobot;'; fi"
+  # Install the mysqlclient lib
+  - sh -c "if [ '$DB' = 'mysql' ]; then poetry install --extras mysql; fi"
   # Install Docker Compose
   - pip install docker-compose
 
