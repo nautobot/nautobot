@@ -213,7 +213,7 @@ Once on the the `Add a new platform` form:
 3. Provide a Name (required)
 4. The Slug will auto-populate based on the Name you provide; you may override this if necessary
 5. Select a Manufacturer from the drop-down selector (optional)
-6. Provide the name of the NAPALM driver ** (optional) (Note: this must be the exact name of the NAPALM driver)
+6. Provide the name of the NAPALM driver (optional) (Note: this must be the exact name of the NAPALM driver)
 7. Provide NAPALM arguments (optional)
 8. Provide description (optional)
 9. Click on the `Create` button
@@ -535,8 +535,7 @@ To view the Prefixes in an Aggregate:
 3. Find the Aggregate you are interested in and click on it
 4. On the main page for the specific Aggregate, look for a specific Prefix (`10.10.10.0/24` in this example)
 
-!!! note 
-   Nautobot will break an Aggregate into the highest-level child Prefixes to carve out user-defined Prefixes
+!!! note Nautobot will break an Aggregate into the highest-level child Prefixes to carve out user-defined Prefixes
 
 ![](images/getting-started-nautobot-ui/31-view-aggregates-again.png)
 
