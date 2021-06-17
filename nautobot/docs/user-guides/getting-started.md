@@ -535,7 +535,8 @@ To view the Prefixes in an Aggregate:
 3. Find the Aggregate you are interested in and click on it
 4. On the main page for the specific Aggregate, look for a specific Prefix (`10.10.10.0/24` in this example)
 
-> !!! note Nautobot will break an Aggregate into the highest-level child Prefixes to carve out user-defined Prefixes
+!!! note 
+   Nautobot will break an Aggregate into the highest-level child Prefixes to carve out user-defined Prefixes
 
 ![](images/getting-started-nautobot-ui/31-view-aggregates-again.png)
 
