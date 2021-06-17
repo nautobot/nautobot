@@ -107,7 +107,7 @@ jobs:
     - stage: lint
 
       before_install:
-        - pip install invoke black=="20.8b1" flake8=="3.9.2"  # Until there is a poetry install --dev-only install the linting tools here to speed up this step
+        - pip install invoke requests black=="20.8b1" flake8=="3.9.2"  # Until there is a poetry install --dev-only install the linting tools here to speed up this step
         - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
         - chmod +x /home/travis/bin/hadolint
 
