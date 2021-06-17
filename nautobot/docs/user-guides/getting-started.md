@@ -4,6 +4,7 @@
 
 The audience for this user guide is a user new to Nautobot. 
 It is intended to assist the user with:
+
 * Understanding the prerequisites to adding a new Device
 * Creating the necessary prerequisite objects to add a new Device
 * Adding new Devices
@@ -23,6 +24,7 @@ It is intended to assist the user with:
 ## Creating Devices in Nautobot
 
 A network Device in Nautobot has a few required attributes:
+
 * A Device Role
 * A Device Type
   * A Device Type requires a Manufacturer
@@ -36,6 +38,7 @@ The following sections will guide you through how to create each object type.
 To create a new Device, you will need an existing Device Role or need to create a new Device Role instance.
 
 To create a new Device Role:
+
 1. Click on **Devices** in the top navigation menu
 2. Find **Device Roles** on the drop-down menu
 3. Select `+`
@@ -50,6 +53,7 @@ To create a new Device Role:
 To create a new Device Type, you will need an existing Manufacturer or need to create a new Manufacturer instance.
 
 To create a new Manufacturer:
+
 1. Click on **Devices** in the top navigation menu
 2. Find **Manufacturers** on the drop-down
 3. Select `+`
@@ -64,6 +68,7 @@ To create a new Manufacturer:
 To create a new Device, you will need an existing Device Type or need to create a new Device Type instance.
 
 To create a new Device Type:
+
 1. Click on **Devices** in the top navigation menu
 2. Find **Device Types**
 3. Select `+` 
@@ -81,6 +86,7 @@ Once on the `Add a new device type` form:
 To create a new Device, you will need an existing Site or need to create a new Site instance.
 
 To create a new Site:
+
 1. Click on **Organization** in the top navigation menu
 2. Find **Sites**
 3. Select `+`
@@ -97,6 +103,7 @@ Then, on the `Add a new site` form:
 ### Creating a Device
 
 To create a new Device:
+
 1. Click on **Devices** in the top navigation menu
 2. Find **Devices**
 3. Select `+`
@@ -120,6 +127,7 @@ A Region might represent a continent, country, city, campus, or other area. A Re
 Additional information on Regions is in the [Regions section of the Nautobot documentation](https://nautobot.readthedocs.io/en/latest/models/dcim/region/).
 
 In the following exercise, we will create three Regions:
+
 * North America
   * Intended to hold Regions that represent each component country 
 * Canada
@@ -128,6 +136,7 @@ In the following exercise, we will create three Regions:
   * Intended to hold Sites within the Vancouver market
     
 To create a Region:
+
 1. Click on **Organization** in the top memu
 2. Click on **Regions** in the **Organization** drop-down menu
     * From this page you can view any existing Regions
@@ -138,18 +147,21 @@ To create a Region:
 The screenshots below show the creation of each Region.
 
 North America:
+
 1. Leave the Parent blank; **North America** will be a top-tier Region
 2. Populate the Name as `North America`
     * The Slug will auto-populate based on the Name, but can be manually overwritten
 3. Click on the `Create and Add Another` button
 
 Canada:
+
 1. Select **North America** as the Parent from the drop-down menu selector
 2. Populate the Name as `Canada`
     * The Slug will auto-populate based on the Name, but can be manually overwritten   
 3. Click on the `Create and Add Another` button
 
 Vancouver:
+
 1. Select **Canada** as the Parent from the drop-down menu selector
 2. Populate the Name as `Vancouver`
     * The Slug will auto-populate based on the Name, but can be manually overwritten
@@ -162,6 +174,7 @@ Vancouver:
 It's quite easy to add an existing Site to a Region.
 
 To access the page where you can modify a Site:
+
 1. Click on **Organization** in the top navigation menu
 2. Click on **Sites** in the drop-down menu
 3. The **Sites** page will appear; click on the specific Site you want to modify (`Vancouver 1` in this example shown).
@@ -170,6 +183,7 @@ To access the page where you can modify a Site:
 ![](images/getting-started-nautobot-ui/8-add-site-to-region.png)
 
 Once you're on the `Editing site` form:
+
 1. Look for the **Region** drop-down selection menu and select the appropriate Region
 2. Observe that the correct region for the Site is selected
 3. Click on the `Update` button
@@ -190,6 +204,7 @@ Further information is available in the [Platforms](https://nautobot.readthedocs
 While use of Platforms is optional, they provide great value in many use cases.
 
 To add a Platform:
+
 1. Click on **Devices** in the top navigation menu
 2. Find **Platforms** and click on the `+` icon in the menu
    
@@ -227,6 +242,7 @@ A 'Tenant' signifies ownership of an object in Nautobot and as such, any object 
 More information on Tenants can be found in the [Tenants](https://nautobot.readthedocs.io/en/latest/models/tenancy/tenant/) section of the Nautobot docs.
 
 To create a Tenant:
+
 1. Click on **Devices** on the top navigation menu
 2. Find **Platforms** and click on the `+`
 3. Populate the Name
@@ -247,6 +263,7 @@ It is simple to assign a Tenant to an existing object. This next example will ad
 ![](images/getting-started-nautobot-ui/13-assign-tenant-to-device.png)
 
 Once on the page to edit the Device:
+
 1. Make a selection from the **Tenant** drop-down menu selector
 2. Click the `Update` button
 
@@ -268,6 +285,7 @@ Which one you select depends on your use case; in some instances you will need t
 ### Interface Add Example
 
 Let’s take an example:
+
 * We want to define a Device Type of `MX240-edge`
 * This Device Type will have 20x10G (`xe[0-1]/0/[0-9]`) ports and one LAG (`ae0`)
 * The following ports will be part of `ae0`: `xe-0/0/9`, `xe-1/0/9`
@@ -284,6 +302,7 @@ Device Types can serve as templates for Devices, and as such the two are very si
 Creating a Device Type is very similar to [creating a Device](#creating-a-device).
 
 To create a Device Type:
+
 1. Click on **Devices** in the top navigation menu
 2. Click on the **Device Types** option in the drop-down menu
 3. On the Device Types page `Add +` a new Device Type
@@ -295,6 +314,7 @@ To create a Device Type:
 ![](images/getting-started-nautobot-ui/15-create-device-type.png)
 
 You will now see the `Interface Template` form:
+
 1. Add the `ae0` Interface Template
    * `Manufacturer` will auto-populate to the Manufacturer of the Device Type you are editing
    * `Device Type` will auto-populate to the Device Type you are editing
@@ -320,6 +340,7 @@ see that the **Interfaces** tab now has the expected 21 Interfaces listed.
 ### Create a New Device Using the Device Type
 
 Create a new Device with these attributes:
+
 * **Name** = `edge2.van1`
 * **Device role** select `Customer Edge`
 * **Device type** select `Juniper MX240-edge` (this will show up as a fusion of the **Manufacturer** (`Juniper`) for the Device Type and the Device Type (`MX240-edge`) Names)
@@ -352,6 +373,7 @@ On the Device's main page, notice that `xe-0/0/9` and `xe-1/0/9` are now assigne
 Each VLAN may be assigned to a site, tenant, and/or VLAN group.
 
 Each VLAN must be assigned a status. The following statuses are available by default:
+
 - Active
 - Reserved
 - Deprecated
@@ -372,6 +394,7 @@ We’ll also create a vlan 200 without a site assignment.
 > Refer back to the [Create a Site](#create-a-site) and [Create a Region](#creating-regions) sections to do so.
 
 The following example will show:
+
 * Creating a `vlan 200` without a site assignment (*global* scope)
 * Creating two VLANs, each with overlapping Names and IDs: ID = `100` and Name = `vlan 100`
   * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different site (*site-specific* scope)
@@ -394,6 +417,7 @@ Now we'll create two instances of VLANs, each with **ID** = `100` and **Name** =
 The differentiator will be that one instance will be assigned to the `Vancouver 1` Site and the other to the `Ottawa 1` Site.
 
 On the `Add a new VLAN` form:
+
 1. Populate **ID** with `100`
 2. Populate **Name** with `vlan 100`
 3. Select **Status** as `Active`
@@ -422,6 +446,7 @@ you'll see the three VLANs and the Site assignment for each one. Each `vlan 100`
 #### Assigning VLANs to an Interface
 
 To assign a VLAN to an Interface:
+
 1. Click on **IPAM** on the top-level navigation menu
 2. Select **Devices** to go to the Devices main page
 3. Click on the name of the Device you wish to add a VLAN to (`edge2.van1`) in this example
@@ -439,10 +464,11 @@ To assign a VLAN to an Interface:
 ## IP Address Management
 
 This next section will demonstrate how to 
-- Create a Regional Internet Registry
-- Create an Aggregate  
-- Create assignable IP addresses
-- Assign an IP address to an Interface on a Device
+
+* Create a Regional Internet Registry
+* Create an Aggregate  
+* Create assignable IP addresses
+* Assign an IP address to an Interface on a Device
 
 These type of operations fall under an umbrella called IP Address Management (IPAM). 
 The Nautobot documentation [IPAM section](https://nautobot.readthedocs.io/en/latest/core-functionality/ipam/) has more detail on IPAM and each operation.
@@ -455,6 +481,7 @@ Nautobot also considers RFCs 1918 and 6589 to be RIR-like because they allocate 
 Nautobot requires any IP allocation be attributed to a RIR.
 
 To create a RIR:
+
 1. Click on **IPAM** in the top-level navigation menu
 2. Find **RIRs** and click on the `+`; this takes you to the `Add a new RIR` form
 3. Specify the RIR Name
@@ -469,6 +496,7 @@ To create a RIR:
 An aggregate is a consolidated allocation of IP address space, whether it is public or private. An aggregate must map back to a RIR that has allocated the space.
 
 To create an Aggregate:
+
 1. Click on **IPAM** in the top-level navigation menu
 2. Find **Aggregates** and click on the `+`; this takes you to the `Add a new aggregate` form
 3. Specify the prefix and mask in a `prefix/mask` format
@@ -488,6 +516,7 @@ Prefixes are automatically organized by their parent Aggregates.
 Additionally, each Prefix can be assigned to a particular Site and virtual routing and forwarding instance (VRF). 
 
 To create a prefix:
+
 1. Click on **IPAM** in the top-level navigation menu
 2. Look for **Prefixes** and click on the `+`; this will take you to the `Add a new prefix` form
 3. Populate the Prefix in CIDR notation
@@ -500,6 +529,7 @@ To create a prefix:
 ### Verify a Prefix in an Aggregate
 
 To view the Prefixes in an Aggregate:
+
 1. Click on **IPAM** in the top-level navigation menu
 2. Click on **Aggregates** to go to the Aggregates main page
 3. Find the Aggregate you are interested in and click on it
@@ -512,6 +542,7 @@ To view the Prefixes in an Aggregate:
 ### Create IP Addresses
 
 To create an IP address:
+
 1. Click on **IPAM** in the top-level navigation menu
 2. Find **IP Addresses** and click on the `+`; this will take you to the `Add a new IP address` form
 3. In this example, we are going to create multiple individual addresses, so click on the `Bulk Create` tab
@@ -526,6 +557,7 @@ To create an IP address:
 ### Assigning IP Addresses
 
 To assign an IP Address:
+
 1. Click on **IPAM** in the top-level navigation menu
 2. Click on **IP Addresses** to go to the main IP Addresses page
 3. Find the IP address you wish to assign to an Interface and click on it
@@ -537,6 +569,7 @@ To assign an IP Address:
 ![](images/getting-started-nautobot-ui/34-assign-address-2.png)
 
 Once on the `Editing IP address` page:
+
 1. Select a Device from the drop-down selector
 2. Select an Interface on the Device
 3. Click on the `Update` button
@@ -553,7 +586,8 @@ You can also use the search bar to find the desired object's page.
 
 We will show two quick examples.
 
-Example one: 
+Example one:
+
 1. Type in `10.10.10.0` in the Search Bar and click on `Search`; this takes you to a search results page
 2. **Aggregate** search result `10.0.0.0/8` (this is the Aggregate for the Prefix `10.10.10.0/24`)
 3. **Prefix** search result `10.10.10.0/24`
@@ -567,6 +601,7 @@ This example shows the result of clicking on the **IP Address** object (4).
 ![](images/getting-started-nautobot-ui/42-address-search-v2.png)
 
 Example two shows a Device-specific search:
+
 1. Search for `edge`; this takes you to a search results page
 2. In the drop-down selector to the right, select **Devices**
 3. Search results for Devices with `edge` in the name
@@ -575,6 +610,7 @@ Example two shows a Device-specific search:
 6. *Site* for each Device
 
 Clicking on an of the links for the results takes you to the main page for that object. For example:
+
 * Clicking on the `Vancouver 1` Site takes you to the main page for the Site.
 * Clicking on the `edge2.van1` Device takes you to the main page for the Device
 
@@ -592,6 +628,7 @@ Clicking on an of the links for the results takes you to the main page for that 
 ## Finding IP Addresses in a Prefix 
 
 To find information on a particular Prefix:
+
 1. Click on **IPAM** in the top-level drop-down menu
 2. Click on **Prefixes** to get to the Prefixes main page 
 3. Find the Prefix you are interested in and click on the link
