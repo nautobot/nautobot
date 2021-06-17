@@ -1,4 +1,4 @@
-# Config Contexts & Schemas
+# Configuration Contexts & Schemas
 
 
 {%

@@ -199,7 +199,8 @@ class SplinterTestCase(StaticLiveServerTestCase):
     def setUpClass(cls):
         super().setUpClass()
         # Instantiate the browser object
-        cls.browser = Browser("firefox", profile_preferences=FIREFOX_PROFILE_PREFERENCES)
+        profile = cls._create_firefox_profile()
+        cls.browser = Browser("remote", command_executor=SELENIUM_URL, browser_profile=profile)
 
     def setUp(self):
         # Setup test user
@@ -243,3 +244,18 @@ class SplinterTestCase(StaticLiveServerTestCase):
 
     def logout(self):
         self.browser.visit(f"{self.live_server_url}/logout")
+
+    @classmethod
+    def _create_firefox_profile(cls):
+        """
+        Return a `FirefoxProfile` with speed-optimized preferences such as disabling image loading,
+        enabling HTTP pipelining, among others.
+
+        Credit: https://bit.ly/2TuHa9D
+        """
+
+        profile = webdriver.FirefoxProfile()
+        for key, value in FIREFOX_PROFILE_PREFERENCES.items():
+            profile.set_preference(key, value)
+
+        return profile
