@@ -2,14 +2,11 @@
 os: linux
 dist: xenial
 
-services:
-  - postgresql
-  - redis
-
-addons:
-  postgresql: "9.6"
-
-language: python
+# Specify the explicit order of the build stages here.
+stages:
+  - lint
+  - test
+  - integration
 
 # Cache settings to explicitly cache Pip & Poetry files
 cache:
@@ -17,30 +14,43 @@ cache:
   directories:
     - ~/.cache/pypoetry
 
+#
+## Begin "test" stage global config
+#
+
 # Environment variables passed to the job nodes
 env:
+
   # Environment variables passed to all jobs
   global:
     - INVOKE_NAUTOBOT_LOCAL=True
     - NAUTOBOT_SELENIUM_URL=http://localhost:4444/wd/hub
     - NAUTOBOT_SELENIUM_HOST=$(hostname -f)
+  # Environment variables passed to "test" stage jobs
+  jobs:
+    - DB=postgres NAUTOBOT_DB_ENGINE=django.db.backends.postgresql
+    - DB=mysql NAUTOBOT_DB_USER=root NAUTOBOT_DB_ENGINE=django.db.backends.mysql
 
-jobs:
-  fast_finish: true
-  include:
-    - stage: Tests
-      python: "3.6"
-    - python: "3.7"
-    - python: "3.8"
-    - python: "3.9"
-  allow_failures:
-    - python: "3.9"
+# We be using Python
+language: python
 
-# Things to do before the install phase
-before_install:
-  - pip install poetry
-  - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
-  - chmod +x /home/travis/bin/hadolint
+# Test these Python versions
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "3.9"
+
+# Services we want installed on the VM(s)
+services:
+  - mysql
+  - postgresql
+  - redis
+
+# Explicitly install PostgreSQL 9.6
+addons:
+  postgresql: "9.6"
+
 
 # Install phase
 install:
@@ -54,9 +64,89 @@ install:
 
 # Things to do before the script phase
 before_script:
-  - psql -U postgres -c 'create database nautobot;'
+  # If postgres: Create the database
+  - sh -c "if [ '$DB' = 'postgres' ]; then echo 'Creating PostgreSQL database...'; fi"
+  - sh -c "if [ '$DB' = 'postgres' ]; then psql -c 'CREATE DATABASE nautobot;' -U postgres; fi"
+  # If mysql: Upgrade/install MySQL 8.x, then create the database
+  - sh -c "if [ '$DB' = 'mysql' ]; then echo 'Upgrading MySQL to v8.x...'; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then wget https://repo.mysql.com//mysql-apt-config_0.8.17-1_all.deb; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then sudo dpkg -i mysql-apt-config_0.8.17-1_all.deb; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then sudo apt-get update -q; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then sudo apt-get install -q -y --allow-unauthenticated -o Dpkg::Options::=--force-confnew mysql-server; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then sudo systemctl restart mysql; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then sudo mysql_upgrade; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then mysql --version; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then echo 'Creating MySQL database...'; fi"
+  - sh -c "if [ '$DB' = 'mysql' ]; then mysql -e 'CREATE DATABASE IF NOT EXISTS nautobot;'; fi"
+  # Install Docker Compose
   - pip install docker-compose
 
 # Script phase
 script:
-  - poetry run ./scripts/cibuild.sh
+  # Run unit tests
+  - invoke unittest --failfast --keepdb || travis_terminate 1
+  # Generate unit test coverage report
+  - invoke unittest-coverage || travis_terminate 1
+
+#
+## End "test" stage global config
+#
+
+# Job/stage matrix
+jobs:
+
+  # Terminate build matrix as soon as any job fails.
+  fast_finish: true
+
+  # Job definitions for custom stages
+  include:
+
+    - stage: lint
+
+      before_install:
+        - pip install invoke black=="20.8b1" flake8=="3.9.2"  # Until there is a poetry install --dev-only install the linting tools here to speed up this step
+        - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
+        - chmod +x /home/travis/bin/hadolint
+      python: "3.9"
+      script: "invoke tests --lint-only"
+
+    - stage: integration
+
+      python: "3.9"
+
+      # Services we want installed on the VM(s)
+      services:
+        - postgresql
+        - redis
+
+      # Explicitly install PostgreSQL 9.6
+      addons:
+        postgresql: "9.6"
+
+      # Install phase
+      install:
+        - poetry config virtualenvs.create false
+        # Poetry 1.1.0 added parallel installation as an option;
+        # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
+        # while simultaneously atttempting to *use* those packages to install other packages.
+        # For now we disable it.
+        - poetry config installer.parallel false
+        - poetry install
+
+      # Things to do before the script phase
+      before_script:
+        # Create Nautobot database
+        - psql -U postgres -c 'CREATE DATABASE nautobot;'
+        # Install Docker compose
+        - pip install docker-compose
+        # Login to Docker if password is in the environment
+        - sh -c "if [[ -n '$DOCKER_HUB_PASSWORD' ]]; then echo -e '\n>> Attempting login to Docker Hub...'; echo '$DOCKER_HUB_PASSWORD' | docker login -u '$DOCKER_HUB_USERNAME' --password-stdin; fi"
+
+      # Script phase
+      script:
+        # Start Selenium container
+        - invoke start --service selenium
+        # Run integration tests
+        - invoke integration-test --keepdb --append
+        # Generate integration test coverage report
+        - invoke unittest-coverage || travis_terminate 1

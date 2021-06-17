@@ -13,13 +13,13 @@ ALLOWED_HOSTS = ["*"]
 
 DATABASES = {
     "default": {
-        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
-        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
-        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
-        "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
-        "PORT": "",
-        "CONN_MAX_AGE": 300,
-        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("NAUTOBOT_DB_NAME", "nautobot"),
+        "USER": os.environ.get("NAUTOBOT_DB_USER", ""),
+        "PASSWORD": os.environ.get("NAUTOBOT_DB_PASSWORD", ""),
+        "HOST": os.environ.get("NAUTOBOT_DB_HOST", "localhost"),
+        "PORT": os.environ.get("NAUTOBOT_DB_PORT", ""),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
