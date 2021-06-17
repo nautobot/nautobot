@@ -71,5 +71,6 @@ The page for the Site you updated will appear again, showing the updated Region 
 
 ![](../images/getting-started-nautobot-ui/9-add-site-to-region-step-2.png)
 
-> NOTE: In the example, notice that we assigned the `Vancouver 1` Site to `Vancouver`, which is tier-3 Region. 
-> Notice that the Regional hierarchy is displayed for the `Vancouver 1` Site: `North America/Canada/Vancouver`
+!!! note
+    In the example, notice that we assigned the `Vancouver 1` Site to `Vancouver`, which is tier-3 Region. 
+    Notice that the Regional hierarchy is displayed for the `Vancouver 1` Site: `North America/Canada/Vancouver`

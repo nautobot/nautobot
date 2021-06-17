@@ -20,8 +20,9 @@ but each of these VLANs will be assigned to a different Site.
 
 We’ll also create a vlan 200 without a site assignment.
 
-> NOTE: this example will require a Site (`Ottawa 1`) within a Region (`Ottawa`) in the `North America` Region in addition to the `Vancouver 1` Site and `Vancouver` Region created prior. 
-> Refer back to the [Create a Site](#create-a-site) and [Create a Region](#creating-regions) sections to do so.
+!!! note
+    This example will require a Site (`Ottawa 1`) within a Region (`Ottawa`) in the `North America` Region in addition to the `Vancouver 1` Site and `Vancouver` Region created prior. 
+    Refer back to the [Create a Site](#create-a-site) and [Create a Region](#creating-regions) sections to do so.
 
 The following example will show:
 
@@ -39,7 +40,8 @@ The following example will show:
 5. Select **Status** as `Active`
 6. Click on `Create and Add Another` to save and to go to the `Add a new VLAN` form
 
-> NOTE: The required parameters to create a new VLAN are bolded in the `Add a new VLAN` form: **ID**, **Name**, and **Status**
+!!! note
+    The required parameters to create a new VLAN are bolded in the `Add a new VLAN` form: **ID**, **Name**, and **Status**
 
 ![](../images/getting-started-nautobot-ui/22-create-vlans.png)
 
@@ -55,8 +57,9 @@ On the `Add a new VLAN` form:
 5. Select `Vancouver 1` from the **Site** selector drop-down
 6. Click on the `Create and Add Another` button
 
-> NOTE: The **Region** drop-down selection in step 4 is optional and only meant to narrow down the options presented in the **Site** drop-down selector in Step 5.
-> A VLAN cannot be assigned to a Region.
+!!! note
+    The **Region** drop-down selection in step 4 is optional and only meant to narrow down the options presented in the **Site** drop-down selector in Step 5.
+    A VLAN cannot be assigned to a Region.
 
 1. Populate **ID** with `100`
 2. Populate **Name** with `vlan 100`

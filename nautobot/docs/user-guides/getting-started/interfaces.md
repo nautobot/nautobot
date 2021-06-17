@@ -57,8 +57,9 @@ You will now see the `Interface Template` form:
 Clicking the `Create` button will take you back to the home screen for the Device Type you are editing. There, you will
 see that the **Interfaces** tab now has the expected 21 Interfaces listed.
 
-> NOTE: As of this writing (Nautobot 1.0.3), Interfaces cannot be assigned in to a LAG in the Device Type template; component
-> Interfaces must be designated in the specific instantiation of s Device created from the Device Type 
+!!! note
+    As of this writing (Nautobot 1.0.3), Interfaces cannot be assigned in to a LAG in the Device Type template; component
+    Interfaces must be designated in the specific instantiation of s Device created from the Device Type 
 
 ![](../images/getting-started-nautobot-ui/17-templated-interfaces.png)
 
@@ -75,8 +76,9 @@ On the main screen for the new *Device*, you will see an **Interfaces** tab with
 
 ![](../images/getting-started-nautobot-ui/18-assign-device-type.png)
 
-> NOTE: **Device Type** properties only apply to **new** instantiations of Devices from the Type; 
-> Devices created prior to a modification of the Device Type will not inherit the changes retroactively
+!!! note
+    **Device Type** properties only apply to **new** instantiations of Devices from the Type; 
+    Devices created prior to a modification of the Device Type will not inherit the changes retroactively
 
 ## Specify the LAG Components on the Device
 
