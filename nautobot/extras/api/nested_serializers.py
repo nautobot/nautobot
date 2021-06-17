@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
 from nautobot.core.api import ChoiceField, ContentTypeField, WritableNestedSerializer
-from nautobot.core.api.serializers import ComputedFieldModelSerializer
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 
@@ -46,13 +45,12 @@ class NestedExportTemplateSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name"]
 
 
-class NestedGitRepositorySerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
+class NestedGitRepositorySerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
 
     class Meta:
         model = models.GitRepository
-        fields = ["id", "url", "name", "computed_fields"]
-        opt_in_fields = ["computed_fields"]
+        fields = ["id", "url", "name"]
 
 
 class NestedImageAttachmentSerializer(WritableNestedSerializer):

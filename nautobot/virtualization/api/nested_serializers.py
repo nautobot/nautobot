@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
 from nautobot.core.api import WritableNestedSerializer
-from nautobot.core.api.serializers import ComputedFieldModelSerializer
 from nautobot.dcim.models import Interface
 from nautobot.virtualization.models import (
     Cluster,
@@ -23,34 +22,31 @@ __all__ = [
 #
 
 
-class NestedClusterTypeSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
+class NestedClusterTypeSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustertype-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = ClusterType
-        fields = ["id", "url", "name", "slug", "cluster_count", "computed_fields"]
-        opt_in_fields = ["computed_fields"]
+        fields = ["id", "url", "name", "slug", "cluster_count"]
 
 
-class NestedClusterGroupSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
+class NestedClusterGroupSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustergroup-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = ClusterGroup
-        fields = ["id", "url", "name", "slug", "cluster_count", "computed_fields"]
-        opt_in_fields = ["computed_fields"]
+        fields = ["id", "url", "name", "slug", "cluster_count"]
 
 
-class NestedClusterSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
+class NestedClusterSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:cluster-detail")
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Cluster
-        fields = ["id", "url", "name", "virtualmachine_count", "computed_fields"]
-        opt_in_fields = ["computed_fields"]
+        fields = ["id", "url", "name", "virtualmachine_count"]
 
 
 #
@@ -58,20 +54,18 @@ class NestedClusterSerializer(WritableNestedSerializer, ComputedFieldModelSerial
 #
 
 
-class NestedVirtualMachineSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
+class NestedVirtualMachineSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
 
     class Meta:
         model = VirtualMachine
-        fields = ["id", "url", "name", "computed_fields"]
-        opt_in_fields = ["computed_fields"]
+        fields = ["id", "url", "name"]
 
 
-class NestedVMInterfaceSerializer(WritableNestedSerializer, ComputedFieldModelSerializer):
+class NestedVMInterfaceSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer(read_only=True)
 
     class Meta:
         model = Interface
-        fields = ["id", "url", "virtual_machine", "name", "computed_fields"]
-        opt_in_fields = ["computed_fields"]
+        fields = ["id", "url", "virtual_machine", "name"]
