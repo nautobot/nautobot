@@ -334,33 +334,43 @@ def register_plugin_menu_items(section_name, menu_items):
             new_menu_button_weight = 100
             new_menu_buttons = []
             for button in menu_item.buttons:
-                new_menu_buttons.append(NavMenuButton(
-                    link=button.link, title=button.title, icon_class=button.icon_class, button_class=button.color, permissions=button.permissions, weight=new_menu_button_weight
-                ))
+                new_menu_buttons.append(
+                    NavMenuButton(
+                        link=button.link,
+                        title=button.title,
+                        icon_class=button.icon_class,
+                        button_class=button.color,
+                        permissions=button.permissions,
+                        weight=new_menu_button_weight,
+                    )
+                )
                 new_menu_button_weight += 100
 
-            new_menu_items.append(NavMenuItem(
-                link=menu_item.link, link_text=menu_item.link_text, permissions=menu_item.permissions, weight=new_menu_item_weight, buttons=new_menu_buttons
-            ))
+            new_menu_items.append(
+                NavMenuItem(
+                    link=menu_item.link,
+                    link_text=menu_item.link_text,
+                    permissions=menu_item.permissions,
+                    weight=new_menu_item_weight,
+                    buttons=new_menu_buttons,
+                )
+            )
             new_menu_item_weight += 100
 
     if new_menu_items:
         # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
         if registry["nav_menu"]["tabs"].get("Plugins"):
-            weight = registry["nav_menu"]["tabs"]["Plugins"][list(registry["nav_menu"]["tabs"]["Plugins"])[-1]]["weight"] + 100
+            weight = (
+                registry["nav_menu"]["tabs"]["Plugins"][list(registry["nav_menu"]["tabs"]["Plugins"])[-1]]["weight"]
+                + 100
+            )
         else:
             weight = 100
         menu_items += (
             NavMenuTab(
                 name="Plugins",
                 weight=5000,
-                groups=(
-                    NavMenuGroup(
-                        name=section_name,
-                        weight=weight,
-                        items=new_menu_items
-                    ),
-                ),
+                groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
             ),
         )
 
