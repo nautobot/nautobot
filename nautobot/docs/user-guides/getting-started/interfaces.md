@@ -41,15 +41,15 @@ To create a Device Type:
 You will now see the `Interface Template` form:
 
 1. Add the `ae0` Interface Template
-   * `Manufacturer` will auto-populate to the Manufacturer of the Device Type you are editing
-   * `Device Type` will auto-populate to the Device Type you are editing
-   * Populate a `Name`
-   * Select a `Type` of **Link Aggregation Group (LAG)** from the drop-down selector
-   * Add a `Description` and Label (optional)
+    * `Manufacturer` will auto-populate to the Manufacturer of the Device Type you are editing
+    * `Device Type` will auto-populate to the Device Type you are editing
+    * Populate a `Name`
+    * Select a `Type` of **Link Aggregation Group (LAG)** from the drop-down selector
+    * Add a `Description` and Label (optional)
 2. Click `Create and Add More`
 3. Create the `xe-` Interfaces
-   * This example shows bulk creation using a range (`xe-[0-1]/0/[0-9]`) in Name 
-   * Select the appropriate Type from the drop-down selector
+    * This example shows bulk creation using a range (`xe-[0-1]/0/[0-9]`) in Name 
+    * Select the appropriate Type from the drop-down selector
 4. Click on `Create`    
 
 ![](../images/getting-started-nautobot-ui/16-interface-templates.png)

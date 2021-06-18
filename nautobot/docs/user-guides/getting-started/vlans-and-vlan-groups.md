@@ -38,7 +38,7 @@ The following example will show:
 3. Populate **ID** with `200`
 4. Populate **Name** with `vlan 200`
 5. Select **Status** as `Active`
-6. Click on `Create and Add Another` to save and to go to the `Add a new VLAN` form
+6. Click on `Create and Add Another` to save; you will then be taken to the `Add a new VLAN` form
 
 !!! note
     The required parameters to create a new VLAN are bolded in the `Add a new VLAN` form: **ID**, **Name**, and **Status**
@@ -84,12 +84,13 @@ To assign a VLAN to an Interface:
 2. Select **Devices** to go to the Devices main page
 3. Click on the name of the Device you wish to add a VLAN to (`edge2.van1`) in this example
 4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
+5. On the `Editing interface xe-0/0/0` page, set **802.1Q** Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
+    * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Site
+    * The other choice is `vlan 200`, which was not assigned to a Site, and thus has a global scope 
 
 ![](../images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
 
-5. On the `Editing interface xe-0/0/0` page, set **802.1Q** Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
-    * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Site
-    * The other choice is `vlan 200`, which was not assigned to a Site, and thus has a global scope
-    * The `vlan 100` choice that is assigned to the `Ottawa 1` Site does not show up as an option
+!!! note 
+    The `vlan 100` choice that is assigned to the `Ottawa 1` Site does not show up as an option for the `Vancouver1` Site
 
 ![](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)

@@ -48,10 +48,7 @@ To create a new Device Type:
 
 1. Click on **Devices** in the top navigation menu
 2. Find **Device Types**
-3. Select `+` 
-   
-Once on the `Add a new device type` form:
-
+3. Select `+` to go to the `Add a new device type` form
 4. Select the Manufacturer from the drop-down selector
 5. Select the Model from the drop-down selector
 6. Click on **Create**
@@ -66,10 +63,7 @@ To create a new Site:
 
 1. Click on **Organization** in the top navigation menu
 2. Find **Sites**
-3. Select `+`
-
-Then, on the `Add a new site` form:
-
+3. Select `+` to go to the `Add a new site` form
 4. Populate the Site's Name
     * The Slug will auto-populate based on the Name, but can be manually overwritten
 5. Set the Status to `Active` in the drop-down selector
@@ -83,9 +77,7 @@ To create a new Device:
 
 1. Click on **Devices** in the top navigation menu
 2. Find **Devices**
-3. Select `+`
-
-Then, on the `Add a new device` form:
+3. Select `+` to go to the `Add a new device` form
 
 4. Populate the Name
 5. Select the Device Role from the drop-down selector

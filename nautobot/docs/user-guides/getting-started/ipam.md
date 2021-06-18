@@ -131,8 +131,10 @@ To find information on a particular Prefix:
 1. Click on **IPAM** in the top-level drop-down menu
 2. Click on **Prefixes** to get to the Prefixes main page 
 3. Find the Prefix you are interested in and click on the link
+4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab
 
 ![](../images/getting-started-nautobot-ui/37-verify-prefix.png)
 
-4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab
 ![](../images/getting-started-nautobot-ui/38-verify-prefix2.png)
+
+**END OF *Getting Started in the Web UI* GUIDE**
