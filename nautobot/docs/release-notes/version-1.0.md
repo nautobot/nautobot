@@ -184,6 +184,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
 - [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
 - [#523](https://github.com/nautobot/nautobot/issues/523) - Added instructions for using LDAP TLS Options to SSO documentation
+- [#576](https://github.com/nautobot/nautobot/pull/576) - `JobResult` detail views not support custom links and plugin template extensions
 
 ### Changed
 
