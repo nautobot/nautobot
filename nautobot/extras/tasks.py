@@ -119,7 +119,7 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
     try:
         headers.update(webhook.render_headers(context))
     except (TemplateError, ValueError) as e:
-        logger.error("Error parsing HTTP headers for webhook {}: {}".format(webhook, e))
+        logger.error("Error parsing HTTP headers for webhook %s: %s", webhook, e)
         raise
 
     # Render the request body
@@ -137,13 +137,13 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
         "data": body.encode("utf8"),
     }
     logger.info(
-        "Sending {} request to {} ({} {})".format(params["method"], params["url"], context["model"], context["event"])
+        "Sending %s request to %s (%s %s)", params["method"], params["url"], context["model"], context["event"])
     )
     logger.debug("%s", params)
     try:
         prepared_request = requests.Request(**params).prepare()
     except requests.exceptions.RequestException as e:
-        logger.error("Error forming HTTP request: {}".format(e))
+        logger.error("Error forming HTTP request: %s", e)
         raise
 
     # If a secret key is defined, sign the request with a hash of the key and its content
@@ -157,11 +157,11 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
             session.verify = webhook.ca_file_path
         response = session.send(prepared_request, proxies=settings.HTTP_PROXIES)
 
-    if 200 <= response.status_code <= 299:
-        logger.info("Request succeeded; response status {}".format(response.status_code))
+    if response.ok:
+        logger.info("Request succeeded; response status %s", response.status_code)
         return "Status {} returned, webhook successfully processed.".format(response.status_code)
     else:
-        logger.warning("Request failed; response status {}: {}".format(response.status_code, response.content))
+        logger.warning("Request failed; response status %s: %s", response.status_code, response.content)
         raise requests.exceptions.RequestException(
             "Status {} returned with content '{}', webhook FAILED to process.".format(
                 response.status_code, response.content

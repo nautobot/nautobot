@@ -491,7 +491,7 @@ RQ_QUEUES = {
 }
 
 #
-# Celery (used for background processesing)
+# Celery (used for background processing)
 #
 
 CELERY_TASK_TRACK_STARTED = True
