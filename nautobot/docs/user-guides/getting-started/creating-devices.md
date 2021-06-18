@@ -4,7 +4,7 @@ A network Device in Nautobot has a few required attributes:
 
 * A Device Role
 * A Device Type
-  * A Device Type requires a Manufacturer
+    * A Device Type requires a Manufacturer
 * A Site
 
 Looking at the list above, there are four objects in Nautobot that must be present prior to creating a related Device.
@@ -40,7 +40,7 @@ To create a new Manufacturer:
 
 ![](../images/getting-started-nautobot-ui/2-create%20manufacturer.png)
 
-## Create a Device Type
+## Creating a Device Type
 
 To create a new Device, you will need an existing Device Type or need to create a new Device Type instance.
 
@@ -55,7 +55,7 @@ To create a new Device Type:
 
 ![](../images/getting-started-nautobot-ui/4-create%20device%20type.png)
 
-## Create a Site
+## Creating a Site
 
 To create a new Device, you will need an existing Site or need to create a new Site instance.
 

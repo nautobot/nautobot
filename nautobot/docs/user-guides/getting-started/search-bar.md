@@ -38,8 +38,3 @@ Clicking on an of the links for the results takes you to the main page for that 
 * Clicking on the `edge2.van1` Device takes you to the main page for the Device
 
 ![](../images/getting-started-nautobot-ui/41-device%20search%20results.png)
-
-
-
-
-

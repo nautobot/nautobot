@@ -4,6 +4,8 @@ A 'Tenant' signifies ownership of an object in Nautobot and as such, any object 
 
 More information on Tenants can be found in the [Tenants](https://nautobot.readthedocs.io/en/latest/models/tenancy/tenant/) section of the Nautobot docs.
 
+## Creating a Tenant
+
 To create a Tenant:
 
 1. Click on **Devices** on the top navigation menu

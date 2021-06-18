@@ -1,4 +1,4 @@
-# Creating Regions
+# Regions
 
 Regions are administrative domains, used to organize Sites and other Regions. They can be nested recursively.
 A Region might represent a continent, country, city, campus, or other area. A Region can contain Sites and other Regions.
@@ -8,11 +8,13 @@ Additional information on Regions is in the [Regions section of the Nautobot doc
 In the following exercise, we will create three Regions:
 
 * North America
-  * Intended to hold Regions that represent each component country 
+    * Intended to hold Regions that represent each component country 
 * Canada
-  * Intended to hold Regions that represent markets in Canada
+    * Intended to hold Regions that represent markets in Canada
 * Vancouver
-  * Intended to hold Sites within the Vancouver market
+    * Intended to hold Sites within the Vancouver market
+
+## Creating a Region
     
 To create a Region:
 
@@ -48,7 +50,7 @@ Vancouver:
 
 ![](../images/getting-started-nautobot-ui/6-create-region.png)
 
-# Adding a Site to a Region
+## Adding a Site to a Region
 
 It's quite easy to add an existing Site to a Region.
 

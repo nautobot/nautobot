@@ -10,7 +10,7 @@ This next section will demonstrate how to
 These type of operations fall under an umbrella called IP Address Management (IPAM). 
 The Nautobot documentation [IPAM section](https://nautobot.readthedocs.io/en/latest/core-functionality/ipam/) has more detail on IPAM and each operation.
 
-## Create a Regional Internet Registry (RIR)
+## Creating a Regional Internet Registry (RIR)
 
 A RIR allocates globally-routable IP address space. There are five top-level RIRs, each responsible for a particular section of the globe.
 Nautobot also considers RFCs 1918 and 6589 to be RIR-like because they allocate private IP space.
@@ -28,7 +28,7 @@ To create a RIR:
 
 ![](../images/getting-started-nautobot-ui/27-add-rir.png)
 
-## Create an Aggregate
+## Creating an Aggregate
 
 An aggregate is a consolidated allocation of IP address space, whether it is public or private. An aggregate must map back to a RIR that has allocated the space.
 
@@ -64,7 +64,7 @@ To create a prefix:
 
 ![](../images/getting-started-nautobot-ui/30-add-prefix.png)
 
-## Verify a Prefix in an Aggregate
+## Verifying a Prefix in an Aggregate
 
 To view the Prefixes in an Aggregate:
 
@@ -78,7 +78,7 @@ To view the Prefixes in an Aggregate:
 
 ![](../images/getting-started-nautobot-ui/31-view-aggregates-again.png)
 
-## Create IP Addresses
+## Creating IP Addresses
 
 To create an IP address:
 
@@ -115,7 +115,7 @@ Once on the `Editing IP address` page:
 
 ![](../images/getting-started-nautobot-ui/35-assign-address-3.png)
 
-# Finding an IP Address for an Interface
+## Finding an IP Address for an Interface
 
 1. Click on **Devices** on the top-level navigation menu
 2. Click on **Devices** to go to the main page for Devices
@@ -124,7 +124,7 @@ Once on the `Editing IP address` page:
 
 ![](../images/getting-started-nautobot-ui/36-verify-address.png)
 
-# Finding IP Addresses in a Prefix 
+## Finding IP Addresses in a Prefix 
 
 To find information on a particular Prefix:
 

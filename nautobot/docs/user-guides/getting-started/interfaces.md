@@ -15,7 +15,7 @@ Let’s take an example:
 * This Device Type will have 20x10G (`xe[0-1]/0/[0-9]`) ports and one LAG (`ae0`)
 * The following ports will be part of `ae0`: `xe-0/0/9`, `xe-1/0/9`
 
-## Create a Device Type
+## Creating a Device Type
 
 We are going to use the **Device Type** to achieve part of this goal. Using the **Device Type** will also provide repeatability
 because the **Device Type** object also serves as a template. This templating feature is demonstrated in this example.
@@ -63,7 +63,7 @@ see that the **Interfaces** tab now has the expected 21 Interfaces listed.
     As of this writing (Nautobot 1.0.3), Interfaces cannot be assigned in to a LAG in the Device Type template; component
     Interfaces must be designated in the specific instantiation of s Device created from the Device Type 
 
-## Create a New Device Using the Device Type
+## Creating a New Device Using the Device Type
 
 Create a new Device with these attributes:
 
@@ -80,7 +80,7 @@ On the main screen for the new *Device*, you will see an **Interfaces** tab with
     **Device Type** properties only apply to **new** instantiations of Devices from the Type; 
     Devices created prior to a modification of the Device Type will not inherit the changes retroactively
 
-## Specify the LAG Components on the Device
+## Specifying the LAG Components on the Device
 
 As of this writing (Nautobot 1.0.3), LAG component Interfaces cannot be assigned in the Device Type template, so we will
 edit this new Device, specifying the component `ae0` Interfaces.
