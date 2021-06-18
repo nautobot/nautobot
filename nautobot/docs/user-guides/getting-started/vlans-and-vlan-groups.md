@@ -24,7 +24,7 @@ The following example will show:
 
 !!! note
     This example will require a Site (`Ottawa 1`) within a Region (`Ottawa`) in the `North America` Region in addition to the `Vancouver 1` Site and `Vancouver` Region created prior. 
-    Refer back to the [Create a Site](creating-devices.md/#create-a-site) and [Create a Region](regions.md/#creating-regions) sections to do so.
+    Refer back to the [Create a Site](creating-devices.md#create-a-site) and [Create a Region](regions.md#creating-regions) sections to do so.
 
 
 ### Creating the VLANs

@@ -19,8 +19,10 @@ To create a Tenant:
 It is simple to assign a Tenant to an existing object. This next example will add a Tenant to an existing Device.
 
 1. Click on **Devices** in the top navigation menu
-2. Look for the **Devices** option and click on it; this will take you to the *Devices* page
-3. Click on the specific Device you want to add the Tenant to; this will take you to the main page for that Device
+2. Look for the **Devices** option and click on it 
+    * This will take you to the *Devices* page
+3. Click on the specific Device you want to add the Tenant to 
+    * This will take you to the main page for that Device
 4. On the specific Device page, click on the `Edit` button
 
 ![](../images/getting-started-nautobot-ui/13-assign-tenant-to-device.png)

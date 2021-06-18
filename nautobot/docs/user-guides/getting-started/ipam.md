@@ -55,7 +55,8 @@ Additionally, each Prefix can be assigned to a particular Site and virtual routi
 To create a prefix:
 
 1. Click on **IPAM** in the top-level navigation menu
-2. Look for **Prefixes** and click on the `+`; this will take you to the `Add a new prefix` form
+2. Look for **Prefixes** and click on the `+`
+    * This will take you to the `Add a new prefix` form
 3. Populate the Prefix in CIDR notation
 4. Select a Status from the drop-down selector
 5. If all addresses in the Prefix are usable, check the `Is a pool` flag
@@ -82,7 +83,8 @@ To view the Prefixes in an Aggregate:
 To create an IP address:
 
 1. Click on **IPAM** in the top-level navigation menu
-2. Find **IP Addresses** and click on the `+`; this will take you to the `Add a new IP address` form
+2. Find **IP Addresses** and click on the `+`
+    * This will take you to the `Add a new IP address` form
 3. In this example, we are going to create multiple individual addresses, so click on the `Bulk Create` tab
 4. Populate an Address pattern
     * This example uses `10.10.10.[0-1,2-3,6-7]/31` to create 3 non-contiguous /31's 
@@ -99,10 +101,8 @@ To assign an IP Address:
 1. Click on **IPAM** in the top-level navigation menu
 2. Click on **IP Addresses** to go to the main IP Addresses page
 3. Find the IP address you wish to assign to an Interface and click on it
-
-![](../images/getting-started-nautobot-ui/33-assign-address.png)
-
 4. On the main page for the Address, click on the `Edit` button to go to the `Editing IP address` page
+![](../images/getting-started-nautobot-ui/33-assign-address.png)
 
 ![](../images/getting-started-nautobot-ui/34-assign-address-2.png)
 

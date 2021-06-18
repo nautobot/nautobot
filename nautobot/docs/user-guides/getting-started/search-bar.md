@@ -9,7 +9,8 @@ We will show two quick examples.
 
 Example one:
 
-1. Type in `10.10.10.0` in the Search Bar and click on `Search`; this takes you to a search results page
+1. Type in `10.10.10.0` in the Search Bar and click on `Search`
+    * This takes you to a search results page
 2. **Aggregate** search result `10.0.0.0/8` (this is the Aggregate for the Prefix `10.10.10.0/24`)
 3. **Prefix** search result `10.10.10.0/24`
 4. **IP Address** search result `10.10.10.0/31`
@@ -23,7 +24,8 @@ This example shows the result of clicking on the **IP Address** object (4).
 
 Example two shows a Device-specific search:
 
-1. Search for `edge`; this takes you to a search results page
+1. Search for `edge`
+    * This takes you to a search results page
 2. In the drop-down selector to the right, select **Devices**
 3. Search results for Devices with `edge` in the name
 4. *Tenants* for each Device (if applicable) 
