@@ -534,7 +534,7 @@ class ConfigContextSchemaTestCase(TestCase):
         except ValidationError:
             self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
 
-    def test_existingvirtual_machinevalid_schema_applied(self):
+    def test_existing_virtual_machine_valid_schema_applied(self):
         """
         Given an existing virtual machine object with local_context_data
         And a config context schema object with a json schema
@@ -548,7 +548,7 @@ class ConfigContextSchemaTestCase(TestCase):
         except ValidationError:
             self.fail("self.virtual_machine.full_clean() raised ValidationError unexpectedly!")
 
-    def test_existingvirtual_machineinvalid_schema_applied(self):
+    def test_existing_virtual_machine_invalid_schema_applied(self):
         """
         Given an existing virtual machine object with local_context_data
         And a config context schema object with a json schema
@@ -560,7 +560,7 @@ class ConfigContextSchemaTestCase(TestCase):
         with self.assertRaises(ValidationError):
             self.virtual_machine.full_clean()
 
-    def test_existingvirtual_machinewith_no_schema_applied(self):
+    def test_existing_virtual_machine_with_no_schema_applied(self):
         """
         Given an existing virtual machine object
         And no schema has been set on the virtual machine object
@@ -578,7 +578,7 @@ class ConfigContextSchemaTestCase(TestCase):
         Assert calling clean on the config context schema object raises a ValidationError
         """
         invalid_schema = ConfigContextSchema(
-            name="invlaid", slug="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
+            name="invalid", slug="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
         )
 
         with self.assertRaises(ValidationError):

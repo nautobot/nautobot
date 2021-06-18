@@ -529,7 +529,12 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         self._validate_with_schema("local_context_data", "local_context_schema")
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
+)
 class ConfigContextSchema(OrganizationalModel):
     """
     This model stores jsonschema documents where are used to optionally validate config context data payloads.
