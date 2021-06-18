@@ -419,7 +419,7 @@ class ComputedFieldTest(TestCase):
     def setUp(self):
         self.good_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
-            name="good_computed_field",
+            slug="good_computed_field",
             label="Good Computed Field",
             template="{{ obj.name }} is awesome!",
             fallback_value="This template has errored",
@@ -427,7 +427,7 @@ class ComputedFieldTest(TestCase):
         )
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
-            name="bad_computed_field",
+            slug="bad_computed_field",
             label="Bad Computed Field",
             template="{{ not_in_context | not_a_filter }} is horrible!",
             fallback_value="An error occurred while rendering this template.",
@@ -453,7 +453,7 @@ class ComputedFieldModelMixinTest(TestCase):
         self.site1 = Site.objects.create(name="NYC")
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
-            name="computed_field_one",
+            slug="computed_field_one",
             label="Computed Field One",
             template="{{ obj.name }} is the name of this site.",
             fallback_value="An error occurred while rendering this template.",
@@ -461,7 +461,7 @@ class ComputedFieldModelMixinTest(TestCase):
         )
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
-            name="bad_computed_field",
+            slug="bad_computed_field",
             label="Bad Computed Field",
             template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
             fallback_value="This template has errored",

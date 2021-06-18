@@ -698,7 +698,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer):
         fields = (
             "id",
             "url",
-            "name",
+            "slug",
             "label",
             "description",
             "content_type",

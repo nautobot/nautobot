@@ -913,7 +913,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         model = ComputedField
         fields = (
             "content_type",
-            "name",
+            "slug",
             "label",
             "description",
             "template",

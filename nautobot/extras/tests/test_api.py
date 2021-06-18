@@ -911,7 +911,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         "fallback_value",
         "id",
         "label",
-        "name",
+        "slug",
         "template",
         "url",
         "weight",
@@ -919,21 +919,21 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "content_type": "dcim.site",
-            "name": "cf4",
+            "slug": "cf4",
             "label": "Computed Field 4",
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
         {
             "content_type": "dcim.site",
-            "name": "cf5",
+            "slug": "cf5",
             "label": "Computed Field 5",
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
         {
             "content_type": "dcim.site",
-            "name": "cf6",
+            "slug": "cf6",
             "label": "Computed Field 6",
             "template": "{{ obj.name }}",
             "fallback_value": "error",
@@ -941,7 +941,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     ]
     update_data = {
         "content_type": "dcim.site",
-        "name": "cf1",
+        "slug": "cf1",
         "label": "My Computed Field",
     }
     bulk_update_data = {
@@ -953,21 +953,21 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         site_ct = ContentType.objects.get_for_model(Site)
 
         ComputedField.objects.create(
-            name="cf1",
+            slug="cf1",
             label="Computed Field One",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
         ),
         ComputedField.objects.create(
-            name="cf2",
+            slug="cf2",
             label="Computed Field Two",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
         ),
         ComputedField.objects.create(
-            name="cf3",
+            slug="cf3",
             label="Computed Field Three",
             template="{{ obj.name }}",
             fallback_value="error",

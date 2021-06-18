@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ),
                 ("created", models.DateField(auto_now_add=True, null=True)),
                 ("last_updated", models.DateTimeField(auto_now=True, null=True)),
-                ("name", models.SlugField(max_length=100, unique=True)),
+                ("slug", models.SlugField(max_length=100, unique=True)),
                 ("label", models.CharField(max_length=100)),
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("template", models.TextField(max_length=500)),
@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "ordering": ["weight", "name"],
+                "ordering": ["weight", "slug"],
             },
             managers=[
                 ("objects", nautobot.extras.models.computed_fields.ComputedFieldManager()),

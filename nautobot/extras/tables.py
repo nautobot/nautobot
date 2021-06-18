@@ -426,18 +426,18 @@ class RelationshipAssociationTable(BaseTable):
 
 class ComputedFieldTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    label = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
         model = ComputedField
         fields = (
             "pk",
-            "name",
+            "label",
             "template",
             "weight",
         )
         default_columns = (
             "pk",
-            "name",
+            "label",
             "template" "weight",
         )

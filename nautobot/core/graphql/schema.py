@@ -177,12 +177,12 @@ def extend_schema_type_computed_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
 
     for field in cfs:
-        field_name = f"{prefix}{str_to_var_name(field.name)}"
+        field_name = f"{prefix}{str_to_var_name(field.slug)}"
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, field_name):
             logger.warning(
-                f"Unable to add the computed field {field.name} to {schema_type._meta.name} "
+                f"Unable to add the computed field {field.slug} to {schema_type._meta.slug} "
                 f"because there is already an attribute with the same name ({field_name})"
             )
             continue
@@ -190,7 +190,7 @@ def extend_schema_type_computed_field(schema_type, model):
         setattr(
             schema_type,
             resolver_name,
-            generate_computed_field_resolver(field.name, resolver_name),
+            generate_computed_field_resolver(field.slug, resolver_name),
         )
 
         schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())

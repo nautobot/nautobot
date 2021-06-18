@@ -36,7 +36,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("computed_fields"),
     )
-    name = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
+    slug = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
@@ -48,10 +48,10 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     objects = ComputedFieldManager()
 
     class Meta:
-        ordering = ["weight", "name"]
+        ordering = ["weight", "slug"]
 
     def __str__(self):
-        return self.name
+        return self.slug
 
     def get_absolute_url(self):
         return reverse("extras:computedfield", kwargs={"pk": self.pk})
@@ -81,8 +81,8 @@ class ComputedFieldModelMixin(models.Model):
         """
         return bool(ComputedField.objects.get_for_model(self))
 
-    def get_computed_field(self, name, render=True):
-        computed_field = ComputedField.objects.get_for_model(self).get(name=name)
+    def get_computed_field(self, slug, render=True):
+        computed_field = ComputedField.objects.get_for_model(self).get(slug=slug)
         if render:
             return computed_field.render(context={"obj": self})
         return computed_field.template
@@ -93,5 +93,5 @@ class ComputedFieldModelMixin(models.Model):
         if not computed_fields:
             return {}
         for cf in computed_fields:
-            computed_fields_dict[cf.name] = cf.render(context={"obj": self})
+            computed_fields_dict[cf.slug] = cf.render(context={"obj": self})
         return computed_fields_dict
