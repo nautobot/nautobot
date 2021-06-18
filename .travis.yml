@@ -71,6 +71,7 @@ before_script:
   - sh -c "if [ '$DB' = 'postgres' ]; then echo 'Creating PostgreSQL database...'; fi"
   - sh -c "if [ '$DB' = 'postgres' ]; then psql -c 'CREATE DATABASE nautobot;' -U postgres; fi"
   # If mysql: Upgrade/install MySQL 8.x, then create the database
+  # We have to upgrade MySQL from v5.7 to get the Travis-specific underpinnings
   - sh -c "if [ '$DB' = 'mysql' ]; then echo 'Upgrading MySQL to v8.x...'; fi"
   - sh -c "if [ '$DB' = 'mysql' ]; then wget https://repo.mysql.com//mysql-apt-config_0.8.17-1_all.deb; fi"
   - sh -c "if [ '$DB' = 'mysql' ]; then sudo dpkg -i mysql-apt-config_0.8.17-1_all.deb; fi"
@@ -110,7 +111,6 @@ jobs:
 
       before_install:
         - pip install poetry
-        # - pip install invoke requests black=="20.8b1" flake8=="3.9.2"  # Until there is a poetry install --dev-only install the linting tools here to speed up this step
         - curl -Lo /home/travis/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64
         - chmod +x /home/travis/bin/hadolint
 
@@ -120,6 +120,7 @@ jobs:
       addons:
         postgresql: ""
       before_script:
+        # This is required so that we can run `invoke check-migrations`
         - psql -U postgres -c 'CREATE DATABASE nautobot;'
 
       # Python 3.9; lint only
