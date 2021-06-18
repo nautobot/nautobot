@@ -31,6 +31,8 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+# Background task processing
+celery = "~5.1.0"
 # Fundamental web framework for Nautobot
 Django = "~3.1.8"
 # Caching with Redis
@@ -87,7 +89,6 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
-celery = "~5.1.0"
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement

@@ -1,5 +1,4 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
-import importlib
 import inspect
 import json
 import logging
@@ -796,7 +795,8 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
 
-    This gets around the inability to pickle an instance method for queueing into the background processor.
+    This function is responsible for setting up the job execution, handing the DB tranaction
+    and rollback conditions, plus post execution cleanup and saving the JobResult record.
     """
     from nautobot.extras.models import JobResult  # avoid circular import
 

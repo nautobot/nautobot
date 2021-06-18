@@ -9,6 +9,7 @@ from itertools import count, groupby
 from distutils.util import strtobool
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.serializers import serialize
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, OuterRef, Subquery, Model
@@ -350,7 +351,7 @@ class NautobotFakeRequest:
         """
         Deserialize a json representation that is safe to pass to celery and return an actual instance
         """
-        from nautobot.users.models import User  # avoiding circular import
+        User = get_user_model()
 
         obj = cls(data)
         obj.user = User.objects.get(pk=obj.user)

@@ -4,7 +4,6 @@ from celery.contrib.testing.worker import start_worker
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
-from django.test import TransactionTestCase
 from django.urls import reverse
 from rest_framework import status
 
@@ -14,7 +13,7 @@ from nautobot.dcim.forms import SiteCSVForm
 from nautobot.dcim.models import Site, Rack
 from nautobot.extras.choices import *
 from nautobot.extras.models import CustomField, CustomFieldChoice, Status
-from nautobot.utilities.testing import APITestCase, TestCase
+from nautobot.utilities.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.virtualization.models import VirtualMachine
 
 
@@ -976,9 +975,6 @@ class CustomFieldChoiceTest(TestCase):
         self.cf.delete()
         self.assertEqual(CustomField.objects.count(), 0)
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
-
-
-from django.db import connections
 
 
 class CustomFieldBackgroundTasks(TransactionTestCase):

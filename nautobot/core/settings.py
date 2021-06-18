@@ -494,10 +494,18 @@ RQ_QUEUES = {
 # Celery (used for background processing)
 #
 
+# Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
+
+# Global task time limit
 CELERY_TASK_TIME_LIMIT = 30 * 60
+
+# The Redis connection fined in the CACHES config above for the broker and results backend
 CELERY_BROKER_URL = CACHES["default"]["LOCATION"]
 CELERY_RESULT_BACKEND = CACHES["default"]["LOCATION"]
+
+# These settings define the custom nautobot serialization encoding as an accepted data encoding format
+# and register that format for task input and result serialization
 CELERY_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"

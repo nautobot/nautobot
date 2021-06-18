@@ -137,7 +137,7 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
         "data": body.encode("utf8"),
     }
     logger.info(
-        "Sending %s request to %s (%s %s)", params["method"], params["url"], context["model"], context["event"])
+        "Sending %s request to %s (%s %s)", params["method"], params["url"], context["model"], context["event"]
     )
     logger.debug("%s", params)
     try:
