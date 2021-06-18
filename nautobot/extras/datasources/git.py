@@ -13,7 +13,7 @@ from django.db import transaction
 from django_rq import job
 import yaml
 
-from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
     ConfigContext,
@@ -226,6 +226,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "device_types",
         "roles",
         "platforms",
         "cluster_groups",
@@ -343,6 +344,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("device_types", DeviceType),
         ("roles", DeviceRole),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
