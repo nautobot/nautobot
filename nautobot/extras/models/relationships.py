@@ -1,7 +1,7 @@
 import logging
 from collections import OrderedDict
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError
 from django.db import models
@@ -31,6 +31,19 @@ class RelationshipModel(models.Model):
 
     class Meta:
         abstract = True
+
+    # Define GenericRelations so that deleting a RelationshipModel instance
+    # cascades to deleting any RelationshipAssociations that were using this instance
+    source_for_associations = GenericRelation(
+        "extras.RelationshipAssociation",
+        content_type_field="source_type",
+        object_id_field="source_id",
+    )
+    destination_for_associations = GenericRelation(
+        "extras.RelationshipAssociation",
+        content_type_field="destination_type",
+        object_id_field="destination_id",
+    )
 
     def get_relationships(self, include_hidden=False):
         """

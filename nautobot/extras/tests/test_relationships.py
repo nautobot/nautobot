@@ -166,7 +166,6 @@ class RelationshipTest(RelationshipBaseTest):
         )
 
         m2m.clean()
-        self.assertTrue(True)
 
     def test_get_label_input(self):
         with self.assertRaises(ValueError):
@@ -279,9 +278,13 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         cra.save()
 
         with self.assertRaises(ValidationError) as handler:
-            cra = RelationshipAssociation(relationship=self.o2o_1, source=self.sites[2], destination=self.vlans[0])
+            cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[2], destination=self.vlans[0])
             cra.clean()
-        expected_errors = {"source_type": ["source_type has a different value than defined in Primary Rack per Site"]}
+        expected_errors = {
+            "destination": [
+                "Unable to create more than one generic site to vlan association to VLAN A (100) (destination)",
+            ],
+        }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_m2m(self):
@@ -302,9 +305,45 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         cra.clean()
 
     def test_get_peer(self):
+        """Validate that the get_peer() method works correctly."""
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
         cra.save()
 
         self.assertEqual(cra.get_peer(self.racks[0]), self.vlans[0])
         self.assertEqual(cra.get_peer(self.vlans[0]), self.racks[0])
         self.assertEqual(cra.get_peer(self.vlans[1]), None)
+
+    def test_delete_cascade(self):
+        """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
+        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
+        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1])
+        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[0])
+
+        self.assertEqual(3, RelationshipAssociation.objects.count())
+
+        # Test automatic deletion of RelationshipAssociations when their 'source' object is deleted
+        self.racks[0].delete()
+
+        # Both relations involving racks[0] should have been deleted
+        # The relation between racks[1] and vlans[0] should remain
+        self.assertEqual(1, RelationshipAssociation.objects.count())
+
+        # Test automatic deletion of RelationshipAssociations when their 'destination' object is deleted
+        self.vlans[0].delete()
+
+        self.assertEqual(0, RelationshipAssociation.objects.count())
+
+    def test_generic_relation(self):
+        """Verify that the GenericRelations on the involved models work correctly."""
+        associations = (
+            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
+            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
+            RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0]),
+        )
+        for association in associations:
+            association.validated_save()
+
+        self.assertEqual(3, self.racks[0].source_for_associations.count())
+        self.assertEqual(0, self.racks[0].destination_for_associations.count())
+        self.assertEqual(0, self.vlans[0].source_for_associations.count())
+        self.assertEqual(1, self.vlans[0].destination_for_associations.count())
