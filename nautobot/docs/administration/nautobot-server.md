@@ -93,6 +93,18 @@ $ nautobot-server generate_secret_key
 e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
 ```
 
+### `health_check`
+
+`nautobot-server  health_check`
+
+```no-highlight
+nautobot-server health_check
+Cache backend: default   ... working
+DatabaseBackend          ... working
+DefaultFileStorageHealthCheck ... working
+```
+
+Performs a health check of the server.  Please see the [healthcheck documentation](/additional-features/healthcheck/) for more information.
 ### `init`
 
 `nautobot-server init [config_path]`
