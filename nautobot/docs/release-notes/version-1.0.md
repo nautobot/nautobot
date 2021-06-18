@@ -192,6 +192,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Fixed
 
 - [#220](https://github.com/nautobot/nautobot/issues/220) - Added a troubleshooting section to the development guide for issues encountered when using the multi-threaded development server
+- [#342](https://github.com/nautobot/nautobot/issues/342) - Fixed inconsistent behavior in `Site.time_zone` to emit and accept input as a null field if not set when using API
 - [#389](https://github.com/nautobot/nautobot/issues/389) - Fixed incorrect TaggedItem base class that caused tag issues on MySQL.
 - [#421](https://github.com/nautobot/nautobot/issues/421) - Fixed `git: Reference at 'refs/heads/master' does not exist` by improving error-handling displaying a warning when a user tries to use an empty repo or a branch that does not exist upstream.
 - [#452](https://github.com/nautobot/nautobot/issues/452) - Fixed `api/dcim/cables` `OPTIONS` response not including the `status` field.
