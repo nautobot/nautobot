@@ -94,7 +94,7 @@ python-versions = "*"
 
 [[package]]
 name = "celery"
-version = "5.1.0"
+version = "5.1.1"
 description = "Distributed Task Queue."
 category = "main"
 optional = false
@@ -145,7 +145,7 @@ zstd = ["zstandard"]
 
 [[package]]
 name = "certifi"
-version = "2020.12.5"
+version = "2021.5.30"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -289,7 +289,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "django"
-version = "3.1.11"
+version = "3.1.12"
 description = "A high-level Python Web framework that encourages rapid development and clean, pragmatic design."
 category = "main"
 optional = false
@@ -535,6 +535,9 @@ optional = false
 python-versions = "^3.6"
 develop = true
 
+[package.dependencies]
+importlib-metadata = {version = "~3.4.0", markers = "python_version < \"3.8\""}
+
 [package.source]
 type = "directory"
 url = "examples/dummy_plugin"
@@ -582,11 +585,11 @@ smmap = ">=3.0.1,<5"
 
 [[package]]
 name = "gitpython"
-version = "3.1.17"
+version = "3.1.18"
 description = "Python Git Library"
 category = "main"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.6"
 
 [package.dependencies]
 gitdb = ">=4.0.1,<5"
@@ -689,14 +692,14 @@ testing = ["pytest (>=3.5,!=3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake
 
 [[package]]
 name = "importlib-resources"
-version = "5.1.3"
+version = "5.1.4"
 description = "Read resources from Python packages"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-zipp = {version = ">=0.4", markers = "python_version < \"3.8\""}
+zipp = {version = ">=3.1.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
@@ -926,16 +929,16 @@ twitter = ["twython"]
 
 [[package]]
 name = "oauthlib"
-version = "3.1.0"
+version = "3.1.1"
 description = "A generic, spec-compliant, thorough implementation of the OAuth request-signing logic"
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.6"
 
 [package.extras]
-rsa = ["cryptography"]
-signals = ["blinker"]
-signedtoken = ["cryptography", "pyjwt (>=1.0.0)"]
+rsa = ["cryptography (>=3.0.0,<4)"]
+signals = ["blinker (>=1.4.0)"]
+signedtoken = ["cryptography (>=3.0.0,<4)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
 name = "packaging"
@@ -966,7 +969,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "prometheus-client"
-version = "0.10.1"
+version = "0.11.0"
 description = "Python client for the Prometheus monitoring system."
 category = "main"
 optional = false
@@ -1175,7 +1178,7 @@ redis = ">=3.5.0"
 
 [[package]]
 name = "ruamel.yaml"
-version = "0.17.4"
+version = "0.17.9"
 description = "ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order"
 category = "main"
 optional = false
@@ -1206,7 +1209,7 @@ python-versions = "*"
 
 [[package]]
 name = "singledispatch"
-version = "3.6.1"
+version = "3.6.2"
 description = "Backport functools.singledispatch from Python 3.4 to Python 2.6-3.3."
 category = "main"
 optional = false
@@ -1217,7 +1220,7 @@ six = "*"
 
 [package.extras]
 docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
-testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pytest-cov", "pytest-black (>=0.3.7)", "unittest2"]
+testing = ["pytest (>=4.6)", "pytest-flake8", "pytest-cov", "pytest-black (>=0.3.7)", "unittest2", "pytest-checkdocs (>=2.4)"]
 
 [[package]]
 name = "six"
@@ -1326,7 +1329,7 @@ python-versions = ">= 3.5"
 
 [[package]]
 name = "tqdm"
-version = "4.60.0"
+version = "4.61.1"
 description = "Fast, Extensible Progress Meter"
 category = "dev"
 optional = false
@@ -1363,16 +1366,16 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "urllib3"
-version = "1.26.4"
+version = "1.26.5"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
 
 [package.extras]
+brotli = ["brotlipy (>=0.6.0)"]
 secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "ipaddress"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
-brotli = ["brotlipy (>=0.6.0)"]
 
 [[package]]
 name = "vine"
@@ -1405,7 +1408,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "60cf247ebfb126c5637fa781d26bf8e1828fe55bb6b0abc1d1945345c15ccb74"
+content-hash = "cbc3741390de6d5a9b20da65c19aa835133c67c1158dd92764309fa6a361c338"
 
 [metadata.files]
 amqp = [
@@ -1440,12 +1443,12 @@ cached-property = [
     {file = "cached_property-1.5.2-py2.py3-none-any.whl", hash = "sha256:df4f613cf7ad9a588cc381aaf4a512d26265ecebd5eb9e1ba12f1319eb85a6a0"},
 ]
 celery = [
-    {file = "celery-5.1.0-py3-none-any.whl", hash = "sha256:1329de1edeaf734ef859e630cb42df2c116d53e59d2f46433b13aed196e85620"},
-    {file = "celery-5.1.0.tar.gz", hash = "sha256:65f061c04578cf189cd7352c192e1a79fdeb370b916bff792bcc769560e81184"},
+    {file = "celery-5.1.1-py3-none-any.whl", hash = "sha256:b5399d76cf70d5cfac3ec993f8796ec1aa90d4cef55972295751f384758a80d7"},
+    {file = "celery-5.1.1.tar.gz", hash = "sha256:54436cd97b031bf2e08064223240e2a83d601d9414bcb1b702f94c6c33c29485"},
 ]
 certifi = [
-    {file = "certifi-2020.12.5-py2.py3-none-any.whl", hash = "sha256:719a74fb9e33b9bd44cc7f3a8d94bc35e4049deebe19ba7d8e108280cfd59830"},
-    {file = "certifi-2020.12.5.tar.gz", hash = "sha256:1a4995114262bffbc2413b159f2a1a480c969de6e6eb13ee966d470af86af59c"},
+    {file = "certifi-2021.5.30-py2.py3-none-any.whl", hash = "sha256:50b1e4f8446b06f41be7dd6338db18e0990601dce795c2b1686458aa7e8fa7d8"},
+    {file = "certifi-2021.5.30.tar.gz", hash = "sha256:2bbf76fd432960138b3ef6dda3dde0544f27cbf8546c458e60baf371917ba9ee"},
 ]
 cffi = [
     {file = "cffi-1.14.5-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:bb89f306e5da99f4d922728ddcd6f7fcebb3241fc40edebcb7284d7514741991"},
@@ -1587,8 +1590,8 @@ defusedxml = [
     {file = "defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69"},
 ]
 django = [
-    {file = "Django-3.1.11-py3-none-any.whl", hash = "sha256:c79245c488411d1ae300b8f7a08ac18a496380204cf3035aff97ad917a8de999"},
-    {file = "Django-3.1.11.tar.gz", hash = "sha256:9a0a2f3d34c53032578b54db7ec55929b87dda6fec27a06cc2587afbea1965e5"},
+    {file = "Django-3.1.12-py3-none-any.whl", hash = "sha256:a523d62b7ab2908f551dabc32b99017a86aa7784e32b761708e52be3dce6d35d"},
+    {file = "Django-3.1.12.tar.gz", hash = "sha256:dc41bf07357f1f4810c1c555b685cb51f780b41e37892d6cc92b89789f2847e1"},
 ]
 django-appconf = [
     {file = "django-appconf-1.0.4.tar.gz", hash = "sha256:be58deb54a43d77d2e1621fe59f787681376d3cd0b8bd8e4758ef6c3a6453380"},
@@ -1675,8 +1678,8 @@ gitdb = [
     {file = "gitdb-4.0.7.tar.gz", hash = "sha256:96bf5c08b157a666fec41129e6d327235284cca4c81e92109260f353ba138005"},
 ]
 gitpython = [
-    {file = "GitPython-3.1.17-py3-none-any.whl", hash = "sha256:29fe82050709760081f588dd50ce83504feddbebdc4da6956d02351552b1c135"},
-    {file = "GitPython-3.1.17.tar.gz", hash = "sha256:ee24bdc93dce357630764db659edaf6b8d664d4ff5447ccfeedd2dc5c253f41e"},
+    {file = "GitPython-3.1.18-py3-none-any.whl", hash = "sha256:fce760879cd2aebd2991b3542876dc5c4a909b30c9d69dfc488e504a8db37ee8"},
+    {file = "GitPython-3.1.18.tar.gz", hash = "sha256:b838a895977b45ab6f0cc926a9045c8d1c44e2b653c1fcc39fe91f42c6e8f05b"},
 ]
 graphene = [
     {file = "graphene-2.1.8-py2.py3-none-any.whl", hash = "sha256:09165f03e1591b76bf57b133482db9be6dac72c74b0a628d3c93182af9c5a896"},
@@ -1703,8 +1706,8 @@ importlib-metadata = [
     {file = "importlib_metadata-3.4.0.tar.gz", hash = "sha256:fa5daa4477a7414ae34e95942e4dd07f62adf589143c875c133c1e53c4eff38d"},
 ]
 importlib-resources = [
-    {file = "importlib_resources-5.1.3-py3-none-any.whl", hash = "sha256:3b9c774e0e7e8d9c069eb2fe6aee7e9ae71759a381dec02eb45249fba7f38713"},
-    {file = "importlib_resources-5.1.3.tar.gz", hash = "sha256:0786b216556e53b34156263ab654406e543a8b0d9b1381019e25a36a09263c36"},
+    {file = "importlib_resources-5.1.4-py3-none-any.whl", hash = "sha256:e962bff7440364183203d179d7ae9ad90cb1f2b74dcb84300e88ecc42dca3351"},
+    {file = "importlib_resources-5.1.4.tar.gz", hash = "sha256:54161657e8ffc76596c4ede7080ca68cb02962a2e074a2586b695a93a925d36e"},
 ]
 inflection = [
     {file = "inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2"},
@@ -1807,8 +1810,8 @@ nltk = [
     {file = "nltk-3.6.2.zip", hash = "sha256:57d556abed621ab9be225cc6d2df1edce17572efb67a3d754630c9f8381503eb"},
 ]
 oauthlib = [
-    {file = "oauthlib-3.1.0-py2.py3-none-any.whl", hash = "sha256:df884cd6cbe20e32633f1db1072e9356f53638e4361bef4e8b03c9127c9328ea"},
-    {file = "oauthlib-3.1.0.tar.gz", hash = "sha256:bee41cc35fcca6e988463cacc3bcb8a96224f470ca547e697b604cc697b2f889"},
+    {file = "oauthlib-3.1.1-py2.py3-none-any.whl", hash = "sha256:42bf6354c2ed8c6acb54d971fce6f88193d97297e18602a3a886603f9d7730cc"},
+    {file = "oauthlib-3.1.1.tar.gz", hash = "sha256:8f0215fcc533dd8dd1bee6f4c412d4f0cd7297307d43ac61666389e3bc3198a3"},
 ]
 packaging = [
     {file = "packaging-20.9-py2.py3-none-any.whl", hash = "sha256:67714da7f7bc052e064859c05c595155bd1ee9f69f76557e21f051443c20947a"},
@@ -1854,8 +1857,8 @@ pillow = [
     {file = "Pillow-8.1.2.tar.gz", hash = "sha256:b07c660e014852d98a00a91adfbe25033898a9d90a8f39beb2437d22a203fc44"},
 ]
 prometheus-client = [
-    {file = "prometheus_client-0.10.1-py2.py3-none-any.whl", hash = "sha256:030e4f9df5f53db2292eec37c6255957eb76168c6f974e4176c711cf91ed34aa"},
-    {file = "prometheus_client-0.10.1.tar.gz", hash = "sha256:b6c5a9643e3545bcbfd9451766cbaa5d9c67e7303c7bc32c750b6fa70ecb107d"},
+    {file = "prometheus_client-0.11.0-py2.py3-none-any.whl", hash = "sha256:b014bc76815eb1399da8ce5fc84b7717a3e63652b0c0f8804092c9363acab1b2"},
+    {file = "prometheus_client-0.11.0.tar.gz", hash = "sha256:3a8baade6cb80bcfe43297e33e7623f3118d660d41387593758e2fb1ea173a86"},
 ]
 promise = [
     {file = "promise-2.3.tar.gz", hash = "sha256:dfd18337c523ba4b6a58801c164c1904a9d4d1b1747c7d5dbf45b693a49d93d0"},
@@ -2072,8 +2075,8 @@ rq = [
     {file = "rq-1.8.1.tar.gz", hash = "sha256:feec0f914e69cae2380e2f46d82901e2abbd6fb09db320acb295f486a338f89f"},
 ]
 "ruamel.yaml" = [
-    {file = "ruamel.yaml-0.17.4-py3-none-any.whl", hash = "sha256:ac79fb25f5476e8e9ed1c53b8a2286d2c3f5dde49eb37dbcee5c7eb6a8415a22"},
-    {file = "ruamel.yaml-0.17.4.tar.gz", hash = "sha256:44bc6b54fddd45e4bc0619059196679f9e8b79c027f4131bb072e6a22f4d5e28"},
+    {file = "ruamel.yaml-0.17.9-py3-none-any.whl", hash = "sha256:8873a6f5516e0d848c92418b0b006519c0566b6cd0dcee7deb9bf399e2bd204f"},
+    {file = "ruamel.yaml-0.17.9.tar.gz", hash = "sha256:374373b4743aee9f6d9f40bea600fe020a7ac7ae36b838b4a6a93f72b584a14c"},
 ]
 "ruamel.yaml.clib" = [
     {file = "ruamel.yaml.clib-0.2.2-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:28116f204103cb3a108dfd37668f20abe6e3cafd0d3fd40dba126c732457b3cc"},
@@ -2113,8 +2116,8 @@ rx = [
     {file = "Rx-1.6.1.tar.gz", hash = "sha256:13a1d8d9e252625c173dc795471e614eadfe1cf40ffc684e08b8fff0d9748c23"},
 ]
 singledispatch = [
-    {file = "singledispatch-3.6.1-py2.py3-none-any.whl", hash = "sha256:85c97f94c8957fa4e6dab113156c182fb346d56d059af78aad710bced15f16fb"},
-    {file = "singledispatch-3.6.1.tar.gz", hash = "sha256:58b46ce1cc4d43af0aac3ac9a047bdb0f44e05f0b2fa2eec755863331700c865"},
+    {file = "singledispatch-3.6.2-py2.py3-none-any.whl", hash = "sha256:0d428477703d8386eb6aeed6e522c9f22d49f4363cdf4ed6a2ba3dc276053e20"},
+    {file = "singledispatch-3.6.2.tar.gz", hash = "sha256:d5bb9405a4b8de48e36709238e8b91b4f6f300f81a5132ba2531a9a738eca391"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
@@ -2197,8 +2200,8 @@ tornado = [
     {file = "tornado-6.1.tar.gz", hash = "sha256:33c6e81d7bd55b468d2e793517c909b139960b6c790a60b7991b9b6b76fb9791"},
 ]
 tqdm = [
-    {file = "tqdm-4.60.0-py2.py3-none-any.whl", hash = "sha256:daec693491c52e9498632dfbe9ccfc4882a557f5fa08982db1b4d3adbe0887c3"},
-    {file = "tqdm-4.60.0.tar.gz", hash = "sha256:ebdebdb95e3477ceea267decfc0784859aa3df3e27e22d23b83e9b272bf157ae"},
+    {file = "tqdm-4.61.1-py2.py3-none-any.whl", hash = "sha256:aa0c29f03f298951ac6318f7c8ce584e48fa22ec26396e6411e43d038243bdb2"},
+    {file = "tqdm-4.61.1.tar.gz", hash = "sha256:24be966933e942be5f074c29755a95b315c69a91f839a29139bf26ffffe2d3fd"},
 ]
 typed-ast = [
     {file = "typed_ast-1.4.3-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:2068531575a125b87a41802130fa7e29f26c09a2833fea68d9a40cf33902eba6"},
@@ -2242,8 +2245,8 @@ uritemplate = [
     {file = "uritemplate-3.0.1.tar.gz", hash = "sha256:5af8ad10cec94f215e3f48112de2022e1d5a37ed427fbd88652fa908f2ab7cae"},
 ]
 urllib3 = [
-    {file = "urllib3-1.26.4-py2.py3-none-any.whl", hash = "sha256:2f4da4594db7e1e110a944bb1b551fdf4e6c136ad42e4234131391e21eb5b0df"},
-    {file = "urllib3-1.26.4.tar.gz", hash = "sha256:e7b021f7241115872f92f43c6508082facffbd1c048e3c6e2bb9c2a157e28937"},
+    {file = "urllib3-1.26.5-py2.py3-none-any.whl", hash = "sha256:753a0374df26658f99d826cfe40394a686d05985786d946fbe4165b5148f5a7c"},
+    {file = "urllib3-1.26.5.tar.gz", hash = "sha256:a7acd0977125325f516bda9735fa7142b909a8d01e8b2e4c8108d0984e6e0098"},
 ]
 vine = [
     {file = "vine-5.0.0-py2.py3-none-any.whl", hash = "sha256:4c9dceab6f76ed92105027c49c823800dd33cacce13bdedc5b914e3514b7fb30"},
