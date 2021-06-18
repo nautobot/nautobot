@@ -9,10 +9,7 @@ While use of Platforms is optional, they provide great value in many use cases.
 To add a Platform:
 
 1. Click on **Devices** in the top navigation menu
-2. Find **Platforms** and click on the `+` icon in the menu
-   
-Once on the the `Add a new platform` form:
-
+2. Find **Platforms** and click on the `+` icon in the menu, which takes you to the `Add a new platform` form
 3. Provide a Name (required)
 4. The Slug will auto-populate based on the Name you provide; you may override this if necessary
 5. Select a Manufacturer from the drop-down selector (optional)
@@ -23,6 +20,7 @@ Once on the the `Add a new platform` form:
 
 !!! tip 
     NAPALM Driver Options include:
+
     - eos (Arista)
     - ios (Cisco)
     - nxos (used with `nxapi` feature)

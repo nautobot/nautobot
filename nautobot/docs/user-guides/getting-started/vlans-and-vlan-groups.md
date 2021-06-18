@@ -15,21 +15,17 @@ The Nautobot documentation has more info about [VLANs and VLAN Groups](https://n
 
 ## VLAN Example
 
-In the following example, we will create two VLANs with overlapping Names and IDs. Neither of the vlan 100 instances is assigned to a group, 
-but each of these VLANs will be assigned to a different Site.
-
-We’ll also create a vlan 200 without a site assignment.
-
-!!! note
-    This example will require a Site (`Ottawa 1`) within a Region (`Ottawa`) in the `North America` Region in addition to the `Vancouver 1` Site and `Vancouver` Region created prior. 
-    Refer back to the [Create a Site](#create-a-site) and [Create a Region](#creating-regions) sections to do so.
-
 The following example will show:
 
 * Creating a `vlan 200` without a site assignment (*global* scope)
 * Creating two VLANs, each with overlapping Names and IDs: ID = `100` and Name = `vlan 100`
   * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different site (*site-specific* scope)
 * How the *site-specific* and *global* scopes affect which VLANs can be assigned on which Devices
+
+!!! note
+    This example will require a Site (`Ottawa 1`) within a Region (`Ottawa`) in the `North America` Region in addition to the `Vancouver 1` Site and `Vancouver` Region created prior. 
+    Refer back to the [Create a Site](creating-devices.md/#create-a-site) and [Create a Region](regions.md/#creating-regions) sections to do so.
+
 
 ### Creating the VLANs
 
