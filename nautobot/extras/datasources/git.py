@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
+from django.utils.text import slugify
 from django_rq import job
 import yaml
 
@@ -17,6 +18,7 @@ from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     ExportTemplate,
     GitRepository,
     JobResult,
@@ -552,6 +554,152 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
 
 
 #
+# Config Context Schemas
+#
+
+
+def refresh_git_config_context_schemas(repository_record, job_result, delete=False):
+    """Callback function for GitRepository updates - refresh all ConfigContext records managed by this repository."""
+    if "extras.configcontextschema" in repository_record.provided_contents and not delete:
+        update_git_config_context_schemas(repository_record, job_result)
+    else:
+        delete_git_config_context_schemas(repository_record, job_result)
+
+
+def update_git_config_context_schemas(repository_record, job_result):
+    """Refresh any config context schemas provided by this Git repository."""
+    config_context_path = os.path.join(repository_record.filesystem_path, "config_context_schemas")
+    if not os.path.isdir(config_context_path):
+        return
+
+    managed_config_context_schemas = set()
+
+    # First, handle the "flat file" case - data files in the root config_context_path,
+    # whose metadata is expressed purely within the contents of the file:
+    for file_name in os.listdir(config_context_path):
+        if not os.path.isfile(os.path.join(config_context_path, file_name)):
+            continue
+        job_result.log(
+            f"Loading config context schema from `{file_name}`",
+            grouping="config contexts",
+            logger=logger,
+        )
+        try:
+            with open(os.path.join(config_context_path, file_name), "r") as fd:
+                # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
+                try:
+                    context_schema_data = yaml.safe_load(fd)
+                except Exception as exc:
+                    raise RuntimeError(f"Error in loading config context data from `{file_name}`: {exc}")
+
+            # A file can contain one config context dict or a list thereof
+            if isinstance(context_schema_data, dict):
+                context_name = import_config_context_schema(context_schema_data, repository_record, job_result, logger)
+                managed_config_context_schemas.add(context_name)
+            else:
+                raise RuntimeError(
+                    f"Error in loading config context data from `{file_name}`: data must be a dict or list of dicts"
+                )
+        except Exception as exc:
+            job_result.log(
+                str(exc),
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="config contexts",
+                logger=logger,
+            )
+            job_result.save()
+
+    # Delete any prior contexts that are owned by this repository but were not created/updated above
+    delete_git_config_context_schemas(
+        repository_record,
+        job_result,
+        preserve=managed_config_context_schemas,
+    )
+
+
+def import_config_context_schema(context_schema_data, repository_record, job_result, logger):
+    """Using data from schema file, create schema record in Nautobot."""
+    git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
+
+    created = False
+    modified = False
+
+    if not context_schema_data.get("title"):
+        raise RuntimeError("File has no title set.")
+    if not context_schema_data.get("properties"):
+        raise RuntimeError("File has no schema to enforce.")
+
+    try:
+        schema_record = ConfigContextSchema.objects.get(
+            name=context_schema_data["title"],
+            owner_content_type=git_repository_content_type,
+            owner_object_id=repository_record.pk,
+        )
+    except ConfigContextSchema.DoesNotExist:
+        schema_record = ConfigContextSchema(
+            name=context_schema_data["title"],
+            slug=slugify(context_schema_data["title"]),
+            owner_content_type=git_repository_content_type,
+            owner_object_id=repository_record.pk,
+        )
+        created = True
+
+    if schema_record.description != context_schema_data.get("description", ""):
+        schema_record.description = context_schema_data.get("description", "")
+        modified = True
+
+    if schema_record.data_schema != context_schema_data.get("properties"):
+        schema_record.data_schema = context_schema_data.get("properties")
+        modified = True
+
+    if created:
+        schema_record.validated_save()
+        job_result.log(
+            "Successfully created config context",
+            obj=schema_record,
+            level_choice=LogLevelChoices.LOG_SUCCESS,
+            grouping="config contexts",
+            logger=logger,
+        )
+    elif modified:
+        schema_record.validated_save()
+        job_result.log(
+            "Successfully refreshed config context",
+            obj=schema_record,
+            level_choice=LogLevelChoices.LOG_SUCCESS,
+            grouping="config contexts",
+            logger=logger,
+        )
+    else:
+        job_result.log(
+            "No change to config context",
+            obj=schema_record,
+            level_choice=LogLevelChoices.LOG_INFO,
+            grouping="config contexts",
+            logger=logger,
+        )
+
+    return schema_record.name if schema_record else None
+
+
+def delete_git_config_context_schemas(repository_record, job_result, preserve=()):
+    """Delete config context schemas owned by this Git repository that are not in the preserve list (if any)."""
+    git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
+    for schema_record in ConfigContextSchema.objects.filter(
+        owner_content_type=git_repository_content_type,
+        owner_object_id=repository_record.pk,
+    ):
+        if schema_record.name not in preserve:
+            schema_record.delete()
+            job_result.log(
+                f"Deleted config context {schema_record}",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                grouping="config contexts",
+                logger=logger,
+            )
+
+
+#
 # Job handling
 #
 
@@ -730,6 +878,15 @@ register_datasource_contents(
                 content_identifier="extras.exporttemplate",
                 icon="mdi-database-export",
                 callback=refresh_git_export_templates,
+            ),
+        ),
+        (
+            "extras.gitrepository",
+            DatasourceContent(
+                name="config context schemas",
+                content_identifier="extras.configcontextschema",
+                icon="mdi-floor-plan",
+                callback=refresh_git_config_context_schemas,
             ),
         ),
     ]
