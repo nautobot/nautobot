@@ -51,7 +51,7 @@ BANNER_LOGIN = ""
 BANNER_TOP = ""
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.environ.get("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
 CHANGELOG_RETENTION = 90
 DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), "docs")
@@ -71,9 +71,9 @@ EXEMPT_EXCLUDE_MODELS = (
 )
 
 EXEMPT_VIEW_PERMISSIONS = []
-GIT_ROOT = os.environ.get("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
+GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
-JOBS_ROOT = os.environ.get("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000
 
@@ -271,7 +271,7 @@ REDIS = {
 }
 
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # Default overrides
 ALLOWED_HOSTS = []

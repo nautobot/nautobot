@@ -92,7 +92,7 @@ def configure_app(
 
     # normalize path
     if settings_envvar in os.environ:
-        default_config_path = os.environ.get(settings_envvar)
+        default_config_path = os.getenv(settings_envvar)
     else:
         default_config_path = os.path.normpath(os.path.abspath(os.path.expanduser(default_config_path)))
 
