@@ -27,8 +27,6 @@ PLUGINS = [
     "dummy_plugin",
 ]
 
-CRYPTOGRAPHY_KEY = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 

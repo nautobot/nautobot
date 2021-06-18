@@ -77,7 +77,8 @@ class ValidatedModelSerializer(BaseModelSerializer):
 
 class WritableNestedSerializer(BaseModelSerializer):
     """
-    Returns a nested representation of an object on read, but accepts only a primary key on write.
+    Returns a nested representation of an object on read, but accepts either the nested representation or the
+    primary key value on write operations.
     """
 
     def to_internal_value(self, data):
