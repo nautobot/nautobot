@@ -33,7 +33,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Fill out form
         self.browser.fill("name", "Integration Schema 1")
         self.browser.fill("description", "Description")
-        self.browser.fill("data_schema", '{"properties": {"a": {"type": "string"}}}')
+        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
         self.browser.find_by_text("Create").click()
 
         # Verify form redirect
@@ -60,7 +60,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Fill out form
         self.browser.fill("name", "Integration Schema 2")
         self.browser.fill("description", "Description")
-        self.browser.fill("data_schema", '{"properties": {"a": {"type": "not a valid type"}}}')
+        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
         self.browser.find_by_text("Create").click()
 
         # Verify validation error raised to user within form

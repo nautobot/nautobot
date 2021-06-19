@@ -354,17 +354,17 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "Schema 4",
             "slug": "schema-4",
-            "data_schema": {"properties": {"foo": {"type": "string"}}},
+            "data_schema": {"type": "object", "properties": {"foo": {"type": "string"}}},
         },
         {
             "name": "Schema 5",
             "slug": "schema-5",
-            "data_schema": {"properties": {"bar": {"type": "string"}}},
+            "data_schema": {"type": "object", "properties": {"bar": {"type": "string"}}},
         },
         {
             "name": "Schema 6",
             "slug": "schema-6",
-            "data_schema": {"properties": {"buz": {"type": "string"}}},
+            "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
         },
     ]
     bulk_update_data = {
@@ -375,13 +375,13 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"properties": {"foo": {"type": "string"}}}
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         ),
         ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"properties": {"bar": {"type": "string"}}}
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
         ),
         ConfigContextSchema.objects.create(
-            name="Schema 3", slug="schema-3", data_schema={"properties": {"baz": {"type": "string"}}}
+            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
         ),
 
 

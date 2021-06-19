@@ -52,15 +52,6 @@ CONFIGCONTEXT_ACTIONS = """
 {% endif %}
 """
 
-CONFIGCONTEXTSCHEMA_ACTIONS = """
-{% if perms.extras.change_configcontextschema %}
-    <a href="{% url 'extras:configcontext_edit' slug=record.slug %}" class="btn btn-xs btn-warning"><i class="mdi mdi-pencil" aria-hidden="true"></i></a>
-{% endif %}
-{% if perms.extras.delete_configcontextschema %}
-    <a href="{% url 'extras:configcontextschema_delete' slug=record.slug %}" class="btn btn-xs btn-danger"><i class="mdi mdi-trash-can-outline" aria-hidden="true"></i></a>
-{% endif %}
-"""
-
 GITREPOSITORY_PROVIDES = """
 <span class="text-nowrap">
 {% for entry in datasource_contents %}
@@ -144,6 +135,7 @@ class ConfigContextSchemaTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     owner = tables.LinkColumn()
+    actions = ButtonsColumn(ConfigContextSchema, pk_field="slug")
 
     class Meta(BaseTable.Meta):
         model = ConfigContextSchema
@@ -152,8 +144,9 @@ class ConfigContextSchemaTable(BaseTable):
             "name",
             "owner",
             "description",
+            "actions",
         )
-        default_columns = ("pk", "name", "description")
+        default_columns = ("pk", "name", "description", "actions")
 
 
 class GitRepositoryTable(BaseTable):

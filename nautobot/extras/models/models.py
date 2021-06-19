@@ -585,7 +585,7 @@ class ConfigContextSchema(OrganizationalModel):
         ):
             raise ValidationError(
                 {
-                    "data_schema": "Nautobot only supports context data in form of an object and thus the "
+                    "data_schema": "Nautobot only supports context data in the form of an object and thus the "
                     "JSON schema must be of type object and specify a set of properties."
                 }
             )
