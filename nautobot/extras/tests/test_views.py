@@ -124,19 +124,19 @@ class ConfigContextSchemaTestCase(
 
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"properties": {"foo": {"type": "string"}}}
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         ),
         ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"properties": {"bar": {"type": "string"}}}
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
         ),
         ConfigContextSchema.objects.create(
-            name="Schema 3", slug="schema-3", data_schema={"properties": {"baz": {"type": "string"}}}
+            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
         ),
 
         cls.form_data = {
             "name": "Schema X",
             "slug": "schema-x",
-            "data_schema": '{"properties": {"baz": {"type": "string"}}}',
+            "data_schema": '{"type": "object", "properties": {"baz": {"type": "string"}}}',
         }
 
         cls.bulk_edit_data = {
