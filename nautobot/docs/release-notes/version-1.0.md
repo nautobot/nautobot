@@ -177,7 +177,7 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
-## Unreleased (2021-MM-DD)
+## v1.0.3 (2021-06-21)
 
 ### Added
 
