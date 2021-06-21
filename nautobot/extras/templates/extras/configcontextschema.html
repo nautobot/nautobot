@@ -1,56 +1,6 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
+{% extends 'extras/configcontextschema/base.html' %}
 {% load helpers %}
 {% load plugins %}
-
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:configcontextschema_list' %}">Config Context Schemas</a></li>
-                <li>{{ object }}</li>
-            </ol>
-        </div>
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url 'extras:configcontextschema_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search config context schemas"/>
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        <div class="pull-right noprint">
-            {% plugin_buttons object %}
-            {% if perms.extras.add_configcontextschema %}
-                {% clone_button object %}
-            {% endif %}
-            {% if perms.extras.change_configcontextschema %}
-                {% edit_button object %}
-            {% endif %}
-            {% if perms.extras.delete_configcontextschema %}
-                {% delete_button object %}
-            {% endif %}
-        </div>
-    </div>
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Config Context Schema</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:configcontextschema_changelog' slug=object.slug %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-{% endblock %}
 
 {% block content %}
     <div class="row">

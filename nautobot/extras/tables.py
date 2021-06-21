@@ -5,7 +5,9 @@ import django_tables2 as tables
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
+from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.utilities.tables import (
     BaseTable,
@@ -147,6 +149,28 @@ class ConfigContextSchemaTable(BaseTable):
             "actions",
         )
         default_columns = ("pk", "name", "description", "actions")
+
+
+class ConfigContextSchemaValidationStateColumn(tables.Column):
+    """
+    Custom column that validates an instance's context data against a config context schema
+    """
+
+    def __init__(self, validator, data_field, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.validator = validator
+        self.data_field = data_field
+
+    def render(self, record):
+        data = getattr(record, self.data_field)
+        try:
+            self.validator.validate(data)
+        except JSONSchemaValidationError as e:
+            # Return a red x (like a boolean column) and the validation error message
+            return mark_safe(f'<span class="text-danger"><i class="mdi mdi-close-thick"></i>{e.message}</span>')
+
+        # Return a green check (like a boolean column)
+        return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
 
 
 class GitRepositoryTable(BaseTable):

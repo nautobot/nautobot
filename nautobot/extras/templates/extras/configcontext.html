@@ -13,7 +13,7 @@
         <div class="col-sm-4 col-md-3">
             <form action="{% url 'extras:configcontext_list' %}" method="get">
                 <div class="input-group">
-                    <input type="text" name="q" class="form-control" />
+                    <input type="text" name="q" class="form-control" placeholder="Search config contexts"/>
                     <span class="input-group-btn">
                         <button type="submit" class="btn btn-primary">
                             <span class="mdi mdi-magnify" aria-hidden="true"></span>
@@ -31,6 +31,8 @@
             </a>
         {% endif %}
     </div>
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
     <ul class="nav nav-tabs">
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Config Context</a>
@@ -41,7 +43,6 @@
             </li>
         {% endif %}
     </ul>
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}

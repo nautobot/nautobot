@@ -418,7 +418,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
     schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         help_text="Optional schema to validate the structure of the data",
@@ -473,7 +473,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     )
     local_context_schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         help_text="Optional schema to validate the structure of the data",

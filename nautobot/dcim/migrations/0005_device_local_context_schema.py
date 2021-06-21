@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             model_name="device",
             name="local_context_schema",
             field=models.ForeignKey(
-                blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to="extras.configcontextschema"
+                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to="extras.configcontextschema"
             ),
         ),
     ]
