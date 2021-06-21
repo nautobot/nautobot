@@ -100,6 +100,8 @@ def register_menu_items(tab_list):
             )
             # Add collected permissions to tab dict
             registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] |= tab_perms
+        else:
+            raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {nav_tab}")
 
         # Order all tabs in dict
         registry["nav_menu"]["tabs"] = OrderedDict(

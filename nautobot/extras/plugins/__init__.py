@@ -327,6 +327,9 @@ def register_plugin_menu_items(section_name, menu_items):
     """
     new_menu_items = []
     new_menu_item_weight = 100
+
+    nav_menu_items = set()
+
     for menu_item in menu_items:
         if isinstance(menu_item, PluginMenuItem):
             # translate old-style plugin menu definitions into the new nav-menu items and buttons
@@ -356,6 +359,10 @@ def register_plugin_menu_items(section_name, menu_items):
                 )
             )
             new_menu_item_weight += 100
+        elif isinstance(menu_item, NavMenuTab):
+            nav_menu_items.add(menu_item)
+        else:
+            raise TypeError("Top level objects need to be an instance of NavMenuTab or PluginMenuItem: {menu_tab}")
 
     if new_menu_items:
         # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
@@ -366,7 +373,7 @@ def register_plugin_menu_items(section_name, menu_items):
             )
         else:
             weight = 100
-        menu_items += (
+        nav_menu_items.add(
             NavMenuTab(
                 name="Plugins",
                 weight=5000,
@@ -374,7 +381,7 @@ def register_plugin_menu_items(section_name, menu_items):
             ),
         )
 
-    register_menu_items(menu_items)
+    register_menu_items(nav_menu_items)
 
 
 #
