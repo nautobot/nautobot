@@ -39,7 +39,7 @@ def create_or_check_entry(grouping, record, key, path):
         grouping[key] = record.initial_dict
     else:
         for attr, value in record.fixed_fields:
-            if grouping[key][attr] != value and attr != "weight":
+            if grouping[key][attr]:
                 logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
 
 
@@ -152,7 +152,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
 
     @property
     def fixed_fields(self):
-        return (("weight", self.weight),)
+        return ()
 
     def __init__(self, name, permissions=None, groups=None, weight=1000):
         """Ensure tab properties."""
@@ -187,7 +187,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
 
     @property
     def fixed_fields(self):
-        return (("weight", self.weight),)
+        return ()
 
     def __init__(self, name, items=None, weight=1000):
         """Ensure group properties."""
@@ -224,7 +224,6 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         return (
             ("link_text", self.link_text),
             ("permissions", self.permissions),
-            ("weight", self.weight),
         )
 
     permissions = []
@@ -258,7 +257,6 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             "link": self.link,
             "icon_class": self.icon_class,
             "button_class": self.button_class,
-            "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
         }
@@ -270,7 +268,6 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             ("icon_class", self.icon_class),
             ("link", self.link),
             ("permissions", self.permissions),
-            ("weight", self.weight),
         )
 
     def __init__(

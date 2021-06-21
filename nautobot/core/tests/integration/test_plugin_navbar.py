@@ -72,7 +72,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     def test_plugin_navbar_new_tab(self):
         """
-        Render navbar from home page with superuser.
+        Verify that a new menu tab defined and populated by the dummy plugin is rendered properly.
         """
         # Set test user to admin
         self.user.is_superuser = True
@@ -93,7 +93,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     def test_plugin_navbar_modify_circuits(self):
         """
-        Render navbar from home page with superuser.
+        Verify that the dummy plugin is able to add a new group and items to an existing menu tab.
         """
         # Set test user to admin
         self.user.is_superuser = True
@@ -120,18 +120,16 @@ class PluginNavBarTestCase(SeleniumTestCase):
                     # Ensure button has matching class for its name
                     button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
                     if button_class:
-                        rendered_button_class = button.get_attribute("class").split(" ")[-1].split("-")[-1]
-                        self.assertEquals(button_class, rendered_button_class)
+                        self.assertIn(button_class, button.get_attribute("class"))
                     # Ensure button has matching icon for its name
                     button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
                     if button_icon:
                         icon = button.find_element_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
-                        rendered_button_icon = icon.get_attribute("class").split(" ")[-1]
-                        self.assertEquals(button_icon, rendered_button_icon)
+                        self.assertIn(button_icon, icon.get_attribute("class"))
 
     def test_plugin_navbar_plugin_tab(self):
         """
-        Render navbar from home page with superuser.
+        Test that old-style plugin menu definitions are correctly rendered to the Plugins menu tab.
         """
         # Set test user to admin
         self.user.is_superuser = True
@@ -139,11 +137,6 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
         # Retrieve home page
         self.load_page(self.live_server_url)
-
-        tab_xpath = f"//*[@id='navbar']//*[contains(text(), 'Circuits')]"
-        tab = self.selenium.find_element_by_xpath(tab_xpath)
-        tab.click()
-        self.assertTrue(bool(tab.get_attribute("aria-expanded")))
 
         tab_xpath = f"//*[@id='navbar']//*[contains(text(), 'Plugins')]"
         tab = self.selenium.find_element_by_xpath(tab_xpath)
@@ -163,11 +156,9 @@ class PluginNavBarTestCase(SeleniumTestCase):
                     # Ensure button has matching class for its name
                     button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
                     if button_class:
-                        rendered_button_class = button.get_attribute("class").split(" ")[-1].split("-")[-1]
-                        self.assertEquals(button_class, rendered_button_class)
+                        self.assertIn(button_class, button.get_attribute("class"))
                     # Ensure button has matching icon for its name
                     button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
                     if button_icon:
                         icon = button.find_element_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
-                        rendered_button_icon = icon.get_attribute("class").split(" ")[-1]
-                        self.assertEquals(button_icon, rendered_button_icon)
+                        self.assertIn(button_icon, icon.get_attribute("class"))
