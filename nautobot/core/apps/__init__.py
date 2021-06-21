@@ -39,7 +39,7 @@ def create_or_check_entry(grouping, record, key, path):
         grouping[key] = record.initial_dict
     else:
         for attr, value in record.fixed_fields:
-            if grouping[key][attr] != value:
+            if grouping[key][attr] != value and attr != "weight":
                 logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
 
 
