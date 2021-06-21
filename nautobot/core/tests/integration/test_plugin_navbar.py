@@ -86,9 +86,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
         tab.click()
         self.assertTrue(bool(tab.get_attribute("aria-expanded")))
 
-        group = tab.find_element_by_xpath(
-            f"{tab_xpath}/following-sibling::ul//li[contains(text(), 'Dummy Group 1')]"
-        )
+        group = tab.find_element_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), 'Dummy Group 1')]")
 
         item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), 'Dummy Model')]]"
         group.find_element_by_xpath(item_xpath)
