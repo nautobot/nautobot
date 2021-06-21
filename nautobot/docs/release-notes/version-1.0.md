@@ -214,8 +214,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#570](https://github.com/nautobot/nautobot/issues/570) - Fixed inability to import `ExportTemplates` for the `VLAN` model via Git.
 - [#583](https://github.com/nautobot/nautobot/pull/583) - Fixed incorrect rejection of various forms when explicitly selecting a `null` option. (Port of [NetBox #5704](https://github.com/netbox-community/netbox/pull/5704))
 
-### Removed
-
 ### Security
 
 - [#418](https://github.com/nautobot/nautobot/issues/418) - Removed unused JQuery-UI component flagged by vulnerability scanner (CVE-2020-7729)
