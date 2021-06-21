@@ -64,6 +64,7 @@ nav:
         - Custom Links: 'models/extras/customlink.md'
         - Export Templates: 'models/extras/exporttemplate.md'
         - Git Repositories: 'models/extras/gitrepository.md'
+        - Health Check: 'additional-features/healthcheck.md'
         - Jobs: 'additional-features/jobs.md'
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'

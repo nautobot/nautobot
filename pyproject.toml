@@ -41,6 +41,8 @@ django-cors-headers = "~3.7.0"
 django-cryptography = "~1.0"
 # Advanced query filters
 django-filter = "~2.4.0"
+# Health check endpoint
+django-health-check = "^3.16.4"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
 # Prometheus metrics for Django
