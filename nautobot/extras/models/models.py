@@ -292,6 +292,17 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
         if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
 
+        # Don't allow two ExportTemplates with the same name, content_type, and owner.
+        # This is necessary because Django doesn't consider NULL=NULL, and so if owner is NULL the unique_together
+        # condition will never be matched even if name and content_type are the same.
+        if ExportTemplate.objects.exclude(pk=self.pk).filter(
+            name=self.name,
+            content_type=self.content_type,
+            owner_content_type=self.owner_content_type,
+            owner_object_id=self.owner_object_id,
+        ):
+            raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
+
 
 #
 # Image attachments
@@ -422,6 +433,13 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
         # Verify that JSON data is provided as an object
         if type(self.data) is not dict:
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
+
+        # Check for a duplicated `name`. This is necessary because Django does not consider two NULL fields to be equal,
+        # and thus if the `owner` is NULL, a duplicate `name` will not otherwise automatically raise an exception.
+        if ConfigContext.objects.exclude(pk=self.pk).filter(
+            name=self.name, owner_content_type=self.owner_content_type, owner_object_id=self.owner_object_id
+        ):
+            raise ValidationError({"name": "A ConfigContext with this name already exists."})
 
 
 class ConfigContextModel(models.Model):
