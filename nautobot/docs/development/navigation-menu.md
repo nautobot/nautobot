@@ -123,7 +123,7 @@ A `NavMenuItem` has the following attributes:
 * `buttons` - An iterable of NavMenuButton instances to display (optional)
 
 !!! note
-    Any buttons associated within a menu item will be shown only if the user has permission to view the link, regardless of what permissions are set on the buttons.
+    Any buttons associated within a menu item will be hidden if the user does not have permission to access the menu item, regardless of what permissions are set on the buttons.
 
 A `NavMenuButton` has the following attributes:
 
