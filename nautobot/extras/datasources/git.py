@@ -559,7 +559,7 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
 
 
 def refresh_git_config_context_schemas(repository_record, job_result, delete=False):
-    """Callback function for GitRepository updates - refresh all ConfigContext records managed by this repository."""
+    """Callback function for GitRepository updates - refresh all ConfigContextSchema records managed by this repository."""
     if "extras.configcontextschema" in repository_record.provided_contents and not delete:
         update_git_config_context_schemas(repository_record, job_result)
     else:
@@ -590,7 +590,7 @@ def update_git_config_context_schemas(repository_record, job_result):
                 try:
                     context_schema_data = yaml.safe_load(fd)
                 except Exception as exc:
-                    raise RuntimeError(f"Error in loading config context data from `{file_name}`: {exc}")
+                    raise RuntimeError(f"Error in loading config context schema data from `{file_name}`: {exc}")
 
             # A file can contain one config context dict or a list thereof
             if isinstance(context_schema_data, dict):
@@ -598,7 +598,7 @@ def update_git_config_context_schemas(repository_record, job_result):
                 managed_config_context_schemas.add(context_name)
             else:
                 raise RuntimeError(
-                    f"Error in loading config context data from `{file_name}`: data must be a dict or list of dicts"
+                    f"Error in loading config context schema data from `{file_name}`: data must be a dict or list of dicts"
                 )
         except Exception as exc:
             job_result.log(
@@ -655,10 +655,10 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
     if created:
         schema_record.validated_save()
         job_result.log(
-            "Successfully created config context",
+            "Successfully created config context schema",
             obj=schema_record,
             level_choice=LogLevelChoices.LOG_SUCCESS,
-            grouping="config contexts",
+            grouping="config context schemas",
             logger=logger,
         )
     elif modified:
@@ -667,7 +667,7 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
             "Successfully refreshed config context",
             obj=schema_record,
             level_choice=LogLevelChoices.LOG_SUCCESS,
-            grouping="config contexts",
+            grouping="config context schemas",
             logger=logger,
         )
     else:
@@ -675,7 +675,7 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
             "No change to config context",
             obj=schema_record,
             level_choice=LogLevelChoices.LOG_INFO,
-            grouping="config contexts",
+            grouping="config context schemas",
             logger=logger,
         )
 
@@ -692,9 +692,9 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
         if schema_record.name not in preserve:
             schema_record.delete()
             job_result.log(
-                f"Deleted config context {schema_record}",
+                f"Deleted config context schema {schema_record}",
                 level_choice=LogLevelChoices.LOG_WARNING,
-                grouping="config contexts",
+                grouping="config context schemas",
                 logger=logger,
             )
 
