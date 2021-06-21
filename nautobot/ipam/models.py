@@ -554,16 +554,6 @@ class Prefix(PrimaryModel, StatusModel):
             if self.prefix.prefixlen == 0:
                 raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
 
-            # Disallow host masks
-            if self.prefix.version == 4 and self.prefix.prefixlen == 32:
-                raise ValidationError(
-                    {"prefix": "Cannot create host addresses (/32) as prefixes. Create an IPv4 address instead."}
-                )
-            elif self.prefix.version == 6 and self.prefix.prefixlen == 128:
-                raise ValidationError(
-                    {"prefix": "Cannot create host addresses (/128) as prefixes. Create an IPv6 address instead."}
-                )
-
             # Enforce unique IP space (if applicable)
             if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
                 duplicate_prefixes = self.get_duplicates()
@@ -665,9 +655,9 @@ class Prefix(PrimaryModel, StatusModel):
         if self.is_pool:
             return available_ips
 
-        # All IP addresses within a point-to-point prefix (IPv4 /31 or IPv6 /127) are considered usable
-        if (self.prefix.version == 4 and self.prefix.prefixlen == 31) or (  # RFC 3021
-            self.prefix.version == 6 and self.prefix.prefixlen == 127  # RFC 6164
+        # All IP addresses within a prefix are considered usable
+        if (self.prefix.version == 4 and self.prefix.prefixlen >= 31) or (  # RFC 3021
+            self.prefix.version == 6 and self.prefix.prefixlen >= 127  # RFC 6164
         ):
             return available_ips
 
