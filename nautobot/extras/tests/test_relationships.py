@@ -343,7 +343,28 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         for association in associations:
             association.validated_save()
 
+        # Check that the GenericRelation lookup works correctly
         self.assertEqual(3, self.racks[0].source_for_associations.count())
         self.assertEqual(0, self.racks[0].destination_for_associations.count())
         self.assertEqual(0, self.vlans[0].source_for_associations.count())
         self.assertEqual(1, self.vlans[0].destination_for_associations.count())
+
+        # Check that the related_query_names work correctly for each individual RelationshipAssociation
+        self.assertEqual([self.racks[0]], list(associations[0].source_dcim_rack.all()))
+        self.assertEqual([self.vlans[0]], list(associations[0].destination_ipam_vlan.all()))
+        self.assertEqual([], list(associations[0].destination_dcim_site.all()))
+
+        self.assertEqual([self.racks[0]], list(associations[1].source_dcim_rack.all()))
+        self.assertEqual([self.vlans[1]], list(associations[1].destination_ipam_vlan.all()))
+        self.assertEqual([], list(associations[1].destination_dcim_site.all()))
+
+        self.assertEqual([self.racks[0]], list(associations[2].source_dcim_rack.all()))
+        self.assertEqual([], list(associations[2].destination_ipam_vlan.all()))
+        self.assertEqual([self.sites[0]], list(associations[2].destination_dcim_site.all()))
+
+        # Check that the related query names can be used for filtering as well
+        self.assertEqual(3, RelationshipAssociation.objects.filter(source_dcim_rack=self.racks[0]).count())
+        self.assertEqual(2, RelationshipAssociation.objects.filter(destination_ipam_vlan__isnull=False).count())
+        self.assertEqual(1, RelationshipAssociation.objects.filter(destination_ipam_vlan=self.vlans[0]).count())
+        self.assertEqual(1, RelationshipAssociation.objects.filter(destination_ipam_vlan=self.vlans[1]).count())
+        self.assertEqual(1, RelationshipAssociation.objects.filter(destination_dcim_site=self.sites[0]).count())
