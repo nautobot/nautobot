@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from jinja2.exceptions import TemplateError
 
-from nautobot.core.celery import app
+from nautobot.core.celery import nautobot_task
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.utils import generate_signature
 
@@ -13,7 +13,7 @@ from nautobot.extras.utils import generate_signature
 logger = getLogger("nautobot.extras.tasks")
 
 
-@app.task()
+@nautobot_task
 def update_custom_field_choice_data(field_id, old_value, new_value):
     """
     Update the values for a custom field choice used in objects' _custom_field_data for the given field.
@@ -54,7 +54,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         return False
 
 
-@app.task()
+@nautobot_task
 def delete_custom_field_data(field_name, content_type_pk_set):
     """
     Delete the values for a custom field
@@ -70,7 +70,7 @@ def delete_custom_field_data(field_name, content_type_pk_set):
             obj.save()
 
 
-@app.task()
+@nautobot_task
 def provision_field(field_id, content_type_pk_set):
     """
     Provision a new custom field on all relevant content type object instances.
@@ -94,7 +94,7 @@ def provision_field(field_id, content_type_pk_set):
             obj.save()
 
 
-@app.task()
+@nautobot_task
 def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id):
     """
     Make a POST request to the defined Webhook

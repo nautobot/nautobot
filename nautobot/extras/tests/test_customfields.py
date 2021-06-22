@@ -982,6 +982,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
     def setUpClass(cls):
         """Start a celery worker"""
         super().setUpClass()
+        # Special namespace loading of methods needed by start_worker, per the celery docs
         app.loader.import_module("celery.contrib.testing.tasks")
         cls.clear_worker()
         cls.celery_worker = start_worker(app, concurrency=1)
@@ -1060,6 +1061,8 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         )
         cf.save()
         cf.content_types.set([obj_type])
+
+        self.wait_on_active_tasks()
 
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()

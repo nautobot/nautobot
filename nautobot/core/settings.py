@@ -497,10 +497,10 @@ RQ_QUEUES = {
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
-# Global task time limit
+# Global task time limit (seconds)
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
-# The Redis connection fined in the CACHES config above for the broker and results backend
+# The Redis connection defined in the CACHES config above for the broker and results backend
 CELERY_BROKER_URL = CACHES["default"]["LOCATION"]
 CELERY_RESULT_BACKEND = CACHES["default"]["LOCATION"]
 

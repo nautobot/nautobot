@@ -13,7 +13,6 @@ import yaml
 
 from django import forms
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.utils import timezone
@@ -28,7 +27,7 @@ from .forms import JobForm
 from .models import GitRepository
 from .registry import registry
 
-from nautobot.core.celery import app
+from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -790,7 +789,7 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
-@app.task()
+@nautobot_task
 def run_job(data, request, job_result, commit=True, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.

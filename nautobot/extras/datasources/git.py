@@ -10,10 +10,9 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
-from django_rq import job
 import yaml
 
-from nautobot.core.celery import app
+from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
@@ -50,7 +49,7 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
     )
 
 
-@app.task()
+@nautobot_task
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().

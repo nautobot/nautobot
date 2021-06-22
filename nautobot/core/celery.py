@@ -4,15 +4,18 @@ import os
 
 import nautobot
 
-from celery import Celery
+from celery import Celery, shared_task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.module_loading import import_string
 from kombu.serialization import register
 
 logger = logging.getLogger(__name__)
 
+# First, we need to call setup on the app to initialize settings
+nautobot.setup()
+
 # Set the default Django settings module for the 'celery' program.
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot.core.settings")
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot.core.settings")
 
 app = Celery("nautobot")
 
@@ -20,8 +23,6 @@ app = Celery("nautobot")
 # the configuration object to child processes.
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
-# First, we need to call setup on the app to initialize settings
-nautobot.setup()
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Load task modules from all registered Django apps.
@@ -93,3 +94,14 @@ def _loads(obj):
 
 # Register the custom serialization type
 register("nautobot_json", _dumps, _loads, content_type="application/x-nautobot-json", content_encoding="utf-8")
+
+
+#
+# nautobot_task
+#
+# By exposing `shared_task` within our own namespace, we leave the door open to
+# extending and expanding the useage and meaning of shared_task without having
+# to undergo further refactoring of task's decorators.
+#
+
+nautobot_task = shared_task
