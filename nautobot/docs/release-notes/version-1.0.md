@@ -177,7 +177,7 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
-## Unreleased (2021-MM-DD)
+## v1.0.3 (2021-06-21)
 
 ### Added
 
@@ -199,6 +199,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#421](https://github.com/nautobot/nautobot/issues/421) - Fixed `git: Reference at 'refs/heads/master' does not exist` by improving error-handling displaying a warning when a user tries to use an empty repo or a branch that does not exist upstream.
 - [#452](https://github.com/nautobot/nautobot/issues/452) - Fixed `api/dcim/cables` `OPTIONS` response not including the `status` field.
 - [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
+- [#490](https://github.com/nautobot/nautobot/issues/490) - Fixed incorrect VLAN count displayed in VLANGroup detail views.
 - [#499](https://github.com/nautobot/nautobot/issues/499) - Fixed object's changelog showing incorrect information about its tags on partial (PATCH) updates using API
 - [#501](https://github.com/nautobot/nautobot/issues/501) - Fixed missing prepopulation of address/prefix value into the form when adding an address or prefix under a parent prefix.
 - [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
@@ -210,9 +211,8 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
 - [#562](https://github.com/nautobot/nautobot/issues/562) - Fixed inability to use a Git repository to define a `ConfigContext` mapped to a specific `DeviceType`.
 - [#564](https://github.com/nautobot/nautobot/pull/564) - Fixed incorrect docstring on `nautobot.utilities.tables.ButtonsColumn`.
+- [#570](https://github.com/nautobot/nautobot/issues/570) - Fixed inability to import `ExportTemplates` for the `VLAN` model via Git.
 - [#583](https://github.com/nautobot/nautobot/pull/583) - Fixed incorrect rejection of various forms when explicitly selecting a `null` option. (Port of [NetBox #5704](https://github.com/netbox-community/netbox/pull/5704))
-
-### Removed
 
 ### Security
 

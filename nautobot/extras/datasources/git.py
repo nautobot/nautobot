@@ -693,7 +693,7 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
         owner_content_type=git_repository_content_type,
         owner_object_id=repository_record.pk,
     ):
-        key = f"{template_record.content_type.app_label}.{template_record.content_type.name}"
+        key = f"{template_record.content_type.app_label}.{template_record.content_type.model}"
         if template_record.name not in preserve.get(key, ()):
             template_record.delete()
             job_result.log(
