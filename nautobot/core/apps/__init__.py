@@ -257,6 +257,7 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             "link": self.link,
             "icon_class": self.icon_class,
             "button_class": self.button_class,
+            "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
         }
