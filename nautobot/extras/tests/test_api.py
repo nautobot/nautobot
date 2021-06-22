@@ -5,6 +5,7 @@ from unittest import skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
@@ -345,6 +346,42 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext6.sites.add(site2)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["bar"], 456)
+
+    def test_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a config context that conforms to that schema
+        Assert that the config context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+
+        data = {"name": "Config Context with schema", "weight": 100, "data": {"foo": "bar"}, "schema": str(schema.pk)}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["schema"]["id"], str(schema.pk))
+
+    def test_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a config context that *does not* conform to that schema
+        Assert that the config context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+
+        data = {
+            "name": "Config Context with bad schema",
+            "weight": 100,
+            "data": {"foo": "bar"},
+            "schema": str(schema.pk),
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):

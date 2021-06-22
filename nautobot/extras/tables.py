@@ -3,8 +3,8 @@ import inspect
 import django_tables2 as tables
 
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
@@ -167,7 +167,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
             self.validator.validate(data)
         except JSONSchemaValidationError as e:
             # Return a red x (like a boolean column) and the validation error message
-            return mark_safe(f'<span class="text-danger"><i class="mdi mdi-close-thick"></i>{e.message}</span>')
+            return format_html(f'<span class="text-danger"><i class="mdi mdi-close-thick"></i>{e.message}</span>')
 
         # Return a green check (like a boolean column)
         return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
