@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
-from django.test import override_settings
+from django.test import override_settings, tag
 from rest_framework import status
 from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
@@ -63,6 +63,7 @@ class APITestCase(ModelTestCase):
         return reverse(viewname)
 
 
+@tag("unit")
 class APIViewTestCases:
     class GetObjectViewTestCase(APITestCase):
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -134,6 +135,7 @@ class APIViewTestCases:
 
     class ListObjectsViewTestCase(APITestCase):
         brief_fields = []
+        choices_fields = None
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -232,6 +234,27 @@ class APIViewTestCases:
                 for choice in choices:
                     self.assertIn("display", choice, f"A choice in {field} is missing the display key")
                     self.assertIn("value", choice, f"A choice in {field} is missing the value key")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_returns_expected_choices(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choice fields match expected choice fields for serializer.
+            """
+            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            # Grab any field name that has choices defined (fields with enums)
+            field_choices = {k for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+
+            self.assertEqual(set(self.choices_fields), field_choices)
 
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
@@ -427,6 +450,7 @@ class APIViewTestCases:
         pass
 
 
+@tag("unit")
 class APITransactionTestCase(_APITransactionTestCase):
     def setUp(self):
         """
