@@ -71,6 +71,8 @@ graphene-django = "~2.15.0"
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 # Template rendering engine
 Jinja2 = "~2.11.3"
+# Optional data validation of config contexts
+jsonschema = "~3.2.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.4"
 # MySQL database adapter
@@ -116,6 +118,8 @@ mkdocs = "~1.1.2"
 requests = "~2.25.1"
 # Selenium web drivers for live integration testing
 selenium = "~3.141.0"
+# Abstraction layer for working with Selenium
+splinter = "~0.14.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

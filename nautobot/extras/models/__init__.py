@@ -6,6 +6,7 @@ from .relationships import Relationship, RelationshipModel, RelationshipAssociat
 from .models import (
     ConfigContext,
     ConfigContextModel,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GraphQLQuery,
@@ -20,6 +21,7 @@ __all__ = (
     "ChangeLoggedModel",
     "ConfigContext",
     "ConfigContextModel",
+    "ConfigContextSchema",
     "Status",
     "StatusField",
     "StatusModel",

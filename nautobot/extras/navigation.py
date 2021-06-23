@@ -179,6 +179,22 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
+                        link="extras:configcontextschema_list",
+                        link_text="Config Context Schemas",
+                        weight=100,
+                        permissions=[
+                            "extras.view_configcontextschema",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:configcontextschema_add",
+                                permissions=[
+                                    "extras.add_configcontextschema",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="extras:exporttemplate_list",
                         name="Export Templates",
                         weight=200,

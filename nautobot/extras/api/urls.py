@@ -24,6 +24,9 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 # Config contexts
 router.register("config-contexts", views.ConfigContextViewSet)
 
+# Config context schemas
+router.register("config-context-schemas", views.ConfigContextSchemaViewSet)
+
 # Jobs
 router.register("jobs", views.JobViewSet, basename="job")
 

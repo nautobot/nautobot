@@ -38,7 +38,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -1064,6 +1064,44 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         url = reverse("dcim-api:device-list")
         response = self.client.post(url, data, format="json", **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_local_context_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a device with local context that conforms to that schema
+        Assert that the local context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+        )
+        self.add_permissions("dcim.change_device")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+
+    def test_local_context_schema_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a device with local context that *does not* conform to that schema
+        Assert that the local context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+        )
+        # Add object-level permission
+        self.add_permissions("dcim.change_device")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
+        )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
