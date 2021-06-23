@@ -12,7 +12,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="dcim:site_list",
-                        link_text="Sites",
+                        name="Sites",
                         weight=100,
                         permissions=[
                             "dcim.view_site",
@@ -34,7 +34,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:region_list",
-                        link_text="Regions",
+                        name="Regions",
                         weight=200,
                         permissions=[
                             "dcim.view_region",
@@ -62,7 +62,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="dcim:rack_list",
-                        link_text="Racks",
+                        name="Racks",
                         weight=100,
                         permissions=[
                             "dcim.view_rack",
@@ -84,7 +84,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:rackgroup_list",
-                        link_text="Rack Groups",
+                        name="Rack Groups",
                         weight=200,
                         permissions=[
                             "dcim.view_rackgroup",
@@ -106,7 +106,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:rackrole_list",
-                        link_text="Rack Roles",
+                        name="Rack Roles",
                         weight=300,
                         permissions=[
                             "dcim.view_rackrole",
@@ -128,7 +128,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:rackreservation_list",
-                        link_text="Reservations",
+                        name="Reservations",
                         weight=400,
                         permissions=[
                             "dcim.view_rackreservation",
@@ -150,7 +150,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:rack_elevation_list",
-                        link_text="Elevations",
+                        name="Elevations",
                         weight=500,
                         permissions=[
                             "dcim.view_rack",
@@ -171,7 +171,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="dcim:device_list",
-                        link_text="Devices",
+                        name="Devices",
                         weight=100,
                         permissions=[
                             "dcim.view_device",
@@ -193,7 +193,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:devicerole_list",
-                        link_text="Device Roles",
+                        name="Device Roles",
                         weight=200,
                         permissions=[
                             "dcim.view_devicerole",
@@ -215,7 +215,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:platform_list",
-                        link_text="Platforms",
+                        name="Platforms",
                         weight=300,
                         permissions=[
                             "dcim.view_platform",
@@ -237,7 +237,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:virtualchassis_list",
-                        link_text="Virtual Chassis",
+                        name="Virtual Chassis",
                         weight=400,
                         permissions=[
                             "dcim.view_virtualchassis",
@@ -265,7 +265,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="dcim:devicetype_list",
-                        link_text="Device Types",
+                        name="Device Types",
                         weight=100,
                         permissions=[
                             "dcim.view_devicetype",
@@ -287,7 +287,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:manufacturer_list",
-                        link_text="Manufacturers",
+                        name="Manufacturers",
                         weight=200,
                         permissions=[
                             "dcim.view_manufacturer",
@@ -315,7 +315,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="dcim:cable_list",
-                        link_text="Cables",
+                        name="Cables",
                         weight=100,
                         permissions=[
                             "dcim.view_cable",
@@ -331,7 +331,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:console_connections_list",
-                        link_text="Console Connections",
+                        name="Console Connections",
                         weight=200,
                         permissions=[
                             "dcim.view_consoleport",
@@ -341,7 +341,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:power_connections_list",
-                        link_text="Power Connections",
+                        name="Power Connections",
                         weight=300,
                         permissions=[
                             "dcim.view_powerport",
@@ -351,7 +351,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:interface_connections_list",
-                        link_text="Interface Connections",
+                        name="Interface Connections",
                         weight=400,
                         permissions=[
                             "dcim.view_interface",
@@ -366,7 +366,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="dcim:interface_list",
-                        link_text="Interfaces",
+                        name="Interfaces",
                         weight=100,
                         permissions=[
                             "dcim.view_interface",
@@ -382,7 +382,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:frontport_list",
-                        link_text="Front Ports",
+                        name="Front Ports",
                         weight=200,
                         permissions=[
                             "dcim.view_frontport",
@@ -398,7 +398,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:rearport_list",
-                        link_text="Rear Ports",
+                        name="Rear Ports",
                         weight=300,
                         permissions=[
                             "dcim.view_rearport",
@@ -414,7 +414,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:consoleport_list",
-                        link_text="Console Ports",
+                        name="Console Ports",
                         weight=400,
                         permissions=[
                             "dcim.view_consoleport",
@@ -430,7 +430,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:consoleserverport_list",
-                        link_text="Console Server Ports",
+                        name="Console Server Ports",
                         weight=500,
                         permissions=[
                             "dcim.view_consoleserverport",
@@ -446,7 +446,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:powerport_list",
-                        link_text="Power Ports",
+                        name="Power Ports",
                         weight=600,
                         permissions=[
                             "dcim.view_powerport",
@@ -462,7 +462,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:poweroutlet_list",
-                        link_text="Power Outlets",
+                        name="Power Outlets",
                         weight=700,
                         permissions=[
                             "dcim.view_poweroutlet",
@@ -478,7 +478,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:devicebay_list",
-                        link_text="Device Bays",
+                        name="Device Bays",
                         weight=800,
                         permissions=[
                             "dcim.view_devicebay",
@@ -494,7 +494,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:inventoryitem_list",
-                        link_text="Inventory Items",
+                        name="Inventory Items",
                         weight=900,
                         permissions=[
                             "dcim.view_inventoryitem",
@@ -522,7 +522,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="dcim:powerfeed_list",
-                        link_text="Power Feeds",
+                        name="Power Feeds",
                         permissions=[
                             "dcim.view_powerfeed",
                         ],
@@ -543,7 +543,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:powerpanel_list",
-                        link_text="Power Panels",
+                        name="Power Panels",
                         permissions=[
                             "dcim.view_powerpanel",
                         ],

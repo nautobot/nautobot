@@ -12,7 +12,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:tag_list",
-                        link_text="Tags",
+                        name="Tags",
                         weight=100,
                         permissions=[
                             "extras.view_tags",
@@ -40,7 +40,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:status_list",
-                        link_text="Statuses",
+                        name="Statuses",
                         weight=100,
                         permissions=[
                             "extras.view_status",
@@ -74,7 +74,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:objectchange_list",
-                        link_text="Change Log",
+                        name="Change Log",
                         weight=100,
                         permissions=[
                             "extras.view_objectchange",
@@ -83,7 +83,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:jobresult_list",
-                        link_text="Job Results",
+                        name="Job Results",
                         weight=200,
                         permissions=[
                             "extras.view_jobresult",
@@ -98,7 +98,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:gitrepository_list",
-                        link_text="Git Repositories",
+                        name="Git Repositories",
                         weight=100,
                         permissions=[
                             "extras.view_gitrepository",
@@ -126,7 +126,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:graphqlquery_list",
-                        link_text="GraphQL Queries",
+                        name="GraphQL Queries",
                         weight=100,
                         permissions=[
                             "extras.view_graphqlquery",
@@ -142,7 +142,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:relationship_list",
-                        link_text="Relationships",
+                        name="Relationships",
                         weight=200,
                         permissions=[
                             "extras.view_relationship",
@@ -164,7 +164,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:configcontext_list",
-                        link_text="Config Contexts",
+                        name="Config Contexts",
                         weight=100,
                         permissions=[
                             "extras.view_configcontext",
@@ -180,7 +180,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:exporttemplate_list",
-                        link_text="Export Templates",
+                        name="Export Templates",
                         weight=200,
                         permissions=[
                             "extras.view_exporttemplate",
@@ -196,7 +196,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:job_list",
-                        link_text="Jobs",
+                        name="Jobs",
                         weight=300,
                         permissions=[
                             "extras.view_job",
@@ -205,7 +205,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:webhook_list",
-                        link_text="Webhooks",
+                        name="Webhooks",
                         weight=400,
                         permissions=[
                             "extras.view_webhook",
@@ -227,7 +227,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="extras:customlink_list",
-                        link_text="Custom Links",
+                        name="Custom Links",
                         weight=100,
                         permissions=[
                             "extras.view_customlink",

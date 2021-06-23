@@ -12,7 +12,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="circuits:circuit_list",
-                        link_text="Circuits",
+                        name="Circuits",
                         weight=100,
                         permissions=[
                             "circuits.view_circuit",
@@ -34,7 +34,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="circuits:circuittype_list",
-                        link_text="Circuit Types",
+                        name="Circuit Types",
                         weight=200,
                         permissions=[
                             "circuits.view_circuittype",
@@ -62,7 +62,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="circuits:provider_list",
-                        link_text="Providers",
+                        name="Providers",
                         weight=100,
                         permissions=[
                             "circuits.view_provider",

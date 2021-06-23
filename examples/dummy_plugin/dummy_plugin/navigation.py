@@ -36,7 +36,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:dummy_plugin:dummymodel_list",
-                        link_text="Dummy Model",
+                        name="Dummy Model",
                         permissions=["dummy_plugin.view_dummymodel"],
                         buttons=(
                             NavMenuAddButton(
@@ -64,7 +64,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:dummy_plugin:dummymodel_list",
-                        link_text="Dummy Model",
+                        name="Dummy Model",
                         permissions=["dummy_plugin.view_dummymodel"],
                         buttons=(
                             NavMenuAddButton(

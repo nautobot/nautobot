@@ -213,7 +213,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     @property
     def initial_dict(self):
         return {
-            "link_text": self.link_text,
+            "name": self.name,
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
@@ -222,20 +222,20 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     @property
     def fixed_fields(self):
         return (
-            ("link_text", self.link_text),
+            ("name", self.name),
             ("permissions", self.permissions),
         )
 
     permissions = []
     buttons = []
 
-    def __init__(self, link, link_text, permissions=None, buttons=None, weight=1000):
+    def __init__(self, link, name, permissions=None, buttons=None, weight=1000):
         """Ensure item properties."""
         super().__init__(permissions)
         # Reverse lookup sanity check
         reverse(link)
         self.link = link
-        self.link_text = link_text
+        self.name = name
         self.weight = weight
 
         if buttons is not None and not isinstance(buttons, (list, tuple)):

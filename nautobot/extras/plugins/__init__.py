@@ -352,7 +352,7 @@ def register_plugin_menu_items(section_name, menu_items):
             new_menu_items.append(
                 NavMenuItem(
                     link=menu_item.link,
-                    link_text=menu_item.link_text,
+                    name=menu_item.link_text,
                     permissions=menu_item.permissions,
                     weight=new_menu_item_weight,
                     buttons=new_menu_buttons,

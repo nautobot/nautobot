@@ -12,7 +12,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="ipam:ipaddress_list",
-                        link_text="IP Addresses",
+                        name="IP Addresses",
                         weight=100,
                         permissions=[
                             "ipam.view_ipaddress",
@@ -40,7 +40,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="ipam:prefix_list",
-                        link_text="Prefixes",
+                        name="Prefixes",
                         weight=100,
                         permissions=[
                             "ipam.view_prefix",
@@ -62,7 +62,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="ipam:role_list",
-                        link_text="Prefix/VLAN Roles",
+                        name="Prefix/VLAN Roles",
                         weight=200,
                         permissions=[
                             "ipam.view_role",
@@ -90,7 +90,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="ipam:aggregate_list",
-                        link_text="Aggregates",
+                        name="Aggregates",
                         weight=100,
                         permissions=[
                             "ipam.view_aggregate",
@@ -112,7 +112,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="ipam:rir_list",
-                        link_text="RIRs",
+                        name="RIRs",
                         weight=200,
                         permissions=[
                             "ipam.view_rir",
@@ -140,7 +140,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="ipam:vrf_list",
-                        link_text="VRFs",
+                        name="VRFs",
                         weight=100,
                         permissions=[
                             "ipam.view_vrf",
@@ -162,7 +162,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="ipam:routetarget_list",
-                        link_text="Route Targets",
+                        name="Route Targets",
                         weight=200,
                         permissions=[
                             "ipam.view_routetarget",
@@ -190,7 +190,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="ipam:vlan_list",
-                        link_text="VLANs",
+                        name="VLANs",
                         weight=100,
                         permissions=[
                             "ipam.view_vlan",
@@ -212,7 +212,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="ipam:vlangroup_list",
-                        link_text="VLAN Groups",
+                        name="VLAN Groups",
                         weight=200,
                         permissions=[
                             "ipam.view_vlangroup",
@@ -240,7 +240,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="ipam:service_list",
-                        link_text="Services",
+                        name="Services",
                         weight=100,
                         permissions=[
                             "ipam.view_service",

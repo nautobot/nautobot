@@ -12,7 +12,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="tenancy:tenant_list",
-                        link_text="Tenants",
+                        name="Tenants",
                         weight=100,
                         permissions=[
                             "tenancy.view_tenant",
@@ -34,7 +34,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="tenancy:tenantgroup_list",
-                        link_text="Tenant Groups",
+                        name="Tenant Groups",
                         weight=200,
                         permissions=[
                             "tenancy.view_tenantgroup",
