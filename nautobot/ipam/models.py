@@ -651,8 +651,8 @@ class Prefix(PrimaryModel, StatusModel):
         child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()])
         available_ips = prefix - child_ips
 
-        # All IP addresses within a pool are considered usable
-        if self.is_pool:
+        # IPv6, pool, or IPv4 /31 sets are fully usable
+        if self.family == 6 or self.is_pool or self.prefix.prefixlen == 31:
             return available_ips
 
         # All IP addresses within a prefix are considered usable
@@ -662,6 +662,7 @@ class Prefix(PrimaryModel, StatusModel):
             return available_ips
 
         # Omit first and last IP address from the available set
+        # For "normal" IPv4 prefixes, omit first and last addresses
         available_ips -= netaddr.IPSet(
             [
                 netaddr.IPAddress(self.prefix.first),
