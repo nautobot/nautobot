@@ -177,6 +177,20 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
+## Unreleased (2021-??-??)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choicescorrectly when performing `OPTIONS` metadata API requests
+
+### Removed
+
+### Security
+
 ## v1.0.3 (2021-06-21)
 
 ### Added
