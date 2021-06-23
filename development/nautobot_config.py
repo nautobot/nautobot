@@ -101,3 +101,8 @@ if "debug_toolbar" not in INSTALLED_APPS:
     INSTALLED_APPS.append("debug_toolbar")
 if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+
+NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
+NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
+NAPALM_ARGS = {'secret': NAPALM_PASSWORD}

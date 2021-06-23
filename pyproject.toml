@@ -88,6 +88,7 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+napalm = "^3.3.1"
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
