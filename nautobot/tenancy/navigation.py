@@ -1,7 +1,7 @@
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
-menu_tabs = (
+menu_items = (
     NavMenuTab(
         name="Organization",
         weight=100,
@@ -12,7 +12,7 @@ menu_tabs = (
                 items=(
                     NavMenuItem(
                         link="tenancy:tenant_list",
-                        link_text="Tenants",
+                        name="Tenants",
                         weight=100,
                         permissions=[
                             "tenancy.view_tenant",
@@ -34,7 +34,7 @@ menu_tabs = (
                     ),
                     NavMenuItem(
                         link="tenancy:tenantgroup_list",
-                        link_text="Tenant Groups",
+                        name="Tenant Groups",
                         weight=200,
                         permissions=[
                             "tenancy.view_tenantgroup",

@@ -1,7 +1,7 @@
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
-menu_tabs = (
+menu_items = (
     NavMenuTab(
         name="Virtualization",
         weight=400,
@@ -12,7 +12,7 @@ menu_tabs = (
                 items=(
                     NavMenuItem(
                         link="virtualization:virtualmachine_list",
-                        link_text="Virtual Machines",
+                        name="Virtual Machines",
                         weight=100,
                         permissions=[
                             "virtualization.view_virtualmachine",
@@ -34,7 +34,7 @@ menu_tabs = (
                     ),
                     NavMenuItem(
                         link="virtualization:vminterface_list",
-                        link_text="Interfaces",
+                        name="Interfaces",
                         weight=200,
                         permissions=[
                             "virtualization.view_vminterface",
@@ -56,7 +56,7 @@ menu_tabs = (
                 items=(
                     NavMenuItem(
                         link="virtualization:cluster_list",
-                        link_text="Clusters",
+                        name="Clusters",
                         weight=100,
                         permissions=[
                             "virtualization.view_cluster",
@@ -78,7 +78,7 @@ menu_tabs = (
                     ),
                     NavMenuItem(
                         link="virtualization:clustertype_list",
-                        link_text="Cluster Types",
+                        name="Cluster Types",
                         weight=200,
                         permissions=[
                             "virtualization.view_clustertype",
@@ -100,7 +100,7 @@ menu_tabs = (
                     ),
                     NavMenuItem(
                         link="virtualization:clustergroup_list",
-                        link_text="Cluster Groups",
+                        name="Cluster Groups",
                         weight=300,
                         permissions=[
                             "virtualization.view_clustergroup",

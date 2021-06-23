@@ -23,7 +23,7 @@ class NautobotConfig(AppConfig):
     applications.
     """
 
-    menu_tabs = "navigation.menu_tabs"
+    menu_tabs = "navigation.menu_items"
 
     def ready(self):
         """
@@ -39,7 +39,7 @@ def create_or_check_entry(grouping, record, key, path):
         grouping[key] = record.initial_dict
     else:
         for attr, value in record.fixed_fields:
-            if grouping[key][attr] != value:
+            if grouping[key][attr]:
                 logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
 
 
@@ -52,58 +52,61 @@ def register_menu_items(tab_list):
     NavMenuButton. The Django template then uses this dictionary to generate the navbar HTML.
     """
     for nav_tab in tab_list:
-        create_or_check_entry(registry["nav_menu"]["tabs"], nav_tab, nav_tab.name, f"{nav_tab.name}")
+        if isinstance(nav_tab, NavMenuTab):
+            create_or_check_entry(registry["nav_menu"]["tabs"], nav_tab, nav_tab.name, f"{nav_tab.name}")
 
-        tab_perms = set()
-        registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
-        for group in nav_tab.groups:
-            create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
+            tab_perms = set()
+            registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
+            for group in nav_tab.groups:
+                create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
 
-            group_perms = set()
-            for item in group.items:
-                create_or_check_entry(
-                    registry_groups[group.name]["items"],
-                    item,
-                    item.link,
-                    f"{nav_tab.name} -> {group.name} -> {item.link}",
-                )
-
-                registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
-                for button in item.buttons:
+                group_perms = set()
+                for item in group.items:
                     create_or_check_entry(
-                        registry_buttons,
-                        button,
-                        button.title,
-                        f"{nav_tab.name} -> {group.name} -> {item.link} -> {button.title}",
+                        registry_groups[group.name]["items"],
+                        item,
+                        item.link,
+                        f"{nav_tab.name} -> {group.name} -> {item.link}",
                     )
 
-                # Add sorted buttons to group registry dict
-                registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
-                    sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                    registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
+                    for button in item.buttons:
+                        create_or_check_entry(
+                            registry_buttons,
+                            button,
+                            button.title,
+                            f"{nav_tab.name} -> {group.name} -> {item.link} -> {button.title}",
+                        )
+
+                    # Add sorted buttons to group registry dict
+                    registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
+                        sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                    )
+
+                    group_perms |= set(perms for perms in item.permissions)
+
+                # Add sorted items to group registry dict
+                registry_groups[group.name]["items"] = OrderedDict(
+                    sorted(registry_groups[group.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
                 )
+                # Add collected permissions to group
+                registry_groups[group.name]["permissions"] = group_perms
+                # Add collected permissions to tab
+                tab_perms |= group_perms
 
-                group_perms |= set(perms for perms in item.permissions)
-
-            # Add sorted items to group registry dict
-            registry_groups[group.name]["items"] = OrderedDict(
-                sorted(registry_groups[group.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
+            # Add sorted groups to tab dict
+            registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
+                sorted(registry_groups.items(), key=lambda kv_pair: kv_pair[1]["weight"])
             )
-            # Add collected permissions to group
-            registry_groups[group.name]["permissions"] = group_perms
-            # Add collected permissions to tab
-            tab_perms |= group_perms
+            # Add collected permissions to tab dict
+            registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] |= tab_perms
+        else:
+            raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {nav_tab}")
 
-        # Add sorted groups to tab dict
-        registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
-            sorted(registry_groups.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+        # Order all tabs in dict
+        registry["nav_menu"]["tabs"] = OrderedDict(
+            sorted(registry["nav_menu"]["tabs"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
         )
-        # Add collected permissions to tab dict
-        registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] |= tab_perms
-
-    # Order all tabs in dict
-    registry["nav_menu"]["tabs"] = OrderedDict(
-        sorted(registry["nav_menu"]["tabs"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
-    )
 
 
 class NavMenuBase(ABC):  # replaces PermissionsMixin
@@ -149,7 +152,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
 
     @property
     def fixed_fields(self):
-        return (("weight", self.weight),)
+        return ()
 
     def __init__(self, name, permissions=None, groups=None, weight=1000):
         """Ensure tab properties."""
@@ -184,7 +187,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
 
     @property
     def fixed_fields(self):
-        return (("weight", self.weight),)
+        return ()
 
     def __init__(self, name, items=None, weight=1000):
         """Ensure group properties."""
@@ -210,7 +213,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     @property
     def initial_dict(self):
         return {
-            "link_text": self.link_text,
+            "name": self.name,
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
@@ -219,21 +222,20 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     @property
     def fixed_fields(self):
         return (
-            ("link_text", self.link_text),
+            ("name", self.name),
             ("permissions", self.permissions),
-            ("weight", self.weight),
         )
 
     permissions = []
     buttons = []
 
-    def __init__(self, link, link_text, permissions=None, buttons=None, weight=1000):
+    def __init__(self, link, name, permissions=None, buttons=None, weight=1000):
         """Ensure item properties."""
         super().__init__(permissions)
         # Reverse lookup sanity check
         reverse(link)
         self.link = link
-        self.link_text = link_text
+        self.name = name
         self.weight = weight
 
         if buttons is not None and not isinstance(buttons, (list, tuple)):
@@ -267,7 +269,6 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             ("icon_class", self.icon_class),
             ("link", self.link),
             ("permissions", self.permissions),
-            ("weight", self.weight),
         )
 
     def __init__(

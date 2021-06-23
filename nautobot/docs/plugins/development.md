@@ -536,43 +536,9 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 
 ## Navigation Menu Items
 
-To make its views easily accessible to users, a plugin can inject items in Nautobot's navigation menu under the "Plugins" header. Menu items are added by defining a list of PluginMenuItem instances. By default, this should be a variable named `menu_items` in the file `navigation.py`. An example is shown below.
+Plugins can modify the existing navigation bar layout by defining `menu_items` inside of `navigation.py`. Using the key and weight system, a developer can integrate the plugin amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
 
-```python
-# navigation.py
-from nautobot.extras.plugins import PluginMenuButton, PluginMenuItem
-from nautobot.utilities.choices import ButtonColorChoices
-
-
-menu_items = (
-    PluginMenuItem(
-        link='plugins:nautobot_animal_sounds:random_animal',
-        link_text='Random sound',
-        buttons=(
-            PluginMenuButton('home', 'Button A', 'mdi mdi-help-circle', ButtonColorChoices.BLUE),
-            PluginMenuButton('home', 'Button B', 'mdi mdi-alert', ButtonColorChoices.GREEN),
-        )
-    ),
-)
-```
-
-A `PluginMenuItem` has the following attributes:
-
-* `link` - The name of the URL path to which this menu item links
-* `link_text` - The text presented to the user
-* `permissions` - A list of permissions required to display this link (optional)
-* `buttons` - An iterable of PluginMenuButton instances to display (optional)
-
-A `PluginMenuButton` has the following attributes:
-
-* `link` - The name of the URL path to which this button links
-* `title` - The tooltip text (displayed when the mouse hovers over the button)
-* `icon_class` - Button icon CSS classes (Nautobot currently supports [Material Design Icons](https://materialdesignicons.com))
-* `color` - One of the choices provided by `ButtonColorChoices` (optional)
-* `permissions` - A list of permissions required to display this button (optional)
-
-!!! note
-    Any buttons associated within a menu item will be shown only if the user has permission to view the link, regardless of what permissions are set on the buttons.
+More documentation and examples can be found [here](../development/navigation-menu.md)
 
 ## Extending Core Templates
 

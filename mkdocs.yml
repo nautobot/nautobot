@@ -19,8 +19,8 @@ markdown_extensions:
     - toc:
         permalink: true
 plugins:
-  - search
-  - include-markdown
+    - search
+    - include-markdown
 nav:
     - Introduction: 'index.md'
     - Installation:
@@ -94,6 +94,7 @@ nav:
         - Style Guide: 'development/style-guide.md'
         - Extending Models: 'development/extending-models.md'
         - Application Registry: 'development/application-registry.md'
+        - Navigation Menu: 'development/navigation-menu.md'
         - User Preferences: 'development/user-preferences.md'
         - Release Checklist: 'development/release-checklist.md'
     - Release Notes:
