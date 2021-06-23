@@ -64,3 +64,8 @@ However it would not allow any of these examples to be saved:
     ]
 }
 ```
+
+For more information on JSON Schemas and specifically type formats for specialized objects like IP addresses, hostnames, and more see the JSON Schema [docs](https://json-schema.org/understanding-json-schema/reference/string.html#format).
+
+!!! note
+    Config Context Schemas currently support the JSON Schema draft 7 specification.
