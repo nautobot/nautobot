@@ -81,7 +81,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
         # Retrieve home page
         self.load_page(self.live_server_url)
 
-        tab_xpath = f"//*[@id='navbar']//*[contains(text(), 'Dummy Tab')]"
+        tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Dummy Tab')]"
         tab = self.selenium.find_element_by_xpath(tab_xpath)
         tab.click()
         self.assertTrue(bool(tab.get_attribute("aria-expanded")))
@@ -102,7 +102,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
         # Retrieve home page
         self.load_page(self.live_server_url)
 
-        tab_xpath = f"//*[@id='navbar']//*[contains(text(), 'Circuits')]"
+        tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Circuits')]"
         tab = self.selenium.find_element_by_xpath(tab_xpath)
         tab.click()
         self.assertTrue(bool(tab.get_attribute("aria-expanded")))
@@ -138,7 +138,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
         # Retrieve home page
         self.load_page(self.live_server_url)
 
-        tab_xpath = f"//*[@id='navbar']//*[contains(text(), 'Plugins')]"
+        tab_xpath = "//*[@id='navbar']//*[contains(text(), 'Plugins')]"
         tab = self.selenium.find_element_by_xpath(tab_xpath)
         tab.click()
         self.assertTrue(bool(tab.get_attribute("aria-expanded")))
