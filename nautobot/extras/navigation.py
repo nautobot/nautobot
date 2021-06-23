@@ -180,7 +180,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:configcontextschema_list",
-                        link_text="Config Context Schemas",
+                        name="Config Context Schemas",
                         weight=100,
                         permissions=[
                             "extras.view_configcontextschema",
