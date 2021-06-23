@@ -54,7 +54,7 @@ You can implement the entire job within the `run()` function, but for more compl
 It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database as [`JobResult`](../models/extras/jobresult.md) records.
 
 !!! note
-    When actively developing a Job utilizing a development environment it's important to understand that the reload on save debug functionality does **not** automatically restart the `nautobot_worker`; therefore, it is required to restart the `worker` after each update to `jobs.py`.
+    When actively developing a Job utilizing a development environment it's important to understand that the "reload on code changes" debugging functionality does **not** automatically restart the `nautobot_worker`; therefore, it is required to restart the `worker` after each update to your Job source code.
 
 ### Module Attributes
 
