@@ -655,11 +655,6 @@ class Prefix(PrimaryModel, StatusModel):
         if self.family == 6 or self.is_pool or (self.family == 4 and self.prefix.prefixlen >= 31):
             return available_ips
 
-        # All IP addresses within a prefix are considered usable
-        if (self.prefix.version == 4 and self.prefix.prefixlen >= 31) or (  # RFC 3021
-            self.prefix.version == 6 and self.prefix.prefixlen >= 127  # RFC 6164
-        ):
-            return available_ips
 
         # Omit first and last IP address from the available set
         # For "normal" IPv4 prefixes, omit first and last addresses
