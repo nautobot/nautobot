@@ -59,13 +59,22 @@ log-5xx = true
 ; processes = 5
 
 ; If using subdirectory hosting e.g. example.com/nautobot, you must uncomment this line. Otherwise you'll get double paths e.g. example.com/nautobot/nautobot/.
-; See: https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.11.html#fixpathinfo-routing-action
+; Ref: https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.11.html#fixpathinfo-routing-action
 ; route-run = fixpathinfo:
+
+; If hosted behind a load balancer uncomment these lines, the harakiri timeout should be greater than your load balancer timeout.
+; Ref: https://uwsgi-docs.readthedocs.io/en/latest/HTTP.html?highlight=keepalive#http-keep-alive
+; harakiri = 65
+; add-header = Connection: Keep-Alive
+; http-keepalive = 1
 ```
 
 This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
 address and/or port number, or to make performance-related adjustments. See [uWSGI
 documentation](https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html) for the available configuration parameters.
+
+!!! note
+    If you are deploying uWSGI behind a load balancer be sure to configure the harakiri timeout and keep alive appropriately.
 
 ## Setup systemd
 
