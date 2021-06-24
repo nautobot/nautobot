@@ -13,6 +13,7 @@ import yaml
 
 from django import forms
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.utils import timezone
@@ -907,7 +908,7 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
         _run_job()
 
 
-@app.task()
+@nautobot_task
 def scheduled_job_handler(*args, **kwargs):
     """
     A thin wrapper around JobResult.enqueue_job() that allows for it to be called as an async task

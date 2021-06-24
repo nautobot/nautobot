@@ -15,17 +15,14 @@ from django.db.models import signals
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
-<<<<<<< HEAD
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
-=======
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
 from graphql.language.ast import OperationDefinition
 from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
->>>>>>> 223-celery
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
@@ -36,11 +33,8 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-<<<<<<< HEAD
-=======
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
->>>>>>> 223-celery
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
