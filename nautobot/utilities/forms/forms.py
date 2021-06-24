@@ -32,9 +32,10 @@ class AddressFieldMixin(forms.ModelForm):
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
-        # If we're editing an object with a `address` field, we need to patch initial to include
-        # `address` because it is a computed field.
-        if instance is not None:
+        # If initial already has an `address`, we want to use that `address` as it was passed into
+        # the form. If we're editing an object with a `address` field, we need to patch initial
+        # to include `address` because it is a computed field.
+        if "address" not in initial and instance is not None:
             initial["address"] = instance.address
 
         kwargs["initial"] = initial
@@ -151,9 +152,10 @@ class PrefixFieldMixin(forms.ModelForm):
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
-        # If we're editing an object with a `prefix` field, we need to patch initial to include
-        # `prefix` because it is a computed field.
-        if instance is not None:
+        # If initial already has a `prefix`, we want to use that `prefix` as it was passed into
+        # the form. If we're editing an object with a `prefix` field, we need to patch initial
+        # to include `prefix` because it is a computed field.
+        if "prefix" not in initial and instance is not None:
             initial["prefix"] = instance.prefix
 
         kwargs["initial"] = initial

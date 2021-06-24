@@ -12,28 +12,36 @@ The [installation instructions](#installing-nautobot-dependencies) below will gu
 
 The following minimum versions are required for Nautobot to operate:
 
-| Dependency | Minimum Version |
-|------------|-----------------|
-| Python     | 3.6             |
-| PostgreSQL | 9.6             |
-| Redis      | 4.0             |
+| Dependency | Role         | Minimum Version |
+|------------|--------------|-----------------|
+| Python     | Application  | 3.6             |
+| PostgreSQL | Database     | 9.6             |
+| MySQL      | Database     | 8.0             |
+| Redis      | Cache, Queue | 4.0             |
+
+!!! note
+    Either PostgreSQL or MySQL must be selected, but not both.
 
 Nautobot will not work without these dependencies.
 
 #### Python
 
-Nautobot is written in the [Python programming language](https://www.python.org/). The official Python package installer
-is called [Pip](https://pip.pypa.io/en/stable/), and you will see the `pip` command referenced often to install or
+Nautobot is written in the [Python programming language](https://www.python.org/). The official Python package installer is called [Pip](https://pip.pypa.io/en/stable/), and you will see the `pip` command referenced often to install or
 update Python packages.
 
 All Nautobot plugins and library dependencies will be written using Python.
 
-#### PostgreSQL
+#### Database
 
-[PostgreSQL](https://www.postgresql.org) is a powerful, open source relational database server. Nautobot uses the database to store its data.
+Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL are officially supported.
 
-!!! note
-    MySQL or other relational databases are not currently supported.
+##### MySQL
+
+[MySQL](https://mysql.com) is an open-source relational database management system that’s relatively easy to set up and manage, fast, reliable, and well-understood.
+
+##### PostgreSQL
+
+[PostgreSQL](https://www.postgresql.org) is a powerful, feature-rich open source relational database server that can handle complex queries and massive databases.
 
 #### Redis
 
@@ -41,9 +49,7 @@ All Nautobot plugins and library dependencies will be written using Python.
 
 ### Optional dependencies
 
-Nautobot will still operate without these optional dependencies, but would likely not be ready for use in a production
-environment without them. The installation and configuration of these dependencies are covered in the detailed guides on
-[Deploying Nautobot](deploying-nautobot).
+Nautobot will still operate without these optional dependencies, but would likely not be ready for use in a production environment without them. The installation and configuration of these dependencies are covered in the detailed guides on [Deploying Nautobot](deploying-nautobot).
 
 For production deployment we recommend the following:
 

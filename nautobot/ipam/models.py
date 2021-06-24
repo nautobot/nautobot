@@ -265,9 +265,15 @@ class Aggregate(PrimaryModel):
         if pre:
             if isinstance(pre, str):
                 pre = netaddr.IPNetwork(pre)
-            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
-            # then |address.broadcast| is None
-            broadcast = pre.broadcast if pre.broadcast else pre.network
+            # Note that our "broadcast" field is actually the last IP address in this prefix.
+            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
+            # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
+            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
+            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the prefix.
+            #    We store this address as both the network and the "broadcast".
+            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
+            # of addresses and prefixes, not for packet forwarding. :-)
+            broadcast = pre.broadcast if pre.broadcast else pre[-1]
             self.network = str(pre.network)
             self.broadcast = str(broadcast)
             self.prefix_length = pre.prefixlen
@@ -516,9 +522,15 @@ class Prefix(PrimaryModel, StatusModel):
         if pre:
             if isinstance(pre, str):
                 pre = netaddr.IPNetwork(pre)
-            # if |prefix.prefixlen| is 32 (ip4) or 128 (ip6)
-            # then |prefix.broadcast| is None
-            broadcast = pre.broadcast if pre.broadcast else pre.network
+            # Note that our "broadcast" field is actually the last IP address in this prefix.
+            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
+            # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
+            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
+            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the prefix.
+            #    We store this address as both the network and the "broadcast".
+            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
+            # of addresses and prefixes, not for packet forwarding. :-)
+            broadcast = pre.broadcast if pre.broadcast else pre[-1]
             self.network = str(pre.network)
             self.broadcast = str(broadcast)
             self.prefix_length = pre.prefixlen
@@ -826,9 +838,15 @@ class IPAddress(PrimaryModel, StatusModel):
         if address:
             if isinstance(address, str):
                 address = netaddr.IPNetwork(address)
-            # if |address.prefixlen| is 32 (ip4) or 128 (ip6)
-            # then |address.broadcast| is None
-            broadcast = address.broadcast if address.broadcast else address.network
+            # Note that our "broadcast" field is actually the last IP address in this network.
+            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
+            # 1. For a point-to-point address (IPv4 /31 or IPv6 /127), there are two addresses in the network,
+            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
+            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the network.
+            #    We store this address as both the host and the "broadcast".
+            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
+            # of addresses and prefixes, not for packet forwarding. :-)
+            broadcast = address.broadcast if address.broadcast else address[-1]
             self.host = str(address.ip)
             self.broadcast = str(broadcast)
             self.prefix_length = address.prefixlen

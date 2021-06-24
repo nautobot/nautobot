@@ -671,7 +671,7 @@ Default: `None`
 
 Environment Variable: `NAUTOBOT_SESSION_FILE_PATH`
 
-HTTP session data is used to track authenticated users when they access Nautobot. By default, Nautobot stores session data in its PostgreSQL database. However, this inhibits authentication to a standby instance of Nautobot without write access to the database. Alternatively, a local file path may be specified here and Nautobot will store session data as files instead of using the database. Note that the Nautobot system user must have read and write permissions to this path.
+HTTP session data is used to track authenticated users when they access Nautobot. By default, Nautobot stores session data in its database. However, this inhibits authentication to a standby instance of Nautobot without write access to the database. Alternatively, a local file path may be specified here and Nautobot will store session data as files instead of using the database. Note that the Nautobot system user must have read and write permissions to this path.
 
 When the default value (`None`) is used, Nautobot will use the standard temporary directory for the system.
 

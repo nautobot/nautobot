@@ -120,6 +120,9 @@ SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
 
+# Test runner that is aware of our use of "integration" tags and only runs
+# integration tests if explicitly passed in with `nautobot-server test --tag integration`.
+TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 
 #
 # Django cryptography
@@ -241,8 +244,8 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
@@ -315,6 +318,10 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "health_check",
+    "health_check.db",
+    "health_check.cache",
+    "health_check.storage",
 ]
 
 # Middleware

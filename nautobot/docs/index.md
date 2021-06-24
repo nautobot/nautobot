@@ -45,20 +45,21 @@ When given a choice between a relatively simple [80% solution](https://en.wikipe
 
 ## Application Stack
 
-Nautobot is built on the [Django](https://djangoproject.com/) Python framework and utilizes a [PostgreSQL](https://www.postgresql.org/) database. It runs as a WSGI service behind your choice of HTTP server.
+Nautobot is built on the [Django](https://djangoproject.com/) Python Web framework and requires either a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database backend. It runs as a WSGI service behind your choice of HTTP server.
 
-| Function           | Component         |
-|--------------------|-------------------|
-| HTTP service       | NGINX             |
-| WSGI service       | uWSGI or Gunicorn |
-| Application        | Django/Python     |
-| Database           | PostgreSQL 9.6+   |
-| Task queuing       | Redis/django-rq   |
-| Live device access | NAPALM            |
+| Function           | Component                       |
+|--------------------|---------------------------------|
+| HTTP service       | NGINX                           |
+| WSGI service       | uWSGI or Gunicorn               |
+| Application        | Django/Python                   |
+| Database           | PostgreSQL 9.6+ or MySQL 8.0+   |
+| Cache              | Redis/django-cacheops           |
+| Task queuing       | Redis/django-rq                 |
+| Live device access | NAPALM                          |
 
 ## Supported Python Versions
 
-Nautobot supports Python 3.6, 3.7, and 3.8.
+Nautobot supports Python 3.6, 3.7, 3.8, and 3.9.
 
 ## Getting Started
 
