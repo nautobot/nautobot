@@ -1,7 +1,7 @@
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
-from taggit.models import TagBase, GenericTaggedItemBase
+from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
@@ -47,7 +47,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
         return (self.name, self.slug, self.color, self.description)
 
 
-class TaggedItem(BaseModel, GenericTaggedItemBase):
+class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
     object_id = models.UUIDField()
 

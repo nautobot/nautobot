@@ -40,7 +40,7 @@ Every minor version release should refresh `poetry.lock`, so that it lists the m
 5. Run all tests and check that the UI and API function as expected.
 
 !!! hint
-    You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are avaiable and the versions it would upgrade.
+    You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are available and the versions it would upgrade.
 
 ### Update Static Libraries
 

@@ -1,9 +1,21 @@
 # Circuits
 
-{!docs/models/circuits/provider.md!}
+{%
+    include-markdown "../models/circuits/provider.md"
+    heading-offset=1
+%}
 
 ---
 
-{!docs/models/circuits/circuit.md!}
-{!docs/models/circuits/circuittype.md!}
-{!docs/models/circuits/circuittermination.md!}
+{%
+    include-markdown "../models/circuits/circuit.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/circuits/circuittype.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/circuits/circuittermination.md"
+    heading-offset=1
+%}

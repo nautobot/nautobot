@@ -90,8 +90,10 @@ class RelationshipTest(RelationshipBaseTest):
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             m2m.clean()
+        expected_errors = {"source_filter": ["Filter for dcim.Site must be a dictionary"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_filter_not_valid(self):
         m2m = Relationship(
@@ -103,8 +105,42 @@ class RelationshipTest(RelationshipBaseTest):
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             m2m.clean()
+        expected_errors = {"source_filter": ["'notvalid' is not a valid filter parameter for dcim.Site object"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        m2m = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=self.site_ct,
+            source_filter={"region": "not a list"},
+            destination_type=self.rack_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+
+        with self.assertRaises(ValidationError) as handler:
+            m2m.clean()
+        expected_errors = {"source_filter": ["'region': Enter a list of values."]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        m2m = Relationship(
+            name="Another Vlan to Rack",
+            slug="vlan-rack-2",
+            source_type=self.site_ct,
+            source_filter={"region": ["not a valid region"]},
+            destination_type=self.rack_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+
+        with self.assertRaises(ValidationError) as handler:
+            m2m.clean()
+        expected_errors = {
+            "source_filter": [
+                "'region': Select a valid choice. not a valid region is not one of the available choices."
+            ]
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_same_object(self):
         m2m = Relationship(
@@ -123,15 +159,13 @@ class RelationshipTest(RelationshipBaseTest):
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=self.site_ct,
-            source_filter={"region": "myregion"},
+            source_filter={"name": ["site-b"]},
             destination_type=self.rack_ct,
-            destination_filter={"site": "mysite"},
+            destination_filter={"site": ["site-a"]},
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
         m2m.clean()
-
-        self.assertTrue(True)
 
     def test_get_label_input(self):
         with self.assertRaises(ValueError):
@@ -187,14 +221,18 @@ class RelationshipTest(RelationshipBaseTest):
 class RelationshipAssociationTest(RelationshipBaseTest):
     def test_clean_wrong_type(self):
         # Create with the wrong source Type
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.m2m_1, source=self.sites[0], destination=self.vlans[0])
             cra.clean()
+        expected_errors = {"source_type": ["source_type has a different value than defined in Vlan to Rack"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
         # Create with the wrong destination Type
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.racks[0])
             cra.clean()
+        expected_errors = {"destination_type": ["destination_type has a different value than defined in Vlan to Rack"]}
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_o2o(self):
         """Validate that one-to-one relationships can't have more than one relationship association per side. """
@@ -207,13 +245,22 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         cra.clean()
         cra.save()
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[2])
             cra.clean()
 
-        with self.assertRaises(ValidationError):
+        expected_errors = {
+            "source": ["Unable to create more than one Primary Rack per Site association to Rack A (source)"]
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[2], destination=self.sites[0])
             cra.clean()
+        expected_errors = {
+            "destination": ["Unable to create more than one Primary Rack per Site association to Site A (destination)"]
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_o2m(self):
         """Validate that one-to-many relationships can't have more than one relationship association per source. """
@@ -230,9 +277,15 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         cra.clean()
         cra.save()
 
-        with self.assertRaises(ValidationError):
-            cra = RelationshipAssociation(relationship=self.o2o_1, source=self.sites[2], destination=self.vlans[0])
+        with self.assertRaises(ValidationError) as handler:
+            cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[2], destination=self.vlans[0])
             cra.clean()
+        expected_errors = {
+            "destination": [
+                "Unable to create more than one generic site to vlan association to VLAN A (100) (destination)",
+            ],
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_m2m(self):
         """Validate that many-to-many relationship can have many relationship associations."""
@@ -252,9 +305,66 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         cra.clean()
 
     def test_get_peer(self):
+        """Validate that the get_peer() method works correctly."""
         cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
         cra.save()
 
         self.assertEqual(cra.get_peer(self.racks[0]), self.vlans[0])
         self.assertEqual(cra.get_peer(self.vlans[0]), self.racks[0])
         self.assertEqual(cra.get_peer(self.vlans[1]), None)
+
+    def test_delete_cascade(self):
+        """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
+        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0])
+        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1])
+        RelationshipAssociation.objects.create(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[0])
+
+        self.assertEqual(3, RelationshipAssociation.objects.count())
+
+        # Test automatic deletion of RelationshipAssociations when their 'source' object is deleted
+        self.racks[0].delete()
+
+        # Both relations involving racks[0] should have been deleted
+        # The relation between racks[1] and vlans[0] should remain
+        self.assertEqual(1, RelationshipAssociation.objects.count())
+
+        # Test automatic deletion of RelationshipAssociations when their 'destination' object is deleted
+        self.vlans[0].delete()
+
+        self.assertEqual(0, RelationshipAssociation.objects.count())
+
+    def test_generic_relation(self):
+        """Verify that the GenericRelations on the involved models work correctly."""
+        associations = (
+            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
+            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
+            RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0]),
+        )
+        for association in associations:
+            association.validated_save()
+
+        # Check that the GenericRelation lookup works correctly
+        self.assertEqual(3, self.racks[0].source_for_associations.count())
+        self.assertEqual(0, self.racks[0].destination_for_associations.count())
+        self.assertEqual(0, self.vlans[0].source_for_associations.count())
+        self.assertEqual(1, self.vlans[0].destination_for_associations.count())
+
+        # Check that the related_query_names work correctly for each individual RelationshipAssociation
+        self.assertEqual([self.racks[0]], list(associations[0].source_dcim_rack.all()))
+        self.assertEqual([self.vlans[0]], list(associations[0].destination_ipam_vlan.all()))
+        self.assertEqual([], list(associations[0].destination_dcim_site.all()))
+
+        self.assertEqual([self.racks[0]], list(associations[1].source_dcim_rack.all()))
+        self.assertEqual([self.vlans[1]], list(associations[1].destination_ipam_vlan.all()))
+        self.assertEqual([], list(associations[1].destination_dcim_site.all()))
+
+        self.assertEqual([self.racks[0]], list(associations[2].source_dcim_rack.all()))
+        self.assertEqual([], list(associations[2].destination_ipam_vlan.all()))
+        self.assertEqual([self.sites[0]], list(associations[2].destination_dcim_site.all()))
+
+        # Check that the related query names can be used for filtering as well
+        self.assertEqual(3, RelationshipAssociation.objects.filter(source_dcim_rack=self.racks[0]).count())
+        self.assertEqual(2, RelationshipAssociation.objects.filter(destination_ipam_vlan__isnull=False).count())
+        self.assertEqual(1, RelationshipAssociation.objects.filter(destination_ipam_vlan=self.vlans[0]).count())
+        self.assertEqual(1, RelationshipAssociation.objects.filter(destination_ipam_vlan=self.vlans[1]).count())
+        self.assertEqual(1, RelationshipAssociation.objects.filter(destination_dcim_site=self.sites[0]).count())

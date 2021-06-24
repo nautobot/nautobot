@@ -165,7 +165,7 @@ class ButtonsColumn(tables.TemplateColumn):
     Render edit, delete, and changelog buttons for an object.
 
     :param model: Model class to use for calculating URL view names
-    :param prepend_content: Additional template content to render in the column (optional)
+    :param prepend_template: Additional template content to render in the column (optional)
     :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
     """
 

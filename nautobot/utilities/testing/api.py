@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
-from django.test import override_settings
+from django.test import override_settings, tag
 from rest_framework import status
 from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
@@ -63,6 +63,7 @@ class APITestCase(ModelTestCase):
         return reverse(viewname)
 
 
+@tag("unit")
 class APIViewTestCases:
     class GetObjectViewTestCase(APITestCase):
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -134,6 +135,7 @@ class APIViewTestCases:
 
     class ListObjectsViewTestCase(APITestCase):
         brief_fields = []
+        choices_fields = None
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -233,6 +235,53 @@ class APIViewTestCases:
                     self.assertIn("display", choice, f"A choice in {field} is missing the display key")
                     self.assertIn("value", choice, f"A choice in {field} is missing the value key")
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_options_returns_expected_choices(self):
+            """
+            Make an OPTIONS request for a list endpoint and validate choice fields match expected choice fields for serializer.
+            """
+            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            # Grab any field name that has choices defined (fields with enums)
+            field_choices = {k for k, v in response.json()["actions"]["POST"].items() if "choices" in v}
+
+            self.assertEqual(set(self.choices_fields), field_choices)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_status_options_returns_expected_choices(self):
+            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
+
+            # Don't bother testing if there's no `status` field.
+            if "status" not in self.choices_fields:
+                self.skipTest("Object does not contain a `status` field.")
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            actions = response.json()["actions"]["POST"]
+            choices = actions["status"]["choices"]
+
+            # Import Status here to avoid circular import issues w/ test utilities.
+            from nautobot.extras.models import Status  # noqa
+
+            # Assert that the expected Status objects matches what is emitted.
+            statuses = Status.objects.get_for_model(self.model)
+            expected = [{"value": v, "display": d} for (v, d) in statuses.values_list("slug", "name")]
+            self.assertListEqual(choices, expected)
+
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
@@ -259,15 +308,16 @@ class APIViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             initial_count = self._get_queryset().count()
-            response = self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(self._get_queryset().count(), initial_count + 1)
-            self.assertInstanceEqual(
-                self._get_queryset().get(pk=response.data["id"]),
-                self.create_data[0],
-                exclude=self.validation_excluded_fields,
-                api=True,
-            )
+            for i, create_data in enumerate(self.create_data):
+                response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_201_CREATED)
+                self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
+                self.assertInstanceEqual(
+                    self._get_queryset().get(pk=response.data["id"]),
+                    create_data,
+                    exclude=self.validation_excluded_fields,
+                    api=True,
+                )
 
         def test_bulk_create_objects(self):
             """
@@ -426,6 +476,7 @@ class APIViewTestCases:
         pass
 
 
+@tag("unit")
 class APITransactionTestCase(_APITransactionTestCase):
     def setUp(self):
         """
