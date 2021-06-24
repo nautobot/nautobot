@@ -655,7 +655,6 @@ class Prefix(PrimaryModel, StatusModel):
         if self.family == 6 or self.is_pool or (self.family == 4 and self.prefix.prefixlen >= 31):
             return available_ips
 
-
         # Omit first and last IP address from the available set
         # For "normal" IPv4 prefixes, omit first and last addresses
         available_ips -= netaddr.IPSet(
@@ -664,7 +663,6 @@ class Prefix(PrimaryModel, StatusModel):
                 netaddr.IPAddress(self.prefix.last),
             ]
         )
-
         return available_ips
 
     def get_first_available_prefix(self):
