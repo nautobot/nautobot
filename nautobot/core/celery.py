@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 
 import nautobot
 
@@ -11,16 +10,18 @@ from kombu.serialization import register
 
 logger = logging.getLogger(__name__)
 
-# First, we need to call setup on the app to initialize settings
+# First, we need to call setup on the app to initialize settings.
+# Note this will set the `DJANGO_SETTINGS_MODULE` environment variable which
+# Celery and its workers need under the hood. The Celery docs and examples
+# normally have you set it here, but because of our custom settings boostrapping
+# it is handled in the setup call.
 nautobot.setup()
-
-# Set the default Django settings module for the 'celery' program.
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot.core.settings")
 
 app = Celery("nautobot")
 
 # Using a string here means the worker doesn't have to serialize
-# the configuration object to child processes.
+# the configuration object to child processes. Again, this is possible
+# only after calling `nautobot.setup()` which sets `DJANGO_SETTINGS_MODULE`.
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings", namespace="CELERY")
@@ -100,8 +101,9 @@ register("nautobot_json", _dumps, _loads, content_type="application/x-nautobot-j
 # nautobot_task
 #
 # By exposing `shared_task` within our own namespace, we leave the door open to
-# extending and expanding the useage and meaning of shared_task without having
-# to undergo further refactoring of task's decorators.
+# extending and expanding the usage and meaning of shared_task without having
+# to undergo further refactoring of task's decorators. We could also transparently
+# swap out shared_task to a custom base task.
 #
 
 nautobot_task = shared_task

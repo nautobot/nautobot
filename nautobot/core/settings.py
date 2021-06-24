@@ -505,7 +505,7 @@ RQ_QUEUES = {
 CELERY_TASK_TRACK_STARTED = True
 
 # Global task time limit (seconds)
-CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
 
 # The Redis connection defined in the CACHES config above for the broker and results backend
 CELERY_BROKER_URL = CACHES["default"]["LOCATION"]

@@ -101,3 +101,10 @@ if "debug_toolbar" not in INSTALLED_APPS:
     INSTALLED_APPS.append("debug_toolbar")
 if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+
+#
+# Celery
+#
+
+CELERY_TASK_TIME_LIMIT = int(os.environ.get("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
