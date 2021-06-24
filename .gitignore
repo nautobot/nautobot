@@ -23,3 +23,4 @@ override.env
 .python-version
 db_output.*
 celerybeat-schedule
+geckodriver.log

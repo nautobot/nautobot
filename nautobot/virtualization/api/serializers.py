@@ -17,6 +17,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
+from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -121,6 +122,7 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
     primary_ip = NestedIPAddressSerializer(read_only=True)
     primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
     primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)
+    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VirtualMachine
@@ -142,6 +144,7 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
             "disk",
             "comments",
             "local_context_data",
+            "local_context_schema",
             "tags",
             "custom_fields",
             "created",
@@ -152,6 +155,7 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
     config_context = serializers.SerializerMethodField()
+    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta(VirtualMachineSerializer.Meta):
         fields = [
@@ -172,6 +176,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
             "disk",
             "comments",
             "local_context_data",
+            "local_context_schema",
             "tags",
             "custom_fields",
             "config_context",

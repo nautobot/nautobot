@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields import TextField
+from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils import timezone
 from django.utils.safestring import mark_safe
@@ -34,10 +36,12 @@ from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -439,6 +443,7 @@ class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
 
 
 class ConfigContextForm(BootstrapMixin, forms.ModelForm):
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
@@ -457,6 +462,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
             "name",
             "weight",
             "description",
+            "schema",
             "is_active",
             "regions",
             "sites",
@@ -474,6 +480,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
 
 class ConfigContextBulkEditForm(BootstrapMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
     description = forms.CharField(required=False, max_length=100)
@@ -481,12 +488,14 @@ class ConfigContextBulkEditForm(BootstrapMixin, BulkEditForm):
     class Meta:
         nullable_fields = [
             "description",
+            "schema",
         ]
 
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
     # FIXME(glenn) filtering by owner_content_type
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
@@ -508,12 +517,69 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class LocalConfigContextFilterForm(forms.Form):
+class LocalContextFilterForm(forms.Form):
     local_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    local_context_schema = DynamicModelMultipleChoiceField(
+        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
+    )
+
+
+#
+# Model form for local config context data
+#
+
+
+class LocalContextModelForm(forms.ModelForm):
+    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_context_data = JSONField(required=False, label="")
+
+
+class LocalContextModelBulkEditForm(BulkEditForm):
+    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # append nullable fields
+        self.nullable_fields.append("local_context_schema")
+
+
+#
+# Config context schemas
+#
+
+
+class ConfigContextSchemaForm(BootstrapMixin, forms.ModelForm):
+    data_schema = JSONField(label="")
+    slug = SlugField()
+
+    class Meta:
+        model = ConfigContextSchema
+        fields = (
+            "name",
+            "slug",
+            "description",
+            "data_schema",
+        )
+
+
+class ConfigContextSchemaBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ConfigContextSchema.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(required=False, max_length=100)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
+class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
+    q = forms.CharField(required=False, label="Search")
+    # FIXME(glenn) filtering by owner_content_type
 
 
 #
@@ -967,3 +1033,24 @@ class StatusModelCSVFormMixin(CSVModelForm):
         to_field_name="slug",
         help_text="Operational status",
     )
+
+
+class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
+    slug = SlugField()
+    query = TextField()
+
+    class Meta:
+        model = GraphQLQuery
+        fields = (
+            "name",
+            "slug",
+            "query",
+        )
+
+    def get_action_url(self):
+        return reverse("extras:graphqlquery_add")
+
+
+class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):
+    model = GraphQLQuery
+    q = forms.CharField(required=False, label="Search")

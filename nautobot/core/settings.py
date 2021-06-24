@@ -123,6 +123,9 @@ SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
 
+# Test runner that is aware of our use of "integration" tags and only runs
+# integration tests if explicitly passed in with `nautobot-server test --tag integration`.
+TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 
 #
 # Django cryptography
@@ -244,8 +247,8 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
@@ -319,6 +322,10 @@ INSTALLED_APPS = [
     "drf_yasg",
     "graphene_django",
     "django_celery_beat",
+    "health_check",
+    "health_check.db",
+    "health_check.cache",
+    "health_check.storage",
 ]
 
 # Middleware
@@ -495,13 +502,21 @@ RQ_QUEUES = {
 }
 
 #
-# Celery (used for background processesing)
+# Celery (used for background processing)
 #
 
+# Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
+
+# Global task time limit (seconds)
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
+
+# The Redis connection defined in the CACHES config above for the broker and results backend
 CELERY_BROKER_URL = CACHES["default"]["LOCATION"]
 CELERY_RESULT_BACKEND = CACHES["default"]["LOCATION"]
+
+# These settings define the custom nautobot serialization encoding as an accepted data encoding format
+# and register that format for task input and result serialization
 CELERY_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"

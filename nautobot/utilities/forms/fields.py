@@ -477,6 +477,20 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, forms.ModelMultip
     filter = django_filters.ModelMultipleChoiceFilter
     widget = widgets.APISelectMultiple
 
+    def prepare_value(self, value):
+        """
+        Ensure that a single string value (i.e. UUID) is accurately represented as a list of one item.
+
+        This is necessary because otherwise the superclass will split the string into individual characters,
+        resulting in an error (https://github.com/nautobot/nautobot/issues/512).
+
+        Note that prepare_value() can also be called with an object instance or list of instances; in that case,
+        we do *not* want to convert a single instance to a list of one entry.
+        """
+        if isinstance(value, str):
+            value = [value]
+        return super().prepare_value(value)
+
 
 class LaxURLField(forms.URLField):
     """

@@ -62,7 +62,7 @@ Superuser created successfully.
 
 `nautobot-server dbshell`
 
-A shell for your PostgreSQL database. This can be very useful in troubleshooting raw database issues.
+A shell for your database. This can be very useful in troubleshooting raw database issues.
 
 !!! danger
     This is an advanced feature that gives you direct access to run raw SQL queries. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
@@ -93,6 +93,20 @@ $ nautobot-server generate_secret_key
 e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
 ```
 
+### `health_check`
+
+`nautobot-server health_check`
+
+Run health checks and exit 0 if everything went well.
+
+```no-highlight
+$ nautobot-server health_check
+Cache backend: default   ... working
+DatabaseBackend          ... working
+DefaultFileStorageHealthCheck ... working
+```
+
+Please see the [healthcheck documentation](../additional-features/healthcheck.md) for more information.
 ### `init`
 
 `nautobot-server init [config_path]`

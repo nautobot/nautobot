@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from jinja2.exceptions import TemplateError
 
-from nautobot.core.celery import app
+from nautobot.core.celery import nautobot_task
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.utils import generate_signature
 
@@ -13,7 +13,7 @@ from nautobot.extras.utils import generate_signature
 logger = getLogger("nautobot.extras.tasks")
 
 
-@app.task()
+@nautobot_task
 def update_custom_field_choice_data(field_id, old_value, new_value):
     """
     Update the values for a custom field choice used in objects' _custom_field_data for the given field.
@@ -54,7 +54,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         return False
 
 
-@app.task()
+@nautobot_task
 def delete_custom_field_data(field_name, content_type_pk_set):
     """
     Delete the values for a custom field
@@ -70,7 +70,7 @@ def delete_custom_field_data(field_name, content_type_pk_set):
             obj.save()
 
 
-@app.task()
+@nautobot_task
 def provision_field(field_id, content_type_pk_set):
     """
     Provision a new custom field on all relevant content type object instances.
@@ -94,7 +94,7 @@ def provision_field(field_id, content_type_pk_set):
             obj.save()
 
 
-@app.task()
+@nautobot_task
 def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id):
     """
     Make a POST request to the defined Webhook
@@ -119,7 +119,7 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
     try:
         headers.update(webhook.render_headers(context))
     except (TemplateError, ValueError) as e:
-        logger.error("Error parsing HTTP headers for webhook {}: {}".format(webhook, e))
+        logger.error("Error parsing HTTP headers for webhook %s: %s", webhook, e)
         raise
 
     # Render the request body
@@ -136,14 +136,12 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
         "headers": headers,
         "data": body.encode("utf8"),
     }
-    logger.info(
-        "Sending {} request to {} ({} {})".format(params["method"], params["url"], context["model"], context["event"])
-    )
+    logger.info("Sending %s request to %s (%s %s)", params["method"], params["url"], context["model"], context["event"])
     logger.debug("%s", params)
     try:
         prepared_request = requests.Request(**params).prepare()
     except requests.exceptions.RequestException as e:
-        logger.error("Error forming HTTP request: {}".format(e))
+        logger.error("Error forming HTTP request: %s", e)
         raise
 
     # If a secret key is defined, sign the request with a hash of the key and its content
@@ -157,11 +155,11 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
             session.verify = webhook.ca_file_path
         response = session.send(prepared_request, proxies=settings.HTTP_PROXIES)
 
-    if 200 <= response.status_code <= 299:
-        logger.info("Request succeeded; response status {}".format(response.status_code))
+    if response.ok:
+        logger.info("Request succeeded; response status %s", response.status_code)
         return "Status {} returned, webhook successfully processed.".format(response.status_code)
     else:
-        logger.warning("Request failed; response status {}: {}".format(response.status_code, response.content))
+        logger.warning("Request failed; response status %s: %s", response.status_code, response.content)
         raise requests.exceptions.RequestException(
             "Status {} returned with content '{}', webhook FAILED to process.".format(
                 response.status_code, response.content

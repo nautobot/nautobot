@@ -38,7 +38,7 @@ def enqueue_webhooks(instance, user, request_id, action):
 
         # Enqueue the webhooks
         for webhook in webhooks:
-            process_webhook.delay(
+            args = [
                 webhook.pk,
                 serializer.data,
                 instance._meta.model_name,
@@ -46,4 +46,5 @@ def enqueue_webhooks(instance, user, request_id, action):
                 str(timezone.now()),
                 user.username,
                 request_id,
-            )
+            ]
+            process_webhook.apply_async(args=args)

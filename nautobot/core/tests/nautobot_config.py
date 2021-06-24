@@ -53,6 +53,3 @@ CACHES = {
 
 # REDIS CACHEOPS
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
-
-# Celery
-CELERY_DB_REUSE_MAX = 1

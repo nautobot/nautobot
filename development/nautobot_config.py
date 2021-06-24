@@ -14,8 +14,8 @@ DATABASES = {
         "PASSWORD": os.environ.get("NAUTOBOT_DB_PASSWORD", ""),
         "HOST": os.environ.get("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.environ.get("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": 300,
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
@@ -101,3 +101,10 @@ if "debug_toolbar" not in INSTALLED_APPS:
     INSTALLED_APPS.append("debug_toolbar")
 if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+
+#
+# Celery
+#
+
+CELERY_TASK_TIME_LIMIT = int(os.environ.get("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))

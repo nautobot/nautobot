@@ -3,9 +3,11 @@ from django.urls import path
 from nautobot.extras import views
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     Tag,
     Status,
     Webhook,
@@ -70,6 +72,53 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="configcontext_changelog",
         kwargs={"model": ConfigContext},
+    ),
+    # Config context schema
+    path(
+        "config-context-schemas/",
+        views.ConfigContextSchemaListView.as_view(),
+        name="configcontextschema_list",
+    ),
+    path(
+        "config-context-schemas/add/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_add",
+    ),
+    path(
+        "config-context-schemas/edit/",
+        views.ConfigContextSchemaBulkEditView.as_view(),
+        name="configcontextschema_bulk_edit",
+    ),
+    path(
+        "config-context-schemas/delete/",
+        views.ConfigContextSchemaBulkDeleteView.as_view(),
+        name="configcontextschema_bulk_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/",
+        views.ConfigContextSchemaView.as_view(),
+        name="configcontextschema",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/validation/",
+        views.ConfigContextSchemaObjectValidationView.as_view(),
+        name="configcontextschema_object_validation",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/edit/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_edit",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/delete/",
+        views.ConfigContextSchemaDeleteView.as_view(),
+        name="configcontextschema_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="configcontextschema_changelog",
+        kwargs={"model": ConfigContextSchema},
     ),
     # Git repositories
     path(
@@ -296,5 +345,30 @@ urlpatterns = [
         "relationships/associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
+    ),
+    # GraphQL Queries
+    path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
+    path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
+    path(
+        "graphql-queries/delete/",
+        views.GraphQLQueryBulkDeleteView.as_view(),
+        name="GraphQLQuery_bulk_delete",
+    ),
+    path("graphql-queries/<str:slug>/", views.GraphQLQueryView.as_view(), name="graphqlquery"),
+    path(
+        "graphql-queries/<str:slug>/edit/",
+        views.GraphQLQueryEditView.as_view(),
+        name="graphqlquery_edit",
+    ),
+    path(
+        "graphql-queries/<str:slug>/delete/",
+        views.GraphQLQueryDeleteView.as_view(),
+        name="graphqlquery_delete",
+    ),
+    path(
+        "graphql-queries/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="graphqlquery_changelog",
+        kwargs={"model": GraphQLQuery},
     ),
 ]

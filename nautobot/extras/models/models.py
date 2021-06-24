@@ -9,14 +9,23 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import signals
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+<<<<<<< HEAD
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
+=======
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend
+from graphql.error import GraphQLSyntaxError
+from graphql.language.ast import OperationDefinition
+from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
+from jsonschema.validators import Draft7Validator
+>>>>>>> 223-celery
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
@@ -27,6 +36,11 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
+<<<<<<< HEAD
+=======
+from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import OrganizationalModel
+>>>>>>> 223-celery
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
@@ -364,8 +378,27 @@ class ImageAttachment(BaseModel):
 #
 # Config contexts
 #
+
+
+class ConfigContextSchemaValidationMixin:
+    """
+    Mixin that provides validation of config context data against a json schema.
+    """
+
+    def _validate_with_schema(self, data_field, schema_field):
+        schema = getattr(self, schema_field)
+        data = getattr(self, data_field)
+
+        # If schema is None, then no schema has been specified on the instance and thus no validation should occur.
+        if schema:
+            try:
+                Draft7Validator(schema.data_schema).validate(data)
+            except JSONSchemaValidationError as e:
+                raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
+
+
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel):
+class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
@@ -395,6 +428,13 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
     description = models.CharField(max_length=200, blank=True)
     is_active = models.BooleanField(
         default=True,
+    )
+    schema = models.ForeignKey(
+        to="extras.ConfigContextSchema",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Optional schema to validate the structure of the data",
     )
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
@@ -429,8 +469,11 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
         if type(self.data) is not dict:
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
+        # Validate data against schema
+        self._validate_with_schema("data", "schema")
 
-class ConfigContextModel(models.Model):
+
+class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     """
     A model which includes local configuration context data. This local data will override any inherited data from
     ConfigContexts.
@@ -440,6 +483,13 @@ class ConfigContextModel(models.Model):
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
+    )
+    local_context_schema = models.ForeignKey(
+        to="extras.ConfigContextSchema",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
     local_context_data_owner_content_type = models.ForeignKey(
@@ -484,6 +534,74 @@ class ConfigContextModel(models.Model):
         # Verify that JSON data is provided as an object
         if self.local_context_data and type(self.local_context_data) is not dict:
             raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
+
+        if self.local_context_schema and not self.local_context_data:
+            raise ValidationError({"local_context_schema": "Local context data must exist for a schema to be applied."})
+
+        # Validate data against schema
+        self._validate_with_schema("local_context_data", "local_context_schema")
+
+
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
+)
+class ConfigContextSchema(OrganizationalModel):
+    """
+    This model stores jsonschema documents where are used to optionally validate config context data payloads.
+    """
+
+    name = models.CharField(max_length=200, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    slug = models.SlugField()
+    data_schema = models.JSONField(
+        help_text="A JSON Schema document which is used to validate a config context object."
+    )
+    # A ConfigContextSchema *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("config_context_owners"),
+        default=None,
+        null=True,
+        blank=True,
+    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    owner = GenericForeignKey(
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
+    )
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:configcontextschema", args=[self.slug])
+
+    def clean(self):
+        """
+        Validate the schema
+        """
+        super().clean()
+
+        try:
+            Draft7Validator.check_schema(self.data_schema)
+        except SchemaError as e:
+            raise ValidationError({"data_schema": e.message})
+
+        if (
+            type(self.data_schema) is not dict
+            or "properties" not in self.data_schema
+            or self.data_schema.get("type") != "object"
+        ):
+            raise ValidationError(
+                {
+                    "data_schema": "Nautobot only supports context data in the form of an object and thus the "
+                    "JSON schema must be of type object and specify a set of properties."
+                }
+            )
 
 
 #
@@ -861,3 +979,54 @@ class ScheduledJob(BaseModel):
 signals.pre_delete.connect(ScheduledJobs.changed, sender=ScheduledJob)
 signals.pre_save.connect(ScheduledJobs.changed, sender=ScheduledJob)
 signals.post_save.connect(ScheduledJobs.update_changed, sender=ScheduledJob)
+
+
+@extras_features("graphql")
+class GraphQLQuery(BaseModel, ChangeLoggedModel):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.CharField(max_length=100, unique=True)
+    query = models.TextField()
+    variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+
+    class Meta:
+        ordering = ("slug",)
+        verbose_name = "GraphQL query"
+        verbose_name_plural = "GraphQL queries"
+
+    def get_absolute_url(self):
+        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
+
+    def save(self, *args, **kwargs):
+        variables = {}
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        # Load query into GraphQL backend
+        document = backend.document_from_string(schema, self.query)
+
+        # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
+        # that define one or more variables. For each operation and variable definition, store the variable's
+        # default value (if any) into our own "variables" dict.
+        definitions = [
+            d
+            for d in document.document_ast.definitions
+            if isinstance(d, OperationDefinition) and d.variable_definitions
+        ]
+        for definition in definitions:
+            for variable_definition in definition.variable_definitions:
+                default = variable_definition.default_value.value if variable_definition.default_value else ""
+                variables[variable_definition.variable.name.value] = default
+
+        self.variables = variables
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        try:
+            backend.document_from_string(schema, self.query)
+        except GraphQLSyntaxError as error:
+            raise ValidationError({"query": error})
+
+    def __str__(self):
+        return self.name

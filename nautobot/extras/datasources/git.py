@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import logging
+import mimetypes
 import os
 import re
 from urllib.parse import quote
@@ -10,10 +11,9 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
-from django_rq import job
 import yaml
 
-from nautobot.core.celery import app
+from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
@@ -50,7 +50,7 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
     )
 
 
-@app.task()
+@nautobot_task
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
@@ -632,8 +632,12 @@ def update_git_export_templates(repository_record, job_result):
                 template_record.template_code = template_content
                 modified = True
 
-            if template_record.mime_type != "text/plain":
-                template_record.mime_type = "text/plain"
+            # mimetypes.guess_type returns a tuple (type, encoding)
+            mime_type = mimetypes.guess_type(file_path)[0]
+            if mime_type is None:
+                mime_type = "text/plain"
+            if template_record.mime_type != mime_type:
+                template_record.mime_type = mime_type
                 modified = True
 
             if template_record.file_extension != file_name.rsplit(os.extsep, 1)[-1]:

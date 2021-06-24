@@ -5,13 +5,13 @@ from cacheops.simple import cache, CacheMiss
 from django.conf import settings
 from packaging import version
 
-from nautobot.core.celery import app
+from nautobot.core.celery import nautobot_task
 
 # Get an instance of a logger
 logger = logging.getLogger("nautobot.releases")
 
 
-@app.task()
+@nautobot_task
 def get_releases(pre_releases=False):
     url = settings.RELEASE_CHECK_URL
     headers = {
