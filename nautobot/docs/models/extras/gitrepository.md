@@ -67,7 +67,8 @@ After loading and potentially extending the JSON or YAML data with any implied s
         "weight": 1000,
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
-        "regions": [{"slug": "nyc"}]
+        "regions": [{"slug": "nyc"}],
+        "schema": "Config Context Schema 1",
     },
     "ntp-servers": [
         "172.16.10.22",
@@ -80,7 +81,7 @@ After loading and potentially extending the JSON or YAML data with any implied s
 }
 ```
 
-Within the `_metadata`, the `name` key is always required; all other metadata keys are optional and will take on default values if omitted.
+Within the `_metadata`, the `name` key is always required; all other metadata keys are optional and will take on default values if omitted. The optional field `schema` defines the name of a config context schema to validate data.
 
 For files in the root of the `/config_contexts/` directory, a single file may define a single config context as above, or alternatively it may contain a list of config context data definitions, as in the following example:
 
@@ -131,8 +132,6 @@ config_context_schema/
 
 When loading the schema, the key `_metadata` will be extracted from the loaded data and used to define the config context schemer's metadata; all remaining data will form the config context data schema.
 
-Inside of the metadata there is a list called `config_contexts`, this holds all of the config contexts the schema applies too. The config contexts are defined through dictionaries with attributes which can identify the context. Below shows that the schema applies to a config context with a name of `"Config Context 1"`.
-
 JSON example:
 
 ``` json
@@ -140,9 +139,6 @@ JSON example:
   "_metadata": {
     "name": "Config Context Schema 1",
     "description": "Schema for defining first names, last names and ages.",
-    "config_contexts": [
-      {"name": "Config Context 1"},
-    ],
   },
   "data_schema": {
     "title": "Person",

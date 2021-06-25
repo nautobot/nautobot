@@ -419,7 +419,6 @@ def import_config_context(context_data, repository_record, job_result, logger):
                         logger=logger,
                     )
 
-
         if context_record.data != data:
             context_record.data = data
             modified = True
