@@ -22,6 +22,9 @@ The token implementation can vary from Git provider to Git provider, the followi
 
 Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../../../configuration/optional-settings/#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
+!!! important
+    The repository branch must exist and have a commit against it. At this time, Nautobot will not initialize an empty repository.
+
 ## Repository Structure
 
 ### Jobs
@@ -195,5 +198,5 @@ YAML example:
 Export templates may be provided as files located in `/export_templates/<grouping>/<model>/<template_file>`; for example, a JSON export template for Device records might be `/export_templates/dcim/device/mytemplate.json`.
 
 * The name of a discovered export template will be presented in Nautobot as `<repository name>: <filename>`.
-* The MIME type of a file rendered from a discovered export template will always be the default `text/plain`.
+* The MIME type of a file rendered from a discovered export template will try to match the extension to [`IANA's list`](https://www.iana.org/assignments/media-types/media-types.xhtml). If not detected, it will default to `text/plain`.
 * The file extension of a file rendered from a discovered export template will match that of the template itself (so, in the above example, the extension would be `.json`)

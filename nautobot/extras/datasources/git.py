@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import logging
+import mimetypes
 import os
 import re
 from urllib.parse import quote
@@ -14,7 +15,7 @@ from django.utils.text import slugify
 from django_rq import job
 import yaml
 
-from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
     ConfigContext,
@@ -228,6 +229,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "device_types",
         "roles",
         "platforms",
         "cluster_groups",
@@ -345,6 +347,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("device_types", DeviceType),
         ("roles", DeviceRole),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
@@ -797,8 +800,12 @@ def update_git_export_templates(repository_record, job_result):
                 template_record.template_code = template_content
                 modified = True
 
-            if template_record.mime_type != "text/plain":
-                template_record.mime_type = "text/plain"
+            # mimetypes.guess_type returns a tuple (type, encoding)
+            mime_type = mimetypes.guess_type(file_path)[0]
+            if mime_type is None:
+                mime_type = "text/plain"
+            if template_record.mime_type != mime_type:
+                template_record.mime_type = mime_type
                 modified = True
 
             if template_record.file_extension != file_name.rsplit(os.extsep, 1)[-1]:
@@ -857,7 +864,7 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
         owner_content_type=git_repository_content_type,
         owner_object_id=repository_record.pk,
     ):
-        key = f"{template_record.content_type.app_label}.{template_record.content_type.name}"
+        key = f"{template_record.content_type.app_label}.{template_record.content_type.model}"
         if template_record.name not in preserve.get(key, ()):
             template_record.delete()
             job_result.log(

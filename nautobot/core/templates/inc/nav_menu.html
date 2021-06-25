@@ -20,24 +20,24 @@
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
                         {% if request.user|has_one_or_more_perms:tab_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                             <li class="dropdown">
-                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                <a href="#" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     {{ tab_name }} <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
                                     {% for group_name, group_details in tab_details.groups.items %}
                                         {% if request.user|has_one_or_more_perms:group_details.permissions or not settings.HIDE_RESTRICTED_UI %}
-                                            <li class="dropdown-header">{{ group_name }}</li>
+                                            <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
                                                 {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                                                     <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
                                                         <div class="buttons pull-right">
                                                             {% for button_title, button_details in item_details.buttons.items %}
                                                                 {% if request.user|has_perms:button_details.permissions %}
-                                                                    <a href="{% url button_details.link %}" class="btn btn-xs btn-{{ button_details.button_class }}" title="{{ button_title }}"><i class="mdi {{ button_details.icon_class }}"></i></a>
+                                                                    <a href="{% url button_details.link %}" data-button-weight="{{ button_details.weight }}" class="btn btn-xs btn-{{ button_details.button_class }}" title="{{ button_title }}"><i class="mdi {{ button_details.icon_class }}"></i></a>
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>
-                                                        <a href="{% url item_link %}">{{ item_details.link_text }}</a>
+                                                        <a href="{% url item_link %}" data-item-weight="{{ item_details.weight }}">{{ item_details.name }}</a>
                                                     </li>
                                                 {% endif %}
                                             {% endfor %}
@@ -50,9 +50,6 @@
                             </li>
                         {% endif %}
                     {% endfor %}
-                    {% if registry.plugin_menu_items %}
-                        {% include 'inc/plugin_menu_items.html' %}
-                    {% endif %}
                 </ul>
             {% endif %}
 

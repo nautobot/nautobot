@@ -43,6 +43,8 @@ urlpatterns = [
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO
     path("", include("social_django.urls", namespace="social")),
+    # django-health-check
+    path(r"health/", include("health_check.urls")),
 ]
 
 

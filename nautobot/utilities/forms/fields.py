@@ -466,7 +466,14 @@ class DynamicModelChoiceField(DynamicModelChoiceMixin, forms.ModelChoiceField):
     rendered only with choices set via bound data. Choices are populated on-demand via the APISelect widget.
     """
 
-    pass
+    def clean(self, value):
+        """
+        When null option is enabled and "None" is sent as part of a form to be submitted, it is sent as the
+        string 'null'.  This will check for that condition and gracefully handle the conversion to a NoneType.
+        """
+        if self.null_option is not None and value == settings.FILTERS_NULL_CHOICE_VALUE:
+            return None
+        return super().clean(value)
 
 
 class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, forms.ModelMultipleChoiceField):
