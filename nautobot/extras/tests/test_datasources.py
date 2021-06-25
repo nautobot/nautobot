@@ -184,6 +184,7 @@ class GitTest(TestCase):
                         "w",
                     ) as fd:
                         fd.write("<!DOCTYPE html>/n{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    with open(
                         os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"),
                         "w",
                     ) as fd:
@@ -230,8 +231,8 @@ class GitTest(TestCase):
                     content_type=ContentType.objects.get_for_model(Device),
                     name="template.j2",
                 )
-                self.assertIsNotNone(export_template)
-                self.assertEqual(export_template.mime_type, "text/plain")
+                self.assertIsNotNone(export_template_device)
+                self.assertEqual(export_template_device.mime_type, "text/plain")
 
                 export_template_html = ExportTemplate.objects.get(
                     owner_object_id=self.repo.pk,
@@ -241,7 +242,6 @@ class GitTest(TestCase):
                 )
                 self.assertIsNotNone(export_template_html)
                 self.assertEqual(export_template_html.mime_type, "text/html")
-                self.assertIsNotNone(export_template_device)
 
                 # Make sure ExportTemplate was successfully loaded from file
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
