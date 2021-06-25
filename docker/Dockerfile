@@ -103,6 +103,7 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi
 
 COPY --from=dev /source/dist/*.whl /tmp
 
+# hadolint ignore=DL3013
 RUN pip install --no-cache-dir /tmp/nautobot*.whl
 
 ################################ Stage: final
@@ -149,5 +150,6 @@ CMD ["nautobot-server", "start", "--ini", "/opt/nautobot/uwsgi.ini"]
 FROM dev as final-dev
 
 # Nautobot was installed in editable mode so reinstall as a system package (all dependencies are already there)
+# hadolint ignore=DL3013
 RUN pip install --force-reinstall --no-deps --no-cache-dir /source/dist/*.whl && \
     rm -rf /source
