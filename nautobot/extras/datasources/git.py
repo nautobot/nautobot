@@ -14,7 +14,7 @@ from django.db import transaction
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
     ConfigContext,
@@ -227,6 +227,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "device_types",
         "roles",
         "platforms",
         "cluster_groups",
@@ -344,6 +345,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("device_types", DeviceType),
         ("roles", DeviceRole),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
@@ -696,7 +698,7 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
         owner_content_type=git_repository_content_type,
         owner_object_id=repository_record.pk,
     ):
-        key = f"{template_record.content_type.app_label}.{template_record.content_type.name}"
+        key = f"{template_record.content_type.app_label}.{template_record.content_type.model}"
         if template_record.name not in preserve.get(key, ()):
             template_record.delete()
             job_result.log(
