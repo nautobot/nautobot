@@ -81,15 +81,6 @@ menu_items = (
                         ],
                         buttons=(),
                     ),
-                    NavMenuItem(
-                        link="extras:jobresult_list",
-                        name="Job Results",
-                        weight=200,
-                        permissions=[
-                            "extras.view_jobresult",
-                        ],
-                        buttons=(),
-                    ),
                 ),
             ),
             NavMenuGroup(
@@ -159,8 +150,50 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
-                name="Automation",
+                name="Jobs",
                 weight=400,
+                items=(
+                    NavMenuItem(
+                        link="extras:job_list",
+                        name="Jobs",
+                        weight=100,
+                        permissions=[
+                            "extras.view_job",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="extras:jobresult_list",
+                        name="Job Results",
+                        weight=200,
+                        permissions=[
+                            "extras.view_jobresult",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="extras:scheduled_jobs_list",
+                        name="Job Schedules",
+                        weight=300,
+                        permissions=[
+                            "extras.view_job",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="extras:scheduled_jobs_approval_queue_list",
+                        name="Approval Queue",
+                        weight=400,
+                        permissions=[
+                            "extras.view_job",
+                        ],
+                        buttons=(),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Automation",
+                weight=500,
                 items=(
                     NavMenuItem(
                         link="extras:configcontext_list",
@@ -211,15 +244,6 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="extras:job_list",
-                        name="Jobs",
-                        weight=300,
-                        permissions=[
-                            "extras.view_job",
-                        ],
-                        buttons=(),
-                    ),
-                    NavMenuItem(
                         link="extras:webhook_list",
                         name="Webhooks",
                         weight=400,
@@ -239,7 +263,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Miscellaneous",
-                weight=500,
+                weight=600,
                 items=(
                     NavMenuItem(
                         link="extras:customlink_list",

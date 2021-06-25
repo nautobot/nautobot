@@ -137,6 +137,20 @@ class ScheduledJobExtendedQuerySet(RestrictedQuerySet, ExtendedQuerySet):
 
     def enabled(self):
         """
-        Return only ScheduledJob instances that are enabled
+        Return only ScheduledJob instances that are enabled and approved (if approval required)
         """
-        return self.filter(enabled=True)
+        return self.filter(
+            Q(enabled=True) & Q(Q(approval_required=True, approved_at__isnull=False) | Q(approval_required=False))
+        )
+
+    def approved(self):
+        """
+        Return only ScheduledJob instances that require approval and are approved
+        """
+        return self.filter(approval_required=True, approved_at__isnull=False)
+
+    def needs_approved(self):
+        """
+        Return only ScheduledJob instances that require approval and are not approved
+        """
+        return self.filter(approval_required=True, approved_at__isnull=True).order_by("start_time")

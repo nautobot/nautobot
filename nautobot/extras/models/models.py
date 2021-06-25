@@ -12,11 +12,12 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import signals
-from django.http import HttpResponse
+from django.http import HttpResponse, request
 from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
+from django_celery_beat.utils import make_aware, now
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
@@ -642,6 +643,7 @@ class JobResult(BaseModel):
         default=JobResultStatusChoices.STATUS_PENDING,
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
+    schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
     """
     Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
 
@@ -752,7 +754,7 @@ class JobResult(BaseModel):
             self.completed = timezone.now()
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, *args, **kwargs):
+    def enqueue_job(cls, func, name, obj_type, user, *args, schedule=None, **kwargs):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
@@ -761,9 +763,10 @@ class JobResult(BaseModel):
         obj_type: ContentType to link to the JobResult instance obj_type
         user: User object to link to the JobResult instance
         args: additional args passed to the callable
+        schedule: Optional ScheduledJob instance to link to the JobResult
         kwargs: additional kargs passed to the callable
         """
-        job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4())
+        job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
         kwargs["job_result"] = job_result.pk
 
@@ -943,9 +946,38 @@ class ScheduledJob(BaseModel):
         verbose_name="Description",
         help_text="Detailed description about the details of this Periodic Task",
     )
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        blank=True,
+        null=True,
+        help_text="User that requested the schedule",
+    )
+    approved_by_user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        blank=True,
+        null=True,
+        help_text="User that approved the schedule",
+    )
+    approval_required = models.BooleanField(default=False)
+    approved_at = models.DateTimeField(
+        auto_now=False,
+        auto_now_add=False,
+        editable=False,
+        blank=True,
+        null=True,
+        verbose_name="Approval date/time",
+        help_text="Datetime that the schedule was approved",
+    )
 
     objects = ScheduledJobExtendedQuerySet.as_manager()
     no_changes = False
+
+    def __str__(self):
+        return "{0.name}: {0.interval}".format(self)
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or None
@@ -953,8 +985,12 @@ class ScheduledJob(BaseModel):
             self.last_run_at = None
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return "{0.name}: {0.interval}".format(self)
+    def clean(self):
+        """
+        Model Validation
+        """
+        if self.user and self.approved_by_user and self.user == self.approved_by_user:
+            raise ValidationError("The requesting and approving users cannot be the same")
 
     @property
     def schedule(self):
@@ -966,7 +1002,7 @@ class ScheduledJob(BaseModel):
         every = 7 if self.interval == JobExecutionType.TYPE_WEEKLY else 1
         return schedules.schedule(
             timedelta(**{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: every}),
-            nowfun=lambda: timezone.make_aware(timezone.now()),
+            nowfun=lambda: make_aware(now()),
         )
 
 

@@ -25,7 +25,7 @@ from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import GitRepository
+from .models import GitRepository, ScheduledJob
 from .registry import registry
 
 from nautobot.core.celery import nautobot_task
@@ -84,6 +84,7 @@ class BaseJob:
         - commit_default (bool)
         - field_order (list)
         - read_only (bool)
+        - approval_required (bool)
         """
 
         pass
@@ -182,6 +183,10 @@ class BaseJob:
     def read_only(cls):
         return getattr(cls.Meta, "read_only", False)
 
+    @classproperty
+    def approval_required(cls):
+        return getattr(cls.Meta, "approval_required", False)
+
     @classmethod
     def _get_vars(cls):
         vars = OrderedDict()
@@ -261,9 +266,12 @@ class BaseJob:
         """
         return self.job_result.data if self.job_result else None
 
-    def as_form(self, data=None, files=None, initial=None):
+    def as_form(self, data=None, files=None, initial=None, approval_view=False):
         """
         Return a Django form suitable for populating the context data required to run this Job.
+
+        `approval_view` will disable all fields from modification and is used to display the form
+        during a approval review workflow.
         """
         fields = {name: var.as_field() for name, var in self._get_vars().items()}
         FormClass = type("JobForm", (JobForm,), fields)
@@ -282,6 +290,14 @@ class BaseJob:
 
         if field_order:
             form.order_fields(field_order)
+
+        if approval_view:
+            # Set `disabled=True` on all fields
+            for _, field in form.fields.items():
+                field.disabled = True
+
+            # Alter the commit help text to avoid confusion concerning approval dry-runs
+            form.fields["_commit"].help_text = "Commit changes to the database"
 
         return form
 
@@ -921,6 +937,8 @@ def scheduled_job_handler(*args, **kwargs):
     user_pk = kwargs.pop("user")
     user = User.objects.get(pk=user_pk)
     name = kwargs.pop("name")
+    scheduled_job_pk = kwargs.pop("scheduled_job_pk")
+    schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
     job_content_type = ContentType.objects.get(app_label="extras", model="job")
-    JobResult.enqueue_job(run_job, name, job_content_type, user, **kwargs)
+    JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)

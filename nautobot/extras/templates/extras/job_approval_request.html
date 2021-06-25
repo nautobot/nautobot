@@ -3,7 +3,7 @@
 {% load form_helpers %}
 {% load log_levels %}
 
-{% block title %}{{ job }}{% endblock %}
+{% block title %}{{ job }} - Approval Request{% endblock %}
 
 {% block content %}
     <div class="row noprint">
@@ -23,7 +23,7 @@
     <p>{{ job.description }}</p>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
-            <a href="#run" role="tab" data-toggle="tab" class="active">Run</a>
+            <a href="#run" role="tab" data-toggle="tab" class="active">Approval Request</a>
         </li>
         <li role="presentation">
             <a href="#source" role="tab" data-toggle="tab">Source</a>
@@ -36,7 +36,7 @@
                     {% if not perms.extras.run_job %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i>
-                            You do not have permission to run jobs.
+                            You do not have permission to run & approve jobs.
                         </div>
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
@@ -68,23 +68,28 @@
                         {% endif %}
                         <div class="panel panel-default">
                             <div class="panel-heading">
-                                <strong>Job Execution</strong>
+                                <strong>Approval Request</strong>
                             </div>
                             <div class="panel-body">
-                                {% render_form schedule_form %}
-                            </div>
-                            {% if job.approval_required %}
-                                <div class="panel-footer">
-                                    <span class="help-block">
-                                        <i class="mdi mdi-information-outline"></i>
-                                        This job requires approval to run or schedule.
-                                    </span>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label required">Requestor</label>
+                                    <div class="col-md-9">
+                                        <span>{{ scheduled_job.user.username|placeholder }}</span>
+                                    </div>
                                 </div>
-                            {% endif %}
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label required">Submitted</label>
+                                    <div class="col-md-9">
+                                        <span>{{ scheduled_job.start_time|placeholder }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="pull-right">
-                            <button type="submit" name="_run" id="id__run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Run Job Now</button>
-                            <a href="{% url 'extras:job_list' %}" class="btn btn-default">Cancel</a>
+                            <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Dry Run</button>
+                            <button type="submit" name="_approve" id="id__approve" class="btn btn-success"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-check"></i> Approve</button>
+                            <button type="submit" name="_deny" id="id__approve" class="btn btn-danger"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-close"></i> Deny</button>
+                            <a href="{% url 'extras:scheduled_jobs_approval_queue_list' %}" class="btn btn-default">Cancel</a>
                         </div>
                     </form>
                 </div>
