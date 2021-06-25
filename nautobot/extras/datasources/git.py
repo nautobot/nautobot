@@ -402,6 +402,21 @@ def import_config_context(context_data, repository_record, job_result, logger):
         data = context_data.copy()
         del data["_metadata"]
 
+        if context_metadata["schema"]:
+            if getattr(context_record, "name", None) != context_metadata["schema"]:
+                try:
+                    schema = ConfigContextSchema.objects.get(name=context_metadata["schema"])
+                    context_record.schema = schema
+                except ConfigContextSchema.DoesNotExist:
+                    job_result.log(
+                        f"ConfigContextSchema {context_metadata['schema']} does not exist.",
+                        obj=context_record,
+                        level_choice=LogLevelChoices.LOG_FAILURE,
+                        grouping="config contexts",
+                        logger=logger,
+                    )
+
+
         if context_record.data != data:
             context_record.data = data
             modified = True
@@ -682,45 +697,6 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
             logger=logger,
         )
 
-    for config_context_identifier in schema_metadata.get("config_contexts", []):
-        try:
-            config_context_record = ConfigContext.objects.get(**config_context_identifier)
-        except ConfigContext.DoesNotExist:
-            job_result.log(
-                f"Unable to find ConfigContext object using identifier {config_context_identifier} for schema {schema_metadata['name']}",
-                obj=schema_record,
-                level_choice=LogLevelChoices.LOG_FAILURE,
-                grouping="config context schemas",
-                logger=logger,
-            )
-            continue
-        except ConfigContext.MultipleObjectsReturned:
-            job_result.log(
-                f"Multiple ConfigContext objects using identifier {config_context_identifier} for schema {schema_metadata['name']}",
-                obj=schema_record,
-                level_choice=LogLevelChoices.LOG_FAILURE,
-                grouping="config context schemas",
-                logger=logger,
-            )
-            continue
-
-        if config_context_record.schema != schema_record:
-            config_context_record.schema = schema_record
-
-            try:
-                config_context_record.validated_save()
-            except ValidationError as error:
-                job_result.log(
-                    f"Schema validation failed. Schema: {schema_metadata['name']}, ConfigContext: {config_context_record}, Error: {error}",
-                    obj=schema_record,
-                    level_choice=LogLevelChoices.LOG_FAILURE,
-                    grouping="config context schemas",
-                    logger=logger,
-                )
-                continue
-
-            modified = True
-
     return schema_record.name if schema_record else None
 
 
@@ -898,10 +874,20 @@ register_datasource_contents(
         (
             "extras.gitrepository",
             DatasourceContent(
+                name="config context schemas",
+                content_identifier="extras.configcontextschema",
+                icon="mdi-floor-plan",
+                weight=100,
+                callback=refresh_git_config_context_schemas,
+            ),
+        ),
+        (
+            "extras.gitrepository",
+            DatasourceContent(
                 name="config contexts",
                 content_identifier="extras.configcontext",
                 icon="mdi-code-json",
-                weight=100,
+                weight=200,
                 callback=refresh_git_config_contexts,
             ),
         ),
@@ -911,7 +897,7 @@ register_datasource_contents(
                 name="jobs",
                 content_identifier="extras.job",
                 icon="mdi-script-text",
-                weight=200,
+                weight=300,
                 callback=refresh_git_jobs,
             ),
         ),
@@ -921,18 +907,8 @@ register_datasource_contents(
                 name="export templates",
                 content_identifier="extras.exporttemplate",
                 icon="mdi-database-export",
-                weight=300,
-                callback=refresh_git_export_templates,
-            ),
-        ),
-        (
-            "extras.gitrepository",
-            DatasourceContent(
-                name="config context schemas",
-                content_identifier="extras.configcontextschema",
-                icon="mdi-floor-plan",
                 weight=400,
-                callback=refresh_git_config_context_schemas,
+                callback=refresh_git_export_templates,
             ),
         ),
     ]

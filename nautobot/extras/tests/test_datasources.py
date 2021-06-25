@@ -76,9 +76,6 @@ class GitTest(TestCase):
             "_metadata": {
                 "name": "Config Context Schema 1",
                 "description": "Schema for defining first names, last names and ages.",
-                "config_contexts": [
-                    {"name": "Region NYC servers"},
-                ],
             },
             "data_schema": {
                 "title": "Person",
@@ -192,6 +189,7 @@ class GitTest(TestCase):
                                     "weight": 1500,
                                     "description": "NTP servers for region NYC",
                                     "is_active": True,
+                                    "schema": "Config Context Schema 1",
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
                             },
@@ -236,6 +234,7 @@ class GitTest(TestCase):
                     {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
                     config_context.data,
                 )
+                self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
 
                 # Make sure ConfigContextSchema was successfully loaded from file
                 config_context_schema_record = ConfigContextSchema.objects.get(
@@ -248,8 +247,6 @@ class GitTest(TestCase):
                 self.assertIsNotNone(config_context_schema_record)
                 self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
                 self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
-
-                self.assertEqual(config_context.schema, config_context_schema_record)
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
@@ -404,6 +401,7 @@ class GitTest(TestCase):
                                     "weight": 1500,
                                     "description": "NTP servers for region NYC",
                                     "is_active": True,
+                                    "schema": "Config Context Schema 1",
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
                             },
@@ -448,6 +446,7 @@ class GitTest(TestCase):
                     {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
                     config_context.data,
                 )
+                self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
 
                 # Make sure ConfigContextSchema was successfully loaded from file
                 config_context_schema_record = ConfigContextSchema.objects.get(
@@ -460,8 +459,6 @@ class GitTest(TestCase):
                 self.assertIsNotNone(config_context_schema_record)
                 self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
                 self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
-
-                self.assertEqual(config_context.schema, config_context_schema_record)
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
