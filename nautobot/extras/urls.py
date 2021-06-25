@@ -199,6 +199,7 @@ urlpatterns = [
         name="job_jobresult",
     ),
     path("jobs/schedules/", views.ScheduledJobListView.as_view(), name="scheduled_jobs_list"),
+    path("jobs/schedules/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
     path(
         "jobs/schedules/approval-queue/",
         views.ScheduledJobApprovalQueueListView.as_view(),

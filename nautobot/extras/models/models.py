@@ -979,6 +979,9 @@ class ScheduledJob(BaseModel):
     def __str__(self):
         return "{0.name}: {0.interval}".format(self)
 
+    def get_absolute_url(self):
+        return reverse("extras:scheduledjob", kwargs={"pk": self.pk})
+
     def save(self, *args, **kwargs):
         self.queue = self.queue or None
         if not self.enabled:

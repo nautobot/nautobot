@@ -937,6 +937,10 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
     template_name = "extras/scheduled_jobs_approval_queue_list.html"
 
 
+class ScheduledJobView(generic.ObjectView):
+    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
+
+
 #
 # JobResult
 #

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+
+{% block header %}
+    <div class="row">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:scheduled_jobs_list' %}">Scheduled Jobs</a></li>
+                <li>{{ object.name }}</li>
+            </ol>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url 'extras:scheduled_jobs_list' %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="pull-right">
+        <div class="pull-right noprint">
+            {% plugin_buttons object %}
+            <!-- TODO clone_button, edit_button, delete_button? -->
+        </div>
+    </div>
+    <h1>{% block title %}Scheduled Job: {{ object.name }}{% endblock %}</h1>
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Scheduled Job</a>
+        </li>
+    </ul>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Scheduled Job</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            {{ object.name }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td>
+                            {{ object.description }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Requester</td>
+                        <td>
+                            {{ object.user }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Approver</td>
+                        <td>
+                            {{ object.approved_by_user | placeholder }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Approval Required?</td>
+                        <td>
+                            {% if object.approval_required %}
+                                <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                            {% else %}
+                                <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Approved At</td>
+                        <td>
+                            {{ object.approved_at | placeholder }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Scheduling</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Enabled?</td>
+                        <td>
+                            {% if object.enabled %}
+                                <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                            {% else %}
+                                <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Interval</td>
+                        <td>
+                            {{ object.interval }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>One Off?</td>
+                        <td>
+                            {% if object.one_off %}
+                                <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                            {% else %}
+                                <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Start Time</td>
+                        <td>
+                            {{ object.start_time }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Last Run At</td>
+                        <td>
+                            {{ object.last_run_at|placeholder }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Total Run Count</td>
+                        <td>
+                            {{ object.total_run_count }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            {% include 'inc/custom_fields_panel.html' %}
+            {% include 'inc/relationships_panel.html' %}
+            {% plugin_left_page object %}
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Parameters</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Job Class</td>
+                        <td>
+                            {{ object.job_class }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Args</td>
+                        <td>
+                            <ul>
+                                {% for arg in object.args %}
+                                    <li>{{ arg }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Keyword Args</td>
+                        <td>
+                            <dl>
+                                {% for key, value in object.kwargs.items %}
+                                    <dt>{{ key }}</dt>
+                                    <dd><code>{{ value }}</code></dd>
+                                {% endfor %}
+                            </dl>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            {% plugin_right_page object %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% plugin_full_width_page object %}
+        </div>
+    </div>
+{% endblock %}
