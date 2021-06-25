@@ -28,7 +28,10 @@
     <div class="pull-right">
         <div class="pull-right noprint">
             {% plugin_buttons object %}
-            <!-- TODO clone_button, edit_button, delete_button? -->
+            <!-- TODO clone_button, edit_button? -->
+            {% if perms.extras.delete_scheduledjob %}
+                {% delete_button object %}
+            {% endif %}
         </div>
     </div>
     <h1>{% block title %}Scheduled Job: {{ object.name }}{% endblock %}</h1>

@@ -938,7 +938,11 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
 
 
 class ScheduledJobView(generic.ObjectView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
+    queryset = ScheduledJob.objects.all()
+
+
+class ScheduledJobDeleteView(generic.ObjectDeleteView):
+    queryset = ScheduledJob.objects.all()
 
 
 #
