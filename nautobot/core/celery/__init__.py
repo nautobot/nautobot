@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # First, we need to call setup on the app to initialize settings.
 # Note this will set the `DJANGO_SETTINGS_MODULE` environment variable which
 # Celery and its workers need under the hood. The Celery docs and examples
-# normally have you set it here, but because of our custom settings boostrapping
+# normally have you set it here, but because of our custom settings bootstrapping
 # it is handled in the setup call.
 nautobot.setup()
 

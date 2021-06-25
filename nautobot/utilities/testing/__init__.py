@@ -19,7 +19,7 @@ class TransactionTestCase(_TransactionTestCase):
 
 class CeleryTestCase(TransactionTestCase):
     """
-    Test class that provides a running Celery worker for the durration of the test case
+    Test class that provides a running Celery worker for the duration of the test case
     """
 
     @classmethod
