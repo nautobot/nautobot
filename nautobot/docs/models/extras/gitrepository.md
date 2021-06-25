@@ -114,6 +114,79 @@ Files in a `config_contexts/devices/` and/or `config_contexts/virtual_machines/`
 !!! note
     While virtual machines are always uniquely identified by their name, it is possible for devices associated with different sites and/or tenants to share an identical name. Currently, Nautobot is unable to automatically apply local config context via Git to devices that have a non-globally-unique name (or no name at all).
 
+### Configuration Context Schemas
+
+Config contexts may be provided as JSON or YAML files located in `/config_context_schemas/`.
+
+Files in the root of the `/config_context_schemas/` directory will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context schema will be taken from the `_metadata` within the file, not the filename).
+
+```shell
+config_context_schema/
+  context_schema_1.json   # JSON data will be imported as-is, with scoping derived from its contents
+  context_schema_2.yaml   # YAML data will be imported as-is, with scoping derived from its contents
+```
+
+When loading the schema, the key `_metadata` will be extracted from the loaded data and used to define the config context schemer's metadata; all remaining data will form the config context data schema.
+
+Inside of the metadata there is a list called `config_contexts`, this holds all of the config contexts the schema applies too. The config contexts are defined through dictionaries with attributes which can identify the context. Below shows that the schema applies to a config context with a name of `"Config Context 1"`.
+
+JSON example:
+
+``` json
+{
+  "_metadata": {
+    "name": "Config Context Schema 1",
+    "description": "Schema for defining first names, last names and ages.",
+    "config_contexts": [
+      {"name": "Config Context 1"},
+    ],
+  },
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string",
+      "description": "The person's first name.",
+    },
+    "lastName": {
+      "type": "string",
+      "description": "The person's last name.",
+    },
+    "age": {
+      "description": "Age in years which must be equal to or greater than zero.",
+      "type": "integer",
+      "minimum": 0,
+    },
+  },
+}
+```
+
+YAML example:
+
+``` yaml
+---
+- _metadata:
+    name: "Config Context Schema 1"
+    description: "Schema for config contexts"
+    config_contexts:
+    - name: "Config Context 1"
+  $id: "https://example.com/person.schema.json"
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  title: "Person"
+  type: "object"
+  properties:
+    firstName:
+      type: "string"
+      description: "The person's first name"
+    lastName:
+      type: "string"
+      description: "The person's last name."
+    age:
+      type: "integer"
+      description: "Age in years which must be equal to or greater than zero"
+      minimum: 0
+```
+
 ### Export Templates
 
 Export templates may be provided as files located in `/export_templates/<grouping>/<model>/<template_file>`; for example, a JSON export template for Device records might be `/export_templates/dcim/device/mytemplate.json`.

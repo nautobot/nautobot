@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.utils.text import slugify
 from django_rq import job
@@ -596,6 +596,10 @@ def update_git_config_context_schemas(repository_record, job_result):
             if isinstance(context_schema_data, dict):
                 context_name = import_config_context_schema(context_schema_data, repository_record, job_result, logger)
                 managed_config_context_schemas.add(context_name)
+            elif isinstance(context_schema_data, list):
+                for context_schema in context_schema_data:
+                    context_name = import_config_context_schema(context_schema, repository_record, job_result, logger)
+                    managed_config_context_schemas.add(context_name)
             else:
                 raise RuntimeError(
                     f"Error in loading config context schema data from `{file_name}`: data must be a dict or list of dicts"
@@ -624,32 +628,33 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
     created = False
     modified = False
 
-    if not context_schema_data.get("title"):
+    schema_metadata = context_schema_data.pop("_metadata", {})
+
+    if not schema_metadata.get("name"):
         raise RuntimeError("File has no title set.")
-    if not context_schema_data.get("properties"):
-        raise RuntimeError("File has no schema to enforce.")
 
     try:
         schema_record = ConfigContextSchema.objects.get(
-            name=context_schema_data["title"],
+            name=schema_metadata["name"],
             owner_content_type=git_repository_content_type,
             owner_object_id=repository_record.pk,
         )
     except ConfigContextSchema.DoesNotExist:
         schema_record = ConfigContextSchema(
-            name=context_schema_data["title"],
-            slug=slugify(context_schema_data["title"]),
+            name=schema_metadata["name"],
+            slug=slugify(schema_metadata["name"]),
             owner_content_type=git_repository_content_type,
             owner_object_id=repository_record.pk,
+            data_schema=context_schema_data,
         )
         created = True
 
-    if schema_record.description != context_schema_data.get("description", ""):
-        schema_record.description = context_schema_data.get("description", "")
+    if schema_record.description != schema_metadata.get("description", ""):
+        schema_record.description = schema_metadata.get("description", "")
         modified = True
 
-    if schema_record.data_schema != context_schema_data.get("properties"):
-        schema_record.data_schema = context_schema_data.get("properties")
+    if schema_record.data_schema != context_schema_data:
+        schema_record.data_schema = context_schema_data
         modified = True
 
     if created:
@@ -664,7 +669,7 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
     elif modified:
         schema_record.validated_save()
         job_result.log(
-            "Successfully refreshed config context",
+            "Successfully refreshed config context schema",
             obj=schema_record,
             level_choice=LogLevelChoices.LOG_SUCCESS,
             grouping="config context schemas",
@@ -672,12 +677,51 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
         )
     else:
         job_result.log(
-            "No change to config context",
+            "No change to config context schema",
             obj=schema_record,
             level_choice=LogLevelChoices.LOG_INFO,
             grouping="config context schemas",
             logger=logger,
         )
+
+    for config_context_identifier in schema_metadata.get("config_contexts", []):
+        try:
+            config_context_record = ConfigContext.objects.get(**config_context_identifier)
+        except ConfigContext.DoesNotExist:
+            job_result.log(
+                f"Unable to find ConfigContext object using identifier {config_context_identifier} for schema {schema_metadata['name']}",
+                obj=schema_record,
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="config context schemas",
+                logger=logger,
+            )
+            continue
+        except ConfigContext.MultipleObjectsReturned:
+            job_result.log(
+                f"Multiple ConfigContext objects using identifier {config_context_identifier} for schema {schema_metadata['name']}",
+                obj=schema_record,
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="config context schemas",
+                logger=logger,
+            )
+            continue
+
+        if config_context_record.schema != schema_record:
+            config_context_record.schema = schema_record
+
+            try:
+                config_context_record.validated_save()
+            except ValidationError as error:
+                job_result.log(
+                    f"Schema validation failed. Schema: {schema_metadata['name']}, ConfigContext: {config_context_record}, Error: {error}",
+                    obj=schema_record,
+                    level_choice=LogLevelChoices.LOG_FAILURE,
+                    grouping="config context schemas",
+                    logger=logger,
+                )
+                continue
+
+            modified = True
 
     return schema_record.name if schema_record else None
 
@@ -859,6 +903,7 @@ register_datasource_contents(
                 name="config contexts",
                 content_identifier="extras.configcontext",
                 icon="mdi-code-json",
+                weight=100,
                 callback=refresh_git_config_contexts,
             ),
         ),
@@ -868,6 +913,7 @@ register_datasource_contents(
                 name="jobs",
                 content_identifier="extras.job",
                 icon="mdi-script-text",
+                weight=200,
                 callback=refresh_git_jobs,
             ),
         ),
@@ -877,6 +923,7 @@ register_datasource_contents(
                 name="export templates",
                 content_identifier="extras.exporttemplate",
                 icon="mdi-database-export",
+                weight=300,
                 callback=refresh_git_export_templates,
             ),
         ),
@@ -886,6 +933,7 @@ register_datasource_contents(
                 name="config context schemas",
                 content_identifier="extras.configcontextschema",
                 icon="mdi-floor-plan",
+                weight=400,
                 callback=refresh_git_config_context_schemas,
             ),
         ),

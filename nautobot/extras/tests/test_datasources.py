@@ -73,8 +73,14 @@ class GitTest(TestCase):
         )
 
         self.config_context_schema = {
-            "title": "Person Schema",
-            "description": "Schema for defining first names, last names and ages.",
+            "_metadata": {
+                "name": "Config Context Schema 1",
+                "description": "Schema for defining first names, last names and ages.",
+                "config_contexts": [
+                    {"name": "Region NYC servers"},
+                ],
+            },
+            "title": "Person",
             "type": "object",
             "properties": {
                 "firstName": {
@@ -230,14 +236,16 @@ class GitTest(TestCase):
                 )
 
                 # Make sure ConfigContextSchema was successfully loaded from file
-                config_context_schema = ConfigContextSchema.objects.get(
-                    name="Person Schema",
+                config_context_schema_record = ConfigContextSchema.objects.get(
+                    name="Config Context Schema 1",
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
-                self.assertIsNotNone(config_context_schema)
-                self.assertEqual(self.config_context_schema["description"], config_context_schema.description)
-                self.assertEqual(self.config_context_schema["properties"], config_context_schema.data_schema)
+                config_context_schema = self.config_context_schema
+                config_context_schema_metadata = config_context_schema.pop("_metadata", {})
+                self.assertIsNotNone(config_context_schema_record)
+                self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
+                self.assertEqual(config_context_schema, config_context_schema_record.data_schema)
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
@@ -438,14 +446,16 @@ class GitTest(TestCase):
                 )
 
                 # Make sure ConfigContextSchema was successfully loaded from file
-                config_context_schema = ConfigContextSchema.objects.get(
-                    name="Person Schema",
+                config_context_schema_record = ConfigContextSchema.objects.get(
+                    name="Config Context Schema 1",
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
-                self.assertIsNotNone(config_context_schema)
-                self.assertEqual(self.config_context_schema["description"], config_context_schema.description)
-                self.assertEqual(self.config_context_schema["properties"], config_context_schema.data_schema)
+                config_context_schema = self.config_context_schema
+                config_context_schema_metadata = config_context_schema.pop("_metadata", {})
+                self.assertIsNotNone(config_context_schema_record)
+                self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
+                self.assertEqual(config_context_schema, config_context_schema_record.data_schema)
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
