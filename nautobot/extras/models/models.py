@@ -768,7 +768,7 @@ class JobResult(BaseModel):
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
-        kwargs["job_result"] = job_result.pk
+        kwargs["job_result_pk"] = job_result.pk
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id))
 

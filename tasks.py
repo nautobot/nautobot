@@ -287,10 +287,10 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task
-def cli(context):
+@task(help={"container": "Name of the container to shell into"})
+def cli(context, container="nautobot"):
     """Launch a bash shell inside the running Nautobot container."""
-    docker_compose(context, "exec nautobot bash", pty=True)
+    docker_compose(context, f"exec {container} bash", pty=True)
 
 
 @task(
