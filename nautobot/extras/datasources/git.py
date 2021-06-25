@@ -574,8 +574,6 @@ def update_git_config_context_schemas(repository_record, job_result):
 
     managed_config_context_schemas = set()
 
-    # First, handle the "flat file" case - data files in the root config_context_path,
-    # whose metadata is expressed purely within the contents of the file:
     for file_name in os.listdir(config_context_path):
         if not os.path.isfile(os.path.join(config_context_path, file_name)):
             continue
