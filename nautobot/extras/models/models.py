@@ -28,14 +28,13 @@ from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import *
 from nautobot.extras.constants import *
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import OrganizationalModel
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
