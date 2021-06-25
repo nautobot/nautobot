@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
 from django.urls import reverse
@@ -418,7 +418,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
     schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         help_text="Optional schema to validate the structure of the data",
@@ -473,7 +473,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     )
     local_context_schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         help_text="Optional schema to validate the structure of the data",
@@ -577,6 +577,18 @@ class ConfigContextSchema(OrganizationalModel):
             Draft7Validator.check_schema(self.data_schema)
         except SchemaError as e:
             raise ValidationError({"data_schema": e.message})
+
+        if (
+            type(self.data_schema) is not dict
+            or "properties" not in self.data_schema
+            or self.data_schema.get("type") != "object"
+        ):
+            raise ValidationError(
+                {
+                    "data_schema": "Nautobot only supports context data in the form of an object and thus the "
+                    "JSON schema must be of type object and specify a set of properties."
+                }
+            )
 
 
 #

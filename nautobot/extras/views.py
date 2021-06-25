@@ -10,16 +10,22 @@ from django.urls import reverse
 from django.views.generic import View
 from django_rq.queues import get_connection
 from django_tables2 import RequestConfig
+from jsonschema.validators import Draft7Validator
 from rq import Worker
 
 from nautobot.core.views import generic
+from nautobot.dcim.models import Device
+from nautobot.dcim.tables import DeviceTable
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
     shallow_compare_dict,
 )
+from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ContentTypePermissionRequiredMixin
+from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
 from .models import (
@@ -220,6 +226,88 @@ class ConfigContextSchemaView(generic.ObjectView):
 
         return {
             "format": format,
+            "active_tab": "configcontextschema",
+        }
+
+
+class ConfigContextSchemaObjectValidationView(generic.ObjectView):
+    """
+    This view renders a detail tab that shows tables of objects that utilize the given schema object
+    and their validation state.
+    """
+
+    queryset = ConfigContextSchema.objects.all()
+    template_name = "extras/configcontextschema/validation.html"
+
+    def get_extra_context(self, request, instance):
+        """
+        Reuse the model tables for config context, device, and virtual machine but inject
+        the `ConfigContextSchemaValidationStateColumn` and an object edit action button.
+        """
+        # Prep the validator with the schema so it can be reused for all records
+        validator = Draft7Validator(instance.data_schema)
+
+        # Config context table
+        config_context_table = tables.ConfigContextTable(
+            data=instance.configcontext_set.all(),
+            orderable=False,
+            extra_columns=[
+                (
+                    "validation_state",
+                    tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
+                ),
+                ("actions", ButtonsColumn(model=ConfigContext, buttons=["edit"])),
+            ],
+        )
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(config_context_table)
+
+        # Device table
+        device_table = DeviceTable(
+            data=instance.device_set.prefetch_related(
+                "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
+            ),
+            orderable=False,
+            extra_columns=[
+                (
+                    "validation_state",
+                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                ),
+                ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
+            ],
+        )
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(device_table)
+
+        # Virtual machine table
+        virtual_machine_table = VirtualMachineTable(
+            data=instance.virtualmachine_set.prefetch_related("cluster", "role", "tenant", "primary_ip"),
+            orderable=False,
+            extra_columns=[
+                (
+                    "validation_state",
+                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                ),
+                ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
+            ],
+        )
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(virtual_machine_table)
+
+        return {
+            "config_context_table": config_context_table,
+            "device_table": device_table,
+            "virtual_machine_table": virtual_machine_table,
+            "active_tab": "validation",
         }
 
 

@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
             model_name="configcontext",
             name="schema",
             field=models.ForeignKey(
-                blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to="extras.configcontextschema"
+                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to="extras.configcontextschema"
             ),
         ),
     ]

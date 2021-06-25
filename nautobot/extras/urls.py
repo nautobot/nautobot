@@ -100,6 +100,11 @@ urlpatterns = [
         name="configcontextschema",
     ),
     path(
+        "config-context-schemas/<slug:slug>/validation/",
+        views.ConfigContextSchemaObjectValidationView.as_view(),
+        name="configcontextschema_object_validation",
+    ),
+    path(
         "config-context-schemas/<slug:slug>/edit/",
         views.ConfigContextSchemaEditView.as_view(),
         name="configcontextschema_edit",

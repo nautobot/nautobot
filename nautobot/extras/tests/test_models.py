@@ -583,3 +583,51 @@ class ConfigContextSchemaTestCase(TestCase):
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
+
+    def test_json_schema_must_be_an_object(self):
+        """
+        Given a config context schema object
+        With a JSON schema of type object
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema=["not an object"])
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_type_set_to_object(self):
+        """
+        Given a config context schema object
+        With a JSON schema with type set to integer
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_type_present(self):
+        """
+        Given a config context schema object
+        With a JSON schema with type not present
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"properties": {"a": {"type": "string"}}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_properties_present(self):
+        """
+        Given a config context schema object
+        With a JSON schema with properties not present
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema={"type": "object"})
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
