@@ -790,7 +790,7 @@ def get_job(class_path):
 
 
 @nautobot_task
-def run_job(data, request, job_result, commit=True, *args, **kwargs):
+def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
 
@@ -799,7 +799,7 @@ def run_job(data, request, job_result, commit=True, *args, **kwargs):
     """
     from nautobot.extras.models import JobResult  # avoid circular import
 
-    job_result = JobResult.objects.get(pk=job_result)
+    job_result = JobResult.objects.get(pk=job_result_pk)
 
     job_class = get_job(job_result.name)
     if not job_class:
