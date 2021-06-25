@@ -22,6 +22,9 @@ The token implementation can vary from Git provider to Git provider, the followi
 
 Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../../../configuration/optional-settings/#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
+!!! important
+    The repository branch must exist and have a commit against it. At this time, Nautobot will not initialize an empty repository.
+
 ## Repository Structure
 
 ### Jobs
