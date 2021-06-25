@@ -257,9 +257,9 @@ There is a huge benefit to having `config contexts` managed by a Git workflow.  
 
 ### Config Context Schemas
 
-Detailed information on [config context schema](../models/extras/gitrepository.md#configuration-context-schemas) in Git Repositories.
+Detailed information on [config context schemas](../models/extras/gitrepository.md#configuration-context-schemas) in Git Repositories.
 
-Config context schemas are used to enforce data validation on config contexts. These schema are managed via the config [context schema model](../models/extras/configcontextschema.md) and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data.
+Config context schemas are used to enforce data validation on config contexts. These schema are managed via the [config context schema model](../models/extras/configcontextschema.md) and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data.
 
 ```no-highlight
 ▶ tree config_contexts

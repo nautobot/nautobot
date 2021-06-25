@@ -141,21 +141,23 @@ JSON example:
       {"name": "Config Context 1"},
     ],
   },
-  "title": "Person",
-  "type": "object",
-  "properties": {
-    "firstName": {
-      "type": "string",
-      "description": "The person's first name.",
-    },
-    "lastName": {
-      "type": "string",
-      "description": "The person's last name.",
-    },
-    "age": {
-      "description": "Age in years which must be equal to or greater than zero.",
-      "type": "integer",
-      "minimum": 0,
+  "data_schema": {
+    "title": "Person",
+    "type": "object",
+    "properties": {
+      "firstName": {
+        "type": "string",
+        "description": "The person's first name.",
+      },
+      "lastName": {
+        "type": "string",
+        "description": "The person's last name.",
+      },
+      "age": {
+        "description": "Age in years which must be equal to or greater than zero.",
+        "type": "integer",
+        "minimum": 0,
+      },
     },
   },
 }
@@ -170,21 +172,22 @@ YAML example:
     description: "Schema for config contexts"
     config_contexts:
     - name: "Config Context 1"
-  $id: "https://example.com/person.schema.json"
-  $schema: "https://json-schema.org/draft/2020-12/schema"
-  title: "Person"
-  type: "object"
-  properties:
-    firstName:
-      type: "string"
-      description: "The person's first name"
-    lastName:
-      type: "string"
-      description: "The person's last name."
-    age:
-      type: "integer"
-      description: "Age in years which must be equal to or greater than zero"
-      minimum: 0
+  data_schema:
+    $id: "https://example.com/person.schema.json"
+    $schema: "https://json-schema.org/draft/2020-12/schema"
+    title: "Person"
+    type: "object"
+    properties:
+      firstName:
+        type: "string"
+        description: "The person's first name"
+      lastName:
+        type: "string"
+        description: "The person's last name."
+      age:
+        type: "integer"
+        description: "Age in years which must be equal to or greater than zero"
+        minimum: 0
 ```
 
 ### Export Templates

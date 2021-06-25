@@ -606,7 +606,7 @@ def update_git_config_context_schemas(repository_record, job_result):
             job_result.log(
                 str(exc),
                 level_choice=LogLevelChoices.LOG_FAILURE,
-                grouping="config contexts",
+                grouping="config context schemas",
                 logger=logger,
             )
             job_result.save()
@@ -626,10 +626,10 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
     created = False
     modified = False
 
-    schema_metadata = context_schema_data.pop("_metadata", {})
+    schema_metadata = context_schema_data.setdefault("_metadata", {})
 
     if not schema_metadata.get("name"):
-        raise RuntimeError("File has no title set.")
+        raise RuntimeError("File has no name set.")
 
     try:
         schema_record = ConfigContextSchema.objects.get(
@@ -643,7 +643,7 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
             slug=slugify(schema_metadata["name"]),
             owner_content_type=git_repository_content_type,
             owner_object_id=repository_record.pk,
-            data_schema=context_schema_data,
+            data_schema=context_schema_data["data_schema"],
         )
         created = True
 
@@ -651,8 +651,8 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
         schema_record.description = schema_metadata.get("description", "")
         modified = True
 
-    if schema_record.data_schema != context_schema_data:
-        schema_record.data_schema = context_schema_data
+    if schema_record.data_schema != context_schema_data["data_schema"]:
+        schema_record.data_schema = context_schema_data["data_schema"]
         modified = True
 
     if created:

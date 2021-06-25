@@ -1,5 +1,4 @@
 import json
-from nautobot.extras.models.models import ConfigContextSchema
 import os
 import tempfile
 from unittest import mock
@@ -18,6 +17,7 @@ from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     ExportTemplate,
     GitRepository,
     JobResult,
@@ -80,21 +80,23 @@ class GitTest(TestCase):
                     {"name": "Region NYC servers"},
                 ],
             },
-            "title": "Person",
-            "type": "object",
-            "properties": {
-                "firstName": {
-                    "type": "string",
-                    "description": "The person's first name.",
-                },
-                "lastName": {
-                    "type": "string",
-                    "description": "The person's last name.",
-                },
-                "age": {
-                    "description": "Age in years which must be equal to or greater than zero.",
-                    "type": "integer",
-                    "minimum": 0,
+            "data_schema": {
+                "title": "Person",
+                "type": "object",
+                "properties": {
+                    "firstName": {
+                        "type": "string",
+                        "description": "The person's first name.",
+                    },
+                    "lastName": {
+                        "type": "string",
+                        "description": "The person's last name.",
+                    },
+                    "age": {
+                        "description": "Age in years which must be equal to or greater than zero.",
+                        "type": "integer",
+                        "minimum": 0,
+                    },
                 },
             },
         }
@@ -242,10 +244,12 @@ class GitTest(TestCase):
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
                 config_context_schema = self.config_context_schema
-                config_context_schema_metadata = config_context_schema.pop("_metadata", {})
+                config_context_schema_metadata = config_context_schema.setdefault("_metadata", {})
                 self.assertIsNotNone(config_context_schema_record)
                 self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
-                self.assertEqual(config_context_schema, config_context_schema_record.data_schema)
+                self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
+
+                self.assertEqual(config_context.schema, config_context_schema_record)
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
@@ -452,10 +456,12 @@ class GitTest(TestCase):
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
                 config_context_schema = self.config_context_schema
-                config_context_schema_metadata = config_context_schema.pop("_metadata", {})
+                config_context_schema_metadata = config_context_schema.setdefault("_metadata", {})
                 self.assertIsNotNone(config_context_schema_record)
                 self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
-                self.assertEqual(config_context_schema, config_context_schema_record.data_schema)
+                self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
+
+                self.assertEqual(config_context.schema, config_context_schema_record)
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
