@@ -36,7 +36,7 @@ class JobTest(TestCase):
                 job_id=uuid.uuid4(),
             )
 
-            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
 
@@ -56,7 +56,7 @@ class JobTest(TestCase):
                 user=None,
                 job_id=uuid.uuid4(),
             )
-            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
@@ -128,7 +128,7 @@ class JobTest(TestCase):
                 job_id=uuid.uuid4(),
             )
 
-            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
             self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
@@ -149,7 +149,7 @@ class JobTest(TestCase):
                 user=None,
                 job_id=uuid.uuid4(),
             )
-            run_job(data={}, request=None, commit=False, job_result=job_result.pk)
+            run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
             self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted

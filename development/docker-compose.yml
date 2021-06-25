@@ -32,6 +32,15 @@ services:
     env_file:
       - ./dev.env
     tty: true
+  celery_worker:
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "celery -A nautobot.core worker -B -l INFO"
+    depends_on:
+      - nautobot
+      - redis
+    env_file:
+      - ./dev.env
+    tty: true
   postgres:
     image: postgres:13
     env_file:
