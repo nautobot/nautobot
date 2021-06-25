@@ -11,8 +11,8 @@
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:computedfield_list' %}">Computed Fields</a></li>
-                {% if object.name %}
-                    <li><a href="{% url 'extras:computedfield' pk=object.pk %}">{{ object.name }}</a></li>
+                {% if object.label %}
+                    <li><a href="{% url 'extras:computedfield' pk=object.pk %}">{{ object.label }}</a></li>
                 {% endif %}
             </ol>
         </div>
@@ -24,10 +24,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.extras.change_computedfield %}
-            {% edit_button object %}
+            {% edit_button object use_pk=1 %}
         {% endif %}
         {% if perms.extras.delete_computedfield %}
-            {% delete_button object %}
+            {% delete_button object use_pk=1 %}
         {% endif %}
     </div>
 
@@ -61,12 +61,16 @@
 
             <table class="table table-hover panel-body attr-table">
                 <tr>
-                    <td>Object Type</td>
+                    <td>Content Type</td>
                     <td><span>{{ object.content_type }}</span></td>
                 </tr>
                 <tr>
-                    <td>Name</td>
-                    <td><span>{{ object.name }}</span></td>
+                    <td>Label</td>
+                    <td><span>{{ object.label }}</span></td>
+                </tr>
+                <tr>
+                    <td>Slug</td>
+                    <td><span>{{ object.slug }}</span></td>
                 </tr>
                 <tr>
                     <td>Weight</td>
