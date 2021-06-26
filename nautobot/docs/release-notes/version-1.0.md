@@ -185,7 +185,8 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Fixed
 
-- [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choicescorrectly when performing `OPTIONS` metadata API requests
+- [#460](https://github.com/nautobot/nautobot/issues/460) - Deleting a record now deletes any associated `RelationshipAssociation` records
+- [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choices correctly when performing `OPTIONS` metadata API requests
 
 ### Removed
 
@@ -199,7 +200,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
 - [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
 - [#523](https://github.com/nautobot/nautobot/issues/523) - Added instructions for using LDAP TLS Options to SSO documentation
-- [#576](https://github.com/nautobot/nautobot/pull/576) - `JobResult` detail views not support custom links and plugin template extensions
+- [#576](https://github.com/nautobot/nautobot/pull/576) - `JobResult` detail views now support custom links and plugin template extensions
 
 ### Changed
 
