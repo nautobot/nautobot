@@ -53,8 +53,8 @@ nav:
         - Tenants: 'user-guides/getting-started/tenants.md'
         - Interfaces: 'user-guides/getting-started/interfaces.md'
         - VLANS and VLAN Groups: 'user-guides/getting-started/vlans-and-vlan-groups.md'
-        - The Search Bar: 'user-guides/getting-started/search-bar.md'
         - IP Address Management: 'user-guides/getting-started/ipam.md'
+        - The Search Bar: 'user-guides/getting-started/search-bar.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'

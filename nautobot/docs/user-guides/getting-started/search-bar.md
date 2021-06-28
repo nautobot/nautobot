@@ -1,9 +1,8 @@
 # The Search Bar
 
-The next couple sections walk you through finding different objects and verifying information about the objects. 
-The instructions in those sections will walk you through how to **navigate** to the main page for the proper object. 
+The exercises in the prior sections in this *Getting Started Guide* walked you through how to **navigate** to the proper objects. 
 
-You can also use the search bar to find the desired object's page.
+You can also use the Search Bar to find the desired object.
 
 We will show two quick examples.
 
