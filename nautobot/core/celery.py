@@ -10,12 +10,17 @@ from kombu.serialization import register
 
 logger = logging.getLogger(__name__)
 
-# First, we need to call setup on the app to initialize settings.
-# Note this will set the `DJANGO_SETTINGS_MODULE` environment variable which
-# Celery and its workers need under the hood. The Celery docs and examples
+# The Celery documentation tells us to call setup on the app to initialize
+# settings, but we will NOT be doing that because of a chicken-and-egg problem
+# when bootstrapping the Django settings with `nautobot-server`.
+#
+# Note this would normally set the `DJANGO_SETTINGS_MODULE` environment variable
+# which Celery and its workers need under the hood.The Celery docs and examples
 # normally have you set it here, but because of our custom settings bootstrapping
-# it is handled in the setup call.
-nautobot.setup()
+# it is handled in the `nautobot.setup() call, and we have implemented a
+# `nautobot-server celery` command to provide the correct context so this does
+# NOT need to be called here.
+# nautobot.setup()
 
 app = Celery("nautobot")
 
