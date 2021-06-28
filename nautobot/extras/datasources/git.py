@@ -586,14 +586,14 @@ def refresh_git_config_context_schemas(repository_record, job_result, delete=Fal
 
 def update_git_config_context_schemas(repository_record, job_result):
     """Refresh any config context schemas provided by this Git repository."""
-    config_context_path = os.path.join(repository_record.filesystem_path, "config_context_schemas")
-    if not os.path.isdir(config_context_path):
+    config_context_schema_path = os.path.join(repository_record.filesystem_path, "config_context_schemas")
+    if not os.path.isdir(config_context_schema_path):
         return
 
     managed_config_context_schemas = set()
 
-    for file_name in os.listdir(config_context_path):
-        if not os.path.isfile(os.path.join(config_context_path, file_name)):
+    for file_name in os.listdir(config_context_schema_path):
+        if not os.path.isfile(os.path.join(config_context_schema_path, file_name)):
             continue
         job_result.log(
             f"Loading config context schema from `{file_name}`",
@@ -601,7 +601,7 @@ def update_git_config_context_schemas(repository_record, job_result):
             logger=logger,
         )
         try:
-            with open(os.path.join(config_context_path, file_name), "r") as fd:
+            with open(os.path.join(config_context_schema_path, file_name), "r") as fd:
                 # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
                 try:
                     context_schema_data = yaml.safe_load(fd)
