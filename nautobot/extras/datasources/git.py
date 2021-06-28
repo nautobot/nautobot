@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
 from django.utils.text import slugify
 from django_rq import job
@@ -614,8 +614,11 @@ def update_git_config_context_schemas(repository_record, job_result):
                 managed_config_context_schemas.add(context_name)
             elif isinstance(context_schema_data, list):
                 for context_schema in context_schema_data:
-                    context_name = import_config_context_schema(context_schema, repository_record, job_result, logger)
-                    managed_config_context_schemas.add(context_name)
+                    if isinstance(context_schema, dict):
+                        context_name = import_config_context_schema(
+                            context_schema, repository_record, job_result, logger
+                        )
+                        managed_config_context_schemas.add(context_name)
             else:
                 raise RuntimeError(
                     f"Error in loading config context schema data from `{file_name}`: data must be a dict or list of dicts"

@@ -68,7 +68,7 @@ After loading and potentially extending the JSON or YAML data with any implied s
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
         "regions": [{"slug": "nyc"}],
-        "schema": "Config Context Schema 1",
+        "schema": "Config Context Schema 1"
     },
     "ntp-servers": [
         "172.16.10.22",
@@ -130,7 +130,7 @@ config_context_schema/
   context_schema_2.yaml   # YAML data will be imported as-is, with scoping derived from its contents
 ```
 
-When loading the schema, the key `_metadata` will be extracted from the loaded data and used to define the config context schemer's metadata; all remaining data will form the config context data schema.
+When loading the schema, the key `_metadata` will be extracted from the loaded data and used to define the config context schema's metadata, while the actual config context data schema will be based on the key `data_schema`.
 
 JSON example:
 
@@ -138,7 +138,7 @@ JSON example:
 {
   "_metadata": {
     "name": "Config Context Schema 1",
-    "description": "Schema for defining first names, last names and ages.",
+    "description": "Schema for defining first names, last names and ages."
   },
   "data_schema": {
     "title": "Person",
@@ -146,19 +146,19 @@ JSON example:
     "properties": {
       "firstName": {
         "type": "string",
-        "description": "The person's first name.",
+        "description": "The person's first name."
       },
       "lastName": {
         "type": "string",
-        "description": "The person's last name.",
+        "description": "The person's last name."
       },
       "age": {
         "description": "Age in years which must be equal to or greater than zero.",
         "type": "integer",
-        "minimum": 0,
-      },
-    },
-  },
+        "minimum": 0
+      }
+    }
+  }
 }
 ```
 
@@ -173,7 +173,7 @@ YAML example:
     - name: "Config Context 1"
   data_schema:
     $id: "https://example.com/person.schema.json"
-    $schema: "https://json-schema.org/draft/2020-12/schema"
+    $schema: "https://json-schema.org/draft-07/schema"
     title: "Person"
     type: "object"
     properties:
