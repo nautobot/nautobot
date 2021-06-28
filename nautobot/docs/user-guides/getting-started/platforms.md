@@ -61,11 +61,11 @@ in the Search Bar.
 2. Click on the device name on the results page
 3. Click on the `Edit` button on the main page for the Device
 
+![](../images/getting-started-nautobot-ui/43-get-to-device-main-page.png)
+
 ### Reaching the `Add a new device` Page
 
 For a new Device, follow the steps to [create a new Device](creating-devices.md) to reach the `Add a new device` page. 
-
-![](../images/getting-started-nautobot-ui/43-get-to-device-main-page.png)
 
 ### Specifying the Device's Platform
 
