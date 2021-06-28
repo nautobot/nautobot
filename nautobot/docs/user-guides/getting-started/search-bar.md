@@ -26,7 +26,7 @@ Example two shows a Device-specific search:
 
 1. Search for `edge`
     * This takes you to a search results page
-2. In the drop-down selector to the right, select **Devices**
+2. In the drop-down selector to the right, select `Devices`
 3. Search results for Devices with `edge` in the name
 4. *Tenants* for each Device (if applicable) 
 5. *Device Type* for each Device

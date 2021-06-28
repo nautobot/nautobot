@@ -30,8 +30,8 @@ To create a new Device Role:
 1. Click on **Devices** in the top navigation menu
 2. Find **Device Roles** on the drop-down menu
 3. Select `+`
-4. In the `Add a new device role` form, populate a Name
-    * The Slug will auto-populate based on the Name, but can be manually overwritten
+4. In the `Add a new device role` form, populate the `Name`
+    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 5. Click on Create    
 
 !!! note
@@ -41,7 +41,7 @@ To create a new Device Role:
 
 ## Creating a Manufacturer
 
-A manufacturer represents the "make" of a device; e.g. Cisco or Dell. Each device type must be assigned to a manufacturer.
+A Manufacturer represents the "make" of a device; e.g. Cisco or Dell. Each device type must be assigned to a manufacturer.
 
 More information on Manufacturers is in the [Manufacturers](../../core-functionality/device-types.md#manufacturers) section of the Nautobot documentation.
 
@@ -51,10 +51,10 @@ To create a new Manufacturer:
 
 1. Click on **Devices** in the top navigation menu
 2. Find **Manufacturers** on the drop-down
-3. Select `+`
-4. In the `Add a new manufacturer` form, populate the Name
-     * The Slug will auto-populate based on the Name, but can be manually overwritten
-5. Click on **Create**
+3. Select **+**
+4. In the `Add a new manufacturer` form, populate the `Name`
+     * The `Slug` will auto-populate based on the entered `Name`, but can be manually overwritten
+5. Click on `Create`
 
 ![](../images/getting-started-nautobot-ui/2-create-manufacturer.png)
 
@@ -71,10 +71,10 @@ To create a new Device Type:
 
 1. Click on **Devices** in the top navigation menu
 2. Find **Device Types**
-3. Select `+` to go to the `Add a new device type` form
-4. Select the Manufacturer from the drop-down selector
-5. Populate the Model (name)
-6. Click on **Create**
+3. Select **+** to go to the `Add a new device type` form
+4. Select the `Manufacturer` from the drop-down selector
+5. Populate the `Model` (name)
+6. Click on `Create`
 
 ![](../images/getting-started-nautobot-ui/4-create-device-type.png)
 
@@ -91,11 +91,11 @@ To create a new Site:
 
 1. Click on **Organization** in the top navigation menu
 2. Find **Sites**
-3. Select `+` to go to the `Add a new site` form
-4. Populate the Site's Name
-    * The Slug will auto-populate based on the Name, but can be manually overwritten
-5. Set the Status to `Active` in the drop-down selector
-6. Click on **Create** at the bottom of the form (not shown)
+3. Select **+** to go to the `Add a new site` form
+4. Populate the Site's `Name`
+    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
+5. Set the `Status` to `Active` in the drop-down selector
+6. Click on `Create` at the bottom of the form (not shown)
 
 ![](../images/getting-started-nautobot-ui/1-create-site.png)
 
@@ -105,13 +105,12 @@ To create a new Device:
 
 1. Click on **Devices** in the top navigation menu
 2. Find **Devices**
-3. Select `+` to go to the `Add a new device` form
-
-4. Populate the Name
-5. Select the Device Role from the drop-down selector
-6. Select the Device Type from the down-down selector
-7. Select the Site from the drop-down selector
-8. Set the Status to the appropriate value in the drop-down selector
-9. Click on **Create** at the bottom of the form (not shown)
+3. Select **+** to go to the `Add a new device` form
+4. Populate the `Name`
+5. Select the `Device Role` from the drop-down selector
+6. Select the `Device Type` from the down-down selector
+7. Select the `Site` from the drop-down selector
+8. Set the `Status` to the appropriate value in the drop-down selector
+9. Click on `Create` at the bottom of the form (not shown)
 
 ![](../images/getting-started-nautobot-ui/5-create-device.png)

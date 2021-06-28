@@ -20,10 +20,10 @@ Nautobot requires any IP allocation be attributed to a RIR.
 To create a RIR:
 
 1. Click on **IPAM** in the top-level navigation menu
-2. Find **RIRs** and click on the `+`; this takes you to the `Add a new RIR` form
-3. Specify the RIR Name
-4. The Slug will auto-populate based on the Name you provide, but this default can be manually overwritten
-5. There is a checkbox to flag Private (internal use) only
+2. Find **RIRs** and click on the **+**; this takes you to the `Add a new RIR` form
+3. Specify the RIR `Name`
+4. The `Slug` will auto-populate based on the `Name` field, but this default can be manually overwritten
+5. There is a checkbox to flag `Private` (internal use) only
 6. Click on the `Create` button
 
 ![](../images/getting-started-nautobot-ui/27-add-rir.png)
@@ -35,9 +35,9 @@ An aggregate is a consolidated allocation of IP address space, whether it is pub
 To create an Aggregate:
 
 1. Click on **IPAM** in the top-level navigation menu
-2. Find **Aggregates** and click on the `+`; this takes you to the `Add a new aggregate` form
-3. Specify the prefix and mask in a `prefix/mask` format
-4. Select a RIR from the drop-down selector
+2. Find **Aggregates** and click on the **+**; this takes you to the `Add a new aggregate` form
+3. Specify the `Prefix` in a `prefix/mask` format
+4. Select a `RIR` from the drop-down selector
 5. Click the `Create` button
 
 ![](../images/getting-started-nautobot-ui/28-add-aggregate.png)
@@ -55,10 +55,10 @@ Additionally, each Prefix can be assigned to a particular Site and virtual routi
 To create a prefix:
 
 1. Click on **IPAM** in the top-level navigation menu
-2. Look for **Prefixes** and click on the `+`
+2. Look for **Prefixes** and click on the **+**
     * This will take you to the `Add a new prefix` form
-3. Populate the Prefix in CIDR notation
-4. Select a Status from the drop-down selector
+3. Populate the `Prefix` in CIDR notation
+4. Select a `Status` from the drop-down selector
 5. If all addresses in the Prefix are usable, check the `Is a pool` flag
 6. Click on the `Create` button (not shown)
 
@@ -83,13 +83,13 @@ To view the Prefixes in an Aggregate:
 To create an IP address:
 
 1. Click on **IPAM** in the top-level navigation menu
-2. Find **IP Addresses** and click on the `+`
+2. Find **IP Addresses** and click on the **+**
     * This will take you to the `Add a new IP address` form
 3. In this example, we are going to create multiple individual addresses, so click on the `Bulk Create` tab
 4. Populate an Address pattern
     * This example uses `10.10.10.[0-1,2-3,6-7]/31` to create 3 non-contiguous /31's 
     * The specified mask should be exactly as would be configured on the Device's Interface 
-5. Select Active for Status from the drop-down selector   
+5. Select `Active` for `Status` from the drop-down selector   
 6. Click on the `Create` button
 
 ![](../images/getting-started-nautobot-ui/32-add-ip-addr.png)
@@ -108,8 +108,8 @@ To assign an IP Address to a specific Device and Interface:
 
 Once on the `Editing IP address` page:
 
-1. Select a Device from the drop-down selector
-2. Select an Interface on the Device
+1. Select a `Device` from the drop-down selector
+2. Select an `Interface` on the Device
 3. Click on the `Update` button
     * This will take you back to the main page for the IP Address, where you will see the assignment shown as `device (interface)`
 

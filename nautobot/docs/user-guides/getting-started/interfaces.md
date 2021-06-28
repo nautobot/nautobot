@@ -1,9 +1,13 @@
 # Interfaces
 
-Interfaces can be added at the **Device** or the **Device Type** level.  Which one you choose depends on your use case.
+Interfaces in Nautobot represent network interfaces used to exchange data with connected devices.
 
-Interfaces added to an individual Device are for that Device only.
-Interfaces added to the Device Type will be applied to all NEW implementations of that Device Type (not existing implementations).  
+More information on Interfaces is in the [Interfaces](../../core-functionality/devices.md#interfaces) section of the Nautobot documentation.
+
+Interfaces can be added at the Device or the Device Type level:
+
+* Interfaces added to an individual Device are for that Device only
+* Interfaces added to the Device Type will be applied to all NEW implementations of that Device Type (not existing implementations)
 
 Which one you select depends on your use case; in some instances you will need to use both, as in the example below.
 
@@ -12,8 +16,8 @@ Which one you select depends on your use case; in some instances you will need t
 Let’s take an example:
 
 * We want to define a Device Type of `MX240-edge`
-* This Device Type will have 20x10G (`xe[0-1]/0/[0-9]`) ports and one LAG (`ae0`)
-* The following ports will be part of `ae0`: `xe-0/0/9`, `xe-1/0/9`
+* This Device Type will have 20x 10G (`xe-[0-1]/0/[0-9]`) Interfaces and one LAG (`ae0`) Interface
+* The `xe-0/0/9` and `xe-1/0/9` Interfaces will be members of the `ae0` Interface
 
 ## Creating a Device Type
 
@@ -32,7 +36,7 @@ To create a Device Type:
 2. Click on the **Device Types** option in the drop-down menu
 3. On the Device Types page `Add +` a new Device Type
     * A Device Type requires a **Manufacturer** object to be created prior to creating the Device Type
-    * Device Type requires **Manufacturer**, **Model**, **Slug**, and **Height** values at creation.
+    * Device Type requires **Manufacturer**, **Model**, **Slug**, and **Height** values at creation
     * In this example, name the Device Type `MX240-edge`
 4. On the home page for the specific Device Type, click on `+Add Components` and select `Interfaces`    
 
@@ -44,11 +48,11 @@ You will now see the `Interface Template` form:
     * `Manufacturer` will auto-populate to the Manufacturer of the Device Type you are editing
     * `Device Type` will auto-populate to the Device Type you are editing
     * Populate a `Name`
-    * Select a `Type` of **Link Aggregation Group (LAG)** from the drop-down selector
-    * Add a `Description` and Label (optional)
+    * Select a `Type` of `Link Aggregation Group (LAG)` from the drop-down selector
+    * Add a `Description` and `Label` (optional)
 2. Click `Create and Add More`
 3. Create the `xe-` Interfaces
-    * This example shows bulk creation using a range (`xe-[0-1]/0/[0-9]`) in Name 
+    * This example shows bulk creation using a range (`xe-[0-1]/0/[0-9]`) in `Name` 
     * Select the appropriate Type from the drop-down selector
 4. Click on `Create`    
 
@@ -77,7 +81,7 @@ On the main screen for the new *Device*, you will see an **Interfaces** tab with
 ![](../images/getting-started-nautobot-ui/18-assign-device-type.png)
 
 !!! note
-    **Device Type** properties only apply to **new** instantiations of Devices from the Type; 
+    Device Type properties only apply to **new** instantiations of Devices from the Type; 
     Devices created prior to a modification of the Device Type will not inherit the changes retroactively
 
 ## Specifying the LAG Components on the Device
@@ -86,7 +90,7 @@ As of this writing (Nautobot 1.0.3), LAG component Interfaces cannot be assigned
 edit this new Device, specifying the component `ae0` Interfaces.
 
 1. On the new Device's main page, select the appropriate Interfaces (`xe-0/0/9` and `xe-1/0/9`) to be added to `ae0` and click on the `Edit` button
-2. On the `Editing Interfaces` form, select `ae0` in the **Parent LAG** drop-down selector
+2. On the `Editing Interfaces` form, select `ae0` in the `Parent LAG` drop-down selector
 3. Click on `Apply`; you will be taken back to the main page for the Device
 
 ![](../images/getting-started-nautobot-ui/19-edit-ints-for-lag.png)

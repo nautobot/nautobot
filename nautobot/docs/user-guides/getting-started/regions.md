@@ -29,23 +29,23 @@ The screenshots below show the creation of each Region.
 
 North America:
 
-1. Leave the Parent blank; **North America** will be a top-tier Region
-2. Populate the Name as `North America`
-    * The Slug will auto-populate based on the Name, but can be manually overwritten
+1. Leave the `Parent` blank; **North America** will be a top-tier Region
+2. Populate the `Name` to be `North America`
+    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 3. Click on the `Create and Add Another` button
 
 Canada:
 
-1. Select **North America** as the Parent from the drop-down menu selector
-2. Populate the Name as `Canada`
-    * The Slug will auto-populate based on the Name, but can be manually overwritten   
+1. Select **North America** as the `Parent` from the drop-down menu selector
+2. Populate the `Name` to be `Canada`
+    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten   
 3. Click on the `Create and Add Another` button
 
 Vancouver:
 
-1. Select **Canada** as the Parent from the drop-down menu selector
-2. Populate the Name as `Vancouver`
-    * The Slug will auto-populate based on the Name, but can be manually overwritten
+1. Select **Canada** as the `Parent` from the drop-down menu selector
+2. Populate the `Name` to be `Vancouver`
+    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 3. Click on the `Create` button
 
 ![](../images/getting-started-nautobot-ui/6-create-region.png)
@@ -65,8 +65,8 @@ To access the page where you can modify a Site:
 
 Once you're on the `Editing site` form:
 
-1. Look for the **Region** drop-down selection menu and select the appropriate Region
-2. Observe that the correct region for the Site is selected
+1. Look for the `Region` drop-down selection menu and select the appropriate Region
+2. Observe that the correct `Region` for the `Site` is selected
 3. Click on the `Update` button
 
 The page for the Site you updated will appear again, showing the updated Region hierarchy for the Site.

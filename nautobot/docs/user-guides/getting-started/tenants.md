@@ -10,8 +10,8 @@ To create a Tenant:
 
 1. Click on **Organization** on the top navigation menu
 2. Find **Tenants** and click on the `+`
-3. Populate the Name
-4. The Slug will auto-populate based on the Name you provide, but this can be manually overwritten
+3. Populate the `Name` field
+4. The `Slug` field will auto-populate based on the `Name` field, but this can be manually overwritten
 5. Click the `Create` button
 
 ![](../images/getting-started-nautobot-ui/12-add-tenant.png)
@@ -31,11 +31,11 @@ It is simple to assign a Tenant to an existing object. This next example will ad
 
 Once on the page to edit the Device:
 
-1. Make a selection from the **Tenant** drop-down menu selector
+1. Make a selection from the `Tenant` drop-down menu selector
 2. Click the `Update` button
 
 This will take you back to the main page for the Device.
 
 ![](../images/getting-started-nautobot-ui/14-assign-tenant-to-device-2.png)
 
-Notice that the **Tenant** field is now populated/updated.
+Notice that the `Tenant` field is now populated/updated.
