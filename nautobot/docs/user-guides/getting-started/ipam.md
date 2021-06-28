@@ -50,7 +50,7 @@ You will then be taken to the `Aggregates` main page, where you will see the Agg
 
 A Prefix is an IPv4 or IPv6 network and mask expressed in CIDR notation (e.g. 192.0.2.0/24). 
 Prefixes are automatically organized by their parent Aggregates. 
-Additionally, each Prefix can be assigned to a particular Site and virtual routing and forwarding instance (VRF). 
+Additionally, each Prefix can be assigned to a particular Site and virtual routing and forwarding (VRF) instance. 
 
 To create a prefix:
 
@@ -96,7 +96,7 @@ To create an IP address:
 
 ## Assigning IP Addresses
 
-To assign an IP Address:
+To assign an IP Address to a specific Device and Interface:
 
 1. Click on **IPAM** in the top-level navigation menu
 2. Click on **IP Addresses** to go to the main IP Addresses page
@@ -111,7 +111,7 @@ Once on the `Editing IP address` page:
 1. Select a Device from the drop-down selector
 2. Select an Interface on the Device
 3. Click on the `Update` button
-    * This will take you back to the main page for the IP Address, where you will see the `device (interface)` assignment
+    * This will take you back to the main page for the IP Address, where you will see the assignment shown as `device (interface)`
 
 ![](../images/getting-started-nautobot-ui/35-assign-address-3.png)
 

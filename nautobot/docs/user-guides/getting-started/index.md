@@ -5,14 +5,14 @@ This guide will demonstrate how to use and perform common operations in Nautobot
 
 It is intended to assist the user with:
 
-* Understanding the prerequisites to adding a new Device
+* Understanding the prerequisites for dding a new Device
 * Creating the necessary prerequisite objects to add a new Device
 * Adding new Devices
 * Adding and understanding Regions
-* Adding and Understanding Platforms
-* Adding and Understanding Tenants and Tenant Groups
+* Adding and understanding Platforms
+* Adding and understanding Tenants and Tenant Groups
 * Adding Interfaces to a Device
-* Adding VLANs and Understanding VLAN Groups
+* Adding VLANs and understanding VLAN Groups
 * Understanding IP Address Management (IPAM) in Nautobot
 * How to navigate to the object you are interested in
 * How to use the Search Bar to find the object you are interested in
@@ -27,5 +27,5 @@ the included exercises, the user should have a good feel for:
 
 ## Requirements
 
-1. A functional Nautobot installation
+1. A functional Nautobot [installation](../installation/index.md)
 

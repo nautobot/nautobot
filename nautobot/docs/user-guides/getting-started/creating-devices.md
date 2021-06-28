@@ -23,7 +23,7 @@ To create a new Device Role:
     * The Slug will auto-populate based on the Name, but can be manually overwritten
 5. Click on Create    
 
-![](../images/getting-started-nautobot-ui/3-create%20role.png)
+![](../images/getting-started-nautobot-ui/3-create-role.png)
 
 ## Creating a Manufacturer
 
@@ -38,7 +38,7 @@ To create a new Manufacturer:
      * The Slug will auto-populate based on the Name, but can be manually overwritten
 5. Click on **Create**
 
-![](../images/getting-started-nautobot-ui/2-create%20manufacturer.png)
+![](../images/getting-started-nautobot-ui/2-create-manufacturer.png)
 
 ## Creating a Device Type
 
@@ -53,7 +53,7 @@ To create a new Device Type:
 5. Select the Model from the drop-down selector
 6. Click on **Create**
 
-![](../images/getting-started-nautobot-ui/4-create%20device%20type.png)
+![](../images/getting-started-nautobot-ui/4-create-device-type.png)
 
 ## Creating a Site
 
@@ -86,4 +86,4 @@ To create a new Device:
 8. Set the Status to the appropriate value in the drop-down selector
 9. Click on **Create** at the bottom of the form (not shown)
 
-![](../images/getting-started-nautobot-ui/5-create%20device.png)
+![](../images/getting-started-nautobot-ui/5-create-device.png)
