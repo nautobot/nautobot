@@ -257,7 +257,7 @@ class GitTest(TestCase):
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
                 config_context_schema = self.config_context_schema
-                config_context_schema_metadata = config_context_schema.setdefault("_metadata", {})
+                config_context_schema_metadata = config_context_schema["_metadata"]
                 self.assertIsNotNone(config_context_schema_record)
                 self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
                 self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
@@ -491,7 +491,7 @@ class GitTest(TestCase):
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
                 config_context_schema = self.config_context_schema
-                config_context_schema_metadata = config_context_schema.setdefault("_metadata", {})
+                config_context_schema_metadata = config_context_schema["_metadata"]
                 self.assertIsNotNone(config_context_schema_record)
                 self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
                 self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
