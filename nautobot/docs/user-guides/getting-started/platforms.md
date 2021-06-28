@@ -65,9 +65,9 @@ in the Search Bar.
 
 For a new Device, follow the steps to [create a new Device](creating-devices.md) to reach the `Add a new device` page. 
 
-[](../images/getting-started-nautobot-ui/43-get-to-device-main-page.png)
+![](../images/getting-started-nautobot-ui/43-get-to-device-main-page.png)
 
-### Specify the Device's Platform
+## Specifying a Device's Platform
 
 1. While on the **Add a new device**/**Editing device** page, scroll down to the 'Management' section
 2. In the `Platform` field drop-down selector, select the appropriate Platform
@@ -76,4 +76,4 @@ For a new Device, follow the steps to [create a new Device](creating-devices.md)
 !!! tip
     The only choices that will appear in the `Platform` drop-down selector will be those Platforms that have the same Manufacturer specified in the Device's `Hardware` section.
 
-[](../images/getting-started-nautobot-ui/44-add-platform.png)
+![](../images/getting-started-nautobot-ui/44-add-platform.png)
