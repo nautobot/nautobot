@@ -5,7 +5,7 @@ This guide will demonstrate how to use and perform common operations in Nautobot
 
 It is intended to assist the user with:
 
-* Understanding the prerequisites for dding a new Device
+* Understanding the prerequisites for adding a new Device
 * Creating the necessary prerequisite objects to add a new Device
 * Adding new Devices
 * Adding and understanding Regions

@@ -23,7 +23,7 @@ More information on Device Roles can be found in the [Device Roles](../../core-f
 To create a new Device, you will need an existing Device Role or need to create a new Device Role instance.
 
 !!! note
-     you might create roles for core switches, distribution switches, and access switches within your network.
+     You might create roles for core switches, distribution switches, and access switches within your network.
 
 To create a new Device Role:
 
