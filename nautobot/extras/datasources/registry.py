@@ -8,7 +8,9 @@ from nautobot.extras.registry import registry
 
 def get_datasource_contents(model_name):
     """Get the list of DatasourceContent entries registered for a given model name."""
-    return sorted(registry["datasource_contents"].get(model_name, []), key=lambda datasource: (datasource.weight, datasource.name))
+    return sorted(
+        registry["datasource_contents"].get(model_name, []), key=lambda datasource: (datasource.weight, datasource.name)
+    )
 
 
 def get_datasource_content_choices(model_name):
