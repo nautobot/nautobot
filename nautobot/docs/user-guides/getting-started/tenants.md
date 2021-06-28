@@ -8,8 +8,8 @@ More information on Tenants can be found in the [Tenants](https://nautobot.readt
 
 To create a Tenant:
 
-1. Click on **Devices** on the top navigation menu
-2. Find **Platforms** and click on the `+`
+1. Click on **Organization** on the top navigation menu
+2. Find **Tenants** and click on the `+`
 3. Populate the Name
 4. The Slug will auto-populate based on the Name you provide, but this can be manually overwritten
 5. Click the `Create` button
@@ -22,7 +22,7 @@ It is simple to assign a Tenant to an existing object. This next example will ad
 
 1. Click on **Devices** in the top navigation menu
 2. Look for the **Devices** option and click on it 
-    * This will take you to the *Devices* page
+    * This will take you to the **Devices** page
 3. Click on the specific Device you want to add the Tenant to 
     * This will take you to the main page for that Device
 4. On the specific Device page, click on the `Edit` button

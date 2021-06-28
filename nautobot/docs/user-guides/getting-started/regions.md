@@ -3,7 +3,7 @@
 Regions are administrative domains, used to organize Sites and other Regions. They can be nested recursively.
 A Region might represent a continent, country, city, campus, or other area. A Region can contain Sites and other Regions.
 
-Additional information on Regions is in the [Regions section of the Nautobot documentation](https://nautobot.readthedocs.io/en/latest/models/dcim/region/).
+Additional information on Regions is in the [Regions section of the Nautobot documentation](../../models/dcim/region.md).
 
 In the following exercise, we will create three Regions:
 
@@ -75,4 +75,4 @@ The page for the Site you updated will appear again, showing the updated Region 
 
 !!! note
     In the example, notice that we assigned the `Vancouver 1` Site to `Vancouver`, which is tier-3 Region. 
-    Notice that the Regional hierarchy is displayed for the `Vancouver 1` Site: `North America/Canada/Vancouver`
+    Notice that the Regional hierarchy is displayed for the `Vancouver 1` Site: `North America / Canada / Vancouver`
