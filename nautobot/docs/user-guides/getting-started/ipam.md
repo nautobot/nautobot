@@ -136,5 +136,3 @@ To find information on a particular Prefix:
 ![](../images/getting-started-nautobot-ui/37-verify-prefix.png)
 
 ![](../images/getting-started-nautobot-ui/38-verify-prefix2.png)
-
-**END OF *Getting Started in the Web UI* GUIDE**
