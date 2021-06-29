@@ -287,10 +287,10 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task
-def cli(context):
+@task(help={"container": "Name of the container to shell into"})
+def cli(context, container="nautobot"):
     """Launch a bash shell inside the running Nautobot container."""
-    docker_compose(context, "exec nautobot bash", pty=True)
+    docker_compose(context, f"exec {container} bash", pty=True)
 
 
 @task(
@@ -501,13 +501,14 @@ def integration_test(
 @task(
     help={
         "lint-only": "Only run linters; unit tests will be excluded.",
+        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
 )
-def tests(context, lint_only=False):
+def tests(context, lint_only=False, keepdb=False):
     """Run all tests and linters."""
     black(context)
     flake8(context)
     hadolint(context)
     check_migrations(context)
     if not lint_only:
-        unittest(context)
+        unittest(context, keepdb=keepdb)

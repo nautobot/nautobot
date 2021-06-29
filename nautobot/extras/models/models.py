@@ -617,7 +617,10 @@ class Job(models.Model):
 #
 # Job results
 #
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "graphql",
+)
 class JobResult(BaseModel):
     """
     This model stores the results from running a user-defined report.
@@ -768,7 +771,7 @@ class JobResult(BaseModel):
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4(), schedule=schedule)
 
-        kwargs["job_result"] = job_result.pk
+        kwargs["job_result_pk"] = job_result.pk
 
         func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id))
 

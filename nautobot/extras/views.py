@@ -549,12 +549,7 @@ class GitRepositorySyncView(View):
 
         repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
-        # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection("default")):
-            messages.error(request, "Unable to sync Git repository: RQ worker process not running.")
-
-        else:
-            enqueue_pull_git_repository_and_refresh_data(repository, request)
+        enqueue_pull_git_repository_and_refresh_data(repository, request)
 
         return redirect("extras:gitrepository_result", slug=slug)
 

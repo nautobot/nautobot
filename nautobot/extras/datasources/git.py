@@ -14,7 +14,7 @@ from django.db import transaction
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
     ConfigContext,
@@ -51,10 +51,11 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
 
 
 @nautobot_task
-def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
+def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
     """
+    job_result = JobResult.objects.get(pk=job_result_pk)
     repository_record = GitRepository.objects.get(pk=repository_pk)
     if not repository_record:
         job_result.log(
@@ -227,6 +228,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "device_types",
         "roles",
         "platforms",
         "cluster_groups",
@@ -344,6 +346,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("device_types", DeviceType),
         ("roles", DeviceRole),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
@@ -696,7 +699,7 @@ def delete_git_export_templates(repository_record, job_result, preserve=None):
         owner_content_type=git_repository_content_type,
         owner_object_id=repository_record.pk,
     ):
-        key = f"{template_record.content_type.app_label}.{template_record.content_type.name}"
+        key = f"{template_record.content_type.app_label}.{template_record.content_type.model}"
         if template_record.name not in preserve.get(key, ()):
             template_record.delete()
             job_result.log(

@@ -75,7 +75,7 @@ class WebRequestContextTestCase(TestCase):
         #    site = Site(name="Test Site 2")
         #    site.save()
 
-        ## Verify that a job was queued for the object creation webhook
+        # Verify that a job was queued for the object creation webhook
         # site = Site.objects.get(name="Test Site 2")
 
         # self.assertEqual(job.args[0], Webhook.objects.get(type_create=True))
