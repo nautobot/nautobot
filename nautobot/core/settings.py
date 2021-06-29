@@ -520,3 +520,5 @@ CELERY_RESULT_BACKEND = CACHES["default"]["LOCATION"]
 CELERY_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"
+
+CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
