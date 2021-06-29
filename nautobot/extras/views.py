@@ -709,9 +709,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 if schedule_type in choices.JobExecutionType.SCHEDULE_CHOICES:
                     # Schedule the job instead of running it now
                     schedule_name = schedule_form.cleaned_data["_schedule_name"]
-                    schedule_start_date = schedule_form.cleaned_data["_schedule_start_date"]
-                    schedule_start_time = schedule_form.cleaned_data["_schedule_start_time"]
-                    schedule_datetime = datetime.combine(schedule_start_date, schedule_start_time)
+                    schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
                 else:
                     # The job must be approved.
