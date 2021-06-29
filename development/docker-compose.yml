@@ -34,7 +34,7 @@ services:
     tty: true
   celery_worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
-    entrypoint: "celery -A nautobot.core worker -B -l INFO"
+    entrypoint: "nautobot-server celery worker -B -l INFO"
     depends_on:
       - nautobot
       - redis

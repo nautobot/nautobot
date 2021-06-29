@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 {% load helpers %}
+{% load custom_links %}
 {% load form_helpers %}
 {% load log_levels %}
+{% load plugins %}
 {% load static %}
 
 {% block title %}
@@ -31,6 +33,14 @@
             </ol>
         </div>
     </div>
+    <div class="pull-right noprint">
+        {% plugin_buttons result %}
+        {% if perms.extras.delete_jobresult %}
+            <a href="{% url 'extras:jobresult_delete' pk=result.pk %}" class="btn btn-danger">
+                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+            </a>
+        {% endif %}
+    </div>
     <h1>
         {% if associated_record %}
             {{ associated_record }}
@@ -42,19 +52,19 @@
         - Job Result
     </h1>
     <div class="pull-right noprint">
-        {% if perms.extras.delete_jobresult %}
-            <a href="{% url 'extras:jobresult_delete' pk=result.pk %}" class="btn btn-danger">
-                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
-            </a>
-        {% endif %}
+        {% custom_links result %}
     </div>
-
     {% if job %}
         <p>{{ job.description }}</p>
     {% endif %}
     <div class="row">
         <div class="col-md-12">
             {% include 'extras/inc/jobresult.html' with result=result %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% plugin_full_width_page result %}
         </div>
     </div>
 {% endblock %}

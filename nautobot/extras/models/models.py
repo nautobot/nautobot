@@ -616,7 +616,10 @@ class Job(models.Model):
 #
 # Job results
 #
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "graphql",
+)
 class JobResult(BaseModel):
     """
     This model stores the results from running a user-defined report.

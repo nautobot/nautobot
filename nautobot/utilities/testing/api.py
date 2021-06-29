@@ -256,6 +256,32 @@ class APIViewTestCases:
 
             self.assertEqual(set(self.choices_fields), field_choices)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_status_options_returns_expected_choices(self):
+            # Set to self.choices_fields as empty set to compare classes that shouldn't have any choice fields on serializer.
+            if not self.choices_fields:
+                self.choices_fields = set()
+
+            # Don't bother testing if there's no `status` field.
+            if "status" not in self.choices_fields:
+                self.skipTest("Object does not contain a `status` field.")
+
+            # Save self.user as superuser to be able to view available choices on list views.
+            self.user.is_superuser = True
+            self.user.save()
+
+            response = self.client.options(self._get_list_url(), **self.header)
+            actions = response.json()["actions"]["POST"]
+            choices = actions["status"]["choices"]
+
+            # Import Status here to avoid circular import issues w/ test utilities.
+            from nautobot.extras.models import Status  # noqa
+
+            # Assert that the expected Status objects matches what is emitted.
+            statuses = Status.objects.get_for_model(self.model)
+            expected = [{"value": v, "display": d} for (v, d) in statuses.values_list("slug", "name")]
+            self.assertListEqual(choices, expected)
+
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
