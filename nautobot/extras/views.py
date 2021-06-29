@@ -703,7 +703,6 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
-            scheduled_job_additional_kwargs = {}
 
             if job_class.approval_required or schedule_type in choices.JobExecutionType.SCHEDULE_CHOICES:
 
@@ -846,7 +845,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
             # Mark the scheduled_job as approved, allowing the schedular to schedule the ob execution task
             if request.user == scheduled_job.user:
                 # The requestor *cannot* approve their own job
-                messages.error(request, f"You cannot approve your own job request!")
+                messages.error(request, "You cannot approve your own job request!")
             else:
                 scheduled_job.approved_by_user = request.user
                 scheduled_job.approved_at = timezone.now()
