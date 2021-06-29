@@ -19,7 +19,7 @@ from nautobot.dcim.models import (
     Region,
 )
 from nautobot.extras.jobs import get_job, Job
-from nautobot.extras.models import ConfigContext, GitRepository, JobResult, Status, Tag
+from nautobot.extras.models import ConfigContext, ExportTemplate, GitRepository, JobResult, Status, Tag
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
@@ -83,6 +83,27 @@ class ConfigContextTest(TestCase):
 
         expected_data = {"a": 123, "b": 456, "c": 789}
         self.assertEqual(self.device.get_config_context(), expected_data)
+
+    def test_name_uniqueness(self):
+        """
+        Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
+        """
+        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
+        with self.assertRaises(ValidationError):
+            duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
+            duplicate_context.validated_save()
+
+        # If a different context is owned by a GitRepository, that's not considered a duplicate
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+
+        nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
+        nonduplicate_context.validated_save()
 
     def test_annotation_same_as_get_for_object(self):
         """
@@ -222,6 +243,38 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+
+
+class ExportTemplateTest(TestCase):
+    """
+    Tests for the ExportTemplate model class.
+    """
+
+    def test_name_contenttype_uniqueness(self):
+        """
+        The pair of (name, content_type) must be unique for an un-owned ExportTemplate.
+
+        See GitHub issue #431.
+        """
+        device_ct = ContentType.objects.get_for_model(Device)
+        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
+
+        with self.assertRaises(ValidationError):
+            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
+            duplicate_template.validated_save()
+
+        # A differently owned ExportTemplate may have the same name
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+        nonduplicate_template = ExportTemplate(
+            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
+        )
+        nonduplicate_template.validated_save()
 
 
 class GitRepositoryTest(TransactionTestCase):
