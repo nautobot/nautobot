@@ -183,10 +183,14 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Changed
 
+- [#431](https://github.com/nautobot/nautobot/issues/431) - `ConfigContext` and `ExportTemplate` records now must have unique `name` values. This was always the case in NetBox, but was inadvertently un-enforced in earlier versions of Nautobot.
+
 ### Fixed
 
 - [#460](https://github.com/nautobot/nautobot/issues/460) - Deleting a record now deletes any associated `RelationshipAssociation` records
 - [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choices correctly when performing `OPTIONS` metadata API requests
+- [#602](https://github.com/nautobot/nautobot/issues/602) - Fixed incorrect requirement to install `toml` Python library before running `invoke` tasks
+- [#618](https://github.com/nautobot/nautobot/pull/618) - Fixed typo in release-notes
 
 ### Removed
 
