@@ -163,11 +163,11 @@ menu_items = (
                         buttons=(),
                     ),
                     NavMenuItem(
-                        link="extras:jobresult_list",
-                        name="Job Results",
+                        link="extras:scheduled_jobs_approval_queue_list",
+                        name="Job Approval Queue",
                         weight=200,
                         permissions=[
-                            "extras.view_jobresult",
+                            "extras.view_job",
                         ],
                         buttons=(),
                     ),
@@ -177,15 +177,16 @@ menu_items = (
                         weight=300,
                         permissions=[
                             "extras.view_job",
+                            "extras.view_scheduledjob",
                         ],
                         buttons=(),
                     ),
                     NavMenuItem(
-                        link="extras:scheduled_jobs_approval_queue_list",
-                        name="Approval Queue",
+                        link="extras:jobresult_list",
+                        name="Job Results",
                         weight=400,
                         permissions=[
-                            "extras.view_job",
+                            "extras.view_jobresult",
                         ],
                         buttons=(),
                     ),
