@@ -1,6 +1,7 @@
 from logging import getLogger
 
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django_rq import job
 
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -50,6 +51,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
 
 
 @job("custom_fields")
+@transaction.atomic
 def delete_custom_field_data(field_name, content_type_pk_set):
     """
     Delete the values for a custom field
@@ -66,6 +68,7 @@ def delete_custom_field_data(field_name, content_type_pk_set):
 
 
 @job("custom_fields")
+@transaction.atomic
 def provision_field(field_id, content_type_pk_set):
     """
     Provision a new custom field on all relevant content type object instances.
