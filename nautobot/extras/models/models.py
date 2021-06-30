@@ -32,7 +32,6 @@ class Webhook(BaseModel, ChangeLoggedModel):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.
-    delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.
     Each Webhook can be limited to firing only on certain actions or certain object types.
     """
 
