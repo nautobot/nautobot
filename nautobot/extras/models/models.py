@@ -610,6 +610,7 @@ class Job(models.Model):
 # Job results
 #
 @extras_features(
+    "custom_fields",
     "custom_links",
     "graphql",
 )
