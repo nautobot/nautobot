@@ -9,6 +9,7 @@ from nautobot.extras.utils import FeatureQuery
 
 logger = getLogger("nautobot.extras.cfcleanup")
 
+
 class Command(BaseCommand):
     help = "Reset custom field attachments"
 
@@ -28,7 +29,6 @@ class Command(BaseCommand):
                 del obj._custom_field_data[field_name]
                 obj.save()
 
-
     @transaction.atomic
     def provision_field(self, field, content_type_pk_set):
         """
@@ -45,16 +45,15 @@ class Command(BaseCommand):
                 obj._custom_field_data[field.name] = field.default
                 obj.save()
 
-
     def handle(self, *args, **kwargs):
         """Run through all custom fields and ensure they are associated with the correct content types."""
         # The list of all content type pks which can have custom fields
-        all_content_type_pks = [ ct.pk for ct in ContentType.objects.filter(FeatureQuery("custom_fields").get_query()) ]
+        all_content_type_pks = [ct.pk for ct in ContentType.objects.filter(FeatureQuery("custom_fields").get_query())]
         for custom_field in CustomField.objects.all():
-            # The list of all content_types for which this custom field should be associated with
-            cf_content_type_pks = [ ct.pk for ct in custom_field.content_types.all() ]
+            # The list of all content types pks for which this custom field should be associated with
+            cf_content_type_pks = [ct.pk for ct in custom_field.content_types.all()]
             # The list of all content_types for which this custom field should NOT be associated with
-            content_type_pks_to_remove = list(set(all_content_type_pks)-set(cf_content_type_pks))
+            content_type_pks_to_remove = list(set(all_content_type_pks) - set(cf_content_type_pks))
             # Remove any custom field data which should not exist
             self.delete_custom_field_data(custom_field.name, content_type_pks_to_remove)
             # Add the custom field to any content type for which it should exist
