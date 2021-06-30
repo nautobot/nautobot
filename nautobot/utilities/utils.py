@@ -1,12 +1,13 @@
+import copy
 import datetime
 import json
 import inspect
 from importlib import import_module
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
-from distutils.util import strtobool
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.serializers import serialize
 from django.db.models import Count, OuterRef, Subquery, Model
 from django.db.models.functions import Coalesce
@@ -333,6 +334,25 @@ class NautobotFakeRequest:
 
     def __init__(self, _dict):
         self.__dict__ = _dict
+
+    def nautobot_serialize(self):
+        """
+        Serialize a json representation that is safe to pass to celery
+        """
+        data = copy.deepcopy(self.__dict__)
+        data["user"] = data["user"].pk
+        return data
+
+    @classmethod
+    def nautobot_deserialize(cls, data):
+        """
+        Deserialize a json representation that is safe to pass to celery and return an actual instance
+        """
+        User = get_user_model()
+
+        obj = cls(data)
+        obj.user = User.objects.get(pk=obj.user)
+        return obj
 
 
 def copy_safe_request(request):

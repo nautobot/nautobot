@@ -19,7 +19,6 @@ from django.utils import timezone
 from django.utils.functional import classproperty
 
 from cacheops import cached
-from django_rq import job
 
 from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
@@ -28,6 +27,7 @@ from .forms import JobForm
 from .models import GitRepository
 from .registry import registry
 
+from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -789,13 +789,18 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
-@job("default")
-def run_job(data, request, job_result, commit=True, *args, **kwargs):
+@nautobot_task
+def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
 
-    This gets around the inability to pickle an instance method for queueing into the background processor.
+    This function is responsible for setting up the job execution, handing the DB tranaction
+    and rollback conditions, plus post execution cleanup and saving the JobResult record.
     """
+    from nautobot.extras.models import JobResult  # avoid circular import
+
+    job_result = JobResult.objects.get(pk=job_result_pk)
+
     job_class = get_job(job_result.name)
     if not job_class:
         job_result.log(

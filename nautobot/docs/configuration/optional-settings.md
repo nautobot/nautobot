@@ -105,6 +105,16 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_TASK_TIME_LIMIT
+
+Default: `1800`
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_TIME_LIMIT`
+
+The global Celery task timeout (in seconds)
+
+---
+
 ## CHANGELOG_RETENTION
 
 Default: `90`

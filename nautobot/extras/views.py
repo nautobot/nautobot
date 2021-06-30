@@ -8,7 +8,6 @@ from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import View
-from django_rq.queues import get_connection
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rq import Worker
@@ -543,12 +542,7 @@ class GitRepositorySyncView(View):
 
         repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
-        # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection("default")):
-            messages.error(request, "Unable to sync Git repository: RQ worker process not running.")
-
-        else:
-            enqueue_pull_git_repository_and_refresh_data(repository, request)
+        enqueue_pull_git_repository_and_refresh_data(repository, request)
 
         return redirect("extras:gitrepository_result", slug=slug)
 
@@ -695,11 +689,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         grouping, module, class_name = class_path.split("/", 2)
         form = job.as_form(request.POST, request.FILES)
 
-        # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection("default")):
-            messages.error(request, "Unable to run job: RQ worker process not running.")
-
-        elif form.is_valid():
+        if form.is_valid():
             # Run the job. A new JobResult is created.
             commit = form.cleaned_data.pop("_commit")
 
