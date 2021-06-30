@@ -12,7 +12,6 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rq import Worker
 
-from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
