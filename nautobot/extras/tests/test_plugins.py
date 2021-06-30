@@ -136,11 +136,9 @@ class PluginTest(TestCase):
                 self.assertEqual(datasource.icon, plugin_datasource.icon)
                 self.assertEqual(datasource.weight, plugin_datasource.weight)
                 self.assertEqual(datasource.callback, plugin_datasource.callback)
-                return
-
-        self.assertEqual(
-            plugin_datasource, None, f"Datasource '{plugin_datasource.name}' could not be found in registry."
-        )
+                break
+        else:
+            self.fail(f"Datasource {plugin_datasource.name} not found in registered_datasources!")
 
     def test_middleware(self):
         """

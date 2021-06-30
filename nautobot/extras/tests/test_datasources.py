@@ -482,7 +482,6 @@ class GitTest(TestCase):
                     {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
                     config_context.data,
                 )
-                self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
 
                 # Make sure ConfigContextSchema was successfully loaded from file
                 config_context_schema_record = ConfigContextSchema.objects.get(
@@ -490,6 +489,8 @@ class GitTest(TestCase):
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
+                self.assertEqual(config_context_schema_record, config_context.schema)
+
                 config_context_schema = self.config_context_schema
                 config_context_schema_metadata = config_context_schema["_metadata"]
                 self.assertIsNotNone(config_context_schema_record)

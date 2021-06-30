@@ -132,62 +132,114 @@ config_context_schema/
 
 When loading the schema, the key `_metadata` will be extracted from the loaded data and used to define the config context schema's metadata, while the actual config context data schema will be based on the key `data_schema`.
 
-JSON example:
+JSON single example:
 
 ``` json
 {
   "_metadata": {
     "name": "Config Context Schema 1",
-    "description": "Schema for defining first names, last names and ages."
+    "description": "Schema for defining first names."
   },
   "data_schema": {
+    "$id": "https://example.com/person.schema.json",
+    "$schema": "https://json-schema.org/draft-07/schema",
     "title": "Person",
-    "type": "object",
     "properties": {
       "firstName": {
         "type": "string",
         "description": "The person's first name."
-      },
-      "lastName": {
-        "type": "string",
-        "description": "The person's last name."
-      },
-      "age": {
-        "description": "Age in years which must be equal to or greater than zero.",
-        "type": "integer",
-        "minimum": 0
       }
     }
   }
 }
 ```
 
-YAML example:
+JSON list example:
+
+``` json
+[
+  {
+    "_metadata": {
+      "name": "Config Context Schema 1",
+      "description": "Schema for defining first names."
+    },
+    "data_schema": {
+      "$id": "https://example.com/person.schema.json",
+      "$schema": "https://json-schema.org/draft-07/schema",
+      "title": "Person",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "The person's first name."
+        },
+      }
+    }
+  },
+  {
+    "_metadata": {
+      "name": "Config Context Schema 2",
+      "description": "Schema for defining last names."
+    },
+    "data_schema": {
+      "$id": "https://example.com/person.schema.json",
+      "$schema": "https://json-schema.org/draft-07/schema",
+      "title": "Person",
+      "properties": {
+        "lastName": {
+          "type": "string",
+          "description": "The person's last name."
+        },
+      }
+    }
+  },
+]
+```
+
+YAML single example:
+
+``` yaml
+---
+_metadata:
+  name: "Config Context Schema 1"
+  description: "Schema for defining first names."
+data_schema:
+  $id: "https://example.com/person.schema.json"
+  $schema: "https://json-schema.org/draft-07/schema"
+  title: "Person"
+  properties:
+    firstName:
+      type: "string"
+      description: "The person's first name"
+```
+
+YAML list example:
 
 ``` yaml
 ---
 - _metadata:
     name: "Config Context Schema 1"
-    description: "Schema for config contexts"
-    config_contexts:
-    - name: "Config Context 1"
+    description: "Schema for defining first names."
   data_schema:
     $id: "https://example.com/person.schema.json"
     $schema: "https://json-schema.org/draft-07/schema"
     title: "Person"
-    type: "object"
     properties:
       firstName:
         type: "string"
         description: "The person's first name"
+- _metadata:
+    name: "Config Context Schema 2"
+    description: "Schema for defining last names."
+  data_schema:
+    $id: "https://example.com/person.schema.json"
+    $schema: "https://json-schema.org/draft-07/schema"
+    title: "Person"
+    properties:
       lastName:
         type: "string"
-        description: "The person's last name."
-      age:
-        type: "integer"
-        description: "Age in years which must be equal to or greater than zero"
-        minimum: 0
+        description: "The person's last name"
 ```
+
 
 ### Export Templates
 
