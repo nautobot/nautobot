@@ -120,14 +120,14 @@ Files in a `config_contexts/devices/` and/or `config_contexts/virtual_machines/`
 
 ### Configuration Context Schemas
 
-Config contexts may be provided as JSON or YAML files located in `/config_context_schemas/`.
+Config context schemas may be provided as JSON or YAML files located in `/config_context_schemas/`.
 
-Files in the root of the `/config_context_schemas/` directory will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context schema will be taken from the `_metadata` within the file, not the filename).
+Files in the root of the `/config_context_schemas/` directory will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context schema will be taken from the `_metadata` within the file, not the filename). Similar to config context definitions, a single file may define a single config context schema or a list of such schemas - see examples below.
 
 ```shell
-config_context_schema/
-  context_schema_1.json   # JSON data will be imported as-is, with scoping derived from its contents
-  context_schema_2.yaml   # YAML data will be imported as-is, with scoping derived from its contents
+config_context_schemas/
+  context_schema_1.json
+  context_schema_2.yaml
 ```
 
 When loading the schema, the key `_metadata` will be extracted from the loaded data and used to define the config context schema's metadata, while the actual config context data schema will be based on the key `data_schema`.
