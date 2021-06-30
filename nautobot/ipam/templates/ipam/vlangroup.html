@@ -82,7 +82,7 @@
                 <tr>
                     <td>VLANs</td>
                     <td>
-                        <a href="{% url 'ipam:vlan_list' %}?group={{ object.pk }}">{{ vlan_table.rows|length }}</a>
+                        <a href="{% url 'ipam:vlan_list' %}?group={{ object.pk }}">{{ vlans_count }}</a>
                     </td>
                 </tr>
             </table>

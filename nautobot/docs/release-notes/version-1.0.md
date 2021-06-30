@@ -103,7 +103,7 @@ Nautobot has done away with the requirement to duplicate or modify files anywher
 
 To facilitate this, many automatically generated settings have been removed, and replaced with their underlying static configurations. We feel this affords a greater amount of flexibility in deployment patterns, with a tradeoff of slightly more initial configuration.
 
-To make things a little easier, you may generate a new configuration with sane defaults using the `nautobot-server init` command! The configuration file defaults to `~/.nautbot/nautobot_config.py` but using the `nautobot-server --config` argument, you may name or place the file anywhere you choose.
+To make things a little easier, you may generate a new configuration with sane defaults using the `nautobot-server init` command! The configuration file defaults to `~/.nautobot/nautobot_config.py` but using the `nautobot-server --config` argument, you may name or place the file anywhere you choose.
 
 You may also defined a `NAUTOBOT_CONFIG` variable to tell Nautobot where to find the file so that you don't need to always pass the `--config` argument.
 
@@ -177,13 +177,37 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
-## Unreleased (2021-MM-DD)
+## Unreleased (2021-??-??)
 
 ### Added
 
+- [#10](https://github.com/nautobot/nautobot/issues/10) - Added a new "Getting Started in the Web UI" section to the documentation to help new users begin learning how to use Nautobot.
+- [#557](https://github.com/nautobot/nautobot/issues/557) - `Prefix` records can now be created using /32 (IPv4) and /128 (IPv6) networks. (Port of [NetBox #6545](https://github.com/netbox-community/netbox/pull/6545))
+
+### Changed
+
+- [#431](https://github.com/nautobot/nautobot/issues/431) - `ConfigContext` and `ExportTemplate` records now must have unique `name` values. This was always the case in NetBox, but was inadvertently un-enforced in earlier versions of Nautobot.
+
+### Fixed
+
+- [#460](https://github.com/nautobot/nautobot/issues/460) - Deleting a record now deletes any associated `RelationshipAssociation` records
+- [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choices correctly when performing `OPTIONS` metadata API requests
+- [#602](https://github.com/nautobot/nautobot/issues/602) - Fixed incorrect requirement to install `toml` Python library before running `invoke` tasks
+- [#618](https://github.com/nautobot/nautobot/pull/618) - Fixed typo in release-notes
+
+### Removed
+
+### Security
+
+## v1.0.3 (2021-06-21)
+
+### Added
+
+- [#143](https://github.com/nautobot/nautobot/issues/143) - Added "copy" button on hover to `Device` detail view for name, primary IP addresses, and serial number.
 - [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
 - [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
 - [#523](https://github.com/nautobot/nautobot/issues/523) - Added instructions for using LDAP TLS Options to SSO documentation
+- [#576](https://github.com/nautobot/nautobot/pull/576) - `JobResult` detail views now support custom links and plugin template extensions
 
 ### Changed
 
@@ -192,20 +216,25 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Fixed
 
 - [#220](https://github.com/nautobot/nautobot/issues/220) - Added a troubleshooting section to the development guide for issues encountered when using the multi-threaded development server
+- [#342](https://github.com/nautobot/nautobot/issues/342) - Fixed inconsistent behavior in `Site.time_zone` to emit and accept input as a null field if not set when using API
 - [#389](https://github.com/nautobot/nautobot/issues/389) - Fixed incorrect TaggedItem base class that caused tag issues on MySQL.
+- [#421](https://github.com/nautobot/nautobot/issues/421) - Fixed `git: Reference at 'refs/heads/master' does not exist` by improving error-handling displaying a warning when a user tries to use an empty repo or a branch that does not exist upstream.
 - [#452](https://github.com/nautobot/nautobot/issues/452) - Fixed `api/dcim/cables` `OPTIONS` response not including the `status` field.
 - [#476](https://github.com/nautobot/nautobot/issues/476) - Fixed incorrect handling of /31 and /127 networks in `Aggregate`, `Prefix`, and `IPAddress` models.
+- [#490](https://github.com/nautobot/nautobot/issues/490) - Fixed incorrect VLAN count displayed in VLANGroup detail views.
 - [#499](https://github.com/nautobot/nautobot/issues/499) - Fixed object's changelog showing incorrect information about its tags on partial (PATCH) updates using API
 - [#501](https://github.com/nautobot/nautobot/issues/501) - Fixed missing prepopulation of address/prefix value into the form when adding an address or prefix under a parent prefix.
 - [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
 - [#512](https://github.com/nautobot/nautobot/issues/512) - Fixed ServerError when cloning a record with exactly one `Tag` applied to it.
 - [#513](https://github.com/nautobot/nautobot/issues/513) - Fixed inadvertent omission of "Search" box from ReadTheDocs.
 - [#528](https://github.com/nautobot/nautobot/pull/528) - Fixed an ordering issue in the `test_EXTERNAL_AUTH_DEFAULT_groups` test case.
+- [#530](https://github.com/nautobot/nautobot/issues/530) - Fixed incorrect/confusing docstring in `nautobot.core.api.serializers.WritableNestedSerializer`
 - [#540](https://github.com/nautobot/nautobot/pull/540) - Fixed intermittent CI failures due to DockerHub rate limits.
 - [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
+- [#562](https://github.com/nautobot/nautobot/issues/562) - Fixed inability to use a Git repository to define a `ConfigContext` mapped to a specific `DeviceType`.
 - [#564](https://github.com/nautobot/nautobot/pull/564) - Fixed incorrect docstring on `nautobot.utilities.tables.ButtonsColumn`.
-
-### Removed
+- [#570](https://github.com/nautobot/nautobot/issues/570) - Fixed inability to import `ExportTemplates` for the `VLAN` model via Git.
+- [#583](https://github.com/nautobot/nautobot/pull/583) - Fixed incorrect rejection of various forms when explicitly selecting a `null` option. (Port of [NetBox #5704](https://github.com/netbox-community/netbox/pull/5704))
 
 ### Security
 

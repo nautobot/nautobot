@@ -79,7 +79,16 @@
                                     </tr>
                                     <tr>
                                         <td>Serial Number</td>
-                                        <td><span>{{ object.serial|placeholder }}</span></td>
+                                        <td>
+                                            <span class="hover_copy">
+                                                <span id="serial_number">{{ object.serial|placeholder }}</span>
+                                                {% if object.serial %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#serial_number">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                {% endif %}
+                                            </span>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td>Asset Tag</td>
@@ -148,27 +157,38 @@
                                         <td>Primary IPv4</td>
                                         <td>
                                             {% if object.primary_ip4 %}
-                                                <a href="{% url 'ipam:ipaddress' pk=object.primary_ip4.pk %}">{{ object.primary_ip4.address.ip }}</a>
-                                                {% if object.primary_ip4.nat_inside %}
-                                                    <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
-                                                {% elif object.primary_ip4.nat_outside %}
-                                                    <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
-                                                {% endif %}
+                                                <span class="hover_copy">
+                                                    <a href="{% url 'ipam:ipaddress' pk=object.primary_ip4.pk %}" id="ipv4">{{ object.primary_ip4.address.ip }}</a>
+                                                    {% if object.primary_ip4.nat_inside %}
+                                                        <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
+                                                    {% elif object.primary_ip4.nat_outside %}
+                                                        <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
+                                                    {% endif %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                </span>
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
+                                            
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Primary IPv6</td>
                                         <td>
                                             {% if object.primary_ip6 %}
-                                                <a href="{% url 'ipam:ipaddress' pk=object.primary_ip6.pk %}">{{ object.primary_ip6.address.ip }}</a>
-                                                {% if object.primary_ip6.nat_inside %}
-                                                    <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                                                {% elif object.primary_ip6.nat_outside %}
-                                                    <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
-                                                {% endif %}
+                                                <span class="hover_copy">
+                                                    <a href="{% url 'ipam:ipaddress' pk=object.primary_ip6.pk %}" id="ipv6">{{ object.primary_ip6.address.ip }}</a>
+                                                    {% if object.primary_ip6.nat_inside %}
+                                                        <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
+                                                    {% elif object.primary_ip6.nat_outside %}
+                                                        <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
+                                                    {% endif %}
+                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
+                                                        <span class="mdi mdi-content-copy"></span>
+                                                    </button>
+                                                </span>
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}

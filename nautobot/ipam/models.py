@@ -560,16 +560,6 @@ class Prefix(PrimaryModel, StatusModel):
             if self.prefix.prefixlen == 0:
                 raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
 
-            # Disallow host masks
-            if self.prefix.version == 4 and self.prefix.prefixlen == 32:
-                raise ValidationError(
-                    {"prefix": "Cannot create host addresses (/32) as prefixes. Create an IPv4 address instead."}
-                )
-            elif self.prefix.version == 6 and self.prefix.prefixlen == 128:
-                raise ValidationError(
-                    {"prefix": "Cannot create host addresses (/128) as prefixes. Create an IPv6 address instead."}
-                )
-
             # Enforce unique IP space (if applicable)
             if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
                 duplicate_prefixes = self.get_duplicates()
@@ -667,24 +657,18 @@ class Prefix(PrimaryModel, StatusModel):
         child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()])
         available_ips = prefix - child_ips
 
-        # All IP addresses within a pool are considered usable
-        if self.is_pool:
-            return available_ips
-
-        # All IP addresses within a point-to-point prefix (IPv4 /31 or IPv6 /127) are considered usable
-        if (self.prefix.version == 4 and self.prefix.prefixlen == 31) or (  # RFC 3021
-            self.prefix.version == 6 and self.prefix.prefixlen == 127  # RFC 6164
-        ):
+        # IPv6, pool, or IPv4 /31-32 sets are fully usable
+        if self.family == 6 or self.is_pool or (self.family == 4 and self.prefix.prefixlen >= 31):
             return available_ips
 
         # Omit first and last IP address from the available set
+        # For "normal" IPv4 prefixes, omit first and last addresses
         available_ips -= netaddr.IPSet(
             [
                 netaddr.IPAddress(self.prefix.first),
                 netaddr.IPAddress(self.prefix.last),
             ]
         )
-
         return available_ips
 
     def get_first_available_prefix(self):

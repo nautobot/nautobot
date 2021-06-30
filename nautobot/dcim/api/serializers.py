@@ -3,12 +3,12 @@ from django.contrib.contenttypes.models import ContentType
 from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
+from timezone_field.rest_framework import TimeZoneSerializerField
 
 from nautobot.core.api import (
     ChoiceField,
     ContentTypeField,
     SerializedPKRelatedField,
-    TimeZoneField,
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
@@ -152,7 +152,7 @@ class SiteSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
     region = NestedRegionSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    time_zone = TimeZoneField(required=False)
+    time_zone = TimeZoneSerializerField(required=False, allow_null=True)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     prefix_count = serializers.IntegerField(read_only=True)
