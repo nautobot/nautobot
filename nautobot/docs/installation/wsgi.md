@@ -1,4 +1,4 @@
-# Deploying Nautobot: Web Service and Worker
+# Deploying Nautobot: Web Service and Workers
 
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
@@ -69,14 +69,14 @@ documentation](https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html) f
 
 ## Setup systemd
 
-We'll use `systemd` to control both uWSGI and Nautobot's background worker process.
+We'll use `systemd` to control both uWSGI and Nautobot's background worker processes.
 
 !!! warning
     The following steps must be performed with root permissions.
 
 ### Nautobot service
 
-First, copy and paste the following into `/etc/systemd/system/nautobot.service`:
+First, we'll setablish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
 
 ```
 [Unit]
@@ -108,7 +108,7 @@ WantedBy=multi-user.target
 
 ### Nautobot Worker service
 
-Next, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+Next we will setup the `systemd` unit for the RQ worker. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 
 ```
 [Unit]
@@ -135,6 +135,35 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
+### Nautobot Celery service
+
+Lastly, we will setup the `systemd` unit for the Celery worker. Copy and paste the following into `/etc/systemd/system/nautobot-celery.service`:
+
+```
+[Unit]
+Description=Nautobot Celery Worker
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
+
+User=nautobot
+Group=nautobot
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO
+
+Restart=on-failure
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ### Configure systemd
 
 Because we just added new service files, you'll need to reload the systemd daemon:
@@ -143,10 +172,10 @@ Because we just added new service files, you'll need to reload the systemd daemo
 $ sudo systemctl daemon-reload
 ```
 
-Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
+Then, start the `nautobot`, `nautobot-celery`, and `nautobot-worker` services and enable them to initiate at boot time:
 
 ```no-highlight
-$ sudo systemctl enable --now nautobot nautobot-worker
+$ sudo systemctl enable --now nautobot nautobot-celery nautobot-worker
 ```
 
 ### Verify the service
@@ -183,4 +212,3 @@ If you see the error `SSL error: decryption failed or bad record mac`, it is lik
 See [this conversation](https://github.com/nautobot/nautobot/issues/127) for more details.
 
 - Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
-

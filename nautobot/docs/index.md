@@ -54,7 +54,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | Application        | Django/Python                   |
 | Database           | PostgreSQL 9.6+ or MySQL 8.0+   |
 | Cache              | Redis/django-cacheops           |
-| Task queuing       | Redis/django-rq                 |
+| Task queuing       | Redis/Celery/django-rq          |
 | Live device access | NAPALM                          |
 
 ## Supported Python Versions
