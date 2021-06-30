@@ -2,6 +2,7 @@ from unittest import skipIf
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
 
@@ -77,11 +78,11 @@ class PluginTest(TestCase):
         """
         Check that plugin custom jinja filters are registered correctly.
         """
-        from dummy_plugin.jinja_filters import LeetSpeakJinjaFilter
+        from dummy_plugin.jinja_filters import leet_speak
 
-        self.assertEqual(
-            LeetSpeakJinjaFilter.filter, registry["plugin_jinja_filters"][LeetSpeakJinjaFilter.filter_name]
-        )
+        rendering_engine = engines["jinja"]
+
+        self.assertEqual(leet_speak, rendering_engine.env.filters[leet_speak.__name__])
 
     def test_graphql_types(self):
         """

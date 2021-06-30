@@ -23,6 +23,7 @@ from nautobot.utilities.views import ContentTypePermissionRequiredMixin
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
 from .models import (
+    ComputedField,
     ConfigContext,
     CustomLink,
     ExportTemplate,
@@ -36,7 +37,6 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
-    ComputedField,
 )
 from .jobs import get_job, get_jobs, run_job, Job
 from .datasources import (

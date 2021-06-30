@@ -25,6 +25,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.views import JobViewSet
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     CustomField,
     CustomLink,
@@ -37,7 +38,6 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Webhook,
-    ComputedField,
 )
 from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar
 from nautobot.utilities.testing import APITestCase, APIViewTestCases

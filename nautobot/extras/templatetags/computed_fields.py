@@ -35,18 +35,17 @@ def computed_fields(context, obj):
     """
     Render all applicable links for the given object.
     """
-    content_type = ContentType.objects.get_for_model(obj)
-    computed_fields = ComputedField.objects.filter(content_type=content_type)
+    computed_fields = obj.get_computed_fields(label_as_key=True)
     if not computed_fields:
         return ""
 
     template_code = ""
 
-    for cf in computed_fields:
+    for label, value in computed_fields.items():
         template_code += f"""
         <tr>
-            <td><span title="{cf.label}">{cf.label}</span></td>
-            <td>{cf.render(context={"obj": obj})}</td>
+            <td><span title="{label}">{label}</span></td>
+            <td>{value}</td>
         <tr>
         """
     return mark_safe(template_code)

@@ -2,6 +2,7 @@ import collections
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.template import engines
 from django.utils.deconstruct import deconstructible
 from jinja2 import Environment
 from taggit.managers import _TaggableManager
@@ -88,23 +89,3 @@ def extras_features(*features):
         return model_class
 
     return wrapper
-
-
-class TemplateRenderer:
-    """
-    Rendering class to be used anywhere that Nautobot renders Jinja2 templates.
-    The Jinja2 rendering environment sources custom filters defined in plugins via the registry.
-    """
-
-    def __init__(self):
-        self.environment = Environment()
-        self._populate_plugin_filters()
-
-    def render_jinja2(self, template_code, context):
-        """
-        Render a Jinja2 template with the provided context. Return the rendered content.
-        """
-        return self.environment.from_string(source=template_code).render(**context)
-
-    def _populate_plugin_filters(self):
-        self.environment.filters.update(registry["plugin_jinja_filters"])

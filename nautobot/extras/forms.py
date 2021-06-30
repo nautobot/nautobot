@@ -30,6 +30,7 @@ from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
+    ComputedField,
     ConfigContext,
     CustomField,
     CustomLink,
@@ -43,7 +44,6 @@ from .models import (
     Status,
     Tag,
     Webhook,
-    ComputedField,
 )
 from .utils import FeatureQuery
 

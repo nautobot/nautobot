@@ -19,9 +19,9 @@ from nautobot.extras.constants import *
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet
-from nautobot.extras.utils import extras_features, FeatureQuery, image_upload, TemplateRenderer
+from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.core.models import BaseModel
-from nautobot.utilities.utils import deepmerge
+from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
 #
@@ -131,8 +131,7 @@ class Webhook(BaseModel, ChangeLoggedModel):
         if not self.additional_headers:
             return {}
         ret = {}
-        template_renderer = TemplateRenderer()
-        data = template_renderer.render_jinja2(self.additional_headers, context)
+        data = render_jinja2(self.additional_headers, context)
         for line in data.splitlines():
             header, value = line.split(":")
             ret[header.strip()] = value.strip()
@@ -143,8 +142,7 @@ class Webhook(BaseModel, ChangeLoggedModel):
         Render the body template, if defined. Otherwise, jump the context as a JSON object.
         """
         if self.body_template:
-            template_renderer = TemplateRenderer()
-            return template_renderer.render_jinja2(self.body_template, context)
+            return render_jinja2(self.body_template, context)
         else:
             return json.dumps(context, cls=JSONEncoder)
 
@@ -261,9 +259,8 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
         """
         Render the contents of the template.
         """
-        template_renderer = TemplateRenderer()
         context = {"queryset": queryset}
-        output = template_renderer.render_jinja2(self.template_code, context)
+        output = render_jinja2(self.template_code, context)
 
         # Replace CRLF-style line terminators
         output = output.replace("\r\n", "\n")

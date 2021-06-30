@@ -10,8 +10,9 @@ from jinja2 import TemplateError
 
 from nautobot.core.models import BaseModel
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.utils import extras_features, FeatureQuery, TemplateRenderer
+from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.utilities.utils import render_jinja2
 
 
 class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
@@ -49,6 +50,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
 
     class Meta:
         ordering = ["weight", "slug"]
+        unique_together = ("content_type", "label")
 
     def __str__(self):
         return self.slug
@@ -61,8 +63,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
 
     def render(self, context):
         try:
-            template_render = TemplateRenderer()
-            return template_render.render_jinja2(self.template, context)
+            return render_jinja2(self.template, context)
         except TemplateError:
             return self.fallback_value
 
@@ -87,11 +88,11 @@ class ComputedFieldModelMixin(models.Model):
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
-    def get_computed_fields(self):
+    def get_computed_fields(self, label_as_key=False):
         computed_fields_dict = {}
         computed_fields = ComputedField.objects.get_for_model(self)
         if not computed_fields:
             return {}
         for cf in computed_fields:
-            computed_fields_dict[cf.slug] = cf.render(context={"obj": self})
+            computed_fields_dict[cf.label if label_as_key else cf.slug] = cf.render(context={"obj": self})
         return computed_fields_dict

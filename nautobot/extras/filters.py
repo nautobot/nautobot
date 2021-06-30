@@ -16,6 +16,7 @@ from nautobot.utilities.filters import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .models import (
+    ComputedField,
     ConfigContext,
     CustomField,
     CustomFieldChoice,
@@ -30,7 +31,6 @@ from .models import (
     Status,
     Tag,
     Webhook,
-    ComputedField,
 )
 
 

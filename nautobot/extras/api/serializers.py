@@ -22,6 +22,7 @@ from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack,
 from nautobot.extras.choices import *
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     CustomField,
     CustomFieldChoice,
@@ -36,7 +37,6 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Webhook,
-    ComputedField,
 )
 from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.utils import FeatureQuery

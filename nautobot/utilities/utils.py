@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.serializers import serialize
 from django.db.models import Count, OuterRef, Subquery, Model
 from django.db.models.functions import Coalesce
-from jinja2 import Environment
+from django.template import engines
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
@@ -230,7 +230,9 @@ def render_jinja2(template_code, context):
     """
     Render a Jinja2 template with the provided context. Return the rendered content.
     """
-    return Environment().from_string(source=template_code).render(**context)
+    rendering_engine = engines["jinja"]
+    template = rendering_engine.from_string(template_code)
+    return template.render(context=context)
 
 
 def prepare_cloned_fields(instance):

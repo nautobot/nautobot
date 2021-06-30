@@ -11,12 +11,12 @@ from graphene.types import generic
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.generators import (
-    generate_schema_type,
+    generate_attrs_for_schema_type,
+    generate_computed_field_resolver,
     generate_custom_field_resolver,
     generate_relationship_resolver,
     generate_restricted_queryset,
-    generate_attrs_for_schema_type,
-    generate_computed_field_resolver,
+    generate_schema_type,
 )
 from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
@@ -29,7 +29,7 @@ from nautobot.dcim.graphql.types import (
     SiteType,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.models import CustomField, Relationship, ComputedField
+from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType
 from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
@@ -182,8 +182,10 @@ def extend_schema_type_computed_field(schema_type, model):
 
         if hasattr(schema_type, field_name):
             logger.warning(
-                f"Unable to add the computed field {field.slug} to {schema_type._meta.slug} "
-                f"because there is already an attribute with the same name ({field_name})"
+                "Unable to add the computed field %s to %s because there is already an attribute with the same name (%s)",
+                field.slug,
+                schema_type._meta.slug,
+                field_name,
             )
             continue
 

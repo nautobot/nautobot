@@ -484,3 +484,10 @@ class ComputedFieldModelMixinTest(TestCase):
             "bad_computed_field": self.bad_computed_field.fallback_value,
         }
         self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)
+
+    def test_get_computed_fields_method_label_as_key(self):
+        expected_renderings = {
+            "Computed Field One": f"{self.site1.name} is the name of this site.",
+            "Bad Computed Field": self.bad_computed_field.fallback_value,
+        }
+        self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)

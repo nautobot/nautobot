@@ -12,11 +12,11 @@ from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
+    ComputedFieldModelMixin,
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
     TaggedItem,
-    ComputedFieldModelMixin,
 )
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel

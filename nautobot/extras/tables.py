@@ -433,11 +433,16 @@ class ComputedFieldTable(BaseTable):
         fields = (
             "pk",
             "label",
+            "slug",
+            "content_type",
+            "description",
             "template",
             "weight",
         )
         default_columns = (
             "pk",
             "label",
-            "template" "weight",
+            "slug",
+            "content_type",
+            "description",
         )
