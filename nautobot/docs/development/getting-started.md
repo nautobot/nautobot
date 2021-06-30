@@ -174,6 +174,9 @@ A development environment can be easily started up from the root of the project 
 - `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 - `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, and the Jobs worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
 
+!!! tip
+    A new development install requires `invoke migrate` be run prior to `invoke createsuperuser` 
+
 Additional useful commands for the development environment:
 
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
