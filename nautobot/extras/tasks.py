@@ -62,7 +62,7 @@ def delete_custom_field_data(field_name, content_type_pk_set):
     with transaction.atomic():
         for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
             model = ct.model_class()
-            for obj in model.objects.filter(**{f"_custom_field_data__{field_name}__isnull": False}): 
+            for obj in model.objects.filter(**{f"_custom_field_data__{field_name}__isnull": False}):
                 del obj._custom_field_data[field_name]
                 obj.save()
 
