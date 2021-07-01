@@ -2,6 +2,7 @@ import collections
 import hashlib
 import hmac
 
+from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.deconstruct import deconstructible
@@ -97,3 +98,26 @@ def generate_signature(request_body, secret):
     """
     hmac_prep = hmac.new(key=secret.encode("utf8"), msg=request_body, digestmod=hashlib.sha512)
     return hmac_prep.hexdigest()
+
+
+def get_worker_count(request):
+    """
+    Return a count of the active Celery workers.
+    """
+    # Inner imports so we don't risk circular imports
+    from nautobot.core.celery import app  # noqa
+    from rq.worker import Worker  # noqa
+    from django_rq.queues import get_connection  # noqa
+
+    # Try RQ first since, it's faster.
+    rq_count = Worker.count(get_connection("default"))
+
+    if rq_count:
+        messages.error(request, "RQ workers are deprecated. Please migrate your worker to Celery.")
+        # Force a failure because it wouldn't work w/ RQ anyways.
+        return 0
+
+    # Celery next, since it's slower.
+    inspect = app.control.inspect()
+    active = inspect.active()  # None if no active workers
+    return len(active) if active is not None else 0

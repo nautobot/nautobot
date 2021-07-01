@@ -10,11 +10,11 @@ from django.urls import reverse
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
-from rq import Worker
 
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import (
     copy_safe_request,
@@ -542,7 +542,11 @@ class GitRepositorySyncView(View):
 
         repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
-        enqueue_pull_git_repository_and_refresh_data(repository, request)
+        # Allow execution only if a worker process is running.
+        if not get_worker_count(request):
+            messages.error(request, "Unable to run job: Celery worker process not running.")
+        else:
+            enqueue_pull_git_repository_and_refresh_data(repository, request)
 
         return redirect("extras:gitrepository_result", slug=slug)
 
@@ -689,7 +693,10 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         grouping, module, class_name = class_path.split("/", 2)
         form = job.as_form(request.POST, request.FILES)
 
-        if form.is_valid():
+        # Allow execution only if a worker process is running.
+        if not get_worker_count(request):
+            messages.error(request, "Unable to run job: Celery worker process not running.")
+        elif form.is_valid():
             # Run the job. A new JobResult is created.
             commit = form.cleaned_data.pop("_commit")
 
