@@ -436,7 +436,6 @@ class ComputedFieldTable(BaseTable):
             "slug",
             "content_type",
             "description",
-            "template",
             "weight",
         )
         default_columns = (
