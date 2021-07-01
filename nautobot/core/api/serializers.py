@@ -13,7 +13,7 @@ from rest_framework.exceptions import ValidationError
 from nautobot.utilities.utils import dict_to_filter_params
 
 
-class OptInFieldsMixin(object):
+class OptInFieldsMixin:
     """
     A serializer mixin that takes an additional `opt_in_fields` argument that controls
     which fields should be displayed.
@@ -29,10 +29,10 @@ class OptInFieldsMixin(object):
         but `computed_fields` is not specified in the `?opt_in_fields` query parameter, `computed_fields` will be popped
         from the list of fields.
         """
-        fields = super(OptInFieldsMixin, self).fields
+        fields = super().fields
         serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
 
-        if serializer_opt_in_fields is None:
+        if not serializer_opt_in_fields:
             return fields
 
         if not hasattr(self, "_context"):
