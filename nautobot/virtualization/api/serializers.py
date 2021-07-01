@@ -37,7 +37,7 @@ from .nested_serializers import *
 #
 # Clusters
 #
-from ...core.api.serializers import ComputedFieldModelSerializer
+from nautobot.core.api.serializers import ComputedFieldModelSerializer
 
 
 class ClusterTypeSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
