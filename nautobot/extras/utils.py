@@ -112,10 +112,10 @@ def get_worker_count(request):
     # Try RQ first since, it's faster.
     rq_count = Worker.count(get_connection("default"))
 
+    # FIXME(jathan): If both RQ/Celery workers are running, this error is
+    # displayed but barely seen because of the redirect after task execution.
     if rq_count:
         messages.error(request, "RQ workers are deprecated. Please migrate your worker to Celery.")
-        # Force a failure because it wouldn't work w/ RQ anyways.
-        return 0
 
     # Celery next, since it's slower.
     inspect = app.control.inspect()
