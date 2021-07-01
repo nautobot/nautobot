@@ -905,7 +905,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
 
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("computed_fields").get_query()).order_by("app_label", "model"),
-        required=False,
+        required=True,
         label="Content Types",
     )
 
