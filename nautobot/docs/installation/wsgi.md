@@ -27,7 +27,7 @@ $ nautobot-server celery --help
 ```
 
 !!! important
-	Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@jobs` decorator for custom Jobs is still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
+	Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
 
 ## Configuration
 
