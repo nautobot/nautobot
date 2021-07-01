@@ -579,7 +579,16 @@ class DeviceBayTemplateSerializer(CustomFieldModelSerializer):
 
     class Meta:
         model = DeviceBayTemplate
-        fields = ["id", "url", "device_type", "name", "label", "description", "custom_fields", "computed_fields"]
+        fields = [
+            "id",
+            "url",
+            "device_type",
+            "name",
+            "label",
+            "description",
+            "custom_fields",
+            "computed_fields",
+        ]
         opt_in_fields = ["computed_fields"]
 
 
