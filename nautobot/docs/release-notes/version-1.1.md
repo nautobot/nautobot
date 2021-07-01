@@ -68,7 +68,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#17](https://github.com/nautobot/nautobot/issues/17) - MySQL 8.x is now fully supported as a database backend
 - [#200](https://github.com/nautobot/nautobot/issues/200) - Jobs can be marked as read-only
 - [#274](https://github.com/nautobot/nautobot/issues/274) - Added config context schemas to optionally validate config and local context data against JSON Schemas
-- [#297](https://github.com/nautobot/nautobot/issues/297) -  Added an anonymous health-checking endpoint at /`health/`using, also introducing a `nautobot-server health_check` command.
+- [#297](https://github.com/nautobot/nautobot/issues/297) -  Added an anonymous health-checking endpoint at `/health/`using, also introducing a `nautobot-server health_check` command.
 - [#485](https://github.com/nautobot/nautobot/pulls/485) - Applications can define navbar properties through `navigation.py`
 - [#561](https://github.com/nautobot/nautobot/pulls/561) - Added autodetection of `mime_type` on `export_templates` provided by Git datasources
 
