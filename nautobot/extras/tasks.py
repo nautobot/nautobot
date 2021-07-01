@@ -51,7 +51,6 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
 
 
 @job("custom_fields")
-@transaction.atomic
 def delete_custom_field_data(field_name, content_type_pk_set):
     """
     Delete the values for a custom field
@@ -60,15 +59,15 @@ def delete_custom_field_data(field_name, content_type_pk_set):
         field_name (str): The name of the custom field which is being deleted
         content_type_pk_set (list): List of PKs for content types to act upon
     """
-    for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
-        model = ct.model_class()
-        for obj in model.objects.filter(**{f"_custom_field_data__{field_name}__isnull": False}):
-            del obj._custom_field_data[field_name]
-            obj.save()
+    with transaction.atomic():
+        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+            model = ct.model_class()
+            for obj in model.objects.filter(**{f"_custom_field_data__{field_name}__isnull": False}): 
+                del obj._custom_field_data[field_name]
+                obj.save()
 
 
 @job("custom_fields")
-@transaction.atomic
 def provision_field(field_id, content_type_pk_set):
     """
     Provision a new custom field on all relevant content type object instances.
@@ -85,8 +84,9 @@ def provision_field(field_id, content_type_pk_set):
         logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
         return False
 
-    for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
-        model = ct.model_class()
-        for obj in model.objects.all():
-            obj._custom_field_data[field.name] = field.default
-            obj.save()
+    with transaction.atomic():
+        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+            model = ct.model_class()
+            for obj in model.objects.all():
+                obj._custom_field_data[field.name] = field.default
+                obj.save()

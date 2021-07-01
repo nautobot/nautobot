@@ -82,6 +82,17 @@ nautobot=> \q
 !!! note
     This is a built-in Django command. Please see the [official documentation on `dbshell`](https://docs.djangoproject.com/en/stable/ref/django-admin/#dbshell) for more information.
 
+
+### `fix_custom_fields`
+
+`nautobot-server fix_custom_fields`
+
+Adds/Removes any custom fields which should or should not exist on an object.  This command should not be run unless a custom fields jobs has failed:
+
+```no-highlight
+$ nautobot-server fix_custom_fields
+```
+
 ### `generate_secret_key`
 
 `nautobot-server generate_secret_key`
