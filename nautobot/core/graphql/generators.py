@@ -49,7 +49,7 @@ def generate_custom_field_resolver(name, resolver_name):
 
 
 def generate_computed_field_resolver(name, resolver_name):
-    """Generate function to resolve each computed field within each DjangoObjectType.
+    """Generate an instance method for resolving an individual computed field within a given DjangoObjectType.
 
     Args:
         name (str): name of the computed field to resolve
