@@ -15,6 +15,7 @@ from django.utils.text import slugify
 from django_rq import job
 import yaml
 
+from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import (
@@ -52,11 +53,12 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
     )
 
 
-@job("default")
-def pull_git_repository_and_refresh_data(repository_pk, request, job_result):
+@nautobot_task
+def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
     """
+    job_result = JobResult.objects.get(pk=job_result_pk)
     repository_record = GitRepository.objects.get(pk=repository_pk)
     if not repository_record:
         job_result.log(
