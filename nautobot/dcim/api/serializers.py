@@ -1275,7 +1275,17 @@ class VirtualChassisSerializer(TaggedObjectSerializer, CustomFieldModelSerialize
 
     class Meta:
         model = VirtualChassis
-        fields = ["id", "url", "name", "domain", "master", "tags", "custom_fields", "member_count", "computed_fields"]
+        fields = [
+            "id",
+            "url",
+            "name",
+            "domain",
+            "master",
+            "tags",
+            "custom_fields",
+            "member_count",
+            "computed_fields",
+        ]
         opt_in_fields = ["computed_fields"]
 
 
