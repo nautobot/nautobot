@@ -1,5 +1,6 @@
 from django import template
 from django.contrib.contenttypes.models import ContentType
+from django.utils.html import format_html, escape
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.models import CustomLink, ComputedField
@@ -29,10 +30,11 @@ def computed_fields(context, obj):
     template_code = ""
 
     for label, value in computed_fields.items():
+        escaped_label = escape(label)
         template_code += f"""
-        <tr>
-            <td><span title="{label}">{label}</span></td>
-            <td>{value}</td>
-        <tr>
-        """
+            <tr>
+                <td><span title="{escaped_label}">{escaped_label}</span></td>
+                <td>{escape(value)}</td>
+            <tr>
+            """
     return mark_safe(template_code)

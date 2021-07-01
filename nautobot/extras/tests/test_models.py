@@ -520,6 +520,14 @@ class ComputedFieldModelMixinTest(TestCase):
             fallback_value="This template has errored",
             weight=100,
         )
+        self.non_site_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Device),
+            slug="device_computed_field",
+            label="Device Computed Field",
+            template="Hello, world.",
+            fallback_value="This template has errored",
+            weight=100,
+        )
 
     def test_get_computed_field_method(self):
         self.assertEqual(
@@ -544,3 +552,6 @@ class ComputedFieldModelMixinTest(TestCase):
             "Bad Computed Field": self.bad_computed_field.fallback_value,
         }
         self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)
+
+    def test_get_computed_fields_only_returns_fields_for_content_type(self):
+        self.assertTrue(self.non_site_computed_field.slug not in self.site1.get_computed_fields())

@@ -503,6 +503,7 @@ class RelationshipAssociationTestCase(
 
 
 class ComputedFieldTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -554,6 +555,6 @@ class ComputedFieldTestCase(
             "slug": "computed_field_four",
             "label": "Computed Field Four",
             "template": "{{ obj.name }} is the best Site!",
-            "fallback_value": ":skull:",
+            "fallback_value": "💀",
             "weight": 100,
         }
