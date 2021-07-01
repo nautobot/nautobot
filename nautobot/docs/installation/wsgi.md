@@ -196,7 +196,7 @@ Because we just added new service files, you'll need to reload the systemd daemo
 $ sudo systemctl daemon-reload
 ```
 
-Then, start the `nautobot` and `nautobot-worker`services and enable them to initiate at boot time:
+Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
 
 ```no-highlight
 $ sudo systemctl enable --now nautobot nautobot-worker
