@@ -83,12 +83,20 @@ class ComputedFieldModelMixin(models.Model):
         return bool(ComputedField.objects.get_for_model(self))
 
     def get_computed_field(self, slug, render=True):
+        """
+        Get a computed field for this model, lookup via slug.
+        Returns the template of this field if render is False, otherwise returns the rendered value.
+        """
         computed_field = ComputedField.objects.get_for_model(self).get(slug=slug)
         if render:
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
     def get_computed_fields(self, label_as_key=False):
+        """
+        Return a dictionary of all computed fields and their rendered values for this model.
+        Keys are the `slug` value of each field. If label_as_key is True, `label` values of each field are used as keys.
+        """
         computed_fields_dict = {}
         computed_fields = ComputedField.objects.get_for_model(self)
         if not computed_fields:
