@@ -390,7 +390,7 @@ spawned uWSGI worker 4 (pid: 112168, cores: 3)
 spawned uWSGI worker 5 (pid: 112171, cores: 3)
 ```
 
-Please see the guide on [Deploying Nautobot](../installation/wsgi.md) for our recommended configuration for use with uWSGI.
+Please see the guide on [Deploying Nautobot Services](../installation/services.md) for our recommended configuration for use with uWSGI.
 
 ### `startplugin`
 
@@ -402,9 +402,9 @@ This command is similar to the django-admin [startapp](https://docs.djangoprojec
 
 Without passing in the destination directory, `nautobot-server startplugin` will use your current directory and the `name` argument provided to create a new directory. We recommend providing a  directory so that the plugin can be installed or published easily. Here is an example:
 
-```bash
-mkdir -p ~/myplugin/myplugin
-nautobot-server startplugin myplugin ~/myplugin/myplugin
+```no-highlight
+$ mkdir -p ~/myplugin/myplugin
+$ nautobot-server startplugin myplugin ~/myplugin/myplugin
 ```
 
 Additional options such as `--name` or `--extension` can be found in the Django [documentation](https://docs.djangoproject.com/en/stable/ref/django-admin/#startapp).
