@@ -123,7 +123,7 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-### Nautobot  Worker Service
+### Nautobot Worker Service
 
 !!! note
 	Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-from-rq). 
