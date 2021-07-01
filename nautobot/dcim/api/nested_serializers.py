@@ -128,7 +128,14 @@ class NestedDeviceTypeSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.DeviceType
-        fields = ["id", "url", "manufacturer", "model", "slug", "device_count"]
+        fields = [
+            "id",
+            "url",
+            "manufacturer",
+            "model",
+            "slug",
+            "device_count",
+        ]
 
 
 class NestedConsolePortTemplateSerializer(WritableNestedSerializer):

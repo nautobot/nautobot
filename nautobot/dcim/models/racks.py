@@ -382,7 +382,13 @@ class Rack(PrimaryModel, StatusModel):
         if self.present_in_database:
 
             # Retrieve all devices installed within the rack
-            queryset = Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
+            queryset = (
+                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
+                .annotate(devicebay_count=Count("devicebays"))
+                .exclude(pk=exclude)
+                .filter(rack=self, position__gt=0, device_type__u_height__gt=0)
+                .filter(Q(face=face) | Q(device_type__is_full_depth=True))
+            )
 
             # Determine which devices the user has permission to view
             permitted_device_ids = []
