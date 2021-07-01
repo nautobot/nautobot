@@ -60,7 +60,7 @@ from .nested_serializers import *
 #
 # Custom fields
 #
-from ...core.api.serializers import ComputedFieldModelSerializer
+from nautobot.core.api.serializers import ComputedFieldModelSerializer
 
 
 class CustomFieldSerializer(ValidatedModelSerializer):
