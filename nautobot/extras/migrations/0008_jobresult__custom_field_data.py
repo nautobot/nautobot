@@ -7,13 +7,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0007_configcontextschema'),
+        ("extras", "0007_configcontextschema"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='jobresult',
-            name='_custom_field_data',
+            model_name="jobresult",
+            name="_custom_field_data",
             field=models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
         ),
     ]
