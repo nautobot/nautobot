@@ -72,7 +72,6 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel, Com
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "relationships",
@@ -112,7 +111,7 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         return ConsoleServerPort(device=device, name=self.name, label=self.label, type=self.type)
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "computed_fields")
+@extras_features("custom_fields", "custom_validators", "relationships")
 class PowerPortTemplate(ComponentTemplateModel):
     """
     A template for a PowerPort to be created for a new Device.
@@ -157,7 +156,6 @@ class PowerPortTemplate(ComponentTemplateModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "relationships",
@@ -209,7 +207,6 @@ class PowerOutletTemplate(ComponentTemplateModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "relationships",
@@ -244,7 +241,6 @@ class InterfaceTemplate(ComponentTemplateModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "relationships",
@@ -341,7 +337,6 @@ class RearPortTemplate(ComponentTemplateModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "relationships",

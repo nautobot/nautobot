@@ -904,7 +904,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
 
     content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("computed_fields").get_query()).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=True,
         label="Content Types",
     )
@@ -926,7 +926,7 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
     model = ComputedField
     q = forms.CharField(required=False, label="Search")
     content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("computed_fields").get_query()).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=False,
         label="Content Types",
     )

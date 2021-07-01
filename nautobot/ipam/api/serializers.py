@@ -44,10 +44,9 @@ from .nested_serializers import *
 #
 # VRFs
 #
-from nautobot.core.api.serializers import ComputedFieldModelSerializer
 
 
-class VRFSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class VRFSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vrf-detail")
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     import_targets = SerializedPKRelatedField(
@@ -93,7 +92,7 @@ class VRFSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, Computed
 #
 
 
-class RouteTargetSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class RouteTargetSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:routetarget-detail")
     tenant = NestedTenantSerializer(required=False, allow_null=True)
 
@@ -119,7 +118,7 @@ class RouteTargetSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, 
 #
 
 
-class RIRSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class RIRSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
     aggregate_count = serializers.IntegerField(read_only=True)
 
@@ -141,7 +140,7 @@ class RIRSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
         opt_in_fields = ["computed_fields"]
 
 
-class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -174,7 +173,7 @@ class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, Co
 #
 
 
-class RoleSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class RoleSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:role-detail")
     prefix_count = serializers.IntegerField(read_only=True)
     vlan_count = serializers.IntegerField(read_only=True)
@@ -198,7 +197,7 @@ class RoleSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
         opt_in_fields = ["computed_fields"]
 
 
-class VLANGroupSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class VLANGroupSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
     vlan_count = serializers.IntegerField(read_only=True)
@@ -235,9 +234,7 @@ class VLANGroupSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializ
         return data
 
 
-class VLANSerializer(
-    TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer, ComputedFieldModelSerializer
-):
+class VLANSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
     group = NestedVLANGroupSerializer(required=False, allow_null=True)
@@ -287,9 +284,7 @@ class VLANSerializer(
 #
 
 
-class PrefixSerializer(
-    TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer, ComputedFieldModelSerializer
-):
+class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -375,9 +370,7 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(
-    TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer, ComputedFieldModelSerializer
-):
+class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
@@ -457,7 +450,7 @@ class AvailableIPSerializer(serializers.Serializer):
 #
 
 
-class ServiceSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class ServiceSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:service-detail")
     device = NestedDeviceSerializer(required=False, allow_null=True)
     virtual_machine = NestedVirtualMachineSerializer(required=False, allow_null=True)

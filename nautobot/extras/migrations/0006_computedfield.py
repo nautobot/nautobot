@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 (
                     "content_type",
                     models.ForeignKey(
-                        limit_choices_to=nautobot.extras.utils.FeatureQuery("computed_fields"),
+                        limit_choices_to=nautobot.extras.utils.FeatureQuery("custom_fields"),
                         on_delete=django.db.models.deletion.CASCADE,
                         to="contenttypes.contenttype",
                     ),

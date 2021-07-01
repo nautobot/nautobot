@@ -193,10 +193,3 @@ class BulkOperationSerializer(serializers.Serializer):
 class GraphQLAPISerializer(serializers.Serializer):
     query = serializers.CharField(required=True, help_text="GraphQL query")
     variables = serializers.JSONField(required=False, help_text="Variables in JSON Format")
-
-
-class ComputedFieldModelSerializer(serializers.ModelSerializer):
-    computed_fields = serializers.SerializerMethodField(read_only=True)
-
-    def get_computed_fields(self, obj):
-        return obj.get_computed_fields()

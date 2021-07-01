@@ -39,7 +39,6 @@ __all__ = (
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "graphql",
@@ -79,7 +78,6 @@ class ClusterType(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "graphql",
@@ -119,7 +117,6 @@ class ClusterGroup(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -207,7 +204,6 @@ class Cluster(PrimaryModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -373,7 +369,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",

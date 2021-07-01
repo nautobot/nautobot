@@ -20,7 +20,6 @@ __all__ = (
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -89,7 +88,7 @@ class Provider(PrimaryModel):
         )
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "computed_fields")
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships")
 class CircuitType(OrganizationalModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
@@ -123,7 +122,6 @@ class CircuitType(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",

@@ -38,7 +38,6 @@ __all__ = (
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "export_templates",
@@ -112,7 +111,6 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "graphql",
@@ -152,7 +150,6 @@ class RackRole(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -532,7 +529,6 @@ class Rack(PrimaryModel, StatusModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",

@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from django import template
 from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
@@ -8,17 +6,6 @@ from nautobot.extras.models import CustomLink, ComputedField
 
 
 register = template.Library()
-
-LINK_BUTTON = '<a href="{}"{} class="btn btn-sm btn-{}">{}</a>\n'
-GROUP_BUTTON = (
-    '<div class="btn-group">\n'
-    '<button type="button" class="btn btn-sm btn-{} dropdown-toggle" data-toggle="dropdown">\n'
-    '{} <span class="caret"></span>\n'
-    "</button>\n"
-    '<ul class="dropdown-menu pull-right">\n'
-    "{}</ul></div>\n"
-)
-GROUP_LINK = '<li><a href="{}"{}>{}</a></li>\n'
 
 
 @register.simple_tag(takes_context=True)

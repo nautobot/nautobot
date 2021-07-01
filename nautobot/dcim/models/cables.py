@@ -37,7 +37,6 @@ __all__ = (
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",

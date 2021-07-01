@@ -26,7 +26,6 @@ __all__ = (
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "export_templates",
@@ -91,7 +90,6 @@ class Region(MPTTModel, OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "export_templates",

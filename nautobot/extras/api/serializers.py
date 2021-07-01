@@ -60,7 +60,6 @@ from .nested_serializers import *
 #
 # Custom fields
 #
-from nautobot.core.api.serializers import ComputedFieldModelSerializer
 
 
 class CustomFieldSerializer(ValidatedModelSerializer):
@@ -206,7 +205,7 @@ class TaggedObjectSerializer(serializers.Serializer):
 #
 
 
-class GitRepositorySerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class GitRepositorySerializer(CustomFieldModelSerializer):
     """Git repositories defined as a data source."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
@@ -690,7 +689,7 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
 class ComputedFieldSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
     content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("computed_fields").get_query()).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
 
     class Meta:

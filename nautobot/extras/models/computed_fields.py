@@ -35,7 +35,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery("computed_fields"),
+        limit_choices_to=FeatureQuery("custom_fields"),
     )
     slug = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")

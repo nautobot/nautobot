@@ -38,7 +38,6 @@ __all__ = (
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -114,7 +113,6 @@ class VRF(PrimaryModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -162,7 +160,6 @@ class RouteTarget(PrimaryModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "graphql",
@@ -206,7 +203,6 @@ class RIR(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -373,7 +369,6 @@ class Aggregate(PrimaryModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "graphql",
@@ -414,7 +409,6 @@ class Role(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -712,7 +706,6 @@ class Prefix(PrimaryModel, StatusModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -972,7 +965,6 @@ class IPAddress(PrimaryModel, StatusModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "graphql",
@@ -1034,7 +1026,6 @@ class VLANGroup(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -1159,7 +1150,6 @@ class VLAN(PrimaryModel, StatusModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",

@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from nautobot.circuits.models import Provider, Circuit, CircuitTermination, CircuitType
 from nautobot.core.api import WritableNestedSerializer
-from nautobot.core.api.serializers import ComputedFieldModelSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedCableSerializer,
     NestedInterfaceSerializer,
@@ -26,7 +25,7 @@ from .nested_serializers import *
 #
 
 
-class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:provider-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
@@ -58,7 +57,7 @@ class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer, Com
 #
 
 
-class CircuitTypeSerializer(CustomFieldModelSerializer, ComputedFieldModelSerializer):
+class CircuitTypeSerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittype-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
@@ -97,9 +96,7 @@ class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
         ]
 
 
-class CircuitSerializer(
-    TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer, ComputedFieldModelSerializer
-):
+class CircuitSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuit-detail")
     provider = NestedProviderSerializer()
     type = NestedCircuitTypeSerializer()

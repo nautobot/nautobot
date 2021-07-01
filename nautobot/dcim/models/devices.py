@@ -38,7 +38,6 @@ __all__ = (
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_validators",
     "export_templates",
@@ -71,7 +70,6 @@ class Manufacturer(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -320,7 +318,7 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql", "computed_fields")
+@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
 class DeviceRole(OrganizationalModel):
     """
     Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
@@ -362,7 +360,7 @@ class DeviceRole(OrganizationalModel):
         )
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql", "computed_fields")
+@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
@@ -425,7 +423,6 @@ class Platform(OrganizationalModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -838,7 +835,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
 
 
 @extras_features(
-    "computed_fields",
     "custom_fields",
     "custom_links",
     "custom_validators",
