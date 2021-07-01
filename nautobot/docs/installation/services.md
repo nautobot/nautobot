@@ -23,11 +23,11 @@ $ nautobot-server start --help
 Nautobot requires at least one worker to consume background tasks required for advanced background features. A `nautobot-server celery` command is included that directly invokes Celery. This command behaves exactly as the Celery command-line utility does, but launches it through Nautobot's environment to share Redis and database connection settings transparently.
 
 ```no-highlight
-$ nautobot-server celery --help  
+$ nautobot-server celery --help
 ```
 
 !!! important
-	Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
 
 ## Configuration
 
@@ -126,7 +126,7 @@ WantedBy=multi-user.target
 ### Nautobot Worker Service
 
 !!! note
-	Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-from-rq). 
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
 Next, we will setup the `systemd` unit for the Celery worker. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 
@@ -156,7 +156,7 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-#### Migrating from RQ
+#### Migrating to Celery from RQ
 
 If you're upgrading from Nautobot version 1.0.x, all you really need to do are two things.
 
