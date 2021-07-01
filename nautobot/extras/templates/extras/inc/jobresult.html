@@ -2,37 +2,57 @@
 {% load log_levels %}
 {% load static %}
 
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Summary of Results:</strong>
-        <span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span>
-        {% if result %}
-            started at <strong>{{ result.created }}</strong> by <strong>{{ result.user }}</strong>
-            {% if result.completed %}
-                and ran for <strong>{{ result.duration }}</strong>
-            {% else %}
-                <img id="pending-result-loader" src="{% static 'img/ajax-loader.gif' %}">
-            {% endif %}
-        {% endif %}
-    </div>
-    <table class="table table-hover panel-body">
-        {% if result.completed %}
-            {% for grouping, data in result.data.items %}
-                {% if grouping != "total" and grouping != "output" %}
-                    <tr>
-                        <td><code><a href="#{{ grouping }}">{{ grouping }}</a></code></td>
-                        <td class="text-right report-stats">
-                            <label class="label label-success">{{ data.success }}</label>
-                            <label class="label label-info">{{ data.info }}</label>
-                            <label class="label label-warning">{{ data.warning }}</label>
-                            <label class="label label-danger">{{ data.failure }}</label>
-                        </td>
-                    </tr>
+<div class="row noprint">
+    <div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Summary of Results</strong>
+            </div>
+            <table class="table table-hover panel-body">
+                <tr>
+                    <td>Status</td>
+                    <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
+                </tr>
+                <tr>
+                    <td>Started at</td>
+                    <td>{{ result.created }}</td>
+                </tr>
+                <tr>
+                    <td>User</td>
+                    <td>{{ result.user }}</td>
+                </tr>
+                <tr>
+                    <td>Duration</td>
+                    {% if result.completed %}
+                        <td>{{ result.duration }}</td>
+                    {% else %}
+                        <td><img id="pending-result-loader" src="{% static 'img/ajax-loader.gif' %}"></td>
+                    {% endif %}
+                </tr>
+
+                {% if result.completed %}
+                    {% for grouping, data in result.data.items %}
+                        {% if grouping != "total" and grouping != "output" %}
+                            <tr>
+                                <td><code><a href="#{{ grouping }}">{{ grouping }}</a></code></td>
+                                <td class="text-right report-stats">
+                                    <label class="label label-success">{{ data.success }}</label>
+                                    <label class="label label-info">{{ data.info }}</label>
+                                    <label class="label label-warning">{{ data.warning }}</label>
+                                    <label class="label label-danger">{{ data.failure }}</label>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
                 {% endif %}
-            {% endfor %}
-        {% endif %}
-    </table>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+            {% include 'inc/custom_fields_panel.html' %}
+    </div>
 </div>
+
 {% if result.completed %}
     <div class="panel panel-default">
         <div class="panel-heading">
