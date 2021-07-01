@@ -1,5 +1,6 @@
 {% load helpers %}
 {% load log_levels %}
+{% load plugins %}
 {% load static %}
 
 <div class="row noprint">
@@ -47,9 +48,11 @@
                 {% endif %}
             </table>
         </div>
+        {% plugin_left_page result %}
     </div>
     <div class="col-md-6">
-            {% include 'inc/custom_fields_panel.html' %}
+        {% include 'inc/custom_fields_panel.html' %}
+        {% plugin_right_page result %}
     </div>
 </div>
 
