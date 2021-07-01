@@ -141,8 +141,6 @@ JSON single example:
     "description": "Schema for defining first names."
   },
   "data_schema": {
-    "$id": "https://example.com/person.schema.json",
-    "$schema": "https://json-schema.org/draft-07/schema",
     "title": "Person",
     "properties": {
       "firstName": {
@@ -164,8 +162,6 @@ JSON list example:
       "description": "Schema for defining first names."
     },
     "data_schema": {
-      "$id": "https://example.com/person.schema.json",
-      "$schema": "https://json-schema.org/draft-07/schema",
       "title": "Person",
       "properties": {
         "firstName": {
@@ -181,8 +177,6 @@ JSON list example:
       "description": "Schema for defining last names."
     },
     "data_schema": {
-      "$id": "https://example.com/person.schema.json",
-      "$schema": "https://json-schema.org/draft-07/schema",
       "title": "Person",
       "properties": {
         "lastName": {
@@ -203,8 +197,6 @@ _metadata:
   name: "Config Context Schema 1"
   description: "Schema for defining first names."
 data_schema:
-  $id: "https://example.com/person.schema.json"
-  $schema: "https://json-schema.org/draft-07/schema"
   title: "Person"
   properties:
     firstName:
@@ -220,8 +212,6 @@ YAML list example:
     name: "Config Context Schema 1"
     description: "Schema for defining first names."
   data_schema:
-    $id: "https://example.com/person.schema.json"
-    $schema: "https://json-schema.org/draft-07/schema"
     title: "Person"
     properties:
       firstName:
@@ -231,8 +221,6 @@ YAML list example:
     name: "Config Context Schema 2"
     description: "Schema for defining last names."
   data_schema:
-    $id: "https://example.com/person.schema.json"
-    $schema: "https://json-schema.org/draft-07/schema"
     title: "Person"
     properties:
       lastName:
