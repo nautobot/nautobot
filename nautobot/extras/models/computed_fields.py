@@ -20,7 +20,7 @@ class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
     def get_for_model(self, model):
         """
-        Return all ComputedFiedlds assigned to the given model.
+        Return all ComputedFields assigned to the given model.
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.get_queryset().filter(content_type=content_type)
