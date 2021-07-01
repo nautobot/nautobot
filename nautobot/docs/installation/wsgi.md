@@ -76,7 +76,7 @@ We'll use `systemd` to control both uWSGI and Nautobot's background worker proce
 
 ### Nautobot service
 
-First, we'll setablish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
+First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
 
 ```
 [Unit]
