@@ -15,7 +15,7 @@ def has_computed_fields(context, obj):
     Return a boolean value indicating if an object's content type has associated computed fields.
     """
     content_type = ContentType.objects.get_for_model(obj)
-    return bool(ComputedField.objects.filter(content_type=content_type))
+    return ComputedField.objects.filter(content_type=content_type).exists()
 
 
 @register.simple_tag(takes_context=True)
