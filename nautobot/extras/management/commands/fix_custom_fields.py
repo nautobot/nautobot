@@ -35,5 +35,5 @@ class Command(BaseCommand):
                     if obj_changed:
                         try:
                             obj.validated_save()
-                        except ValidationError as err:
+                        except ValidationError:
                             self.stderr.write(self.style.ERROR(f"Failed saving {obj}"))
