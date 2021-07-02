@@ -802,6 +802,6 @@ class ComputedFieldTestCase(
             "slug": "computed_field_four",
             "label": "Computed Field Four",
             "template": "{{ obj.name }} is the best Site!",
-            "fallback_value": "💀",
+            "fallback_value": ":skull_emoji:",
             "weight": 100,
         }
