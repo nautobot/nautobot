@@ -8,15 +8,13 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
-#### Saved GraphQL Queries ([#3](https://github.com/nautobot/nautobot/issues/3))
-
-[Saved GraphQL queries](../additional-features/graphql.md#saved-queries) offers a new model where reusable queries can be stored in Nautobot. New views for managing saved queries are available; additionally, the GraphiQL interface has been augmented to allow populating the interface from a saved query, editing and saving new queries.
-
-Saved queries can easily be imported into the GraphiQL interface by using the new navigation tab located on the right side of the navbar. Inside the new tab are also buttons for editing and saving queries directly into Nautobot's databases.
-
 #### App Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/485))
 
 Applications can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/application-registry.md) for more details.
+
+#### Config Context Schemas ([#274](https://github.com/nautobot/nautobot/issues/274))
+
+While config contexts allow for arbitrary data structures to be stored within Nautobot, at scale it is desirable to apply validation constraints to that data to ensure its consistency and to avoid data entry errors. To service this need, Nautobot supports optionally backing config contexts with [JSON Schemas](https://json-schema.org/) for validation. These schema are managed via the config context schema model and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data. Please see the [docs](../additional-features/config-contexts.md#config-context-schemas) for more details.
 
 #### GraphQL ORM Functions
 
@@ -42,9 +40,13 @@ Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-s
 
 Jobs may be optionally marked as read only by setting the `read_only = True` meta attribute. This prevents the job from making any changes to nautobot data and suppresses certain log messages. Read only jobs can be a great way to safely develop new jobs, and for working with reporting use cases. Please see the [Jobs documentation](../additional-features/jobs.md) for more details.
 
-#### Config Context Schemas ([#274](https://github.com/nautobot/nautobot/issues/274))
+#### Saved GraphQL Queries ([#3](https://github.com/nautobot/nautobot/issues/3))
 
-While config contexts allow for arbitrary data structures to be stored within Nautobot, at scale it is desirable to apply validation constraints to that data to ensure its consistency and to avoid data entry errors. To service this need, Nautobot supports optionally backing config contexts with [JSON Schemas](https://json-schema.org/) for validation. These schema are managed via the config context schema model and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data. Please see the [docs](../additional-features/config-contexts.md#config-context-schemas) for more details.
+[Saved GraphQL queries](../additional-features/graphql.md#saved-queries) offers a new model where reusable queries can be stored in Nautobot. New views for managing saved queries are available; additionally, the GraphiQL interface has been augmented to allow populating the interface from a saved query, editing and saving new queries.
+
+Saved queries can easily be imported into the GraphiQL interface by using the new navigation tab located on the right side of the navbar. Inside the new tab are also buttons for editing and saving queries directly into Nautobot's databases.
+
+### Changed
 
 #### Background Tasks now use Celery ([#223](https://github.com/nautobot/nautobot/issues/223))
 
@@ -59,8 +61,6 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 #### Plugin Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/572))
 
 Plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/navigation-menu.md) for more details.
-
-### Changed
 
 ### Removed
 
