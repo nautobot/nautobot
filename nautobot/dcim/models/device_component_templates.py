@@ -111,7 +111,11 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         return ConsoleServerPort(device=device, name=self.name, label=self.label, type=self.type)
 
 
-@extras_features("custom_fields", "custom_validators", "relationships")
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "relationships",
+)
 class PowerPortTemplate(ComponentTemplateModel):
     """
     A template for a PowerPort to be created for a new Device.
