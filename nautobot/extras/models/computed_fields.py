@@ -53,7 +53,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         unique_together = ("content_type", "label")
 
     def __str__(self):
-        return self.slug
+        return self.label
 
     def get_absolute_url(self):
         return reverse("extras:computedfield", kwargs={"pk": self.pk})
@@ -78,7 +78,7 @@ class ComputedFieldModelMixin(models.Model):
         """
         Return a boolean indicating whether or not this content type has computed fields associated with it.
         """
-        return bool(ComputedField.objects.get_for_model(self))
+        return ComputedField.objects.get_for_model(self).exists()
 
     def get_computed_field(self, slug, render=True):
         """
