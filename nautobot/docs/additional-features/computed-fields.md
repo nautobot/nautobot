@@ -3,12 +3,13 @@
 Computed fields are largely based on custom fields. See the overview of [Custom Fields](./custom-fields.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in it's database.
 
 As an example, for use by some automation system, you might want to be able to have an automatically generated field on the Device model that combines the name of the device and the uppercased site name. To do that, you would define a Jinja template for this field that looks like such:
+
 ```jinja2
 {{ obj.name }}_{{ obj.site.name | upper }}
 ```
 
 !!! note
-    Everytime an object with this computed field is loaded, the template gets rendered. It's important to note that these values are not stored in the database and are dynamically rendered.
+    Every time an object with this computed field is loaded, the template gets re-rendered with the currently available data. It's important to note that these rendered values are not stored in the database; only the template is.
 
 ## Creating Computed Fields
 
@@ -22,15 +23,27 @@ Similar to custom fields, the weight value is used to order computed fields with
 
 Computed fields must define a template from which to render their values. The template field must contain a valid Jinja2 template string.
 
-A computed field must be assigned to an object types, or model, in Nautobot. Once created, computed fields will automatically appear as part of these models in the web UI. See notes about viewing computed fields via the REST API below.
+A computed field must be assigned to an object type, or model, in Nautobot. Once created, a computed field will automatically appear as part of this model's display. See notes about viewing computed fields via the REST API below.
 
 
 ## Computed Field Template Context
 
 Computed field templates can utilize the context of the object the field is being rendered on. This context is available for use in templates via the `obj` keyword. As an example, for a computed field being rendered on a Device object, the name of the site that this Device belongs to can be accessed like this:
+
 ```jinja2
 {{ obj.site.name }}
 ```
+
+## Computed Field Template Filters
+
+Computed field templates can also utilize custom jinja filters that have been registered via plugins. These filters can be used by providing the name of the filter function. As an example:
+
+```jinja2
+{{ obj.site.name | leet_speak }}
+```
+
+See the documentation on [registering custom jinja filters](../plugins/development.md#including-jinja-filters) in plugins.
+
 
 ## Computed Fields and the REST API
 
@@ -54,4 +67,4 @@ When explicitly requested as such, computed field data will be included in the `
 ```
 
 !!! note
-    Note that the slug field is used as the key names for items in the `computed_fields` attribute.
+    Note that the slug field is used as the key name for items in the `computed_fields` attribute.

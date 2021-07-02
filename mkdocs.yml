@@ -69,6 +69,7 @@ nav:
     - Additional Features:
         - Caching: 'additional-features/caching.md'
         - Change Logging: 'additional-features/change-logging.md'
+        - Computed Fields: 'additional-features/computed-fields.md'
         - Context Data: 'additional-features/config-contexts.md'
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'

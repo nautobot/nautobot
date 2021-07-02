@@ -147,7 +147,7 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `description` | Brief description of the plugin's purpose |
 | `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.types.graphql_types)` |
 | `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
-| `jinja_filters` | The dotted path to the file that contains jinja filters to be registered (default: `jinja_filters.jinja_filters`) |
+| `jinja_filters` | The path to the file that contains jinja filters to be registered (default: `jinja_filters`) |
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
 | `max_version` | Maximum version of Nautobot with which the plugin is compatible |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
