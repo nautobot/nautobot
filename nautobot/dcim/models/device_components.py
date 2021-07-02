@@ -12,7 +12,6 @@ from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
-    ComputedFieldModelMixin,
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
@@ -43,7 +42,7 @@ __all__ = (
 )
 
 
-class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, ComputedFieldModelMixin):
+class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
     """
     An abstract model inherited by any model which has a parent Device.
     """

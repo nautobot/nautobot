@@ -4,7 +4,7 @@ from django.db import models
 
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
-from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel, ComputedFieldModelMixin
+from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import NaturalOrderingField
@@ -34,7 +34,7 @@ __all__ = (
 )
 
 
-class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel, ComputedFieldModelMixin):
+class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
     device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.CASCADE, related_name="%(class)ss")
     name = models.CharField(max_length=64)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)

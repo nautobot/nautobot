@@ -12,7 +12,6 @@ from nautobot.extras.models import (
     ObjectChange,
     StatusModel,
     TaggedItem,
-    ComputedFieldModelMixin,
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
@@ -377,7 +376,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "relationships",
     "webhooks",
 )
-class VMInterface(BaseModel, BaseInterface, CustomFieldModel, ComputedFieldModelMixin):
+class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
     virtual_machine = models.ForeignKey(
         to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,
