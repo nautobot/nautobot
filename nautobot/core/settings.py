@@ -299,6 +299,7 @@ INSTALLED_APPS = [
     "cacheops",
     "corsheaders",
     "django_filters",
+    "django_jinja",
     "django_tables2",
     "django_prometheus",
     "mptt",
@@ -318,6 +319,10 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "health_check",
+    "health_check.db",
+    "health_check.cache",
+    "health_check.storage",
 ]
 
 # Middleware
@@ -343,9 +348,29 @@ ROOT_URLCONF = "nautobot.core.urls"
 
 TEMPLATES = [
     {
+        "NAME": "django",
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.template.context_processors.media",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.sso_auth",
+            ],
+        },
+    },
+    {
+        "NAME": "jinja",
+        "BACKEND": "django_jinja.backend.Jinja2",
+        "DIRS": [],
+        "APP_DIRS": False,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -429,6 +454,7 @@ GRAPHENE = {
 }
 GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 GRAPHQL_RELATIONSHIP_PREFIX = "rel"
+GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 
 
 #
@@ -473,7 +499,7 @@ CACHES = {
 }
 
 #
-# Django RQ (Webhooks backend)
+# Django RQ (used for legacy background processesing)
 #
 
 # These defaults utilize the Django caches setting defined for django-redis.
@@ -492,3 +518,23 @@ RQ_QUEUES = {
         "USE_REDIS_CACHE": "default",
     },
 }
+
+#
+# Celery (used for background processing)
+#
+
+# Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
+CELERY_TASK_TRACK_STARTED = True
+
+# Global task time limit (seconds)
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
+
+# The Redis connection defined in the CACHES config above for the broker and results backend
+CELERY_BROKER_URL = CACHES["default"]["LOCATION"]
+CELERY_RESULT_BACKEND = CACHES["default"]["LOCATION"]
+
+# These settings define the custom nautobot serialization encoding as an accepted data encoding format
+# and register that format for task input and result serialization
+CELERY_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_TASK_SERIALIZER = "nautobot_json"
+CELERY_RESULT_SERIALIZER = "nautobot_json"

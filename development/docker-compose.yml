@@ -21,8 +21,29 @@ services:
   worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server rqworker"
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "health_check"]
     depends_on:
       - nautobot
+    env_file:
+      - ./dev.env
+    tty: true
+  celery_worker:
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "nautobot-server celery worker -B -l INFO"
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "health_check"]
+    depends_on:
+      - nautobot
+      - redis
     env_file:
       - ./dev.env
     tty: true

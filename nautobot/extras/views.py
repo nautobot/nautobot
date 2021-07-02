@@ -8,22 +8,29 @@ from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import View
-from django_rq.queues import get_connection
 from django_tables2 import RequestConfig
+from jsonschema.validators import Draft7Validator
 from rq import Worker
 
 from nautobot.core.views import generic
+from nautobot.dcim.models import Device
+from nautobot.dcim.tables import DeviceTable
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
     shallow_compare_dict,
 )
+from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ContentTypePermissionRequiredMixin
+from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
 from .models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -185,6 +192,145 @@ class ObjectConfigContextView(generic.ObjectView):
             "base_template": self.base_template,
             "active_tab": "config-context",
         }
+
+
+#
+# Config context schemas
+#
+
+# TODO: disallow (or at least warn) user from manually editing config context schemas that
+# have an associated owner, such as a Git repository
+
+
+class ConfigContextSchemaListView(generic.ObjectListView):
+    queryset = ConfigContextSchema.objects.all()
+    filterset = filters.ConfigContextSchemaFilterSet
+    filterset_form = forms.ConfigContextSchemaFilterForm
+    table = tables.ConfigContextSchemaTable
+    action_buttons = ("add",)
+
+
+class ConfigContextSchemaView(generic.ObjectView):
+    queryset = ConfigContextSchema.objects.all()
+
+    def get_extra_context(self, request, instance):
+        # Determine user's preferred output format
+        if request.GET.get("format") in ["json", "yaml"]:
+            format = request.GET.get("format")
+            if request.user.is_authenticated:
+                request.user.set_config("extras.configcontextschema.format", format, commit=True)
+        elif request.user.is_authenticated:
+            format = request.user.get_config("extras.configcontextschema.format", "json")
+        else:
+            format = "json"
+
+        return {
+            "format": format,
+            "active_tab": "configcontextschema",
+        }
+
+
+class ConfigContextSchemaObjectValidationView(generic.ObjectView):
+    """
+    This view renders a detail tab that shows tables of objects that utilize the given schema object
+    and their validation state.
+    """
+
+    queryset = ConfigContextSchema.objects.all()
+    template_name = "extras/configcontextschema/validation.html"
+
+    def get_extra_context(self, request, instance):
+        """
+        Reuse the model tables for config context, device, and virtual machine but inject
+        the `ConfigContextSchemaValidationStateColumn` and an object edit action button.
+        """
+        # Prep the validator with the schema so it can be reused for all records
+        validator = Draft7Validator(instance.data_schema)
+
+        # Config context table
+        config_context_table = tables.ConfigContextTable(
+            data=instance.configcontext_set.all(),
+            orderable=False,
+            extra_columns=[
+                (
+                    "validation_state",
+                    tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
+                ),
+                ("actions", ButtonsColumn(model=ConfigContext, buttons=["edit"])),
+            ],
+        )
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(config_context_table)
+
+        # Device table
+        device_table = DeviceTable(
+            data=instance.device_set.prefetch_related(
+                "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
+            ),
+            orderable=False,
+            extra_columns=[
+                (
+                    "validation_state",
+                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                ),
+                ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
+            ],
+        )
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(device_table)
+
+        # Virtual machine table
+        virtual_machine_table = VirtualMachineTable(
+            data=instance.virtualmachine_set.prefetch_related("cluster", "role", "tenant", "primary_ip"),
+            orderable=False,
+            extra_columns=[
+                (
+                    "validation_state",
+                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                ),
+                ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
+            ],
+        )
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(virtual_machine_table)
+
+        return {
+            "config_context_table": config_context_table,
+            "device_table": device_table,
+            "virtual_machine_table": virtual_machine_table,
+            "active_tab": "validation",
+        }
+
+
+class ConfigContextSchemaEditView(generic.ObjectEditView):
+    queryset = ConfigContextSchema.objects.all()
+    model_form = forms.ConfigContextSchemaForm
+    template_name = "extras/configcontextschema_edit.html"
+
+
+class ConfigContextSchemaBulkEditView(generic.BulkEditView):
+    queryset = ConfigContextSchema.objects.all()
+    filterset = filters.ConfigContextSchemaFilterSet
+    table = tables.ConfigContextSchemaTable
+    form = forms.ConfigContextSchemaBulkEditForm
+
+
+class ConfigContextSchemaDeleteView(generic.ObjectDeleteView):
+    queryset = ConfigContextSchema.objects.all()
+
+
+class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
+    queryset = ConfigContextSchema.objects.all()
+    table = tables.ConfigContextSchemaTable
 
 
 #
@@ -397,12 +543,7 @@ class GitRepositorySyncView(View):
 
         repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
-        # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection("default")):
-            messages.error(request, "Unable to sync Git repository: RQ worker process not running.")
-
-        else:
-            enqueue_pull_git_repository_and_refresh_data(repository, request)
+        enqueue_pull_git_repository_and_refresh_data(repository, request)
 
         return redirect("extras:gitrepository_result", slug=slug)
 
@@ -549,11 +690,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         grouping, module, class_name = class_path.split("/", 2)
         form = job.as_form(request.POST, request.FILES)
 
-        # Allow execution only if RQ worker process is running
-        if not Worker.count(get_connection("default")):
-            messages.error(request, "Unable to run job: RQ worker process not running.")
-
-        elif form.is_valid():
+        if form.is_valid():
             # Run the job. A new JobResult is created.
             commit = form.cleaned_data.pop("_commit")
 
@@ -658,6 +795,7 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
             {
                 "associated_record": associated_record,
                 "job": job,
+                "object": job_result,
                 "result": job_result,
             },
         )
@@ -862,3 +1000,29 @@ class GraphQLQueryDeleteView(generic.ObjectDeleteView):
 class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
     queryset = GraphQLQuery.objects.all()
     table = tables.GraphQLQueryTable
+
+
+class ComputedFieldListView(generic.ObjectListView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
+    filterset_form = forms.ComputedFieldFilterForm
+    action_buttons = ("add",)
+
+
+class ComputedFieldView(generic.ObjectView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldEditView(generic.ObjectEditView):
+    queryset = ComputedField.objects.all()
+    model_form = forms.ComputedFieldForm
+
+
+class ComputedFieldDeleteView(generic.ObjectDeleteView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable

@@ -14,12 +14,12 @@ limitations under the License.
 
 from distutils.util import strtobool
 import os
+import re
 from time import sleep
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 import requests
-import toml
 
 
 def is_truthy(arg):
@@ -178,6 +178,15 @@ def buildx(
     context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 
+def get_nautobot_version():
+    """Directly parse `pyproject.toml` and extract the version."""
+    with open("pyproject.toml", "r") as fh:
+        content = fh.read()
+
+    version_match = re.findall(r"version = \"(.*)\"\n", content)
+    return version_match[0]
+
+
 @task(
     help={
         "branch": "Source branch used to push.",
@@ -187,10 +196,7 @@ def buildx(
 )
 def docker_push(context, branch, commit="", datestamp=""):
     """Tags and pushes docker images to the appropriate repos, intended for CI use only."""
-    with open("pyproject.toml", "r") as pyproject:
-        parsed_toml = toml.load(pyproject)
-
-    nautobot_version = parsed_toml["tool"]["poetry"]["version"]
+    nautobot_version = get_nautobot_version()
 
     docker_image_tags_main = [
         f"latest-py{context.nautobot.python_ver}",
@@ -291,10 +297,10 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task
-def cli(context):
+@task(help={"container": "Name of the container to shell into"})
+def cli(context, container="nautobot"):
     """Launch a bash shell inside the running Nautobot container."""
-    docker_compose(context, "exec nautobot bash", pty=True)
+    docker_compose(context, f"exec {container} bash", pty=True)
 
 
 @task(
@@ -505,13 +511,14 @@ def integration_test(
 @task(
     help={
         "lint-only": "Only run linters; unit tests will be excluded.",
+        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
 )
-def tests(context, lint_only=False):
+def tests(context, lint_only=False, keepdb=False):
     """Run all tests and linters."""
     black(context)
     flake8(context)
     hadolint(context)
     check_migrations(context)
     if not lint_only:
-        unittest(context)
+        unittest(context, keepdb=keepdb)

@@ -24,6 +24,9 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 # Config contexts
 router.register("config-contexts", views.ConfigContextViewSet)
 
+# Config context schemas
+router.register("config-context-schemas", views.ConfigContextSchemaViewSet)
+
 # Jobs
 router.register("jobs", views.JobViewSet, basename="job")
 
@@ -51,6 +54,9 @@ router.register("relationship-associations", views.RelationshipAssociationViewSe
 
 # GraphQL Queries
 router.register("graphql-queries", views.GraphQLQueryViewSet)
+
+# Computed Fields
+router.register("computed-fields", views.ComputedFieldViewSet)
 
 app_name = "extras-api"
 urlpatterns = router.urls

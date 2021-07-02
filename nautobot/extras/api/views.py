@@ -21,7 +21,9 @@ from nautobot.extras import filters
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -196,6 +198,17 @@ class ConfigContextViewSet(ModelViewSet):
     )
     serializer_class = serializers.ConfigContextSerializer
     filterset_class = filters.ConfigContextFilterSet
+
+
+#
+# Config context schemas
+#
+
+
+class ConfigContextSchemaViewSet(ModelViewSet):
+    queryset = ConfigContextSchema.objects.all()
+    serializer_class = serializers.ConfigContextSchemaSerializer
+    filterset_class = filters.ConfigContextSchemaFilterSet
 
 
 #
@@ -436,3 +449,18 @@ class GraphQLQueryViewSet(ModelViewSet):
                 {"errors": [GraphQLView.format_error(error)]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldViewSet(ModelViewSet):
+    """
+    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = ComputedField.objects.all()
+    serializer_class = serializers.ComputedFieldSerializer
+    filterset_class = filters.ComputedFieldFilterSet

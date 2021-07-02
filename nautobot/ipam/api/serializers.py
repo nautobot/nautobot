@@ -82,7 +82,9 @@ class VRFSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "last_updated",
             "ipaddress_count",
             "prefix_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -106,7 +108,9 @@ class RouteTargetSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -131,7 +135,9 @@ class RIRSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -156,8 +162,10 @@ class AggregateSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         read_only_fields = ["family"]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -184,7 +192,9 @@ class RoleSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class VLANGroupSerializer(CustomFieldModelSerializer):
@@ -205,8 +215,10 @@ class VLANGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         validators = []
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
 
@@ -248,8 +260,10 @@ class VLANSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "created",
             "last_updated",
             "prefix_count",
+            "computed_fields",
         ]
         validators = []
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
 
@@ -299,8 +313,10 @@ class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         read_only_fields = ["family"]
+        opt_in_fields = ["computed_fields"]
 
 
 class PrefixLengthSerializer(serializers.Serializer):
@@ -392,8 +408,10 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         read_only_fields = ["family"]
+        opt_in_fields = ["computed_fields"]
 
     @swagger_serializer_method(serializer_or_field=serializers.DictField)
     def get_assigned_object(self, obj):
@@ -466,4 +484,6 @@ class ServiceSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
