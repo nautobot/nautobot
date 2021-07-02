@@ -24,10 +24,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.extras.change_computedfield %}
-            {% edit_button object use_pk=1 %}
+            {% edit_button object %}
         {% endif %}
         {% if perms.extras.delete_computedfield %}
-            {% delete_button object use_pk=1 %}
+            {% delete_button object %}
         {% endif %}
     </div>
 

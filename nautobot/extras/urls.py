@@ -305,19 +305,19 @@ urlpatterns = [
         views.ComputedFieldBulkDeleteView.as_view(),
         name="computedfield_bulk_delete",
     ),
-    path("computed-fields/<uuid:pk>/", views.ComputedFieldView.as_view(), name="computedfield"),
+    path("computed-fields/<slug:slug>/", views.ComputedFieldView.as_view(), name="computedfield"),
     path(
-        "computed-fields/<uuid:pk>/edit/",
+        "computed-fields/<slug:slug>/edit/",
         views.ComputedFieldEditView.as_view(),
         name="computedfield_edit",
     ),
     path(
-        "computed-fields/<uuid:pk>/delete/",
+        "computed-fields/<slug:slug>/delete/",
         views.ComputedFieldDeleteView.as_view(),
         name="computedfield_delete",
     ),
     path(
-        "computed-fields/<uuid:pk>/changelog/",
+        "computed-fields/<slug:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="computedfield_changelog",
         kwargs={"model": ComputedField},
