@@ -26,7 +26,9 @@ DATABASES = {
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),  # Database server
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),  # Database timeout
-        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postgres only supported!)
+        "ENGINE": os.getenv(
+            "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
+        ),  # Database driver ("mysql" or "postgresql")
     }
 }
 
@@ -116,6 +118,9 @@ CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", 900))
 
 # Set to False to disable caching with cacheops. (Default: True)
 CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", True))
+
+# Global Celery task timeout (in seconds)
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
 
 # Maximum number of days to retain logged changes. Set to 0 to retain changes indefinitely. (Default: 90)
 CHANGELOG_RETENTION = int(os.getenv("NAUTOBOT_CHANGELOG_RETENTION", 90))
