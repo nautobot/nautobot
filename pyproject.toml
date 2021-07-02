@@ -32,6 +32,8 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+# Background task processing
+celery = "~5.1.0"
 # Fundamental web framework for Nautobot
 Django = "~3.1.12"
 # Caching with Redis

@@ -71,7 +71,7 @@ def configure_app(
     :param project: should represent the canonical name for the project, generally
         the same name it assigned in distutils.
     :param default_config_path: the default location for the configuration file.
-    :param default_settings: default settings to load (think inheritence).
+    :param default_settings: default settings to load (think inheritance).
     :param settings_initializer: a callback function which should return a string
         representing the default settings template to generate.
     :param initializer: a callback function which will be executed before the command
