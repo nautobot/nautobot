@@ -405,7 +405,7 @@ def import_config_context(context_data, repository_record, job_result, logger):
         data = context_data.copy()
         del data["_metadata"]
 
-        if context_metadata["schema"]:
+        if context_metadata.get("schema"):
             if getattr(context_record.schema, "name", None) != context_metadata["schema"]:
                 try:
                     schema = ConfigContextSchema.objects.get(name=context_metadata["schema"])
