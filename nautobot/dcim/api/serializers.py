@@ -54,6 +54,7 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
     StatusModelSerializerMixin,
 )
+from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -664,6 +665,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
     parent_device = serializers.SerializerMethodField()
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
+    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Device
@@ -691,6 +693,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "vc_position",
             "vc_priority",
             "comments",
+            "local_context_schema",
             "local_context_data",
             "tags",
             "custom_fields",
@@ -753,6 +756,7 @@ class DeviceWithConfigContextSerializer(DeviceSerializer):
             "vc_position",
             "vc_priority",
             "comments",
+            "local_context_schema",
             "local_context_data",
             "tags",
             "custom_fields",

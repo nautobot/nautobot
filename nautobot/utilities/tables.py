@@ -30,10 +30,12 @@ class BaseTable(tables.Table):
             self.empty_text = "No {} found".format(self._meta.model._meta.verbose_name_plural)
 
         # Hide non-default columns
-        default_columns = getattr(self.Meta, "default_columns", list())
+        default_columns = list(getattr(self.Meta, "default_columns", list()))
+        extra_columns = [c[0] for c in kwargs.get("extra_columns", list())]  # extra_columns is a list of tuples
         if default_columns:
             for column in self.columns:
-                if column.name not in default_columns:
+                if column.name not in default_columns and column.name not in extra_columns:
+                    # Hide the column if it is non-default *and* not manually specified as an extra column
                     self.columns.hide(column.name)
 
         # Apply custom column ordering for user

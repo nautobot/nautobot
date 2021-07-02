@@ -76,7 +76,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         return self.label
 
     def get_absolute_url(self):
-        return reverse("extras:computedfield", kwargs={"slug": self.slug})
+        return reverse("extras:computedfield", args=[self.slug])
 
     def render(self, context):
         try:

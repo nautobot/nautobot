@@ -36,6 +36,7 @@ plugin_name/
     - datasources.py        # Loading Data from a Git Repository
     - graphql/
       - types.py            # GraphQL Type Objects
+    - jinja_filters.py      # Jinja Filters
     - jobs.py               # Job classes
     - middleware.py         # Request/response middleware
     - migrations/
@@ -146,6 +147,7 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `description` | Brief description of the plugin's purpose |
 | `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.types.graphql_types)` |
 | `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
+| `jinja_filters` | The dotted path to the file that contains jinja filters to be registered (default: `jinja_filters.jinja_filters`) |
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
 | `max_version` | Maximum version of Nautobot with which the plugin is compatible |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
@@ -364,7 +366,7 @@ A URL pattern has three components:
 
 This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
 
-## GraphQL Types
+## Integrating with GraphQL
 
 Plugins can optionally expose their models via the GraphQL interface to allow the models to be part of the Graph and to be queried easily. There are two mutually exclusive ways to expose a model to the GraphQL interface.
 
@@ -428,6 +430,53 @@ class AnimalType(DjangoObjectType):
 graphql_types = [AnimalType]
 ```
 
+### Using GraphQL ORM Utility
+
+GraphQL utility functions:
+
+1) `execute_query()`: Runs string as a query against GraphQL.
+2) `execute_saved_query()`: Execute a saved query from Nautobot database.
+
+Both functions have the same arguments other than `execute_saved_query()` which requires a slug to identify the saved query rather than a string holding a query.
+
+For authentication either a request object or user object needs to be passed in. If there is none, the function will error out.
+
+Arguments:
+
+* `execute_query()`:
+  * query (str): String with GraphQL query.
+  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * request (django.test.client.RequestFactory, optional): Used to authenticate.
+  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+* `execute_saved_query()`:
+  * saved_query_slug (str): Slug of a saved GraphQL query.
+  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+  * request (django.test.client.RequestFactory, optional): Used to authenticate.
+  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+
+Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
+
+Usage in a view:
+
+``` python
+from nautobot.core.graphql import execute_saved_query
+
+
+class GraphQLModelView(ModelViewSet):
+    queryset = GraphQLModelQuery.objects.all()
+
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        try:
+            result = execute_saved_query(pk, variable=request.data, request=request).to_dict()
+            return Response(result)
+        except GraphQLError as error:
+            return Response(
+                {"errors": [GraphQLView.format_error(error)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+```
+
 ## REST API Endpoints
 
 Plugins can declare custom endpoints on Nautobot's REST API to retrieve or manipulate models or other data. These behave very similarly to views, except that instead of rendering arbitrary content using a template, data is returned in JSON format using a serializer. Nautobot uses the [Django REST Framework](https://www.django-rest-framework.org/), which makes writing API serializers and views very simple.
@@ -489,43 +538,9 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 
 ## Navigation Menu Items
 
-To make its views easily accessible to users, a plugin can inject items in Nautobot's navigation menu under the "Plugins" header. Menu items are added by defining a list of PluginMenuItem instances. By default, this should be a variable named `menu_items` in the file `navigation.py`. An example is shown below.
+Plugins can modify the existing navigation bar layout by defining `menu_items` inside of `navigation.py`. Using the key and weight system, a developer can integrate the plugin amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
 
-```python
-# navigation.py
-from nautobot.extras.plugins import PluginMenuButton, PluginMenuItem
-from nautobot.utilities.choices import ButtonColorChoices
-
-
-menu_items = (
-    PluginMenuItem(
-        link='plugins:nautobot_animal_sounds:random_animal',
-        link_text='Random sound',
-        buttons=(
-            PluginMenuButton('home', 'Button A', 'mdi mdi-help-circle', ButtonColorChoices.BLUE),
-            PluginMenuButton('home', 'Button B', 'mdi mdi-alert', ButtonColorChoices.GREEN),
-        )
-    ),
-)
-```
-
-A `PluginMenuItem` has the following attributes:
-
-* `link` - The name of the URL path to which this menu item links
-* `link_text` - The text presented to the user
-* `permissions` - A list of permissions required to display this link (optional)
-* `buttons` - An iterable of PluginMenuButton instances to display (optional)
-
-A `PluginMenuButton` has the following attributes:
-
-* `link` - The name of the URL path to which this button links
-* `title` - The tooltip text (displayed when the mouse hovers over the button)
-* `icon_class` - Button icon CSS classes (Nautobot currently supports [Material Design Icons](https://materialdesignicons.com))
-* `color` - One of the choices provided by `ButtonColorChoices` (optional)
-* `permissions` - A list of permissions required to display this button (optional)
-
-!!! note
-    Any buttons associated within a menu item will be shown only if the user has permission to view the link, regardless of what permissions are set on the buttons.
+More documentation and examples can be found [here](../development/navigation-menu.md)
 
 ## Extending Core Templates
 
@@ -569,6 +584,32 @@ class SiteAnimalCount(PluginTemplateExtension):
 
 template_extensions = [SiteAnimalCount]
 ```
+
+## Including Jinja Filters
+
+Plugins can define custom jinja filters to be used when rendering jinja in computed fields. Check out the [official Jinja documentation](https://jinja.palletsprojects.com/en/3.0.x/api/#custom-filters) on how to create filter functions.
+
+In the file that defines your filters, you must import the `library` module from the `django_jinja` library. Filters must then be decorated with `@library.filter`. See an example below that defines a filter called `leet_speak`.
+
+```python
+from django_jinja import library
+
+
+@library.filter
+def leet_speak(input_str):
+    charset = {"a": "4", "e": "3", "l": "1", "o": "0", "s": "5", "t": "7"}
+    output_str = ""
+    for char in input_str:
+        output_str += charset.get(char.lower(), char)
+    return output_str
+```
+
+This filter will then be available for use in computed field templates like so:
+```
+{{ "HELLO WORLD" | leet_speak }}
+```
+The output of this template results in the string `"H3110 W0R1D"`
+
 
 ## Including Jobs
 

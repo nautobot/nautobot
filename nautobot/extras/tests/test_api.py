@@ -5,6 +5,7 @@ from unittest import skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
@@ -27,10 +28,12 @@ from nautobot.extras.api.views import JobViewSet
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     Relationship,
@@ -339,6 +342,80 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext6.sites.add(site2)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["bar"], 456)
+
+    def test_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a config context that conforms to that schema
+        Assert that the config context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+
+        data = {"name": "Config Context with schema", "weight": 100, "data": {"foo": "bar"}, "schema": str(schema.pk)}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["schema"]["id"], str(schema.pk))
+
+    def test_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a config context that *does not* conform to that schema
+        Assert that the config context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+
+        data = {
+            "name": "Config Context with bad schema",
+            "weight": 100,
+            "data": {"foo": "bar"},
+            "schema": str(schema.pk),
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+
+class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
+    model = ConfigContextSchema
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "Schema 4",
+            "slug": "schema-4",
+            "data_schema": {"type": "object", "properties": {"foo": {"type": "string"}}},
+        },
+        {
+            "name": "Schema 5",
+            "slug": "schema-5",
+            "data_schema": {"type": "object", "properties": {"bar": {"type": "string"}}},
+        },
+        {
+            "name": "Schema 6",
+            "slug": "schema-6",
+            "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = []
+
+    @classmethod
+    def setUpTestData(cls):
+        ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
+        ),
 
 
 class JobTest(APITestCase):
@@ -754,6 +831,136 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
         See `extras.management.create_custom_statuses` for context.
         """
+
+
+class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
+    model = GraphQLQuery
+    brief_fields = ["display", "id", "name", "url"]
+
+    create_data = [
+        {
+            "name": "graphql-query-4",
+            "slug": "graphql-query-4",
+            "query": "{ query: sites {name} }",
+        },
+        {
+            "name": "graphql-query-5",
+            "slug": "graphql-query-5",
+            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        graphqlqueries = (
+            GraphQLQuery(
+                name="graphql-query-1",
+                slug="graphql-query-1",
+                query="{ query: sites {name} }",
+            ),
+            GraphQLQuery(
+                name="graphql-query-2",
+                slug="graphql-query-2",
+                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            ),
+            GraphQLQuery(
+                name="graphql-query-3",
+                slug="graphql-query-3",
+                query="""
+query ($device: String!) {
+  devices(name: $device) {
+    config_context
+    name
+    position
+    serial
+    primary_ip4 {
+      id
+      primary_ip4_for {
+        id
+        name
+      }
+    }
+    tenant {
+      name
+    }
+    tags {
+      name
+      slug
+    }
+    device_role {
+      name
+    }
+    platform {
+      name
+      slug
+      manufacturer {
+        name
+      }
+      napalm_driver
+    }
+    site {
+      name
+      slug
+      vlans {
+        id
+        name
+        vid
+      }
+      vlan_groups {
+        id
+      }
+    }
+    interfaces {
+      description
+      mac_address
+      enabled
+      name
+      ip_addresses {
+        address
+        tags {
+          id
+        }
+      }
+      connected_circuit_termination {
+        circuit {
+          cid
+          commit_rate
+          provider {
+            name
+          }
+        }
+      }
+      tagged_vlans {
+        id
+      }
+      untagged_vlan {
+        id
+      }
+      cable {
+        termination_a_type
+        status {
+          name
+        }
+        color
+      }
+      tagged_vlans {
+        site {
+          name
+        }
+        id
+      }
+      tags {
+        id
+      }
+    }
+  }
+}""",
+            ),
+        )
+
+        for query in graphqlqueries:
+            query.full_clean()
+            query.save()
 
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase):

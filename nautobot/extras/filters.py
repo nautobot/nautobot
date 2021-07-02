@@ -18,11 +18,13 @@ from .choices import *
 from .models import (
     ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -43,9 +45,10 @@ __all__ = (
     "CustomLinkFilterSet",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
+    "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
     "JobResultFilterSet",
-    "LocalConfigContextFilterSet",
+    "LocalContextFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
@@ -307,14 +310,52 @@ class ConfigContextFilterSet(BaseFilterSet):
 #
 
 
-class LocalConfigContextFilterSet(django_filters.FilterSet):
+class LocalContextFilterSet(django_filters.FilterSet):
     local_context_data = django_filters.BooleanFilter(
         method="_local_context_data",
         label="Has local config context data",
     )
+    local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=ConfigContextSchema.objects.all(),
+        label="Schema (ID)",
+    )
+    local_context_schema = django_filters.ModelMultipleChoiceFilter(
+        field_name="local_context_schema__slug",
+        queryset=ConfigContextSchema.objects.all(),
+        to_field_name="slug",
+        label="Schema (slug)",
+    )
 
     def _local_context_data(self, queryset, name, value):
         return queryset.exclude(local_context_data__isnull=value)
+
+
+#
+# Filter for config context schema
+#
+
+
+class ConfigContextSchemaFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    owner_content_type = ContentTypeFilter()
+
+    class Meta:
+        model = ConfigContextSchema
+        fields = [
+            "id",
+            "name",
+            "description",
+        ]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) | Q(description__icontains=value) | Q(data_schema__icontains=value)
+        )
 
 
 class ObjectChangeFilterSet(BaseFilterSet):
@@ -623,6 +664,25 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
     class Meta:
         model = RelationshipAssociation
         fields = ["id", "relationship", "source_type", "source_id", "destination_type", "destination_id"]
+
+
+class GraphQLQueryFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+
+    class Meta:
+        model = GraphQLQuery
+        fields = (
+            "name",
+            "slug",
+        )
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value) | Q(query__icontains=value))
 
 
 class ComputedFieldFilterSet(BaseFilterSet):

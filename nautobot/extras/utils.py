@@ -1,4 +1,6 @@
 import collections
+import hashlib
+import hmac
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -87,3 +89,11 @@ def extras_features(*features):
         return model_class
 
     return wrapper
+
+
+def generate_signature(request_body, secret):
+    """
+    Return a cryptographic signature that can be used to verify the authenticity of webhook data.
+    """
+    hmac_prep = hmac.new(key=secret.encode("utf8"), msg=request_body, digestmod=hashlib.sha512)
+    return hmac_prep.hexdigest()

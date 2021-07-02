@@ -1,6 +1,3 @@
-import time
-
-import django_rq
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
@@ -12,7 +9,7 @@ from nautobot.dcim.forms import SiteCSVForm
 from nautobot.dcim.models import Site, Rack, Device
 from nautobot.extras.choices import *
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
-from nautobot.utilities.testing import APITestCase, TestCase
+from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
 
@@ -1034,16 +1031,10 @@ class CustomFieldChoiceTest(TestCase):
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
 
-class CustomFieldBackgroundTasks(TestCase):
-    def setUp(self):
-        # Clear the queue for each test
-        django_rq.get_queue("custom_fields").empty()
-
-    def get_worker(self, queue_name="custom_fields", **kwargs):
-        worker = django_rq.get_worker(queue_name, worker_class="rq.worker.SimpleWorker", **kwargs)
-        worker.work(burst=True)
-
+class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
+        self.clear_worker()
+
         site = Site(
             name="Site 1",
             slug="site-1",
@@ -1055,14 +1046,15 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         site.refresh_from_db()
 
         self.assertEqual(site.cf["cf1"], "Foo")
 
     def test_delete_custom_field_data_task(self):
+        self.clear_worker()
+
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(
             name="cf1",
@@ -1071,22 +1063,20 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
-
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
         site.save()
 
         cf.delete()
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         site.refresh_from_db()
 
         self.assertTrue("cf1" not in site.cf)
 
     def test_update_custom_field_choice_data_task(self):
+        self.clear_worker()
+
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(
             name="cf1",
@@ -1095,8 +1085,7 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
@@ -1107,8 +1096,7 @@ class CustomFieldBackgroundTasks(TestCase):
         choice.value = "Bar"
         choice.save()
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         site.refresh_from_db()
 
