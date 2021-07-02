@@ -150,7 +150,11 @@ class CustomFieldModel(models.Model):
         Get a computed field for this model, lookup via slug.
         Returns the template of this field if render is False, otherwise returns the rendered value.
         """
-        computed_field = ComputedField.objects.get_for_model(self).get(slug=slug)
+        try:
+            computed_field = ComputedField.objects.get_for_model(self).get(slug=slug)
+        except ComputedField.DoesNotExist:
+            logger.warning("Computed Field with slug %s does not exist for model %s", slug, self._meta.verbose_name)
+            return None
         if render:
             return computed_field.render(context={"obj": self})
         return computed_field.template
