@@ -1,16 +1,33 @@
-# Deploying Nautobot: Web Service and Worker
+# Deploying Nautobot: Web Service and Workers
+
+## Services Overview
 
 Like most Django applications, Nautobot runs as a [WSGI application](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface) behind an HTTP server.
 
 Nautobot comes preinstalled with [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) to use as the WSGI server, however other WSGI servers are available and should work similarly well. [Gunicorn](http://gunicorn.org/) is a popular alternative.
 
-This document will guide you through setting up uWSGI and establishing Nautobot web services to run on system startup.
+Additionally, certain Nautobot features (including Git repository synchronization, Webhooks, Jobs, etc.) depend on the presence of Nautobot's [Celery](https://docs.celeryproject.org/en/stable/) background worker process, which is not automatically started with Nautobot and is run as a separate service.
+
+This document will guide you through setting up uWSGI and establishing Nautobot web and Celery worker services to run on system startup.
+
+### Web Service
 
 Nautobot includes a `nautobot-server start` management command that directly invokes uWSGI. This command behaves exactly as uWSGI does, but allows us to maintain a single entrypoint into the Nautobot application.
 
 ```no-highlight
 $ nautobot-server start --help
 ```
+
+### Worker Service
+
+Nautobot requires at least one worker to consume background tasks required for advanced background features. A `nautobot-server celery` command is included that directly invokes Celery. This command behaves exactly as the Celery command-line utility does, but launches it through Nautobot's environment to share Redis and database connection settings transparently.
+
+```no-highlight
+$ nautobot-server celery --help
+```
+
+!!! important
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
 
 ## Configuration
 
@@ -69,14 +86,14 @@ documentation](https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html) f
 
 ## Setup systemd
 
-We'll use `systemd` to control both uWSGI and Nautobot's background worker process.
+We'll use `systemd` to control both uWSGI and Nautobot's background worker processes.
 
 !!! warning
     The following steps must be performed with root permissions.
 
-### Nautobot service
+### Nautobot Service
 
-First, copy and paste the following into `/etc/systemd/system/nautobot.service`:
+First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
 
 ```
 [Unit]
@@ -106,33 +123,69 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-### Nautobot Worker service
+### Nautobot Worker Service
 
-Next, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+!!! note
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
+
+Next, we will setup the `systemd` unit for the Celery worker. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 
 ```
 [Unit]
-Description=Nautobot Request Queue Worker
+Description=Nautobot Celery Worker
 Documentation=https://nautobot.readthedocs.io/en/stable/
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
+Type=forking
 Environment="NAUTOBOT_ROOT=/opt/nautobot"
 
 User=nautobot
 Group=nautobot
+PIDFile=/var/tmp/nautobot-celery.pid
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/bin/nautobot-server rqworker
+ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-celery.pid
 
-Restart=on-failure
+Restart=always
 RestartSec=30
 PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
+```
+
+#### Migrating to Celery from RQ
+
+If you're upgrading from Nautobot version 1.0.x, all you really need to do are two things.
+
+First, you must replace the contents of `/etc/systemd/system/nautobot-worker.service` with the `systemd` unit file provided just above.
+
+Next, you must update any custom background tasks that you may have written. If you do not have any custom background tasks, then you may continue on to the next section to reload your worker service to use Celery.
+
+To update your custom tasks, you'll need to do the following.
+
+- Replace each import `from django_rq import job` with `from nautobot.core.celery import nautobot_task`
+- Replace each decorator of `@job` with `@nautobot_task`
+
+For example:
+
+```diff
+diff --git a/task_example.py b/task_example.py
+index f84073fb5..52baf6096 100644
+--- a/task_example.py
++++ b/task_example.py
+@@ -1,6 +1,6 @@
+-from django_rq import job
++from nautobot.core.celery import nautobot_task
+
+
+-@job("default")
++@nautobot_task
+ def example_task(*args, **kwargs):
+     return "examples are cool!"
+(END)
 ```
 
 ### Configure systemd
@@ -183,4 +236,3 @@ If you see the error `SSL error: decryption failed or bad record mac`, it is lik
 See [this conversation](https://github.com/nautobot/nautobot/issues/127) for more details.
 
 - Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
-
