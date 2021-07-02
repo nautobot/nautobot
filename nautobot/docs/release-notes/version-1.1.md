@@ -56,6 +56,10 @@ RQ support for custom tasks was not removed in order to give plugin authors time
 
 Please see the section on [migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
 
+#### Plugin Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/572))
+
+Plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/navigation-menu.md) for more details.
+
 ### Changed
 
 ### Removed
@@ -71,6 +75,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#297](https://github.com/nautobot/nautobot/issues/297) -  Added an anonymous health-checking endpoint at `/health/`using, also introducing a `nautobot-server health_check` command.
 - [#485](https://github.com/nautobot/nautobot/pulls/485) - Applications can define navbar properties through `navigation.py`
 - [#561](https://github.com/nautobot/nautobot/pulls/561) - Added autodetection of `mime_type` on `export_templates` provided by Git datasources
+- [#636](https://github.com/nautobot/nautobot/pull/636) - Added custom fields to `JobResult` model, with minor changes to job result detail page
 
 ### Changed
 
