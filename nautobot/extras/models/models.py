@@ -992,7 +992,9 @@ class ScheduledJob(BaseModel):
             # I'm not sure if this is a bug, or "works as designed", but if self.last_run_at is not set,
             # the celery beat scheduler will never pick up a recurring job. One-off jobs work just fine though.
             if self.interval in [
-                JobExecutionType.TYPE_HOURLY, JobExecutionType.TYPE_DAILY, JobExecutionType.TYPE_WEEKLY
+                JobExecutionType.TYPE_HOURLY,
+                JobExecutionType.TYPE_DAILY,
+                JobExecutionType.TYPE_WEEKLY,
             ]:
                 # A week is 7 days, otherwise the iteration is set to 1
                 multiplier = 7 if self.interval == JobExecutionType.TYPE_WEEKLY else 1

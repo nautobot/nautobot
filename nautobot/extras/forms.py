@@ -800,8 +800,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
             if not cleaned_data["_schedule_start_time"] or cleaned_data["_schedule_start_time"] < timezone.now():
                 raise ValidationError(
                     {
-                        "_schedule_start_time":
-                        "Please enter a valid date and time greater than or equal to the current date and time."
+                        "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
                     }
                 )
 
