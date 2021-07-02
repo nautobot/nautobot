@@ -625,6 +625,10 @@ def update_git_config_context_schemas(repository_record, job_result):
                             context_schema, repository_record, job_result, logger
                         )
                         managed_config_context_schemas.add(context_name)
+                    else:
+                        raise RuntimeError(
+                            f"Error in loading config context schema data from `{file_name}`: data must be a dict or list of dicts"
+                        )
             else:
                 raise RuntimeError(
                     f"Error in loading config context schema data from `{file_name}`: data must be a dict or list of dicts"
