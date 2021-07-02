@@ -42,6 +42,8 @@ django-cors-headers = "~3.7.0"
 django-cryptography = "~1.0"
 # Advanced query filters
 django-filter = "~2.4.0"
+# Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
+django-jinja = "^2.8.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
 # Prometheus metrics for Django
@@ -88,7 +90,6 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
-django-jinja = "^2.8.0"
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
