@@ -21,6 +21,7 @@ from nautobot.utilities.tables import (
 )
 from .jobs import get_job_classpaths, Job
 from .models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomLink,
@@ -468,4 +469,27 @@ class GraphQLQueryTable(BaseTable):
             "pk",
             "name",
             "slug",
+        )
+
+
+class ComputedFieldTable(BaseTable):
+    pk = ToggleColumn()
+    label = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = ComputedField
+        fields = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
         )

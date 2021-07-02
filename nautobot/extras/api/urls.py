@@ -55,5 +55,8 @@ router.register("relationship-associations", views.RelationshipAssociationViewSe
 # GraphQL Queries
 router.register("graphql-queries", views.GraphQLQueryViewSet)
 
+# Computed Fields
+router.register("computed-fields", views.ComputedFieldViewSet)
+
 app_name = "extras-api"
 urlpatterns = router.urls

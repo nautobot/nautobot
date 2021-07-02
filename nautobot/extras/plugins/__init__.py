@@ -1,5 +1,7 @@
 import collections
 import inspect
+from importlib import import_module
+
 from packaging import version
 
 from django.core.exceptions import ValidationError
@@ -69,6 +71,7 @@ class PluginConfig(NautobotConfig):
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
     template_extensions = "template_content.template_extensions"
+    jinja_filters = "jinja_filters"
 
     def ready(self):
 
@@ -101,6 +104,12 @@ class PluginConfig(NautobotConfig):
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+
+        # Register custom jinja filters
+        try:
+            import_module(f"{self.__module__}.{self.jinja_filters}")
+        except ModuleNotFoundError:
+            pass
 
     @classmethod
     def validate(cls, user_config, nautobot_version):

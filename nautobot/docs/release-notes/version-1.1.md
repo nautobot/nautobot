@@ -8,6 +8,11 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 ### Added
 
+#### Computed Fields [#4](https://github.com/nautobot/nautobot/issues/4)
+
+[Computed fields](../additional-features/computed-fields.md) offers users the ability to create read-only custom fields using existing data already stored in the database. Users define Jinja2 templates that populate the value of these fields. Computed fields are available on all data models that currently support custom fields.
+
+
 #### Saved GraphQL Queries [#3](https://github.com/nautobot/nautobot/issues/3)
 
 [Saved GraphQL queries](../additional-features/graphql.md#saved-queries) offers a new model where reusable queries can be stored in Nautobot. New views for managing saved queries are available; additionally, the GraphiQL interface has been augmented to allow populating the interface from a saved query, editing and saving new queries.

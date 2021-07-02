@@ -56,7 +56,9 @@ class ClusterTypeSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class ClusterGroupSerializer(CustomFieldModelSerializer):
@@ -75,7 +77,9 @@ class ClusterGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -104,7 +108,9 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "last_updated",
             "device_count",
             "virtualmachine_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -149,8 +155,10 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
         validators = []
+        opt_in_fields = ["computed_fields"]
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):

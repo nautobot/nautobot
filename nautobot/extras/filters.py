@@ -16,6 +16,7 @@ from nautobot.utilities.filters import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
@@ -682,3 +683,32 @@ class GraphQLQueryFilterSet(BaseFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value) | Q(query__icontains=value))
+
+
+class ComputedFieldFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    content_type = ContentTypeFilter()
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "content_type",
+            "slug",
+            "template",
+            "fallback_value",
+            "weight",
+        )
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+            | Q(target_url__icontains=value)
+            | Q(text__icontains=value)
+            | Q(content_type__app_label__icontains=value)
+            | Q(content_type__model__icontains=value)
+        )

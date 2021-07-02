@@ -6,9 +6,9 @@ from rest_framework import status
 
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
-from nautobot.dcim.models import Site, Rack
+from nautobot.dcim.models import Site, Rack, Device
 from nautobot.extras.choices import *
-from nautobot.extras.models import CustomField, CustomFieldChoice, Status
+from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
@@ -733,6 +733,33 @@ class CustomFieldModelTest(TestCase):
         cf2.save()
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
 
+    def setUp(self):
+        self.site1 = Site.objects.create(name="NYC")
+        self.computed_field_one = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="computed_field_one",
+            label="Computed Field One",
+            template="{{ obj.name }} is the name of this site.",
+            fallback_value="An error occurred while rendering this template.",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        self.non_site_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Device),
+            slug="device_computed_field",
+            label="Device Computed Field",
+            template="Hello, world.",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+
     def test_cf_data(self):
         """
         Check that custom field data is present on the instance immediately after being set and after being fetched
@@ -781,6 +808,37 @@ class CustomFieldModelTest(TestCase):
 
         site.cf["baz"] = "def"
         site.clean()
+
+    #
+    # test computed field components
+    #
+
+    def test_get_computed_field_method(self):
+        self.assertEqual(
+            self.site1.get_computed_field("computed_field_one"), f"{self.site1.name} is the name of this site."
+        )
+
+    def test_get_computed_field_method_render_false(self):
+        self.assertEqual(
+            self.site1.get_computed_field("computed_field_one", render=False), self.computed_field_one.template
+        )
+
+    def test_get_computed_fields_method(self):
+        expected_renderings = {
+            "computed_field_one": f"{self.site1.name} is the name of this site.",
+            "bad_computed_field": self.bad_computed_field.fallback_value,
+        }
+        self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)
+
+    def test_get_computed_fields_method_label_as_key(self):
+        expected_renderings = {
+            "Computed Field One": f"{self.site1.name} is the name of this site.",
+            "Bad Computed Field": self.bad_computed_field.fallback_value,
+        }
+        self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)
+
+    def test_get_computed_fields_only_returns_fields_for_content_type(self):
+        self.assertTrue(self.non_site_computed_field.slug not in self.site1.get_computed_fields())
 
 
 class CustomFieldFilterTest(TestCase):
