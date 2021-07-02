@@ -580,6 +580,21 @@ class CustomFieldAPITest(APITestCase):
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    def test_bigint_values_of_custom_field_minimum_attribute(self):
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
+        self.add_permissions("dcim.change_site")
+
+        self.cf_integer.validation_minimum = -5000000000
+        self.cf_integer.save()
+
+        data = {"custom_fields": {"number_field": -4294967294}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"custom_fields": {"number_field": -5000000001}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
     def test_regex_validation(self):
         url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
         self.add_permissions("dcim.change_site")
