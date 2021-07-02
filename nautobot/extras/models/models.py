@@ -23,6 +23,7 @@ from rest_framework.utils.encoders import JSONEncoder
 from nautobot.extras.choices import *
 from nautobot.extras.constants import *
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -634,10 +635,11 @@ class Job(models.Model):
 # Job results
 #
 @extras_features(
+    "custom_fields",
     "custom_links",
     "graphql",
 )
-class JobResult(BaseModel):
+class JobResult(BaseModel, CustomFieldModel):
     """
     This model stores the results from running a user-defined report.
     """

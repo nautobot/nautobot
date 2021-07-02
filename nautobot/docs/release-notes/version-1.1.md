@@ -48,6 +48,10 @@ Jobs may be optionally marked as read only by setting the `read_only = True` met
 
 While config contexts allow for arbitrary data structures to be stored within Nautobot, at scale it is desirable to apply validation constraints to that data to ensure its consistency and to avoid data entry errors. To service this need, Nautobot supports optionally backing config contexts with [JSON Schemas](https://json-schema.org/) for validation. These schema are managed via the config context schema model and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data. Please see the [docs](../additional-features/config-contexts.md#config-context-schemas) for more details.
 
+#### Plugin Defined Navigation [#12](https://github.com/nautobot/nautobot/pull/572)
+
+Plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/navigation-menu.md) for more details.
+
 ### Changed
 
 ### Removed
@@ -63,6 +67,7 @@ While config contexts allow for arbitrary data structures to be stored within Na
 - [#297](https://github.com/nautobot/nautobot/issues/297) -  Added an anonymous health-checking endpoint at /`health/`using, also introducing a `nautobot-server health_check` command.
 - [#485](https://github.com/nautobot/nautobot/pulls/485) - Applications can define navbar properties through `navigation.py`
 - [#561](https://github.com/nautobot/nautobot/pulls/561) - Added autodetection of `mime_type` on `export_templates` provided by Git datasources
+- [#636](https://github.com/nautobot/nautobot/pull/636) - Added custom fields to `JobResult` model, with minor changes to job result detail page
 
 ### Changed
 

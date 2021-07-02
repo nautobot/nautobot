@@ -795,6 +795,7 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
             {
                 "associated_record": associated_record,
                 "job": job,
+                "object": job_result,
                 "result": job_result,
             },
         )
