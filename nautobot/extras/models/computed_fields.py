@@ -1,9 +1,6 @@
-from collections import OrderedDict
+import logging
 
-from django import forms
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 from jinja2 import TemplateError
@@ -13,6 +10,9 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import render_jinja2
+
+
+logger = logging.getLogger(__name__)
 
 
 class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
@@ -58,13 +58,11 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     def get_absolute_url(self):
         return reverse("extras:computedfield", kwargs={"pk": self.pk})
 
-    def to_form_field(self):
-        return forms.CharField(max_length=255, disabled=True)
-
     def render(self, context):
         try:
             return render_jinja2(self.template, context)
-        except TemplateError:
+        except TemplateError as e:
+            logger.warning("Failed to render computed field %s: %s", self.slug, e)
             return self.fallback_value
 
 
