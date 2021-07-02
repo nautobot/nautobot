@@ -1,21 +1,22 @@
 # Computed Fields
 
-Computed fields are largely based on custom fields. See the overview of [Custom Fields](./custom-fields.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in it's database.
+Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./custom-fields.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in it's database and merging it into a Jinja2 template and associated filters.
 
-As an example, for use by some automation system, you might want to be able to have an automatically generated field on the Device model that combines the name of the device and the uppercased site name. To do that, you would define a Jinja template for this field that looks like such:
+As an example, within your automation system, you may want to be able to have an automatically generated field on the Device model that combines the name of the device and the uppercased site name. To do that, you would define a Jinja2 template for this field that looks like such:
 
 ```jinja2
 {{ obj.name }}_{{ obj.site.name | upper }}
 ```
 
-!!! note
-    Every time an object with this computed field is loaded, the template gets re-rendered with the currently available data. It's important to note that these rendered values are not stored in the database; only the template is.
+!!! important
+    Every time an object with this computed field is loaded, the template gets re-rendered with the currently available data. These rendered values are not stored in the database; only the Jinja2 template is stored.
 
 ## Creating Computed Fields
 
-Computed fields can be created through the Nautobot UI under Extensibility > Computed Fields.
+Computed fields can be created through the Nautobot UI under **Extensibility > Computed Fields**.
 
 Each computed field must have a slug and a label.
+
 - Slug must be a simple, database-friendly string, e.g. `device_with_site`
 - Label is used as the human-friendly display name for this field in the UI, for example, `Device With Site`.
 
@@ -48,9 +49,8 @@ See the documentation on [registering custom jinja filters](../plugins/developme
 ## Computed Fields and the REST API
 
 When retrieving an object via the REST API, computed field data is not included by default in order to prevent potentially computationally expensive rendering operations that degrade the user experience. In order to retrieve computed field data, you must use the `opt_in_fields` query parameter.
-
 Take a look at an example URL that includes computed field data:
-```
+```no-highlight
 http://localhost:8080/api/dcim/sites?opt_in_fields=computed_fields
 ```
 When explicitly requested as such, computed field data will be included in the `computed_fields` attribute. For example, below is the partial output of a site with one computed field defined:
@@ -67,4 +67,4 @@ When explicitly requested as such, computed field data will be included in the `
 ```
 
 !!! note
-    Note that the slug field is used as the key name for items in the `computed_fields` attribute.
+    The slug field is used as the key name for items in the `computed_fields` attribute.

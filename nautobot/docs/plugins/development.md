@@ -585,9 +585,9 @@ class SiteAnimalCount(PluginTemplateExtension):
 template_extensions = [SiteAnimalCount]
 ```
 
-## Including Jinja Filters
+## Including Jinja2 Filters
 
-Plugins can define custom jinja filters to be used when rendering jinja in computed fields. Check out the [official Jinja documentation](https://jinja.palletsprojects.com/en/3.0.x/api/#custom-filters) on how to create filter functions.
+Plugins can define custom Jinja2 filters to be used when rendering templates defined in computed fields. Check out the [official Jinja2 documentation](https://jinja.palletsprojects.com/en/3.0.x/api/#custom-filters) on how to create filter functions.
 
 In the file that defines your filters, you must import the `library` module from the `django_jinja` library. Filters must then be decorated with `@library.filter`. See an example below that defines a filter called `leet_speak`.
 
@@ -605,10 +605,11 @@ def leet_speak(input_str):
 ```
 
 This filter will then be available for use in computed field templates like so:
+
 ```
 {{ "HELLO WORLD" | leet_speak }}
 ```
-The output of this template results in the string `"H3110 W0R1D"`
+The output of this template results in the string `"H3110 W0R1D"`.
 
 
 ## Including Jobs
