@@ -2,9 +2,7 @@ import collections
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.template import engines
 from django.utils.deconstruct import deconstructible
-from jinja2 import Environment
 from taggit.managers import _TaggableManager
 
 from nautobot.extras.constants import EXTRAS_FEATURES
