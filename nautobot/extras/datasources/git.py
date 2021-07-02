@@ -421,6 +421,8 @@ def import_config_context(context_data, repository_record, job_result, logger):
                         grouping="config contexts",
                         logger=logger,
                     )
+        else:
+            context_record.schema = None
 
         if context_record.data != data:
             context_record.data = data
