@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.views import JobViewSet
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
@@ -45,16 +46,13 @@ from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
-
 rq_worker_running = Worker.count(get_connection("default"))
-
 
 THIS_DIRECTORY = os.path.dirname(__file__)
 
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("extras-api:api-root")
         response = self.client.get("{}?format=api".format(url), **self.header)
 
@@ -173,7 +171,6 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Tag.objects.create(name="Tag 1", slug="tag-1")
         Tag.objects.create(name="Tag 2", slug="tag-2")
         Tag.objects.create(name="Tag 3", slug="tag-3")
@@ -304,7 +301,6 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
@@ -572,7 +568,6 @@ class JobResultTest(APITestCase):
 
 class CreatedUpdatedFilterTest(APITestCase):
     def setUp(self):
-
         super().setUp()
 
         self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
@@ -1107,3 +1102,81 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 "destination_id": cls.devices[2].pk,
             },
         ]
+
+
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
+    model = ComputedField
+    brief_fields = [
+        "content_type",
+        "description",
+        "display",
+        "fallback_value",
+        "id",
+        "label",
+        "slug",
+        "template",
+        "url",
+        "weight",
+    ]
+    create_data = [
+        {
+            "content_type": "dcim.site",
+            "slug": "cf4",
+            "label": "Computed Field 4",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
+        {
+            "content_type": "dcim.site",
+            "slug": "cf5",
+            "label": "Computed Field 5",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
+        {
+            "content_type": "dcim.site",
+            "slug": "cf6",
+            "label": "Computed Field 6",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
+    ]
+    update_data = {
+        "content_type": "dcim.site",
+        "slug": "cf1",
+        "label": "My Computed Field",
+    }
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        site_ct = ContentType.objects.get_for_model(Site)
+
+        ComputedField.objects.create(
+            slug="cf1",
+            label="Computed Field One",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        ),
+        ComputedField.objects.create(
+            slug="cf2",
+            label="Computed Field Two",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        ),
+        ComputedField.objects.create(
+            slug="cf3",
+            label="Computed Field Three",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        )

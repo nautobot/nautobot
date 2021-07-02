@@ -299,6 +299,7 @@ INSTALLED_APPS = [
     "cacheops",
     "corsheaders",
     "django_filters",
+    "django_jinja",
     "django_tables2",
     "django_prometheus",
     "mptt",
@@ -347,9 +348,29 @@ ROOT_URLCONF = "nautobot.core.urls"
 
 TEMPLATES = [
     {
+        "NAME": "django",
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.template.context_processors.media",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.sso_auth",
+            ],
+        },
+    },
+    {
+        "NAME": "jinja",
+        "BACKEND": "django_jinja.backend.Jinja2",
+        "DIRS": [],
+        "APP_DIRS": False,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -433,6 +454,7 @@ GRAPHENE = {
 }
 GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 GRAPHQL_RELATIONSHIP_PREFIX = "rel"
+GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 
 
 #

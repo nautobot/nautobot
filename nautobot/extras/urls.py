@@ -2,6 +2,7 @@ from django.urls import path
 
 from nautobot.extras import views
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomLink,
@@ -369,5 +370,30 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="graphqlquery_changelog",
         kwargs={"model": GraphQLQuery},
+    ),
+    # Computed Fields
+    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
+    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
+    path(
+        "computed-fields/delete/",
+        views.ComputedFieldBulkDeleteView.as_view(),
+        name="computedfield_bulk_delete",
+    ),
+    path("computed-fields/<slug:slug>/", views.ComputedFieldView.as_view(), name="computedfield"),
+    path(
+        "computed-fields/<slug:slug>/edit/",
+        views.ComputedFieldEditView.as_view(),
+        name="computedfield_edit",
+    ),
+    path(
+        "computed-fields/<slug:slug>/delete/",
+        views.ComputedFieldDeleteView.as_view(),
+        name="computedfield_delete",
+    ),
+    path(
+        "computed-fields/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="computedfield_changelog",
+        kwargs={"model": ComputedField},
     ),
 ]

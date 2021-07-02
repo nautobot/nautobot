@@ -48,6 +48,21 @@ def generate_custom_field_resolver(name, resolver_name):
     return resolve_custom_field
 
 
+def generate_computed_field_resolver(name, resolver_name):
+    """Generate an instance method for resolving an individual computed field within a given DjangoObjectType.
+
+    Args:
+        name (str): name of the computed field to resolve
+        resolver_name (str): name of the resolver as declare in DjangoObjectType
+    """
+
+    def resolve_computed_field(self, info, **kwargs):
+        return self.get_computed_field(name=name)
+
+    resolve_computed_field.__name__ = resolver_name
+    return resolve_computed_field
+
+
 def generate_relationship_resolver(name, resolver_name, relationship, side, peer_model):
     """Generate function to resolve each custom relationship within each DjangoObjectType.
 

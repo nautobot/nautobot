@@ -141,7 +141,9 @@ class RegionSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
@@ -188,7 +190,9 @@ class SiteSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "rack_count",
             "virtualmachine_count",
             "vlan_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -218,7 +222,9 @@ class RackGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class RackRoleSerializer(CustomFieldModelSerializer):
@@ -238,7 +244,9 @@ class RackRoleSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class RackSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
@@ -281,13 +289,14 @@ class RackSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomF
             "last_updated",
             "device_count",
             "powerfeed_count",
+            "computed_fields",
         ]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (group, facility_id). This
         # prevents facility_id from being interpreted as a required field.
         validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("group", "name"))]
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
-
         # Validate uniqueness of (group, facility_id) since we omitted the automatically-created validator from Meta.
         if data.get("facility_id", None):
             validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("group", "facility_id"))
@@ -330,7 +339,9 @@ class RackReservationSerializer(TaggedObjectSerializer, CustomFieldModelSerializ
             "description",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class RackElevationDetailFilterSerializer(serializers.Serializer):
@@ -373,7 +384,9 @@ class ManufacturerSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -402,7 +415,9 @@ class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "created",
             "last_updated",
             "device_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class ConsolePortTemplateSerializer(CustomFieldModelSerializer):
@@ -421,7 +436,9 @@ class ConsolePortTemplateSerializer(CustomFieldModelSerializer):
             "type",
             "description",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class ConsoleServerPortTemplateSerializer(CustomFieldModelSerializer):
@@ -461,7 +478,9 @@ class PowerPortTemplateSerializer(CustomFieldModelSerializer):
             "allocated_draw",
             "description",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class PowerOutletTemplateSerializer(CustomFieldModelSerializer):
@@ -484,7 +503,9 @@ class PowerOutletTemplateSerializer(CustomFieldModelSerializer):
             "feed_leg",
             "description",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class InterfaceTemplateSerializer(CustomFieldModelSerializer):
@@ -504,7 +525,9 @@ class InterfaceTemplateSerializer(CustomFieldModelSerializer):
             "mgmt_only",
             "description",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class RearPortTemplateSerializer(CustomFieldModelSerializer):
@@ -546,7 +569,9 @@ class FrontPortTemplateSerializer(CustomFieldModelSerializer):
             "rear_port_position",
             "description",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class DeviceBayTemplateSerializer(CustomFieldModelSerializer):
@@ -563,7 +588,9 @@ class DeviceBayTemplateSerializer(CustomFieldModelSerializer):
             "label",
             "description",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -591,7 +618,9 @@ class DeviceRoleSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class PlatformSerializer(CustomFieldModelSerializer):
@@ -616,7 +645,9 @@ class PlatformSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
@@ -668,7 +699,9 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
         validators = []
 
     def validate(self, data):
@@ -770,7 +803,9 @@ class ConsoleServerPortSerializer(
             "connected_endpoint_reachable",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class ConsolePortSerializer(
@@ -802,7 +837,9 @@ class ConsolePortSerializer(
             "connected_endpoint_reachable",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class PowerOutletSerializer(
@@ -838,7 +875,9 @@ class PowerOutletSerializer(
             "connected_endpoint_reachable",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class PowerPortSerializer(
@@ -872,7 +911,9 @@ class PowerPortSerializer(
             "connected_endpoint_reachable",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class InterfaceSerializer(
@@ -923,7 +964,9 @@ class InterfaceSerializer(
             "tags",
             "count_ipaddresses",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
 
@@ -963,7 +1006,9 @@ class RearPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, Cus
             "cable_peer_type",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class FrontPortRearPortSerializer(WritableNestedSerializer):
@@ -1002,7 +1047,9 @@ class FrontPortSerializer(TaggedObjectSerializer, CableTerminationSerializer, Cu
             "cable_peer_type",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class DeviceBaySerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -1022,7 +1069,9 @@ class DeviceBaySerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "installed_device",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -1056,7 +1105,9 @@ class InventoryItemSerializer(TaggedObjectSerializer, CustomFieldModelSerializer
             "tags",
             "_depth",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -1091,7 +1142,9 @@ class CableSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custom
             "length_unit",
             "tags",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
     def _get_termination(self, obj, side):
         """
@@ -1235,7 +1288,9 @@ class VirtualChassisSerializer(TaggedObjectSerializer, CustomFieldModelSerialize
             "tags",
             "custom_fields",
             "member_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -1260,7 +1315,9 @@ class PowerPanelSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "tags",
             "custom_fields",
             "powerfeed_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class PowerFeedSerializer(
@@ -1304,4 +1361,6 @@ class PowerFeedSerializer(
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]

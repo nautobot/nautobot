@@ -12,6 +12,10 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 Applications can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/application-registry.md) for more details.
 
+#### Computed Fields ([#4](https://github.com/nautobot/nautobot/issues/4))
+
+[Computed fields](../additional-features/computed-fields.md) offers users the ability to create read-only custom fields using existing data already stored in the database. Users define Jinja2 templates that populate the value of these fields. Computed fields are available on all data models that currently support custom fields.
+
 #### Config Context Schemas ([#274](https://github.com/nautobot/nautobot/issues/274))
 
 While config contexts allow for arbitrary data structures to be stored within Nautobot, at scale it is desirable to apply validation constraints to that data to ensure its consistency and to avoid data entry errors. To service this need, Nautobot supports optionally backing config contexts with [JSON Schemas](https://json-schema.org/) for validation. These schema are managed via the config context schema model and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data. Please see the [docs](../additional-features/config-contexts.md#config-context-schemas) for more details.
@@ -36,6 +40,10 @@ A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for spec
 
 Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-setup) and [CentOS](../installation/centos.md#mysql-setup) to get started.
 
+#### Plugin Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/572))
+
+Plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/navigation-menu.md) for more details.
+
 #### Read Only Jobs ([#200](https://github.com/nautobot/nautobot/issues/200))
 
 Jobs may be optionally marked as read only by setting the `read_only = True` meta attribute. This prevents the job from making any changes to nautobot data and suppresses certain log messages. Read only jobs can be a great way to safely develop new jobs, and for working with reporting use cases. Please see the [Jobs documentation](../additional-features/jobs.md) for more details.
@@ -57,10 +65,6 @@ Prior to version 1.1.0, Nautobot utilized RQ as the primary background task work
 RQ support for custom tasks was not removed in order to give plugin authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
 
 Please see the section on [migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
-
-#### Plugin Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/572))
-
-Plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/navigation-menu.md) for more details.
 
 ### Removed
 

@@ -28,6 +28,7 @@ from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
 from .models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomLink,
@@ -1006,3 +1007,29 @@ class GraphQLQueryDeleteView(generic.ObjectDeleteView):
 class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
     queryset = GraphQLQuery.objects.all()
     table = tables.GraphQLQueryTable
+
+
+class ComputedFieldListView(generic.ObjectListView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
+    filterset_form = forms.ComputedFieldFilterForm
+    action_buttons = ("add",)
+
+
+class ComputedFieldView(generic.ObjectView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldEditView(generic.ObjectEditView):
+    queryset = ComputedField.objects.all()
+    model_form = forms.ComputedFieldForm
+
+
+class ComputedFieldDeleteView(generic.ObjectDeleteView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable
