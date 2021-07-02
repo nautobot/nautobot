@@ -1,11 +1,13 @@
 import collections
 import inspect
+from importlib import import_module
+
 from packaging import version
 
-from django.apps import AppConfig
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 
+from nautobot.core.apps import NautobotConfig, NavMenuButton, NavMenuGroup, NavMenuItem, NavMenuTab, register_menu_items
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
@@ -17,7 +19,6 @@ from nautobot.utilities.choices import ButtonColorChoices
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
-registry["plugin_menu_items"] = {}
 registry["plugin_template_extensions"] = collections.defaultdict(list)
 
 
@@ -26,7 +27,7 @@ registry["plugin_template_extensions"] = collections.defaultdict(list)
 #
 
 
-class PluginConfig(AppConfig):
+class PluginConfig(NautobotConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
@@ -70,6 +71,7 @@ class PluginConfig(AppConfig):
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
     template_extensions = "template_content.template_extensions"
+    jinja_filters = "jinja_filters"
 
     def ready(self):
 
@@ -93,15 +95,21 @@ class PluginConfig(AppConfig):
         if jobs is not None:
             register_jobs(jobs)
 
-        # Register navigation menu items (if defined)
+        # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
         if menu_items is not None:
-            register_menu_items(self.verbose_name, menu_items)
+            register_plugin_menu_items(self.verbose_name, menu_items)
 
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+
+        # Register custom jinja filters
+        try:
+            import_module(f"{self.__module__}.{self.jinja_filters}")
+        except ModuleNotFoundError:
+            pass
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -322,19 +330,67 @@ class PluginMenuButton:
             self.color = color
 
 
-def register_menu_items(section_name, class_list):
+def register_plugin_menu_items(section_name, menu_items):
     """
     Register a list of PluginMenuItem instances for a given menu section (e.g. plugin name)
     """
-    # Validation
-    for menu_link in class_list:
-        if not isinstance(menu_link, PluginMenuItem):
-            raise TypeError(f"{menu_link} must be an instance of extras.plugins.PluginMenuItem")
-        for button in menu_link.buttons:
-            if not isinstance(button, PluginMenuButton):
-                raise TypeError(f"{button} must be an instance of extras.plugins.PluginMenuButton")
+    new_menu_items = []
+    new_menu_item_weight = 100
 
-    registry["plugin_menu_items"][section_name] = class_list
+    nav_menu_items = set()
+
+    for menu_item in menu_items:
+        if isinstance(menu_item, PluginMenuItem):
+            # translate old-style plugin menu definitions into the new nav-menu items and buttons
+
+            new_menu_button_weight = 100
+            new_menu_buttons = []
+            for button in menu_item.buttons:
+                new_menu_buttons.append(
+                    NavMenuButton(
+                        link=button.link,
+                        title=button.title,
+                        icon_class=button.icon_class,
+                        button_class=button.color,
+                        permissions=button.permissions,
+                        weight=new_menu_button_weight,
+                    )
+                )
+                new_menu_button_weight += 100
+
+            new_menu_items.append(
+                NavMenuItem(
+                    link=menu_item.link,
+                    name=menu_item.link_text,
+                    permissions=menu_item.permissions,
+                    weight=new_menu_item_weight,
+                    buttons=new_menu_buttons,
+                )
+            )
+            new_menu_item_weight += 100
+        elif isinstance(menu_item, NavMenuTab):
+            nav_menu_items.add(menu_item)
+        else:
+            raise TypeError("Top level objects need to be an instance of NavMenuTab or PluginMenuItem: {menu_tab}")
+
+    if new_menu_items:
+        # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
+        if registry["nav_menu"]["tabs"].get("Plugins"):
+            weight = (
+                registry["nav_menu"]["tabs"]["Plugins"][list(registry["nav_menu"]["tabs"]["Plugins"])[-1]]["weight"]
+                + 100
+            )
+        else:
+            weight = 100
+        nav_menu_items.add(
+            NavMenuTab(
+                name="Plugins",
+                weight=5000,
+                groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
+            ),
+        )
+
+    register_menu_items(nav_menu_items)
 
 
 #

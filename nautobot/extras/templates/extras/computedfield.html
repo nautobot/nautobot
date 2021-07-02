@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:computedfield_list' %}">Computed Fields</a></li>
+                {% if object.label %}
+                    <li><a href="{% url 'extras:computedfield' slug=object.slug %}">{{ object.label }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.extras.add_computedfield %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_computedfield %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_computedfield %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Computed Field</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:computedfield_changelog' slug=object.slug %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+	<div class="col-md-7">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Computed Field</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Content Type</td>
+                    <td><span>{{ object.content_type }}</span></td>
+                </tr>
+                <tr>
+                    <td>Label</td>
+                    <td><span>{{ object.label }}</span></td>
+                </tr>
+                <tr>
+                    <td>Slug</td>
+                    <td><span>{{ object.slug }}</span></td>
+                </tr>
+                <tr>
+                    <td>Weight</td>
+                    <td><span>{{ object.weight }}</span></td>
+                </tr>
+                <tr>
+                    <td>Template</td>
+                    <td><pre>{{ object.template }}</pre></td>
+                </tr>
+                <tr>
+                    <td>Fallback Value</td>
+                    <td><span>{{ object.fallback_value }}</span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
