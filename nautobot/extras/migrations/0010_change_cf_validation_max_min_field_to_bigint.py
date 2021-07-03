@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0009_computedfield'),
+        ("extras", "0009_computedfield"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='customfield',
-            name='validation_maximum',
+            model_name="customfield",
+            name="validation_maximum",
             field=models.BigIntegerField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='customfield',
-            name='validation_minimum',
+            model_name="customfield",
+            name="validation_minimum",
             field=models.BigIntegerField(blank=True, null=True),
         ),
     ]
