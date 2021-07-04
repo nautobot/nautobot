@@ -34,6 +34,9 @@
                                        id="{{ job.class_path }}">
                                         <strong>{{ job }}</strong>
                                     </a>
+                                    {% if job.read_only %}
+                                        <label class="label label-default">Read-only</label>
+                                    {% endif %}
                                 </td>
                                 <td>{{ job.description | placeholder }}</td>
                                 <td class="text-right text-nowrap">

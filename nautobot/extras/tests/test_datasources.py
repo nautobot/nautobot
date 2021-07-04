@@ -66,7 +66,7 @@ class GitTest(TestCase):
         )
         self.repo.save(trigger_resync=False)
 
-        self.job_result = JobResult(
+        self.job_result = JobResult.objects.create(
             name=self.repo.name,
             obj_type=ContentType.objects.get_for_model(GitRepository),
             job_id=uuid.uuid4(),
@@ -86,7 +86,9 @@ class GitTest(TestCase):
                 MockGitRepo.side_effect = create_empty_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -103,12 +105,15 @@ class GitTest(TestCase):
                 self.repo.save()
                 # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
-                self.job_result = JobResult(
+                self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -124,12 +129,15 @@ class GitTest(TestCase):
                 self.repo.save()
                 # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
-                self.job_result = JobResult(
+                self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -180,6 +188,11 @@ class GitTest(TestCase):
                     ) as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     with open(
+                        os.path.join(path, "export_templates", "dcim", "device", "template2.html"),
+                        "w",
+                    ) as fd:
+                        fd.write("<!DOCTYPE html>/n{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    with open(
                         os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"),
                         "w",
                     ) as fd:
@@ -189,7 +202,9 @@ class GitTest(TestCase):
                 MockGitRepo.side_effect = populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -227,6 +242,16 @@ class GitTest(TestCase):
                     name="template.j2",
                 )
                 self.assertIsNotNone(export_template_device)
+                self.assertEqual(export_template_device.mime_type, "text/plain")
+
+                export_template_html = ExportTemplate.objects.get(
+                    owner_object_id=self.repo.pk,
+                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
+                    content_type=ContentType.objects.get_for_model(Device),
+                    name="template2.html",
+                )
+                self.assertIsNotNone(export_template_html)
+                self.assertEqual(export_template_html.mime_type, "text/html")
 
                 # Make sure ExportTemplate was successfully loaded from file
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
@@ -243,19 +268,22 @@ class GitTest(TestCase):
                     os.remove(os.path.join(path, "config_contexts", "context.yaml"))
                     os.remove(os.path.join(path, "config_contexts", "devices", "test-device.json"))
                     os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))
+                    os.remove(os.path.join(path, "export_templates", "dcim", "device", "template2.html"))
                     os.remove(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"))
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = empty_repo
                 # For verisimilitude, don't re-use the old request and job_result
                 self.dummy_request.id = uuid.uuid4()
-                self.job_result = JobResult(
+                self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
                     job_id=uuid.uuid4(),
                 )
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -340,7 +368,9 @@ class GitTest(TestCase):
                 MockGitRepo.side_effect = populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
@@ -389,7 +419,9 @@ class GitTest(TestCase):
                 MockGitRepo.side_effect = populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
-                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result)
+                # Run the Git operation and refresh the object from the DB
+                pull_git_repository_and_refresh_data(self.repo.pk, self.dummy_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,

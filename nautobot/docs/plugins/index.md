@@ -18,6 +18,7 @@ The Nautobot plugin architecture allows for the following:
 * **Declare configuration parameters.** Each plugin can define required, optional, and default configuration parameters within its unique namespace. Plug configuration parameter are defined by the user under `PLUGINS_CONFIG` in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** A plugin can specify a minimum and/or maximum Nautobot version with which it is compatible.
 * **Add additional Git Providers.** Add additional Git Providers with a defined callback function to post process data received from the Git Repository.
+* **Register Jinja2 filters.** A plugin can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
 
 ## Limitations
 

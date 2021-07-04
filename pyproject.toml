@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.0.4-beta.1"
+version = "1.1.0-beta.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -32,6 +32,8 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+# Background task processing
+celery = "~5.1.0"
 # Fundamental web framework for Nautobot
 Django = "~3.1.12"
 # Caching with Redis
@@ -42,6 +44,10 @@ django-cors-headers = "~3.7.0"
 django-cryptography = "~1.0"
 # Advanced query filters
 django-filter = "~2.4.0"
+# Health check endpoint
+django-health-check = "^3.16.4"
+# Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
+django-jinja = "^2.8.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
 # Prometheus metrics for Django
@@ -69,9 +75,13 @@ graphene-django = "~2.15.0"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 # Template rendering engine
-Jinja2 = "~2.11.3"
+Jinja2 = "~3.0.1"
+# Optional data validation of config contexts
+jsonschema = "~3.2.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.4"
+# MySQL database adapter
+mysqlclient = {version = "~2.0.3", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Image processing library
@@ -88,6 +98,9 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+
+[tool.poetry.extras]
+mysql = ["mysqlclient"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
@@ -110,6 +123,8 @@ mkdocs = "~1.1.2"
 requests = "~2.25.1"
 # Selenium web drivers for live integration testing
 selenium = "~3.141.0"
+# Abstraction layer for working with Selenium
+splinter = "~0.14.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
