@@ -90,7 +90,7 @@ CACHES = {
 # REDIS CACHEOPS
 CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 
-HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
+HIDE_RESTRICTED_UI = is_truthy(os.environ.get("HIDE_RESTRICTED_UI", False))
 
 SECRET_KEY = os.environ.get("NAUTOBOT_SECRET_KEY", "")
 
