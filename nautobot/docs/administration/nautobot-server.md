@@ -9,6 +9,9 @@ For those familiar with Django applications, this CLI utility works exactly as a
 !!! important
     Since Nautobot is a Django application, there are a number of built-in management commands that will not be covered in this document. Please see the [official Django documentation on management commands](https://docs.djangoproject.com/en/stable/ref/django-admin/#available-commands) for more information.
 
+!!! important
+    Django does not recognize `nautobot-server`.  Anywhere `python manage.py` is mentioned, it is safe to replace with `nautobot-server`.
+
 ## Getting Help
 
 To see all available management commands:
