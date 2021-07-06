@@ -244,12 +244,12 @@ The `docker-entrypoint.sh` script will run any migrations and then look for spec
  Any variables defined in this file will override the defaults. The `override.env` should look like the following:
 
 ```bash
-# Superuser information. CREATE_SUPERUSER defaults to false.
-CREATE_SUPERUSER=true
-SUPERUSER_NAME=admin
-SUPERUSER_EMAIL=admin@example.com
-SUPERUSER_PASSWORD=admin
-SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
+# Superuser information. NAUTOBOT_CREATE_SUPERUSER defaults to false.
+NAUTOBOT_CREATE_SUPERUSER=true
+NAUTOBOT_SUPERUSER_NAME=admin
+NAUTOBOT_SUPERUSER_EMAIL=admin@example.com
+NAUTOBOT_SUPERUSER_PASSWORD=admin
+NAUTOBOT_SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 ```
 
 !!! warning
