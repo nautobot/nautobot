@@ -1,12 +1,11 @@
 import platform
-from re import template
 import sys
 
 from django.conf import settings
 from django.db.models import F
 from django.http import HttpResponseServerError
 from django.shortcuts import render
-from django.template import loader, Template, RequestContext
+from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
@@ -15,30 +14,12 @@ from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
 
-from nautobot.circuits.models import Circuit, Provider
-from nautobot.dcim.models import (
-    Cable,
-    ConsolePort,
-    Device,
-    DeviceType,
-    Interface,
-    PowerPanel,
-    PowerFeed,
-    PowerPort,
-    Rack,
-    Site,
-    VirtualChassis,
-)
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import GitRepository, GraphQLQuery, ObjectChange, JobResult
+from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
-from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, VirtualMachine
 
 
 class HomeView(TemplateView):
