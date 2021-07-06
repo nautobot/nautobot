@@ -29,7 +29,7 @@ layout = (
                         link="dcim:site_list",
                         model=GitRepository,
                         description="Collections of data and/or job files",
-                        permissions=["extra.view_gitrepository"],
+                        permissions=["extras.view_gitrepository"],
                         weight=100,
                     ),
                 ),
@@ -40,6 +40,7 @@ layout = (
                 items=(
                     HomePageItem(
                         name="Job History",
+                        permissions=["extras.view_jobresult"],
                         weight=100,
                         custom_data={"job_results": get_job_results},
                         custom_code="""
@@ -80,44 +81,43 @@ layout = (
                 items=(
                     HomePageItem(
                         name="Change Log",
+                        permissions=["extras.view_objectchange"],
                         weight=100,
                         custom_data={"changelog": get_changelog},
                         custom_code="""
                             {% load helpers %}
                             {% if changelog and perms.extras.view_objectchange %}
-                                <div class="list-group">
-                                    {% for change in changelog %}
-                                        {% with action=change.get_action_display|lower %}
-                                            <div class="list-group-item">
-                                                {% if action == 'created' %}
-                                                    <span class="label label-success">Created</span>
-                                                {% elif action == 'updated' %}
-                                                    <span class="label label-warning">Modified</span>
-                                                {% elif action == 'deleted' %}
-                                                    <span class="label label-danger">Deleted</span>
-                                                {% endif %}
-                                                {{ change.changed_object_type.name|bettertitle }}
-                                                {% if change and change.changed_object and change.changed_object.get_absolute_url %}
-                                                    <a href="{{ change.changed_object.get_absolute_url }}">{{ change.changed_object }}</a>
-                                                {% elif change and change.changed_object %}
-                                                    {{ change.changed_object|default:change.object_repr }}
-                                                {% elif change %}
-                                                    {{ change.object_repr }}
-                                                {% endif %}
-                                                <br />
-                                                <small>
-                                                    <span class="text-muted">{{ change.user|default:change.user_name }} -</span>
-                                                    <a href="{{ change.get_absolute_url }}" class="text-muted">{{ change.time|date:'SHORT_DATETIME_FORMAT' }}</a>
-                                                </small>
-                                            </div>
-                                        {% endwith %}
-                                        {% if forloop.last %}
-                                            <div class="list-group-item text-right">
-                                                <a href="{% url 'extras:objectchange_list' %}">View All Changes</a>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
+                                {% for change in changelog %}
+                                    {% with action=change.get_action_display|lower %}
+                                        <div class="list-group-item">
+                                            {% if action == 'created' %}
+                                                <span class="label label-success">Created</span>
+                                            {% elif action == 'updated' %}
+                                                <span class="label label-warning">Modified</span>
+                                            {% elif action == 'deleted' %}
+                                                <span class="label label-danger">Deleted</span>
+                                            {% endif %}
+                                            {{ change.changed_object_type.name|bettertitle }}
+                                            {% if change and change.changed_object and change.changed_object.get_absolute_url %}
+                                                <a href="{{ change.changed_object.get_absolute_url }}">{{ change.changed_object }}</a>
+                                            {% elif change and change.changed_object %}
+                                                {{ change.changed_object|default:change.object_repr }}
+                                            {% elif change %}
+                                                {{ change.object_repr }}
+                                            {% endif %}
+                                            <br />
+                                            <small>
+                                                <span class="text-muted">{{ change.user|default:change.user_name }} -</span>
+                                                <a href="{{ change.get_absolute_url }}" class="text-muted">{{ change.time|date:'SHORT_DATETIME_FORMAT' }}</a>
+                                            </small>
+                                        </div>
+                                    {% endwith %}
+                                    {% if forloop.last %}
+                                        <div class="list-group-item text-right">
+                                            <a href="{% url 'extras:objectchange_list' %}">View All Changes</a>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
                             {% elif perms.extras.view_objectchange %}
                                 <div class="panel-body text-muted">
                                     No change history found

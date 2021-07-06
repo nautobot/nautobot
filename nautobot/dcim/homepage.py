@@ -65,6 +65,7 @@ layout = (
                         name="Virtual Chassis",
                         link="dcim:virtualchassis_list",
                         model=Rack,
+                        permissions=["dcim.view_virtualchassis"],
                         description="Represents a set of devices which share a common control plane",
                         weight=400,
                     ),

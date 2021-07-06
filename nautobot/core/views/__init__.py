@@ -45,64 +45,6 @@ class HomeView(TemplateView):
     template_name = "home.html"
 
     def get(self, request):
-
-        connected_consoleports = (
-            ConsolePort.objects.restrict(request.user, "view")
-            .prefetch_related("_path")
-            .filter(_path__destination_id__isnull=False)
-        )
-        connected_powerports = (
-            PowerPort.objects.restrict(request.user, "view")
-            .prefetch_related("_path")
-            .filter(_path__destination_id__isnull=False)
-        )
-        connected_interfaces = (
-            Interface.objects.restrict(request.user, "view")
-            .prefetch_related("_path")
-            .filter(_path__destination_id__isnull=False, pk__lt=F("_path__destination_id"))
-        )
-
-        # Job history
-        # Only get JobResults that have reached a terminal state
-        job_results = (
-            JobResult.objects.filter(status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES)
-            .defer("data")
-            .order_by("-completed")
-        )
-
-        stats = {
-            # Organization
-            "site_count": Site.objects.restrict(request.user, "view").count(),
-            "tenant_count": Tenant.objects.restrict(request.user, "view").count(),
-            # DCIM
-            "rack_count": Rack.objects.restrict(request.user, "view").count(),
-            "devicetype_count": DeviceType.objects.restrict(request.user, "view").count(),
-            "device_count": Device.objects.restrict(request.user, "view").count(),
-            "interface_connections_count": connected_interfaces.count(),
-            "cable_count": Cable.objects.restrict(request.user, "view").count(),
-            "console_connections_count": connected_consoleports.count(),
-            "power_connections_count": connected_powerports.count(),
-            "powerpanel_count": PowerPanel.objects.restrict(request.user, "view").count(),
-            "powerfeed_count": PowerFeed.objects.restrict(request.user, "view").count(),
-            "virtualchassis_count": VirtualChassis.objects.restrict(request.user, "view").count(),
-            # IPAM
-            "vrf_count": VRF.objects.restrict(request.user, "view").count(),
-            "aggregate_count": Aggregate.objects.restrict(request.user, "view").count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view").count(),
-            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").count(),
-            # Circuits
-            "provider_count": Provider.objects.restrict(request.user, "view").count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view").count(),
-            # Virtualization
-            "cluster_count": Cluster.objects.restrict(request.user, "view").count(),
-            "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view").count(),
-            # Extras
-            "gitrepository_count": GitRepository.objects.restrict(request.user, "view").count(),
-        }
-
-        changelog = ObjectChange.objects.restrict(request.user, "view").prefetch_related("user", "changed_object_type")
-
         # Check whether a new release is available. (Only for staff/superusers.)
         new_release = None
         if request.user.is_staff or request.user.is_superuser:
@@ -119,29 +61,35 @@ class HomeView(TemplateView):
         context.update(
             {
                 "search_form": SearchForm(),
-                "stats": stats,
-                "job_results": job_results[:10],
-                "changelog": changelog[:15],
                 "new_release": new_release,
             }
         )
 
+        # Loop over homepage layout to collect all additional data and create custom panels.
         for column_name, column_details in registry["homepage_layout"]["columns"].items():
             for panel_name, panel_details in column_details["panels"].items():
                 for item_name, item_details in panel_details["items"].items():
+
                     if item_details.get("custom_code"):
+                        # Collect all custom data using callback functions.
                         for key, function in item_details.get("custom_data", {}).items():
                             context[key] = function(request)
+                        # Create standalone template
                         sub_template = Template(item_details["custom_code"].strip())
                         sub_context = RequestContext(request, context)
+                        # Store rendered sub-template in registry.
                         registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][item_name][
                             "rendered_html"
                         ] = sub_template.render(sub_context)
+
                     elif item_details.get("model"):
+                        # If there is a model attached collect object count.
                         registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][item_name][
                             "count"
                         ] = (item_details["model"].objects.restrict(request.user, "view").count())
+
                     elif item_details.get("items"):
+                        # Collect count for grouped objects.
                         for group_item_name, group_item_details in item_details["items"].items():
                             registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][
                                 item_name

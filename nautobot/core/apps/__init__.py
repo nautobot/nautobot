@@ -115,10 +115,22 @@ def register_menu_items(tab_list):
 
 
 def register_homepage_panels(homepage_layout):
+    """
+    Register homepage panels using `homepage.py`.
+
+    Each app can now register a `homepage.py` file which holds objects defining the layout of the
+    home page. `HomePageColumn`, `HomePagePanel`, `HomePageGroup` and `HomePageItem` can be used to
+    define different parts of the layout.
+
+    These objects are converted into a dictionary to be stored inside of the Nautobot registry.
+    """
     for column in homepage_layout:
+        column_perms = set()
         create_or_check_entry(registry["homepage_layout"]["columns"], column, column.name, f"{column.name}")
         registry_panels = registry["homepage_layout"]["columns"][column.name]["panels"]
+
         for panel in column.panels:
+            panel_perms = set()
             if isinstance(panel, HomePagePanel):
                 create_or_check_entry(registry_panels, panel, panel.name, f"{column.name} -> {panel.name}")
                 registry_items = registry_panels[panel.name]["items"]
@@ -127,6 +139,7 @@ def register_homepage_panels(homepage_layout):
                         create_or_check_entry(
                             registry_items, item, item.name, f"{column.name} -> {panel.name} -> {item.name}"
                         )
+                        panel_perms |= set(perms for perms in item.permissions)
                     elif isinstance(item, HomePageGroup):
                         create_or_check_entry(
                             registry_items, item, item.name, f"{column.name} -> {panel.name} -> {item.name}"
@@ -138,6 +151,7 @@ def register_homepage_panels(homepage_layout):
                                 group_item.name,
                                 f"{column.name} -> {panel.name} -> {item.name} -> {group_item.name}",
                             )
+                        panel_perms |= set(perms for perms in group_item.permissions)
                         registry_items[item.name]["items"] = OrderedDict(
                             sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
                         )
@@ -151,16 +165,22 @@ def register_homepage_panels(homepage_layout):
                 )
             else:
                 raise TypeError(f"Top level objects need to be an instance of HomePagePanel: {panel}")
+            registry_panels[panel.name]["permissions"] = panel_perms
+            column_perms |= panel_perms
 
         registry["homepage_layout"]["columns"][column.name]["panels"] = OrderedDict(
             sorted(registry_panels.items(), key=lambda kv_pair: kv_pair[1]["weight"])
         )
+        registry["homepage_layout"]["columns"][column.name]["permissions"] = column_perms
+
     registry["homepage_layout"]["columns"] = OrderedDict(
         sorted(registry["homepage_layout"]["columns"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
     )
 
 
 class HomePageBase(ABC):
+    """Base class for homepage layout classes."""
+
     @abstractproperty
     def initial_dict(self):  # to be implemented by each subclass
         return {}
@@ -193,6 +213,8 @@ class PermissionsMixin:
 
 
 class HomePageColumn(HomePageBase, PermissionsMixin):
+    """Defines properties that can be used for a column."""
+
     permissions = []
     panels = []
 
@@ -208,8 +230,8 @@ class HomePageColumn(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=None, panels=None, weight=1000):
-        """Ensure tab properties."""
+    def __init__(self, name, permissions=[], panels=None, weight=1000):
+        """Ensure column properties."""
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -222,6 +244,8 @@ class HomePageColumn(HomePageBase, PermissionsMixin):
 
 
 class HomePagePanel(HomePageBase, PermissionsMixin):
+    """Defines properties that can be used for a panel."""
+
     permissions = []
     items = []
 
@@ -237,8 +261,8 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=None, items=None, weight=1000):
-        """Ensure tab properties."""
+    def __init__(self, name, permissions=[], items=None, weight=1000):
+        """Ensure panel properties."""
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -251,6 +275,8 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
 
 
 class HomePageGroup(HomePageBase, PermissionsMixin):
+    """Defines properties that can be used for a panel group."""
+
     permissions = []
     items = []
 
@@ -266,8 +292,8 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=None, items=None, weight=1000):
-        """Ensure tab properties."""
+    def __init__(self, name, permissions=[], items=None, weight=1000):
+        """Ensure group properties."""
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -281,6 +307,8 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
 
 
 class HomePageItem(HomePageBase, PermissionsMixin):
+    """Defines properties that can be used for a panel item."""
+
     permissions = []
     items = []
 
@@ -292,7 +320,7 @@ class HomePageItem(HomePageBase, PermissionsMixin):
             "description": self.description,
             "link": self.link,
             "model": self.model,
-            "permissions": set(),
+            "permissions": self.permissions,
             "weight": self.weight,
         }
 
@@ -311,7 +339,7 @@ class HomePageItem(HomePageBase, PermissionsMixin):
         permissions=None,
         weight=1000,
     ):
-        """Ensure tab properties."""
+        """Ensure item properties."""
         super().__init__(permissions)
         if link:
             reverse(link)
