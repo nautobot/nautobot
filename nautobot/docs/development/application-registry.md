@@ -57,6 +57,73 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
 }
 ```
 
+### `nav_menu`
+
+Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other application and plugins. The `nav_menu` dict should never be modified directly.
+
+Example:
+
+```python
+{
+    "tabs": {
+        "tab_1": {
+            "weight": 100,
+            "permissions": [],
+            "groups": {
+                "group_1":{
+                    "weight": 100,
+                    "permissions": [],
+                    "items": {
+                        "item_link_1": {
+                            "link_text": "Item 1",
+                            "weight": 100,
+                            "permissions": [],
+                            "buttons": {
+                                "button_1": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_1",
+                                    "weight": 100,
+                                    "permissions": [],
+                                },
+                                "button_2": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_2",
+                                    "weight": 200,
+                                    "permissions": [],
+                                }
+                            }
+                        },
+                        "item_link_2": {
+                            "link_text": "Item 2",
+                            "weight": 200,
+                            "permissions": [],
+                            "buttons": {
+                                "button_1": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_1",
+                                    "weight": 100,
+                                    "permissions": [],
+                                },
+                                "button_2": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_2",
+                                    "weight": 200,
+                                    "permissions": [],
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
 ### `plugin_custom_validators`
 
 Plugin [custom validator classes](../plugins/development.md#implementing-custom-validators) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `PluginCustomValidator` subclasses, for example:

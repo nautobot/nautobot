@@ -1,3 +1,4 @@
+from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 from nautobot.extras.plugins import PluginMenuButton, PluginMenuItem
 from nautobot.utilities.choices import ButtonColorChoices
 
@@ -22,7 +23,64 @@ menu_items = (
         ),
     ),
     PluginMenuItem(
-        link="plugins:dummy_plugin:dummymodel_list",
+        link="plugins:dummy_plugin:dummymodel_add",
         link_text="Other Models",
+    ),
+    NavMenuTab(
+        name="Dummy Tab",
+        weight=150,
+        groups=(
+            NavMenuGroup(
+                name="Dummy Group 1",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="plugins:dummy_plugin:dummymodel_list",
+                        name="Dummy Model",
+                        permissions=["dummy_plugin.view_dummymodel"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="plugins:dummy_plugin:dummymodel_add",
+                                permissions=[
+                                    "dummy_plugin.add_dummymodel",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="plugins:dummy_plugin:dummymodel_import",
+                                permissions=["dummy_plugin.add_dummymodel"],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+    NavMenuTab(
+        name="Circuits",
+        groups=(
+            NavMenuGroup(
+                name="Dummy Circuit Group",
+                weight=150,
+                items=(
+                    NavMenuItem(
+                        link="plugins:dummy_plugin:dummymodel_list",
+                        name="Dummy Model",
+                        permissions=["dummy_plugin.view_dummymodel"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="plugins:dummy_plugin:dummymodel_add",
+                                permissions=[
+                                    "dummy_plugin.add_dummymodel",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="plugins:dummy_plugin:dummymodel_import",
+                                permissions=["dummy_plugin.add_dummymodel"],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
     ),
 )

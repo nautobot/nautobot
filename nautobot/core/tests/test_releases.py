@@ -9,7 +9,7 @@ from django.test import SimpleTestCase, override_settings
 from packaging.version import Version
 from requests import Response
 
-from nautobot.utilities.background_tasks import get_releases
+from nautobot.utilities.tasks import get_releases
 
 
 def successful_github_response(url, *_args, **_kwargs):
