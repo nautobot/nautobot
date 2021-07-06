@@ -3,7 +3,6 @@ import logging
 from abc import ABC, abstractproperty
 from django.apps import AppConfig
 from django.urls import reverse
-from operator import getitem
 from collections import OrderedDict
 
 from nautobot.extras.plugins.utils import import_object
@@ -13,6 +12,7 @@ from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIco
 
 logger = logging.getLogger("nautobot.core.apps")
 registry["nav_menu"] = {"tabs": {}}
+registry["homepage_layout"] = {"columns": {}}
 
 
 class NautobotConfig(AppConfig):
@@ -23,12 +23,17 @@ class NautobotConfig(AppConfig):
     applications.
     """
 
+    homepage_layout = "homepage.layout"
     menu_tabs = "navigation.menu_items"
 
     def ready(self):
         """
         Ready function initiates the import application.
         """
+        homepage_layout = import_object(f"{self.name}.{self.homepage_layout}")
+        if homepage_layout is not None:
+            register_homepage_panels(homepage_layout)
+
         menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
             register_menu_items(menu_items)
@@ -109,6 +114,62 @@ def register_menu_items(tab_list):
         )
 
 
+def register_homepage_panels(homepage_layout):
+    for column in homepage_layout:
+        create_or_check_entry(registry["homepage_layout"]["columns"], column, column.name, f"{column.name}")
+        registry_panels = registry["homepage_layout"]["columns"][column.name]["panels"]
+        for panel in column.panels:
+            if isinstance(panel, HomePagePanel):
+                create_or_check_entry(registry_panels, panel, panel.name, f"{column.name} -> {panel.name}")
+                registry_items = registry_panels[panel.name]["items"]
+                for item in panel.items:
+                    if isinstance(item, HomePageItem):
+                        create_or_check_entry(
+                            registry_items, item, item.name, f"{column.name} -> {panel.name} -> {item.name}"
+                        )
+                    elif isinstance(item, HomePageGroup):
+                        create_or_check_entry(
+                            registry_items, item, item.name, f"{column.name} -> {panel.name} -> {item.name}"
+                        )
+                        for group_item in item.items:
+                            create_or_check_entry(
+                                registry_items[item.name]["items"],
+                                group_item,
+                                group_item.name,
+                                f"{column.name} -> {panel.name} -> {item.name} -> {group_item.name}",
+                            )
+                        registry_items[item.name]["items"] = OrderedDict(
+                            sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                        )
+                    else:
+                        raise TypeError(
+                            f"Second level objects need to be an instance of HomePageGroup or HomePageItem: {item}"
+                        )
+
+                registry_panels[panel.name]["items"] = OrderedDict(
+                    sorted(registry_items.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                )
+            else:
+                raise TypeError(f"Top level objects need to be an instance of HomePagePanel: {panel}")
+
+        registry["homepage_layout"]["columns"][column.name]["panels"] = OrderedDict(
+            sorted(registry_panels.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+        )
+    registry["homepage_layout"]["columns"] = OrderedDict(
+        sorted(registry["homepage_layout"]["columns"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
+    )
+
+
+class HomePageBase(ABC):
+    @abstractproperty
+    def initial_dict(self):  # to be implemented by each subclass
+        return {}
+
+    @abstractproperty
+    def fixed_fields(self):  # to be implemented by subclass
+        return ()
+
+
 class NavMenuBase(ABC):  # replaces PermissionsMixin
     """Base class for navigation classes."""
 
@@ -129,6 +190,139 @@ class PermissionsMixin:
         if permissions is not None and not isinstance(permissions, (list, tuple)):
             raise TypeError("Permissions must be passed as a tuple or list.")
         self.permissions = permissions
+
+
+class HomePageColumn(HomePageBase, PermissionsMixin):
+    permissions = []
+    panels = []
+
+    @property
+    def initial_dict(self):
+        return {
+            "weight": self.weight,
+            "panels": {},
+            "permissions": set(),
+        }
+
+    @property
+    def fixed_fields(self):
+        return ()
+
+    def __init__(self, name, permissions=None, panels=None, weight=1000):
+        """Ensure tab properties."""
+        super().__init__(permissions)
+        self.name = name
+        self.weight = weight
+        if panels is not None:
+            if not isinstance(panels, (list, tuple)):
+                raise TypeError("Items must be passed as a tuple or list.")
+            elif not all(isinstance(panel, HomePagePanel) for panel in panels):
+                raise TypeError("All items defined in a tab must be an instance of HomePagePanel")
+            self.panels = panels
+
+
+class HomePagePanel(HomePageBase, PermissionsMixin):
+    permissions = []
+    items = []
+
+    @property
+    def initial_dict(self):
+        return {
+            "weight": self.weight,
+            "items": {},
+            "permissions": set(),
+        }
+
+    @property
+    def fixed_fields(self):
+        return ()
+
+    def __init__(self, name, permissions=None, items=None, weight=1000):
+        """Ensure tab properties."""
+        super().__init__(permissions)
+        self.name = name
+        self.weight = weight
+        if items is not None:
+            if not isinstance(items, (list, tuple)):
+                raise TypeError("Items must be passed as a tuple or list.")
+            elif not all(isinstance(item, (HomePageGroup, HomePageItem)) for item in items):
+                raise TypeError("All items defined in a tab must be an instance of HomePageGroup or HomePageItem")
+            self.items = items
+
+
+class HomePageGroup(HomePageBase, PermissionsMixin):
+    permissions = []
+    items = []
+
+    @property
+    def initial_dict(self):
+        return {
+            "items": {},
+            "permissions": set(),
+            "weight": self.weight,
+        }
+
+    @property
+    def fixed_fields(self):
+        return ()
+
+    def __init__(self, name, permissions=None, items=None, weight=1000):
+        """Ensure tab properties."""
+        super().__init__(permissions)
+        self.name = name
+        self.weight = weight
+
+        if items is not None:
+            if not isinstance(items, (list, tuple)):
+                raise TypeError("Items must be passed as a tuple or list.")
+            elif not all(isinstance(item, HomePageItem) for item in items):
+                raise TypeError("All items defined in a tab must be an instance of HomePageItem")
+            self.items = items
+
+
+class HomePageItem(HomePageBase, PermissionsMixin):
+    permissions = []
+    items = []
+
+    @property
+    def initial_dict(self):
+        return {
+            "custom_code": self.custom_code,
+            "custom_data": self.custom_data,
+            "description": self.description,
+            "link": self.link,
+            "model": self.model,
+            "permissions": set(),
+            "weight": self.weight,
+        }
+
+    @property
+    def fixed_fields(self):
+        return ()
+
+    def __init__(
+        self,
+        name,
+        link=None,
+        model=None,
+        custom_code=None,
+        custom_data=None,
+        description=None,
+        permissions=None,
+        weight=1000,
+    ):
+        """Ensure tab properties."""
+        super().__init__(permissions)
+        if link:
+            reverse(link)
+
+        self.name = name
+        self.custom_code = custom_code
+        self.custom_data = custom_data
+        self.description = description
+        self.link = link
+        self.model = model
+        self.weight = weight
 
 
 class NavMenuTab(NavMenuBase, PermissionsMixin):

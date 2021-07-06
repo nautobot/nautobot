@@ -1,11 +1,12 @@
 import platform
+from re import template
 import sys
 
 from django.conf import settings
 from django.db.models import F
 from django.http import HttpResponseServerError
 from django.shortcuts import render
-from django.template import loader
+from django.template import loader, Template, RequestContext
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
@@ -33,6 +34,7 @@ from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models import GitRepository, GraphQLQuery, ObjectChange, JobResult
+from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from nautobot.tenancy.models import Tenant
@@ -123,6 +125,29 @@ class HomeView(TemplateView):
                 "new_release": new_release,
             }
         )
+
+        for column_name, column_details in registry["homepage_layout"]["columns"].items():
+            for panel_name, panel_details in column_details["panels"].items():
+                for item_name, item_details in panel_details["items"].items():
+                    if item_details.get("custom_code"):
+                        for key, function in item_details.get("custom_data", {}).items():
+                            context[key] = function(request)
+                        sub_template = Template(item_details["custom_code"].strip())
+                        sub_context = RequestContext(request, context)
+                        registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][item_name][
+                            "rendered_html"
+                        ] = sub_template.render(sub_context)
+                    elif item_details.get("model"):
+                        registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][item_name][
+                            "count"
+                        ] = (item_details["model"].objects.restrict(request.user, "view").count())
+                    elif item_details.get("items"):
+                        for group_item_name, group_item_details in item_details["items"].items():
+                            registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][
+                                item_name
+                            ]["items"][group_item_name]["count"] = (
+                                group_item_details["model"].objects.restrict(request.user, "view").count()
+                            )
 
         return self.render_to_response(context)
 
