@@ -171,6 +171,7 @@ Available tasks:
 A development environment can be easily started up from the root of the project using the following commands:
 
 - `invoke build` - Builds Nautobot docker images
+- `invoke migrate` - Performs database migration operation in Django    
 - `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 - `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
 
