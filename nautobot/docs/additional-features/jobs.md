@@ -12,7 +12,7 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 ...and so on. Jobs are Python code and exist outside of the official Nautobot code base, so they can be updated and changed without interfering with the core Nautobot installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below.
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](./#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](./#variables).
 
 ## Writing Jobs
 
@@ -53,6 +53,9 @@ You can implement the entire job within the `run()` function, but for more compl
 
 It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database as [`JobResult`](../models/extras/jobresult.md) records.
 
+!!! note
+    When actively developing a Job utilizing a development environment it's important to understand that the "reload on code changes" debugging functionality does **not** automatically restart the `nautobot_worker`; therefore, it is required to restart the `worker` after each update to your Job source code.
+
 ### Module Attributes
 
 #### `name`
@@ -90,6 +93,10 @@ class MyJob(Job):
 #### `field_order`
 
 A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
+
+#### `read_only`
+
+A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 ### Variables
 

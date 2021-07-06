@@ -10,10 +10,10 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Rendered Context</strong>
-                    {% include 'extras/inc/configcontext_format.html' %}
+                    {% include 'extras/inc/json_format.html' %}
                 </div>
                 <div class="panel-body">
-                    {% include 'extras/inc/configcontext_data.html' with data=rendered_context format=format %}
+                    {% include 'extras/inc/json_data.html' with data=rendered_context format=format %}
                 </div>
             </div>
         </div>
@@ -24,12 +24,15 @@
                 </div>
                 <div class="panel-body">
                     {% if object.local_context_data %}
+                        {% if object.local_context_schema %}
+                            <span>Schema <a href="{{ object.local_context_schema.get_absolute_url }}">{{ object.local_context_schema }}</a></span>
+                        {% endif %}
                         {% if object.local_context_data_owner %}
                             Owned by <a href="{{ object.local_context_data_owner.get_absolute_url }}"><strong>
                                 {{ object.local_context_data_owner }}
                             </strong></a>
                         {% endif %}
-                        {% include 'extras/inc/configcontext_data.html' with data=object.local_context_data format=format %}
+                        {% include 'extras/inc/json_data.html' with data=object.local_context_data format=format %}
                     {% else %}
                         <span class="text-muted">None</span>
                     {% endif %}
@@ -54,7 +57,7 @@
                         {% if context.description %}
                             <br /><small>{{ context.description }}</small>
                         {% endif %}
-                        {% include 'extras/inc/configcontext_data.html' with data=context.data format=format %}
+                        {% include 'extras/inc/json_data.html' with data=context.data format=format %}
                     </div>
                 {% empty %}
                     <div class="panel-body">

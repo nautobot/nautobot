@@ -10,18 +10,22 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import *
 from nautobot.extras.models import (
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
     Status,
     Tag,
     Webhook,
+    ComputedField,
 )
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body
+from nautobot.utilities.testing.utils import post_data
 
 
 # Use the proper swappable User model
@@ -60,9 +64,11 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 # TODO: Change base class to PrimaryObjectViewTestCase
 # Blocked by absence of standard create/edit, bulk create views
 class ConfigContextTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
@@ -99,6 +105,119 @@ class ConfigContextTestCase(
         cls.bulk_edit_data = {
             "weight": 300,
             "is_active": False,
+            "description": "New description",
+        }
+
+    def test_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a config context that conforms to that schema
+        Assert that the config context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+        self.add_permissions("extras.view_configcontextschema")
+
+        form_data = {
+            "name": "Config Context with schema",
+            "weight": 200,
+            "description": "A new config context",
+            "is_active": True,
+            "regions": [],
+            "sites": [],
+            "roles": [],
+            "device_types": [],
+            "platforms": [],
+            "tenant_groups": [],
+            "tenants": [],
+            "tags": [],
+            "data": '{"foo": "bar"}',
+            "schema": schema.pk,
+        }
+
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(self._get_queryset().get(name="Config Context with schema").schema.pk, schema.pk)
+
+    def test_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a config context that *does not* conform to that schema
+        Assert that the config context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+        self.add_permissions("extras.view_configcontextschema")
+
+        form_data = {
+            "name": "Config Context with bad schema",
+            "weight": 200,
+            "description": "A new config context",
+            "is_active": True,
+            "regions": [],
+            "sites": [],
+            "roles": [],
+            "device_types": [],
+            "platforms": [],
+            "tenant_groups": [],
+            "tenants": [],
+            "tags": [],
+            "data": '{"foo": "bar"}',
+            "schema": schema.pk,
+        }
+
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.assertEqual(self._get_queryset().filter(name="Config Context with schema").count(), 0)
+
+
+# This OrganizationalObjectViewTestCase less BulkImportObjectsViewTestCase
+# because it doesn't make sense to support CSV for schemas.
+class ConfigContextSchemaTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
+    model = ConfigContextSchema
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Create three ConfigContextSchema records
+        ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
+        ),
+
+        cls.form_data = {
+            "name": "Schema X",
+            "slug": "schema-x",
+            "data_schema": '{"type": "object", "properties": {"baz": {"type": "string"}}}',
+        }
+
+        cls.bulk_edit_data = {
             "description": "New description",
         }
 
@@ -389,6 +508,135 @@ class WebhookTestCase(
         }
 
 
+class GraphQLQueriesTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = GraphQLQuery
+
+    @classmethod
+    def setUpTestData(cls):
+        graphqlqueries = (
+            GraphQLQuery(
+                name="graphql-query-1",
+                slug="graphql-query-1",
+                query="{ query: sites {name} }",
+            ),
+            GraphQLQuery(
+                name="graphql-query-2",
+                slug="graphql-query-2",
+                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            ),
+            GraphQLQuery(
+                name="graphql-query-3",
+                slug="graphql-query-3",
+                query="""
+query ($device: String!) {
+  devices(name: $device) {
+    config_context
+    name
+    position
+    serial
+    primary_ip4 {
+      id
+      primary_ip4_for {
+        id
+        name
+      }
+    }
+    tenant {
+      name
+    }
+    tags {
+      name
+      slug
+    }
+    device_role {
+      name
+    }
+    platform {
+      name
+      slug
+      manufacturer {
+        name
+      }
+      napalm_driver
+    }
+    site {
+      name
+      slug
+      vlans {
+        id
+        name
+        vid
+      }
+      vlan_groups {
+        id
+      }
+    }
+    interfaces {
+      description
+      mac_address
+      enabled
+      name
+      ip_addresses {
+        address
+        tags {
+          id
+        }
+      }
+      connected_circuit_termination {
+        circuit {
+          cid
+          commit_rate
+          provider {
+            name
+          }
+        }
+      }
+      tagged_vlans {
+        id
+      }
+      untagged_vlan {
+        id
+      }
+      cable {
+        termination_a_type
+        status {
+          name
+        }
+        color
+      }
+      tagged_vlans {
+        site {
+          name
+        }
+        id
+      }
+      tags {
+        id
+      }
+    }
+  }
+}""",
+            ),
+        )
+
+        for query in graphqlqueries:
+            query.full_clean()
+            query.save()
+
+        cls.form_data = {
+            "name": "graphql-query-4",
+            "slug": "graphql-query-4",
+            "query": "{query: sites {name}}",
+        }
+
+
 class RelationshipTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -499,3 +747,61 @@ class RelationshipAssociationTestCase(
             destination_type=vlan_type,
             destination_id=vlans[2].pk,
         )
+
+
+class ComputedFieldTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ComputedField
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        computed_fields = (
+            ComputedField(
+                content_type=obj_type,
+                label="Computed Field One",
+                slug="computed_field_one",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+            ComputedField(
+                content_type=obj_type,
+                slug="computed_field_two",
+                label="Computed Field Two",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+            ComputedField(
+                content_type=obj_type,
+                slug="computed_field_three",
+                label="Computed Field Three",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+        )
+
+        cls.site1 = Site(name="NYC")
+        cls.site1.save()
+
+        for cf in computed_fields:
+            cf.save()
+
+        cls.form_data = {
+            "content_type": obj_type.pk,
+            "slug": "computed_field_four",
+            "label": "Computed Field Four",
+            "template": "{{ obj.name }} is the best Site!",
+            "fallback_value": ":skull_emoji:",
+            "weight": 100,
+        }

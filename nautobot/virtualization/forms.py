@@ -12,6 +12,9 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
+    LocalContextFilterForm,
+    LocalContextModelForm,
+    LocalContextModelBulkEditForm,
     RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
@@ -259,7 +262,9 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 #
 
 
-class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VirtualMachineForm(
+    BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm
+):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -273,7 +278,6 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
         query_params={"vm_role": "True"},
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    local_context_data = JSONField(required=False, label="")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -295,6 +299,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
             "comments",
             "tags",
             "local_context_data",
+            "local_context_schema",
         ]
         help_texts = {
             "local_context_data": "Local config context data overwrites all sources contexts in the final rendered "
@@ -378,7 +383,9 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = VirtualMachine.csv_headers
 
 
-class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class VirtualMachineBulkEditForm(
+    BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
     role = DynamicModelChoiceField(
@@ -405,7 +412,9 @@ class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEd
         ]
 
 
-class VirtualMachineFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class VirtualMachineFilterForm(
+    BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm, LocalContextFilterForm
+):
     model = VirtualMachine
     field_order = [
         "q",

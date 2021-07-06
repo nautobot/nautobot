@@ -1,0 +1,55 @@
+{% extends 'extras/configcontextschema/base.html' %}
+{% load helpers %}
+{% load plugins %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Config Context Schema</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            {{ object.name }}
+                        </td>
+                    </tr>
+                    {% if object.owner %}
+                        <tr>
+                            <td>Owner</td>
+                            <td>
+                                <a href="{{ object.owner.get_absolute_url }}">{{ object.owner }}</a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                </table>
+            </div>
+            {% include 'inc/custom_fields_panel.html' %}
+            {% include 'inc/relationships_panel.html' %}
+            {% plugin_left_page object %}
+        </div>
+        <div class="col-md-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Data Schema</strong>
+                    {% include 'extras/inc/json_format.html' %}
+                </div>
+                <div class="panel-body">
+                    {% include 'extras/inc/json_data.html' with data=object.data_schema format=format %}
+                </div>
+            </div>
+            {% plugin_right_page object %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% plugin_full_width_page object %}
+        </div>
+    </div>
+{% endblock %}

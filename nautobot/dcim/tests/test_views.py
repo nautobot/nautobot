@@ -15,7 +15,14 @@ from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
 from nautobot.dcim.models import *
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice, Relationship, RelationshipAssociation, Status
+from nautobot.extras.models import (
+    ConfigContextSchema,
+    CustomField,
+    CustomFieldChoice,
+    Relationship,
+    RelationshipAssociation,
+    Status,
+)
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, post_data
@@ -1259,6 +1266,54 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         self.assertHttpStatus(self.client.post(**request), 302)
         self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), form_data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_local_context_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a device with local context that conforms to that schema
+        Assert that the local context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        )
+        self.add_permissions("dcim.add_device")
+
+        form_data = self.form_data.copy()
+        form_data["local_context_schema"] = schema.pk
+        form_data["local_context_data"] = '{"foo": "bar"}'
+
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(self._get_queryset().get(name="Device X").local_context_schema.pk, schema.pk)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_local_context_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a device with local context that *does not* conform to that schema
+        Assert that the local context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+        )
+        self.add_permissions("dcim.add_device")
+
+        form_data = self.form_data.copy()
+        form_data["local_context_schema"] = schema.pk
+        form_data["local_context_data"] = '{"foo": "bar"}'
+
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.assertEqual(self._get_queryset().filter(name="Device X").count(), 0)
 
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
