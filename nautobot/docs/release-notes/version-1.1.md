@@ -96,3 +96,4 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#533](https://github.com/nautobot/nautobot/issues/533) - Custom field tasks are now run atomically to avoid stale field data from being saved on objects.
 - [#602](https://github.com/nautobot/nautobot/issues/602) - Fixed incorrect requirement to install `toml` Python library before running `invoke` tasks
 - [#618](https://github.com/nautobot/nautobot/pull/618) - Fixed typo in release-notes
+- [#626](https://github.com/nautobot/nautobot/pull/626) - Added prefix `NAUTOBOT_` in `override.env` example inside of `docker-entrypoint.sh`
