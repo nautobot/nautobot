@@ -1,6 +1,7 @@
 from nautobot.core.apps import HomePageColumn, HomePageItem, HomePagePanel
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
+
 layout = (
     HomePageColumn(
         name="second",

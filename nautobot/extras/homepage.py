@@ -3,7 +3,7 @@ from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models import GitRepository, JobResult, ObjectChange
 
 
-def get_job_results(_):
+def get_job_results(request):
     return (
         JobResult.objects.filter(status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES)
         .defer("data")
