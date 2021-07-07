@@ -5,17 +5,17 @@ import sys
 from nautobot.core.settings import *
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
-ALLOWED_HOSTS = os.environ.get("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
 DATABASES = {
     "default": {
-        "NAME": os.environ.get("NAUTOBOT_DB_NAME", "nautobot"),
-        "USER": os.environ.get("NAUTOBOT_DB_USER", ""),
-        "PASSWORD": os.environ.get("NAUTOBOT_DB_PASSWORD", ""),
-        "HOST": os.environ.get("NAUTOBOT_DB_HOST", "localhost"),
-        "PORT": os.environ.get("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": 300,
-        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
+        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
+        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
+        "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
+        "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
@@ -92,7 +92,7 @@ CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 
 HIDE_RESTRICTED_UI = is_truthy(os.environ.get("HIDE_RESTRICTED_UI", False))
 
-SECRET_KEY = os.environ.get("NAUTOBOT_SECRET_KEY", "")
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
 
 # Django Debug Toolbar
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
@@ -103,6 +103,16 @@ if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
 
+#
+# Napalm
+#
+
 NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
 NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
 NAPALM_ARGS = {'secret': NAPALM_PASSWORD}
+
+#
+# Celery
+#
+
+CELERY_TASK_TIME_LIMIT = int(os.environ.get("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))

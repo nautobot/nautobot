@@ -11,11 +11,12 @@ from graphene.types import generic
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.generators import (
-    generate_schema_type,
+    generate_attrs_for_schema_type,
+    generate_computed_field_resolver,
     generate_custom_field_resolver,
     generate_relationship_resolver,
     generate_restricted_queryset,
-    generate_attrs_for_schema_type,
+    generate_schema_type,
 )
 from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
@@ -28,7 +29,7 @@ from nautobot.dcim.graphql.types import (
     SiteType,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.models import CustomField, Relationship
+from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType
 from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
@@ -108,6 +109,11 @@ def extend_schema_type(schema_type):
     #
     schema_type = extend_schema_type_relationships(schema_type, model)
 
+    #
+    # Computed Fields
+    #
+    schema_type = extend_schema_type_computed_field(schema_type, model)
+
     return schema_type
 
 
@@ -149,6 +155,47 @@ def extend_schema_type_custom_field(schema_type, model):
             schema_type._meta.fields[field_name] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
         else:
             schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
+
+    return schema_type
+
+
+def extend_schema_type_computed_field(schema_type, model):
+    """Extend schema_type object to had attribute and resolver around computed_fields.
+    Each computed field will be defined as a first level attribute.
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+
+    cfs = ComputedField.objects.get_for_model(model)
+    prefix = ""
+    if settings.GRAPHQL_COMPUTED_FIELD_PREFIX and isinstance(settings.GRAPHQL_COMPUTED_FIELD_PREFIX, str):
+        prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
+
+    for field in cfs:
+        field_name = f"{prefix}{str_to_var_name(field.slug)}"
+        resolver_name = f"resolve_{field_name}"
+
+        if hasattr(schema_type, field_name):
+            logger.warning(
+                "Unable to add the computed field %s to %s because there is already an attribute with the same name (%s)",
+                field.slug,
+                schema_type._meta.slug,
+                field_name,
+            )
+            continue
+
+        setattr(
+            schema_type,
+            resolver_name,
+            generate_computed_field_resolver(field.slug, resolver_name),
+        )
+
+        schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
 
     return schema_type
 

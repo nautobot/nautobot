@@ -19,13 +19,15 @@ from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     CustomFieldFilterForm,
     CustomFieldModelForm,
-    LocalConfigContextFilterForm,
+    LocalContextFilterForm,
+    LocalContextModelForm,
+    LocalContextModelBulkEditForm,
     RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
+from nautobot.extras.models import ConfigContextSchema, Tag
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN, IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -1623,7 +1625,7 @@ class PlatformCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm):
     region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
     site = DynamicModelChoiceField(queryset=Site.objects.all(), query_params={"region_id": "$region"})
     rack_group = DynamicModelChoiceField(
@@ -1678,7 +1680,6 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         query_params={"group_id": "$cluster_group"},
     )
     comments = CommentField()
-    local_context_data = JSONField(required=False, label="")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -1704,6 +1705,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
             "comments",
             "tags",
             "local_context_data",
+            "local_context_schema",
         ]
         help_texts = {
             "device_role": "The function this device serves",
@@ -1937,7 +1939,9 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
             self.instance.rack = parent.rack
 
 
-class DeviceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class DeviceBulkEditForm(
+    BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     device_type = DynamicModelChoiceField(
@@ -1960,7 +1964,7 @@ class DeviceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMi
 
 class DeviceFilterForm(
     BootstrapMixin,
-    LocalConfigContextFilterForm,
+    LocalContextFilterForm,
     TenancyFilterForm,
     StatusFilterFormMixin,
     CustomFieldFilterForm,

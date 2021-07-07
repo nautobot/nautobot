@@ -103,7 +103,7 @@ Nautobot has done away with the requirement to duplicate or modify files anywher
 
 To facilitate this, many automatically generated settings have been removed, and replaced with their underlying static configurations. We feel this affords a greater amount of flexibility in deployment patterns, with a tradeoff of slightly more initial configuration.
 
-To make things a little easier, you may generate a new configuration with sane defaults using the `nautobot-server init` command! The configuration file defaults to `~/.nautbot/nautobot_config.py` but using the `nautobot-server --config` argument, you may name or place the file anywhere you choose.
+To make things a little easier, you may generate a new configuration with sane defaults using the `nautobot-server init` command! The configuration file defaults to `~/.nautobot/nautobot_config.py` but using the `nautobot-server --config` argument, you may name or place the file anywhere you choose.
 
 You may also defined a `NAUTOBOT_CONFIG` variable to tell Nautobot where to find the file so that you don't need to always pass the `--config` argument.
 
@@ -176,21 +176,6 @@ Secrets storage and management has been removed from Nautobot.
 #### Related Devices
 
 The "Related Devices" table has been removed from the detailed Device view.
-
-## Unreleased (2021-??-??)
-
-### Added
-
-### Changed
-
-### Fixed
-
-- [#460](https://github.com/nautobot/nautobot/issues/460) - Deleting a record now deletes any associated `RelationshipAssociation` records
-- [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choices correctly when performing `OPTIONS` metadata API requests
-
-### Removed
-
-### Security
 
 ## v1.0.3 (2021-06-21)
 
