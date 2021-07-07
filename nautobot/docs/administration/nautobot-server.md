@@ -136,6 +136,14 @@ Adds/Removes any custom fields which should or should not exist on an object.  T
 
 ```no-highlight
 $ nautobot-server fix_custom_fields
+Processing ContentType dcim | device
+Processing ContentType dcim | site
+Processing ContentType dcim | rack
+Processing ContentType dcim | cable
+Processing ContentType dcim | power feed
+Processing ContentType circuits | circuit
+Processing ContentType ipam | prefix
+... (truncated for brevity of documentation) ...
 ```
 
 ### `generate_secret_key`

@@ -24,12 +24,12 @@ class Command(BaseCommand):
                     # Provision CustomFields that are not associated with the object
                     for custom_field in custom_fields_for_content_type:
                         if not obj._custom_field_data[custom_field.name]:
-                            self.stdout.write(f"Adding CustomField {custom_field.name} to {obj}")
+                            self.stdout.write(f"Adding missing CustomField {custom_field.name} to {obj}")
                             obj._custom_field_data[custom_field.name] = custom_field.default
                             obj_changed = True
                     # Remove any custom fields that are not associated with the content type
                     for field_name in set(obj._custom_field_data) - set(custom_field_names_for_content_type):
-                        self.stdout.write(f"Removing CustomField {field_name} from {obj}")
+                        self.stdout.write(f"Removing invalid CustomField {field_name} from {obj}")
                         del obj._custom_field_data[field_name]
                         obj_changed = True
                     if obj_changed:
