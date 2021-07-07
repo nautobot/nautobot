@@ -7,7 +7,7 @@ from nautobot.extras.utils import FeatureQuery
 
 
 class Command(BaseCommand):
-    help = "Reset custom field attachments"
+    help = "Adds/Removes any custom fields which should or should not exist on an object. This command should not be run unless a custom fields jobs has failed."
 
     def handle(self, *args, **kwargs):
         """Run through all objects and ensure they are associated with the correct custom fields."""
