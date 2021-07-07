@@ -2,6 +2,7 @@ from unittest import skipIf
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
 
@@ -24,7 +25,6 @@ from dummy_plugin.datasources import refresh_git_text_files
 )
 class PluginTest(TestCase):
     def test_config(self):
-
         self.assertIn(
             "dummy_plugin.DummyPluginConfig",
             settings.INSTALLED_APPS,
@@ -43,19 +43,9 @@ class PluginTest(TestCase):
         self.assertIsNone(instance.pk)
 
     def test_admin(self):
-
         # Test admin view URL resolution
         url = reverse("admin:dummy_plugin_dummymodel_add")
         self.assertEqual(url, "/admin/dummy_plugin/dummymodel/add/")
-
-    def test_menu_items(self):
-        """
-        Check that plugin MenuItems and MenuButtons are registered.
-        """
-        self.assertIn("Dummy plugin", registry["plugin_menu_items"])
-        menu_items = registry["plugin_menu_items"]["Dummy plugin"]
-        self.assertEqual(len(menu_items), 2)
-        self.assertEqual(len(menu_items[0].buttons), 2)
 
     def test_template_extensions(self):
         """
@@ -74,6 +64,16 @@ class PluginTest(TestCase):
         )
 
         self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
+
+    def test_jinja_filter_registration(self):
+        """
+        Check that plugin custom jinja filters are registered correctly.
+        """
+        from dummy_plugin.jinja_filters import leet_speak
+
+        rendering_engine = engines["jinja"]
+
+        self.assertEqual(leet_speak, rendering_engine.env.filters[leet_speak.__name__])
 
     def test_graphql_types(self):
         """
@@ -235,7 +235,7 @@ class PluginTest(TestCase):
 
     def test_installed_apps(self):
         """
-        Validate that plugin installed apps and dependencies are are registerd.
+        Validate that plugin installed apps and dependencies are are registered.
         """
         self.assertIn(
             "dummy_plugin.DummyPluginConfig",
@@ -250,6 +250,18 @@ class PluginTest(TestCase):
         # Validation should fail when a installed_apps is not a list
         with self.assertRaises(PluginImproperlyConfigured):
             DummyConfigWithInstalledApps.validate({}, settings.VERSION)
+
+    def test_registry_nav_menu_dict(self):
+        """
+        Validate that dummy plugin is adding new items to `registry["nav_menu"]`.
+        """
+        self.assertTrue(registry["nav_menu"]["tabs"].get("Dummy Tab"))
+        self.assertTrue(registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"].get("Dummy Group 1"))
+        self.assertTrue(
+            registry["nav_menu"]["tabs"]["Dummy Tab"]["groups"]["Dummy Group 1"]["items"].get(
+                "plugins:dummy_plugin:dummymodel_list"
+            )
+        )
 
 
 @skipIf(
@@ -342,7 +354,6 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-
         site = Site(name="this site has a matching name", slug="site1")
 
         with self.assertRaises(ValidationError):

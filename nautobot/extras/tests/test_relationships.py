@@ -235,7 +235,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_o2o(self):
-        """Validate that one-to-one relationships can't have more than one relationship association per side. """
+        """Validate that one-to-one relationships can't have more than one relationship association per side."""
 
         cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.sites[0])
         cra.clean()
@@ -263,7 +263,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_o2m(self):
-        """Validate that one-to-many relationships can't have more than one relationship association per source. """
+        """Validate that one-to-many relationships can't have more than one relationship association per source."""
 
         cra = RelationshipAssociation(relationship=self.o2m_1, source=self.sites[0], destination=self.vlans[0])
         cra.clean()

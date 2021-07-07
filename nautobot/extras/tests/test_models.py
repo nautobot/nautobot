@@ -19,7 +19,16 @@ from nautobot.dcim.models import (
     Region,
 )
 from nautobot.extras.jobs import get_job, Job
-from nautobot.extras.models import ConfigContext, GitRepository, JobResult, Status, Tag
+from nautobot.extras.models import (
+    ComputedField,
+    ConfigContext,
+    ConfigContextSchema,
+    ExportTemplate,
+    GitRepository,
+    JobResult,
+    Status,
+    Tag,
+)
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
@@ -83,6 +92,27 @@ class ConfigContextTest(TestCase):
 
         expected_data = {"a": 123, "b": 456, "c": 789}
         self.assertEqual(self.device.get_config_context(), expected_data)
+
+    def test_name_uniqueness(self):
+        """
+        Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
+        """
+        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
+        with self.assertRaises(ValidationError):
+            duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
+            duplicate_context.validated_save()
+
+        # If a different context is owned by a GitRepository, that's not considered a duplicate
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+
+        nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
+        nonduplicate_context.validated_save()
 
     def test_annotation_same_as_get_for_object(self):
         """
@@ -222,6 +252,38 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+
+
+class ExportTemplateTest(TestCase):
+    """
+    Tests for the ExportTemplate model class.
+    """
+
+    def test_name_contenttype_uniqueness(self):
+        """
+        The pair of (name, content_type) must be unique for an un-owned ExportTemplate.
+
+        See GitHub issue #431.
+        """
+        device_ct = ContentType.objects.get_for_model(Device)
+        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
+
+        with self.assertRaises(ValidationError):
+            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
+            duplicate_template.validated_save()
+
+        # A differently owned ExportTemplate may have the same name
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+        nonduplicate_template = ExportTemplate(
+            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
+        )
+        nonduplicate_template.validated_save()
 
 
 class GitRepositoryTest(TransactionTestCase):
@@ -409,3 +471,258 @@ class StatusTest(TestCase):
             self.status.clean()
             self.status.save()
             self.assertEquals(str(self.status), test)
+
+
+class ConfigContextSchemaTestCase(TestCase):
+    """
+    Tests for the ConfigContextSchema model
+    """
+
+    def setUp(self):
+        context_data = {"a": 123, "b": 456, "c": 777}
+
+        # Schemas
+        self.schema_validation_pass = ConfigContextSchema.objects.create(
+            name="schema-pass",
+            slug="schema-pass",
+            data_schema={
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}, "c": {"type": "integer"}},
+            },
+        )
+        self.schema_validation_fail = ConfigContextSchema.objects.create(
+            name="schema-fail",
+            slug="schema-fail",
+            data_schema={"type": "object", "additionalProperties": False, "properties": {"foo": {"type": "string"}}},
+        )
+
+        # ConfigContext
+        self.config_context = ConfigContext.objects.create(name="context 1", weight=101, data=context_data)
+
+        # Device
+        status = Status.objects.get(slug="active")
+        site = Site.objects.create(name="site", slug="site", status=status)
+        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
+        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
+        self.device = Device.objects.create(
+            name="device",
+            site=site,
+            device_type=device_type,
+            device_role=device_role,
+            status=status,
+            local_context_data=context_data,
+        )
+
+        # Virtual Machine
+        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
+        cluster = Cluster.objects.create(name="cluster", type=cluster_type)
+        self.virtual_machine = VirtualMachine.objects.create(
+            name="virtual_machine", cluster=cluster, status=status, local_context_data=context_data
+        )
+
+    def test_existing_config_context_valid_schema_applied(self):
+        """
+        Given an existing config context object
+        And a config context schema object with a json schema
+        And the config context context data is valid for the schema
+        Assert calling clean on the config context object DOES NOT raise a ValidationError
+        """
+        self.config_context.schema = self.schema_validation_pass
+
+        try:
+            self.config_context.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_config_context_invalid_schema_applied(self):
+        """
+        Given an existing config context object
+        And a config context schema object with a json schema
+        And the config context context data is NOT valid for the schema
+        Assert calling clean on the config context object DOES raise a ValidationError
+        """
+        self.config_context.schema = self.schema_validation_fail
+
+        with self.assertRaises(ValidationError):
+            self.config_context.full_clean()
+
+    def test_existing_config_context_with_no_schema_applied(self):
+        """
+        Given an existing config context object
+        And no schema has been set on the config context object
+        Assert calling clean on the config context object DOES NOT raise a ValidationError
+        """
+        try:
+            self.config_context.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_device_valid_schema_applied(self):
+        """
+        Given an existing device object with local_context_data
+        And a config context schema object with a json schema
+        And the device local_context_data is valid for the schema
+        Assert calling clean on the device object DOES NOT raise a ValidationError
+        """
+        self.device.local_context_schema = self.schema_validation_pass
+
+        try:
+            self.device.full_clean()
+        except ValidationError:
+            self.fail("self.device.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_device_invalid_schema_applied(self):
+        """
+        Given an existing device object with local_context_data
+        And a config context schema object with a json schema
+        And the device local_context_data is NOT valid for the schema
+        Assert calling clean on the device object DOES raise a ValidationError
+        """
+        self.device.local_context_schema = self.schema_validation_fail
+
+        with self.assertRaises(ValidationError):
+            self.device.full_clean()
+
+    def test_existing_device_with_no_schema_applied(self):
+        """
+        Given an existing device object
+        And no schema has been set on the device object
+        Assert calling clean on the device object DOES NOT raise a ValidationError
+        """
+        try:
+            self.device.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_virtual_machine_valid_schema_applied(self):
+        """
+        Given an existing virtual machine object with local_context_data
+        And a config context schema object with a json schema
+        And the virtual machine local_context_data is valid for the schema
+        Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
+        """
+        self.virtual_machine.local_context_schema = self.schema_validation_pass
+
+        try:
+            self.virtual_machine.full_clean()
+        except ValidationError:
+            self.fail("self.virtual_machine.full_clean() raised ValidationError unexpectedly!")
+
+    def test_existing_virtual_machine_invalid_schema_applied(self):
+        """
+        Given an existing virtual machine object with local_context_data
+        And a config context schema object with a json schema
+        And the virtual machine local_context_data is NOT valid for the schema
+        Assert calling clean on the virtual machine object DOES raise a ValidationError
+        """
+        self.virtual_machine.local_context_schema = self.schema_validation_fail
+
+        with self.assertRaises(ValidationError):
+            self.virtual_machine.full_clean()
+
+    def test_existing_virtual_machine_with_no_schema_applied(self):
+        """
+        Given an existing virtual machine object
+        And no schema has been set on the virtual machine object
+        Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
+        """
+        try:
+            self.virtual_machine.full_clean()
+        except ValidationError:
+            self.fail("self.config_context.full_clean() raised ValidationError unexpectedly!")
+
+    def test_invalid_json_schema_is_not_allowed(self):
+        """
+        Given a config context schema object
+        With an invalid JSON schema
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_be_an_object(self):
+        """
+        Given a config context schema object
+        With a JSON schema of type object
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema=["not an object"])
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_type_set_to_object(self):
+        """
+        Given a config context schema object
+        With a JSON schema with type set to integer
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_type_present(self):
+        """
+        Given a config context schema object
+        With a JSON schema with type not present
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(
+            name="invalid", slug="invalid", data_schema={"properties": {"a": {"type": "string"}}}
+        )
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+    def test_json_schema_must_have_properties_present(self):
+        """
+        Given a config context schema object
+        With a JSON schema with properties not present
+        Assert calling clean on the config context schema object raises a ValidationError
+        """
+        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema={"type": "object"})
+
+        with self.assertRaises(ValidationError):
+            invalid_schema.full_clean()
+
+
+class ComputedFieldTest(TestCase):
+    """
+    Tests for the `ComputedField` Model
+    """
+
+    def setUp(self):
+        self.good_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="good_computed_field",
+            label="Good Computed Field",
+            template="{{ obj.name }} is awesome!",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ not_in_context | not_a_filter }} is horrible!",
+            fallback_value="An error occurred while rendering this template.",
+            weight=50,
+        )
+        self.site1 = Site.objects.create(name="NYC")
+
+    def test_render_method(self):
+        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+
+    def test_render_method_bad_template(self):
+        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
