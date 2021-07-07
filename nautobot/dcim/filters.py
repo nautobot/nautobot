@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
-    LocalConfigContextFilterSet,
+    LocalContextFilterSet,
     CreatedUpdatedFilterSet,
     StatusModelFilterSetMixin,
 )
@@ -580,7 +580,7 @@ class PlatformFilterSet(
 class DeviceFilterSet(
     BaseFilterSet,
     TenancyFilterSet,
-    LocalConfigContextFilterSet,
+    LocalContextFilterSet,
     StatusModelFilterSetMixin,
     CustomFieldModelFilterSet,
     CreatedUpdatedFilterSet,

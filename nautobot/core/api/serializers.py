@@ -13,7 +13,57 @@ from rest_framework.exceptions import ValidationError
 from nautobot.utilities.utils import dict_to_filter_params
 
 
-class BaseModelSerializer(serializers.ModelSerializer):
+class OptInFieldsMixin:
+    """
+    A serializer mixin that takes an additional `opt_in_fields` argument that controls
+    which fields should be displayed.
+    """
+
+    @property
+    def fields(self):
+        """
+        Removes all serializer fields specified in a serializers `opt_in_fields` list that aren't specified in the
+        `opt_in_fields` query parameter.
+
+        As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
+        but `computed_fields` is not specified in the `?opt_in_fields` query parameter, `computed_fields` will be popped
+        from the list of fields.
+        """
+        fields = super().fields
+        serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
+
+        if not serializer_opt_in_fields:
+            return fields
+
+        if not hasattr(self, "_context"):
+            # We are being called before a request cycle
+            return fields
+
+        try:
+            request = self.context["request"]
+        except KeyError:
+            return fields
+
+        request = self.context["request"]
+
+        # NOTE: drf test framework builds a request object where the query
+        # parameters are found under the GET attribute.
+        params = getattr(request, "query_params", getattr(request, "GET", None))
+
+        try:
+            user_opt_in_fields = params.get("opt_in_fields", None).split(",")
+        except AttributeError:
+            user_opt_in_fields = []
+
+        # Drop any fields that are not specified in the users opt in fields
+        for field in serializer_opt_in_fields:
+            if field not in user_opt_in_fields:
+                fields.pop(field, None)
+
+        return fields
+
+
+class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
     Namely it defines the `display` field which exposes a human friendly value for the given object.

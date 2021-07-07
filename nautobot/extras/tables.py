@@ -3,9 +3,11 @@ import inspect
 import django_tables2 as tables
 
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
+from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.utilities.tables import (
     BaseTable,
@@ -19,10 +21,13 @@ from nautobot.utilities.tables import (
 )
 from .jobs import get_job_classpaths, Job
 from .models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     JobResult,
     ObjectChange,
     Relationship,
@@ -38,15 +43,6 @@ TAGGED_ITEM = """
     <a href="{{ value.get_absolute_url }}">{{ value }}</a>
 {% else %}
     {{ value }}
-{% endif %}
-"""
-
-CONFIGCONTEXT_ACTIONS = """
-{% if perms.extras.change_configcontext %}
-    <a href="{% url 'extras:configcontext_edit' pk=record.pk %}" class="btn btn-xs btn-warning"><i class="mdi mdi-pencil" aria-hidden="true"></i></a>
-{% endif %}
-{% if perms.extras.delete_configcontext %}
-    <a href="{% url 'extras:configcontext_delete' pk=record.pk %}" class="btn btn-xs btn-danger"><i class="mdi mdi-trash-can-outline" aria-hidden="true"></i></a>
 {% endif %}
 """
 
@@ -127,6 +123,46 @@ class ConfigContextTable(BaseTable):
             "tenants",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
+
+
+class ConfigContextSchemaTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    owner = tables.LinkColumn()
+    actions = ButtonsColumn(ConfigContextSchema, pk_field="slug")
+
+    class Meta(BaseTable.Meta):
+        model = ConfigContextSchema
+        fields = (
+            "pk",
+            "name",
+            "owner",
+            "description",
+            "actions",
+        )
+        default_columns = ("pk", "name", "description", "actions")
+
+
+class ConfigContextSchemaValidationStateColumn(tables.Column):
+    """
+    Custom column that validates an instance's context data against a config context schema
+    """
+
+    def __init__(self, validator, data_field, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.validator = validator
+        self.data_field = data_field
+
+    def render(self, record):
+        data = getattr(record, self.data_field)
+        try:
+            self.validator.validate(data)
+        except JSONSchemaValidationError as e:
+            # Return a red x (like a boolean column) and the validation error message
+            return format_html(f'<span class="text-danger"><i class="mdi mdi-close-thick"></i>{e.message}</span>')
+
+        # Return a green check (like a boolean column)
+        return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
 
 
 class GitRepositoryTable(BaseTable):
@@ -421,3 +457,39 @@ class RelationshipAssociationTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
         fields = ("relationship", "source", "destination", "actions")
+
+
+class GraphQLQueryTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = GraphQLQuery
+        fields = (
+            "pk",
+            "name",
+            "slug",
+        )
+
+
+class ComputedFieldTable(BaseTable):
+    pk = ToggleColumn()
+    label = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = ComputedField
+        fields = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+        )

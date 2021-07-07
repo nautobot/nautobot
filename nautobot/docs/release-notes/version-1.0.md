@@ -177,28 +177,6 @@ Secrets storage and management has been removed from Nautobot.
 
 The "Related Devices" table has been removed from the detailed Device view.
 
-## Unreleased (2021-??-??)
-
-### Added
-
-- [#10](https://github.com/nautobot/nautobot/issues/10) - Added a new "Getting Started in the Web UI" section to the documentation to help new users begin learning how to use Nautobot.
-- [#557](https://github.com/nautobot/nautobot/issues/557) - `Prefix` records can now be created using /32 (IPv4) and /128 (IPv6) networks. (Port of [NetBox #6545](https://github.com/netbox-community/netbox/pull/6545))
-
-### Changed
-
-- [#431](https://github.com/nautobot/nautobot/issues/431) - `ConfigContext` and `ExportTemplate` records now must have unique `name` values. This was always the case in NetBox, but was inadvertently un-enforced in earlier versions of Nautobot.
-
-### Fixed
-
-- [#460](https://github.com/nautobot/nautobot/issues/460) - Deleting a record now deletes any associated `RelationshipAssociation` records
-- [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choices correctly when performing `OPTIONS` metadata API requests
-- [#602](https://github.com/nautobot/nautobot/issues/602) - Fixed incorrect requirement to install `toml` Python library before running `invoke` tasks
-- [#618](https://github.com/nautobot/nautobot/pull/618) - Fixed typo in release-notes
-
-### Removed
-
-### Security
-
 ## v1.0.3 (2021-06-21)
 
 ### Added

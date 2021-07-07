@@ -9,6 +9,9 @@ For those familiar with Django applications, this CLI utility works exactly as a
 !!! important
     Since Nautobot is a Django application, there are a number of built-in management commands that will not be covered in this document. Please see the [official Django documentation on management commands](https://docs.djangoproject.com/en/stable/ref/django-admin/#available-commands) for more information.
 
+!!! important
+    Django does not recognize `nautobot-server`.  Anywhere `python manage.py` is mentioned, it is safe to replace with `nautobot-server`.
+
 ## Getting Help
 
 To see all available management commands:
@@ -24,6 +27,48 @@ $ nautobot-server migrate --help
 ```
 
 ## Available Commands
+
+### `celery`
+
+`nautobot-server celery`
+
+Celery command entrypoint which serves as a thin wrapper to the `celery` command that includes the Nautobot Celery application context. This allows us to execute Celery commands without having to worry about the chicken-and-egg problem with bootstrapping the Django settings.
+
+Most commonly you will be using this command to start the Celery worker process:
+
+```no-highlight
+$ nautobot-server celery worker --loglevel INFO --pidfile $(pwd)/nautobot-celery.pid -n worker1
+
+celery@worker1 v5.1.1 (sun-harmonics)
+
+[config]
+.> app:         nautobot:0x10c357eb0
+.> transport:   redis://localhost:6379/0
+.> results:     redis://localhost:6379/0
+.> concurrency: 8 (prefork)
+.> task events: OFF (enable -E to monitor tasks in this worker)
+
+[queues]
+.> celery           exchange=celery(direct) key=celery
+
+
+[tasks]
+  . nautobot.extras.datasources.git.pull_git_repository_and_refresh_data
+  . nautobot.extras.jobs.run_job
+  . nautobot.extras.tasks.delete_custom_field_data
+  . nautobot.extras.tasks.process_webhook
+  . nautobot.extras.tasks.provision_field
+  . nautobot.extras.tasks.update_custom_field_choice_data
+  . nautobot.utilities.tasks.get_releases
+
+[2021-07-01 21:32:40,680: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2021-07-01 21:32:40,690: INFO/MainProcess] mingle: searching for neighbors
+[2021-07-01 21:32:41,713: INFO/MainProcess] mingle: all alone
+[2021-07-01 21:32:41,730: INFO/MainProcess] celery@worker1 ready.
+```
+
+!!! note
+    The internals of this command are built into Celery. Please see the [official Celery workers guide](https://docs.celeryproject.org/en/stable/userguide/workers.html) for more information.
 
 ### `collectstatic`
 
@@ -62,7 +107,7 @@ Superuser created successfully.
 
 `nautobot-server dbshell`
 
-A shell for your PostgreSQL database. This can be very useful in troubleshooting raw database issues.
+A shell for your database. This can be very useful in troubleshooting raw database issues.
 
 !!! danger
     This is an advanced feature that gives you direct access to run raw SQL queries. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
@@ -104,6 +149,20 @@ $ nautobot-server generate_secret_key
 e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
 ```
 
+### `health_check`
+
+`nautobot-server health_check`
+
+Run health checks and exit 0 if everything went well.
+
+```no-highlight
+$ nautobot-server health_check
+Cache backend: default   ... working
+DatabaseBackend          ... working
+DefaultFileStorageHealthCheck ... working
+```
+
+Please see the [healthcheck documentation](../additional-features/healthcheck.md) for more information.
 ### `init`
 
 `nautobot-server init [config_path]`
@@ -345,7 +404,7 @@ spawned uWSGI worker 4 (pid: 112168, cores: 3)
 spawned uWSGI worker 5 (pid: 112171, cores: 3)
 ```
 
-Please see the guide on [Deploying Nautobot](../installation/wsgi.md) for our recommended configuration for use with uWSGI.
+Please see the guide on [Deploying Nautobot Services](../installation/services.md) for our recommended configuration for use with uWSGI.
 
 ### `startplugin`
 
@@ -357,9 +416,9 @@ This command is similar to the django-admin [startapp](https://docs.djangoprojec
 
 Without passing in the destination directory, `nautobot-server startplugin` will use your current directory and the `name` argument provided to create a new directory. We recommend providing a  directory so that the plugin can be installed or published easily. Here is an example:
 
-```bash
-mkdir -p ~/myplugin/myplugin
-nautobot-server startplugin myplugin ~/myplugin/myplugin
+```no-highlight
+$ mkdir -p ~/myplugin/myplugin
+$ nautobot-server startplugin myplugin ~/myplugin/myplugin
 ```
 
 Additional options such as `--name` or `--extension` can be found in the Django [documentation](https://docs.djangoproject.com/en/stable/ref/django-admin/#startapp).

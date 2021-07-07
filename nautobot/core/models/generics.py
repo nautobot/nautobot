@@ -7,12 +7,7 @@ from nautobot.extras.models.tags import TaggedItem
 from nautobot.core.models import BaseModel
 
 
-class OrganizationalModel(
-    BaseModel,
-    ChangeLoggedModel,
-    CustomFieldModel,
-    RelationshipModel,
-):
+class OrganizationalModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Base abstract model for all organizational models.
 
@@ -27,12 +22,7 @@ class OrganizationalModel(
         abstract = True
 
 
-class PrimaryModel(
-    BaseModel,
-    ChangeLoggedModel,
-    CustomFieldModel,
-    RelationshipModel,
-):
+class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     """
     Base abstract model for all primary models.
 
