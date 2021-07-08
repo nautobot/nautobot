@@ -760,10 +760,10 @@ class JobForm(BootstrapMixin, forms.Form):
 
 class JobScheduleForm(BootstrapMixin, forms.Form):
     """
-    This form is rendered along side the JobForm but deals specifically with the fields needed to either
-    execute the job immediately, or schedule it for later. Each field name is prefixed with and underscore
+    This form is rendered alongside the JobForm but deals specifically with the fields needed to either
+    execute the job immediately, or schedule it for later. Each field name is prefixed with an underscore
     because in the POST body, they share a namespace with the JobForm which includes fields defined by the
-    job author.
+    job author, so the underscore prefix helps to avoid name collisions.
     """
 
     _schedule_type = forms.ChoiceField(
@@ -776,17 +776,10 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         label="Schedule name",
         help_text="Name for the job schedule.",
     )
-    _schedule_start_date = forms.DateField(
+    _schedule_start_time = forms.DateTimeField(
         required=False,
-        label="Schedule start date",
-        help_text="Date to schedule the job for execution.",
-        widget=DatePicker(),
-    )
-    _schedule_start_time = forms.TimeField(
-        required=False,
-        label="Schedule start time",
-        help_text="Time to schedule the job for execution.",
-        widget=TimePicker(),
+        label="Starting date and time",
+        widget=DateTimePicker(),
     )
 
     def clean(self):
@@ -804,14 +797,11 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
                 # for existing instances with the same name.
                 raise ValidationError({"_schedule_name": "Scheduled job with this name already exists!"})
 
-            if not cleaned_data["_schedule_start_date"] or cleaned_data["_schedule_start_date"] < timezone.now().date():
+            if not cleaned_data["_schedule_start_time"] or cleaned_data["_schedule_start_time"] < timezone.now():
                 raise ValidationError(
-                    {"_schedule_start_date": "Please enter a valid date greater than or equal to the current date."}
-                )
-
-            if not cleaned_data["_schedule_start_time"] or cleaned_data["_schedule_start_time"] < timezone.now().time():
-                raise ValidationError(
-                    {"_schedule_start_time": "Please enter a valid time greater than or equal to the current time."}
+                    {
+                        "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
                 )
 
 

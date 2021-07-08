@@ -195,8 +195,8 @@ class JobExecutionType(ChoiceSet):
     CHOICES = (
         (TYPE_IMMEDIATELY, "Once immediately"),
         (TYPE_FUTURE, "Once in the future"),
-        (TYPE_HOURLY, "Reccuring hourly"),
-        (TYPE_DAILY, "Reccuring daily"),
+        (TYPE_HOURLY, "Recurring hourly"),
+        (TYPE_DAILY, "Recurring daily"),
         (TYPE_WEEKLY, "Recurring weekly"),
     )
 
