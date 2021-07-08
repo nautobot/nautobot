@@ -100,3 +100,4 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#602](https://github.com/nautobot/nautobot/issues/602) - Fixed incorrect requirement to install `toml` Python library before running `invoke` tasks
 - [#618](https://github.com/nautobot/nautobot/pull/618) - Fixed typo in release-notes
 - [#626](https://github.com/nautobot/nautobot/pull/626) - Added prefix `NAUTOBOT_` in `override.env` example inside of `docker-entrypoint.sh`
+- [#653](https://github.com/nautobot/nautobot/issues/653) - Fixed systemd unit file for `nautobot-worker` to correctly start/stop/restart
