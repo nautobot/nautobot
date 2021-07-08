@@ -147,15 +147,15 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=forking
+Type=exec
 Environment="NAUTOBOT_ROOT=/opt/nautobot"
 
 User=nautobot
 Group=nautobot
-PIDFile=/var/tmp/nautobot-celery.pid
+PIDFile=/var/tmp/nautobot-worker.pid
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-celery.pid
+ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker.pid
 
 Restart=always
 RestartSec=30
