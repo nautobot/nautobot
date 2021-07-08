@@ -241,7 +241,39 @@ Once you've verified that the WSGI service and worker are up and running, move o
 
 ### SSL Error
 
-If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI configuration and Nautobot's database settings.
-See [this conversation](https://github.com/nautobot/nautobot/issues/127) for more details.
+If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI
+configuration and Nautobot's database settings.
 
 - Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
+
+For example:
+
+```python
+DATABASES = {
+    "default": {
+        # Other settings...
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 0)),  # Change the value to 0
+    }
+}
+```
+
+Please see [SSL error: decryption failed or bad record mac & SSL SYSCALL error: EOF detected (#127)](https://github.com/nautobot/nautobot/issues/127) for more details.
+
+### Operational Error: Incorrect string value
+
+When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
+
+- Create an entry in `DATABASES` -> `default` -> `OPTIONS` with the value `{"charset": "utf8mb4"}` in your `nautobot_config.py` and restart all Nautobot services. This will tell MySQL to always use `utf8mb4` character set for encoding.
+
+For example:
+
+```python
+DATABASES = {
+    "default": {
+        # Other setttings...
+        "OPTIONS": {"charset": "utf8mb4"},  # Add this line
+    }
+}
+```
+
+Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.
