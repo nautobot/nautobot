@@ -249,3 +249,31 @@ class PrefixQuerysetTestCase(TestCase):
     def test_filter_by_prefix(self):
         prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
         self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)
+
+    def test_string_search(self):
+        # This test case also applies to Aggregate objects.
+        search_terms = {
+            "192": 7,
+            "192.": 7,
+            "192.168": 7,
+            "192.168.": 7,
+            "192.168.1": 2,
+            "192.168.1.0": 2,
+            "192.168.3": 5,
+            "192.168.3.192/26": 3,
+            "192.168.0.0/16": 1,
+            "11": 0,
+            "fd78": 3,
+            "fd78::": 3,
+            "fd78:da4f": 3,
+            "fd78:da4f:": 3,
+            "fd78:da4f:e596": 3,
+            "fd78:da4f:e596:c217": 3,
+            "fd78:da4f:e596:c217::": 3,
+            "fd78:da4f:e596:c217::/64": 3,
+            "fd78:da4f:e596:c217::/120": 3,
+            "fd78:da4f:e596:c217::/122": 3,
+            "fe80::": 0,
+        }
+        for term, cnt in search_terms.items():
+            self.assertEqual(self.queryset.string_search(term).count(), cnt)

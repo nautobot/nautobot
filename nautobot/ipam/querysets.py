@@ -62,8 +62,15 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
             # (IPv6) If the value ends with ":" but it's not "::", make it so.
             if search.endswith(":") and not self.RE_COLON.match(search):
                 search += ":"
-            # (IPv6) If the value has a colon in it, but doesn't end with one:
-            elif not search.endswith(":") and version == 6:
+            # (IPv6) If the value has a colon in it, but doesn't end with one or
+            # contain "::"
+            elif all(
+                [
+                    not search.endswith(":"),
+                    version == 6,
+                    "::" not in search,
+                ]
+            ):
                 search += ":"
             # (IPv6) If the value is numeric and > 255, append "::"
             # (IPv6) If the value is a hextet (e.g. "fe80"), append "::"
@@ -96,15 +103,18 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         if hextets[-1].isalnum():
             fill_zeroes = False  # Leave "" in there.
             prefix_len = 128  # Force /128
+        # Otherwise fill blanks with zeroes and fuzz prefix_len
         else:
-            fill_zeroes = True  # Replace "" w/ "0"
+            fill_zeroes = True
             hextets = list(filter(lambda h: h, hextets))
+            # Fuzz prefix_len based on parsed octets
             prefix_len = 16 * len(hextets)
 
-        # Create an netaddr.IPNetwork to search within
+        # Replace "" w/ "0"
         if fill_zeroes:
             hextets.extend(["0" for _ in range(len(hextets), 8)])
 
+        # Create an netaddr.IPNetwork to search within
         network = ":".join(hextets)
         ip = f"{network}/{prefix_len}"
         return netaddr.IPNetwork(ip)
@@ -115,6 +125,8 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         # Get non-empty octets from search string
         octets = value.split(".")
         octets = list(filter(lambda o: o, octets))
+
+        # Fuzz prefix_len based on parsed octets
         prefix_len = 8 * len(octets)
 
         # Create an netaddr.IPNetwork to search within
@@ -136,9 +148,9 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return self.filter(
             Q(description__icontains=search)
             | Q(network__gte=network.network, broadcast__lte=last_ip)  # same as `net_contained()`
-            | Q(prefix_length__lte=network.prefixlen,
-                network__lte=network.network,
-                broadcast__gte=last_ip)  # same as `net_contains_or_equals()`
+            | Q(
+                prefix_length__lte=network.prefixlen, network__lte=network.network, broadcast__gte=last_ip
+            )  # same as `net_contains_or_equals()`
         )
 
 
@@ -151,7 +163,7 @@ class NetworkQuerySet(BaseNetworkQuerySet):
         except KeyError:
             raise ValueError("invalid IP family {}".format(family))
 
-        return self.annotate(address_len=Length(F("prefix"))).filter(address_len=byte_len)
+        return self.annotate(address_len=Length(F("network"))).filter(address_len=byte_len)
 
     def net_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
