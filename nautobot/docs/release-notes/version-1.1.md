@@ -89,6 +89,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 ### Changed
 
 - [#431](https://github.com/nautobot/nautobot/issues/431) - `ConfigContext` and `ExportTemplate` records now must have unique `name` values. This was always the case in NetBox, but was inadvertently un-enforced in earlier versions of Nautobot.
+- [#569](https://github.com/nautobot/nautobot/issues/569) - Change minimum/maximum allowed values for integer type in Custom Fields to 64-bit `BigIntegerField` types (64-bit)
 - [#634](https://github.com/nautobot/nautobot/pull/634) - Documentation on plugin capabilities has been clarified.
 
 ### Fixed
