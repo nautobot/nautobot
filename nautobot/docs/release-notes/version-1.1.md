@@ -96,7 +96,9 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 - [#460](https://github.com/nautobot/nautobot/issues/460) - Deleting a record now deletes any associated `RelationshipAssociation` records
 - [#494](https://github.com/nautobot/nautobot/issues/494) - Objects with `status` fields now emit limited choices correctly when performing `OPTIONS` metadata API requests
+- [#495](https://github.com/nautobot/nautobot/issues/495) - Fixed search for partial IPv4 prefixes/aggregates not finding all matching objects
 - [#533](https://github.com/nautobot/nautobot/issues/533) - Custom field tasks are now run atomically to avoid stale field data from being saved on objects.
+- [#554](https://github.com/nautobot/nautobot/issues/554) - Fixed search for partial IPv6 prefixes/aggregates not finding all matching objects
 - [#600](https://github.com/nautobot/nautobot/issues/600) - The `invoke migrate` step is now included in the development getting started guide for Docker workflows
 - [#602](https://github.com/nautobot/nautobot/issues/602) - Fixed incorrect requirement to install `toml` Python library before running `invoke` tasks
 - [#618](https://github.com/nautobot/nautobot/pull/618) - Fixed typo in release-notes
