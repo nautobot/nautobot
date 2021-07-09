@@ -54,7 +54,7 @@ BANNER_TOP = ""
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
 CHANGELOG_RETENTION = 90
-DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), "docs")
+DOCS_ROOT = os.path.join(BASE_DIR, "docs")
 HIDE_RESTRICTED_UI = False
 
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
