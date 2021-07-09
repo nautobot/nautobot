@@ -759,11 +759,13 @@ class DeviceWithConfigContextSerializer(DeviceSerializer):
             "local_context_schema",
             "local_context_data",
             "tags",
+            "computed_fields",
             "custom_fields",
             "config_context",
             "created",
             "last_updated",
         ]
+        opt_in_fields = ["computed_fields"]
 
     @swagger_serializer_method(serializer_or_field=serializers.DictField)
     def get_config_context(self, obj):
