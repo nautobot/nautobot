@@ -171,20 +171,12 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         fields = ["id", "date_added"]
 
     def search(self, queryset, name, value):
-        if not value.strip():
+        value = value.strip()
+
+        if not value:
             return queryset
-        qs_filter = Q(description__icontains=value)
-        try:
-            # filter for Aggregates containing |value|
-            query = netaddr.IPNetwork(value.strip())
-            qs_filter |= Q(
-                prefix_length__lte=query.prefixlen,
-                network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
-            )
-        except (AddrFormatError, ValueError):
-            pass
-        return queryset.filter(qs_filter)
+
+        return queryset.string_search(value)
 
     def filter_prefix(self, queryset, name, value):
         if not value.strip():
@@ -320,20 +312,6 @@ class PrefixFilterSet(
         if not value:
             return queryset
 
-        """
-        qs_filter = Q(description__icontains=value)
-        try:
-            # filter for Prefixes containing |value|
-            query = netaddr.IPNetwork(value)
-            qs_filter |= Q(
-                prefix_length__lte=query.prefixlen,
-                network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
-            )
-        except (AddrFormatError, ValueError):
-            pass
-        return queryset.filter(qs_filter)
-        """
         return queryset.string_search(value)
 
     def filter_prefix(self, queryset, name, value):
@@ -503,6 +481,11 @@ class IPAddressFilterSet(
         fields = ["id", "dns_name"]
 
     def search(self, queryset, name, value):
+        value = value.strip()
+
+        if not value:
+            return queryset
+
         return queryset.string_search(value)
 
     def search_by_parent(self, queryset, name, value):
