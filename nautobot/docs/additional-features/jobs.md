@@ -304,6 +304,10 @@ Messages recorded with `log()` or `log_debug()` will appear in a job's results b
 
 Markdown rendering is supported for log messages.
 
+!!! note
+    Using `self.log_failure()` marks a specific log as a failure, but it will **not** stop the execution of the job. In order to fail the job utilize a Python `raise` or `return` value.
+
+
 ### Accessing Request Data
 
 Details of the current HTTP request (the one being made to execute the job) are available as the instance attribute `self.request`. This can be used to infer, for example, the user executing the job and their client IP address:
