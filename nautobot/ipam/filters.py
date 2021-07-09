@@ -187,7 +187,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             return queryset.none()
 
     def filter_ip_family(self, queryset, name, value):
-        return queryset.ip_family(value.strip())
+        return queryset.ip_family(value)
 
 
 class RoleFilterSet(
@@ -378,7 +378,7 @@ class PrefixFilterSet(
         return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
-        return queryset.ip_family(value.strip())
+        return queryset.ip_family(value)
 
 
 class IPAddressFilterSet(
@@ -515,7 +515,7 @@ class IPAddressFilterSet(
         return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
-        return queryset.ip_family(value.strip())
+        return queryset.ip_family(value)
 
     def filter_device(self, queryset, name, value):
         devices = Device.objects.filter(**{"{}__in".format(name): value})
