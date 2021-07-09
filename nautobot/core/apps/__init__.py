@@ -238,10 +238,11 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.name = name
         self.weight = weight
 
-        if buttons is not None and not isinstance(buttons, (list, tuple)):
-            raise TypeError("Buttons must be passed as a tuple or list.")
-        elif not all(isinstance(button, NavMenuButton) for button in buttons):
-            raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
+        if buttons is not None:
+            if not isinstance(buttons, (list, tuple)):
+                raise TypeError("Buttons must be passed as a tuple or list.")
+            elif not all(isinstance(button, NavMenuButton) for button in buttons):
+                raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
         self.buttons = buttons
 
 
