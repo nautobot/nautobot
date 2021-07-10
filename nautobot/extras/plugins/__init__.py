@@ -377,7 +377,9 @@ def register_plugin_menu_items(section_name, menu_items):
         # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
         if registry["nav_menu"]["tabs"].get("Plugins"):
             weight = (
-                registry["nav_menu"]["tabs"]["Plugins"][list(registry["nav_menu"]["tabs"]["Plugins"])[-1]]["weight"]
+                registry["nav_menu"]["tabs"]["Plugins"]["groups"][
+                    list(registry["nav_menu"]["tabs"]["Plugins"]["groups"])[-1]
+                ]["weight"]
                 + 100
             )
         else:
