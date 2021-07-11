@@ -165,8 +165,7 @@ def _configure_settings(config):
             def _setting(name, default=None):
                 if name in settings.STORAGE_CONFIG:
                     return settings.STORAGE_CONFIG[name]
-                # This is mainly accounting for USE_TZ used in main settings.py as
-                # that is a global setting used by django-storages and django collectstatic
+                # This is mainly accounting for USE_TZ that should be found within the main settings
                 elif name in settings:
                     return getattr(settings, name)
                 return globals().get(name, default)
