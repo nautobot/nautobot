@@ -42,9 +42,7 @@ CACHES = {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": parse_redis_connection(redis_database=2),
         "TIMEOUT": 300,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient",},
     }
 }
 
@@ -55,7 +53,6 @@ CACHES = {
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
 
 # Testing storages within cli.py
-STORAGE_BACKEND = "storages.backends.s3boto3.S3Boto3Storage"
 STORAGE_CONFIG = {
     "AWS_ACCESS_KEY_ID": "ASFWDAMWWOQMEOQMWPMDA<WPDA",
     "AWS_SECRET_ACCESS_KEY": "ASFKMWADMsacasdaw/dawrt1231541231231",
