@@ -31,6 +31,20 @@ DATABASES = {
 }
 
 #
+# Debug
+#
+
+DEBUG = True
+
+# Django Debug Toolbar
+DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
+
+if "debug_toolbar" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("debug_toolbar")
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+#
 # Logging
 #
 
@@ -116,17 +130,3 @@ CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", CACHES["default"]["L
 
 # Celery results backend URL to tell workers where to publish task results
 CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", CACHES["default"]["LOCATION"])
-
-#
-# Debug
-#
-
-DEBUG = True
-
-# Django Debug Toolbar
-DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
-
-if "debug_toolbar" not in INSTALLED_APPS:
-    INSTALLED_APPS.append("debug_toolbar")
-if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
-    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
