@@ -117,7 +117,7 @@ CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", CACHES["default"]["L
 # Celery results backend URL to tell workers where to publish task results
 CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", CACHES["default"]["LOCATION"])
 
-# 
+#
 # Debug
 #
 

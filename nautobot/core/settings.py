@@ -249,27 +249,6 @@ DATABASES = {
     }
 }
 
-#
-# Redis (Caching/Queuing)
-#
-
-REDIS = {
-    "tasks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 0,
-        "SSL": False,
-    },
-    "caching": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 1,
-        "SSL": False,
-    },
-}
-
 # The secret key is used to encrypt session keys and salt passwords.
 SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -523,15 +502,15 @@ RQ_QUEUES = {
 # Celery (used for background processing)
 #
 
+# The Redis connection defined in the CACHES config above for the broker and results backend
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", CACHES["default"]["LOCATION"])
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", CACHES["default"]["LOCATION"])
+
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
 # Global task time limit (seconds)
 CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
-
-# The Redis connection defined in the CACHES config above for the broker and results backend
-CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", CACHES["default"]["LOCATION"])
-CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", CACHES["default"]["LOCATION"])
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization
