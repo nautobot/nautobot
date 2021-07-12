@@ -80,6 +80,8 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Changed
 
+- [#675](https://github.com/nautobot/nautobot/pull/675) - Update MySQL unicode settings docs to be more visible
+
 ### Fixed
 
 ### Removed
