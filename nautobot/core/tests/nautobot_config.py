@@ -42,7 +42,9 @@ CACHES = {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": parse_redis_connection(redis_database=2),
         "TIMEOUT": 300,
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient",},
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
     }
 }
 
