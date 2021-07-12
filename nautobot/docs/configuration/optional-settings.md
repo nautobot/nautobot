@@ -105,6 +105,26 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_BROKER_URL
+
+Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_RESULT_BACKEND
+
+Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery result backend used to tell workers where to store task results (tombstones).
+
+---
+
 ## CELERY_TASK_TIME_LIMIT
 
 Default: `1800`
