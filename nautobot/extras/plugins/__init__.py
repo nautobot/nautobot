@@ -370,7 +370,7 @@ def register_plugin_menu_items(section_name, menu_items):
                 )
             )
             new_menu_item_weight += 100
-            permissions |= set(perms for perms in menu_item.permissions)
+            permissions = permissions.union(menu_item.permissions)
         elif isinstance(menu_item, NavMenuTab):
             nav_menu_items.add(menu_item)
         else:
@@ -389,6 +389,7 @@ def register_plugin_menu_items(section_name, menu_items):
             NavMenuTab(
                 name="Plugins",
                 weight=5000,
+                # Permissions cast to tuple to match development pattern.
                 permissions=tuple(permissions),
                 groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
             ),
