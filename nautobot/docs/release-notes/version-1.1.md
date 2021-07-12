@@ -68,6 +68,16 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Removed
 
+## v1.1.0b3 (2021-??-??)
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
 ## v1.1.0b2 (2021-07-09)
 
 ### Added
