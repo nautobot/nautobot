@@ -5,7 +5,12 @@ import sys
 from nautobot.core.settings import *
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
+
 ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+
+#
+# Databases
+#
 
 DATABASES = {
     "default": {
@@ -19,7 +24,23 @@ DATABASES = {
     }
 }
 
+HIDE_RESTRICTED_UI = os.getenv("HIDE_RESTRICTED_UI", False)
+
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
+
+#
+# Logging
+#
+
 DEBUG = True
+
+# Django Debug Toolbar
+DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
+
+if "debug_toolbar" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("debug_toolbar")
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
@@ -65,8 +86,9 @@ if not TESTING:
         },
     }
 
-
-# Redis variables
+#
+# Redis
+#
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
@@ -87,24 +109,19 @@ CACHES = {
 # RQ_QUEUES is not set here because it just uses the default that gets imported
 # up top via `from nautobot.core.settings import *`.
 
-# REDIS CACHEOPS
+# Redis Cacheops
 CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
-
-HIDE_RESTRICTED_UI = os.getenv("HIDE_RESTRICTED_UI", False)
-
-SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
-
-# Django Debug Toolbar
-DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
-
-if "debug_toolbar" not in INSTALLED_APPS:
-    INSTALLED_APPS.append("debug_toolbar")
-if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
-    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
 
 #
 # Celery
 #
 
-CELERY_TASK_TIME_LIMIT = int(os.environ.get("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
+# Global Celery task timeout (in seconds)
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
+
+# Celery broker URL used to tell workers where queues are located
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", CACHES["default"]["LOCATION"])
+
+# Celery results backend URL to tell workers where to publish task results
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", CACHES["default"]["LOCATION"])
