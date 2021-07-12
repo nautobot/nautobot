@@ -40,6 +40,12 @@ A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for spec
 
 Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-setup) and [CentOS](../installation/centos.md#mysql-setup) to get started.
 
+#### Plugin Defined Jinja2 Filters
+
+Plugins can now define custom Jinja2 filters to be used when rendering templates defined within computed fieldssor custom links. To register your own filters, you may add a `jinja_filters.py` to your plugin and any filters defined there will be automatically registered and globally usable. 
+
+Please see the [plugin development documentation on including Jinja2 filters](../plugins/development.md#including-jinja2-filters) to get started.
+
 #### Plugin Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/572))
 
 Plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/navigation-menu.md) for more details.
