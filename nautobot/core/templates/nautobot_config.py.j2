@@ -16,7 +16,7 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 # Example: ALLOWED_HOSTS = ['nautobot.example.com', 'nautobot.internal.local']
 ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
-# PostgreSQL database configuration. See the Django documentation for a complete list of available parameters:
+# Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {

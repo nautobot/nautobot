@@ -9,6 +9,9 @@ For those familiar with Django applications, this CLI utility works exactly as a
 !!! important
     Since Nautobot is a Django application, there are a number of built-in management commands that will not be covered in this document. Please see the [official Django documentation on management commands](https://docs.djangoproject.com/en/stable/ref/django-admin/#available-commands) for more information.
 
+!!! important
+    Django does not recognize `nautobot-server`.  Anywhere `python manage.py` is mentioned, it is safe to replace with `nautobot-server`.
+
 ## Getting Help
 
 To see all available management commands:
@@ -123,6 +126,25 @@ nautobot=> \q
 
 !!! note
     This is a built-in Django command. Please see the [official documentation on `dbshell`](https://docs.djangoproject.com/en/stable/ref/django-admin/#dbshell) for more information.
+
+
+### `fix_custom_fields`
+
+`nautobot-server fix_custom_fields`
+
+Adds/Removes any custom fields which should or should not exist on an object.  This command should not be run unless a custom fields jobs has failed:
+
+```no-highlight
+$ nautobot-server fix_custom_fields
+Processing ContentType dcim | device
+Processing ContentType dcim | site
+Processing ContentType dcim | rack
+Processing ContentType dcim | cable
+Processing ContentType dcim | power feed
+Processing ContentType circuits | circuit
+Processing ContentType ipam | prefix
+... (truncated for brevity of documentation) ...
+```
 
 ### `generate_secret_key`
 
