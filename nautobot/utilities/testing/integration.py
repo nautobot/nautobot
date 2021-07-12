@@ -39,6 +39,9 @@ class NautobotRemote(webdriver.Remote):
         """Return a `<button>` element with the given `button_text`."""
         return self.find_element_by_xpath(f'//button[text()="{button_text}"]')
 
+    def find_element_by_class_name(self, name):
+        return self.find_elements_by_xpath(f"//*[@class='{name}']")
+
 
 FIREFOX_PROFILE_PREFERENCES = {
     "network.http.pipelining": True,

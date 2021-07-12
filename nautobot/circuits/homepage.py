@@ -24,7 +24,7 @@ layout = (
                         link="circuits:circuit_list",
                         model=Circuit,
                         description="Communication links for Internet transit, peering, and other services",
-                        permissions=["circuits.view_circuits"],
+                        permissions=["circuits.view_circuit"],
                         weight=200,
                     ),
                 ),
