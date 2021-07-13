@@ -4,7 +4,7 @@ This example shows how you can configure Nautobot to host static files on AWS S3
 
 ## Installation
 
-Nautobot uses [`django-storages`](https://django-storages.readthedocs.io/en/stable/) to publish files to s3 see the [docs](https://nautobot.readthedocs.io/en/stable/installation/nautobot/#remote-file-storage) for more information.
+Nautobot can use [`django-storages`](https://django-storages.readthedocs.io/en/stable/) to publish files to S3 -- see the [docs](https://nautobot.readthedocs.io/en/stable/installation/nautobot/#remote-file-storage) for more information.
 
 TLDR:
 
@@ -35,11 +35,11 @@ STORAGE_CONFIG = {
 STATICFILES_STORAGE = STORAGE_BACKEND
 ```
 
-If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not set, boto3 internally looks up IAM credentials.  Using an [IAM Role for EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html?icmpid=docs_ec2_console) is highly recommended.
+If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not set, `boto3` internally looks up IAM credentials.  Using an [IAM Role for EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html?icmpid=docs_ec2_console) is highly recommended.
 
 ## Bucket Creation
 
-The AWS S3 bucket will be hosting Nautobot static files and needs some specific configuration to allow anonymous http access.  The following is the necessary terraform configuration to create the s3 bucket appropriately:
+The AWS S3 bucket will be hosting Nautobot static files and needs some specific configuration to allow anonymous HTTP access.  The following is the necessary Terraform configuration to create the S3 bucket appropriately:
 
 ```terraform
 resource "aws_s3_bucket" "nautobot_static_files" {
