@@ -17,7 +17,7 @@ from nautobot.core.graphql.generators import (
     generate_relationship_resolver,
     generate_restricted_queryset,
     generate_schema_type,
-    generate_single_item_resolver,
+    generate_null_choices_resolver,
 )
 from nautobot.core.graphql.types import ContentTypeType
 from nautobot.dcim.graphql.types import (
@@ -116,14 +116,15 @@ def extend_schema_type(schema_type):
     schema_type = extend_schema_type_computed_field(schema_type, model)
 
     #
-    # Add CharField that can null=False, blank=True, and choices defined
-    schema_type = extend_schema_type_blank_choices_fields(schema_type, model)
+    # Add resolve_{field.name} that has null=False, blank=True, and choices defined to return null
+    #
+    schema_type = extend_schema_type_null_field_choice(schema_type, model)
 
     return schema_type
 
 
-def extend_schema_type_blank_choices_fields(schema_type, model):
-    """Extends the schema fields to add fields that cannot be null, but can be blank, and choices are defined.
+def extend_schema_type_null_field_choice(schema_type, model):
+    """Extends the schema fields to add fields that can be null, blank=True, and choices are defined.
 
     Args:
         schema_type (DjangoObjectType): GraphQL Object type for a given model
@@ -135,23 +136,25 @@ def extend_schema_type_blank_choices_fields(schema_type, model):
     # This is a workaround implemented for https://github.com/nautobot/nautobot/issues/466#issuecomment-877991184
     # We want to iterate over fields and see if they meet the criteria: null=False, blank=True, and choices defined
     for field in model._meta.fields:
-        if all((not field.null, field.blank, field.choices)):
-            field_name = f"{str_to_var_name(field.name)}"
-            resolver_name = f"resolve_{field_name}"
+        # Continue onto the next field if it doesn't match the criteria
+        if not all((not field.null, field.blank, field.choices)):
+            continue
 
-            if hasattr(schema_type, field_name):
-                logger.warning(
-                    f"Unable to add {field.name} to {schema_type._meta.name} "
-                    f"because there is already an attribute with the same name ({field_name})"
-                )
-                continue
+        field_name = f"{str_to_var_name(field.name)}"
+        resolver_name = f"resolve_{field_name}"
 
-            setattr(
-                schema_type,
-                resolver_name,
-                generate_single_item_resolver(schema_type, resolver_name),
+        if hasattr(schema_type, field_name):
+            logger.warning(
+                f"Unable to add {field.name} to {schema_type._meta.name} "
+                f"because there is already an attribute with the same name ({field_name})"
             )
-            # schema_type._meta.fields[field.name] = graphene.Field(graphene.String, source=field.name)
+            continue
+
+        setattr(
+            schema_type,
+            resolver_name,
+            generate_null_choices_resolver(field.name, resolver_name),
+        )
 
     return schema_type
 
