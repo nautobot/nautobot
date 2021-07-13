@@ -84,6 +84,8 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Fixed
 
+- [#677](https://github.com/nautobot/nautobot/issues/677) - Revise LDAPS outdated documentation for ignoring TLS cert errors
+
 ### Removed
 
 ## v1.1.0b2 (2021-07-09)
