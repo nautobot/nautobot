@@ -15,7 +15,7 @@ $ pip3 install django-storages
 
 ## Configuration
 
-The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) is quite powerful, please refer to their documentation for a more detailed explanation of any of the individual settings or for information on how you might use services like [CloudFront](https://aws.amazon.com/cloudfront/).
+The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library is quite powerful, please refer to their documentation for a more detailed explanation of the individual settings or for more information.
 
 In `nautobot_config.py` define the following configuration:
 
