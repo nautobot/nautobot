@@ -16,9 +16,11 @@ Applications can now define tabs, groups, items and buttons in the navigation me
 
 [Computed fields](../additional-features/computed-fields.md) offers users the ability to create read-only custom fields using existing data already stored in the database. Users define Jinja2 templates that populate the value of these fields. Computed fields are available on all data models that currently support custom fields.
 
-#### Config Context Schemas ([#274](https://github.com/nautobot/nautobot/issues/274))
+#### Config Context JSON Schemas ([#274](https://github.com/nautobot/nautobot/issues/274))
 
 While config contexts allow for arbitrary data structures to be stored within Nautobot, at scale it is desirable to apply validation constraints to that data to ensure its consistency and to avoid data entry errors. To service this need, Nautobot supports optionally backing config contexts with [JSON Schemas](https://json-schema.org/) for validation. These schema are managed via the config context schema model and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data. Please see the [docs](../additional-features/config-contexts.md#config-context-schemas) for more details.
+
+Just like config contexts, config context JSON schemas can optionally be [managed via a Git repository](../models/extras/gitrepository.md#configuration-context-schemas).
 
 #### GraphQL ORM Functions
 
@@ -77,6 +79,8 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 ## v1.1.0b3 (2021-??-??)
 
 ### Added
+
+- [#620](https://github.com/nautobot/nautobot/pull/620) - Config context schemas can now be managed via Git repositories.
 
 ### Changed
 
