@@ -46,11 +46,14 @@ class OptInFieldsMixin:
 
         request = self.context["request"]
 
-        # NOTE: DRF test framework builds a request object where the query
+        # NOTE: drf test framework builds a request object where the query
         # parameters are found under the GET attribute.
         params = getattr(request, "query_params", getattr(request, "GET", None))
 
-        user_opt_in_fields = params.getlist("include")
+        try:
+            user_opt_in_fields = params.get("include", None).split(",")
+        except AttributeError:
+            user_opt_in_fields = []
 
         # Drop any fields that are not specified in the users opt in fields
         for field in serializer_opt_in_fields:
