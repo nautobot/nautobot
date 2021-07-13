@@ -47,8 +47,10 @@ namespace.configure(
             "python_ver": "3.6",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
-            "compose_file": "docker-compose.yml",
-            "compose_override_file": "docker-compose.dev.yml",
+            "compose_files": [
+                "docker-compose.yml",
+                "docker-compose.dev.yml",
+            ],
             "docker_image_names_main": [
                 "networktocode/nautobot",
                 "ghcr.io/nautobot/nautobot",
@@ -93,11 +95,12 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
-    compose_file_path = os.path.join(context.nautobot.compose_dir, context.nautobot.compose_file)
-    compose_command = f'docker-compose --project-name {context.nautobot.project_name} --project-directory "{context.nautobot.compose_dir}" -f "{compose_file_path}"'
-    compose_override_path = os.path.join(context.nautobot.compose_dir, context.nautobot.compose_override_file)
-    if os.path.isfile(compose_override_path):
-        compose_command += f' -f "{compose_override_path}"'
+    compose_command = f'docker-compose --project-name {context.nautobot.project_name} --project-directory "{context.nautobot.compose_dir}"'
+
+    for compose_file in context.nautobot.compose_files:
+        compose_file_path = os.path.join(context.nautobot.compose_dir, compose_file)
+        compose_command += f' -f "{compose_file_path}"'
+
     compose_command += f" {command}"
 
     # If `service` was passed as a kwarg, add it to the end.
@@ -112,7 +115,7 @@ def docker_compose(context, command, **kwargs):
 def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
-        context.run(command, **kwargs)
+        context.run(command, pty=True, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
@@ -294,10 +297,10 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task
-def cli(context):
+@task(help={"container": "Name of the container to shell into"})
+def cli(context, container="nautobot"):
     """Launch a bash shell inside the running Nautobot container."""
-    docker_compose(context, "exec nautobot bash", pty=True)
+    docker_compose(context, f"exec {container} bash", pty=True)
 
 
 @task(
@@ -433,7 +436,7 @@ def unittest(
     """Run Nautobot unit tests."""
 
     append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {label} --config=nautobot/core/tests/nautobot_config.py"
+    command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
     # booleans
     if keepdb:
         command += " --keepdb"
