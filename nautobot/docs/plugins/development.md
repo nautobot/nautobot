@@ -589,7 +589,7 @@ template_extensions = [SiteAnimalCount]
 
 Plugins can define custom Jinja2 filters to be used when rendering templates defined in computed fields. Check out the [official Jinja2 documentation](https://jinja.palletsprojects.com/en/3.0.x/api/#custom-filters) on how to create filter functions.
 
-In the file that defines your filters, you must import the `library` module from the `django_jinja` library. Filters must then be decorated with `@library.filter`. See an example below that defines a filter called `leet_speak`.
+In the file that defines your filters (specified in the [PluginConfig](#pluginconfig-attributes)), you must import the `library` module from the `django_jinja` library. Filters must then be decorated with `@library.filter`. See an example below that defines a filter called `leet_speak`.
 
 ```python
 from django_jinja import library
