@@ -64,13 +64,19 @@ Saved queries can easily be imported into the GraphiQL interface by using the ne
 
 #### Background Tasks now use Celery ([#223](https://github.com/nautobot/nautobot/issues/223))
 
-Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All core usage of RQ has been migrated to use Celery.
+Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery. 
+
+!!! note
+    User-defined background tasks and plugins are not part of Nautobot core functions
 
 Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
 
 RQ support for custom tasks was not removed in order to give plugin authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
 
 Please see the section on [migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
+
+!!! warning
+    If you are running plugins and/or user-defined background tasks that require the RQ worker, you will need to run both the RQ and Celery workers concurrently until the plugins/background tasks are converted to use the Celery worker. See the [Migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for details.
 
 ### Removed
 
