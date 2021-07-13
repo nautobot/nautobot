@@ -126,7 +126,7 @@ CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))
 
 # Celery broker URL used to tell workers where queues are located
-CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", CACHES["default"]["LOCATION"])
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
 # Celery results backend URL to tell workers where to publish task results
-CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", CACHES["default"]["LOCATION"])
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
