@@ -203,7 +203,7 @@ index f84073fb5..52baf6096 100644
 (END)
 ```
 
-If you cannot update your custom tasks with the change described above, you must run the RQ worker concurrently with the Celery worker until the plugin can be updated.
+If you cannot update your custom tasks with the change described above, you must run the [RQ worker concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers) until the plugin can be updated.
 
 !!! warning
     Failure to account for the Celery-to-RQ migration may break your custom background tasks
