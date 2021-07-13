@@ -1,5 +1,8 @@
 import collections
+import hashlib
+import hmac
 
+from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.deconstruct import deconstructible
@@ -87,3 +90,34 @@ def extras_features(*features):
         return model_class
 
     return wrapper
+
+
+def generate_signature(request_body, secret):
+    """
+    Return a cryptographic signature that can be used to verify the authenticity of webhook data.
+    """
+    hmac_prep = hmac.new(key=secret.encode("utf8"), msg=request_body, digestmod=hashlib.sha512)
+    return hmac_prep.hexdigest()
+
+
+def get_worker_count(request):
+    """
+    Return a count of the active Celery workers.
+    """
+    # Inner imports so we don't risk circular imports
+    from nautobot.core.celery import app  # noqa
+    from rq.worker import Worker  # noqa
+    from django_rq.queues import get_connection  # noqa
+
+    # Try RQ first since, it's faster.
+    rq_count = Worker.count(get_connection("default"))
+
+    # FIXME(jathan): If both RQ/Celery workers are running, this warning is
+    # displayed but barely seen because of the redirect after task execution.
+    if rq_count:
+        messages.warning(request, "RQ workers are deprecated. Please migrate your worker to Celery.")
+
+    # Celery next, since it's slower.
+    inspect = app.control.inspect()
+    active = inspect.active()  # None if no active workers
+    return len(active) if active is not None else 0

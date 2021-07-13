@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from rest_framework.serializers import SerializerMethodField
 from rest_framework.fields import CreateOnlyDefault, Field
 
 from nautobot.core.api import ValidatedModelSerializer
@@ -63,6 +64,7 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
     Extends ModelSerializer to render any CustomFields and their values associated with an object.
     """
 
+    computed_fields = SerializerMethodField(read_only=True)
     custom_fields = CustomFieldsDataField(
         source="_custom_field_data",
         default=CreateOnlyDefault(CustomFieldDefaultValues()),
@@ -88,3 +90,6 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         instance.custom_fields = {}
         for field in custom_fields:
             instance.custom_fields[field.name] = instance.cf.get(field.name)
+
+    def get_computed_fields(self, obj):
+        return obj.get_computed_fields()

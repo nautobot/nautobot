@@ -171,20 +171,12 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
         fields = ["id", "date_added"]
 
     def search(self, queryset, name, value):
-        if not value.strip():
+        value = value.strip()
+
+        if not value:
             return queryset
-        qs_filter = Q(description__icontains=value)
-        try:
-            # filter for Aggregates containing |value|
-            query = netaddr.IPNetwork(value.strip())
-            qs_filter |= Q(
-                prefix_length__lte=query.prefixlen,
-                network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
-            )
-        except (AddrFormatError, ValueError):
-            pass
-        return queryset.filter(qs_filter)
+
+        return queryset.string_search(value)
 
     def filter_prefix(self, queryset, name, value):
         if not value.strip():
@@ -195,15 +187,7 @@ class AggregateFilterSet(BaseFilterSet, TenancyFilterSet, CustomFieldModelFilter
             return queryset.none()
 
     def filter_ip_family(self, queryset, name, value):
-        if value == 4:
-            length = IPV4_BYTE_LENGTH
-        elif value == 6:
-            length = IPV6_BYTE_LENGTH
-        else:
-            raise ValueError("invalid IP family {}".format(value))
-        return queryset.annotate(network_len=Length(F("network"))).filter(
-            network_len=length,
-        )
+        return queryset.ip_family(value)
 
 
 class RoleFilterSet(
@@ -324,20 +308,11 @@ class PrefixFilterSet(
 
     def search(self, queryset, name, value):
         value = value.strip()
+
         if not value:
             return queryset
-        qs_filter = Q(description__icontains=value)
-        try:
-            # filter for Prefixes containing |value|
-            query = netaddr.IPNetwork(value)
-            qs_filter |= Q(
-                prefix_length__lte=query.prefixlen,
-                network__lte=bytes(query.network),
-                broadcast__gte=bytes(query.broadcast if query.broadcast else query.network),
-            )
-        except (AddrFormatError, ValueError):
-            pass
-        return queryset.filter(qs_filter)
+
+        return queryset.string_search(value)
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -403,15 +378,7 @@ class PrefixFilterSet(
         return queryset.filter(Q(vrf=vrf) | Q(vrf__export_targets__in=vrf.import_targets.all()))
 
     def filter_ip_family(self, queryset, name, value):
-        if value == 4:
-            length = IPV4_BYTE_LENGTH
-        elif value == 6:
-            length = IPV6_BYTE_LENGTH
-        else:
-            raise ValueError("invalid IP family {}".format(value))
-        return queryset.annotate(network_len=Length(F("network"))).filter(
-            network_len=length,
-        )
+        return queryset.ip_family(value)
 
 
 class IPAddressFilterSet(
@@ -514,6 +481,11 @@ class IPAddressFilterSet(
         fields = ["id", "dns_name"]
 
     def search(self, queryset, name, value):
+        value = value.strip()
+
+        if not value:
+            return queryset
+
         return queryset.string_search(value)
 
     def search_by_parent(self, queryset, name, value):

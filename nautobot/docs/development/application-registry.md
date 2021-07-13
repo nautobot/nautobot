@@ -4,7 +4,7 @@ The registry is an in-memory data structure which houses various application-wid
 
 The registry behaves essentially like a Python dictionary, with the notable exception that once a store (key) has been declared, it cannot be deleted or overwritten. The value of a store can, however, be modified; e.g. by appending a value to a list. Store values generally do not change once the application has been initialized.
 
-The registry can be inspected by importing `registry` from `extras.registry`.
+The registry can be inspected by importing `registry` from `nautobot.extras.registry`.
 
 ## Stores
 
@@ -54,6 +54,73 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
         ...
     },
     ...
+}
+```
+
+### `nav_menu`
+
+Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other application and plugins. The `nav_menu` dict should never be modified directly.
+
+Example:
+
+```python
+{
+    "tabs": {
+        "tab_1": {
+            "weight": 100,
+            "permissions": [],
+            "groups": {
+                "group_1":{
+                    "weight": 100,
+                    "permissions": [],
+                    "items": {
+                        "item_link_1": {
+                            "link_text": "Item 1",
+                            "weight": 100,
+                            "permissions": [],
+                            "buttons": {
+                                "button_1": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_1",
+                                    "weight": 100,
+                                    "permissions": [],
+                                },
+                                "button_2": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_2",
+                                    "weight": 200,
+                                    "permissions": [],
+                                }
+                            }
+                        },
+                        "item_link_2": {
+                            "link_text": "Item 2",
+                            "weight": 200,
+                            "permissions": [],
+                            "buttons": {
+                                "button_1": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_1",
+                                    "weight": 100,
+                                    "permissions": [],
+                                },
+                                "button_2": {
+                                    "button_class": "success",
+                                    "icon_class": "mdi-plus-thick",
+                                    "link": "button_link_2",
+                                    "weight": 200,
+                                    "permissions": [],
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    }
 }
 ```
 

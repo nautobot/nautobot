@@ -10,8 +10,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
 
-from nautobot.extras.plugins.utils import load_plugins, get_sso_backend_name
-from .runner import run_app
+from nautobot.core.runner import run_app
+from nautobot.extras.plugins.utils import load_plugins
 
 
 # Default file location for the generated config emitted by `init`

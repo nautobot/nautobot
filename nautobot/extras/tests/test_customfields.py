@@ -1,6 +1,3 @@
-import time
-
-import django_rq
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
@@ -9,10 +6,10 @@ from rest_framework import status
 
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
-from nautobot.dcim.models import Site, Rack
+from nautobot.dcim.models import Site, Rack, Device
 from nautobot.extras.choices import *
-from nautobot.extras.models import CustomField, CustomFieldChoice, Status
-from nautobot.utilities.testing import APITestCase, TestCase
+from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
+from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
 
@@ -568,6 +565,36 @@ class CustomFieldAPITest(APITestCase):
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_bigint_values_of_custom_field_maximum_attribute(self):
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
+        self.add_permissions("dcim.change_site")
+
+        self.cf_integer.validation_maximum = 5000000000
+        self.cf_integer.save()
+
+        data = {"custom_fields": {"number_field": 4294967294}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"custom_fields": {"number_field": 5000000001}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_bigint_values_of_custom_field_minimum_attribute(self):
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
+        self.add_permissions("dcim.change_site")
+
+        self.cf_integer.validation_minimum = -5000000000
+        self.cf_integer.save()
+
+        data = {"custom_fields": {"number_field": -4294967294}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"custom_fields": {"number_field": -5000000001}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
     def test_regex_validation(self):
         url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
         self.add_permissions("dcim.change_site")
@@ -736,6 +763,33 @@ class CustomFieldModelTest(TestCase):
         cf2.save()
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
 
+    def setUp(self):
+        self.site1 = Site.objects.create(name="NYC")
+        self.computed_field_one = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="computed_field_one",
+            label="Computed Field One",
+            template="{{ obj.name }} is the name of this site.",
+            fallback_value="An error occurred while rendering this template.",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        self.non_site_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Device),
+            slug="device_computed_field",
+            label="Device Computed Field",
+            template="Hello, world.",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+
     def test_cf_data(self):
         """
         Check that custom field data is present on the instance immediately after being set and after being fetched
@@ -784,6 +838,37 @@ class CustomFieldModelTest(TestCase):
 
         site.cf["baz"] = "def"
         site.clean()
+
+    #
+    # test computed field components
+    #
+
+    def test_get_computed_field_method(self):
+        self.assertEqual(
+            self.site1.get_computed_field("computed_field_one"), f"{self.site1.name} is the name of this site."
+        )
+
+    def test_get_computed_field_method_render_false(self):
+        self.assertEqual(
+            self.site1.get_computed_field("computed_field_one", render=False), self.computed_field_one.template
+        )
+
+    def test_get_computed_fields_method(self):
+        expected_renderings = {
+            "computed_field_one": f"{self.site1.name} is the name of this site.",
+            "bad_computed_field": self.bad_computed_field.fallback_value,
+        }
+        self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)
+
+    def test_get_computed_fields_method_label_as_key(self):
+        expected_renderings = {
+            "Computed Field One": f"{self.site1.name} is the name of this site.",
+            "Bad Computed Field": self.bad_computed_field.fallback_value,
+        }
+        self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)
+
+    def test_get_computed_fields_only_returns_fields_for_content_type(self):
+        self.assertTrue(self.non_site_computed_field.slug not in self.site1.get_computed_fields())
 
 
 class CustomFieldFilterTest(TestCase):
@@ -976,16 +1061,10 @@ class CustomFieldChoiceTest(TestCase):
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
 
-class CustomFieldBackgroundTasks(TestCase):
-    def setUp(self):
-        # Clear the queue for each test
-        django_rq.get_queue("custom_fields").empty()
-
-    def get_worker(self, queue_name="custom_fields", **kwargs):
-        worker = django_rq.get_worker(queue_name, worker_class="rq.worker.SimpleWorker", **kwargs)
-        worker.work(burst=True)
-
+class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
+        self.clear_worker()
+
         site = Site(
             name="Site 1",
             slug="site-1",
@@ -997,14 +1076,15 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         site.refresh_from_db()
 
         self.assertEqual(site.cf["cf1"], "Foo")
 
     def test_delete_custom_field_data_task(self):
+        self.clear_worker()
+
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(
             name="cf1",
@@ -1013,22 +1093,20 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
-
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
         site.save()
 
         cf.delete()
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         site.refresh_from_db()
 
         self.assertTrue("cf1" not in site.cf)
 
     def test_update_custom_field_choice_data_task(self):
+        self.clear_worker()
+
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(
             name="cf1",
@@ -1037,8 +1115,7 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
@@ -1049,8 +1126,7 @@ class CustomFieldBackgroundTasks(TestCase):
         choice.value = "Bar"
         choice.save()
 
-        # Synchronously process all jobs on the queue in this process
-        self.get_worker()
+        self.wait_on_active_tasks()
 
         site.refresh_from_db()
 
