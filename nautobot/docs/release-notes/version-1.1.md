@@ -22,7 +22,7 @@ While config contexts allow for arbitrary data structures to be stored within Na
 
 #### GraphQL ORM Functions
 
-Two new [GraphQL utility functions](../plugins/development.md) have been added to allow easy access to the GraphQL system from source code. Both can be accessed by using `from nautobot.core.graphql import execute_saved_query, execute_query`.
+Two new [GraphQL utility functions](../plugins/development.md#using-graphql-orm-utility) have been added to allow easy access to the GraphQL system from source code. Both can be accessed by using `from nautobot.core.graphql import execute_saved_query, execute_query`.
 
 1. `execute_query()`: Runs string as a query against GraphQL.
 2. `execute_saved_query()`: Execute a saved query from Nautobot database.
@@ -39,6 +39,12 @@ The installation and configuration guides have been revised to include MySQL. If
 A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for specifying the desired database engine at runtime without needing to modify your `nautobot_config.py`. Please see the [configuration guide on `DATABASES`](../configuration/required-settings.md#databases) for more details on how to configure Nautobot to use MySQL.
 
 Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-setup) and [CentOS](../installation/centos.md#mysql-setup) to get started.
+
+#### Plugin Defined Jinja2 Filters
+
+Plugins can now define custom Jinja2 filters to be used when rendering templates defined within computed fieldssor custom links. To register your own filters, you may add a `jinja_filters.py` to your plugin and any filters defined there will be automatically registered and globally usable. 
+
+Please see the [plugin development documentation on including Jinja2 filters](../plugins/development.md#including-jinja2-filters) to get started.
 
 #### Plugin Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/572))
 
@@ -68,6 +74,46 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Removed
 
+## v1.1.0b3 (2021-??-??)
+
+### Added
+
+### Changed
+
+- [#675](https://github.com/nautobot/nautobot/pull/675) - Update MySQL unicode settings docs to be more visible
+
+### Fixed
+
+- [#677](https://github.com/nautobot/nautobot/issues/677) - Revise LDAPS outdated documentation for ignoring TLS cert errors
+- [#680](https://github.com/nautobot/nautobot/issues/680) - Removed unnecessary warning message when both RQ and Celery workers are present
+
+### Removed
+
+## v1.1.0b2 (2021-07-09)
+
+### Added
+
+- [#599](https://github.com/nautobot/nautobot/issues/599) - Custom fields are now supported on `JobResult` objects
+- [#637](https://github.com/nautobot/nautobot/pull/637) - Implemented a `nautobot-server fix_custom_fields` command to manually purge stale custom field data
+
+### Changed
+
+- [#634](https://github.com/nautobot/nautobot/pull/634) - Documentation on plugin capabilities has been clarified.
+
+### Fixed
+
+- [#495](https://github.com/nautobot/nautobot/issues/495) - Fixed search for partial IPv4 prefixes/aggregates not finding all matching objects
+- [#533](https://github.com/nautobot/nautobot/issues/533) - Custom field tasks are now run atomically to avoid stale field data from being saved on objects.
+- [#554](https://github.com/nautobot/nautobot/issues/554) - Fixed search for partial IPv6 prefixes/aggregates not finding all matching objects
+- [#569](https://github.com/nautobot/nautobot/issues/569) - Change minimum/maximum allowed values for integer type in Custom Fields to 64-bit `BigIntegerField` types (64-bit)
+- [#600](https://github.com/nautobot/nautobot/issues/600) - The `invoke migrate` step is now included in the development getting started guide for Docker workflows
+- [#617](https://github.com/nautobot/nautobot/pull/617) - Added extra comments to `uwsgi.ini` config to help with load balancer deployments in Nautobot services documentation
+- [#626](https://github.com/nautobot/nautobot/pull/626) - Added prefix `NAUTOBOT_` in `override.env` example inside of `docker-entrypoint.sh`
+- [#645](https://github.com/nautobot/nautobot/issues/645) - Updated services troubleshooting docs to include "incorrect string value" fix when using Unicode emojis with MySQL as a database backend
+- [#653](https://github.com/nautobot/nautobot/issues/653) - Fixed systemd unit file for `nautobot-worker` to correctly start/stop/restart
+- [#661](https://github.com/nautobot/nautobot/issues/661) - Fixed `computed_fields` key not being included in API response for devices when using `opt_in_fields`
+- [#667](https://github.com/nautobot/nautobot/pull/667) - Fixed various outdated/incorrect places in the documentation for v1.1.0 release.
+
 ## v1.1.0b1 (2021-07-02)
 
 ### Added
@@ -78,9 +124,9 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#200](https://github.com/nautobot/nautobot/issues/200) - Jobs can be marked as read-only
 - [#274](https://github.com/nautobot/nautobot/issues/274) - Added config context schemas to optionally validate config and local context data against JSON Schemas
 - [#297](https://github.com/nautobot/nautobot/issues/297) -  Added an anonymous health-checking endpoint at `/health/`using, also introducing a `nautobot-server health_check` command.
-- [#485](https://github.com/nautobot/nautobot/pulls/485) - Applications can define navbar properties through `navigation.py`
+- [#485](https://github.com/nautobot/nautobot/pull/485) - Applications can define navbar properties through `navigation.py`
 - [#557](https://github.com/nautobot/nautobot/issues/557) - `Prefix` records can now be created using /32 (IPv4) and /128 (IPv6) networks. (Port of [NetBox #6545](https://github.com/netbox-community/netbox/pull/6545))
-- [#561](https://github.com/nautobot/nautobot/pulls/561) - Added autodetection of `mime_type` on `export_templates` provided by Git datasources
+- [#561](https://github.com/nautobot/nautobot/pull/561) - Added autodetection of `mime_type` on `export_templates` provided by Git datasources
 - [#636](https://github.com/nautobot/nautobot/pull/636) - Added custom fields to `JobResult` model, with minor changes to job result detail page
 
 ### Changed

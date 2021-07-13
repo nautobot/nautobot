@@ -115,7 +115,7 @@ def docker_compose(context, command, **kwargs):
 def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
-        context.run(command, **kwargs)
+        context.run(command, pty=True, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"

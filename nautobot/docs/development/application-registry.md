@@ -4,7 +4,7 @@ The registry is an in-memory data structure which houses various application-wid
 
 The registry behaves essentially like a Python dictionary, with the notable exception that once a store (key) has been declared, it cannot be deleted or overwritten. The value of a store can, however, be modified; e.g. by appending a value to a list. Store values generally do not change once the application has been initialized.
 
-The registry can be inspected by importing `registry` from `extras.registry`.
+The registry can be inspected by importing `registry` from `nautobot.extras.registry`.
 
 ## Stores
 
