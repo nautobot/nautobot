@@ -168,9 +168,9 @@ WantedBy=multi-user.target
 
 #### Migrating to Celery from RQ
 
-Prior to migrating, you need to determine of you are running any custom background tasks or plugins that still rely on the RQ worker. There are a few ways to do this. Two of them are:
+Prior to migrating, you need to determine whether you have any plugins installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
 
-* Ask your developer or administrator if there are any background tasks or plugins still using the RQ worker
+* Ask your developer or administrator if there are any plugins running background tasks still using the RQ worker
 * If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job` 
 
 If you're upgrading from Nautobot version 1.0.x and are NOT running plugins that use the RQ worker, all you really need to do are two things.
@@ -203,7 +203,7 @@ index f84073fb5..52baf6096 100644
 (END)
 ```
 
-If you cannot update your custom tasks with the change described above, you must run the [RQ worker concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers) until the plugin can be updated.
+If you are using plugins that use custom background tasks but have not yet made the change described above, you must run the [RQ worker concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers) until the plugin can be updated.
 
 !!! warning
     Failure to account for the Celery-to-RQ migration may break your custom background tasks
