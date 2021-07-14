@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load perms %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+{% block header %}
+    <div class="row noprint">
+        {% with list_url=object|validated_viewname:"list" %}
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url list_url %}">
+                    {{ verbose_name_plural|bettertitle }}
+                </a></li>
+                {% if object.name %}
+                    <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
+                {% else %}
+                    <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url list_url %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+        {% endwith %}
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if user|can_add:object %}
+            {% clone_button object %}
+        {% endif %}
+        {% if user|can_change:object %}
+            {% edit_button object %}
+        {% endif %}
+        {% if user|can_delete:object %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">
+                {{ verbose_name|bettertitle }}
+            </a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{{ changelog_url }}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock %}
+{% block postcontent %}
+    <div class="row">
+        <div class="col-md-12">
+            {% plugin_full_width_page object %}
+        </div>
+    </div>
+{% endblock postcontent %}

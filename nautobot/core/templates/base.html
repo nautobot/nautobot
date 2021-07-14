@@ -58,8 +58,9 @@
                 {{ message }}
             </div>
         {% endfor %}
-        {% block header %}{% endblock %}
-        {% block content %}{% endblock %}
+        {% block header %}{% endblock header %}
+        {% block content %}{% endblock content %}
+        {% block postcontent %}{% endblock postcontent %}
         <div class="push"></div>
          {% if settings.BANNER_BOTTOM %}
             <div class="alert alert-info text-center banner-bottom" role="alert">

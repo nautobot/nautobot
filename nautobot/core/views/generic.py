@@ -14,6 +14,7 @@ from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
@@ -74,6 +75,25 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         return {}
 
+    def get_changelog_url(self, instance):
+        """Return the changelog URL for a given instance."""
+        meta = self.queryset.model._meta
+
+        # Don't try to generate a changelog_url for an ObjectChange.
+        if meta.model_name == 'objectchange':
+            return None
+
+        route = f"{meta.app_label}:{meta.model_name}_changelog"
+
+        try:
+            changelog_url = reverse(route, kwargs={"pk": instance.pk})
+        except NoReverseMatch:
+            changelog_url = reverse(route, kwargs={"slug": instance.slug})
+        except Exception as err:
+            raise RuntimeError(f"Unexpected error when retrieving changelog URL for object {self.queryset.model}: {err}")
+
+        return changelog_url
+
     def get(self, request, *args, **kwargs):
         """
         Generic GET handler for accessing an object by PK or slug
@@ -85,6 +105,9 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             self.get_template_name(),
             {
                 "object": instance,
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                "changelog_url": self.get_changelog_url(instance),
                 **self.get_extra_context(request, instance),
             },
         )

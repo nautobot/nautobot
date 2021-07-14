@@ -438,6 +438,7 @@ class ObjectChangeLogView(View):
             "extras/object_changelog.html",
             {
                 "object": obj,
+                "verbose_name": obj._meta.verbose_name,
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
