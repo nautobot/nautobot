@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.1.0-beta.1"
+version = "1.1.0-beta.3"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -47,7 +47,7 @@ django-filter = "~2.4.0"
 # Health check endpoint
 django-health-check = "^3.16.4"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
-django-jinja = "^2.8.0"
+django-jinja = "<2.8.0"
 # Modified Preorder Tree Traversal - tree structure for Region, RackGroup, etc.
 django-mptt = "~0.11.0"
 # Prometheus metrics for Django
@@ -75,7 +75,7 @@ graphene-django = "~2.15.0"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 # Template rendering engine
-Jinja2 = "~3.0.1"
+Jinja2 = "~2.11.3"
 # Optional data validation of config contexts
 jsonschema = "~3.2.0"
 # Rendering of markdown files to HTML

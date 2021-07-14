@@ -161,11 +161,11 @@ def _configure_settings(config):
                     )
                 raise e
 
-            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG
+            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG or fall back to settings
             def _setting(name, default=None):
                 if name in settings.STORAGE_CONFIG:
                     return settings.STORAGE_CONFIG[name]
-                return globals().get(name, default)
+                return getattr(settings, name, default)
 
             storages.utils.setting = _setting
 

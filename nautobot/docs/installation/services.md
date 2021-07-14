@@ -76,13 +76,22 @@ log-5xx = true
 ; processes = 5
 
 ; If using subdirectory hosting e.g. example.com/nautobot, you must uncomment this line. Otherwise you'll get double paths e.g. example.com/nautobot/nautobot/.
-; See: https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.11.html#fixpathinfo-routing-action
+; Ref: https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.11.html#fixpathinfo-routing-action
 ; route-run = fixpathinfo:
+
+; If hosted behind a load balancer uncomment these lines, the harakiri timeout should be greater than your load balancer timeout.
+; Ref: https://uwsgi-docs.readthedocs.io/en/latest/HTTP.html?highlight=keepalive#http-keep-alive
+; harakiri = 65
+; add-header = Connection: Keep-Alive
+; http-keepalive = 1
 ```
 
 This configuration should suffice for most initial installations, you may wish to edit this file to change the bound IP
 address and/or port number, or to make performance-related adjustments. See [uWSGI
 documentation](https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html) for the available configuration parameters.
+
+!!! note
+    If you are deploying uWSGI behind a load balancer be sure to configure the harakiri timeout and keep alive appropriately.
 
 ## Setup systemd
 
@@ -138,15 +147,15 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=forking
+Type=exec
 Environment="NAUTOBOT_ROOT=/opt/nautobot"
 
 User=nautobot
 Group=nautobot
-PIDFile=/var/tmp/nautobot-celery.pid
+PIDFile=/var/tmp/nautobot-worker.pid
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-celery.pid
+ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker.pid
 
 Restart=always
 RestartSec=30
@@ -232,7 +241,28 @@ Once you've verified that the WSGI service and worker are up and running, move o
 
 ### SSL Error
 
-If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI configuration and Nautobot's database settings.
-See [this conversation](https://github.com/nautobot/nautobot/issues/127) for more details.
+If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI
+configuration and Nautobot's database settings.
 
 - Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
+
+For example:
+
+```python
+DATABASES = {
+    "default": {
+        # Other settings...
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 0)),  # Change the value to 0
+    }
+}
+```
+
+Please see [SSL error: decryption failed or bad record mac & SSL SYSCALL error: EOF detected (#127)](https://github.com/nautobot/nautobot/issues/127) for more details.
+
+### Operational Error: Incorrect string value
+
+When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
+
+Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for instructions on how to address this.
+
+Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.
