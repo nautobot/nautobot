@@ -283,6 +283,28 @@ class BaseJob:
 
         return form
 
+    @classmethod
+    def deserialize_data(cls, data):
+        """
+        Given data input for a job execution, deserialize it by resolving object references using defined variables.
+
+        This converts a list of pk's back into a QuerySet for MultiObjectVar instances and single pk values into
+        model instances for ObjectVar.
+        """
+        vars = cls._get_vars()
+        return_data = {}
+
+        for field_name, value in data.items():
+            var = vars[field_name]
+            if isinstance(var, MultiObjectVar):
+                return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
+            elif isinstance(var, ObjectVar):
+                return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
+            else:
+                return_data[field_name] = value
+
+        return return_data
+
     def run(self, data, commit):
         """
         Method invoked when this Job is run, before any "test_*" methods.
@@ -815,6 +837,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         return False
     job = job_class()
     job.job_result = job_result
+    data = job_class.deserialize_data(data)
 
     if job.read_only:
         # Force commit to false for read only jobs.

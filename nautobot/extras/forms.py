@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.base import Model
 from django.db.models.fields import TextField
+from django.db.models.query import QuerySet
 from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
@@ -746,6 +748,26 @@ class JobForm(BootstrapMixin, forms.Form):
         A boolean indicating whether the form requires user input (ignore the _commit field).
         """
         return bool(len(self.fields) > 1)
+
+    def get_serializeable_data(self):
+        """
+        This method parses `self.cleaned_data` and returns a dict which is safe to serialize
+
+        Here we convert the QuerySet of a MultiObjectVar to a list of the pk's and the model instance
+        of an ObjectVar into the pk value.
+
+        These are converted back during job execution.
+        """
+        return_data = {}
+        for field_name, value in self.cleaned_data.items():
+            if isinstance(value, QuerySet):
+                return_data[field_name] = list(value.values_list("pk", flat=True))
+            elif isinstance(value, Model):
+                return_data[field_name] = value.pk
+            else:
+                return_data[field_name] = value
+
+        return return_data
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
