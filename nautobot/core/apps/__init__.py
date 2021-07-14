@@ -70,13 +70,14 @@ def register_menu_items(tab_list):
                     )
 
                     registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
-                    for button in item.buttons:
-                        create_or_check_entry(
-                            registry_buttons,
-                            button,
-                            button.title,
-                            f"{nav_tab.name} -> {group.name} -> {item.link} -> {button.title}",
-                        )
+                    if item.buttons:
+                        for button in item.buttons:
+                            create_or_check_entry(
+                                registry_buttons,
+                                button,
+                                button.title,
+                                f"{nav_tab.name} -> {group.name} -> {item.link} -> {button.title}",
+                            )
 
                     # Add sorted buttons to group registry dict
                     registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
