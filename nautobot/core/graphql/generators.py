@@ -34,7 +34,9 @@ def generate_restricted_queryset():
 
 
 def generate_null_choices_resolver(name, resolver_name):
-    """Generate function to resolve fields that can be null, but blank=True, and choices defined.
+    """
+    Generate function to resolve appropriate type when a field has `null=False` (default), `blank=True`, and
+    `choices` defined.
 
     Args:
         name (str): name of the field to resolve
