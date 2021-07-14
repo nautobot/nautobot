@@ -85,6 +85,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 ### Changed
 
 - [#675](https://github.com/nautobot/nautobot/pull/675) - Update MySQL unicode settings docs to be more visible
+- [#684](https://github.com/nautobot/nautobot/issues/684) - Renamed `?opt_in_fields=` query param to `?include=`
 
 ### Fixed
 
