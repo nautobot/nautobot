@@ -30,7 +30,6 @@ STORAGE_CONFIG = {
     "AWS_DEFAULT_ACL": "public-read",
     "AWS_QUERYSTRING_AUTH": False,
     "AWS_LOCATION": "subfolder/name/"
-    "USE_TZ": True,
 }
 STATICFILES_STORAGE = STORAGE_BACKEND
 ```
