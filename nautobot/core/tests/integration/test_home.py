@@ -6,6 +6,7 @@ from nautobot.circuits.models import Circuit, Provider
 from nautobot.dcim.models import PowerFeed, PowerPanel, Site
 from nautobot.tenancy.models import Tenant
 
+
 class HomeTestCase(SeleniumTestCase):
     """Integration tests against the home page."""
 
@@ -13,50 +14,29 @@ class HomeTestCase(SeleniumTestCase):
     layout = [
         {
             "Organization": {
-                "Sites": {
-                    "model": Site,
-                    "permission": "dcim.view_site"
-                },
-                "Tenant": {
-                    "model": Tenant,
-                    "permission": "tenancy.view_tenant"
-                },
+                "Sites": {"model": Site, "permission": "dcim.view_site"},
+                "Tenant": {"model": Tenant, "permission": "tenancy.view_tenant"},
             },
             "Power": {
-                "Power Feeds": {
-                    "model": PowerFeed,
-                    "permission": "dcim.view_powerfeed"
-                },
-                "Power Panel": {
-                    "model": PowerPanel,
-                    "permission": "dcim.view_powerpanel"
-                },
+                "Power Feeds": {"model": PowerFeed, "permission": "dcim.view_powerfeed"},
+                "Power Panel": {"model": PowerPanel, "permission": "dcim.view_powerpanel"},
             },
         },
         {
             "Circuits": {
-                "Providers": {
-                    "model": Provider,
-                    "permission": "circuits.view_provider"
-                },
-                "Circuits": {
-                    "model": Circuit,
-                    "permission": "circuits.view_circuit"
-                },
+                "Providers": {"model": Provider, "permission": "circuits.view_provider"},
+                "Circuits": {"model": Circuit, "permission": "circuits.view_circuit"},
             },
         },
     ]
-
 
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
 
-
     def tearDown(self):
         self.logout()
         super().tearDown()
-
 
     def test_login(self):
         """
@@ -64,7 +44,6 @@ class HomeTestCase(SeleniumTestCase):
         """
         # Wait for the page to render and make sure we got a body.
         self.load_page(self.live_server_url)
-
 
     def test_homepage_render(self):
         """
@@ -76,13 +55,12 @@ class HomeTestCase(SeleniumTestCase):
 
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_element_by_class_name("col-sm-6 col-md-4")
+        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//strong[contains(text(), '{panel_name}')]")
                 for item_name, _ in panel_details.items():
                     columns_html[column_idx].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
-
 
     def test_homepage_render_counters(self):
         """
@@ -94,7 +72,7 @@ class HomeTestCase(SeleniumTestCase):
 
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_element_by_class_name("col-sm-6 col-md-4")
+        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//strong[contains(text(), '{panel_name}')]")
@@ -105,7 +83,6 @@ class HomeTestCase(SeleniumTestCase):
                         counter_html = int(item_html.find_element_by_xpath(f"./../../span").get_property("innerHTML"))
                         self.assertEqual(counter, counter_html)
 
-
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_no_permissions(self):
         """
@@ -113,14 +90,17 @@ class HomeTestCase(SeleniumTestCase):
         """
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_element_by_class_name("col-sm-6 col-md-4")
+        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
                 for item_name, _ in panel_details.items():
-                    item_html = columns_html[column_idx].find_element_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                    self.assertTrue("mdi mdi-lock" in item_html.find_element_by_xpath(f"./../span").get_property("innerHTML"))
-
+                    item_html = columns_html[column_idx].find_element_by_xpath(
+                        f".//h4[contains(text(), '{item_name}')]"
+                    )
+                    self.assertTrue(
+                        "mdi mdi-lock" in item_html.find_element_by_xpath(f"./../span").get_property("innerHTML")
+                    )
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_limit_permissions(self):
@@ -133,13 +113,19 @@ class HomeTestCase(SeleniumTestCase):
 
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_element_by_class_name("col-sm-6 col-md-4")
+        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
                 for item_name, item_details in panel_details.items():
                     if item_details["permission"] in user_permissions:
-                        item_html = columns_html[column_idx].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
+                        item_html = columns_html[column_idx].find_element_by_xpath(
+                            f".//a[contains(text(), '{item_name}')]"
+                        )
                     else:
-                        item_html = columns_html[column_idx].find_element_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                        self.assertTrue("mdi mdi-lock" in item_html.find_element_by_xpath(f"./../span").get_property("innerHTML"))
+                        item_html = columns_html[column_idx].find_element_by_xpath(
+                            f".//h4[contains(text(), '{item_name}')]"
+                        )
+                        self.assertTrue(
+                            "mdi mdi-lock" in item_html.find_element_by_xpath(f"./../span").get_property("innerHTML")
+                        )
