@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
+from django.utils.html import escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
@@ -359,12 +360,12 @@ class CustomFieldColumn(tables.Column):
             if value:
                 template = ""
                 for v in value:
-                    template += f'<span class="label label-default">{v}</span> '
+                    template += format_html('<span class="label label-default">{}</span> ', value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
-            template = f'<span class="label label-default">{value}</span>'
+            template = format_html('<span class="label label-default">{}</span>', value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
-            template = f'<a href="{value}">{value}</a>'
+            template = format_html('<a href="{}">{}</a>', value, value)
         else:
-            template = value
+            template = escape(value)
 
         return mark_safe(template)
