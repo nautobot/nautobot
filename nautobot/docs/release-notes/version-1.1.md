@@ -44,7 +44,7 @@ Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-s
 
 #### Plugin Defined Jinja2 Filters
 
-Plugins can now define custom Jinja2 filters to be used when rendering templates defined within computed fieldssor custom links. To register your own filters, you may add a `jinja_filters.py` to your plugin and any filters defined there will be automatically registered and globally usable. 
+Plugins can now define custom Jinja2 filters to be used when rendering templates defined within computed fields or custom links. To register your own filters, you may add a `jinja_filters.py` to your plugin and any filters defined there will be automatically registered and globally usable. 
 
 Please see the [plugin development documentation on including Jinja2 filters](../plugins/development.md#including-jinja2-filters) to get started.
 
