@@ -96,6 +96,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#680](https://github.com/nautobot/nautobot/issues/680) - Removed unnecessary warning message when both RQ and Celery workers are present
 - [#686](https://github.com/nautobot/nautobot/issues/686) - Fixed incorrect permission name for Tags list view in nav menu
 - [#690](https://github.com/nautobot/nautobot/pull/690) - Fixed Jinja2 dependency version to remain backwards-compatible with Nautobot 1.0.x
+- [#696](https://github.com/nautobot/nautobot/pull/696) - Fixed inheritance of VRF and Tenant assignment when creating an IPAddress or Prefix under a parent Prefix. (Port of [NetBox #5703](https://github.com/netbox-community/netbox/issues/5703) and [NetBox #6012](https://github.com/netbox-community/netbox/issues/6012))
 
 ### Removed
 
