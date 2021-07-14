@@ -117,7 +117,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#626](https://github.com/nautobot/nautobot/pull/626) - Added prefix `NAUTOBOT_` in `override.env` example inside of `docker-entrypoint.sh`
 - [#645](https://github.com/nautobot/nautobot/issues/645) - Updated services troubleshooting docs to include "incorrect string value" fix when using Unicode emojis with MySQL as a database backend
 - [#653](https://github.com/nautobot/nautobot/issues/653) - Fixed systemd unit file for `nautobot-worker` to correctly start/stop/restart
-- [#661](https://github.com/nautobot/nautobot/issues/661) - Fixed `computed_fields` key not being included in API response for devices when using `opt_in_fields`
+- [#661](https://github.com/nautobot/nautobot/issues/661) - Fixed `computed_fields` key not being included in API response for devices when using `include` (for opt-in fields)
 - [#667](https://github.com/nautobot/nautobot/pull/667) - Fixed various outdated/incorrect places in the documentation for v1.1.0 release.
 
 ## v1.1.0b1 (2021-07-02)

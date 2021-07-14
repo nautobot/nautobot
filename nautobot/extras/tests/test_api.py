@@ -1180,3 +1180,19 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             fallback_value="error",
             content_type=site_ct,
         )
+
+        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+
+    def test_computed_field_include(self):
+        """Test that explicitly including a computed field behaves as expected."""
+        self.add_permissions("dcim.view_site")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk})
+
+        # First get the object without computed fields.
+        response = self.client.get(url, **self.header)
+        self.assertNotIn("computed_fields", response.json())
+
+        # Now get it with computed fields.
+        params = {"include": "computed_fields"}
+        response = self.client.get(url, data=params, **self.header)
+        self.assertIn("computed_fields", response.json())

@@ -1,6 +1,6 @@
 # Computed Fields
 
-Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./custom-fields.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in it's database and merging it into a Jinja2 template and associated filters.
+Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./custom-fields.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in its database and merging it into a Jinja2 template and associated filters.
 
 As an example, within your automation system, you may want to be able to have an automatically generated field on the Device model that combines the name of the device and the uppercased site name. To do that, you would define a Jinja2 template for this field that looks like such:
 
@@ -37,23 +37,27 @@ Computed field templates can utilize the context of the object the field is bein
 
 ## Computed Field Template Filters
 
-Computed field templates can also utilize custom jinja filters that have been registered via plugins. These filters can be used by providing the name of the filter function. As an example:
+Computed field templates can also utilize custom Jinja2 filters that have been registered via plugins. These filters can be used by providing the name of the filter function. As an example:
 
 ```jinja2
 {{ obj.site.name | leet_speak }}
 ```
 
-See the documentation on [registering custom jinja filters](../plugins/development.md#including-jinja-filters) in plugins.
+See the documentation on [registering custom Jinja2 filters](../plugins/development.md#including-jinja2-filters) in plugins.
 
 
 ## Computed Fields and the REST API
 
-When retrieving an object via the REST API, computed field data is not included by default in order to prevent potentially computationally expensive rendering operations that degrade the user experience. In order to retrieve computed field data, you must use the `opt_in_fields` query parameter.
+When retrieving an object via the REST API, computed field data is not included by default in order to prevent potentially computationally expensive rendering operations that degrade the user experience. In order to retrieve computed field data, you must use the `include` query parameter.
+
 Take a look at an example URL that includes computed field data:
+
 ```no-highlight
-http://localhost:8080/api/dcim/sites?opt_in_fields=computed_fields
+http://localhost:8080/api/dcim/sites?include=computed_fields
 ```
+
 When explicitly requested as such, computed field data will be included in the `computed_fields` attribute. For example, below is the partial output of a site with one computed field defined:
+
 ```json
 {
     "id": 123,
@@ -67,4 +71,4 @@ When explicitly requested as such, computed field data will be included in the `
 ```
 
 !!! note
-    The slug field is used as the key name for items in the `computed_fields` attribute.
+    The `slug` value of each computed field is used as the key name for items in the `computed_fields` attribute.
