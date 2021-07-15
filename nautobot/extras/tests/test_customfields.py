@@ -1220,7 +1220,7 @@ class CustomFieldTableTest(TestCase):
         self.site.save()
 
     def test_custom_field_table_render(self):
-        queryset = Site.objects.filter(site=self.site)
+        queryset = Site.objects.filter(name=self.site.name)
         site_table = SiteTable(queryset)
 
         custom_column_expected = {
@@ -1233,7 +1233,7 @@ class CustomFieldTableTest(TestCase):
             "multi_choice_field": '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span>',
         }
 
-        for col_name, col_expected_value in custom_column_expected:
+        for col_name, col_expected_value in custom_column_expected.items():
             internal_col_name = "cf_" + col_name
             custom_column = site_table.base_columns.get(internal_col_name)
             self.assertIsNotNone(custom_column)
