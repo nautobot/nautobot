@@ -15,6 +15,9 @@ from django import forms
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import transaction
+from django.db.models import Model
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.functional import classproperty
 
@@ -283,6 +286,27 @@ class BaseJob:
 
         return form
 
+    @staticmethod
+    def serialize_data(data):
+        """
+        This method parses input data (from JobForm usually) and returns a dict which is safe to serialize
+
+        Here we convert the QuerySet of a MultiObjectVar to a list of the pk's and the model instance
+        of an ObjectVar into the pk value.
+
+        These are converted back during job execution.
+        """
+        return_data = {}
+        for field_name, value in data.items():
+            if isinstance(value, QuerySet):
+                return_data[field_name] = list(value.values_list("pk", flat=True))
+            elif isinstance(value, Model):
+                return_data[field_name] = value.pk
+            else:
+                return_data[field_name] = value
+
+        return return_data
+
     @classmethod
     def deserialize_data(cls, data):
         """
@@ -290,6 +314,10 @@ class BaseJob:
 
         This converts a list of pk's back into a QuerySet for MultiObjectVar instances and single pk values into
         model instances for ObjectVar.
+
+        Note that when resolving querysets or model instances by their PK, we do not catch DoesNotExist
+        exceptions here, we leave it up the caller to handle those cases. The normal job execution code
+        path would consider this a failure of the job execution, as described in `nautobot.extras.jobs.run_job`.
         """
         vars = cls._get_vars()
         return_data = {}
@@ -297,9 +325,18 @@ class BaseJob:
         for field_name, value in data.items():
             var = vars[field_name]
             if isinstance(var, MultiObjectVar):
+                queryset = var.field_attrs["queryset"].filter(pk__in=value)
+                if queryset.count() < len(value):
+                    # Not all objects found
+                    not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
+                    raise queryset.model.DoesNotExist(
+                        f"Failed to requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
+                    )
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
+
             elif isinstance(var, ObjectVar):
                 return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
+
             else:
                 return_data[field_name] = value
 
@@ -837,7 +874,19 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         return False
     job = job_class()
     job.job_result = job_result
-    data = job_class.deserialize_data(data)
+
+    # Attempt to resolve serialized data back into original form by creating querysets or model instances
+    # If we fail to find any objects, we consider this a job execution error, and fail.
+    # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
+    # or it might be bad input from an API request, or manual execution.
+    try:
+        data = job_class.deserialize_data(data)
+    except ObjectDoesNotExist as e:
+        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job.log_failure(message=e)
+        job_result.completed = timezone.now()
+        job_result.save()
+        return False
 
     if job.read_only:
         # Force commit to false for read only jobs.
@@ -847,7 +896,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     job.logger.info(f"Running job (commit={commit})")
 
-    job_result.status = JobResultStatusChoices.STATUS_RUNNING
+    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
 
     # Add any files to the form data
