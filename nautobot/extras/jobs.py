@@ -330,7 +330,7 @@ class BaseJob:
                     # Not all objects found
                     not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
                     raise queryset.model.DoesNotExist(
-                        f"Failed to requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
+                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
                     )
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
