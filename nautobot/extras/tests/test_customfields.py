@@ -1136,7 +1136,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
 
 class CustomFieldTableTest(TestCase):
-    def setUpTestData(self):
+    def setUp(self):
         content_type = ContentType.objects.get_for_model(Site)
 
         # Text custom field
