@@ -10,7 +10,6 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from jinja2 import TemplateError
 
 from nautobot.extras.choices import *
 from nautobot.extras.models import ChangeLoggedModel
@@ -81,8 +80,8 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     def render(self, context):
         try:
             return render_jinja2(self.template, context)
-        except TemplateError as e:
-            logger.warning("Failed to render computed field %s: %s", self.slug, e)
+        except Exception as exc:
+            logger.warning("Failed to render computed field %s: %s", self.slug, exc)
             return self.fallback_value
 
 
