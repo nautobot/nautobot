@@ -105,13 +105,23 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_TASK_SOFT_TIME_LIMIT
+
+Default: `300` (5 minutes)
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT`
+
+The global Celery task soft timeout (in seconds). Any background task that exceeds this duration will receive a `SoftTimeLimitExceeded` exception and is responsible for handling this exception and performing any necessary cleanup or final operations before ending. See also `CELERY_TASK_TIME_LIMIT` below.
+
+---
+
 ## CELERY_TASK_TIME_LIMIT
 
-Default: `1800`
+Default: `600` (10 minutes)
 
 Environment Variable: `NAUTOBOT_CELERY_TASK_TIME_LIMIT`
 
-The global Celery task timeout (in seconds)
+The global Celery task hard timeout (in seconds). Any background task that exceeds this duration will be forcibly killed with a `SIGKILL` signal.
 
 ---
 
