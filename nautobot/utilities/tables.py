@@ -342,7 +342,7 @@ class CustomFieldColumn(tables.Column):
 
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
-        kwargs["accessor"] = Accessor(f"custom_field_data__{customfield.name}")
+        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.name}")
         kwargs["verbose_name"] = customfield.label or customfield.name
 
         super().__init__(*args, **kwargs)
