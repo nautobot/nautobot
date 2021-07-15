@@ -1205,7 +1205,7 @@ class CustomFieldTableTest(TestCase):
         statuses = Status.objects.get_for_model(Site)
 
         # Create a site
-        self.site = Site.objects.create(name="Site 1", slug="site-1", status=statuses.get(slug="active"))
+        self.site = Site.objects.create(name="Site Custom", slug="site-1", status=statuses.get(slug="active"))
 
         # Assign custom field values for site 2
         self.site._custom_field_data = {
@@ -1220,7 +1220,8 @@ class CustomFieldTableTest(TestCase):
         self.site.save()
 
     def test_custom_field_table_render(self):
-        site_table = SiteTable(self.site)
+        queryset = Site.objects.filter(site=self.site)
+        site_table = SiteTable(queryset)
 
         custom_column_expected = {
             "text_field": "bar",
