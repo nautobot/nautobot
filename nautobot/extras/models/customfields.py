@@ -4,6 +4,7 @@ from collections import OrderedDict
 from datetime import datetime, date
 
 from django import forms
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
@@ -494,7 +495,9 @@ class CustomFieldChoice(BaseModel):
         super().save(*args, **kwargs)
 
         if self.value != database_object.value:
-            update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+            transaction.on_commit(
+                lambda: update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+            )
 
     def delete(self, *args, **kwargs):
         """
