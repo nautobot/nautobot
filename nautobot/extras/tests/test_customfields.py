@@ -1205,7 +1205,7 @@ class CustomFieldTableTest(TestCase):
         statuses = Status.objects.get_for_model(Site)
 
         # Create a site
-        self.site = (Site.objects.create(name="Site 1", slug="site-1", status=statuses.get(slug="active")),)
+        self.site = Site.objects.create(name="Site 1", slug="site-1", status=statuses.get(slug="active"))
 
         # Assign custom field values for site 2
         self.site._custom_field_data = {
