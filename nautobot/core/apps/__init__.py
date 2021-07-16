@@ -128,7 +128,7 @@ def register_homepage_panels(app_name, homepage_layout):
     template_path = f"{name}/{app_name}/templates/{app_name}/inc/"
     registry_panels = registry["homepage_layout"]["panels"]
     for panel in homepage_layout:
-        panel_perms = set()
+        panel_perms = registry_panels[panel.name]["permissions"] if registry_panels.get(panel.name) else set()
         panel.template_path = template_path
         if isinstance(panel, HomePagePanel):
             create_or_check_entry(registry_panels, panel, panel.name, f"{panel.name}")
@@ -233,7 +233,17 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
         return ()
 
     def __init__(self, name, permissions=[], custom_data=None, custom_template=None, items=None, weight=1000):
-        """Ensure panel properties."""
+        """
+        Ensure panel properties.
+
+        Args:
+            name (str): The name of the panel.
+            permissions (list): The permissions required to view this panel.
+            custom_data (dict): Custom data to be passed to the custom template.
+            custom_template (str): Name of custom template.
+            items (list): List of items to be rendered in this panel.
+            weight (int): The weight of this panel.
+        """
         super().__init__(permissions)
         self.custom_template = custom_template
         self.custom_data = custom_data
@@ -269,7 +279,15 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
         return ()
 
     def __init__(self, name, permissions=[], items=None, weight=1000):
-        """Ensure group properties."""
+        """
+        Ensure group properties.
+
+        Args:
+            name (str): The name of the group.
+            permissions (list): The permissions required to view this group.
+            items (list): List of items to be rendered in this group.
+            weight (int): The weight of this group.
+        """
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -317,7 +335,16 @@ class HomePageItem(HomePageBase, PermissionsMixin):
         permissions=None,
         weight=1000,
     ):
-        """Ensure item properties."""
+        """
+        Ensure item properties.
+
+        Args:
+            name (str): The name of the item.
+            link (str): The link to be used for this item.
+            model (str): The model to being used for this item to calculate the total count of objects.
+            custom_template (str): Name of custom template.
+            custom_data (dict): Custom data to be passed to the custom template.
+        """
         super().__init__(permissions)
         if link:
             reverse(link)
@@ -358,7 +385,15 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
         return ()
 
     def __init__(self, name, permissions=None, groups=None, weight=1000):
-        """Ensure tab properties."""
+        """
+        Ensure tab properties.
+
+        Args:
+            name (str): The name of the tab.
+            permissions (list): The permissions required to view this tab.
+            groups (list): List of groups to be rendered in this tab.
+            weight (int): The weight of this tab.
+        """
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -393,7 +428,14 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         return ()
 
     def __init__(self, name, items=None, weight=1000):
-        """Ensure group properties."""
+        """
+        Ensure group properties.
+
+        Args:
+            name (str): The name of the group.
+            items (list): List of items to be rendered in this group.
+            weight (int): The weight of this group.
+        """
         self.name = name
         self.weight = weight
 
@@ -433,19 +475,28 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     buttons = []
 
     def __init__(self, link, name, permissions=None, buttons=None, weight=1000):
-        """Ensure item properties."""
+        """
+        Ensure item properties.
+
+        Args:
+            link (str): The link to be used for this item.
+            name (str): The name of the item.
+            permissions (list): The permissions required to view this item.
+            buttons (list): List of buttons to be rendered in this item.
+            weight (int): The weight of this item.
+        """
         super().__init__(permissions)
         # Reverse lookup sanity check
         reverse(link)
         self.link = link
         self.name = name
         self.weight = weight
-        if buttons is not None:
-            if not isinstance(buttons, (list, tuple)):
-                raise TypeError("Buttons must be passed as a tuple or list.")
-            elif not all(isinstance(button, NavMenuButton) for button in buttons):
-                raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
-            self.buttons = buttons
+
+        if not isinstance(buttons, (list, tuple)):
+            raise TypeError("Buttons must be passed as a tuple or list.")
+        elif not all(isinstance(button, NavMenuButton) for button in buttons):
+            raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
+        self.buttons = buttons
 
 
 class NavMenuButton(NavMenuBase, PermissionsMixin):
@@ -483,7 +534,17 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
         permissions=None,
         weight=1000,
     ):
-        """Ensure button properties."""
+        """
+        Ensure button properties.
+
+        Args:
+            link (str): The link to be used for this button.
+            title (str): The title of the button.
+            icon_class (str): The icon class to be used as the icon for the start of the button.
+            button_class (str): The button class defines to be used to define the style of the button.
+            permissions (list): The permissions required to view this button.
+            weight (int): The weight of this button.
+        """
         super().__init__(permissions)
         # Reverse lookup sanity check
         reverse(link)

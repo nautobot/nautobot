@@ -7,6 +7,7 @@ services:
         PYTHON_VER: "${PYTHON_VER}"
       context: ../
       dockerfile: docker/Dockerfile
+      target: dev
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     ports:
       - "8080:8080"
@@ -23,6 +24,7 @@ services:
     healthcheck:
       interval: 5s
       timeout: 5s
+      start_period: 5s
       retries: 3
       test: ["CMD", "nautobot-server", "health_check"]
     depends_on:
@@ -36,6 +38,7 @@ services:
     healthcheck:
       interval: 5s
       timeout: 5s
+      start_period: 5s
       retries: 3
       test: ["CMD", "nautobot-server", "health_check"]
     depends_on:
@@ -60,7 +63,7 @@ services:
       - dev.env
   selenium:
     image: selenium/standalone-firefox:latest
-    ports: 
+    ports:
         - "4444:4444"
     shm_size: 2g
 volumes:

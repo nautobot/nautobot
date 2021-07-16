@@ -1,10 +1,10 @@
 from django.test.utils import override_settings
-
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from selenium.common.exceptions import NoSuchElementException
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.dcim.models import PowerFeed, PowerPanel, Site
 from nautobot.tenancy.models import Tenant
+from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 class HomeTestCase(SeleniumTestCase):
@@ -38,6 +38,12 @@ class HomeTestCase(SeleniumTestCase):
         self.logout()
         super().tearDown()
 
+    def get_panel_permissions(self, panel_details):
+        permissions = []
+        for panel in panel_details.values():
+            permissions.append(panel["permission"])
+        return permissions
+
     def test_login(self):
         """
         Perform a UI login.
@@ -55,7 +61,7 @@ class HomeTestCase(SeleniumTestCase):
 
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.selenium.find_elements_by_class_name("col-sm-6 col-md-4 homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//strong[contains(text(), '{panel_name}')]")
@@ -72,7 +78,7 @@ class HomeTestCase(SeleniumTestCase):
 
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.selenium.find_elements_by_class_name("col-sm-6 col-md-4 homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//strong[contains(text(), '{panel_name}')]")
@@ -90,7 +96,7 @@ class HomeTestCase(SeleniumTestCase):
         """
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.selenium.find_elements_by_class_name("col-sm-6 col-md-4 homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
@@ -113,7 +119,7 @@ class HomeTestCase(SeleniumTestCase):
 
         self.load_page(self.live_server_url)
 
-        columns_html = self.selenium.find_elements_by_class_name("homepage_column")
+        columns_html = self.selenium.find_elements_by_class_name("col-sm-6 col-md-4 homepage_column")
         for column_idx, column in enumerate(self.layout):
             for panel_name, panel_details in column.items():
                 columns_html[column_idx].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
@@ -129,3 +135,33 @@ class HomeTestCase(SeleniumTestCase):
                         self.assertTrue(
                             "mdi mdi-lock" in item_html.find_element_by_xpath(f"./../span").get_property("innerHTML")
                         )
+
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_homepage_render_limit_permissions_with_restricted_ui(self):
+        """
+        Render homepage with limited permissions and restricted UI.
+        """
+        self.add_permissions("dcim.view_site")
+        self.add_permissions("circuits.view_circuit")
+        user_permissions = self.user.get_all_permissions()
+
+        self.load_page(self.live_server_url)
+
+        columns_html = self.selenium.find_elements_by_class_name("col-sm-6 col-md-4 homepage_column")
+        for column_idx, column in enumerate(self.layout):
+            for panel_name, panel_details in column.items():
+                if any(perm in self.get_panel_permissions(panel_details) for perm in user_permissions):
+                    columns_html[column_idx].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
+                    for item_name, item_details in panel_details.items():
+                        if item_details["permission"] in user_permissions:
+                            columns_html[column_idx].find_element_by_xpath(
+                                f".//a[contains(text(), '{item_name}')]"
+                            )
+                        else:
+                            with self.assertRaises(NoSuchElementException):
+                                columns_html[column_idx].find_element_by_xpath(
+                                    f".//h4[contains(text(), '{item_name}')]"
+                                )
+                else:
+                    with self.assertRaises(NoSuchElementException):
+                        columns_html[column_idx].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
