@@ -1,7 +1,6 @@
 import logging
 
 from abc import ABC, abstractproperty
-from re import template
 from django.apps import AppConfig
 from django.urls import reverse
 from collections import OrderedDict
@@ -120,7 +119,7 @@ def register_homepage_panels(app_name, homepage_layout):
     Register homepage panels using `homepage.py`.
 
     Each app can now register a `homepage.py` file which holds objects defining the layout of the
-    home page. `HomePageColumn`, `HomePagePanel`, `HomePageGroup` and `HomePageItem` can be used to
+    home page. `HomePagePanel`, `HomePageGroup` and `HomePageItem` can be used to
     define different parts of the layout.
 
     These objects are converted into a dictionary to be stored inside of the Nautobot registry.
@@ -134,6 +133,8 @@ def register_homepage_panels(app_name, homepage_layout):
         if isinstance(panel, HomePagePanel):
             create_or_check_entry(registry_panels, panel, panel.name, f"{panel.name}")
             registry_items = registry_panels[panel.name]["items"]
+            if panel.custom_template:
+                registry["homepage_layout"]["total_items"] += 1
 
             for item in panel.items:
                 if isinstance(item, HomePageItem):
