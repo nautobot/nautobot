@@ -360,7 +360,7 @@ class CustomFieldColumn(tables.Column):
             if value:
                 template = ""
                 for v in value:
-                    template += format_html('<span class="label label-default">{}</span> ', value)
+                    template += format_html('<span class="label label-default">{}</span> ', v)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
             template = format_html('<span class="label label-default">{}</span>', value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
