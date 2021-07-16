@@ -86,7 +86,7 @@ class HomeTestCase(SeleniumTestCase):
                     item_html = columns_html[column_idx].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
                     if item_details.get("model"):
                         counter = item_details["model"].objects.count()
-                        counter_html = int(item_html.find_element_by_xpath(f"./../../span").get_property("innerHTML"))
+                        counter_html = int(item_html.find_element_by_xpath("./../../span").get_property("innerHTML"))
                         self.assertEqual(counter, counter_html)
 
     @override_settings(HIDE_RESTRICTED_UI=False)
@@ -105,7 +105,7 @@ class HomeTestCase(SeleniumTestCase):
                         f".//h4[contains(text(), '{item_name}')]"
                     )
                     self.assertTrue(
-                        "mdi mdi-lock" in item_html.find_element_by_xpath(f"./../span").get_property("innerHTML")
+                        "mdi mdi-lock" in item_html.find_element_by_xpath("./../span").get_property("innerHTML")
                     )
 
     @override_settings(HIDE_RESTRICTED_UI=False)
@@ -133,7 +133,7 @@ class HomeTestCase(SeleniumTestCase):
                             f".//h4[contains(text(), '{item_name}')]"
                         )
                         self.assertTrue(
-                            "mdi mdi-lock" in item_html.find_element_by_xpath(f"./../span").get_property("innerHTML")
+                            "mdi mdi-lock" in item_html.find_element_by_xpath("./../span").get_property("innerHTML")
                         )
 
     @override_settings(HIDE_RESTRICTED_UI=True)
@@ -154,9 +154,7 @@ class HomeTestCase(SeleniumTestCase):
                     columns_html[column_idx].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
                     for item_name, item_details in panel_details.items():
                         if item_details["permission"] in user_permissions:
-                            columns_html[column_idx].find_element_by_xpath(
-                                f".//a[contains(text(), '{item_name}')]"
-                            )
+                            columns_html[column_idx].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
                         else:
                             with self.assertRaises(NoSuchElementException):
                                 columns_html[column_idx].find_element_by_xpath(

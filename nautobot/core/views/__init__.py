@@ -67,8 +67,6 @@ class HomeView(TemplateView):
             }
         )
 
-        item_counter = 0
-        panels_per_column = {}
         # Loop over homepage layout to collect all additional data and create custom panels.
         for panel_name, panel_details in registry["homepage_layout"]["panels"].items():
             if panel_details.get("custom_template"):
