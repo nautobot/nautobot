@@ -263,17 +263,6 @@ Please see [SSL error: decryption failed or bad record mac & SSL SYSCALL error: 
 
 When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
 
-- Create an entry in `DATABASES` -> `default` -> `OPTIONS` with the value `{"charset": "utf8mb4"}` in your `nautobot_config.py` and restart all Nautobot services. This will tell MySQL to always use `utf8mb4` character set for encoding.
-
-For example:
-
-```python
-DATABASES = {
-    "default": {
-        # Other setttings...
-        "OPTIONS": {"charset": "utf8mb4"},  # Add this line
-    }
-}
-```
+Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for instructions on how to address this.
 
 Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.

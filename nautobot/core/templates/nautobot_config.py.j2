@@ -29,6 +29,7 @@ DATABASES = {
         "ENGINE": os.getenv(
             "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
         ),  # Database driver ("mysql" or "postgresql")
+        # "OPTIONS": {"charset": "utf8mb4"},  # For MySQL unicode emoji support, uncomment this line
     }
 }
 
