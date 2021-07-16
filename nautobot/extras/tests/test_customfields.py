@@ -1234,7 +1234,7 @@ class CustomFieldTableTest(TestCase):
                 '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span> '
             ),
         }
-        
+
         bound_row = site_table.rows[0]
 
         for col_name, col_expected_value in custom_column_expected.items():
