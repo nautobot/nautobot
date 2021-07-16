@@ -42,6 +42,8 @@ django-cacheops = "~5.1"
 django-cors-headers = "~3.7.0"
 # Support for encrypted database fields
 django-cryptography = "~1.0"
+# Store files in the database for background tasks
+django-db-file-storage = "~0.5.5"
 # Advanced query filters
 django-filter = "~2.4.0"
 # Health check endpoint

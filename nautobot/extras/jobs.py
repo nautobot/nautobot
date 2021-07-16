@@ -1,4 +1,5 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
+from collections import OrderedDict
 import inspect
 import json
 import logging
@@ -7,12 +8,13 @@ import pkgutil
 import shutil
 import traceback
 import warnings
-from collections import OrderedDict
 
-import yaml
 
+from cacheops import cached
+from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.db.models import Model
@@ -20,14 +22,14 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.functional import classproperty
+import yaml
 
-from cacheops import cached
 
 from .choices import JobResultStatusChoices, LogLevelChoices
 from .context_managers import change_logging
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import GitRepository
+from .models import FileProxy, GitRepository
 from .registry import registry
 
 from nautobot.core.celery import nautobot_task
@@ -296,16 +298,52 @@ class BaseJob:
 
         These are converted back during job execution.
         """
+
         return_data = {}
         for field_name, value in data.items():
+            # MultiObjectVar
             if isinstance(value, QuerySet):
                 return_data[field_name] = list(value.values_list("pk", flat=True))
+            # Objectvar
             elif isinstance(value, Model):
                 return_data[field_name] = value.pk
+            # FileVar
+            elif isinstance(value, InMemoryUploadedFile):
+                return_data[field_name] = BaseJob.save_file(value)
+            # Everything else...
             else:
                 return_data[field_name] = value
 
         return return_data
+
+    @staticmethod
+    def load_file(pk):
+        """Load a file proxy stored in the database by primary key.
+
+        Args:
+            pk (uuid): Primary key of the `FileProxy` to retrieve
+
+        Returns:
+            File-like object
+        """
+        fp = FileProxy.objects.get(pk=pk)
+        return fp.file
+
+    @staticmethod
+    def save_file(uploaded_file):
+        """
+        Save an uploaded file to the database as a file proxy and return the
+        primary key.
+
+        Args:
+            uploaded_file (file): File handle of file to save to database
+
+        Returns:
+            uuid
+        """
+        fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
+        uploaded_file.seek(0)  # Reset the file cursor, just in case.
+        return fp.pk
 
     @classmethod
     def deserialize_data(cls, data):
@@ -336,7 +374,8 @@ class BaseJob:
 
             elif isinstance(var, ObjectVar):
                 return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
-
+            elif isinstance(var, FileVar):
+                return_data[field_name] = cls.load_file(value)
             else:
                 return_data[field_name] = value
 
@@ -626,12 +665,18 @@ class MultiObjectVar(ObjectVar):
     form_field = DynamicModelMultipleChoiceField
 
 
+class DatabaseFileField(forms.FileField):
+    """Specialized `FileField` for use with `DatabaseFileStorage` storage backend."""
+
+    widget = DBClearableFileInput
+
+
 class FileVar(ScriptVariable):
     """
     An uploaded file.
     """
 
-    form_field = forms.FileField
+    form_field = DatabaseFileField
 
 
 class IPAddressVar(ScriptVariable):
@@ -886,6 +931,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job.log_failure(message=e)
         job_result.completed = timezone.now()
         job_result.save()
+        # TODO(jathan): Handle cleanup of FileProxy objects here
         return False
 
     if job.read_only:
@@ -957,6 +1003,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         finally:
             job_result.save()
+            # TODO(jathan): Loop thru file vars and if there are FileProxy, delete them
 
         # Perform any post-run tasks
         job.active_test = "post_run"

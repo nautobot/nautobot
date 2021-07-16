@@ -3,6 +3,8 @@ import logging
 import uuid
 from collections import OrderedDict
 
+from db_file_storage.model_utils import delete_file, delete_file_if_needed
+from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -317,8 +319,61 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
 
 
 #
-# Image attachments
+# File attachments
 #
+
+
+class FileAttachment(BaseModel):
+    """An object for storing the contents and metadata of a file in the database.
+
+    This object is used by `FileProxy` objects to retrieve file contents and is
+    not intended to be used standalone.
+    """
+
+    bytes = models.BinaryField()
+    filename = models.CharField(max_length=255)
+    mimetype = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.filename
+
+    class Meta:
+        ordering = ["filename"]
+
+
+def database_storage():
+    """Returns storage backend used by `FileProxy.file` to store files in the database."""
+    return DatabaseFileStorage()
+
+
+class FileProxy(BaseModel):
+    """An object to store a file in the database.
+
+    The `file` field can be used like a file handle. The file contents are
+    stored and retrieved from `FileAttachment` objects.
+    """
+
+    name = models.CharField(max_length=255)
+    file = models.FileField(
+        upload_to="extras.FileAttachment/bytes/filename/mimetype",
+        storage=database_storage,  # Use only this backend
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        get_latest_by = "uploaded_at"
+        ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        delete_file_if_needed(self, "file")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        delete_file(self, "file")
 
 
 class ImageAttachment(BaseModel):
