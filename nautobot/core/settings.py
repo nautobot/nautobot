@@ -4,6 +4,7 @@ import platform
 from django.contrib.messages import constants as messages
 
 from nautobot import __version__
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 #
 # Environment setup
@@ -502,9 +503,11 @@ RQ_QUEUES = {
 # Celery (used for background processing)
 #
 
-# The Redis connection defined in the CACHES config above for the broker and results backend
-CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", CACHES["default"]["LOCATION"])
-CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", CACHES["default"]["LOCATION"])
+# Celery broker URL used to tell workers where queues are located
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
+
+# Celery results backend URL to tell workers where to publish task results
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
 
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
