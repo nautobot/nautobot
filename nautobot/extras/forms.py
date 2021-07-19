@@ -997,7 +997,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=True,
-        label="Content Types",
+        label="Content Type",
     )
 
     class Meta:
@@ -1019,5 +1019,5 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=False,
-        label="Content Types",
+        label="Content Type",
     )
