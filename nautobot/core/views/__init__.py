@@ -67,45 +67,26 @@ class HomeView(TemplateView):
             }
         )
 
-        item_counter = 0
-        panels_per_column = {}
         # Loop over homepage layout to collect all additional data and create custom panels.
-        registry["homepage_layout"]["columns"] = []
         for panel_name, panel_details in registry["homepage_layout"]["panels"].items():
             if panel_details.get("custom_template"):
-                registry["homepage_layout"]["panels"][panel_name]["rendered_html"] = self.render_additional_content(request, context, panel_details)
-                item_counter += 1
+                panel_details["rendered_html"] = self.render_additional_content(request, context, panel_details)
+
             else:
                 for item_name, item_details in panel_details["items"].items():
                     if item_details.get("custom_template"):
-                        registry["homepage_layout"]["panels"][panel_name]["items"][item_name]["rendered_html"] = self.render_additional_content(request, context, item_details)
+                        item_details["rendered_html"] = self.render_additional_content(request, context, item_details)
 
                     elif item_details.get("model"):
                         # If there is a model attached collect object count.
-                        registry["homepage_layout"]["panels"][panel_name]["items"][item_name]["count"] = (
-                            item_details["model"].objects.restrict(request.user, "view").count()
-                        )
+                        item_details["count"] = item_details["model"].objects.restrict(request.user, "view").count()
 
                     elif item_details.get("items"):
                         # Collect count for grouped objects.
                         for group_item_name, group_item_details in item_details["items"].items():
-                            registry["homepage_layout"]["panels"][panel_name]["items"][item_name]["items"][group_item_name][
-                                "count"
-                            ] = (group_item_details["model"].objects.restrict(request.user, "view").count())
-                    item_counter += 1
-
-            if item_counter >= int(registry["homepage_layout"]["items_per_column"]):
-                # If we have reached the maximum number of items per column, store the panel in a list.
-                panels_per_column[panel_name] = registry["homepage_layout"]["panels"][panel_name]
-                registry["homepage_layout"]["columns"].append(panels_per_column)
-                item_counter = 0
-                panels_per_column = {}
-            else:
-                panels_per_column[panel_name] = registry["homepage_layout"]["panels"][panel_name]
-
-        if panels_per_column is not None:
-            # If we have items left, store the panel in registry.
-            registry["homepage_layout"]["columns"].append(panels_per_column)
+                            group_item_details["count"] = (
+                                group_item_details["model"].objects.restrict(request.user, "view").count()
+                            )
 
         return self.render_to_response(context)
 

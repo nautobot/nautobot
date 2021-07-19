@@ -12,7 +12,7 @@ from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIco
 
 logger = logging.getLogger("nautobot.core.apps")
 registry["nav_menu"] = {"tabs": {}}
-registry["homepage_layout"] = {"panels": {}, "items_per_column": 0, "total_items": 0}
+registry["homepage_layout"] = {"panels": {}}
 
 
 class NautobotConfig(AppConfig):
@@ -133,14 +133,11 @@ def register_homepage_panels(app_name, homepage_layout):
         if isinstance(panel, HomePagePanel):
             create_or_check_entry(registry_panels, panel, panel.name, f"{panel.name}")
             registry_items = registry_panels[panel.name]["items"]
-            if panel.custom_template:
-                registry["homepage_layout"]["total_items"] += 1
 
             for item in panel.items:
                 if isinstance(item, HomePageItem):
                     item.template_path = template_path
                     create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
-                    registry["homepage_layout"]["total_items"] += 1
                     panel_perms |= set(perms for perms in item.permissions)
                 elif isinstance(item, HomePageGroup):
                     item.template_path = template_path
@@ -153,7 +150,6 @@ def register_homepage_panels(app_name, homepage_layout):
                                 group_item.name,
                                 f"{panel.name} -> {item.name} -> {group_item.name}",
                             )
-                            registry["homepage_layout"]["total_items"] += 1
                     panel_perms |= set(perms for perms in group_item.permissions)
                     registry_items[item.name]["items"] = OrderedDict(
                         sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
@@ -173,7 +169,6 @@ def register_homepage_panels(app_name, homepage_layout):
     registry["homepage_layout"]["panels"] = OrderedDict(
         sorted(registry_panels.items(), key=lambda kv_pair: kv_pair[1]["weight"])
     )
-    registry["homepage_layout"]["items_per_column"] = registry["homepage_layout"]["total_items"] / 3
 
 
 class HomePageBase(ABC):
