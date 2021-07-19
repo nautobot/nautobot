@@ -57,6 +57,10 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | Task queuing       | Redis/Celery/django-rq          |
 | Live device access | NAPALM                          |
 
+The low level diagram displays how data travels through Nautobot's application stack.
+
+![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_low_level.png "Application stack diagram")
+
 ## Supported Python Versions
 
 Nautobot supports Python 3.6, 3.7, 3.8, and 3.9.
