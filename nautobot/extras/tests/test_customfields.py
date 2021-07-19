@@ -565,6 +565,36 @@ class CustomFieldAPITest(APITestCase):
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_bigint_values_of_custom_field_maximum_attribute(self):
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
+        self.add_permissions("dcim.change_site")
+
+        self.cf_integer.validation_maximum = 5000000000
+        self.cf_integer.save()
+
+        data = {"custom_fields": {"number_field": 4294967294}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"custom_fields": {"number_field": 5000000001}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_bigint_values_of_custom_field_minimum_attribute(self):
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
+        self.add_permissions("dcim.change_site")
+
+        self.cf_integer.validation_minimum = -5000000000
+        self.cf_integer.save()
+
+        data = {"custom_fields": {"number_field": -4294967294}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"custom_fields": {"number_field": -5000000001}}
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
     def test_regex_validation(self):
         url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[1].pk})
         self.add_permissions("dcim.change_site")
@@ -743,6 +773,7 @@ class CustomFieldModelTest(TestCase):
             fallback_value="An error occurred while rendering this template.",
             weight=100,
         )
+        # Field whose template will raise a TemplateError
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
             slug="bad_computed_field",
@@ -750,6 +781,15 @@ class CustomFieldModelTest(TestCase):
             template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
             fallback_value="This template has errored",
             weight=100,
+        )
+        # Field whose template will raise a TypeError
+        self.worse_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="worse_computed_field",
+            label="Worse Computed Field",
+            template="{{ obj.images | list }}",
+            fallback_value="Another template error",
+            weight=200,
         )
         self.non_site_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
@@ -827,6 +867,7 @@ class CustomFieldModelTest(TestCase):
         expected_renderings = {
             "computed_field_one": f"{self.site1.name} is the name of this site.",
             "bad_computed_field": self.bad_computed_field.fallback_value,
+            "worse_computed_field": self.worse_computed_field.fallback_value,
         }
         self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)
 
@@ -834,6 +875,7 @@ class CustomFieldModelTest(TestCase):
         expected_renderings = {
             "Computed Field One": f"{self.site1.name} is the name of this site.",
             "Bad Computed Field": self.bad_computed_field.fallback_value,
+            "Worse Computed Field": self.worse_computed_field.fallback_value,
         }
         self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)
 

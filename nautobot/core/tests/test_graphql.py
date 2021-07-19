@@ -28,6 +28,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_tags,
     extend_schema_type_config_context,
     extend_schema_type_relationships,
+    extend_schema_type_null_field_choice,
 )
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
@@ -211,6 +212,13 @@ class GraphQLExtendSchemaType(TestCase):
         self.assertNotIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
+
+    def test_extend_schema_null_field_choices(self):
+
+        schema = extend_schema_type_null_field_choice(self.schema, Interface)
+
+        self.assertTrue(hasattr(schema, "resolve_mode"))
+        self.assertIsInstance(getattr(schema, "resolve_mode"), types.FunctionType)
 
 
 class GraphQLExtendSchemaRelationship(TestCase):
@@ -981,6 +989,29 @@ query {
             # TODO: it would be nice to have connections to console server ports and circuit terminations to test!
             self.assertIsNone(interface_entry["connected_console_server_port"])
             self.assertIsNone(interface_entry["connected_circuit_termination"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_mode(self):
+        """Test querying interfaces for their mode and make sure a string or None is returned."""
+
+        query = """\
+query {
+    devices(name: "Device 1") {
+        interfaces {
+            name
+            mode
+        }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for intf in result.data["devices"][0]["interfaces"]:
+            intf_name = intf["name"]
+            if intf_name == "Int1":
+                self.assertEqual(intf["mode"], InterfaceModeChoices.MODE_ACCESS.upper())
+            elif intf_name == "Int2":
+                self.assertIsNone(intf["mode"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_providers_filter(self):
