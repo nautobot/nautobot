@@ -1,3 +1,4 @@
+import os
 import platform
 import sys
 
@@ -25,6 +26,26 @@ from nautobot.extras.forms import GraphQLQueryForm
 class HomeView(TemplateView):
     template_name = "home.html"
 
+    def render_additional_content(self, request, context, details):
+        # Collect all custom data using callback functions.
+        for key, data in details.get("custom_data", {}).items():
+            if callable(data):
+                context[key] = data(request)
+            else:
+                context[key] = data
+
+        # Create standalone template
+        path = f'{details["template_path"]}{details["custom_template"]}'
+        if os.path.isfile(path):
+            with open(path, "r") as f:
+                html = f.read()
+        else:
+            html = details["custom_template"].strip()
+        template = Template(html)
+
+        additional_context = RequestContext(request, context)
+        return template.render(additional_context)
+
     def get(self, request):
         # Check whether a new release is available. (Only for staff/superusers.)
         new_release = None
@@ -47,34 +68,23 @@ class HomeView(TemplateView):
         )
 
         # Loop over homepage layout to collect all additional data and create custom panels.
-        for column_name, column_details in registry["homepage_layout"]["columns"].items():
-            for panel_name, panel_details in column_details["panels"].items():
-                for item_name, item_details in panel_details["items"].items():
+        for panel_details in registry["homepage_layout"]["panels"].values():
+            if panel_details.get("custom_template"):
+                panel_details["rendered_html"] = self.render_additional_content(request, context, panel_details)
 
-                    if item_details.get("custom_code"):
-                        # Collect all custom data using callback functions.
-                        for key, function in item_details.get("custom_data", {}).items():
-                            context[key] = function(request)
-                        # Create standalone template
-                        sub_template = Template(item_details["custom_code"].strip())
-                        sub_context = RequestContext(request, context)
-                        # Store rendered sub-template in registry.
-                        registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][item_name][
-                            "rendered_html"
-                        ] = sub_template.render(sub_context)
+            else:
+                for item_details in panel_details["items"].values():
+                    if item_details.get("custom_template"):
+                        item_details["rendered_html"] = self.render_additional_content(request, context, item_details)
 
                     elif item_details.get("model"):
                         # If there is a model attached collect object count.
-                        registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][item_name][
-                            "count"
-                        ] = (item_details["model"].objects.restrict(request.user, "view").count())
+                        item_details["count"] = item_details["model"].objects.restrict(request.user, "view").count()
 
                     elif item_details.get("items"):
                         # Collect count for grouped objects.
-                        for group_item_name, group_item_details in item_details["items"].items():
-                            registry["homepage_layout"]["columns"][column_name]["panels"][panel_name]["items"][
-                                item_name
-                            ]["items"][group_item_name]["count"] = (
+                        for group_item_details in item_details["items"].values():
+                            group_item_details["count"] = (
                                 group_item_details["model"].objects.restrict(request.user, "view").count()
                             )
 

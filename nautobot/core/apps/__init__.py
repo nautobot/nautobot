@@ -12,7 +12,7 @@ from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIco
 
 logger = logging.getLogger("nautobot.core.apps")
 registry["nav_menu"] = {"tabs": {}}
-registry["homepage_layout"] = {"columns": {}}
+registry["homepage_layout"] = {"panels": {}}
 
 
 class NautobotConfig(AppConfig):
@@ -32,7 +32,7 @@ class NautobotConfig(AppConfig):
         """
         homepage_layout = import_object(f"{self.name}.{self.homepage_layout}")
         if homepage_layout is not None:
-            register_homepage_panels(homepage_layout)
+            register_homepage_panels(self.name, homepage_layout)
 
         menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
@@ -114,67 +114,62 @@ def register_menu_items(tab_list):
         )
 
 
-def register_homepage_panels(homepage_layout):
+def register_homepage_panels(app_name, homepage_layout):
     """
     Register homepage panels using `homepage.py`.
 
     Each app can now register a `homepage.py` file which holds objects defining the layout of the
-    home page. `HomePageColumn`, `HomePagePanel`, `HomePageGroup` and `HomePageItem` can be used to
+    home page. `HomePagePanel`, `HomePageGroup` and `HomePageItem` can be used to
     define different parts of the layout.
 
     These objects are converted into a dictionary to be stored inside of the Nautobot registry.
     """
-    for column in homepage_layout:
-        column_perms = set()
-        create_or_check_entry(registry["homepage_layout"]["columns"], column, column.name, f"{column.name}")
-        registry_panels = registry["homepage_layout"]["columns"][column.name]["panels"]
+    name, app_name = app_name.split(".")
+    template_path = f"{name}/{app_name}/templates/{app_name}/inc/"
+    registry_panels = registry["homepage_layout"]["panels"]
+    for panel in homepage_layout:
+        panel_perms = registry_panels[panel.name]["permissions"] if registry_panels.get(panel.name) else set()
+        if panel.permissions:
+            panel_perms |= set(panel.permissions)
+        panel.template_path = template_path
+        if isinstance(panel, HomePagePanel):
+            create_or_check_entry(registry_panels, panel, panel.name, f"{panel.name}")
+            registry_items = registry_panels[panel.name]["items"]
 
-        for panel in column.panels:
-            panel_perms = set()
-            if isinstance(panel, HomePagePanel):
-                create_or_check_entry(registry_panels, panel, panel.name, f"{column.name} -> {panel.name}")
-                registry_items = registry_panels[panel.name]["items"]
-                for item in panel.items:
-                    if isinstance(item, HomePageItem):
-                        create_or_check_entry(
-                            registry_items, item, item.name, f"{column.name} -> {panel.name} -> {item.name}"
-                        )
-                        panel_perms |= set(perms for perms in item.permissions)
-                    elif isinstance(item, HomePageGroup):
-                        create_or_check_entry(
-                            registry_items, item, item.name, f"{column.name} -> {panel.name} -> {item.name}"
-                        )
-                        for group_item in item.items:
+            for item in panel.items:
+                if isinstance(item, HomePageItem):
+                    item.template_path = template_path
+                    create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
+                    panel_perms |= set(perms for perms in item.permissions)
+                elif isinstance(item, HomePageGroup):
+                    item.template_path = template_path
+                    create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
+                    for group_item in item.items:
+                        if isinstance(group_item, HomePageItem):
                             create_or_check_entry(
                                 registry_items[item.name]["items"],
                                 group_item,
                                 group_item.name,
-                                f"{column.name} -> {panel.name} -> {item.name} -> {group_item.name}",
+                                f"{panel.name} -> {item.name} -> {group_item.name}",
                             )
-                        panel_perms |= set(perms for perms in group_item.permissions)
-                        registry_items[item.name]["items"] = OrderedDict(
-                            sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
-                        )
-                    else:
-                        raise TypeError(
-                            f"Second level objects need to be an instance of HomePageGroup or HomePageItem: {item}"
-                        )
+                    panel_perms |= set(perms for perms in group_item.permissions)
+                    registry_items[item.name]["items"] = OrderedDict(
+                        sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                    )
+                else:
+                    raise TypeError(
+                        f"Second level objects need to be an instance of HomePageGroup or HomePageItem: {item}"
+                    )
 
-                registry_panels[panel.name]["items"] = OrderedDict(
-                    sorted(registry_items.items(), key=lambda kv_pair: kv_pair[1]["weight"])
-                )
-            else:
-                raise TypeError(f"Top level objects need to be an instance of HomePagePanel: {panel}")
-            registry_panels[panel.name]["permissions"] = panel_perms
-            column_perms |= panel_perms
+            registry_panels[panel.name]["items"] = OrderedDict(
+                sorted(registry_items.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+            )
+        else:
+            raise TypeError(f"Top level objects need to be an instance of HomePagePanel: {panel}")
+        registry_panels[panel.name]["permissions"] = panel_perms
 
-        registry["homepage_layout"]["columns"][column.name]["panels"] = OrderedDict(
-            sorted(registry_panels.items(), key=lambda kv_pair: kv_pair[1]["weight"])
-        )
-        registry["homepage_layout"]["columns"][column.name]["permissions"] = column_perms
-
-    registry["homepage_layout"]["columns"] = OrderedDict(
-        sorted(registry["homepage_layout"]["columns"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
+    registry["homepage_layout"]["panels"] = OrderedDict(
+        sorted(registry_panels.items(), key=lambda kv_pair: kv_pair[1]["weight"])
     )
 
 
@@ -212,60 +207,49 @@ class PermissionsMixin:
         self.permissions = permissions
 
 
-class HomePageColumn(HomePageBase, PermissionsMixin):
-    """Defines properties that can be used for a column."""
-
-    permissions = []
-    panels = []
-
-    @property
-    def initial_dict(self):
-        return {
-            "weight": self.weight,
-            "panels": {},
-            "permissions": set(),
-        }
-
-    @property
-    def fixed_fields(self):
-        return ()
-
-    def __init__(self, name, permissions=[], panels=None, weight=1000):
-        """Ensure column properties."""
-        super().__init__(permissions)
-        self.name = name
-        self.weight = weight
-        if panels is not None:
-            if not isinstance(panels, (list, tuple)):
-                raise TypeError("Items must be passed as a tuple or list.")
-            elif not all(isinstance(panel, HomePagePanel) for panel in panels):
-                raise TypeError("All items defined in a tab must be an instance of HomePagePanel")
-            self.panels = panels
-
-
 class HomePagePanel(HomePageBase, PermissionsMixin):
     """Defines properties that can be used for a panel."""
 
     permissions = []
     items = []
+    template_path = None
 
     @property
     def initial_dict(self):
         return {
+            "custom_template": self.custom_template,
+            "custom_data": self.custom_data,
             "weight": self.weight,
             "items": {},
-            "permissions": set(),
+            "permissions": self.permissions,
+            "template_path": self.template_path,
         }
 
     @property
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=[], items=None, weight=1000):
-        """Ensure panel properties."""
+    def __init__(self, name, permissions=[], custom_data=None, custom_template=None, items=None, weight=1000):
+        """
+        Ensure panel properties.
+
+        Args:
+            name (str): The name of the panel.
+            permissions (list): The permissions required to view this panel.
+            custom_data (dict): Custom data to be passed to the custom template.
+            custom_template (str): Name of custom template.
+            items (list): List of items to be rendered in this panel.
+            weight (int): The weight of this panel.
+        """
         super().__init__(permissions)
+        self.custom_template = custom_template
+        self.custom_data = custom_data
         self.name = name
+        self.permissions = permissions
         self.weight = weight
+
+        if items is not None and custom_template is not None:
+            raise ValueError("Cannot specify items and custom_template at the same time.")
         if items is not None:
             if not isinstance(items, (list, tuple)):
                 raise TypeError("Items must be passed as a tuple or list.")
@@ -293,7 +277,15 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
         return ()
 
     def __init__(self, name, permissions=[], items=None, weight=1000):
-        """Ensure group properties."""
+        """
+        Ensure group properties.
+
+        Args:
+            name (str): The name of the group.
+            permissions (list): The permissions required to view this group.
+            items (list): List of items to be rendered in this group.
+            weight (int): The weight of this group.
+        """
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -311,16 +303,18 @@ class HomePageItem(HomePageBase, PermissionsMixin):
 
     permissions = []
     items = []
+    template_path = None
 
     @property
     def initial_dict(self):
         return {
-            "custom_code": self.custom_code,
+            "custom_template": self.custom_template,
             "custom_data": self.custom_data,
             "description": self.description,
             "link": self.link,
             "model": self.model,
             "permissions": self.permissions,
+            "template_path": self.template_path,
             "weight": self.weight,
         }
 
@@ -333,24 +327,36 @@ class HomePageItem(HomePageBase, PermissionsMixin):
         name,
         link=None,
         model=None,
-        custom_code=None,
+        custom_template=None,
         custom_data=None,
         description=None,
         permissions=None,
         weight=1000,
     ):
-        """Ensure item properties."""
+        """
+        Ensure item properties.
+
+        Args:
+            name (str): The name of the item.
+            link (str): The link to be used for this item.
+            model (str): The model to being used for this item to calculate the total count of objects.
+            custom_template (str): Name of custom template.
+            custom_data (dict): Custom data to be passed to the custom template.
+        """
         super().__init__(permissions)
         if link:
             reverse(link)
 
         self.name = name
-        self.custom_code = custom_code
+        self.custom_template = custom_template
         self.custom_data = custom_data
         self.description = description
         self.link = link
         self.model = model
         self.weight = weight
+
+        if model is not None and custom_template is not None:
+            raise ValueError("Cannot specify model and custom_template at the same time.")
 
 
 class NavMenuTab(NavMenuBase, PermissionsMixin):
@@ -377,7 +383,15 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
         return ()
 
     def __init__(self, name, permissions=None, groups=None, weight=1000):
-        """Ensure tab properties."""
+        """
+        Ensure tab properties.
+
+        Args:
+            name (str): The name of the tab.
+            permissions (list): The permissions required to view this tab.
+            groups (list): List of groups to be rendered in this tab.
+            weight (int): The weight of this tab.
+        """
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -412,7 +426,14 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         return ()
 
     def __init__(self, name, items=None, weight=1000):
-        """Ensure group properties."""
+        """
+        Ensure group properties.
+
+        Args:
+            name (str): The name of the group.
+            items (list): List of items to be rendered in this group.
+            weight (int): The weight of this group.
+        """
         self.name = name
         self.weight = weight
 
@@ -452,7 +473,16 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     buttons = []
 
     def __init__(self, link, name, permissions=None, buttons=None, weight=1000):
-        """Ensure item properties."""
+        """
+        Ensure item properties.
+
+        Args:
+            link (str): The link to be used for this item.
+            name (str): The name of the item.
+            permissions (list): The permissions required to view this item.
+            buttons (list): List of buttons to be rendered in this item.
+            weight (int): The weight of this item.
+        """
         super().__init__(permissions)
         # Reverse lookup sanity check
         reverse(link)
@@ -460,7 +490,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.name = name
         self.weight = weight
 
-        if buttons is not None and not isinstance(buttons, (list, tuple)):
+        if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
         elif not all(isinstance(button, NavMenuButton) for button in buttons):
             raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
@@ -502,7 +532,17 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
         permissions=None,
         weight=1000,
     ):
-        """Ensure button properties."""
+        """
+        Ensure button properties.
+
+        Args:
+            link (str): The link to be used for this button.
+            title (str): The title of the button.
+            icon_class (str): The icon class to be used as the icon for the start of the button.
+            button_class (str): The button class defines to be used to define the style of the button.
+            permissions (list): The permissions required to view this button.
+            weight (int): The weight of this button.
+        """
         super().__init__(permissions)
         # Reverse lookup sanity check
         reverse(link)

@@ -20,16 +20,150 @@ from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from nautobot.utilities.querysets import RestrictedQuerySet
 
 
-class NetworkQuerySet(QuerySet):
-    @staticmethod
-    def _get_last_ip(prefix):
-        """
-        Get the last IP address in the given prefix.
+class BaseNetworkQuerySet(RestrictedQuerySet):
+    """Base class for network-related querysets."""
 
-        This is distinct from prefix.broadcast in the case of point-to-point or host network prefixes
+    ip_family_map = {
+        4: IPV4_BYTE_LENGTH,
+        6: IPV6_BYTE_LENGTH,
+    }
+
+    # Match string with ending in "::"
+    RE_COLON = re.compile(".*::$")
+
+    # Match string from "0000" to "ffff" with no trailing ":"
+    RE_HEXTET = re.compile("^[a-f0-9]{4}$")
+
+    @staticmethod
+    def _get_last_ip(network):
+        """
+        Get the last IP address in the given network.
+
+        This is distinct from network.broadcast in the case of point-to-point or host networks
         (neither of which technically have a "broadcast" address).
         """
-        return prefix.broadcast if prefix.broadcast else prefix[-1]
+        return network.broadcast if network.broadcast else network[-1]
+
+    def parse_network_string(self, search):
+        """
+        Attempts to parse a (potentially incomplete) IPAddress and return an IPNetwork.
+        eg: '10.10' should be interpreted as netaddr.IPNetwork('10.10.0.0/16')
+        """
+        version = 4
+
+        try:
+            # Disregard netmask
+            search = search.split("/")[0]
+
+            # Attempt to quickly assess v6
+            if ":" in search:
+                version = 6
+
+            # (IPv6) If the value ends with ":" but it's not "::", make it so.
+            if search.endswith(":") and not self.RE_COLON.match(search):
+                search += ":"
+            # (IPv6) If the value has a colon in it, but doesn't end with one or
+            # contain "::"
+            elif all(
+                [
+                    not search.endswith(":"),
+                    version == 6,
+                    "::" not in search,
+                ]
+            ):
+                search += ":"
+            # (IPv6) If the value is numeric and > 255, append "::"
+            # (IPv6) If the value is a hextet (e.g. "fe80"), append "::"
+            elif any(
+                [
+                    search.isdigit() and int(search) > 255,
+                    self.RE_HEXTET.match(search),
+                ]
+            ):
+                search += "::"
+                version = 6
+
+            call_map = {
+                4: self.parse_ipv4,
+                6: self.parse_ipv6,
+            }
+            return call_map[version](search)
+
+        except netaddr.core.AddrFormatError:
+            ver_map = {4: "0/32", 6: "::/128"}
+            return netaddr.IPNetwork(ver_map[version])
+
+    def parse_ipv6(self, value):
+        """IPv6 addresses are 8, 16-bit fields."""
+
+        # Get non-empty octets from search string
+        hextets = value.split(":")
+
+        # Before we normalize, check that final value is a digit.
+        if hextets[-1].isalnum():
+            fill_zeroes = False  # Leave "" in there.
+            prefix_len = 128  # Force /128
+        # Otherwise fill blanks with zeroes and fuzz prefix_len
+        else:
+            fill_zeroes = True
+            hextets = list(filter(lambda h: h, hextets))
+            # Fuzz prefix_len based on parsed octets
+            prefix_len = 16 * len(hextets)
+
+        # Replace "" w/ "0"
+        if fill_zeroes:
+            hextets.extend(["0" for _ in range(len(hextets), 8)])
+
+        # Create an netaddr.IPNetwork to search within
+        network = ":".join(hextets)
+        ip = f"{network}/{prefix_len}"
+        return netaddr.IPNetwork(ip)
+
+    def parse_ipv4(self, value):
+        """IPv4 addresses are 4, 8-bit fields."""
+
+        # Get non-empty octets from search string
+        octets = value.split(".")
+        octets = list(filter(lambda o: o, octets))
+
+        # Fuzz prefix_len based on parsed octets
+        prefix_len = 8 * len(octets)
+
+        # Create an netaddr.IPNetwork to search within
+        octets.extend(["0" for _ in range(len(octets), 4)])
+        network = ".".join(octets)
+        ip = f"{network}/{prefix_len}"
+        return netaddr.IPNetwork(ip)
+
+    def string_search(self, search):
+        """
+        Interpret a search string and return useful results.
+        """
+        if not search:
+            return self.none()
+
+        network = self.parse_network_string(search)
+        last_ip = self._get_last_ip(network)
+
+        return self.filter(
+            Q(description__icontains=search)
+            | Q(network__gte=network.network, broadcast__lte=last_ip)  # same as `net_contained()`
+            | Q(
+                prefix_length__lte=network.prefixlen, network__lte=network.network, broadcast__gte=last_ip
+            )  # same as `net_contains_or_equals()`
+        )
+
+
+class NetworkQuerySet(BaseNetworkQuerySet):
+    """Base class for Prefix/Aggregate querysets."""
+
+    def ip_family(self, family):
+        try:
+            byte_len = self.ip_family_map[family]
+        except KeyError:
+            raise ValueError("invalid IP family {}".format(family))
+
+        return self.annotate(address_len=Length(F("network"))).filter(address_len=byte_len)
 
     def net_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
@@ -99,11 +233,13 @@ class NetworkQuerySet(QuerySet):
         return super().filter(*args, **kwargs)
 
 
-class AggregateQuerySet(NetworkQuerySet, RestrictedQuerySet):
-    pass
+class AggregateQuerySet(NetworkQuerySet):
+    """Queryset for `Aggregate` objects."""
 
 
-class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
+class PrefixQuerySet(NetworkQuerySet):
+    """Queryset for `Prefix` objects."""
+
     def annotate_tree(self):
         """
         Annotate the number of parent and child prefixes for each Prefix.
@@ -170,27 +306,8 @@ class PrefixQuerySet(NetworkQuerySet, RestrictedQuerySet):
         )
 
 
-class IPAddressQuerySet(RestrictedQuerySet):
-    ip_family_map = {
-        4: IPV4_BYTE_LENGTH,
-        6: IPV6_BYTE_LENGTH,
-    }
-
-    # Match string with ending in "::"
-    RE_COLON = re.compile(".*::$")
-
-    # Match string from "0000" to "ffff" with no trailing ":"
-    RE_HEXTET = re.compile("^[a-f0-9]{4}$")
-
-    @staticmethod
-    def _get_last_ip(network):
-        """
-        Get the last IP address in the given network.
-
-        This is distinct from network.broadcast in the case of point-to-point or host networks
-        (neither of which technically have a "broadcast" address).
-        """
-        return network.broadcast if network.broadcast else network[-1]
+class IPAddressQuerySet(BaseNetworkQuerySet):
+    """Queryset for `IPAddress` objects."""
 
     def get_queryset(self):
         """
@@ -202,97 +319,6 @@ class IPAddressQuerySet(RestrictedQuerySet):
         """
         return super().order_by("host")
 
-    def string_search(self, search):
-        """
-        Interpret a search string and return useful results.
-        """
-        if not search:
-            return self.none()
-
-        network = self._parse_as_network_string(search)
-        last_ip = self._get_last_ip(network)
-        return self.filter(
-            Q(dns_name__icontains=search)
-            | Q(description__icontains=search)
-            | Q(host__lte=last_ip, host__gte=network.network)  # same as `net_host_contained()`
-        )
-
-    def _parse_as_network_string(self, search):
-        """
-        Attempts to parse a (potentially incomplete) IPAddress and return an IPNetwork.
-        eg: '10.10' should be interpreted as netaddr.IPNetwork('10.10.0.0/16')
-        """
-        version = 4
-
-        try:
-            # Disregard netmask
-            search = search.split("/")[0]
-
-            # Attempt to quickly assess v6
-            if ":" in search:
-                version = 6
-
-            # (IPv6) If the value ends with ":" but it's not "::", make it so.
-            if search.endswith(":") and not self.RE_COLON.match(search):
-                search += ":"
-            # (IPv6) If the value is numeric and > 255, append "::"
-            # (IPv6) If the value is a hextet (e.g. "fe80"), append "::"
-            elif any(
-                [
-                    search.isdigit() and int(search) > 255,
-                    self.RE_HEXTET.match(search),
-                ]
-            ):
-                search += "::"
-                version = 6
-
-            call_map = {
-                4: self._parse_ipv4,
-                6: self._parse_ipv6,
-            }
-            return call_map[version](search)
-
-        except netaddr.core.AddrFormatError:
-            ver_map = {4: "0/32", 6: "::/128"}
-            return netaddr.IPNetwork(ver_map[version])
-
-    def _parse_ipv6(self, value):
-        """IPv6 addresses are 8, 16-bit fields."""
-
-        # Get non-empty octets from search string
-        hextets = value.split(":")
-
-        # Before we normalize, check that final value is a digit.
-        if hextets[-1].isalnum():
-            fill_zeroes = False  # Leave "" in there.
-            prefix_len = 128  # Force /128
-        else:
-            fill_zeroes = True  # Replace "" w/ "0"
-            hextets = list(filter(lambda h: h, hextets))
-            prefix_len = 16 * len(hextets)
-
-        # Create an netaddr.IPNetwork to search within
-        if fill_zeroes:
-            hextets.extend(["0" for _ in range(len(hextets), 8)])
-
-        network = ":".join(hextets)
-        ip = f"{network}/{prefix_len}"
-        return netaddr.IPNetwork(ip)
-
-    def _parse_ipv4(self, value):
-        """IPv4 addresses are 4, 8-bit fields."""
-
-        # Get non-empty octets from search string
-        octets = value.split(".")
-        octets = list(filter(lambda o: o, octets))
-        prefix_len = 8 * len(octets)
-
-        # Create an netaddr.IPNetwork to search within
-        octets.extend(["0" for _ in range(len(octets), 4)])
-        network = ".".join(octets)
-        ip = f"{network}/{prefix_len}"
-        return netaddr.IPNetwork(ip)
-
     def ip_family(self, family):
         try:
             byte_len = self.ip_family_map[family]
@@ -300,6 +326,21 @@ class IPAddressQuerySet(RestrictedQuerySet):
             raise ValueError("invalid IP family {}".format(family))
 
         return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
+
+    def string_search(self, search):
+        """
+        Interpret a search string and return useful results.
+        """
+        if not search:
+            return self.none()
+
+        network = self.parse_network_string(search)
+        last_ip = self._get_last_ip(network)
+        return self.filter(
+            Q(dns_name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(host__lte=last_ip, host__gte=network.network)  # same as `net_host_contained()`
+        )
 
     def net_host_contained(self, network):
         # consider only host ip address when
