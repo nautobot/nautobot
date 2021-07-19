@@ -111,7 +111,7 @@ class PluginConfig(NautobotConfig):
 
         homepage_layout = import_object(f"{self.__module__}.{self.homepage_layout}")
         if homepage_layout is not None:
-            register_homepage_panels(homepage_layout)
+            register_homepage_panels(self.path, self.label, homepage_layout)
 
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
