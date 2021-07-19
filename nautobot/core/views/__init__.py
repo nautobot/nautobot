@@ -68,12 +68,12 @@ class HomeView(TemplateView):
         )
 
         # Loop over homepage layout to collect all additional data and create custom panels.
-        for panel_name, panel_details in registry["homepage_layout"]["panels"].items():
+        for panel_details in registry["homepage_layout"]["panels"].values():
             if panel_details.get("custom_template"):
                 panel_details["rendered_html"] = self.render_additional_content(request, context, panel_details)
 
             else:
-                for item_name, item_details in panel_details["items"].items():
+                for item_details in panel_details["items"].values():
                     if item_details.get("custom_template"):
                         item_details["rendered_html"] = self.render_additional_content(request, context, item_details)
 
@@ -83,7 +83,7 @@ class HomeView(TemplateView):
 
                     elif item_details.get("items"):
                         # Collect count for grouped objects.
-                        for group_item_name, group_item_details in item_details["items"].items():
+                        for group_item_details in item_details["items"].values():
                             group_item_details["count"] = (
                                 group_item_details["model"].objects.restrict(request.user, "view").count()
                             )

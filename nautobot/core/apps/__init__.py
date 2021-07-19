@@ -129,6 +129,8 @@ def register_homepage_panels(app_name, homepage_layout):
     registry_panels = registry["homepage_layout"]["panels"]
     for panel in homepage_layout:
         panel_perms = registry_panels[panel.name]["permissions"] if registry_panels.get(panel.name) else set()
+        if panel.permissions:
+            panel_perms |= set(panel.permissions)
         panel.template_path = template_path
         if isinstance(panel, HomePagePanel):
             create_or_check_entry(registry_panels, panel, panel.name, f"{panel.name}")
@@ -219,7 +221,7 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             "custom_data": self.custom_data,
             "weight": self.weight,
             "items": {},
-            "permissions": set(),
+            "permissions": self.permissions,
             "template_path": self.template_path,
         }
 
@@ -243,6 +245,7 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
         self.custom_template = custom_template
         self.custom_data = custom_data
         self.name = name
+        self.permissions = permissions
         self.weight = weight
 
         if items is not None and custom_template is not None:
