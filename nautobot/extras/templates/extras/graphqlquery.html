@@ -113,7 +113,7 @@
             headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
             dataType: "json",
             data: {
-                "query": `{{ object.query }}`,
+                "query": `{{ object.query | escapejs }}`,
                 "variables": variables,
             },
             success: function(data) {
