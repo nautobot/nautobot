@@ -102,6 +102,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#696](https://github.com/nautobot/nautobot/pull/696) - Fixed inheritance of VRF and Tenant assignment when creating an IPAddress or Prefix under a parent Prefix. (Port of [NetBox #5703](https://github.com/netbox-community/netbox/issues/5703) and [NetBox #6012](https://github.com/netbox-community/netbox/issues/6012))
 - [#698](https://github.com/nautobot/nautobot/issues/698) - Fixed cloning of a computed field object to now carry over required non-unique fields
 - [#699](https://github.com/nautobot/nautobot/issues/699) - Exceptions such as TypeError are now caught and handled correctly when rendering a computed field.
+- [#703](https://github.com/nautobot/nautobot/issues/703) - Fixed direct execution of saved GraphQL queries containing double quotes
 - [#705](https://github.com/nautobot/nautobot/issues/705) - Fixed missing description field from detail view for computed fields
 
 ### Removed
