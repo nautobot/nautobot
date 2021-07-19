@@ -27,7 +27,7 @@ $ nautobot-server celery --help
 ```
 
 !!! important
-    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
 
 ## Configuration
 
@@ -260,7 +260,7 @@ sudo systemctl enable --now nautobot-rq-worker
 ```
 
 !!! tip
-    If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in place of the `nautobot-worker` process. 
+    If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in addition to the `nautobot-worker` process. 
 
 ### Verify the service
 You can use the command `systemctl status nautobot.service` to verify that the WSGI service is running:
