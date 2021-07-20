@@ -349,8 +349,14 @@ def database_storage():
 class FileProxy(BaseModel):
     """An object to store a file in the database.
 
-    The `file` field can be used like a file handle. The file contents are
-    stored and retrieved from `FileAttachment` objects.
+    The `file` field can be used like a file handle. The file contents are stored and retrieved from
+    `FileAttachment` objects.
+
+    The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
+    should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
+    are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
+    In most cases, it is better ot iterate over a queryset of `FileProxy` objects and call
+    `delete()` on each one individually.
     """
 
     name = models.CharField(max_length=255)

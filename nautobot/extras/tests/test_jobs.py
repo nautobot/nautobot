@@ -1,8 +1,10 @@
 import os
 import uuid
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import JobResultStatusChoices
@@ -181,17 +183,83 @@ class JobTest(TestCase):
 class JobFileUploadTest(TestCase):
     """Test a job that uploads/deletes files."""
 
-    job_name = "plugins/dummy_plugin.jobs/FileUploadJob"
-
     @classmethod
     def setUpTestData(cls):
-        cls.dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
-        cls.job_class = get_job(cls.job_name)
+        cls.file_contents = b"I am content.\n"
+        cls.dummy_file = SimpleUploadedFile(name="dummy.txt", content=cls.file_contents)
+        cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
-    def test_run_job_success(self):
-        """Test that file upload succeeds, job succeeds, and are deleted."""
-        assert False
+    def setUp(self):
+        self.dummy_file.seek(0)  # Reset cursor so we can read it again.
 
-    def test_run_job_success(self):
-        """Test that file upload succeeds, job fails, files deleted."""
-        assert False
+    def test_run_job_pass(self):
+        """Test that file upload succeeds; job SUCCEEDS; and files are deleted."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            job_name = "local/test_file_upload_pass/TestFileUploadPass"
+            job_class = get_job(job_name)
+            job = job_class()
+
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+
+            # Serialize the file to FileProxy
+            data = {"file": self.dummy_file}
+            serialized_data = job.serialize_data(data)
+
+            # Assert that the file was serialized to a FileProxy
+            self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
+            self.assertTrue(serialized_data["file"], FileProxy.objects.latest().pk)
+            self.assertTrue(FileProxy.objects.count(), 1)
+
+            # Run the job
+            run_job(data=serialized_data, request=None, commit=False, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+
+            # Assert that file contents were correctly read
+            self.assertEqual(
+                job_result.data["run"]["log"][0][2], f"File contents: {self.file_contents}"  # "File contents: ..."
+            )
+
+            # Assert that FileProxy was cleaned up
+            self.assertEqual(FileProxy.objects.count(), 0)
+
+    def test_run_job_fail(self):
+        """Test that file upload succeeds; job FAILS; files deleted."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            job_name = "local/test_file_upload_fail/TestFileUploadFail"
+            job_class = get_job(job_name)
+            job = job_class()
+
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+
+            # Serialize the file to FileProxy
+            data = {"file": self.dummy_file}
+            serialized_data = job.serialize_data(data)
+
+            # Assert that the file was serialized to a FileProxy
+            self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
+            self.assertTrue(serialized_data["file"], FileProxy.objects.latest().pk)
+            self.assertTrue(FileProxy.objects.count(), 1)
+
+            # Run the job
+            run_job(data=serialized_data, request=None, commit=False, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+
+            # Assert that file contents were correctly read
+            self.assertEqual(
+                job_result.data["run"]["log"][0][2], f"File contents: {self.file_contents}"  # "File contents: ..."
+            )
+            # Also ensure the standard log message about aborting the transaction is present
+            self.assertEqual(job_result.data["run"]["log"][-1][-1], "Database changes have been reverted due to error.")
+
+            # Assert that FileProxy was cleaned up
+            self.assertEqual(FileProxy.objects.count(), 0)
