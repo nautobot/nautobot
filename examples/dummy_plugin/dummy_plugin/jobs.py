@@ -1,4 +1,4 @@
-from nautobot.extras.jobs import FileVar, Job, StringVar
+from nautobot.extras.jobs import Job
 
 
 name = "DummyPlugin jobs"

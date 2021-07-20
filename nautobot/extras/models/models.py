@@ -355,7 +355,7 @@ class FileProxy(BaseModel):
     The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
     should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
     are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
-    In most cases, it is better ot iterate over a queryset of `FileProxy` objects and call
+    In most cases, it is better to iterate over a queryset of `FileProxy` objects and call
     `delete()` on each one individually.
     """
 
