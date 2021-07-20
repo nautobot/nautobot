@@ -73,8 +73,8 @@
                     <td><span>{{ object.slug }}</span></td>
                 </tr>
                 <tr>
-                    <td>Weight</td>
-                    <td><span>{{ object.weight }}</span></td>
+                    <td>Description</td>
+                    <td><span>{{ object.description|placeholder }}</span></td>
                 </tr>
                 <tr>
                     <td>Template</td>
@@ -83,6 +83,10 @@
                 <tr>
                     <td>Fallback Value</td>
                     <td><span>{{ object.fallback_value }}</span></td>
+                </tr>
+                <tr>
+                    <td>Weight</td>
+                    <td><span>{{ object.weight }}</span></td>
                 </tr>
             </table>
         </div>

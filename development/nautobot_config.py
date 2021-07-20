@@ -5,7 +5,18 @@ import sys
 from nautobot.core.settings import *
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
+
+#
+# Misc. settings
+#
+
 ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+HIDE_RESTRICTED_UI = os.getenv("HIDE_RESTRICTED_UI", False)
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
+
+#
+# Databases
+#
 
 DATABASES = {
     "default": {
@@ -19,7 +30,23 @@ DATABASES = {
     }
 }
 
+#
+# Debug
+#
+
 DEBUG = True
+
+# Django Debug Toolbar
+DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
+
+if "debug_toolbar" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("debug_toolbar")
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+#
+# Logging
+#
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
@@ -65,8 +92,9 @@ if not TESTING:
         },
     }
 
-
-# Redis variables
+#
+# Redis
+#
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
@@ -87,24 +115,10 @@ CACHES = {
 # RQ_QUEUES is not set here because it just uses the default that gets imported
 # up top via `from nautobot.core.settings import *`.
 
-# REDIS CACHEOPS
+# Redis Cacheops
 CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 
-HIDE_RESTRICTED_UI = os.getenv("HIDE_RESTRICTED_UI", False)
-
-SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
-
-# Django Debug Toolbar
-DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
-
-if "debug_toolbar" not in INSTALLED_APPS:
-    INSTALLED_APPS.append("debug_toolbar")
-if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
-    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
-
-
 #
-# Celery
+# Celery settings are not defined here because they can be overloaded with
+# environment variables. By default they use `CACHES["default"]["LOCATION"]`.
 #
-
-CELERY_TASK_TIME_LIMIT = int(os.environ.get("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 30 * 60))

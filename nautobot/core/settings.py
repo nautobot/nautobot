@@ -4,6 +4,7 @@ import platform
 from django.contrib.messages import constants as messages
 
 from nautobot import __version__
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 #
 # Environment setup
@@ -247,27 +248,6 @@ DATABASES = {
         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
         "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
-}
-
-#
-# Redis (Caching/Queuing)
-#
-
-REDIS = {
-    "tasks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 0,
-        "SSL": False,
-    },
-    "caching": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 1,
-        "SSL": False,
-    },
 }
 
 # The secret key is used to encrypt session keys and salt passwords.
@@ -523,6 +503,12 @@ RQ_QUEUES = {
 # Celery (used for background processing)
 #
 
+# Celery broker URL used to tell workers where queues are located
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
+
+# Celery results backend URL to tell workers where to publish task results
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
+
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
@@ -531,10 +517,6 @@ CELERY_TASK_TRACK_STARTED = True
 # while exceeding the hard limit will result in a SIGKILL.
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", 5 * 60))
 CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 10 * 60))
-
-# The Redis connection defined in the CACHES config above for the broker and results backend
-CELERY_BROKER_URL = CACHES["default"]["LOCATION"]
-CELERY_RESULT_BACKEND = CACHES["default"]["LOCATION"]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization

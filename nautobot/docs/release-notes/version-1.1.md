@@ -66,7 +66,10 @@ Saved queries can easily be imported into the GraphiQL interface by using the ne
 
 #### Background Tasks now use Celery ([#223](https://github.com/nautobot/nautobot/issues/223))
 
-Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All core usage of RQ has been migrated to use Celery.
+Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery. 
+
+!!! note
+    Custom background tasks implemented by plugins are not part of Nautobot core functions
 
 Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
 
@@ -74,9 +77,12 @@ RQ support for custom tasks was not removed in order to give plugin authors time
 
 Please see the section on [migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
 
+!!! warning
+    If you are running plugins that use background tasks requiring the RQ worker, you will need to run both the RQ and Celery workers concurrently until the plugins are converted to use the Celery worker. See the [Migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for details.
+
 ### Removed
 
-## v1.1.0b3 (2021-??-??)
+## v1.1.0 (2021-07-20)
 
 ### Added
 
@@ -86,6 +92,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 - [#675](https://github.com/nautobot/nautobot/pull/675) - Update MySQL unicode settings docs to be more visible
 - [#684](https://github.com/nautobot/nautobot/issues/684) - Renamed `?opt_in_fields=` query param to `?include=`
+- [#691](https://github.com/nautobot/nautobot/pull/691) - Clarify documentation on RQ to Celery worker migration and running both workers in parallel to help ease migration
 - [#692](https://github.com/nautobot/nautobot/pull/692) - Clarify plugin development docs on naming of file for custom Jinja2 filters
 - [#697](https://github.com/nautobot/nautobot/issues/697) - Added `CELERY_TASK_SOFT_TIME_LIMIT` to `settings.py` and lowered the default `CELERY_TASK_TIME_LIMIT` configuration.
 
@@ -94,14 +101,21 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#363](https://github.com/nautobot/nautobot/issues/363) - Fixed using S3 django-storages backend requires `USE_TZ=False`
 - [#466](https://github.com/nautobot/nautobot/issues/466) - Fixed improper GraphQL schema generation on fields that can be blank but not null (such as `Interface.mode`)
 - [#663](https://github.com/nautobot/nautobot/issues/663) - Fixed `kombu.exceptions.EncodeError` when trying to execute Jobs using `(Multi)ObjectVar` objects with nested relationships
+- [#672](https://github.com/nautobot/nautobot/issues/672) - Fixed inheritance of Celery broker/results URL settings for dev/template configs (they can now be defined using Redis env. vars)
 - [#677](https://github.com/nautobot/nautobot/issues/677) - Revise LDAPS outdated documentation for ignoring TLS cert errors
 - [#680](https://github.com/nautobot/nautobot/issues/680) - Removed unnecessary warning message when both RQ and Celery workers are present
 - [#686](https://github.com/nautobot/nautobot/issues/686) - Fixed incorrect permission name for Tags list view in nav menu
 - [#690](https://github.com/nautobot/nautobot/pull/690) - Fixed Jinja2 dependency version to remain backwards-compatible with Nautobot 1.0.x
 - [#696](https://github.com/nautobot/nautobot/pull/696) - Fixed inheritance of VRF and Tenant assignment when creating an IPAddress or Prefix under a parent Prefix. (Port of [NetBox #5703](https://github.com/netbox-community/netbox/issues/5703) and [NetBox #6012](https://github.com/netbox-community/netbox/issues/6012))
+- [#698](https://github.com/nautobot/nautobot/issues/698) - Fixed cloning of a computed field object to now carry over required non-unique fields
 - [#699](https://github.com/nautobot/nautobot/issues/699) - Exceptions such as TypeError are now caught and handled correctly when rendering a computed field.
+- [#702](https://github.com/nautobot/nautobot/issues/702) - GraphiQL view no longer requires internet access to load libraries.
+- [#703](https://github.com/nautobot/nautobot/issues/703) - Fixed direct execution of saved GraphQL queries containing double quotes
+- [#705](https://github.com/nautobot/nautobot/issues/705) - Fixed missing description field from detail view for computed fields
 
-### Removed
+### Security
+
+- [#717](https://github.com/nautobot/nautobot/pull/717) - Bump Pillow from 8.1.2 to 8.2.0 to address numerous critical CVE advisories
 
 ## v1.1.0b2 (2021-07-09)
 
