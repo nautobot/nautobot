@@ -115,6 +115,10 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Removed
 
+### Security
+
+- [#717](https://github.com/nautobot/nautobot/pull/717) - Bump Pillow from 8.1.2 to 8.2.0 to address numerous critical CVE advisories
+
 ## v1.1.0b2 (2021-07-09)
 
 ### Added
