@@ -45,7 +45,7 @@ urlpatterns = [
     path("", include("social_django.urls", namespace="social")),
     # django-health-check
     path(r"health/", include("health_check.urls")),
-    # FileProxy attachments
+    # FileProxy attachments download/get URLs used in admin views only
     path("files/", include("db_file_storage.urls")),
 ]
 

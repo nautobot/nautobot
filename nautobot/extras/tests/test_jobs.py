@@ -4,7 +4,6 @@ import uuid
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
 
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import JobResultStatusChoices
@@ -212,8 +211,8 @@ class JobFileUploadTest(TestCase):
 
             # Assert that the file was serialized to a FileProxy
             self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
-            self.assertTrue(serialized_data["file"], FileProxy.objects.latest().pk)
-            self.assertTrue(FileProxy.objects.count(), 1)
+            self.assertEqual(serialized_data["file"], FileProxy.objects.latest().pk)
+            self.assertEqual(FileProxy.objects.count(), 1)
 
             # Run the job
             run_job(data=serialized_data, request=None, commit=False, job_result_pk=job_result.pk)
@@ -247,8 +246,8 @@ class JobFileUploadTest(TestCase):
 
             # Assert that the file was serialized to a FileProxy
             self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
-            self.assertTrue(serialized_data["file"], FileProxy.objects.latest().pk)
-            self.assertTrue(FileProxy.objects.count(), 1)
+            self.assertEqual(serialized_data["file"], FileProxy.objects.latest().pk)
+            self.assertEqual(FileProxy.objects.count(), 1)
 
             # Run the job
             run_job(data=serialized_data, request=None, commit=False, job_result_pk=job_result.pk)
