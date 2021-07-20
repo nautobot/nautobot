@@ -86,6 +86,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Added
 
+- [#372](https://github.com/nautobot/nautobot/issues/372) - Added support for displaying custom fields in tables used in object list views
 - [#620](https://github.com/nautobot/nautobot/pull/620) - Config context schemas can now be managed via Git repositories.
 
 ### Changed
