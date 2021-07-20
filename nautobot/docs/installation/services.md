@@ -27,7 +27,7 @@ $ nautobot-server celery --help
 ```
 
 !!! important
-    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but will no longer be documented, and support for RQ will be removed in a future release.
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
 
 ## Configuration
 
@@ -165,9 +165,15 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
+
 #### Migrating to Celery from RQ
 
-If you're upgrading from Nautobot version 1.0.x, all you really need to do are two things.
+Prior to migrating, you need to determine whether you have any plugins installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
+
+* Ask your developer or administrator if there are any plugins running background tasks still using the RQ worker
+* If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job` 
+
+If you're upgrading from Nautobot version 1.0.x and are NOT running plugins that use the RQ worker, all you really need to do are two things.
 
 First, you must replace the contents of `/etc/systemd/system/nautobot-worker.service` with the `systemd` unit file provided just above.
 
@@ -197,6 +203,42 @@ index f84073fb5..52baf6096 100644
 (END)
 ```
 
+If you are using plugins that use custom background tasks but have not yet made the change described above, you must run the [RQ worker concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers) until the plugin can be updated.
+
+!!! warning
+    Failure to account for the Celery-to-RQ migration may break your custom background tasks
+
+#### Concurrent Celery and RQ Nautobot Workers
+
+If you must run the Celery and RQ workers concurrently, you must also configure the (deprecated) RQ worker.
+
+Copy and paste the following into `/etc/systemd/system/nautobot-rq-worker.service`:
+
+```
+[Unit]
+Description=Nautobot Request Queue Worker
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
+
+User=nautobot
+Group=nautobot
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/bin/nautobot-server rqworker
+
+Restart=on-failure
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ### Configure systemd
 
 Because we just added new service files, you'll need to reload the systemd daemon:
@@ -210,6 +252,15 @@ Then, start the `nautobot` and `nautobot-worker` services and enable them to ini
 ```no-highlight
 $ sudo systemctl enable --now nautobot nautobot-worker
 ```
+
+If you are also running the RQ worker, repeat the above command for the RQ service:
+
+```no-highlight
+sudo systemctl enable --now nautobot-rq-worker
+```
+
+!!! tip
+    If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in addition to the `nautobot-worker` process. 
 
 ### Verify the service
 You can use the command `systemctl status nautobot.service` to verify that the WSGI service is running:
