@@ -587,6 +587,8 @@ class ConfigContextSchema(OrganizationalModel):
     )
 
     def __str__(self):
+        if self.owner:
+            return f"[{self.owner}] {self.name}"
         return self.name
 
     def get_absolute_url(self):

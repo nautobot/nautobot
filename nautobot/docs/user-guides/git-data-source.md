@@ -4,20 +4,22 @@ The "Git™ as a Data Source" feature was developed to provide the ability to po
 
 For more technical details on how to use this feature, please see the documentation on [Git Repositories](../models/extras/gitrepository.md).
 
-
 ## Supported Providers
+
 The feature uses the concept of a `provides` field to map a repository to a use case. A list of the supported options is provided below.
 
 ### Core Functionality
+
 |Name|Summary|
 |:--|:--|
 |[Export Templates](../models/extras/exporttemplate.md)|Nautobot allows users to define custom templates that can be used when exporting objects.|
 |[Jobs](../additional-features/jobs.md)|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|
 |[Config Contexts](../models/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
+|[Config Context Schemas](../models/extras/configcontextschema.md)|Schemas enforce data validation on config contexts.|
 
 ### Examples of Plugins Defining Additional Providers
 
-Additional Git providers can be added by using Nautobot's flexible plugin system.  
+Additional Git providers can be added by using Nautobot's flexible plugin system.
 
 |Name|Summary|Related Plugin|
 |:--|:--|:--|
@@ -26,6 +28,7 @@ Additional Git providers can be added by using Nautobot's flexible plugin system
 |Jinja Templates|Repository that holds Jinja templates to be used to generate intended configs.|[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
 
 ## Repository Details
+
 This table defines repository parameters that are required to establish a repository connection.
 
 |Field|Explanation|
@@ -44,6 +47,7 @@ This table defines repository parameters that are required to establish a reposi
 
 
 ## Using Git Data Sources
+
 This section will focus on examples and use the `user-guide` branch on the `demo-git-datasources` repo: `https://github.com/nautobot/demo-git-datasource/tree/user-guide`.
 
 ### Export Templates
@@ -53,10 +57,10 @@ This section will focus on examples and use the `user-guide` branch on the `demo
 A template can be used to put objects into a specific format for ingestion into another system, tool, or report.  It is possible that different templates are needed depending on specific users or teams.  This can lead to sprawl of export templates.  To keep accurate templates synced with Nautobot the Git Data Sources extensibility feature can be used.
 
 #### Add a Repository
+
 Navigate to the Data Sources Git integration. **Extensibility -> Git Repositories**.
 
 ![Menu showing "Git Repositories" Item](./images/git-as-data-source/01-git-data-source.png)
-
 
 Click [+] or [Add]
 
@@ -68,6 +72,7 @@ That loads a default page to add a repository.
     By default only config contexts, export templates, and jobs are available resource types.  Others may be added when specific plugins are used.
 
 #### Fill out Repository Details
+
 Fill out the details for the Git repository. More information on the inputs can be found in the [fields section](#repository-details).
 
 ![Example Details Export-Templates](./images/git-as-data-source/03-git-data-source.png)
@@ -89,8 +94,9 @@ Once the repository is synced each template will now be available in the Export 
     If the templates don't populate, make sure the Git directory is named `export_templates` and the sub-directory and sub-sub-directory names correctly match the Nautobot `content type`.
 
 Example below:
+
 ```no-highlight
-▶ tree export_templates 
+▶ tree export_templates
 export_templates
 └── dcim
     └── device
@@ -102,6 +108,7 @@ export_templates
 ```
 
 #### Modifying a File and Sync Changes
+
 Now that the export templates have been loaded into Nautobot they can be utilized as normal.  For example navigate to **Devices -> Devices** and click on **Export** in the top right corner, the dropdown will now include the templates loaded from the Git repository.
 
 The power of having export templates utilizing the Git integration comes with the native source control features that Git comes with.  To illustrate a simple Git sync within Nautobot assume the following template needs to be updated.
@@ -109,6 +116,7 @@ The power of having export templates utilizing the Git integration comes with th
 Filename: `/export_templates/dcim/device/yaml_export.yml`
 
 Current contents:
+
 ```jinja
 ---
 {% for device in queryset %}
@@ -122,6 +130,7 @@ Current contents:
 The template needs to be modified to provide more information than just a list of hostnames.  The site needs to be added.
 
 The updated template is now:
+
 ```jinja
 ---
 {% for device in queryset %}
@@ -148,6 +157,7 @@ From the detailed view:
 Now that the Git repository is linked for export templates it can be controlled via the normal Git operations workflow, which allows users or groups of users to perform code reviews using Pull Requests etc.
 
 ### Jobs
+
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
 For technical details on jobs, please see the [documentation on jobs](../additional-features/jobs.md#jobs).
@@ -186,6 +196,7 @@ Jobs now shows the job from the Git repository.
 At this point all changes, and history can be kept using Git.  A simple `sync` operation can be done from Nautobot to pulldown any changes.
 
 ### Config Contexts
+
 Detailed information on [config contexts](../models/extras/gitrepository.md#configuration-contexts) in Git Repositories.
 
 Config contexts may be provided as JSON or YAML files located in the `/config_contexts/` folder, which must be in the root of the Git repository.
@@ -208,8 +219,9 @@ Once the repository syncs the details can be found in the **Synchronization Stat
 ![Syncronization Menu With Loaded Contexts](./images/git-as-data-source/14-git-data-source.png)
 
 The repository structure is:
+
 ```no-highlight
-▶ tree config_contexts 
+▶ tree config_contexts
 config_contexts
 ├── devices
 │   ├── site-a-bb-01.yml
@@ -243,6 +255,18 @@ Here's an example, with some of the details omitted for brevity.
 
 There is a huge benefit to having `config contexts` managed by a Git workflow.  This type of data can be modified often, especially platform specifics, or new device roles.  Utilizing a standard Git workflow allows for all the proper reviews and approvals to be accomplished before accepting the changes into Nautobot for use.
 
+### Config Context Schemas
+
+Detailed information on [config context schemas](../models/extras/gitrepository.md#configuration-context-schemas) in Git Repositories.
+
+Config context schemas are used to enforce data validation on config contexts. These schema are managed via the [config context schema model](../models/extras/configcontextschema.md) and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data.
+
+```no-highlight
+▶ tree config_contexts
+config_context_schemas
+├── schema_1.yaml
+├── schema_2.json
+```
 
 ## Additional Git Data Sources
 
@@ -255,8 +279,8 @@ As seen in [Fill out Repository Details](#fill-out-repository-details), the stan
 
 For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Repo](https://github.com/nautobot/nautobot-plugin-golden-config/blob/develop/docs/navigating-golden.md#git-settings).
 
-
 ## Common Issues and Troubleshooting
+
 1. Repository is linked, but data is not properly loaded into Nautobot.
     - Validate the root directory is set to the proper name.
     - Export Templates -> `export_templates`.
@@ -266,7 +290,7 @@ For more information for the Golden Configuration specific data sources, navigat
     - Validate branch is correct and exists in the remote repository.
     ![Error Branch Doesn't Exist](./images/git-as-data-source/16-git-data-source.png)
     - Validate the remote url is correct and is the `http(s)` url.  `ssh` urls are not currently supported.
-    ![Error Remote URL Incorrect](./images/git-as-data-source/17-git-data-source.png)    
+    ![Error Remote URL Incorrect](./images/git-as-data-source/17-git-data-source.png)
 3. Authentication Issues.
     - Check repository permissions.
     - Ensure the password is the Personal Access Token (PAT) for the username supplied.
