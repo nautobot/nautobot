@@ -40,7 +40,7 @@ Below is a simplified overview of the Nautobot application stack for reference:
 
 ![Application stack diagram](/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
 
-Find more details [here](nautobot/docs/index.md).
+Find more details [here](/docs/index.md).
 
 ## Providing Feedback
 
