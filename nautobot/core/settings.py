@@ -539,5 +539,6 @@ CELERY_RESULT_BACKEND = CACHES["default"]["LOCATION"]
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization
 CELERY_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_RESULT_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"

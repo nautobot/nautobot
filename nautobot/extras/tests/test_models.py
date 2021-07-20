@@ -731,7 +731,7 @@ class ComputedFieldTest(TestCase):
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
-class FileProxtyTest(TestCase):
+class FileProxyTest(TestCase):
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
         dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")

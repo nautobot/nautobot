@@ -366,6 +366,7 @@ class FileProxy(BaseModel):
     class Meta:
         get_latest_by = "uploaded_at"
         ordering = ["name"]
+        verbose_name_plural = "file proxies"
 
     def save(self, *args, **kwargs):
         delete_file_if_needed(self, "file")
@@ -763,6 +764,7 @@ class JobResult(BaseModel, CustomFieldModel):
 
     class Meta:
         ordering = ["-created"]
+        get_latest_by = "created"
 
     def __str__(self):
         return str(self.job_id)

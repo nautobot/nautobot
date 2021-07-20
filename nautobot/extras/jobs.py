@@ -194,6 +194,17 @@ class BaseJob:
 
         return vars
 
+    @classmethod
+    def _get_file_vars(cls):
+        """Return an ordered dict of FileVar fields."""
+        vars = cls._get_vars()
+        file_vars = OrderedDict()
+        for name, attr in vars.items():
+            if isinstance(attr, FileVar):
+                file_vars[name] = attr
+
+        return file_vars
+
     @property
     def job_result(self):
         return self._job_result
@@ -304,10 +315,10 @@ class BaseJob:
             # MultiObjectVar
             if isinstance(value, QuerySet):
                 return_data[field_name] = list(value.values_list("pk", flat=True))
-            # Objectvar
+            # ObjectVar
             elif isinstance(value, Model):
                 return_data[field_name] = value.pk
-            # FileVar
+            # FileVar (Save each FileVar as a FileProxy)
             elif isinstance(value, InMemoryUploadedFile):
                 return_data[field_name] = BaseJob.save_file(value)
             # Everything else...
@@ -315,35 +326,6 @@ class BaseJob:
                 return_data[field_name] = value
 
         return return_data
-
-    @staticmethod
-    def load_file(pk):
-        """Load a file proxy stored in the database by primary key.
-
-        Args:
-            pk (uuid): Primary key of the `FileProxy` to retrieve
-
-        Returns:
-            File-like object
-        """
-        fp = FileProxy.objects.get(pk=pk)
-        return fp.file
-
-    @staticmethod
-    def save_file(uploaded_file):
-        """
-        Save an uploaded file to the database as a file proxy and return the
-        primary key.
-
-        Args:
-            uploaded_file (file): File handle of file to save to database
-
-        Returns:
-            uuid
-        """
-        fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
-        uploaded_file.seek(0)  # Reset the file cursor, just in case.
-        return fp.pk
 
     @classmethod
     def deserialize_data(cls, data):
@@ -380,6 +362,52 @@ class BaseJob:
                 return_data[field_name] = value
 
         return return_data
+
+    @staticmethod
+    def load_file(pk):
+        """Load a file proxy stored in the database by primary key.
+
+        Args:
+            pk (uuid): Primary key of the `FileProxy` to retrieve
+
+        Returns:
+            File-like object
+        """
+        fp = FileProxy.objects.get(pk=pk)
+        return fp.file
+
+    @staticmethod
+    def save_file(uploaded_file):
+        """
+        Save an uploaded file to the database as a file proxy and return the
+        primary key.
+
+        Args:
+            uploaded_file (file): File handle of file to save to database
+
+        Returns:
+            uuid
+        """
+        fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
+        return fp.pk
+
+    @staticmethod
+    def delete_files(*files_to_delete):
+        """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
+
+        Args:
+            files_to_delete (*args): List of primary keys to delete
+
+        Returns:
+            int (number of objects deleted)
+        """
+        files = FileProxy.objects.filter(pk__in=files_to_delete)
+        num = 0
+        for fp in files:
+            fp.delete()  # Call delete() on each, so `FileAttachment` is reaped
+            num += 1
+        logger.debug(f"Deleted {num} file proxies")
+        return num
 
     def run(self, data, commit):
         """
@@ -920,10 +948,15 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     job = job_class()
     job.job_result = job_result
 
+    # Capture the file IDs for any FileProxy objects created so we can cleanup later.
+    file_fields = list(job._get_file_vars())
+    file_ids = [data[f] for f in file_fields]
+
     # Attempt to resolve serialized data back into original form by creating querysets or model instances
     # If we fail to find any objects, we consider this a job execution error, and fail.
     # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
     # or it might be bad input from an API request, or manual execution.
+
     try:
         data = job_class.deserialize_data(data)
     except ObjectDoesNotExist as e:
@@ -931,7 +964,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job.log_failure(message=e)
         job_result.completed = timezone.now()
         job_result.save()
-        # TODO(jathan): Handle cleanup of FileProxy objects here
+        job.delete_files(*file_ids)  # Cleanup FileProxy objects
         return False
 
     if job.read_only:
@@ -944,12 +977,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
-
-    # Add any files to the form data
-    if request:
-        files = request.FILES
-        for field_name, fileobj in files.items():
-            data[field_name] = fileobj
 
     # Add the current request as a property of the job
     job.request = request
@@ -1003,7 +1030,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         finally:
             job_result.save()
-            # TODO(jathan): Loop thru file vars and if there are FileProxy, delete them
+            job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
         # Perform any post-run tasks
         job.active_test = "post_run"
