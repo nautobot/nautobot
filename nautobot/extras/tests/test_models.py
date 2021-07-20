@@ -732,21 +732,22 @@ class ComputedFieldTest(TestCase):
 
 
 class FileProxyTest(TestCase):
+    def setUp(self):
+        self.dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
+
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
-        dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
-        fp = FileProxy.objects.create(name=dummy_file.name, file=dummy_file)
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
 
         # Now refresh it and make sure it was saved and retrieved correctly.
         fp.refresh_from_db()
-        dummy_file.seek(0)  # Reset cursor since it was previously read
-        self.assertEqual(fp.name, dummy_file.name)
-        self.assertEqual(fp.file.read(), dummy_file.read())
+        self.dummy_file.seek(0)  # Reset cursor since it was previously read
+        self.assertEqual(fp.name, self.dummy_file.name)
+        self.assertEqual(fp.file.read(), self.dummy_file.read())
 
     def test_delete_file_proxy(self):
         """Test deletion of `FileProxy` object."""
-        dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
-        fp = FileProxy.objects.create(name=dummy_file.name, file=dummy_file)
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
 
         # Assert counts before delete
         self.assertEqual(FileProxy.objects.count(), 1)

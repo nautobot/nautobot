@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import JobResult
+from nautobot.extras.models import FileAttachment, FileProxy, JobResult
 from nautobot.utilities.testing import TestCase
 
 
@@ -176,3 +176,22 @@ class JobTest(TestCase):
 <input class="form-control form-control" id="id_var" name="var" placeholder="None" required type="text">
 <br><span class="helptext">Hello</span><input id="id__commit" name="_commit" type="hidden" value="False"></td></tr>""",
             )
+
+
+class JobFileUploadTest(TestCase):
+    """Test a job that uploads/deletes files."""
+
+    job_name = "plugins/dummy_plugin.jobs/FileUploadJob"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
+        cls.job_class = get_job(cls.job_name)
+
+    def test_run_job_success(self):
+        """Test that file upload succeeds, job succeeds, and are deleted."""
+        assert False
+
+    def test_run_job_success(self):
+        """Test that file upload succeeds, job fails, files deleted."""
+        assert False
