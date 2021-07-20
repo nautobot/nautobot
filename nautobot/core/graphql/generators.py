@@ -77,7 +77,7 @@ def generate_computed_field_resolver(name, resolver_name):
     """
 
     def resolve_computed_field(self, info, **kwargs):
-        return self.get_computed_field(name=name)
+        return self.get_computed_field(slug=name)
 
     resolve_computed_field.__name__ = resolver_name
     return resolve_computed_field
