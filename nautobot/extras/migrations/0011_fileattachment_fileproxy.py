@@ -25,9 +25,7 @@ class Migration(migrations.Migration):
                 ("filename", models.CharField(max_length=255)),
                 ("mimetype", models.CharField(max_length=50)),
             ],
-            options={
-                "ordering": ["filename"],
-            },
+            options={"ordering": ["filename"]},
         ),
         migrations.CreateModel(
             name="FileProxy",
@@ -49,8 +47,13 @@ class Migration(migrations.Migration):
                 ("uploaded_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                "ordering": ["name"],
                 "get_latest_by": "uploaded_at",
+                "ordering": ["name"],
+                "verbose_name_plural": "file proxies",
             },
+        ),
+        migrations.AlterModelOptions(
+            name="jobresult",
+            options={"get_latest_by": "created", "ordering": ["-created"]},
         ),
     ]
