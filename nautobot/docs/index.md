@@ -6,10 +6,10 @@ Nautobot is an open source Network Source of Truth and Network Automation Platfo
 
 ## Key Use Cases
 
-Nautobot enables three (3) key use cases. 
+Nautobot enables three (3) key use cases.
 
 1. **Flexible Source of Truth for Networking** - Nautobot core data models are used to define the intended state of network infrastructure enabling it as a Source of Truth. While a baseline set of models are provided (such as IP networks and addresses, devices and racks, circuits and cable, etc.) it is Nautobot's goal to offer maximum data model flexibility. This is enabled through features such as user-defined relationships, custom fields on any model, and data validation that permits users to codify everything from naming standards to having automated tests run before data can be populated into Nautobot.
- 
+
 2. **Extensible Data Platform for Automation** - Nautobot has a rich feature set to seamlessly integrate with network automation solutions.  Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks.  Git integration dynamically loads YAML data files as Nautobot config contexts.  Nautobot also has an evolving plugin system that enables users to create custom models, APIs, and UI elements.  The plugin system is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
 
 3. **Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some applications that are already launched include:
