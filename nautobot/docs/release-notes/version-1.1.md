@@ -82,7 +82,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Removed
 
-## v1.1.0b3 (2021-??-??)
+## v1.1.0 (2021-07-20)
 
 ### Added
 
@@ -112,8 +112,6 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#702](https://github.com/nautobot/nautobot/issues/702) - GraphiQL view no longer requires internet access to load libraries.
 - [#703](https://github.com/nautobot/nautobot/issues/703) - Fixed direct execution of saved GraphQL queries containing double quotes
 - [#705](https://github.com/nautobot/nautobot/issues/705) - Fixed missing description field from detail view for computed fields
-
-### Removed
 
 ### Security
 
