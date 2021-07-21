@@ -20,6 +20,7 @@ layout = (
         items=(
             HomePageItem(
                 name="Dummy Models",
+                model=DummyModel,
                 weight=150,
                 link="plugins:dummy_plugin:dummymodel_list",
                 description="List dummy plugin models.",
@@ -39,6 +40,7 @@ layout = (
             HomePageItem(
                 name="Dummy Models",
                 link="plugins:dummy_plugin:dummymodel_list",
+                model=DummyModel,
                 description="List dummy plugin models.",
                 permissions=["dummy_plugin.view_dummymodel"],
                 weight=100,
