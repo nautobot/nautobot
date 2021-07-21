@@ -44,19 +44,16 @@ class PluginHomeTestCase(SeleniumTestCase):
             "Example 1",
             "Example 2",
             "Example 3",
-        ]
+        ],
     }
-
 
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
 
-
     def tearDown(self):
         self.logout()
         super().tearDown()
-
 
     def test_homepage_render(self):
         """
@@ -73,7 +70,6 @@ class PluginHomeTestCase(SeleniumTestCase):
             columns_html[0].find_element_by_xpath(f".//strong[contains(text(), '{panel_name}')]")
             for item_name, _ in panel_details.items():
                 columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
-
 
     def test_homepage_render_counters(self):
         """
@@ -94,7 +90,6 @@ class PluginHomeTestCase(SeleniumTestCase):
                     counter = item_details["model"].objects.count()
                     counter_html = int(item_html.find_element_by_xpath("./../../span").get_property("innerHTML"))
                     self.assertEqual(counter, counter_html)
-
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_no_permissions(self):

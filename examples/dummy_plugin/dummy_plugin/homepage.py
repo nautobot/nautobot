@@ -30,7 +30,7 @@ layout = (
                 name="Sites",
                 permissions=["dcim.view_site"],
                 custom_template="panel_dummy_example.html",
-            )
+            ),
         ),
     ),
     HomePagePanel(
