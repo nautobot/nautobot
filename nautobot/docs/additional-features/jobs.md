@@ -12,11 +12,11 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 ...and so on. Jobs are Python code and exist outside of the official Nautobot code base, so they can be updated and changed without interfering with the core Nautobot installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below.
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](./#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](./#variables).
 
 ## Writing Jobs
 
-Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `~/.nautobot/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 !!! warning
     The jobs path must include a file named `__init__.py`, which registers the path as a Python module. Do not delete this file.
@@ -53,6 +53,9 @@ You can implement the entire job within the `run()` function, but for more compl
 
 It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database as [`JobResult`](../models/extras/jobresult.md) records.
 
+!!! note
+    When actively developing a Job utilizing a development environment it's important to understand that the "reload on code changes" debugging functionality does **not** automatically restart the `nautobot_worker`; therefore, it is required to restart the `worker` after each update to your Job source code.
+
 ### Module Attributes
 
 #### `name`
@@ -86,6 +89,14 @@ class MyJob(Job):
     class Meta:
         commit_default = False
 ```
+
+#### `field_order`
+
+A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
+
+#### `read_only`
+
+A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 ### Variables
 
@@ -168,16 +179,16 @@ Similar to `ChoiceVar`, but allows for the selection of multiple choices.
 A particular object within Nautobot. Each ObjectVar must specify a particular model, and allows the user to select one of the available instances. ObjectVar accepts several arguments, listed below.
 
 * `model` - The model class
-* `display_field` - The name of the REST API object field to display in the selection list (default: `'name'`)
+* `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
 * `query_params` - A dictionary of query parameters to use when retrieving available options (optional)
 * `null_option` - A label representing a "null" or empty choice (optional)
 
-The `display_field` argument is useful when referencing a model which does not have a `name` field. For example, when displaying a list of device types, you would likely use the `model` field:
+The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
 
 ```python
 device_type = ObjectVar(
-    model=DeviceType,
-    display_field='model'
+    model=IPAddress,
+    display_field="dns_name",
 )
 ```
 
@@ -349,6 +360,12 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 --data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
 ```
 
+The URL contains the `class_path` element that is composed of 3 elements, from the above example:
+
+- `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `example` - path to the job definition file; in this example, a locally installed `example.py` file. For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename`.
+- `MyJobWithVars` - name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
@@ -376,8 +393,8 @@ These variables are presented as a web form to be completed by the user. Once su
 ```python
 from django.utils.text import slugify
 
-from nautobot.dcim.choices import DeviceStatusChoices, SiteStatusChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Status
 from nautobot.extras.jobs import *
 
 
@@ -401,19 +418,19 @@ class NewBranch(Job):
     switch_model = ObjectVar(
         description="Access switch model",
         model=DeviceType,
-        display_field='model',
         query_params={
             'manufacturer_id': '$manufacturer'
         }
     )
 
     def run(self, data, commit):
+        STATUS_PLANNED = Status.objects.get(slug='planned')
 
         # Create the new site
         site = Site(
             name=data['site_name'],
             slug=slugify(data['site_name']),
-            status=SiteStatusChoices.STATUS_PLANNED
+            status=STATUS_PLANNED,
         )
         site.validated_save()
         self.log_success(obj=site, message="Created new site")
@@ -425,7 +442,7 @@ class NewBranch(Job):
                 device_type=data['switch_model'],
                 name=f'{site.slug}-switch{i}',
                 site=site,
-                status=DeviceStatusChoices.STATUS_PLANNED,
+                status=STATUS_PLANNED,
                 device_role=switch_role
             )
             switch.validated_save()
@@ -451,8 +468,8 @@ class NewBranch(Job):
 A job to perform various validation of Device data in Nautobot. As this job does not require any user input, it does not define any variables, nor does it implement a `run()` method.
 
 ```python
-from nautobot.dcim.choices import DeviceStatusChoices
 from nautobot.dcim.models import ConsolePort, Device, PowerPort
+from nautobot.extras.models import Status
 from nautobot.extras.jobs import Job
 
 
@@ -460,10 +477,10 @@ class DeviceConnectionsReport(Job):
     description = "Validate the minimum physical connections for each device"
 
     def test_console_connection(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every console port for every active device has a connection defined.
-        active = DeviceStatusChoices.STATUS_ACTIVE
-        for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=active):
+        for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
             if console_port.connected_endpoint is None:
                 self.log_failure(
                     obj=console_port.device,
@@ -478,9 +495,10 @@ class DeviceConnectionsReport(Job):
                 self.log_success(obj=console_port.device)
 
     def test_power_connections(self):
+        STATUS_ACTIVE = Status.objects.get(slug='active')
 
         # Check that every active device has at least two connected power supplies.
-        for device in Device.objects.filter(status=DeviceStatusChoices.STATUS_ACTIVE):
+        for device in Device.objects.filter(status=STATUS_ACTIVE):
             connected_ports = 0
             for power_port in PowerPort.objects.filter(device=device):
                 if power_port.connected_endpoint is not None:
@@ -498,5 +516,3 @@ class DeviceConnectionsReport(Job):
             else:
                 self.log_success(obj=device)
 ```
-
-

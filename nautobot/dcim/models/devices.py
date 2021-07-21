@@ -301,7 +301,7 @@ class DeviceType(PrimaryModel):
             self.rear_image.delete(save=False)
 
     @property
-    def display_name(self):
+    def display(self):
         return f"{self.manufacturer.name} {self.model}"
 
     @property
@@ -570,7 +570,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         )
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("dcim:device", args=[self.pk])
@@ -760,7 +760,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         )
 
     @property
-    def display_name(self):
+    def display(self):
         if self.name:
             return self.name
         elif self.virtual_chassis:

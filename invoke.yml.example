@@ -1,0 +1,16 @@
+---
+nautobot:
+  local: False
+  python_ver: "3.7"
+  compose_dir: "/full/path/to/nautobot/development"
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.override.yml"
+  docker_image_names_main:
+    - "networktocode/nautobot"
+    - "ghcr.io/nautobot/nautobot"
+  docker_image_names_develop:
+    - "networktocode/nautobot"
+    - "ghcr.io/nautobot/nautobot"
+    - "networktocode/nautobot-dev"
+    - "ghcr.io/nautobot/nautobot-dev"

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.core.api import WritableNestedSerializer
+from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
 
 __all__ = [
@@ -92,7 +92,7 @@ class NestedRackSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Rack
-        fields = ["id", "url", "name", "display_name", "device_count"]
+        fields = ["id", "url", "name", "device_count"]
 
 
 class NestedRackReservationSerializer(WritableNestedSerializer):
@@ -134,7 +134,6 @@ class NestedDeviceTypeSerializer(WritableNestedSerializer):
             "manufacturer",
             "model",
             "slug",
-            "display_name",
             "device_count",
         ]
 
@@ -233,7 +232,7 @@ class NestedDeviceSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Device
-        fields = ["id", "url", "name", "display_name"]
+        fields = ["id", "url", "name"]
 
 
 class NestedConsoleServerPortSerializer(WritableNestedSerializer):
@@ -323,7 +322,7 @@ class NestedInventoryItemSerializer(WritableNestedSerializer):
 #
 
 
-class NestedCableSerializer(serializers.ModelSerializer):
+class NestedCableSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
 
     class Meta:

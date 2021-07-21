@@ -13,7 +13,7 @@
         <div class="col-sm-4 col-md-3">
             <form action="{% url 'extras:configcontext_list' %}" method="get">
                 <div class="input-group">
-                    <input type="text" name="q" class="form-control" />
+                    <input type="text" name="q" class="form-control" placeholder="Search config contexts"/>
                     <span class="input-group-btn">
                         <button type="submit" class="btn btn-primary">
                             <span class="mdi mdi-magnify" aria-hidden="true"></span>
@@ -31,6 +31,8 @@
             </a>
         {% endif %}
     </div>
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
     <ul class="nav nav-tabs">
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Config Context</a>
@@ -41,7 +43,6 @@
             </li>
         {% endif %}
     </ul>
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
@@ -75,6 +76,16 @@
                     <tr>
                         <td>Description</td>
                         <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Schema</td>
+                        <td>
+                            {% if object.schema %}
+                                <a href="{{ object.schema.get_absolute_url }}">{{ object.schema }}</a>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
                         <td>Active</td>
@@ -132,6 +143,20 @@
                                 <ul>
                                     {% for role in object.roles.all %}
                                         <li><a href="{% url 'dcim:device_list' %}?role={{ role.slug }}">{{ role }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Device Types</td>
+                        <td>
+                            {% if object.device_types.all %}
+                                <ul>
+                                    {% for device_type in object.device_types.all %}
+                                        <li><a href="{{ device_type.get_absolute_url }}">{{ device_type }}</a></li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -230,10 +255,10 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Data</strong>
-                    {% include 'extras/inc/configcontext_format.html' %}
+                    {% include 'extras/inc/json_format.html' %}
                 </div>
                 <div class="panel-body">
-                    {% include 'extras/inc/configcontext_data.html' with data=object.data format=format %}
+                    {% include 'extras/inc/json_data.html' with data=object.data format=format %}
                 </div>
             </div>
         </div>

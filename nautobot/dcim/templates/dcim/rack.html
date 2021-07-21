@@ -247,7 +247,7 @@
                             </td>
                             {% with power_port=powerfeed.connected_endpoint %}
                                 {% if power_port %}
-                                    <td>{% utilization_graph power_port.get_power_draw.allocated|percentage:powerfeed.available_power %}</td>
+                                    <td>{% utilization_graph power_port.get_power_draw %}</td>
                                 {% else %}
                                     <td class="text-muted">N/A</td>
                                 {% endif %}
@@ -361,7 +361,7 @@
                                 <a href="{% url 'dcim:device' pk=device.pk %}">{{ device }}</a>
                             </td>
                             <td>{{ device.device_role }}</td>
-                            <td>{{ device.device_type.display_name }}</td>
+                            <td>{{ device.device_type.display }}</td>
                             {% if device.parent_bay %}
                                 <td><a href="{{ device.parent_bay.device.get_absolute_url }}">{{ device.parent_bay.device }}</a></td>
                                 <td>{{ device.parent_bay }}</td>

@@ -13,7 +13,7 @@ These instructions will guide you through the following actions:
 - Verify the installation using the development/test server
 
 !!! important
-    PostgreSQL and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
+    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
 
 ## Choose your `NAUTOBOT_ROOT`
 
@@ -36,57 +36,76 @@ The following command also creates the `/opt/nautobot` directory and sets it as 
 $ sudo useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
 ```
 
+## Setup the Virtual Environment
+
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
+
+When installed per the documentation, Nautobot uses a virtual environment in production.
+
+In the following steps, we will have you create the virtualenv within the `NAUTOBOT_ROOT` you chose in the previous step. This is the same we had you set as the home directory as the `nautobot` user.
+
+!!! note
+    Instead of deliberately requiring you to activate/deactivate the virtualenv, we are emphasizing on relying on the `$PATH` to access programs installed within it. We find this to be much more intuitive and natural when working with Nautobot in this way.
+
+### Create the Virtual Environment
+
+As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libaries.
+
+```no-highlight
+$ sudo -u nautobot python3 -m venv /opt/nautobot
+```
+
+### Update the Nautobot `.bashrc`
+
+So what about the `NAUTOBOT_ROOT`? We've referenced this environment variable several times. Here is where it finally gets set.
+
+We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user and make sure that it always set without having to do it manually.
+
+Run this command to update `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
+
+```no-highlight
+$ echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
+```
+
 ## Sudo to nautobot
 
-It is critical to create the virtualenv and install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
+It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
 ```no-highlight
 $ sudo -iu nautobot
 ```
-!!! warning
-    Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
-
-### Update the Nautobot `.bashrc`
-
-After becoming `nautobot`, we need to set the `NAUTOBOT_ROOT` environment variable for this user and make sure that this variable is always set.
-
-Add this to `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
+Observe also that you can now echo the value of the `NAUTOBOT_ROOT` environment variable that is automatically set because we added to `.bashrc`:
 
 ```no-highlight
-$ echo "export NAUTOBOT_ROOT=/opt/nautobot" >> ~/.bashrc
-```
-
-Next, reload the `.bashrc` file so that your `NAUTOBOT_ROOT` gets set and then echo its value to verify it worked:
-
-```no-highlight
-$ source ~/.bashrc
 $ echo $NAUTOBOT_ROOT
 /opt/nautobot
 ```
 
-## Create the Virtual Environment
-
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
-
-We're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment.
-
-```no-highlight
-$ python3 -m venv $NAUTOBOT_ROOT
-```
+!!! warning
+    Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
 ## Understanding the Virtual Environment
 
 Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
 
+In Ubuntu 20.04:
 ```no-highlight
 $ echo $PATH
 /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 ```
 
+Due to differences between OS, in CentOS `$PATH` will appear as:
+```no-highlight
+$ echo $PATH
+/opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
+
+```
+
+
 Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
 
-Because `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically prefer the virtualenv's commands because they come first in the `$PATH`.
+Since `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically prefer the virtualenv's commands because they come first in the `$PATH`.
 
 As the `nautobot` user, you may use `which pip3` to confirm that you are using the correct version of `pip3`. The path should match that of `$NAUTOBOT_ROOT/bin`. For example:
 
@@ -117,6 +136,20 @@ Use Pip to install Nautobot:
 $ pip3 install nautobot
 ```
 
+!!! hint 
+    If you are using MySQL as your database backend, use `pip3 install nautobot[mysql]` to install Nautobot and the `mysqlclient` library together!
+
+### Install MySQL client library
+
+If you are using MySQL as your database server you must install the `mysqlclient` database client for Python. 
+
+!!! warning
+    If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
+    
+```no-highlight
+$ pip3 install mysqlclient
+```
+
 Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
 
 ## Verify your Nautobot Installation
@@ -144,14 +177,25 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 
 ### Required Settings
 
-Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.
+Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.  If you do not wish to modify the config, by default, many of these configuration settings can also be specified by environment variables. Please see [Required Settings](../../configuration/required-settings) for further details.
 
-Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings.
+Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
+
+* [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
+* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
-Save your changes to your `nautobot_config.py` and then return here.
+!!! warning
+    If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
+
+Save your changes to your `nautobot_config.py` and then proceed to the next step.
+
+#### MySQL Unicode Settings
+
+If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for more information.
 
 ## Optional Settings
 
@@ -246,19 +290,19 @@ At this point, we should be able to run Nautobot's development server for testin
 development instance:
 
 ```no-highlight
-$ nautobot-server runserver 0.0.0.0:8000 --insecure
+$ nautobot-server runserver 0.0.0.0:8080 --insecure
 ```
 
-Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8000; for example, <http://127.0.0.1:8000/>. You should be greeted with the Nautobot home page.
+Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8080; for example, <http://127.0.0.1:8080/>. You should be greeted with the Nautobot home page.
+
+!!! danger
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 !!! warning
-    The development server is for development and testing purposes only. It is neither performant nor secure enough for production use. **Do not use it in production.**
-
-!!! warning
-    If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected.
+    If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected. Some platforms (such as CentOS) have a firewall enabled by default.  If you are unable to connect to the server url on port 8080, verify the firewall policy to allow the appropriate connections, or select an already permitted port.
 
 !!! important
-    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server rqworker` separately. For production use, both Nautobot and the worker should be managed by systemd rather than started manually, as described in the next section of this documentation.
+    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` (for background tasks) or `nautobot-server rqworker` (for jobs) separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
 Note that the initial user interface will be locked down for non-authenticated users.
 
@@ -268,4 +312,4 @@ Try logging in using the superuser account we just created. Once authenticated, 
 
 ![Nautobot UI as seen by an administrator](../media/installation/nautobot_ui_admin.png)
 
-Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](../wsgi).
+Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).

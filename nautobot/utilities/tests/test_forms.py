@@ -1,12 +1,16 @@
 from django import forms
 from django.test import TestCase
+from unittest import mock
+from netaddr import IPNetwork
 
-from nautobot.ipam.forms import IPAddressCSVForm
-from nautobot.utilities.forms.fields import CSVDataField
+from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm
+from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.utilities.forms.fields import CSVDataField, DynamicModelMultipleChoiceField, NumericArrayField
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
 )
+from nautobot.utilities.forms.forms import AddressFieldMixin, PrefixFieldMixin
 
 
 class ExpandIPAddress(TestCase):
@@ -405,3 +409,113 @@ class CSVDataFieldTest(TestCase):
         """
         with self.assertRaises(forms.ValidationError):
             self.field.clean(input)
+
+
+class DynamicModelMultipleChoiceFieldTest(TestCase):
+    """Tests for DynamicModelMultipleChoiceField."""
+
+    def setUp(self):
+        self.field = DynamicModelMultipleChoiceField(queryset=IPAddress.objects.all())
+
+    def test_prepare_value_single_str(self):
+        """A single string (UUID) value should be treated as a single-entry list."""
+        self.assertEqual(
+            self.field.prepare_value("c671a001-4c17-4ca1-80fd-fe1609bcadec"),
+            ["c671a001-4c17-4ca1-80fd-fe1609bcadec"],
+        )
+
+    def test_prepare_value_multiple_str(self):
+        """A list of string (UUID) values should be handled as-is."""
+        self.assertEqual(
+            self.field.prepare_value(["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]),
+            ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"],
+        )
+
+    def test_prepare_value_single_object(self):
+        """A single object value should be translated to its corresponding PK."""
+        address = IPAddress.objects.create(address="10.1.1.1/24")
+        self.assertEqual(
+            self.field.prepare_value(address),
+            address.pk,
+        )
+
+    def test_prepare_value_multiple_object(self):
+        """A list of object values should be translated to a list of PKs."""
+        address_1 = IPAddress.objects.create(address="10.1.1.1/24")
+        address_2 = IPAddress.objects.create(address="10.1.1.2/24")
+        self.assertEqual(
+            self.field.prepare_value([address_1, address_2]),
+            [address_1.pk, address_2.pk],
+        )
+
+
+class NumericArrayFieldTest(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.field = ServiceForm().fields["ports"]
+
+    def test_valid_input(self):
+        # Mapping of input => expected
+        tests = {
+            "80,443-444": [80, 443, 444],
+            "1024-1028,31337": [1024, 1025, 1026, 1027, 1028, 31337],
+        }
+        for test, expected in tests.items():
+            self.assertEqual(self.field.clean(test), expected)
+
+    def test_invalid_input(self):
+        tests = [
+            "pizza",
+            "-41",
+        ]
+        for test in tests:
+            with self.assertRaises(forms.ValidationError):
+                self.field.clean(test)
+
+
+class AddressFieldMixinTest(TestCase):
+    """Test cases for the AddressFieldMixin."""
+
+    def setUp(self):
+        """Setting up shared variables for the AddressFieldMixin."""
+        self.ip = IPAddress.objects.create(address="10.0.0.1/24")
+        self.initial = {"address": self.ip.address}
+
+    def test_address_initial(self):
+        """Ensure initial kwargs for address is passed in."""
+        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+            ip_none = IPAddress()
+            AddressFieldMixin(initial=self.initial, instance=ip_none)
+            mock_init.assert_called_with(initial=self.initial, instance=ip_none)
+
+    def test_address_instance(self):
+        """Ensure override with computed field when initial kwargs for address is not passed in."""
+
+        # Mock the django.forms.ModelForm __init__ function used in nautobot.utilities.forms.forms
+        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+            AddressFieldMixin(instance=self.ip)
+            mock_init.assert_called_with(initial=self.initial, instance=self.ip)
+
+
+class PrefixFieldMixinTest(TestCase):
+    """Test cases for the PrefixFieldMixin."""
+
+    def setUp(self):
+        """Setting up shared variables for the PrefixFieldMixin."""
+        self.prefix = Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"))
+        self.initial = {"prefix": self.prefix.prefix}
+
+    def test_prefix_initial(self):
+        """Ensure initial kwargs for prefix is passed through."""
+        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+            prefix_none = Prefix()
+            PrefixFieldMixin(initial=self.initial, instance=prefix_none)
+            mock_init.assert_called_with(initial=self.initial, instance=prefix_none)
+
+    def test_prefix_instance(self):
+        """Ensure override with computed field when initial kwargs for prefix is not passed in."""
+
+        # Mock the django.forms.ModelForm __init__ function used in nautobot.utilities.forms.forms
+        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+            PrefixFieldMixin(instance=self.prefix)
+            mock_init.assert_called_with(initial=self.initial, instance=self.prefix)

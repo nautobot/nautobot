@@ -102,17 +102,6 @@ class RemoteUserBackend(_RemoteUserBackend):
     def create_unknown_user(self):
         return settings.REMOTE_AUTH_AUTO_CREATE_USER
 
-    def configure_user(self, request, user):
-        logger = logging.getLogger("nautobot.authentication.RemoteUserBackend")  # noqa: F841
-
-        # Assign default groups to the user
-        assign_groups_to_user(user, settings.REMOTE_AUTH_DEFAULT_GROUPS)
-
-        # Assign default object permissions to the user
-        assign_permissions_to_user(user, settings.REMOTE_AUTH_DEFAULT_PERMISSIONS)
-
-        return user
-
     def has_perm(self, user_obj, perm, obj=None):
         return False
 
@@ -130,70 +119,6 @@ class DummyBackend(BaseBackend):
         isn't raised.
         """
         return False
-
-
-class LDAPBackend:
-    """
-    Wrapper for stock `django-auth-ldap` LDAP authentication.
-
-    This backend that validates usability based on whether the plugin is
-    installed and configured, otherwise it will return a dummy backend to allow
-    authentication to proceed using other configured backends.
-    """
-
-    is_usable = False
-
-    def __new__(cls, *args, **kwargs):
-        try:
-            from django_auth_ldap.backend import (
-                LDAPBackend as LDAPBackend_,
-                LDAPSettings,
-            )
-            import ldap
-        except ModuleNotFoundError as e:
-            if getattr(e, "name") == "django_auth_ldap":
-                logging.error("LDAP authentication has been configured, but django-auth-ldap is not installed.")
-
-        # Try to import `ldap_config.py`
-        # FIXME(jathan): Have this read from `django.conf.settings` instead vs.
-        # another config file that has to be dropped inside of the Nautobot code
-        # deployment.
-        try:
-            from nautobot.core import ldap_config
-        except (ModuleNotFoundError, ImportError) as e:
-            if getattr(e, "name") == "ldap_config":
-                logging.error("LDAP configuration file not found: Check that ldap_config.py has been created.")
-            ldap_config = None
-
-        # Once we've asserted that imports/settings work, set this backend as
-        # usable.
-        try:
-            getattr(ldap_config, "AUTH_LDAP_SERVER_URI")
-        except AttributeError:
-            logging.error("Required parameter AUTH_LDAP_SERVER_URI is missing from ldap_config.py.")
-        else:
-            cls.is_usable = True
-
-        # If the LDAP dependencies aren't set/working, just return a dummy
-        # backend and soft fail.
-        if not cls.is_usable:
-            return DummyBackend()
-
-        # Create a new instance of django-auth-ldap's LDAPBackend
-        obj = LDAPBackend_()
-
-        # Read LDAP configuration parameters from ldap_config.py instead of settings.py
-        settings = LDAPSettings()
-        for param in dir(ldap_config):
-            if param.startswith(settings._prefix):
-                setattr(settings, param[10:], getattr(ldap_config, param))
-        obj.settings = settings
-
-        # Optionally disable strict certificate checking
-        if getattr(ldap_config, "LDAP_IGNORE_CERT_ERRORS", False):
-            ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-
-        return obj
 
 
 def assign_groups_to_user(user, groups=None):

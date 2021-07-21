@@ -3,24 +3,34 @@ import logging
 import uuid
 from collections import OrderedDict
 
-from django.contrib.auth.models import User
+from db_file_storage.model_utils import delete_file, delete_file_if_needed
+from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend
+from graphql.error import GraphQLSyntaxError
+from graphql.language.ast import OperationDefinition
+from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
+from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.extras.choices import *
 from nautobot.extras.constants import *
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
@@ -166,11 +176,14 @@ class CustomLink(BaseModel, ChangeLoggedModel):
         limit_choices_to=FeatureQuery("custom_links"),
     )
     name = models.CharField(max_length=100, unique=True)
-    text = models.CharField(max_length=500, help_text="Jinja2 template code for link text")
+    text = models.CharField(
+        max_length=500,
+        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
+    )
     target_url = models.CharField(
         max_length=500,
         verbose_name="URL",
-        help_text="Jinja2 template code for link URL",
+        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
@@ -289,10 +302,85 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
         if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
 
+        # Don't allow two ExportTemplates with the same name, content_type, and owner.
+        # This is necessary because Django doesn't consider NULL=NULL, and so if owner is NULL the unique_together
+        # condition will never be matched even if name and content_type are the same.
+        if (
+            ExportTemplate.objects.exclude(pk=self.pk)
+            .filter(
+                name=self.name,
+                content_type=self.content_type,
+                owner_content_type=self.owner_content_type,
+                owner_object_id=self.owner_object_id,
+            )
+            .exists()
+        ):
+            raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
+
 
 #
-# Image attachments
+# File attachments
 #
+
+
+class FileAttachment(BaseModel):
+    """An object for storing the contents and metadata of a file in the database.
+
+    This object is used by `FileProxy` objects to retrieve file contents and is
+    not intended to be used standalone.
+    """
+
+    bytes = models.BinaryField()
+    filename = models.CharField(max_length=255)
+    mimetype = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.filename
+
+    class Meta:
+        ordering = ["filename"]
+
+
+def database_storage():
+    """Returns storage backend used by `FileProxy.file` to store files in the database."""
+    return DatabaseFileStorage()
+
+
+class FileProxy(BaseModel):
+    """An object to store a file in the database.
+
+    The `file` field can be used like a file handle. The file contents are stored and retrieved from
+    `FileAttachment` objects.
+
+    The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
+    should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
+    are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
+    In most cases, it is better to iterate over a queryset of `FileProxy` objects and call
+    `delete()` on each one individually.
+    """
+
+    name = models.CharField(max_length=255)
+    file = models.FileField(
+        upload_to="extras.FileAttachment/bytes/filename/mimetype",
+        storage=database_storage,  # Use only this backend
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        get_latest_by = "uploaded_at"
+        ordering = ["name"]
+        verbose_name_plural = "file proxies"
+
+    def save(self, *args, **kwargs):
+        delete_file_if_needed(self, "file")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        delete_file(self, "file")
 
 
 class ImageAttachment(BaseModel):
@@ -355,8 +443,27 @@ class ImageAttachment(BaseModel):
 #
 # Config contexts
 #
+
+
+class ConfigContextSchemaValidationMixin:
+    """
+    Mixin that provides validation of config context data against a json schema.
+    """
+
+    def _validate_with_schema(self, data_field, schema_field):
+        schema = getattr(self, schema_field)
+        data = getattr(self, data_field)
+
+        # If schema is None, then no schema has been specified on the instance and thus no validation should occur.
+        if schema:
+            try:
+                Draft7Validator(schema.data_schema).validate(data)
+            except JSONSchemaValidationError as e:
+                raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
+
+
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel):
+class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
@@ -387,9 +494,17 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
     is_active = models.BooleanField(
         default=True,
     )
+    schema = models.ForeignKey(
+        to="extras.ConfigContextSchema",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Optional schema to validate the structure of the data",
+    )
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
+    device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
     cluster_groups = models.ManyToManyField(to="virtualization.ClusterGroup", related_name="+", blank=True)
     clusters = models.ManyToManyField(to="virtualization.Cluster", related_name="+", blank=True)
@@ -419,8 +534,20 @@ class ConfigContext(BaseModel, ChangeLoggedModel):
         if type(self.data) is not dict:
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
+        # Validate data against schema
+        self._validate_with_schema("data", "schema")
 
-class ConfigContextModel(models.Model):
+        # Check for a duplicated `name`. This is necessary because Django does not consider two NULL fields to be equal,
+        # and thus if the `owner` is NULL, a duplicate `name` will not otherwise automatically raise an exception.
+        if (
+            ConfigContext.objects.exclude(pk=self.pk)
+            .filter(name=self.name, owner_content_type=self.owner_content_type, owner_object_id=self.owner_object_id)
+            .exists()
+        ):
+            raise ValidationError({"name": "A ConfigContext with this name already exists."})
+
+
+class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     """
     A model which includes local configuration context data. This local data will override any inherited data from
     ConfigContexts.
@@ -430,6 +557,13 @@ class ConfigContextModel(models.Model):
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
+    )
+    local_context_schema = models.ForeignKey(
+        to="extras.ConfigContextSchema",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
     local_context_data_owner_content_type = models.ForeignKey(
@@ -454,16 +588,11 @@ class ConfigContextModel(models.Model):
         Return the rendered configuration context for a device or VM.
         """
 
+        # always manually query for config contexts
+        config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
-
-        if not hasattr(self, "config_context_data"):
-            # The annotation is not available, so we fall back to manually querying for the config context objects
-            config_context_data = ConfigContext.objects.get_for_object(self, aggregate_data=True)
-        else:
-            # The attribute may exist, but the annotated value could be None if there is no config context data
-            config_context_data = self.config_context_data or []
-
         for context in config_context_data:
             data = deepmerge(data, context)
 
@@ -479,6 +608,76 @@ class ConfigContextModel(models.Model):
         # Verify that JSON data is provided as an object
         if self.local_context_data and type(self.local_context_data) is not dict:
             raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
+
+        if self.local_context_schema and not self.local_context_data:
+            raise ValidationError({"local_context_schema": "Local context data must exist for a schema to be applied."})
+
+        # Validate data against schema
+        self._validate_with_schema("local_context_data", "local_context_schema")
+
+
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "relationships",
+)
+class ConfigContextSchema(OrganizationalModel):
+    """
+    This model stores jsonschema documents where are used to optionally validate config context data payloads.
+    """
+
+    name = models.CharField(max_length=200, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    slug = models.SlugField()
+    data_schema = models.JSONField(
+        help_text="A JSON Schema document which is used to validate a config context object."
+    )
+    # A ConfigContextSchema *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("config_context_owners"),
+        default=None,
+        null=True,
+        blank=True,
+    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    owner = GenericForeignKey(
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
+    )
+
+    def __str__(self):
+        if self.owner:
+            return f"[{self.owner}] {self.name}"
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:configcontextschema", args=[self.slug])
+
+    def clean(self):
+        """
+        Validate the schema
+        """
+        super().clean()
+
+        try:
+            Draft7Validator.check_schema(self.data_schema)
+        except SchemaError as e:
+            raise ValidationError({"data_schema": e.message})
+
+        if (
+            type(self.data_schema) is not dict
+            or "properties" not in self.data_schema
+            or self.data_schema.get("type") != "object"
+        ):
+            raise ValidationError(
+                {
+                    "data_schema": "Nautobot only supports context data in the form of an object and thus the "
+                    "JSON schema must be of type object and specify a set of properties."
+                }
+            )
 
 
 #
@@ -499,8 +698,12 @@ class Job(models.Model):
 #
 # Job results
 #
-@extras_features("graphql")
-class JobResult(BaseModel):
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "graphql",
+)
+class JobResult(BaseModel, CustomFieldModel):
     """
     This model stores the results from running a user-defined report.
     """
@@ -516,7 +719,9 @@ class JobResult(BaseModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     completed = models.DateTimeField(null=True, blank=True)
-    user = models.ForeignKey(to=User, on_delete=models.SET_NULL, related_name="+", blank=True, null=True)
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
+    )
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
@@ -565,6 +770,7 @@ class JobResult(BaseModel):
 
     class Meta:
         ordering = ["-created"]
+        get_latest_by = "created"
 
     def __str__(self):
         return str(self.job_id)
@@ -578,6 +784,47 @@ class JobResult(BaseModel):
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
+
+    @property
+    def related_object(self):
+        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `job_id` fields.
+
+        If `obj_type` is extras.Job, then the `name` is used to look up an extras.jobs.Job subclass based on the
+        `class_path` of the Job subclass.
+        Note that this is **not** the extras.models.Job model class nor an instance thereof.
+
+        Else, if the the model class referenced by `obj_type` has a `name` field, our `name` field will be used
+        to look up a corresponding model instance. This is used, for example, to look up a related `GitRepository`;
+        more generally it can be used by any model that 1) has a unique `name` field and 2) needs to have a many-to-one
+        relationship between JobResults and model instances.
+
+        Else, the `obj_type` and `job_id` will be used together as a quasi-GenericForeignKey to look up a model
+        instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
+        but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
+        to plugin model instances.
+        """
+        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+
+        if self.obj_type == ContentType.objects.get(app_label="extras", model="job"):
+            # Related object is an extras.Job subclass, our `name` matches its `class_path`
+            return get_job(self.name)
+
+        model_class = self.obj_type.model_class()
+
+        if hasattr(model_class, "name"):
+            # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
+            try:
+                return model_class.objects.get(name=self.name)
+            except model_class.DoesNotExist:
+                pass
+
+        # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
+        try:
+            return model_class.objects.get(id=self.job_id)
+        except model_class.DoesNotExist:
+            pass
+
+        return None
 
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
@@ -605,7 +852,9 @@ class JobResult(BaseModel):
         """
         job_result = cls.objects.create(name=name, obj_type=obj_type, user=user, job_id=uuid.uuid4())
 
-        func.delay(*args, job_id=str(job_result.job_id), job_result=job_result, **kwargs)
+        kwargs["job_result_pk"] = job_result.pk
+
+        func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id))
 
         return job_result
 
@@ -681,3 +930,54 @@ class JobResult(BaseModel):
             else:
                 log_level = logging.INFO
             logger.log(log_level, str(message))
+
+
+@extras_features("graphql")
+class GraphQLQuery(BaseModel, ChangeLoggedModel):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.CharField(max_length=100, unique=True)
+    query = models.TextField()
+    variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+
+    class Meta:
+        ordering = ("slug",)
+        verbose_name = "GraphQL query"
+        verbose_name_plural = "GraphQL queries"
+
+    def get_absolute_url(self):
+        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
+
+    def save(self, *args, **kwargs):
+        variables = {}
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        # Load query into GraphQL backend
+        document = backend.document_from_string(schema, self.query)
+
+        # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
+        # that define one or more variables. For each operation and variable definition, store the variable's
+        # default value (if any) into our own "variables" dict.
+        definitions = [
+            d
+            for d in document.document_ast.definitions
+            if isinstance(d, OperationDefinition) and d.variable_definitions
+        ]
+        for definition in definitions:
+            for variable_definition in definition.variable_definitions:
+                default = variable_definition.default_value.value if variable_definition.default_value else ""
+                variables[variable_definition.variable.name.value] = default
+
+        self.variables = variables
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        try:
+            backend.document_from_string(schema, self.query)
+        except GraphQLSyntaxError as error:
+            raise ValidationError({"query": error})
+
+    def __str__(self):
+        return self.name

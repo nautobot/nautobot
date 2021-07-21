@@ -1,10 +1,8 @@
 from collections import OrderedDict
 
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -19,9 +17,9 @@ from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.fields import ColorField, NaturalOrderingField
+from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
 from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import array_to_string, serialize_object
+from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -280,7 +278,7 @@ class Rack(PrimaryModel, StatusModel):
         )
 
     def __str__(self):
-        return self.display_name or super().__str__()
+        return self.display or super().__str__()
 
     def get_absolute_url(self):
         return reverse("dcim:rack", args=[self.pk])
@@ -345,7 +343,7 @@ class Rack(PrimaryModel, StatusModel):
             return reversed(range(1, self.u_height + 1))
 
     @property
-    def display_name(self):
+    def display(self):
         if self.facility_id:
             return f"{self.name} ({self.facility_id})"
         return self.name
@@ -493,9 +491,10 @@ class Rack(PrimaryModel, StatusModel):
         return self.devices.filter(position=0)
 
     def get_utilization(self):
-        """
-        Determine the utilization rate of the rack and return it as a percentage. Occupied and reserved units both count
-        as utilized.
+        """Gets utilization numerator and denominator for racks.
+
+        Returns:
+            UtilizationData: (numerator=Occupied Unit Count, denominator=U Height of the rack)
         """
         # Determine unoccupied units
         available_units = self.get_available_units()
@@ -505,19 +504,19 @@ class Rack(PrimaryModel, StatusModel):
             if u in available_units:
                 available_units.remove(u)
 
-        occupied_unit_count = self.u_height - len(available_units)
-        percentage = int(float(occupied_unit_count) / self.u_height * 100)
-
-        return percentage
+        # Return the numerator and denominator as percentage is to be calculated later where needed
+        return UtilizationData(numerator=self.u_height - len(available_units), denominator=self.u_height)
 
     def get_power_utilization(self):
-        """
-        Determine the utilization rate of power in the rack and return it as a percentage.
+        """Determine the utilization numerator and denominator for power utilization on the rack.
+
+        Returns:
+            UtilizationData: (numerator, denominator)
         """
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
         if not available_power_total:
-            return 0
+            return UtilizationData(numerator=0, denominator=0)
 
         pf_powerports = PowerPort.objects.filter(
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
@@ -532,7 +531,7 @@ class Rack(PrimaryModel, StatusModel):
             or 0
         )
 
-        return int(allocated_draw_total / available_power_total * 100)
+        return UtilizationData(numerator=allocated_draw_total, denominator=available_power_total)
 
 
 @extras_features(
@@ -550,7 +549,7 @@ class RackReservation(PrimaryModel):
     """
 
     rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="reservations")
-    units = ArrayField(base_field=models.PositiveSmallIntegerField())
+    units = JSONArrayField(base_field=models.PositiveSmallIntegerField())
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -558,7 +557,7 @@ class RackReservation(PrimaryModel):
         blank=True,
         null=True,
     )
-    user = models.ForeignKey(to=User, on_delete=models.PROTECT)
+    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     description = models.CharField(max_length=200)
 
     csv_headers = [

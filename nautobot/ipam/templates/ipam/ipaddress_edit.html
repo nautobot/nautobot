@@ -4,7 +4,7 @@
 {% load helpers %}
 
 {% block tabs %}
-    {% if editing %}
+    {% if not editing %}
         {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='add' %}
     {% endif %}
 {% endblock %}

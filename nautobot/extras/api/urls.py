@@ -7,6 +7,7 @@ router.APIRootView = views.ExtrasRootView
 
 # Custom fields
 router.register("custom-fields", views.CustomFieldViewSet)
+router.register("custom-field-choices", views.CustomFieldChoiceViewSet)
 
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
@@ -22,6 +23,9 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 
 # Config contexts
 router.register("config-contexts", views.ConfigContextViewSet)
+
+# Config context schemas
+router.register("config-context-schemas", views.ConfigContextSchemaViewSet)
 
 # Jobs
 router.register("jobs", views.JobViewSet, basename="job")
@@ -47,6 +51,12 @@ router.register("statuses", views.StatusViewSet)
 # Relationships
 router.register("relationships", views.RelationshipViewSet)
 router.register("relationship-associations", views.RelationshipAssociationViewSet)
+
+# GraphQL Queries
+router.register("graphql-queries", views.GraphQLQueryViewSet)
+
+# Computed Fields
+router.register("computed-fields", views.ComputedFieldViewSet)
 
 app_name = "extras-api"
 urlpatterns = router.urls

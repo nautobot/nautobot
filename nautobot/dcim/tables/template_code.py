@@ -8,6 +8,28 @@ CABLETERMINATION = """
 {% endif %}
 """
 
+PATHENDPOINT = """
+{% if value.destination %}
+    <a href="{{ value.destination.parent.get_absolute_url }}">{{ value.destination.parent }}</a>
+    <i class="mdi mdi-chevron-right"></i>
+    <a href="{{ value.destination.get_absolute_url }}">{{ value.destination }}</a>
+    {% with traced_path=value.origin.trace %}
+        {% for near_end, cable, far_end in traced_path %}
+            {% if near_end.circuit %}
+                <small>via
+                    <a href="{{ near_end.circuit.get_absolute_url }}">
+                        {{ near_end.circuit }}
+                        {{ near_end.circuit.provider }}
+                    </a>
+                </small>
+            {% endif %}
+        {% endfor %}
+    {% endwith %}
+{% else %}
+    &mdash;
+{% endif %}
+"""
+
 CABLE_LENGTH = """
 {% if record.length %}{{ record.length }} {{ record.get_length_unit_display }}{% else %}&mdash;{% endif %}
 """
@@ -83,6 +105,7 @@ RACKGROUP_ELEVATIONS = """
 </a>
 """
 
+# Value is a namedtuple that takes a numerator and denominator to pass in.
 UTILIZATION_GRAPH = """
 {% load helpers %}
 {% utilization_graph value %}

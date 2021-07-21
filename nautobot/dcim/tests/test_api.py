@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 
@@ -38,10 +38,14 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 class AppTest(APITestCase):
@@ -88,7 +92,7 @@ class Mixins:
 
 class RegionTest(APIViewTestCases.APIViewTestCase):
     model = Region
-    brief_fields = ["_depth", "id", "name", "site_count", "slug", "url"]
+    brief_fields = ["_depth", "display", "id", "name", "site_count", "slug", "url"]
     create_data = [
         {
             "name": "Region 4",
@@ -117,10 +121,11 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
 
 class SiteTest(APIViewTestCases.APIViewTestCase):
     model = Site
-    brief_fields = ["id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "slug", "url"]
     bulk_update_data = {
         "status": "planned",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -163,10 +168,89 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_time_zone_field_post_null(self):
+        """
+        Test allow_null to time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": None}
+
+        # Attempt to create new site with null time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], None)
+
+    def test_time_zone_field_post_blank(self):
+        """
+        Test disallowed blank time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": ""}
+
+        # Attempt to create new site with blank time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+
+    def test_time_zone_field_post_valid(self):
+        """
+        Test valid time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        time_zone = "UTC"
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+
+        # Attempt to create new site with valid time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], time_zone)
+
+    def test_time_zone_field_post_invalid(self):
+        """
+        Test invalid time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        time_zone = "IDONOTEXIST"
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+
+        # Attempt to create new site with invalid time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["time_zone"],
+            ["A valid timezone is required."],
+        )
+
+    def test_time_zone_field_get_blank(self):
+        """
+        Test that a site's time_zone field defaults to null.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+
+        self.add_permissions("dcim.view_site")
+        site = Site.objects.get(slug="site-1")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["time_zone"], None)
+
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
-    brief_fields = ["_depth", "id", "name", "rack_count", "slug", "url"]
+    brief_fields = ["_depth", "display", "id", "name", "rack_count", "slug", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -227,7 +311,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
 class RackRoleTest(APIViewTestCases.APIViewTestCase):
     model = RackRole
-    brief_fields = ["id", "name", "rack_count", "slug", "url"]
+    brief_fields = ["display", "id", "name", "rack_count", "slug", "url"]
     create_data = [
         {
             "name": "Rack Role 4",
@@ -259,10 +343,11 @@ class RackRoleTest(APIViewTestCases.APIViewTestCase):
 
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
-    brief_fields = ["device_count", "display_name", "id", "name", "url"]
+    brief_fields = ["device_count", "display", "id", "name", "url"]
     bulk_update_data = {
         "status": "planned",
     }
+    choices_fields = ["outer_unit", "status", "type", "width"]
 
     @classmethod
     def setUpTestData(cls):
@@ -386,7 +471,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
-    brief_fields = ["id", "units", "url", "user"]
+    brief_fields = ["display", "id", "units", "url", "user"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -433,7 +518,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["devicetype_count", "id", "name", "slug", "url"]
+    brief_fields = ["devicetype_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Manufacturer 4",
@@ -464,7 +549,7 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     model = DeviceType
     brief_fields = [
         "device_count",
-        "display_name",
+        "display",
         "id",
         "manufacturer",
         "model",
@@ -474,6 +559,7 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "part_number": "ABC123",
     }
+    choices_fields = ["subdevice_role"]
 
     @classmethod
     def setUpTestData(cls):
@@ -508,10 +594,11 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
 
 class ConsolePortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ConsolePortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -540,10 +627,11 @@ class ConsolePortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class ConsoleServerPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ConsoleServerPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -572,10 +660,11 @@ class ConsoleServerPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = PowerPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -604,10 +693,11 @@ class PowerPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class PowerOutletTemplateTest(APIViewTestCases.APIViewTestCase):
     model = PowerOutletTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["feed_leg", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -636,10 +726,11 @@ class PowerOutletTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class InterfaceTemplateTest(APIViewTestCases.APIViewTestCase):
     model = InterfaceTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -671,10 +762,11 @@ class InterfaceTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = FrontPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -760,10 +852,11 @@ class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class RearPortTemplateTest(APIViewTestCases.APIViewTestCase):
     model = RearPortTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -807,7 +900,7 @@ class RearPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceBayTemplateTest(APIViewTestCases.APIViewTestCase):
     model = DeviceBayTemplate
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -844,7 +937,7 @@ class DeviceBayTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRole
-    brief_fields = ["device_count", "id", "name", "slug", "url", "virtualmachine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
     create_data = [
         {
             "name": "Device Role 4",
@@ -876,7 +969,7 @@ class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "id", "name", "slug", "url", "virtualmachine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
     create_data = [
         {
             "name": "Platform 4",
@@ -905,10 +998,11 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
-    brief_fields = ["display_name", "id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "status": "failed",
     }
+    choices_fields = ["face", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1051,14 +1145,53 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    def test_local_context_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a device with local context that conforms to that schema
+        Assert that the local context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+        )
+        self.add_permissions("dcim.change_device")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+
+    def test_local_context_schema_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a device with local context that *does not* conform to that schema
+        Assert that the local context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+        )
+        # Add object-level permission
+        self.add_permissions("dcim.change_device")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
 
 class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = ConsolePort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = ConsoleServerPort
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1090,11 +1223,12 @@ class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
 
 class ConsoleServerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = ConsoleServerPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = ConsolePort
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1126,11 +1260,12 @@ class ConsoleServerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIView
 
 class PowerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = PowerPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = PowerOutlet
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1162,11 +1297,12 @@ class PowerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
 
 class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = PowerOutlet
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = PowerPort
+    choices_fields = ["feed_leg", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1198,11 +1334,12 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
 
 class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = Interface
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = Interface
+    choices_fields = ["mode", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1252,11 +1389,12 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
 
 class FrontPortTest(APIViewTestCases.APIViewTestCase):
     model = FrontPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = Interface
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1321,11 +1459,12 @@ class FrontPortTest(APIViewTestCases.APIViewTestCase):
 
 class RearPortTest(APIViewTestCases.APIViewTestCase):
     model = RearPort
-    brief_fields = ["cable", "device", "id", "name", "url"]
+    brief_fields = ["cable", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
     peer_termination_type = Interface
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1360,7 +1499,7 @@ class RearPortTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceBayTest(APIViewTestCases.APIViewTestCase):
     model = DeviceBay
-    brief_fields = ["device", "id", "name", "url"]
+    brief_fields = ["device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1438,7 +1577,7 @@ class DeviceBayTest(APIViewTestCases.APIViewTestCase):
 
 class InventoryItemTest(APIViewTestCases.APIViewTestCase):
     model = InventoryItem
-    brief_fields = ["_depth", "device", "id", "name", "url"]
+    brief_fields = ["_depth", "device", "display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -1476,11 +1615,12 @@ class InventoryItemTest(APIViewTestCases.APIViewTestCase):
 
 class CableTest(APIViewTestCases.APIViewTestCase):
     model = Cable
-    brief_fields = ["id", "label", "url"]
+    brief_fields = ["display", "id", "label", "url"]
     bulk_update_data = {
         "length": 100,
         "length_unit": "m",
     }
+    choices_fields = ["termination_a_type", "termination_b_type", "type", "status", "length_unit"]
 
     # TODO: Allow updating cable terminations
     test_update_object = None
@@ -1628,7 +1768,7 @@ class ConnectedDeviceTest(APITestCase):
 
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     model = VirtualChassis
-    brief_fields = ["id", "master", "member_count", "name", "url"]
+    brief_fields = ["display", "id", "master", "member_count", "name", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1769,7 +1909,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    brief_fields = ["id", "name", "powerfeed_count", "url"]
+    brief_fields = ["display", "id", "name", "powerfeed_count", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1812,10 +1952,11 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    brief_fields = ["cable", "id", "name", "url"]
+    brief_fields = ["cable", "display", "id", "name", "url"]
     bulk_update_data = {
         "status": "planned",
     }
+    choices_fields = ["phase", "status", "supply", "type"]
 
     @classmethod
     def setUpTestData(cls):

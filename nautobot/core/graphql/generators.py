@@ -2,10 +2,12 @@
 
 import logging
 
+import django_filters.fields
 import graphene
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 
-from nautobot.core.graphql.utils import str_to_var_name
+from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.utilities.utils import get_filterset_for_model
@@ -15,12 +17,40 @@ RESOLVER_PREFIX = "resolve_"
 
 
 def generate_restricted_queryset():
-    """Generate a function to return a restricted queryset compatible with the internal permissions system."""
+    """
+    Generate a function to return a restricted queryset compatible with the internal permissions system.
+
+    Note that for built-in models such as ContentType the queryset has no `restrict` method, so we have to
+    fail gracefully in that case.
+    """
 
     def get_queryset(queryset, info):
+        if not hasattr(queryset, "restrict"):
+            logger.debug(f"Queryset {queryset} is not restrictable")
+            return queryset
         return queryset.restrict(info.context.user, "view")
 
     return get_queryset
+
+
+def generate_null_choices_resolver(name, resolver_name):
+    """
+    Generate function to resolve appropriate type when a field has `null=False` (default), `blank=True`, and
+    `choices` defined.
+
+    Args:
+        name (str): name of the field to resolve
+        resolver_name (str): name of the resolver as declare in DjangoObjectType
+    """
+
+    def resolve_fields_w_choices(model, info, **kwargs):
+        field_value = getattr(model, name)
+        if field_value:
+            return field_value
+        return None
+
+    resolve_fields_w_choices.__name__ = resolver_name
+    return resolve_fields_w_choices
 
 
 def generate_custom_field_resolver(name, resolver_name):
@@ -36,6 +66,21 @@ def generate_custom_field_resolver(name, resolver_name):
 
     resolve_custom_field.__name__ = resolver_name
     return resolve_custom_field
+
+
+def generate_computed_field_resolver(name, resolver_name):
+    """Generate an instance method for resolving an individual computed field within a given DjangoObjectType.
+
+    Args:
+        name (str): name of the computed field to resolve
+        resolver_name (str): name of the resolver as declare in DjangoObjectType
+    """
+
+    def resolve_computed_field(self, info, **kwargs):
+        return self.get_computed_field(slug=name)
+
+    resolve_computed_field.__name__ = resolver_name
+    return resolve_computed_field
 
 
 def generate_relationship_resolver(name, resolver_name, relationship, side, peer_model):
@@ -76,20 +121,22 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
     Example:
         For a model with a name of "Device", the following class definition is generated:
 
-        Class DeviceType(DjangoObjectType):
+        class DeviceType(DjangoObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
 
-        if a FilterSet exist for this model at '<app_name>.filters.<ModelName>FilterSet'
-        The filterset will be store in filterset_class as follow
+        If a FilterSet exists for this model at
+        '<app_name>.filters.<ModelName>FilterSet' the filterset will be stored in
+        filterset_class as follows:
 
-        Class DeviceType(DjangoObjectType):
+        class DeviceType(DjangoObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
                 filterset_class = DeviceFilterSet
     """
+
     main_attrs = {}
     meta_attrs = {"model": model, "fields": "__all__"}
 
@@ -107,15 +154,10 @@ def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
     search_params = {}
-    exclude_filters = ["type"]
-    if schema_type._meta.filterset_class:
-        for key in list(schema_type._meta.filterset_class.get_filters().keys()):
-            if key in exclude_filters:
-                continue
-            if key == "id":
-                search_params[key] = graphene.ID()
-            else:
-                search_params[key] = graphene.String()
+    if schema_type._meta.filterset_class is not None:
+        search_params = get_filtering_args_from_filterset(
+            schema_type._meta.filterset_class,
+        )
 
     return search_params
 
@@ -161,11 +203,23 @@ def generate_list_resolver(schema_type, resolver_name):
     model = schema_type._meta.model
 
     def list_resolver(self, info, **kwargs):
-        if schema_type._meta.filterset_class:
-            fsargs = {key: [value] for key, value in kwargs.items()}
-            return schema_type._meta.filterset_class(
-                fsargs, model.objects.restrict(info.context.user, "view").all()
-            ).qs.all()
+        filterset_class = schema_type._meta.filterset_class
+        if filterset_class is not None:
+            resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
+
+            # Check result filter for errors.
+            if resolved_obj.errors:
+                errors = {}
+
+                # Build error message from results
+                # Error messages are collected from each filter object
+                for key in resolved_obj.errors:
+                    errors[key] = resolved_obj.errors[key]
+
+                # Raising this exception will send the error message in the response of the GraphQL request
+                raise GraphQLError(errors)
+
+            return resolved_obj.qs.all()
 
         return model.objects.restrict(info.context.user, "view").all()
 

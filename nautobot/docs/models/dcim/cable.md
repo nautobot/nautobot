@@ -13,9 +13,9 @@ Each cable must have two endpoints defined. These endpoints are sometimes refere
 * Power outlets
 * Power ports
 
-Each cable may be assigned a type, label, length, and color. Each cable is also assigned one of three operational statuses:
+Each cable may be assigned a type, label, length, and color. Each cable must also assigned to an operational [`status`](https://nautobot.readthedocs.io/en/stable/models/extras/status/). The following statuses are available by default:
 
-* Active (default)
+* Active 
 * Planned
 * Decommissioning
 
@@ -32,3 +32,12 @@ Traced from Interface 1 on Device A, Nautobot will show the following path:
 * Cable 1: Interface 1 to Front Port 1
 * Cable 2: Rear Port 1 to Rear Port 2
 * Cable 3: Front Port 2 to Interface 2
+
+A cable can also be traced through a circuit.
+
+![Cable path circuit](../../media/models/dcim_cable_trace_circuit.png)
+
+Traced from Interface 1 on Device A, Nautobot will show the following path:
+
+* Cable 1: Interface 1 to Side A
+* Cable 2: Side Z to Interface 2

@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
-from django_rq.queues import get_connection
+from django_rq.queues import get_connection as get_rq_connection
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -19,7 +19,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_yasg.openapi import Schema, TYPE_OBJECT, TYPE_ARRAY
 from drf_yasg.utils import swagger_auto_schema
-from rq.worker import Worker
+from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
 from graphql.execution import ExecutionResult
@@ -28,6 +28,7 @@ from graphql.execution.middleware import MiddlewareManager
 from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
+from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
@@ -52,7 +53,7 @@ HTTP_ACTIONS = {
 class BulkUpdateModelMixin:
     """
     Support bulk modification of objects using the list endpoint for a model. Accepts a PATCH action with a list of one
-    or more JSON objects, each specifying the numeric ID of an object to be updated as well as the attributes to be set.
+    or more JSON objects, each specifying the UUID of an object to be updated as well as the attributes to be set.
     For example:
 
     PATCH /api/dcim/sites/
@@ -101,12 +102,12 @@ class BulkUpdateModelMixin:
 class BulkDestroyModelMixin:
     """
     Support bulk deletion of objects using the list endpoint for a model. Accepts a DELETE action with a list of one
-    or more JSON objects, each specifying the numeric ID of an object to be deleted. For example:
+    or more JSON objects, each specifying the UUID of an object to be deleted. For example:
 
     DELETE /api/dcim/sites/
     [
-        {"id": 123},
-        {"id": 456}
+        {"id": "3f01f169-49b9-42d5-a526-df9118635d62"},
+        {"id": "c27d6c5b-7ea8-41e7-b9dd-c065efd5d9cd"}
     ]
     """
 
@@ -340,6 +341,10 @@ class StatusView(APIView):
             plugins[plugin_name] = getattr(plugin_config, "version", None)
         plugins = {k: v for k, v in sorted(plugins.items())}
 
+        # Gather Celery workers
+        workers = celery_app.control.inspect().active()  # list or None
+        worker_count = len(workers) if workers is not None else 0
+
         return Response(
             {
                 "django-version": DJANGO_VERSION,
@@ -347,7 +352,8 @@ class StatusView(APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
-                "rq-workers-running": Worker.count(get_connection("default")),
+                "rq-workers-running": RQWorker.count(get_rq_connection("default")),
+                "celery-workers-running": worker_count,
             }
         )
 

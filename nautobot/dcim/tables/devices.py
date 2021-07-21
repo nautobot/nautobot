@@ -40,6 +40,7 @@ from .template_code import (
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
     INTERFACE_TAGGED_VLANS,
+    PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
@@ -179,7 +180,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
         viewname="dcim:devicetype",
         args=[Accessor("device_type__pk")],
         verbose_name="Type",
-        text=lambda record: record.device_type.display_name,
+        text=lambda record: record.device_type.display,
     )
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
@@ -279,8 +280,8 @@ class CableTerminationTable(BaseTable):
 
 class PathEndpointTable(CableTerminationTable):
     connection = tables.TemplateColumn(
-        accessor="_path.destination",
-        template_code=CABLETERMINATION,
+        accessor="_path",
+        template_code=PATHENDPOINT,
         verbose_name="Connection",
         orderable=False,
     )

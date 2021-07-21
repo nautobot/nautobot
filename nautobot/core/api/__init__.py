@@ -2,10 +2,10 @@ from .fields import (
     ChoiceField,
     ContentTypeField,
     SerializedPKRelatedField,
-    TimeZoneField,
 )
 from .routers import OrderedDefaultRouter
 from .serializers import (
+    BaseModelSerializer,
     BulkOperationSerializer,
     ValidatedModelSerializer,
     WritableNestedSerializer,
@@ -13,12 +13,12 @@ from .serializers import (
 
 
 __all__ = (
+    "BaseModelSerializer",
     "BulkOperationSerializer",
     "ChoiceField",
     "ContentTypeField",
     "OrderedDefaultRouter",
     "SerializedPKRelatedField",
-    "TimeZoneField",
     "ValidatedModelSerializer",
     "WritableNestedSerializer",
 )

@@ -1,5 +1,9 @@
+from unittest import mock
+import uuid
+
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.test import Client
 from django.test.utils import override_settings
@@ -7,11 +11,16 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework.test import APIClient
 
+from nautobot.core.middleware import ExternalAuthMiddleware
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.testing import TestCase
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 # Authentication backends required for remote authentication to work
@@ -29,7 +38,6 @@ class ExternalAuthenticationTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
-    @override_settings(REMOTE_AUTH_ENABLED=False)
     def test_remote_auth_disabled(self):
         """
         Test enabling remote authentication with the default configuration.
@@ -38,7 +46,7 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser1",
         }
 
-        self.assertFalse(settings.REMOTE_AUTH_ENABLED)
+        self.assertFalse("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         # Client should not be authenticated
@@ -54,21 +62,18 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser1",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         response = self.client.get(reverse("home"), follow=True, **headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             self.user.pk,
             msg="Authentication failed",
         )
 
-    @override_settings(
-        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
-        REMOTE_AUTH_HEADER="HTTP_FOO",
-    )
+    @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS, REMOTE_AUTH_HEADER="HTTP_FOO")
     def test_remote_auth_custom_header(self):
         """
         Test enabling remote authentication with a custom HTTP header.
@@ -77,13 +82,13 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_FOO": "remoteuser1",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_FOO")
 
         response = self.client.get(reverse("home"), follow=True, **headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             self.user.pk,
             msg="Authentication failed",
         )
@@ -100,7 +105,7 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser2",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
@@ -110,7 +115,7 @@ class ExternalAuthenticationTestCase(TestCase):
         # Local user should have been automatically created
         new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             new_user.pk,
             msg="Authentication failed",
         )
@@ -118,9 +123,9 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
-        REMOTE_AUTH_DEFAULT_GROUPS=["Group 1", "Group 2"],
+        EXTERNAL_AUTH_DEFAULT_GROUPS=["Group 1", "Group 2"],
     )
-    def test_remote_auth_default_groups(self):
+    def test_EXTERNAL_AUTH_DEFAULT_groups(self):
         """
         Test enabling remote authentication with the default configuration.
         """
@@ -128,10 +133,10 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser2",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
-        self.assertEqual(settings.REMOTE_AUTH_DEFAULT_GROUPS, ["Group 1", "Group 2"])
+        self.assertEqual(settings.EXTERNAL_AUTH_DEFAULT_GROUPS, ["Group 1", "Group 2"])
 
         # Create required groups
         groups = (
@@ -145,21 +150,21 @@ class ExternalAuthenticationTestCase(TestCase):
 
         new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             new_user.pk,
             msg="Authentication failed",
         )
-        self.assertListEqual([groups[0], groups[1]], list(new_user.groups.all()))
+        self.assertSetEqual({groups[0], groups[1]}, set(new_user.groups.all()))
 
     @override_settings(
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
-        REMOTE_AUTH_DEFAULT_PERMISSIONS={
+        EXTERNAL_AUTH_DEFAULT_PERMISSIONS={
             "dcim.add_site": None,
             "dcim.change_site": None,
         },
     )
-    def test_remote_auth_default_permissions(self):
+    def test_external_auth_default_permissions(self):
         """
         Test enabling remote authentication with the default configuration.
         """
@@ -167,11 +172,11 @@ class ExternalAuthenticationTestCase(TestCase):
             "HTTP_REMOTE_USER": "remoteuser2",
         }
 
-        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
         self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
         self.assertEqual(
-            settings.REMOTE_AUTH_DEFAULT_PERMISSIONS,
+            settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS,
             {"dcim.add_site": None, "dcim.change_site": None},
         )
 
@@ -180,7 +185,7 @@ class ExternalAuthenticationTestCase(TestCase):
 
         new_user = User.objects.get(username="remoteuser2")
         self.assertEqual(
-            int(self.client.session.get("_auth_user_id")),
+            uuid.UUID(self.client.session.get("_auth_user_id")),
             new_user.pk,
             msg="Authentication failed",
         )

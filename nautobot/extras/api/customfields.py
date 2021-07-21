@@ -1,9 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
+from rest_framework.serializers import SerializerMethodField
 from rest_framework.fields import CreateOnlyDefault, Field
 
 from nautobot.core.api import ValidatedModelSerializer
+from nautobot.extras.api.nested_serializers import NestedCustomFieldSerializer
 from nautobot.extras.choices import *
-from nautobot.extras.models import CustomField
+from nautobot.extras.models import CustomField, CustomFieldChoice
 
 
 #
@@ -50,9 +52,9 @@ class CustomFieldsDataField(Field):
         return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
-        # If updating an existing instance, start with existing custom_field_data
+        # If updating an existing instance, start with existing _custom_field_data
         if self.parent.instance:
-            data = {**self.parent.instance.custom_field_data, **data}
+            data = {**self.parent.instance._custom_field_data, **data}
 
         return data
 
@@ -62,8 +64,9 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
     Extends ModelSerializer to render any CustomFields and their values associated with an object.
     """
 
+    computed_fields = SerializerMethodField(read_only=True)
     custom_fields = CustomFieldsDataField(
-        source="custom_field_data",
+        source="_custom_field_data",
         default=CreateOnlyDefault(CustomFieldDefaultValues()),
     )
 
@@ -87,3 +90,6 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         instance.custom_fields = {}
         for field in custom_fields:
             instance.custom_fields[field.name] = instance.cf.get(field.name)
+
+    def get_computed_fields(self, obj):
+        return obj.get_computed_fields()

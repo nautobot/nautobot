@@ -90,6 +90,8 @@ def validated_viewname(model, action):
     Return the view name for the given model and action if valid, or None if invalid.
     """
     viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+    if model._meta.app_label in settings.PLUGINS:
+        viewname = f"plugins:{viewname}"
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
         # are written to pass a name to {% url %}.
@@ -198,6 +200,17 @@ def has_perms(user, permissions_list):
 
 
 @register.filter()
+def has_one_or_more_perms(user, permissions_list):
+    """
+    Return True if the user has *at least one* permissions in the list.
+    """
+    for permission in permissions_list:
+        if user.has_perm(permission):
+            return True
+    return False
+
+
+@register.filter()
 def split(string, sep=","):
     """
     Split a string by the given value (default: comma)
@@ -249,14 +262,55 @@ def querystring(request, **kwargs):
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
-def utilization_graph(utilization, warning_threshold=75, danger_threshold=90):
+def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=90):
+    """Wrapper for a horizontal bar graph indicating a percentage of utilization from a tuple of data.
+
+    Takes the utilization_data that is a namedtuple with numerator and denominator field names and passes them into
+    the utilization_graph_raw_data to handle the generation graph data.
+
+    Args:
+        utilization_data (UtilizationData): Namedtuple with numerator and denominator keys
+        warning_threshold (int, optional): Warning Threshold Value. Defaults to 75.
+        danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
+
+    Returns:
+        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
+                display
     """
-    Display a horizontal bar graph indicating a percentage of utilization.
+    return utilization_graph_raw_data(
+        numerator=utilization_data.numerator,
+        denominator=utilization_data.denominator,
+        warning_threshold=warning_threshold,
+        danger_threshold=danger_threshold,
+    )
+
+
+@register.inclusion_tag("utilities/templatetags/utilization_graph.html")
+def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, danger_threshold=90):
+    """Display a horizontal bar graph indicating a percentage of utilization.
+
+    Args:
+        numerator (int): Numerator for creating a percentage
+        denominator (int): Denominator for creating a percentage
+        warning_threshold (int, optional): Warning Threshold Value. Defaults to 75.
+        danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
+
+    Returns:
+        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
+                display
     """
+    # Check for possible division by zero error
+    if denominator == 0:
+        utilization = 0
+    else:
+        utilization = int(float(numerator) / denominator * 100)
+
     return {
         "utilization": utilization,
         "warning_threshold": warning_threshold,
         "danger_threshold": danger_threshold,
+        "utilization_count": numerator,
+        "total_count": denominator,
     }
 
 
@@ -287,4 +341,37 @@ def table_config_form(table, table_name=None):
     return {
         "table_name": table_name or table.__class__.__name__,
         "table_config_form": TableConfigForm(table=table),
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
+def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
+    """Generate a form in a modal view.
+
+    Create an overlaying modal view which holds a Django form.
+
+    Inside of the template the template tag needs to be used with the correct inputs. A button will
+    also need to be create to open and close the modal. See below for an example:
+
+    ```
+    {% modal_form_as_dialog form editing=False form_name="CreateDevice" obj=obj obj_type="Device" %}
+    <a class="btn btn-primary" data-toggle="modal" data-target="#CreateDevice_form" title="Query Form">Create Device</a>
+    ```
+    Args:
+        form (django.form.Forms): Django form object.
+        editing (bool, optional): Is the form creating or editing an object? Defaults to False for create.
+        form_name ([type], optional): Name of form. Defaults to None. If None get name from class name.
+        obj (django.model.Object, optional): If editing an existing model object, the object needs to be passed in. Defaults to None.
+        obj_type (string, optional): Used in title of form to display object type. Defaults to None.
+
+    Returns:
+        dict: Passed in values used to render HTML.
+    """
+    return {
+        "editing": editing,
+        "form": form,
+        "form_action_url": form.get_action_url(),
+        "form_name": form_name or form.__class__.__name__,
+        "obj": obj,
+        "obj_type": obj_type,
     }

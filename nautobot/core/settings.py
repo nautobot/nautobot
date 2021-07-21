@@ -4,7 +4,7 @@ import platform
 from django.contrib.messages import constants as messages
 
 from nautobot import __version__
-
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 #
 # Environment setup
@@ -19,6 +19,9 @@ HOSTNAME = platform.node()
 
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Set the swapable User model to the Nautobot custom User model
+AUTH_USER_MODEL = "users.User"
 
 
 ###############################################################
@@ -47,17 +50,12 @@ ALLOWED_URL_SCHEMES = (
 BANNER_BOTTOM = ""
 BANNER_LOGIN = ""
 BANNER_TOP = ""
-BASE_PATH = ""
-if BASE_PATH:
-    BASE_PATH = BASE_PATH.strip("/") + "/"  # Enforce trailing slash only
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.environ.get(
-    "NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot")
-)
+NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
 CHANGELOG_RETENTION = 90
-DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), "docs")
+DOCS_ROOT = os.path.join(BASE_DIR, "docs")
 HIDE_RESTRICTED_UI = False
 
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
@@ -69,18 +67,14 @@ ENFORCE_GLOBAL_UNIQUE = False
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
     ("auth", "group"),
-    ("auth", "user"),
+    ("users", "user"),
     ("users", "objectpermission"),
 )
 
 EXEMPT_VIEW_PERMISSIONS = []
-GIT_ROOT = os.environ.get(
-    "NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/")
-)
+GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
-JOBS_ROOT = os.environ.get(
-    "NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/")
-)
+JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000
 
@@ -108,34 +102,28 @@ PREFER_IPV4 = False
 RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
 RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
 
-# Remote auth
+# Global 3rd-party authentication settings
+EXTERNAL_AUTH_DEFAULT_GROUPS = []
+EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+
+# Remote auth backend settings
 REMOTE_AUTH_AUTO_CREATE_USER = False
-REMOTE_AUTH_DEFAULT_GROUPS = []
-REMOTE_AUTH_DEFAULT_PERMISSIONS = {}
-REMOTE_AUTH_ENABLED = True  # FIXME(jathan): Deprecated in Nautobot
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 
 # Releases
 RELEASE_CHECK_URL = None
 RELEASE_CHECK_TIMEOUT = 24 * 3600
 
-# RQ
-RQ_DEFAULT_TIMEOUT = 300
-
-# SSO
-SOCIAL_AUTH_ENABLED = False
-SOCIAL_AUTH_MODULE = ""
-SOCIAL_AUTH_DEFAULT_GROUPS = []
-SOCIAL_AUTH_DEFAULT_PERMISSIONS = {}
-SOCIAL_AUTH_DEFAULT_STAFF = False
-SOCIAL_AUTH_DEFAULT_SUPERUSER = False
+# SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
-SOCIAL_AUTH_URL_NAMESPACE = "sso"
 
 # Storage
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
 
+# Test runner that is aware of our use of "integration" tags and only runs
+# integration tests if explicitly passed in with `nautobot-server test --tag integration`.
+TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 
 #
 # Django cryptography
@@ -176,9 +164,7 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
-    "DEFAULT_PERMISSION_CLASSES": (
-        "nautobot.core.api.authentication.TokenPermissions",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
@@ -259,39 +245,20 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
-#
-# Redis (Caching/Queuing)
-#
-
-REDIS = {
-    "tasks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 0,
-        "SSL": False,
-    },
-    "caching": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 1,
-        "SSL": False,
-    },
-}
-
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # Default overrides
 ALLOWED_HOSTS = []
+CSRF_TRUSTED_ORIGINS = []
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
+FORCE_SCRIPT_NAME = None
 LOGGING = {}
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_FILE_PATH = None
@@ -312,10 +279,12 @@ INSTALLED_APPS = [
     "cacheops",
     "corsheaders",
     "django_filters",
+    "django_jinja",
     "django_tables2",
     "django_prometheus",
     "mptt",
     "rest_framework",
+    "social_django",
     "taggit",
     "timezone_field",
     "nautobot.core",
@@ -330,6 +299,10 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "health_check",
+    "health_check.db",
+    "health_check.cache",
+    "health_check.storage",
 ]
 
 # Middleware
@@ -345,6 +318,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
+    "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.APIVersionMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
@@ -354,6 +328,7 @@ ROOT_URLCONF = "nautobot.core.urls"
 
 TEMPLATES = [
     {
+        "NAME": "django",
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
@@ -364,7 +339,29 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
                 "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.sso_auth",
+            ],
+        },
+    },
+    {
+        "NAME": "jinja",
+        "BACKEND": "django_jinja.backend.Jinja2",
+        "DIRS": [],
+        "APP_DIRS": False,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.template.context_processors.media",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.sso_auth",
             ],
         },
     },
@@ -389,11 +386,11 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
-STATIC_URL = "/{}static/".format(BASE_PATH)
+STATIC_URL = "static/"
 STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
 
 # Media
-MEDIA_URL = "/{}media/".format(BASE_PATH)
+MEDIA_URL = "media/"
 
 # Disable default limit of 1000 fields per request. Needed for bulk deletion of objects. (Added in Django 1.10.)
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
@@ -404,10 +401,11 @@ MESSAGE_TAGS = {
 }
 
 # Authentication URLs
-LOGIN_URL = "/{}login/".format(BASE_PATH)
-LOGIN_REDIRECT_URL = "/"
+# This is the URL route name for the login view.
+LOGIN_URL = "login"
 
-CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
+# This is the URL route name for the home page (index) view.
+LOGIN_REDIRECT_URL = "home"
 
 #
 # From django-cors-headers
@@ -436,12 +434,15 @@ GRAPHENE = {
 }
 GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 GRAPHQL_RELATIONSHIP_PREFIX = "rel"
+GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 
 
 #
 # Caching
 #
 
+# The django-cacheops plugin is used to cache querysets. The built-in Django
+# caching is not used.
 CACHEOPS = {
     "auth.user": {"ops": "get", "timeout": 60 * 15},
     "auth.*": {"ops": ("fetch", "get")},
@@ -463,25 +464,63 @@ CACHEOPS_ENABLED = True
 CACHEOPS_REDIS = "redis://localhost:6379/1"
 CACHEOPS_DEFAULTS = {"timeout": 900}
 
+# The django-redis cache is used to establish concurrent locks using Redis. The
+# django-rq settings will use the same instance/database by default.
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://localhost:6379/0",
+        "TIMEOUT": 300,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PASSWORD": "",
+        },
+    }
+}
+
 #
-# Django RQ (Webhooks backend)
+# Django RQ (used for legacy background processesing)
 #
 
+# These defaults utilize the Django caches setting defined for django-redis.
+# See: https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache
 RQ_QUEUES = {
     "default": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+        "USE_REDIS_CACHE": "default",
     },
     "check_releases": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300,
+        "USE_REDIS_CACHE": "default",
+    },
+    "custom_fields": {
+        "USE_REDIS_CACHE": "default",
+    },
+    "webhooks": {
+        "USE_REDIS_CACHE": "default",
     },
 }
+
+#
+# Celery (used for background processing)
+#
+
+# Celery broker URL used to tell workers where queues are located
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
+
+# Celery results backend URL to tell workers where to publish task results
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
+
+# Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
+CELERY_TASK_TRACK_STARTED = True
+
+# Global task time limits (seconds)
+# Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,
+# while exceeding the hard limit will result in a SIGKILL.
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", 5 * 60))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 10 * 60))
+
+# These settings define the custom nautobot serialization encoding as an accepted data encoding format
+# and register that format for task input and result serialization
+CELERY_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_RESULT_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_TASK_SERIALIZER = "nautobot_json"
+CELERY_RESULT_SERIALIZER = "nautobot_json"

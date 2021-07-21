@@ -2,7 +2,12 @@ import logging
 import re
 from contextlib import contextmanager
 
-from django.contrib.auth.models import Permission, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 def post_data(data):
@@ -46,10 +51,32 @@ def create_test_user(username="testuser", permissions=None):
 
 def extract_form_failures(content):
     """
-    Given raw HTML content from an HTTP response, return a list of form errors.
+    Given decoded HTML content from an HTTP response, return a list of form errors.
     """
     FORM_ERROR_REGEX = r"<!-- FORM-ERROR (.*) -->"
-    return re.findall(FORM_ERROR_REGEX, str(content))
+    return re.findall(FORM_ERROR_REGEX, content)
+
+
+def extract_page_body(content):
+    """
+    Given raw HTML content from an HTTP response, extract the main div only.
+
+    <html>
+      <head>...</head>
+      <body>
+        <nav>...</nav>
+        <div class="container-fluid wrapper"> <!-- BEGIN -->
+          ...
+        </div> <!-- END -->
+        <footer class="footer">...</footer>
+        ...
+      </body>
+    </html>
+    """
+    try:
+        return re.findall(r"(?<=</nav>).*(?=<footer)", content, flags=(re.MULTILINE | re.DOTALL))[0]
+    except IndexError:
+        return content
 
 
 @contextmanager

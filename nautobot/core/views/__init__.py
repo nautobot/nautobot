@@ -10,8 +10,9 @@ from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME
-from django.views.generic import View
+from django.views.generic import TemplateView, View
 from packaging import version
+from graphene_django.views import GraphQLView
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.dcim.models import (
@@ -25,18 +26,20 @@ from nautobot.dcim.models import (
     PowerPort,
     Rack,
     Site,
+    VirtualChassis,
 )
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import GitRepository, ObjectChange, JobResult
+from nautobot.extras.models import GitRepository, GraphQLQuery, ObjectChange, JobResult
+from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 
-class HomeView(View):
+class HomeView(TemplateView):
     template_name = "home.html"
 
     def get(self, request):
@@ -79,6 +82,7 @@ class HomeView(View):
             "power_connections_count": connected_powerports.count(),
             "powerpanel_count": PowerPanel.objects.restrict(request.user, "view").count(),
             "powerfeed_count": PowerFeed.objects.restrict(request.user, "view").count(),
+            "virtualchassis_count": VirtualChassis.objects.restrict(request.user, "view").count(),
             # IPAM
             "vrf_count": VRF.objects.restrict(request.user, "view").count(),
             "aggregate_count": Aggregate.objects.restrict(request.user, "view").count(),
@@ -109,17 +113,18 @@ class HomeView(View):
                         "url": release_url,
                     }
 
-        return render(
-            request,
-            self.template_name,
+        context = self.get_context_data()
+        context.update(
             {
                 "search_form": SearchForm(),
                 "stats": stats,
                 "job_results": job_results[:10],
                 "changelog": changelog[:15],
                 "new_release": new_release,
-            },
+            }
         )
+
+        return self.render_to_response(context)
 
 
 class SearchView(View):
@@ -208,3 +213,15 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
             }
         )
     )
+
+
+class CustomGraphQLView(GraphQLView):
+    def render_graphiql(self, request, **data):
+        query_slug = request.GET.get("slug")
+        if query_slug:
+            data["obj"] = GraphQLQuery.objects.get(slug=query_slug)
+            data["editing"] = True
+        data["graphiql"] = True
+        data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
+        data["form"] = GraphQLQueryForm
+        return render(request, self.graphiql_template, data)

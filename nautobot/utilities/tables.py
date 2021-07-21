@@ -1,12 +1,19 @@
 import django_tables2 as tables
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
+from django.utils.html import escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
+from django_tables2.utils import Accessor
+
+from nautobot.extras.models import CustomField
+from nautobot.extras.choices import CustomFieldTypeChoices
 
 
 class BaseTable(tables.Table):
@@ -22,22 +29,32 @@ class BaseTable(tables.Table):
         }
 
     def __init__(self, *args, user=None, **kwargs):
+        # Add custom field columns
+        obj_type = ContentType.objects.get_for_model(self._meta.model)
+
+        for cf in CustomField.objects.filter(content_types=obj_type):
+            name = "cf_{}".format(cf.name)
+            self.base_columns[name] = CustomFieldColumn(cf)
+
+        # Init table
         super().__init__(*args, **kwargs)
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
-            self.empty_text = "No {} found".format(self._meta.model._meta.verbose_name_plural)
+            self.empty_text = f"No {self._meta.model._meta.verbose_name_plural} found"
 
         # Hide non-default columns
-        default_columns = getattr(self.Meta, "default_columns", list())
+        default_columns = list(getattr(self.Meta, "default_columns", list()))
+        extra_columns = [c[0] for c in kwargs.get("extra_columns", list())]  # extra_columns is a list of tuples
         if default_columns:
             for column in self.columns:
-                if column.name not in default_columns:
+                if column.name not in default_columns and column.name not in extra_columns:
+                    # Hide the column if it is non-default *and* not manually specified as an extra column
                     self.columns.hide(column.name)
 
         # Apply custom column ordering for user
         if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.config.get(f"tables.{self.__class__.__name__}.columns")
+            columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
             if columns:
                 pk = self.base_columns.pop("pk", None)
                 actions = self.base_columns.pop("actions", None)
@@ -142,7 +159,7 @@ class ButtonsColumn(tables.TemplateColumn):
     Render edit, delete, and changelog buttons for an object.
 
     :param model: Model class to use for calculating URL view names
-    :param prepend_content: Additional template content to render in the column (optional)
+    :param prepend_template: Additional template content to render in the column (optional)
     :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
     """
 
@@ -151,17 +168,17 @@ class ButtonsColumn(tables.TemplateColumn):
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}
-        <a href="{{% url '{app_label}:{model_name}_changelog' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
+        <a href="{{% url '{prefix}{app_label}:{model_name}_changelog' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
             <i class="mdi mdi-history"></i>
         </a>
     {{% endif %}}
     {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{app_label}:{model_name}_edit' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
+        <a href="{{% url '{prefix}{app_label}:{model_name}_edit' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
             <i class="mdi mdi-pencil"></i>
         </a>
     {{% endif %}}
     {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{app_label}:{model_name}_delete' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
+        <a href="{{% url '{prefix}{app_label}:{model_name}_delete' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
             <i class="mdi mdi-trash-can-outline"></i>
         </a>
     {{% endif %}}
@@ -182,8 +199,12 @@ class ButtonsColumn(tables.TemplateColumn):
             prepend_template = prepend_template.replace("}", "}}")
             self.template_code = prepend_template + self.template_code
 
+        app_label = model._meta.app_label
+        prefix = "plugins:" if app_label in settings.PLUGINS else ""
+
         template_code = self.template_code.format(
-            app_label=model._meta.app_label,
+            prefix=prefix,
+            app_label=app_label,
             model_name=model._meta.model_name,
             pk_field=pk_field,
             buttons=buttons,
@@ -312,3 +333,39 @@ class ContentTypesColumn(tables.ManyToManyColumn):
             trunc = Truncator(value)
             value = trunc.words(self.truncate_words)
         return value
+
+
+class CustomFieldColumn(tables.Column):
+    """
+    Display custom fields in the appropriate format.
+    """
+
+    def __init__(self, customfield, *args, **kwargs):
+        self.customfield = customfield
+        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.name}")
+        kwargs["verbose_name"] = customfield.label or customfield.name
+
+        super().__init__(*args, **kwargs)
+
+    def render(self, record, bound_column, value):
+        if value is None:
+            return self.default
+
+        if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+            if value is True:
+                template = '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
+            else:
+                template = '<span class="text-danger"><i class="mdi mdi-close-thick"></i></span>'
+        elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+            if value:
+                template = ""
+                for v in value:
+                    template += format_html('<span class="label label-default">{}</span> ', v)
+        elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
+            template = format_html('<span class="label label-default">{}</span>', value)
+        elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
+            template = format_html('<a href="{}">{}</a>', value, value)
+        else:
+            template = escape(value)
+
+        return mark_safe(template)

@@ -12,6 +12,9 @@ from nautobot.extras.forms import (
     CustomFieldFilterForm,
     CustomFieldModelCSVForm,
     CustomFieldModelForm,
+    LocalContextFilterForm,
+    LocalContextModelForm,
+    LocalContextModelBulkEditForm,
     RelationshipModelForm,
     StatusBulkEditFormMixin,
     StatusModelCSVFormMixin,
@@ -207,12 +210,10 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        display_field="display_name",
         query_params={"site_id": "$site"},
     )
     devices = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
-        display_field="display_name",
         query_params={
             "site_id": "$site",
             "rack_id": "$rack",
@@ -261,7 +262,9 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 #
 
 
-class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm):
+class VirtualMachineForm(
+    BootstrapMixin, TenancyForm, CustomFieldModelForm, RelationshipModelForm, LocalContextModelForm
+):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -275,7 +278,6 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
         query_params={"vm_role": "True"},
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    local_context_data = JSONField(required=False, label="")
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
@@ -297,6 +299,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
             "comments",
             "tags",
             "local_context_data",
+            "local_context_schema",
         ]
         help_texts = {
             "local_context_data": "Local config context data overwrites all sources contexts in the final rendered "
@@ -320,8 +323,7 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
                 interface_ids = self.instance.interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                interface_ips = IPAddress.objects.filter(
-                    address__family=family,
+                interface_ips = IPAddress.objects.ip_family(family).filter(
                     assigned_object_type=ContentType.objects.get_for_model(VMInterface),
                     assigned_object_id__in=interface_ids,
                 )
@@ -329,10 +331,13 @@ class VirtualMachineForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Rela
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
-                nat_ips = IPAddress.objects.prefetch_related("nat_inside").filter(
-                    address__family=family,
-                    nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
-                    nat_inside__assigned_object_id__in=interface_ids,
+                nat_ips = (
+                    IPAddress.objects.prefetch_related("nat_inside")
+                    .ip_family(family)
+                    .filter(
+                        nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
+                        nat_inside__assigned_object_id__in=interface_ids,
+                    )
                 )
                 if nat_ips:
                     ip_list = [(ip.id, f"{ip.address} (NAT)") for ip in nat_ips]
@@ -378,7 +383,9 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = VirtualMachine.csv_headers
 
 
-class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class VirtualMachineBulkEditForm(
+    BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
     role = DynamicModelChoiceField(
@@ -405,7 +412,9 @@ class VirtualMachineBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEd
         ]
 
 
-class VirtualMachineFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class VirtualMachineFilterForm(
+    BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm, LocalContextFilterForm
+):
     model = VirtualMachine
     field_order = [
         "q",
@@ -475,7 +484,6 @@ class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm,
         queryset=VLAN.objects.all(),
         required=False,
         label="Untagged VLAN",
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -485,7 +493,6 @@ class VMInterfaceForm(BootstrapMixin, InterfaceCommonForm, CustomFieldModelForm,
         queryset=VLAN.objects.all(),
         required=False,
         label="Tagged VLANs",
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -549,7 +556,6 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -558,7 +564,6 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -624,7 +629,6 @@ class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulk
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",
@@ -633,7 +637,6 @@ class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulk
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        display_field="display_name",
         brief_mode=False,
         query_params={
             "site_id": "null",

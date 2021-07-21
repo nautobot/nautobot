@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.extras.models import Status
+from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import (
@@ -25,7 +25,7 @@ class AppTest(APITestCase):
 
 class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     model = ClusterType
-    brief_fields = ["cluster_count", "id", "name", "slug", "url"]
+    brief_fields = ["cluster_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Cluster Type 4",
@@ -54,7 +54,7 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
 
 class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     model = ClusterGroup
-    brief_fields = ["cluster_count", "id", "name", "slug", "url"]
+    brief_fields = ["cluster_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Cluster Group 4",
@@ -83,7 +83,7 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
 
 class ClusterTest(APIViewTestCases.APIViewTestCase):
     model = Cluster
-    brief_fields = ["id", "name", "url", "virtualmachine_count"]
+    brief_fields = ["display", "id", "name", "url", "virtualmachine_count"]
     bulk_update_data = {
         "comments": "New comment",
     }
@@ -126,10 +126,11 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
 
 class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
     model = VirtualMachine
-    brief_fields = ["id", "name", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "status": "staged",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -224,13 +225,58 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    def test_local_context_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a vm with local context that conforms to that schema
+        Assert that the local context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+        )
+        self.add_permissions("virtualization.change_virtualmachine")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(VirtualMachine.objects.get(name="Virtual Machine 1")),
+            patch_data,
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+
+    def test_local_context_schema_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a vm with local context that *does not* conform to that schema
+        Assert that the local context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+        )
+        # Add object-level permission
+        self.add_permissions("virtualization.change_virtualmachine")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(VirtualMachine.objects.get(name="Virtual Machine 2")),
+            patch_data,
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
 
 class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
     model = VMInterface
-    brief_fields = ["id", "name", "url", "virtual_machine"]
+    brief_fields = ["display", "id", "name", "url", "virtual_machine"]
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["mode"]
 
     @classmethod
     def setUpTestData(cls):
