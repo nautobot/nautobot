@@ -59,7 +59,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 
 The low level diagram displays how data travels through Nautobot's application stack.
 
-![Application stack diagram](/docs/media/nautobot_application_stack_low_level.png "Application stack diagram")
+![Application stack diagram](./media/nautobot_application_stack_low_level.png "Application stack diagram")
 
 ## Supported Python Versions
 
