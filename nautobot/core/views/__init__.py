@@ -1,4 +1,3 @@
-from logging import exception
 import os
 import platform
 import sys

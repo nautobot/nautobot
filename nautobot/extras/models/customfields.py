@@ -68,6 +68,8 @@ class ComputedField(BaseModel, ChangeLoggedModel):
 
     objects = ComputedFieldManager()
 
+    clone_fields = ["content_type", "description", "template", "fallback_value", "weight"]
+
     class Meta:
         ordering = ["weight", "slug"]
         unique_together = ("content_type", "label")

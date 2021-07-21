@@ -94,12 +94,16 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 - [#363](https://github.com/nautobot/nautobot/issues/363) - Fixed using S3 django-storages backend requires `USE_TZ=False`
 - [#466](https://github.com/nautobot/nautobot/issues/466) - Fixed improper GraphQL schema generation on fields that can be blank but not null (such as `Interface.mode`)
 - [#663](https://github.com/nautobot/nautobot/issues/663) - Fixed `kombu.exceptions.EncodeError` when trying to execute Jobs using `(Multi)ObjectVar` objects with nested relationships
+- [#672](https://github.com/nautobot/nautobot/issues/672) - Fixed inheritance of Celery broker/results URL settings for dev/template configs (they can now be defined using Redis env. vars)
 - [#677](https://github.com/nautobot/nautobot/issues/677) - Revise LDAPS outdated documentation for ignoring TLS cert errors
 - [#680](https://github.com/nautobot/nautobot/issues/680) - Removed unnecessary warning message when both RQ and Celery workers are present
 - [#686](https://github.com/nautobot/nautobot/issues/686) - Fixed incorrect permission name for Tags list view in nav menu
 - [#690](https://github.com/nautobot/nautobot/pull/690) - Fixed Jinja2 dependency version to remain backwards-compatible with Nautobot 1.0.x
 - [#696](https://github.com/nautobot/nautobot/pull/696) - Fixed inheritance of VRF and Tenant assignment when creating an IPAddress or Prefix under a parent Prefix. (Port of [NetBox #5703](https://github.com/netbox-community/netbox/issues/5703) and [NetBox #6012](https://github.com/netbox-community/netbox/issues/6012))
+- [#698](https://github.com/nautobot/nautobot/issues/698) - Fixed cloning of a computed field object to now carry over required non-unique fields
 - [#699](https://github.com/nautobot/nautobot/issues/699) - Exceptions such as TypeError are now caught and handled correctly when rendering a computed field.
+- [#703](https://github.com/nautobot/nautobot/issues/703) - Fixed direct execution of saved GraphQL queries containing double quotes
+- [#705](https://github.com/nautobot/nautobot/issues/705) - Fixed missing description field from detail view for computed fields
 
 ### Removed
 
