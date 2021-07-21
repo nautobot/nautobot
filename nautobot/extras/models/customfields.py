@@ -4,13 +4,13 @@ from collections import OrderedDict
 from datetime import datetime, date
 
 from django import forms
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from jinja2 import TemplateError
 
 from nautobot.extras.choices import *
 from nautobot.extras.models import ChangeLoggedModel
@@ -68,6 +68,8 @@ class ComputedField(BaseModel, ChangeLoggedModel):
 
     objects = ComputedFieldManager()
 
+    clone_fields = ["content_type", "description", "template", "fallback_value", "weight"]
+
     class Meta:
         ordering = ["weight", "slug"]
         unique_together = ("content_type", "label")
@@ -81,8 +83,8 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     def render(self, context):
         try:
             return render_jinja2(self.template, context)
-        except TemplateError as e:
-            logger.warning("Failed to render computed field %s: %s", self.slug, e)
+        except Exception as exc:
+            logger.warning("Failed to render computed field %s: %s", self.slug, exc)
             return self.fallback_value
 
 
@@ -494,7 +496,9 @@ class CustomFieldChoice(BaseModel):
         super().save(*args, **kwargs)
 
         if self.value != database_object.value:
-            update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+            transaction.on_commit(
+                lambda: update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+            )
 
     def delete(self, *args, **kwargs):
         """

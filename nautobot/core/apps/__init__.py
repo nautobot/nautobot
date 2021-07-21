@@ -229,7 +229,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     permissions = []
     buttons = []
 
-    def __init__(self, link, name, permissions=None, buttons=None, weight=1000):
+    def __init__(self, link, name, permissions=None, buttons=(), weight=1000):
         """Ensure item properties."""
         super().__init__(permissions)
         # Reverse lookup sanity check
@@ -238,11 +238,10 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.name = name
         self.weight = weight
 
-        if buttons is not None:
-            if not isinstance(buttons, (list, tuple)):
-                raise TypeError("Buttons must be passed as a tuple or list.")
-            elif not all(isinstance(button, NavMenuButton) for button in buttons):
-                raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
+        if not isinstance(buttons, (list, tuple)):
+            raise TypeError("Buttons must be passed as a tuple or list.")
+        elif not all(isinstance(button, NavMenuButton) for button in buttons):
+            raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
         self.buttons = buttons
 
 

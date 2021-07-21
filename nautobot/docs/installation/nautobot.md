@@ -193,6 +193,10 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
+#### MySQL Unicode Settings
+
+If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for more information.
+
 ## Optional Settings
 
 All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.

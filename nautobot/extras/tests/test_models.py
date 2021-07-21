@@ -5,9 +5,9 @@ import uuid
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase, TransactionTestCase
 
 from nautobot.dcim.models import (
     Device,
@@ -24,6 +24,8 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     ExportTemplate,
+    FileAttachment,
+    FileProxy,
     GitRepository,
     JobResult,
     Status,
@@ -32,6 +34,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -726,3 +729,31 @@ class ComputedFieldTest(TestCase):
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+
+class FileProxyTest(TestCase):
+    def setUp(self):
+        self.dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
+
+    def test_create_file_proxy(self):
+        """Test creation of `FileProxy` object."""
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+
+        # Now refresh it and make sure it was saved and retrieved correctly.
+        fp.refresh_from_db()
+        self.dummy_file.seek(0)  # Reset cursor since it was previously read
+        self.assertEqual(fp.name, self.dummy_file.name)
+        self.assertEqual(fp.file.read(), self.dummy_file.read())
+
+    def test_delete_file_proxy(self):
+        """Test deletion of `FileProxy` object."""
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+
+        # Assert counts before delete
+        self.assertEqual(FileProxy.objects.count(), 1)
+        self.assertEqual(FileAttachment.objects.count(), 1)
+
+        # Assert counts after delete
+        fp.delete()
+        self.assertEqual(FileProxy.objects.count(), 0)
+        self.assertEqual(FileAttachment.objects.count(), 0)

@@ -8,6 +8,7 @@ from datetime import timedelta
 from cacheops.signals import cache_invalidated, cache_read
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.db.models.signals import m2m_changed, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
@@ -106,11 +107,11 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        delete_custom_field_data.delay(instance.name, pk_set)
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.name, pk_set))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
-        provision_field.delay(instance.pk, pk_set)
+        transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set))
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)

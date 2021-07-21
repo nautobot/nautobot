@@ -33,6 +33,26 @@ def generate_restricted_queryset():
     return get_queryset
 
 
+def generate_null_choices_resolver(name, resolver_name):
+    """
+    Generate function to resolve appropriate type when a field has `null=False` (default), `blank=True`, and
+    `choices` defined.
+
+    Args:
+        name (str): name of the field to resolve
+        resolver_name (str): name of the resolver as declare in DjangoObjectType
+    """
+
+    def resolve_fields_w_choices(model, info, **kwargs):
+        field_value = getattr(model, name)
+        if field_value:
+            return field_value
+        return None
+
+    resolve_fields_w_choices.__name__ = resolver_name
+    return resolve_fields_w_choices
+
+
 def generate_custom_field_resolver(name, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 
@@ -57,7 +77,7 @@ def generate_computed_field_resolver(name, resolver_name):
     """
 
     def resolve_computed_field(self, info, **kwargs):
-        return self.get_computed_field(name=name)
+        return self.get_computed_field(slug=name)
 
     resolve_computed_field.__name__ = resolver_name
     return resolve_computed_field

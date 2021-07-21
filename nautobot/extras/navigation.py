@@ -15,7 +15,7 @@ menu_items = (
                         name="Tags",
                         weight=100,
                         permissions=[
-                            "extras.view_tags",
+                            "extras.view_tag",
                         ],
                         buttons=(
                             NavMenuAddButton(

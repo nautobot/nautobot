@@ -131,15 +131,23 @@ class PluginTest(TestCase):
         """
         registered_datasources = registry.get("datasource_contents", {}).get("extras.gitrepository", [])
 
-        self.assertIn(
-            DatasourceContent(
-                name="text files",
-                content_identifier="dummy_plugin.textfile",
-                icon="mdi-note-text",
-                callback=refresh_git_text_files,
-            ),
-            registered_datasources,
+        plugin_datasource = DatasourceContent(
+            name="text files",
+            content_identifier="dummy_plugin.textfile",
+            icon="mdi-note-text",
+            weight=1000,
+            callback=refresh_git_text_files,
         )
+
+        for datasource in registered_datasources:
+            if datasource.name == plugin_datasource.name:
+                self.assertEqual(datasource.content_identifier, plugin_datasource.content_identifier)
+                self.assertEqual(datasource.icon, plugin_datasource.icon)
+                self.assertEqual(datasource.weight, plugin_datasource.weight)
+                self.assertEqual(datasource.callback, plugin_datasource.callback)
+                break
+        else:
+            self.fail(f"Datasource {plugin_datasource.name} not found in registered_datasources!")
 
     def test_middleware(self):
         """
