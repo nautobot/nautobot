@@ -149,7 +149,8 @@ def register_homepage_panels(path, label, homepage_layout):
                         if not os.path.isfile(f"{template_path}{item.custom_template}"):
                             raise ValueError(f"Unable to load {template_path}{item.custom_template}")
 
-                    panel_perms |= set(perms for perms in item.permissions)
+                    panel_perms |= set(item.permissions)
+
                 elif isinstance(item, HomePageGroup):
                     item.template_path = template_path
                     create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
@@ -161,7 +162,9 @@ def register_homepage_panels(path, label, homepage_layout):
                                 group_item.name,
                                 f"{panel.name} -> {item.name} -> {group_item.name}",
                             )
-                    panel_perms |= set(perms for perms in group_item.permissions)
+                        else:
+                            raise TypeError(f"Third level objects need to be an instance of HomePageItem: {group_item}")
+                    panel_perms |= set(group_item.permissions)
                     registry_items[item.name]["items"] = OrderedDict(
                         sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
                     )
@@ -263,7 +266,7 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             if not isinstance(items, (list, tuple)):
                 raise TypeError("Items must be passed as a tuple or list.")
             elif not all(isinstance(item, (HomePageGroup, HomePageItem)) for item in items):
-                raise TypeError("All items defined in a tab must be an instance of HomePageGroup or HomePageItem")
+                raise TypeError("All items defined in a panel must be an instance of HomePageGroup or HomePageItem")
             self.items = items
 
 
@@ -303,7 +306,7 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
             if not isinstance(items, (list, tuple)):
                 raise TypeError("Items must be passed as a tuple or list.")
             elif not all(isinstance(item, HomePageItem) for item in items):
-                raise TypeError("All items defined in a tab must be an instance of HomePageItem")
+                raise TypeError("All items defined in a group must be an instance of HomePageItem")
             self.items = items
 
 

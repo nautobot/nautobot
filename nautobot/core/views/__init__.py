@@ -41,7 +41,8 @@ class HomeView(TemplateView):
             with open(path, "r") as f:
                 html = f.read()
         else:
-            html = details["custom_template"].strip()
+            raise TemplateDoesNotExist(path)
+
         template = Template(html)
 
         additional_context = RequestContext(request, context)

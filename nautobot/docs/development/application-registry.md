@@ -39,7 +39,7 @@ Definition of data types that can be provided by data source models (such as [Gi
 
 Plugins may extend this dictionary with additional data sources and/or data types by calling `extras.registry.register_datasource_contents()` as desired.
 
-### `homepage_lagout`
+### `homepage_layout`
 
 A dictionary holding information about the layout of Nautobot's homepage. Each app may register homepage panels and items using objects from the generic app class. Each object has a weight attribute allowing the developer to define the position of the object.
 
