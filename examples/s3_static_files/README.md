@@ -38,7 +38,7 @@ If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not set, `boto3` [interna
 
 ## Bucket Creation
 
-The AWS S3 bucket will be hosting Nautobot static files and needs some specific configuration to allow anonymous HTTP access.  The following is the necessary Terraform configuration to create the S3 bucket appropriately:
+The AWS S3 bucket will be hosting Nautobot static files and needs some specific configuration to allow anonymous HTTP access.  The following is an example of Terraform configuration to create the S3 bucket appropriately, the same values can be configured manually:
 
 ```terraform
 resource "aws_s3_bucket" "nautobot_static_files" {
