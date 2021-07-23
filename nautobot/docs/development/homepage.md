@@ -4,7 +4,17 @@ Both core applications and plugins can contribute items to the Nautobot home pag
 
 ## Adding a new Homepage Object
 
-The code below shows how to add a new panel to the home page. A panel is defined by a `HomePagePanel` object. A `HomePagePanel` may contain either or both of `HomePageItem` and/or `HomePageGroup` objects, or may define custom content via a referenced Django template. A`HomePageGroup` may itself contain `HomePageItem` objects as well.
+The code below shows how to add a new panel to the home page. A panel is defined by a `HomePagePanel` object. A `HomePagePanel` may contain either or both of `HomePageItem` and/or `HomePageGroup` objects, or may define custom content via a referenced Django template. A `HomePageGroup` may itself contain `HomePageItem` objects as well.
+
+Some examples:
+
+![DCIM Panel](../media/development/homepage_dcim_panel.png "DCIM Panel")
+
+This is a single `HomePagePanel` (defined in `nautobot/dcim/homepage.py`) containing four `HomePageItem` and one `HomePageGroup` (the `Connections` group, which in turn contains four more `HomePageItem`. Using these objects together allows you to create panels that match the visual style of most other panels on the Nautobot home page.
+
+![Changelog Panel](../media/development/homepage_changelog_panel.png "Changelog Panel")
+
+This is a `HomePagePanel` (defined in `nautobot/extras/homepage.py`) that uses a custom template to render content that doesn't fit into the `HomePageGroup`/`HomePageItem` pattern.
 
 The position in the home page is defined by the weight. The lower the weight the closer to the start (top/left) of the home page the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
 
