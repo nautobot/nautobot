@@ -122,7 +122,6 @@ class PluginHomeTestCase(SeleniumTestCase):
         for item_name in self.custom_panel_dummymodel["items"]:
             columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
-
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_limit_permissions(self):
         """
