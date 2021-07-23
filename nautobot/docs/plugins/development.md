@@ -11,9 +11,8 @@ Plugins can do a lot, including:
 * Inject template content and navigation links
 * Establish their own GraphQL types and REST API endpoints
 * Add custom request/response middleware
-* Create top level navigation items
-* Modify existing navigation items
-* Create new panels for homepage
+* Add content to the Nautobot navigation menu bar
+* Add content to the Nautobot home page
 
 Keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
@@ -39,7 +38,7 @@ plugin_name/
     - datasources.py        # Loading Data from a Git Repository
     - graphql/
       - types.py            # GraphQL Type Objects
-    - homepage.py           # Homepage Panel
+    - homepage.py           # Home Page Content
     - jinja_filters.py      # Jinja Filters
     - jobs.py               # Job classes
     - middleware.py         # Request/response middleware
@@ -546,9 +545,9 @@ Plugins can modify the existing navigation bar layout by defining `menu_items` i
 
 More documentation and examples can be found [here](../development/navigation-menu.md)
 
-## Homepage Panels
+## Home Page Content
 
-Plugins can create panels in the homepage by defining `layout` inside of `homepage.py`. Using the key and weight system, a developer can create new panels using the pre-existing items or by using custom templates with callback functions to collect data.
+Plugins can add content to the Nautobot home page by defining `layout` inside of `homepage.py`. Using the key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
 
 More documentation and examples can be found [here](../development/homepage.md)
 

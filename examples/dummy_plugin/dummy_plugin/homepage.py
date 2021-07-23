@@ -26,11 +26,6 @@ layout = (
                 description="List dummy plugin models.",
                 permissions=["dummy_plugin.view_dummymodel"],
             ),
-            HomePageItem(
-                name="Sites",
-                permissions=["dcim.view_site"],
-                custom_template="panel_dummy_example.html",
-            ),
         ),
     ),
     HomePagePanel(

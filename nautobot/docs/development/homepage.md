@@ -1,42 +1,21 @@
 # Populating the Homepage
 
-Both core applications and plugins can contribute items to the homepage by defining `layout` inside of their app's `homepage.py`. Using key and weight system, a developer can integrate amongst existing homepage objects or can create entirely new objects as desired.
-
-## Modifying Existing Objects
-
-By defining an object with the same identifier, a developer can modify existing objects. The object below shows modifying an existing object to have a custom template.
-
-!!! tip
-    Weights for already existing items can be found in the nautobot source code (in `homepage.py`) or with a web session open to your nautobot instance, you can inspect an element of the navbar using the developer tools.
-
-``` python
-layout = (
-    HomePagePanel(
-        name="Organization",
-        items=(
-            HomePageItem(
-                name="Dummy Models",
-                weight=150,
-                link="plugins:dummy_plugin:dummymodel_list",
-                description="List dummy plugin models.",
-                permissions=["dummy_plugin.view_dummymodel"],
-            ),
-        ),
-    ),
-)
-```
+Both core applications and plugins can contribute items to the Nautobot home page by defining `layout` inside of their app's `homepage.py`. Using a key and weight system, a developer can integrate amongst existing home page panels or can create entirely new panels as desired.
 
 ## Adding a new Homepage Object
 
-The code below shows how to add a new panel to the navbar. A panel is defined by a `HomePagePanel` object. Similarly a group is defined using `HomePageGroup`. Both of these objects are used as containers for actual items.
+The code below shows how to add a new panel to the home page. A panel is defined by a `HomePagePanel` object. A `HomePagePanel` may contain either or both of `HomePageItem` and/or `HomePageGroup` objects, or may define custom content via a referenced Django template. A`HomePageGroup` may itself contain `HomePageItem` objects as well.
 
-The position in the homepage is defined by the weight. The lower the weight the closer to the start of the homepage the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
+The position in the home page is defined by the weight. The lower the weight the closer to the start (top/left) of the home page the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
 
-Below you can see `Dummy Plugin` has a weight value of `150`. This means the tab will appear between `Organization` and `DCIM`.
+In the below code example, you can see that the `Dummy Plugin` panel has a weight value of `150`. This means it will appear between `Organization` (weight `100`) and `DCIM` (weight `200`).
 
-Example of custom code being used in a panel can be seen in `Custom Dummy Plugin`. The attribute `custom_template` is used to define either a string of HTML or a filename of a template. Templates need to be stored in the template and `inc` folder for the plugin (`dummy_plugin/templates/dummy_plugin/inc/`).
+Example of custom code being used in a panel can be seen in the `Custom Dummy Plugin` panel below. The attribute `custom_template` is used to refer to the filename of a template. Templates need to be stored in the templates `inc` folder for the plugin (`/dummy_plugin/templates/dummy_plugin/inc/`).
 
-If additional data is needed for the custom template, callback functions can be used to collect data. Below is `get_dummy_data` which collects all records from `DummyModel`, the function is stored in a dictionary which is called when the homepage gets rendered.
+If additional data is needed to render the custom template, callback functions can be used to collect this data. In the below example, the `Custom Dummy Plugin` panel is using the callback `get_dummy_data()` to dynamically populate the key `dummy_data` into the rendering context of this panel.
+
+!!! tip
+    Weights for already existing items can be found in the Nautobot source code (in `nautobot/<app>/homepage.py`) or with a web session open to your Nautobot instance, you can inspect an element of the home page using the developer tools.
 
 ``` python
 from nautobot.core.apps import HomePageItem, HomePagePanel

@@ -124,6 +124,11 @@ def register_homepage_panels(path, label, homepage_layout):
     define different parts of the layout.
 
     These objects are converted into a dictionary to be stored inside of the Nautobot registry.
+
+    Args:
+        path (str): Path to the app which defines the homepage layout.
+        label (str): Label of the app which defines the homepage layout.
+        homepage_layout (list): A list of objects which define the homepage layout.
     """
     template_path = f"{path}/templates/{label}/inc/"
     registry_panels = registry["homepage_layout"]["panels"]
