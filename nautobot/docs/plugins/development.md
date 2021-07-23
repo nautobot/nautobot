@@ -456,27 +456,6 @@ Arguments:
 
 Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
 
-Usage in a view:
-
-``` python
-from nautobot.core.graphql import execute_saved_query
-
-
-class GraphQLModelView(ModelViewSet):
-    queryset = GraphQLModelQuery.objects.all()
-
-    @action(detail=True, methods=["post"])
-    def run(self, request, pk):
-        try:
-            result = execute_saved_query(pk, variable=request.data, request=request).to_dict()
-            return Response(result)
-        except GraphQLError as error:
-            return Response(
-                {"errors": [GraphQLView.format_error(error)]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-```
-
 ## REST API Endpoints
 
 Plugins can declare custom endpoints on Nautobot's REST API to retrieve or manipulate models or other data. These behave very similarly to views, except that instead of rendering arbitrary content using a template, data is returned in JSON format using a serializer. Nautobot uses the [Django REST Framework](https://www.django-rest-framework.org/), which makes writing API serializers and views very simple.
