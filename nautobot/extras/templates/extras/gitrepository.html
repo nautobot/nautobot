@@ -1,17 +1,31 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load buttons %}
 {% load custom_links %}
+{% load helpers %}
 {% load plugins %}
 
 {% block header %}
     <div class="row">
-        <div class="col">
+        <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a></li>
                 <li>{{ object }}</li>
             </ol>
         </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url 'extras:gitrepository_list' %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
     </div>
+
     <div class="pull-right noprint">
         {% plugin_buttons object %}
         {% if perms.extras.add_gitrepository %}
@@ -83,6 +97,7 @@
             {% include 'inc/custom_fields_panel.html' %}
             {% include 'inc/relationships_panel.html' %}
             {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='extras:gitrepository_list' %}
+            {% plugin_left_page object %}
         </div>
         <div class="col-md-4">
             <div class="panel panel-default">
@@ -108,6 +123,7 @@
                     {% endfor %}
                 </table>
             </div>
+            {% plugin_right_page object %}
         </div>
     </div>
 {% endblock %}
