@@ -847,3 +847,13 @@ class CustomFieldTestCase(
         for custom_field in custom_fields:
             custom_field.validated_save()
             custom_field.content_types.set([obj_type])
+
+        cls.form_data = {
+            "content_types": [obj_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_TEXT,
+            "name": "Custom Field Form Text",
+            "label": "Custom Field Form Text",
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+        }
