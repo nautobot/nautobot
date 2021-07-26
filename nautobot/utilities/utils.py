@@ -361,18 +361,20 @@ def copy_safe_request(request):
     """
     Copy selected attributes from a request object into a new fake request object. This is needed in places where
     thread safe pickling of the useful request data is needed.
+
+    Note that `request.FILES` is explicitly omitted because they cannot be uniformly serialized.
     """
     meta = {
         k: request.META[k]
         for k in HTTP_REQUEST_META_SAFE_COPY
         if k in request.META and isinstance(request.META[k], str)
     }
+
     return NautobotFakeRequest(
         {
             "META": meta,
             "POST": request.POST,
             "GET": request.GET,
-            "FILES": request.FILES,
             "user": request.user,
             "path": request.path,
             "id": getattr(request, "id", None),  # UUID assigned by middleware

@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.1.0-beta.3"
+version = "1.1.0"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -42,6 +42,8 @@ django-cacheops = "~5.1"
 django-cors-headers = "~3.7.0"
 # Support for encrypted database fields
 django-cryptography = "~1.0"
+# Store files in the database for background tasks
+django-db-file-storage = "~0.5.5"
 # Advanced query filters
 django-filter = "~2.4.0"
 # Health check endpoint
@@ -85,7 +87,7 @@ mysqlclient = {version = "~2.0.3", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Image processing library
-Pillow = "~8.1.0"
+Pillow = "~8.2.0"
 # PostgreSQL database adapter
 psycopg2-binary = "~2.8.6"
 # Cryptographic library
