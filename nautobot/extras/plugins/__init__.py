@@ -339,6 +339,8 @@ def register_plugin_menu_items(section_name, menu_items):
 
     nav_menu_items = set()
 
+    permissions = set()
+
     for menu_item in menu_items:
         if isinstance(menu_item, PluginMenuItem):
             # translate old-style plugin menu definitions into the new nav-menu items and buttons
@@ -368,6 +370,7 @@ def register_plugin_menu_items(section_name, menu_items):
                 )
             )
             new_menu_item_weight += 100
+            permissions = permissions.union(menu_item.permissions)
         elif isinstance(menu_item, NavMenuTab):
             nav_menu_items.add(menu_item)
         else:
@@ -388,6 +391,8 @@ def register_plugin_menu_items(section_name, menu_items):
             NavMenuTab(
                 name="Plugins",
                 weight=5000,
+                # Permissions cast to tuple to match development pattern.
+                permissions=tuple(permissions),
                 groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
             ),
         )

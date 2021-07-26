@@ -105,13 +105,43 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_BROKER_URL
+
+Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_RESULT_BACKEND
+
+Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery result backend used to tell workers where to store task results (tombstones).
+
+---
+
+## CELERY_TASK_SOFT_TIME_LIMIT
+
+Default: `300` (5 minutes)
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT`
+
+The global Celery task soft timeout (in seconds). Any background task that exceeds this duration will receive a `SoftTimeLimitExceeded` exception and is responsible for handling this exception and performing any necessary cleanup or final operations before ending. See also `CELERY_TASK_TIME_LIMIT` below.
+
+---
+
 ## CELERY_TASK_TIME_LIMIT
 
-Default: `1800`
+Default: `600` (10 minutes)
 
 Environment Variable: `NAUTOBOT_CELERY_TASK_TIME_LIMIT`
 
-The global Celery task timeout (in seconds)
+The global Celery task hard timeout (in seconds). Any background task that exceeds this duration will be forcibly killed with a `SIGKILL` signal.
 
 ---
 

@@ -277,10 +277,6 @@ class JobViewSet(ViewSet):
         if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("This user does not have permission to run jobs.")
 
-        # Check that at least one RQ worker is running
-        if not Worker.count(get_connection("default")):
-            raise RQWorkerNotRunningException()
-
         job_class = self._get_job_class(class_path)
         job = job_class()
 

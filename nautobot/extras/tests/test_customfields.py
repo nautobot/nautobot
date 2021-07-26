@@ -7,8 +7,10 @@ from rest_framework import status
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
 from nautobot.dcim.models import Site, Rack, Device
+from nautobot.dcim.tables import SiteTable
 from nautobot.extras.choices import *
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
+from nautobot.utilities.tables import CustomFieldColumn
 from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
@@ -773,6 +775,7 @@ class CustomFieldModelTest(TestCase):
             fallback_value="An error occurred while rendering this template.",
             weight=100,
         )
+        # Field whose template will raise a TemplateError
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
             slug="bad_computed_field",
@@ -780,6 +783,15 @@ class CustomFieldModelTest(TestCase):
             template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
             fallback_value="This template has errored",
             weight=100,
+        )
+        # Field whose template will raise a TypeError
+        self.worse_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="worse_computed_field",
+            label="Worse Computed Field",
+            template="{{ obj.images | list }}",
+            fallback_value="Another template error",
+            weight=200,
         )
         self.non_site_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
@@ -857,6 +869,7 @@ class CustomFieldModelTest(TestCase):
         expected_renderings = {
             "computed_field_one": f"{self.site1.name} is the name of this site.",
             "bad_computed_field": self.bad_computed_field.fallback_value,
+            "worse_computed_field": self.worse_computed_field.fallback_value,
         }
         self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)
 
@@ -864,6 +877,7 @@ class CustomFieldModelTest(TestCase):
         expected_renderings = {
             "Computed Field One": f"{self.site1.name} is the name of this site.",
             "Bad Computed Field": self.bad_computed_field.fallback_value,
+            "Worse Computed Field": self.worse_computed_field.fallback_value,
         }
         self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)
 
@@ -1131,3 +1145,115 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         site.refresh_from_db()
 
         self.assertEqual(site.cf["cf1"], "Bar")
+
+
+class CustomFieldTableTest(TestCase):
+    def setUp(self):
+        content_type = ContentType.objects.get_for_model(Site)
+
+        # Text custom field
+        cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="text_field", default="foo")
+        cf_text.save()
+        cf_text.content_types.set([content_type])
+
+        # Integer custom field
+        cf_integer = CustomField(type=CustomFieldTypeChoices.TYPE_INTEGER, name="number_field", default=123)
+        cf_integer.save()
+        cf_integer.content_types.set([content_type])
+
+        # Boolean custom field
+        cf_boolean = CustomField(
+            type=CustomFieldTypeChoices.TYPE_BOOLEAN,
+            name="boolean_field",
+            default=False,
+        )
+        cf_boolean.save()
+        cf_boolean.content_types.set([content_type])
+
+        # Date custom field
+        cf_date = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATE,
+            name="date_field",
+            default="2020-01-01",
+        )
+        cf_date.save()
+        cf_date.content_types.set([content_type])
+
+        # URL custom field
+        cf_url = CustomField(
+            type=CustomFieldTypeChoices.TYPE_URL,
+            name="url_field",
+            default="http://example.com/1",
+        )
+        cf_url.save()
+        cf_url.content_types.set([content_type])
+
+        # Select custom field
+        cf_select = CustomField(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            name="choice_field",
+        )
+        cf_select.save()
+        cf_select.content_types.set([content_type])
+        CustomFieldChoice.objects.create(field=cf_select, value="Foo")
+        CustomFieldChoice.objects.create(field=cf_select, value="Bar")
+        CustomFieldChoice.objects.create(field=cf_select, value="Baz")
+        cf_select.default = "Foo"
+        cf_select.save()
+
+        # Multi-select custom field
+        cf_multi_select = CustomField(
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            name="multi_choice_field",
+        )
+        cf_multi_select.save()
+        cf_multi_select.content_types.set([content_type])
+        CustomFieldChoice.objects.create(field=cf_multi_select, value="Foo")
+        CustomFieldChoice.objects.create(field=cf_multi_select, value="Bar")
+        CustomFieldChoice.objects.create(field=cf_multi_select, value="Baz")
+        cf_multi_select.default = ["Foo", "Bar"]
+        cf_multi_select.save()
+
+        statuses = Status.objects.get_for_model(Site)
+
+        # Create a site
+        self.site = Site.objects.create(name="Site Custom", slug="site-1", status=statuses.get(slug="active"))
+
+        # Assign custom field values for site 2
+        self.site._custom_field_data = {
+            cf_text.name: "bar",
+            cf_integer.name: 456,
+            cf_boolean.name: True,
+            cf_date.name: "2020-01-02",
+            cf_url.name: "http://example.com/2",
+            cf_select.name: "Bar",
+            cf_multi_select.name: ["Bar", "Baz"],
+        }
+        self.site.save()
+
+    def test_custom_field_table_render(self):
+        queryset = Site.objects.filter(name=self.site.name)
+        site_table = SiteTable(queryset)
+
+        custom_column_expected = {
+            "text_field": "bar",
+            "number_field": "456",
+            "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>',
+            "date_field": "2020-01-02",
+            "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
+            "choice_field": '<span class="label label-default">Bar</span>',
+            "multi_choice_field": (
+                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span> '
+            ),
+        }
+
+        bound_row = site_table.rows[0]
+
+        for col_name, col_expected_value in custom_column_expected.items():
+            internal_col_name = "cf_" + col_name
+            custom_column = site_table.base_columns.get(internal_col_name)
+            self.assertIsNotNone(custom_column)
+            self.assertIsInstance(custom_column, CustomFieldColumn)
+
+            rendered_value = bound_row.get_cell(internal_col_name)
+            self.assertEqual(rendered_value, col_expected_value)
