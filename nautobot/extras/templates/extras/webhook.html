@@ -4,10 +4,7 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block content %}
-
-<div class="row">
-	<div class="col-md-7">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Webhook</strong>
@@ -132,17 +129,15 @@
                 </tr>
             </table>
         </div>
-        {% plugin_left_page object %}
-    </div>
+{% endblock content_left_page %}
 
-    <div class="col-md-5">
+{% block content_right_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Body Template</strong>
             </div>
+            <div class="panel-body">
                 {% if object.body_template %} <pre>{{ object.body_template }}</pre> {% else %} {{ None }} {% endif %}
+            </div>
         </div>
-        {% plugin_right_page object %}
-    </div>
-</div>
-{% endblock %}
+{% endblock content_right_page %}

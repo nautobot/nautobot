@@ -4,9 +4,7 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block content %}
-<div class="row">
-	<div class="col-md-5">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Query</strong>
@@ -30,9 +28,9 @@
                 </tr>
             </table>
         </div>
-    </div>
+{% endblock content_left_page %}
 
-    <div class="col-md-7">
+{% block content_right_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Response</strong>
@@ -50,12 +48,10 @@
 
             </pre>
         </div>
-    </div>
+{% endblock content_right_page %}
 
-</div>
-
+{% block javascript %}
 <script>
-
     function test_query() {
         var output = $("#query_output");
         var variables = $("#query_variables").val();
@@ -88,4 +84,4 @@
         this.style.height = this.scrollHeight + 'px';
     }
 </script>
-{% endblock %}
+{% endblock javascript %}

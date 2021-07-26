@@ -4,9 +4,7 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block content %}
-    <div class="row">
-        <div class="col-md-6">
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Computed Field</strong>
@@ -43,10 +41,4 @@
                     </tr>
                 </table>
             </div>
-            {% plugin_left_page object %}
-        </div>
-        <div class="col-md-6">
-            {% plugin_right_page object %}
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_left_page %}

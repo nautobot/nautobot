@@ -4,9 +4,7 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block content %}
-    <div class="row">
-        <div class="col-md-3">
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Config Context</strong>
@@ -62,6 +60,9 @@
                     </tr>
                 </table>
             </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Assignment</strong>
@@ -209,9 +210,9 @@
                     </tr>
                 </table>
             </div>
-            {% plugin_left_page object %}
-        </div>
-        <div class="col-md-9">
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Data</strong>
@@ -221,7 +222,4 @@
                     {% include 'extras/inc/json_data.html' with data=object.data format=format %}
                 </div>
             </div>
-            {% plugin_right_page object %}
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_full_width_page %}
