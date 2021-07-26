@@ -237,7 +237,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
     """
 
     queryset = ConfigContextSchema.objects.all()
-    template_name = "extras/configcontextschema/validation.html"
+    template_name = "extras/configcontextschema_validation.html"
 
     def get_extra_context(self, request, instance):
         """
