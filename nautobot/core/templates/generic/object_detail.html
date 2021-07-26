@@ -39,9 +39,10 @@
     </div>
 
     <div class="pull-right noprint">
+    {% block buttons %}
         {% block extra_buttons %}{% endblock extra_buttons %}
         {% plugin_buttons object %}
-        {% if user|can_add:object %}
+        {% if object.clone_fields and user|can_add:object %}
             {% clone_button object %}
         {% endif %}
         {% if user|can_change:object %}
@@ -50,10 +51,12 @@
         {% if user|can_delete:object %}
             {% delete_button object %}
         {% endif %}
+    {% endblock buttons %}
     </div>
 
     <h1>{% block title %}{{ object }}{% endblock %}</h1>
     {% include 'inc/created_updated.html' %}
+    {% block custom_buttons %}{% endblock custom_buttons %}
     <div class="pull-right noprint">
         {% custom_links object %}
     </div>
@@ -65,6 +68,7 @@
                 {{ verbose_name|bettertitle }}
             </a>
         </li>
+        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
         {% if perms.extras.view_objectchange %}
             <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
                 <a href="{{ changelog_url }}">Change Log</a>
@@ -72,7 +76,7 @@
         {% endif %}
     </ul>
     {% endblock nav_tabs %}
-{% endblock %}
+{% endblock header %}
 
 {% block content %}
     <div class="row">
