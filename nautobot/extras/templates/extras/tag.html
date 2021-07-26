@@ -47,4 +47,5 @@
 {% block content_right_page %}
             {% include 'panel_table.html' with table=items_table heading='Tagged Objects' %}
             {% include 'inc/paginator.html' with paginator=items_table.paginator page=items_table.page %}
+            <div class="row"></div>
 {% endblock content_right_page %}

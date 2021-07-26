@@ -38,6 +38,7 @@
     </div>
 
     <div class="pull-right noprint">
+        {% block extra_buttons %}{% endblock extra_buttons %}
         {% plugin_buttons object %}
         {% if user|can_add:object %}
             {% clone_button object %}
