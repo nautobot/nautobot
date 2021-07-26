@@ -15,6 +15,7 @@
                 <li><a href="{% url list_url %}">
                     {{ verbose_name_plural|bettertitle }}
                 </a></li>
+                {% block extra_breadcrumb %}{% endblock extra_breadcrumb %}
                 {% if object.name %}
                     <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
                 {% else %}
