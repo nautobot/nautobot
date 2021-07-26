@@ -739,6 +739,4 @@ class CustomFieldFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(
-            Q(name__icontains=value)
-        )
+        return queryset.filter(Q(name__icontains=value))

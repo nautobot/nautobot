@@ -850,10 +850,10 @@ class CustomFieldTestCase(
 
         cls.form_data = {
             "content_types": [obj_type.pk],
-            "type": CustomFieldTypeChoices.TYPE_TEXT,
-            "name": "Custom Field Form Text",
-            "label": "Custom Field Form Text",
-            "default": "",
+            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+            "name": "Custom Field Boolean",
+            "label": "Custom Field Boolean",
+            "default": None,
             "filter_logic": "loose",
             "weight": 100,
         }

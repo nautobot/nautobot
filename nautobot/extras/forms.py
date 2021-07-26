@@ -157,6 +157,7 @@ class CustomFieldFilterForm(forms.Form):
     class Meta:
         model = CustomField
 
+
 #
 # Relationship
 #
@@ -1027,8 +1028,8 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 
 # Custom Fields
 
-class CustomFieldForm(BootstrapMixin, forms.ModelForm):
 
+class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = CustomField
         fields = (

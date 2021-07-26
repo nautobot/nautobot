@@ -1040,6 +1040,7 @@ class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
 # Custom fields
 #
 
+
 class CustomFieldListView(generic.ObjectListView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
