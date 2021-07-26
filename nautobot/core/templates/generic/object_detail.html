@@ -71,10 +71,28 @@
     </ul>
     {% endblock nav_tabs %}
 {% endblock %}
-{% block postcontent %}
+
+{% block content %}
     <div class="row">
-        <div class="col-md-12">
-            {% plugin_full_width_page object %}
+        <div class="col-md-6">
+            {% block content_left_page %}{% endblock content_left_page %}
+            {% include 'inc/custom_fields_panel.html' %}
+            {% include 'inc/relationships_panel.html' %}
+            {% include 'extras/inc/tags_panel.html' %}
+            {% plugin_left_page object %}
+            <div class="panel panel-default" style="background-color:red"><div class="panel-heading"><strong>Left Panel</strong></div><div class="panel-body">I AM A LEFT PANEL</div></div>
+        </div>
+        <div class="col-md-6">
+            {% block content_right_page %}{% endblock content_right_page %}
+            {% plugin_right_page object %}
+            <div class="panel panel-default" style="background-color:red"><div class="panel-heading"><strong>Right Panel</strong></div><div class="panel-body">I AM A RIGHT PANEL</div></div>
         </div>
     </div>
-{% endblock postcontent %}
+    <div class="row">
+        <div class="col-md-12">
+            {% block content_full_width_page %}{% endblock content_full_width_page %}
+            {% plugin_full_width_page object %}
+            <div class="panel panel-default" style="background-color:red"><div class="panel-heading"><strong>Full Width Panel</strong></div><div class="panel-body">I AM A FULL WIDTH PANEL</div></div>
+        </div>
+    </div>
+{% endblock content %}
