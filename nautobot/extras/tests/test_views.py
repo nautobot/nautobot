@@ -6,11 +6,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import *
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -805,3 +806,44 @@ class ComputedFieldTestCase(
             "fallback_value": ":skull_emoji:",
             "weight": 100,
         }
+
+
+class CustomFieldTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = CustomField
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        custom_fields = [
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_TEXT,
+                name="Custom Field Text",
+                label="Custom Field Text",
+                default="",
+            ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_INTEGER,
+                name="Custom Field Integer",
+                label="Custom Field Integer",
+                default="",
+            ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_BOOLEAN,
+                name="Custom Field Boolean",
+                label="Custom Field Boolean",
+                default="",
+            ),
+        ]
+
+        for custom_field in custom_fields:
+            custom_field.validated_save()
+            custom_field.content_types.set([obj_type])

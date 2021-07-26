@@ -154,6 +154,8 @@ class CustomFieldFilterForm(forms.Form):
             field_name = "cf_{}".format(cf.name)
             self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
 
+    class Meta:
+        model = CustomField
 
 #
 # Relationship
@@ -1021,3 +1023,25 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Content Type",
     )
+
+
+# Custom Fields
+
+class CustomFieldForm(BootstrapMixin, forms.ModelForm):
+
+    class Meta:
+        model = CustomField
+        fields = (
+            "content_types",
+            "type",
+            "name",
+            "label",
+            "description",
+            "required",
+            "filter_logic",
+            "default",
+            "weight",
+            "validation_minimum",
+            "validation_maximum",
+            "validation_regex",
+        )

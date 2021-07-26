@@ -24,6 +24,7 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -492,4 +493,38 @@ class ComputedFieldTable(BaseTable):
             "slug",
             "content_type",
             "description",
+        )
+
+
+class CustomFieldTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = CustomField
+        fields = (
+            "pk",
+            "name",
+            "content_types",
+            "type",
+            "label",
+            "description",
+            "required",
+            "filter_logic",
+            "default",
+            "weight",
+            "validation_minimum",
+            "validation_maximum",
+            "validation_regex",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "type",
+            "label",
+            "description",
+            "required",
+            "default",
+            "weight",
         )

@@ -712,3 +712,33 @@ class ComputedFieldFilterSet(BaseFilterSet):
             | Q(content_type__app_label__icontains=value)
             | Q(content_type__model__icontains=value)
         )
+
+
+class CustomFieldFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+
+    class Meta:
+        model = CustomField
+        fields = (
+            "content_types",
+            "type",
+            "name",
+            "label",
+            "description",
+            "required",
+            "filter_logic",
+            "weight",
+            "validation_minimum",
+            "validation_maximum",
+            "validation_regex",
+        )
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value)
+        )

@@ -5,6 +5,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -395,5 +396,30 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="computedfield_changelog",
         kwargs={"model": ComputedField},
+    ),
+    # Custom fields
+    path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
+    path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
+    path(
+        "custom-fields/delete/",
+        views.CustomFieldBulkDeleteView.as_view(),
+        name="customfield_bulk_delete",
+    ),
+    path("custom-fields/<uuid:pk>/", views.CustomFieldView.as_view(), name="customfield"),
+    path(
+        "custom-fields/<uuid:pk>/edit/",
+        views.CustomFieldEditView.as_view(),
+        name="customfield_edit",
+    ),
+    path(
+        "custom-fields/<uuid:pk>/delete/",
+        views.CustomFieldDeleteView.as_view(),
+        name="customfield_delete",
+    ),
+    path(
+        "custom-fields/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="customfield_changelog",
+        kwargs={"model": CustomField},
     ),
 ]

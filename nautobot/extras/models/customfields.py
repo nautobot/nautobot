@@ -456,6 +456,9 @@ class CustomField(BaseModel):
 
         delete_custom_field_data.delay(self.name, content_types)
 
+    def get_absolute_url(self):
+        return reverse("extras:customfield", args=[self.pk])
+
 
 class CustomFieldChoice(BaseModel):
     """

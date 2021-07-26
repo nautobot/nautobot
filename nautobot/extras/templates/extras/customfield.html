@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:customfield_list' %}">Custom Fields</a></li>
+                {% if object.label %}
+                    <li><a href="{% url 'extras:customfield' pk=object.pk %}">{{ object.label }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        {% if perms.extras.add_customfield %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_customfield %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_customfield %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Custom Fields</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:customfield_changelog' pk=object.pk %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Custom Field</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Type</td>
+                        <td><span>{{ object.type }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Weight</td>
+                        <td><span>{{ object.weight }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Label</td>
+                        <td><span>{{ object.label }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Required</td>
+                        <td><span>{{ object.required }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td><span>{{ object.description }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Filter Logic</td>
+                        <td><span>{{ object.filter_logic }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Validation Rules</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Minimum Value</td>
+                        <td><span>{{ object.validation_minimum }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Maximum Value Type</td>
+                        <td><span>{{ object.validation_maximum }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Validation Regex</td>
+                        <td><span>{{ object.validation_regex }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Assignment</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Content Type</td>
+                        <td><span>{{ object.content_type }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
