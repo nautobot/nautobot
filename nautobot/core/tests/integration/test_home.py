@@ -59,7 +59,7 @@ class HomeTestCase(SeleniumTestCase):
 
         columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//strong[contains(text(), '{panel_name}')]")
+            columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
                 columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
@@ -75,7 +75,7 @@ class HomeTestCase(SeleniumTestCase):
 
         columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//strong[contains(text(), '{panel_name}')]")
+            columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, item_details in panel_details.items():
                 item_html = columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
                 if item_details.get("model"):
@@ -92,7 +92,7 @@ class HomeTestCase(SeleniumTestCase):
 
         columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
+            columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
                 item_html = columns_html[0].find_element_by_xpath(f".//h4[contains(text(), '{item_name}')]")
                 self.assertTrue(
@@ -112,7 +112,7 @@ class HomeTestCase(SeleniumTestCase):
 
         columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for panel_name, panel_details in self.layout.items():
-            columns_html[0].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
+            columns_html[0].find_element_by_xpath(f".//*[text()='{panel_name}']")
             for item_name, item_details in panel_details.items():
                 if item_details["permission"] in user_permissions:
                     item_html = columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
@@ -140,7 +140,7 @@ class HomeTestCase(SeleniumTestCase):
         columns_html = self.selenium.find_elements_by_class_name("homepage_column")
         for panel_name, panel_details in self.layout.items():
             if any(perm in self.get_panel_permissions(panel_details) for perm in user_permissions):
-                columns_html[0].find_element_by_xpath(f".//*[contains(text(), '{panel_name}')]")
+                columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
                 for item_name, item_details in panel_details.items():
                     if item_details["permission"] in user_permissions:
                         columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")

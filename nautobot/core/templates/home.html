@@ -31,7 +31,7 @@
                                 {% elif panel_details.items %}
                                     {% for item_name, item_details in panel_details.items.items %}
                                         {% if  item_details.rendered_html %}
-                                            {% if request.user|has_perms:item_details.permissions %}
+                                            {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                                                 {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
                                             {% endif %}
                                         {% elif not item_details.items.items %}
