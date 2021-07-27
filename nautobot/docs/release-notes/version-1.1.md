@@ -80,7 +80,11 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 !!! warning
     If you are running plugins that use background tasks requiring the RQ worker, you will need to run both the RQ and Celery workers concurrently until the plugins are converted to use the Celery worker. See the [Migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for details.
 
-### Removed
+## v1.1.1 (2021-??-??)
+
+### Fixed
+
+- [#727](https://github.com/nautobot/nautobot/issues/727) - Fixed broken REST API endpoint (`/api/extras/graphql-queries/<uuid>/run/`) for running saved GraphQL queries.
 
 ## v1.1.0 (2021-07-20)
 
