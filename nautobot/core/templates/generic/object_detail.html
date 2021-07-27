@@ -60,13 +60,13 @@
         <h1>{% block title %}{{ object }}{% endblock %}</h1>
     {% endblock masthead %}
     {% include 'inc/created_updated.html' %}
-    {% block panel_buttons %}{% endblock panel_buttons %}
     <div class="pull-right noprint">
         {% custom_links object %}
+        {% block panel_buttons %}{% endblock panel_buttons %}
     </div>
 
-    {% block nav_tabs %}
     <ul class="nav nav-tabs">
+    {% block nav_tabs %}
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">
                 {{ verbose_name|bettertitle }}
@@ -78,8 +78,8 @@
                 <a href="{{ changelog_url }}">Change Log</a>
             </li>
         {% endif %}
-    </ul>
     {% endblock nav_tabs %}
+    </ul>
 {% endblock header %}
 
 {% block content %}

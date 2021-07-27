@@ -1,7 +1,8 @@
+from copy import deepcopy
 import logging
 import re
-from copy import deepcopy
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
@@ -84,6 +85,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             return None
 
         route = f"{meta.app_label}:{meta.model_name}_changelog"
+        if meta.app_label in settings.PLUGINS:
+            route = f"plugins:{route}"
 
         try:
             changelog_url = reverse(route, kwargs={"pk": instance.pk})

@@ -14,7 +14,6 @@
 {% endblock extra_buttons %}
 
 {% block nav_tabs %}
-    <ul class="nav nav-tabs">
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Virtual Machine</a>
         </li>
@@ -28,7 +27,6 @@
                 <a href="{% url 'virtualization:virtualmachine_changelog' pk=object.pk %}">Change Log</a>
             </li>
         {% endif %}
-    </ul>
 {% endblock nav_tabs %}
 
 {% block content_left_page %}

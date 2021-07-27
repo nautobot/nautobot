@@ -66,7 +66,6 @@
 {% endblock masthead %}
 
 {% block nav_tabs %}
-    <ul class="nav nav-tabs">
         <li role="presentation" {% if active_tab == 'device' %} class="active"{% endif %}>
             <a href="{% url 'dcim:device' pk=object.pk %}">Device</a>
         </li>
@@ -154,7 +153,6 @@
                 <a href="{% url 'dcim:device_changelog' pk=object.pk %}">Change Log</a>
             </li>
         {% endif %}
-    </ul>
 {% endblock nav_tabs %}
 
 {% block javascript %}

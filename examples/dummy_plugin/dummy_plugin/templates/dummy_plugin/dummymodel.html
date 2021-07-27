@@ -1,60 +1,34 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load buttons %}
 {% load custom_links %}
 {% load helpers %}
 {% load plugins %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'plugins:dummy_plugin:dummymodel_list' %}">Custom Links</a></li>
-                {% if object.name %}
-                    <li><a href="{% url 'plugins:dummy_plugin:dummymodel' pk=object.pk %}">{{ object.name }}</a></li>
-                {% endif %}
-            </ol>
-        </div>
-    </div>
-
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.extras.add_dummymodel %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.extras.change_dummymodel %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.extras.delete_dummymodel %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Dummy Model</a>
+{% block extra_breadcrumb %}
+        <li>
+            <a href="{% url 'plugins:dummy_plugin:dummymodel_list' %}?number={{ object.number }}">{{ object.number }}</a>
         </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'plugins:dummy_plugin:dummymodel_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
+{% endblock extra_breadcrumb %}
 
-{% endblock %}
+{% block extra_buttons %}
+        <a onClick="alert('I am from the detail view template.')" class="btn btn-success">
+            <span class="mdi mdi-exclamation-thick" aria-hidden="true"></span> Extra Button
+        </a>
+{% endblock extra_buttons %}
 
-{% block content %}
+{% block panel_buttons %}
+        <a onClick="alert('I am from the detail view template.')" class="btn btn-primary">
+            <span class="mdi mdi-help" aria-hidden="true"></span> Panel Button 1
+        </a>
+        <a onClick="alert('I am from the detail view template.')" class="btn btn-primary">
+            <span class="mdi mdi-help" aria-hidden="true"></span> Panel Button 2
+        </a>
+{% endblock panel_buttons %}
 
-<div class="row">
-	<div class="col-md-7">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Webhook</strong>
+                <strong>DummyModel</strong>
             </div>
 
             <table class="table table-hover panel-body attr-table">
@@ -68,7 +42,48 @@
                 </tr>
             </table>
         </div>
-    </div>
-</div>
+{% endblock content_left_page %}
 
-{% endblock %}
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>View Template Right Page</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <th>Things</th>
+                    <th>Stuff</th>
+                </tr>
+                <tr>
+                    <td><span>Shoe, Horse, Dog</span></td>
+                    <td><span>Widgets, Cogs, Sprockets</span></td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>View Template Full Width Page</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Number</th>
+                    <th>Salt</th>
+                    <th>Pepper</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Bob</td>
+                    <td>-42</td>
+                    <td>Yes</td>
+                    <td>No</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_full_width_page %}

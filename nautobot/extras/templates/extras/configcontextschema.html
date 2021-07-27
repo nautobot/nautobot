@@ -5,7 +5,6 @@
 {% load plugins %}
 
 {% block nav_tabs %}
-    <ul class="nav nav-tabs">
         <li role="presentation"{% if active_tab == 'configcontextschema' %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Config Context Schema</a>
         </li>
@@ -17,7 +16,6 @@
                 <a href="{% url 'extras:configcontextschema_changelog' slug=object.slug %}">Change Log</a>
             </li>
         {% endif %}
-    </ul>
 {% endblock nav_tabs %}
 
 {% block content_left_page %}
