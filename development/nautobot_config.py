@@ -34,7 +34,7 @@ DATABASES = {
 # Debug
 #
 
-DEBUG = True
+DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", True))
 
 # Django Debug Toolbar
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
