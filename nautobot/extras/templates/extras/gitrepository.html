@@ -1,36 +1,7 @@
 {% extends 'generic/object_detail.html' %}
-{% load buttons %}
-{% load custom_links %}
 {% load helpers %}
-{% load plugins %}
 
-{% block header %}
-    <div class="row">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a></li>
-                <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
-            </ol>
-        </div>
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url 'extras:gitrepository_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.extras.add_gitrepository %}
-            {% clone_button object %}
-        {% endif %}
+{% block extra_buttons %}
         {% if perms.extras.change_gitrepository %}
             <form class="form-inline" style="display: inline-block"
                   method="post" action="{% url 'extras:gitrepository_sync' slug=object.slug %}">
@@ -39,31 +10,22 @@
                     <i class="mdi mdi-source-branch-sync" aria-hidden="true"></i> Sync
                 </button>
             </form>
-            {% edit_button object %}
         {% endif %}
-        {% if perms.extras.delete_gitrepository %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
+{% endblock extra_buttons %}
+
+{% block nav_tabs %}
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Git Repository</a>
         </li>
         <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
-            <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
+             <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
         </li>
         {% if perms.extras.view_objectchange %}
             <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
                 <a href="{% url 'extras:gitrepository_changelog' slug=object.slug %}">Change Log</a>
             </li>
         {% endif %}
-    </ul>
-{% endblock %}
+{% endblock nav_tabs %}
 
 {% block content_left_page %}
             <div class="panel panel-default">

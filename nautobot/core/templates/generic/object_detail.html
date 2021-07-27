@@ -42,8 +42,8 @@
 
     <div class="pull-right noprint">
     {% block buttons %}
-        {% block extra_buttons %}{% endblock extra_buttons %}
         {% plugin_buttons object %}
+        {% block extra_buttons %}{% endblock extra_buttons %}
         {% if object.clone_fields and user|can_add:object %}
             {% clone_button object %}
         {% endif %}
