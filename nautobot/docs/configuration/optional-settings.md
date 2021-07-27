@@ -692,6 +692,7 @@ Default: `'django.contrib.sessions.backends.db'`
 
 Controls where Nautobot stores session data.
 
+To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
 To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
 
 See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.
