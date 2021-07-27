@@ -1,8 +1,5 @@
 {% extends 'generic/object_detail.html' %}
-{% load buttons %}
-{% load custom_links %}
 {% load helpers %}
-{% load plugins %}
 
 {% block content_left_page %}
             <div class="panel panel-default">
@@ -28,10 +25,6 @@
                         <td><span>{{ object.description|placeholder }}</span></td>
                     </tr>
                     <tr>
-                        <td>Template</td>
-                        <td><pre>{{ object.template }}</pre></td>
-                    </tr>
-                    <tr>
                         <td>Fallback Value</td>
                         <td><span>{{ object.fallback_value }}</span></td>
                     </tr>
@@ -42,3 +35,14 @@
                 </table>
             </div>
 {% endblock content_left_page %}
+
+{% block content_right_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Template</strong>
+                </div>
+                <div class="panel-body">
+                    <pre>{{ object.template }}</pre>
+                </div>
+            </div>
+{% endblock content_right_page %}

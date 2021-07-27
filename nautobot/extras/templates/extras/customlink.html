@@ -1,11 +1,7 @@
 {% extends 'generic/object_detail.html' %}
-{% load buttons %}
 {% load helpers %}
-{% load plugins %}
 
-{% block content %}
-<div class="row">
-    <div class="col-md-7">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Webhook</strong>
@@ -58,6 +54,4 @@
             </div>
                 {% if object.text %} <pre>{{ object.text }}</pre> {% else %} {{ None }} {% endif %}
         </div>
-    </div>
-</div>
-{% endblock %}
+{% endblock content_left_page %}
