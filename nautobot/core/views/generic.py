@@ -88,16 +88,19 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         if meta.app_label in settings.PLUGINS:
             route = f"plugins:{route}"
 
-        try:
-            changelog_url = reverse(route, kwargs={"pk": instance.pk})
-        except NoReverseMatch:
-            changelog_url = reverse(route, kwargs={"slug": instance.slug})
-        except Exception as err:
-            raise RuntimeError(
-                f"Unexpected error when retrieving changelog URL for object {self.queryset.model}: {err}"
-            )
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(instance, field):
+                continue
 
-        return changelog_url
+            try:
+                return reverse(route, kwargs={"pk": getattr(instance, field)})
+            except NoReverseMatch:
+                continue
+
+        # This object likely doesn't have a changelog route defined.
+        return None
 
     def get(self, request, *args, **kwargs):
         """

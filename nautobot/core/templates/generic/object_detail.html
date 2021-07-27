@@ -74,9 +74,11 @@
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
         {% if perms.extras.view_objectchange %}
+            {% if active_tab != 'changelog' and changelog_url or active_tab == 'changelog' %}
             <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
                 <a href="{{ changelog_url }}">Change Log</a>
             </li>
+            {% endif %}
         {% endif %}
     {% endblock nav_tabs %}
     </ul>
