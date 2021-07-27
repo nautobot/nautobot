@@ -8,9 +8,9 @@
                 <li><a href="{% url 'ipam:aggregate_list' %}?rir={{ object.rir.slug }}">{{ object.rir }}</a></li>
 {% endblock extra_breadcrumb%}
 
-{% block custom_buttons %}
+{% block panel_buttons %}
     {% include 'ipam/inc/toggle_available.html' %}
-{% endblock custom_buttons %}
+{% endblock panel_buttons %}
 
 {% block content_left_page %}
         <div class="panel panel-default">

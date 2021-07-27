@@ -24,9 +24,9 @@
         {% endif %}
 {% endblock extra_buttons %}
 
-{% block custom_buttons %}
+{% block panel_buttons %}
     {% include 'ipam/inc/toggle_available.html' %}
-{% endblock custom_buttons %}
+{% endblock panel_buttons %}
 
 {% block extra_nav_tabs %}
         <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
