@@ -92,6 +92,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 - [#372](https://github.com/nautobot/nautobot/issues/372) - Added support for displaying custom fields in tables used in object list views
 - [#620](https://github.com/nautobot/nautobot/pull/620) - Config context schemas can now be managed via Git repositories.
+- [#681](https://github.com/nautobot/nautobot/pull/681) - Added an example guide on how to use AWS S3 for hosting static files in production.
 
 ### Changed
 
