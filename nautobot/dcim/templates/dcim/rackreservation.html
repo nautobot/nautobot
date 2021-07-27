@@ -5,9 +5,9 @@
 {% load plugins %}
 {% load static %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 <li><a href="{{ object.rack.get_absolute_url }}">{{ object.rack }}</a></li>
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
         <div class="panel panel-default">

@@ -4,13 +4,13 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 <li><a href="{{ object.power_panel.site.get_absolute_url }}">{{ object.power_panel.site }}</a></li>
                 <li><a href="{{ object.power_panel.get_absolute_url }}">{{ object.power_panel }}</a></li>
                 {% if object.rack %}
                     <li><a href="{{ object.rack.get_absolute_url }}">{{ object.rack }}</a></li>
                 {% endif %}
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
         <div class="panel panel-default">

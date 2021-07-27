@@ -5,7 +5,7 @@
 {% load plugins %}
 {% load static %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 <li><a href="{% url 'dcim:rack_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
                 {% if object.group %}
                     {% for group in object.group.get_ancestors %}
@@ -13,7 +13,7 @@
                     {% endfor %}
                     <li><a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a></li>
                 {% endif %}
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block extra_buttons %}
         <a {% if prev_rack %}href="{% url 'dcim:rack' pk=prev_rack.pk %}"{% else %}disabled="disabled"{% endif %} class="btn btn-primary">

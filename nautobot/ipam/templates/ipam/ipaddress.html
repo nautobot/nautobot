@@ -5,11 +5,11 @@
 {% load plugins %}
 {% load render_table from django_tables2 %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 {% if object.vrf %}
                     <li><a href="{% url 'ipam:vrf' pk=object.vrf.pk %}">{{ object.vrf }}</a></li>
                 {% endif %}
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
         <div class="panel panel-default">

@@ -4,14 +4,14 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 {% if object.site %}
                     <li><a href="{% url 'ipam:vlan_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
                 {% endif %}
                 {% if object.group %}
                     <li><a href="{% url 'ipam:vlan_list' %}?group={{ object.group.slug }}">{{ object.group }}</a></li>
                 {% endif %}
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block extra_nav_tabs %}
         <li role="presentation"{% if active_tab == 'interfaces' %} class="active"{% endif %}>

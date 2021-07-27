@@ -4,11 +4,11 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 {% if object.vrf %}
                     <li><a href="{% url 'ipam:vrf' pk=object.vrf.pk %}">{{ object.vrf }}</a></li>
                 {% endif %}
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block extra_buttons %}
         {% if perms.ipam.add_prefix and active_tab == 'prefixes' and first_available_prefix %}

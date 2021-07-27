@@ -12,17 +12,17 @@
         {% with list_url=object|validated_viewname:"list" %}
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
-            {% block breadcrumb %}
+            {% block breadcrumbs %}
                 <li><a href="{% url list_url %}">
                     {{ verbose_name_plural|bettertitle }}
                 </a></li>
-                {% block extra_breadcrumb %}{% endblock extra_breadcrumb %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
                 {% if object.name %}
                     <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
                 {% else %}
                     <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
                 {% endif %}
-            {% endblock breadcrumb %}
+            {% endblock breadcrumbs %}
             </ol>
         </div>
         <div class="col-sm-4 col-md-3">

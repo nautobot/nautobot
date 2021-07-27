@@ -4,9 +4,9 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
             <li><a href="{{ object.parent.get_absolute_url }}">{{ object.parent }}</a></li>
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
         <div class="panel panel-default">

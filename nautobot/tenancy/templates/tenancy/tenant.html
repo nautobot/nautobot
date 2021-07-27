@@ -4,11 +4,11 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 {% if object.group %}
                     <li><a href="{% url 'tenancy:tenant_list' %}?group={{ object.group.slug }}">{{ object.group }}</a></li>
                 {% endif %}
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
         <div class="panel panel-default">

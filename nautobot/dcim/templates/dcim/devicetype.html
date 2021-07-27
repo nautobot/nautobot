@@ -4,9 +4,9 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 <li><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.slug }}">{{ object.manufacturer }}</a></li>
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block buttons %}
         {% plugin_buttons object %}

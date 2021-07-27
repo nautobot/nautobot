@@ -4,9 +4,9 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 <li><a href="{% url 'ipam:aggregate_list' %}?rir={{ object.rir.slug }}">{{ object.rir }}</a></li>
-{% endblock extra_breadcrumb%}
+{% endblock extra_breadcrumbs %}
 
 {% block panel_buttons %}
     {% include 'ipam/inc/toggle_available.html' %}

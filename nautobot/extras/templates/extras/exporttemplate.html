@@ -1,12 +1,7 @@
 {% extends 'generic/object_detail.html' %}
-{% load buttons %}
-{% load custom_links %}
 {% load helpers %}
-{% load plugins %}
 
-{% block content %}
-    <div class="row">
-	<div class="col-md-3">
+{% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Details</strong>
@@ -51,14 +46,13 @@
                 </tr>
             </table>
         </div>
-    </div>
-        <div class="col-md-9">
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Code Template</strong>
                 </div>
                     {% if object.template_code %} <pre>{{ object.template_code }}</pre> {% else %} {{ None }} {% endif %}
             </div>
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_right_page %}

@@ -4,9 +4,9 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block extra_breadcrumb %}
+{% block extra_breadcrumbs %}
                 <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.provider.slug }}">{{ object.provider }}</a></li>
-{% endblock extra_breadcrumb %}
+{% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
         <div class="panel panel-default">
