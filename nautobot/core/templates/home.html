@@ -31,9 +31,11 @@
                                 {% elif panel_details.items %}
                                     {% for item_name, item_details in panel_details.items.items %}
                                         {% if  item_details.rendered_html %}
-                                            {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
-                                                {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
-                                            {% endif %}
+                                            <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
+                                                {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                                                    {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
+                                                {% endif %}
+                                            </div>
                                         {% elif not item_details.items.items %}
                                             {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                                                 <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
