@@ -57,7 +57,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | Task queuing       | Redis/Celery/django-rq          |
 | Live device access | NAPALM                          |
 
-The low level diagram displays how data travels through Nautobot's application stack.
+The following diagram displays how data travels through Nautobot's application stack.
 
 ![Application stack diagram](./media/nautobot_application_stack_low_level.png "Application stack diagram")
 
