@@ -814,24 +814,26 @@ class CustomFieldTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
 
     def test_create_object_without_permission(self):
         # Can't have two CustomFields with the same "name"
-        CustomField.objects.get(name=self.form_data["name"]).delete()
+        for cf in CustomField.objects.all():
+            cf.delete()
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
         # Can't have two CustomFields with the same "name"
-        CustomField.objects.get(name=self.form_data["name"]).delete()
+        for cf in CustomField.objects.all():
+            cf.delete()
         super().test_create_object_with_permission()
 
     def test_create_object_with_constrained_permission(self):
         # Can't have two CustomFields with the same "name"
-        CustomField.objects.get(name=self.form_data["name"]).delete()
+        for cf in CustomField.objects.all():
+            cf.delete()
         super().test_create_object_with_constrained_permission()
 
     @classmethod
@@ -839,6 +841,12 @@ class CustomFieldTestCase(
         obj_type = ContentType.objects.get_for_model(Site)
 
         custom_fields = [
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_BOOLEAN,
+                name="Custom Field Boolean",
+                label="Custom Field Boolean",
+                default="",
+            ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
                 name="Custom Field Text",
@@ -849,12 +857,6 @@ class CustomFieldTestCase(
                 type=CustomFieldTypeChoices.TYPE_INTEGER,
                 name="Custom Field Integer",
                 label="Custom Field Integer",
-                default="",
-            ),
-            CustomField(
-                type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-                name="Custom Field Boolean",
-                label="Custom Field Boolean",
                 default="",
             ),
         ]
