@@ -499,6 +499,8 @@ class ComputedFieldTable(BaseTable):
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    content_types = ContentTypesColumn(truncate_words=15)
+    required = BooleanColumn()
 
     class Meta(BaseTable.Meta):
         model = CustomField
@@ -510,7 +512,6 @@ class CustomFieldTable(BaseTable):
             "label",
             "description",
             "required",
-            "filter_logic",
             "default",
             "weight",
             "validation_minimum",
@@ -523,8 +524,6 @@ class CustomFieldTable(BaseTable):
             "content_types",
             "type",
             "label",
-            "description",
             "required",
-            "default",
             "weight",
         )

@@ -416,10 +416,4 @@ urlpatterns = [
         views.CustomFieldDeleteView.as_view(),
         name="customfield_delete",
     ),
-    path(
-        "custom-fields/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="customfield_changelog",
-        kwargs={"model": CustomField},
-    ),
 ]

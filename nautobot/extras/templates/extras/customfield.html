@@ -41,11 +41,6 @@
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Custom Fields</a>
         </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'extras:customfield_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
     </ul>
 
 {% endblock %}
@@ -73,11 +68,21 @@
                     </tr>
                     <tr>
                         <td>Required</td>
-                        <td><span>{{ object.required }}</span></td>
+                        <td>
+                            {% if object.required %}
+                                <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
+                            {% else %}
+                                <span class="text-danger"><i class="mdi mdi-close"></i></span>
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
                         <td>Description</td>
                         <td><span>{{ object.description }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Default</td>
+                        <td><span>{{ object.default }}</span></td>
                     </tr>
                     <tr>
                         <td>Filter Logic</td>
@@ -102,11 +107,13 @@
                     </tr>
                     <tr>
                         <td>Validation Regex</td>
-                        <td><span>{{ object.validation_regex }}</span></td>
+                        <td><code>{{ object.validation_regex }}</code></td>
                     </tr>
                 </table>
             </div>
         </div>
+    </div>
+    <div class="row">
         <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -114,8 +121,8 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        <td>Content Type</td>
-                        <td><span>{{ object.content_type }}</span></td>
+                        <td>Content Types</td>
+                        <td><span>{{ object.content_types }}</span></td>
                     </tr>
                 </table>
             </div>
