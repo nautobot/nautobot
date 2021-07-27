@@ -128,6 +128,7 @@ requests = "~2.25.1"
 selenium = "~3.141.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.14.0"
+mypy = "^0.910"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
