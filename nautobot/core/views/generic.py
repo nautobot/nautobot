@@ -80,7 +80,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         meta = self.queryset.model._meta
 
         # Don't try to generate a changelog_url for an ObjectChange.
-        if meta.model_name == 'objectchange':
+        if meta.model_name == "objectchange":
             return None
 
         route = f"{meta.app_label}:{meta.model_name}_changelog"
@@ -90,7 +90,9 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         except NoReverseMatch:
             changelog_url = reverse(route, kwargs={"slug": instance.slug})
         except Exception as err:
-            raise RuntimeError(f"Unexpected error when retrieving changelog URL for object {self.queryset.model}: {err}")
+            raise RuntimeError(
+                f"Unexpected error when retrieving changelog URL for object {self.queryset.model}: {err}"
+            )
 
         return changelog_url
 

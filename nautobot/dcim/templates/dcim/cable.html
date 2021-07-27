@@ -1,47 +1,10 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load buttons %}
 {% load custom_links %}
 {% load helpers %}
 {% load plugins %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="col-md-12">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'dcim:cable_list' %}">Cables</a></li>
-                <li>{{ object }}</li>
-            </ol>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.dcim.change_cable %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.dcim.delete_cable %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-    <h1>{% block title %}Cable {{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Cable</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:cable_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-{% endblock %}
-
-{% block content %}
-    <div class="row">
-        <div class="col-md-6">
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Cable</strong>
@@ -83,12 +46,9 @@
                     </tr>
                 </table>
             </div>
-            {% include 'inc/custom_fields_panel.html' %}
-            {% include 'inc/relationships_panel.html' %}
-            {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:cable_list' %}
-            {% plugin_left_page object %}
-        </div>
-        <div class="col-md-6">
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Termination A</strong>
@@ -101,12 +61,4 @@
                 </div>
                 {% include 'dcim/inc/cable_termination.html' with termination=object.termination_b %}
             </div>
-            {% plugin_right_page object %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% plugin_full_width_page object %}
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_right_page %}

@@ -1,22 +1,14 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load buttons %}
 {% load custom_links %}
 {% load helpers %}
 {% load plugins %}
 
-{% block title %}{{ object.manufacturer }} {{ object.model }}{% endblock %}
-
-{% block header %}
-    <div class="row noprint">
-        <div class="col-md-12">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'dcim:devicetype_list' %}">Device Types</a></li>
+{% block extra_breadcrumb %}
                 <li><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.slug }}">{{ object.manufacturer }}</a></li>
-                <li>{{ object.model }}</li>
-            </ol>
-        </div>
-    </div>
-    <div class="pull-right noprint">
+{% endblock extra_breadcrumb %}
+
+{% block buttons %}
         {% plugin_buttons object %}
         {% if perms.dcim.change_devicetype %}
             <div class="btn-group">
@@ -60,27 +52,11 @@
         {% if perms.dcim.delete_devicetype %}
             {% delete_button object use_pk=True %}
         {% endif %}
-    </div>
-    <h1>{{ object.manufacturer }} {{ object.model }}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Device Type</a>
-        </li>
-        {% if perms.extras.view_objectchange %}
-            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:devicetype_changelog' pk=object.pk %}">Change Log</a>
-            </li>
-        {% endif %}
-    </ul>
-{% endblock %}
+{% endblock buttons %}
 
-{% block content %}
-    <div class="row">
-        <div class="col-md-6">
+{% block title %}{{ object.manufacturer }} {{ object.model }}{% endblock title %}
+
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Chassis</strong>
@@ -151,12 +127,9 @@
                     </tr>
                 </table>
             </div>
-            {% plugin_left_page object %}
-        </div>
-        <div class="col-md-6">
-            {% include 'inc/custom_fields_panel.html' %}
-            {% include 'inc/relationships_panel.html' %}
-            {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:devicetype_list' %}
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Comments</strong>
@@ -169,16 +142,9 @@
                     {% endif %}
                 </div>
             </div>
-            {% plugin_right_page object %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% plugin_full_width_page object %}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" class="active">
                     <a href="#interfaces" role="tab" data-toggle="tab">Interfaces {% badge interface_table.rows|length %}</a>
@@ -231,20 +197,18 @@
                     {% include 'dcim/inc/devicetype_component_table.html' with table=devicebay_table title='Device Bays' tab='devicebays' %}
                 </div>
             </div>
-        </div>
-    </div>
-{% endblock %}
+{% endblock content_full_width_page %}
 
 {% block javascript %}
 <script type="text/javascript">
-// Redirect user to appropriate components tab if specified
-var hash = document.location.hash;
-var prefix = "tab_";
-if (hash) {
-    $('.nav-tabs a[href="'+hash.replace(prefix,"")+'"]').tab('show');
-}
-$('.nav-tabs a').on('shown.bs.tab', function (e) {
-    window.location.hash = e.target.hash.replace("#", "#" + prefix);
-});
+    // Redirect user to appropriate components tab if specified
+    var hash = document.location.hash;
+    var prefix = "tab_";
+    if (hash) {
+        $('.nav-tabs a[href="'+hash.replace(prefix,"")+'"]').tab('show');
+    }
+    $('.nav-tabs a').on('shown.bs.tab', function (e) {
+        window.location.hash = e.target.hash.replace("#", "#" + prefix);
+    });
 </script>
-{% endblock %}
+{% endblock javascript %}

@@ -12,6 +12,7 @@
         {% with list_url=object|validated_viewname:"list" %}
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
+            {% block breadcrumb %}
                 <li><a href="{% url list_url %}">
                     {{ verbose_name_plural|bettertitle }}
                 </a></li>
@@ -21,6 +22,7 @@
                 {% else %}
                     <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
                 {% endif %}
+            {% endblock breadcrumb %}
             </ol>
         </div>
         <div class="col-sm-4 col-md-3">
@@ -54,7 +56,9 @@
     {% endblock buttons %}
     </div>
 
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% block masthead %}
+        <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% endblock masthead %}
     {% include 'inc/created_updated.html' %}
     {% block panel_buttons %}{% endblock panel_buttons %}
     <div class="pull-right noprint">
@@ -86,19 +90,16 @@
             {% include 'inc/relationships_panel.html' %}
             {% include 'extras/inc/tags_panel.html' %}
             {% plugin_left_page object %}
-            <div class="panel panel-default" style="background-color:red"><div class="panel-heading"><strong>Left Panel</strong></div><div class="panel-body">I AM A LEFT PANEL</div></div>
         </div>
         <div class="col-md-6">
             {% block content_right_page %}{% endblock content_right_page %}
             {% plugin_right_page object %}
-            <div class="panel panel-default" style="background-color:red"><div class="panel-heading"><strong>Right Panel</strong></div><div class="panel-body">I AM A RIGHT PANEL</div></div>
         </div>
     </div>
     <div class="row">
         <div class="col-md-12">
             {% block content_full_width_page %}{% endblock content_full_width_page %}
             {% plugin_full_width_page object %}
-            <div class="panel panel-default" style="background-color:red"><div class="panel-heading"><strong>Full Width Panel</strong></div><div class="panel-body">I AM A FULL WIDTH PANEL</div></div>
         </div>
     </div>
 {% endblock content %}

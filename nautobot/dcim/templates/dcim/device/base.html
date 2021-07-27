@@ -1,40 +1,21 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load buttons %}
-{% load static %}
-{% load helpers %}
 {% load custom_links %}
+{% load helpers %}
 {% load plugins %}
+{% load static %}
 
-{% block title %}{{ object }}{% endblock %}
-
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-        <ol class="breadcrumb">
+{% block breadcrumb %}
             <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
             <li><a href="{% url 'dcim:device_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
             {% if object.parent_bay %}
                 <li><a href="{% url 'dcim:device' pk=object.parent_bay.device.pk %}">{{ object.parent_bay.device }}</a></li>
                 <li>{{ object.parent_bay }}</li>
             {% endif %}
-            <li>{{ object }}</li>
-        </ol>
-        </div>
-        <div class="col-sm-4 col-md-3">
-            <form action="{% url 'dcim:device_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search devices" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
+            <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
+{% endblock breadcrumb %}
+
+{% block extra_buttons %}
         {% if perms.dcim.change_device %}
             <div class="btn-group">
                 <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -71,28 +52,20 @@
                 </ul>
             </div>
         {% endif %}
-        {% if perms.dcim.add_device %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.dcim.change_device %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.dcim.delete_device %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
+{% endblock extra_buttons %}
+
+{% block masthead %}
     <span class="hover_copy">
         <h1 id="devicename">
-            {{ object }}
+            {% block title %}{{ object }}{% endblock title %}
             <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-target="#devicename">
                 <span class="mdi mdi-content-copy"></span>
             </button>
         </h1>
     </span>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
+{% endblock masthead %}
+
+{% block nav_tabs %}
     <ul class="nav nav-tabs">
         <li role="presentation" {% if active_tab == 'device' %} class="active"{% endif %}>
             <a href="{% url 'dcim:device' pk=object.pk %}">Device</a>
@@ -182,10 +155,12 @@
             </li>
         {% endif %}
     </ul>
-{% endblock %}
+{% endblock nav_tabs %}
+
 {% block javascript %}
 <script src="{% static 'clipboard.js/clipboard-2.0.6.min.js' %}"
-    onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'"></script>
+    onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'">
+</script>
 <script>
     var clipboard = new ClipboardJS('.btn');
 
@@ -197,4 +172,4 @@
         console.log(e);
     });
 </script>
-{% endblock %}
+{% endblock javascript %}
