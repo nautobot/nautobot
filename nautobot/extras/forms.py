@@ -1030,6 +1030,8 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
+    name = forms.CharField(required=True, label="Slug")
+
     class Meta:
         model = CustomField
         fields = (

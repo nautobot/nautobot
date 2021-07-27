@@ -11,8 +11,8 @@
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:customfield_list' %}">Custom Fields</a></li>
-                {% if object.label %}
-                    <li><a href="{% url 'extras:customfield' pk=object.pk %}">{{ object.label }}</a></li>
+                {% if object.name %}
+                    <li><a href="{% url 'extras:customfield' pk=object.pk %}">{{ object.name }}</a></li>
                 {% endif %}
             </ol>
         </div>
@@ -55,16 +55,20 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        <td>Type</td>
-                        <td><span>{{ object.type }}</span></td>
-                    </tr>
-                    <tr>
-                        <td>Weight</td>
-                        <td><span>{{ object.weight }}</span></td>
+                        <td>Slug</td>
+                        <td><span>{{ object.name }}</span></td>
                     </tr>
                     <tr>
                         <td>Label</td>
                         <td><span>{{ object.label }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        <td><span>{{ object.type | capfirst }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Weight</td>
+                        <td><span>{{ object.weight }}</span></td>
                     </tr>
                     <tr>
                         <td>Required</td>
@@ -86,7 +90,7 @@
                     </tr>
                     <tr>
                         <td>Filter Logic</td>
-                        <td><span>{{ object.filter_logic }}</span></td>
+                        <td><span>{{ object.filter_logic | capfirst }}</span></td>
                     </tr>
                 </table>
             </div>
@@ -107,7 +111,13 @@
                     </tr>
                     <tr>
                         <td>Validation Regex</td>
-                        <td><code>{{ object.validation_regex }}</code></td>
+                        <td>
+                            {% if object.validation_regex %}
+                                <code>{{ object.validation_regex }}</code>
+                            {% else %}
+                                <span>None</span>
+                            {% endif %}
+                        </td>
                     </tr>
                 </table>
             </div>
@@ -122,7 +132,11 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Content Types</td>
-                        <td><span>{{ object.content_types }}</span></td>
+                        <td>
+                            {% for ct in object.content_types.all %}
+                                {{ ct }}<br>
+                            {% endfor %}
+                        </td>
                     </tr>
                 </table>
             </div>

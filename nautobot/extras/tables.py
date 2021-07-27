@@ -498,7 +498,7 @@ class ComputedFieldTable(BaseTable):
 
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    name = tables.Column(linkify=True, verbose_name="Slug")
     content_types = ContentTypesColumn(truncate_words=15)
     required = BooleanColumn()
 
