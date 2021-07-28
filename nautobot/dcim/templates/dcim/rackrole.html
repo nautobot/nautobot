@@ -34,7 +34,7 @@
         </div>
 {% endblock content_left_page %}
 
-{% block content_right_page %}
+{% block content_full_width_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Racks</strong>
@@ -47,6 +47,7 @@
                     </a>
                 </div>
             {% endif %}
+        </div>
         {% include 'inc/paginator.html' with paginator=rack_table.paginator page=rack_table.page %}
         <div class="row"></div>
-{% endblock content_right_page %}
+{% endblock content_full_width_page %}

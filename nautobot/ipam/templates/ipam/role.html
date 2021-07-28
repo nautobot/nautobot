@@ -31,7 +31,7 @@
         </div>
 {% endblock content_left_page %}
 
-{% block content_right_page %}
+{% block content_full_width_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Prefixes</strong>
@@ -60,4 +60,4 @@
         </div>
         {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
         <div class="row"></div>
-{% endblock content_right_page %}
+{% endblock content_full_width_page %}

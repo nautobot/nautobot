@@ -41,6 +41,9 @@
                 </tr>
             </table>
         </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Comments</strong>
@@ -53,9 +56,9 @@
                 {% endif %}
             </div>
         </div>
-{% endblock content_left_page %}
+{% endblock content_right_page %}
 
-{% block content_right_page %}
+{% block content_full_width_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Circuits</strong>
@@ -71,4 +74,4 @@
         </div>
         {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
         <div class="row"></div>
-{% endblock content_right_page %}
+{% endblock content_full_width_page %}
