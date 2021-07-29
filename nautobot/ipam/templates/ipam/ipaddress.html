@@ -19,29 +19,6 @@
                     <td>IPv{{ object.family }}</td>
                 </tr>
                 <tr>
-                    <td>VRF</td>
-                    <td>
-                        {% if object.vrf %}
-                            <a href="{% url 'ipam:vrf' pk=object.vrf.pk %}">{{ object.vrf }}</a>
-                        {% else %}
-                            <span>Global</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td>Tenant</td>
-                    <td>
-                        {% if object.tenant %}
-                            {% if object.tenant.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
                     <td>Status</td>
                     <td>
                         <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
@@ -58,12 +35,45 @@
                     </td>
                 </tr>
                 <tr>
+                    <td>VRF</td>
+                    <td>
+                        {% if object.vrf %}
+                            <a href="{% url 'ipam:vrf' pk=object.vrf.pk %}">{{ object.vrf }}</a>
+                        {% else %}
+                            <span>Global</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
                     <td>DNS Name</td>
                     <td>{{ object.dns_name|placeholder }}</td>
                 </tr>
                 <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Operational Details</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Tenant</td>
+                    <td>
+                        {% if object.tenant %}
+                            {% if object.tenant.group %}
+                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
+                            {% endif %}
+                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 <tr>
                     <td>Assignment</td>
@@ -100,10 +110,10 @@
                 </tr>
             </table>
         </div>
-{% endblock content_left_page %}
-
-{% block content_right_page %}
         {% include 'panel_table.html' with table=parent_prefixes_table heading='Parent Prefixes' %}
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
         {% if duplicate_ips_table.rows %}
             {# Custom version of panel_table.html #}
             <div class="panel panel-danger">
@@ -125,4 +135,4 @@
             </div>
         {% endif %}
         {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default noprint' %}
-{% endblock content_right_page %}
+{% endblock content_full_width_page %}

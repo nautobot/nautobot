@@ -44,7 +44,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
 
         # Verify form redirect
         self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
-        self.assertTrue(self.browser.is_text_present("Clone"))
+        self.assertTrue(self.browser.is_text_present("Edit"))
 
     def test_create_invalid_config_context_schema(self):
         """
