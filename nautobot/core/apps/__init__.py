@@ -1,4 +1,5 @@
 import logging
+import os
 
 from abc import ABC, abstractproperty
 from django.apps import AppConfig
@@ -32,7 +33,7 @@ class NautobotConfig(AppConfig):
         """
         homepage_layout = import_object(f"{self.name}.{self.homepage_layout}")
         if homepage_layout is not None:
-            register_homepage_panels(self.name, homepage_layout)
+            register_homepage_panels(self.path, self.label, homepage_layout)
 
         menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
@@ -114,7 +115,7 @@ def register_menu_items(tab_list):
         )
 
 
-def register_homepage_panels(app_name, homepage_layout):
+def register_homepage_panels(path, label, homepage_layout):
     """
     Register homepage panels using `homepage.py`.
 
@@ -123,9 +124,13 @@ def register_homepage_panels(app_name, homepage_layout):
     define different parts of the layout.
 
     These objects are converted into a dictionary to be stored inside of the Nautobot registry.
+
+    Args:
+        path (str): Absolute filesystem path to the app which defines the homepage layout; typically this will be an `AppConfig.path` property
+        label (str): Label of the app which defines the homepage layout, for example `dcim` or `my_nautobot_plugin`
+        homepage_layout (list): A list of HomePagePanel instances to contribute to the homepage layout.
     """
-    name, app_name = app_name.split(".")
-    template_path = f"{name}/{app_name}/templates/{app_name}/inc/"
+    template_path = f"{path}/templates/{label}/inc/"
     registry_panels = registry["homepage_layout"]["panels"]
     for panel in homepage_layout:
         panel_perms = registry_panels[panel.name]["permissions"] if registry_panels.get(panel.name) else set()
@@ -136,11 +141,21 @@ def register_homepage_panels(app_name, homepage_layout):
             create_or_check_entry(registry_panels, panel, panel.name, f"{panel.name}")
             registry_items = registry_panels[panel.name]["items"]
 
+            if panel.custom_template:
+                if not os.path.isfile(f"{template_path}{panel.custom_template}"):
+                    raise ValueError(f"Unable to load {template_path}{panel.custom_template}")
+
             for item in panel.items:
                 if isinstance(item, HomePageItem):
                     item.template_path = template_path
                     create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
+
+                    if item.custom_template:
+                        if not os.path.isfile(f"{template_path}{item.custom_template}"):
+                            raise ValueError(f"Unable to load {template_path}{item.custom_template}")
+
                     panel_perms |= set(item.permissions)
+
                 elif isinstance(item, HomePageGroup):
                     item.template_path = template_path
                     create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
@@ -244,8 +259,8 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             weight (int): The weight of this panel.
         """
         super().__init__(permissions)
-        self.custom_template = custom_template
         self.custom_data = custom_data
+        self.custom_template = custom_template
         self.name = name
         self.permissions = permissions
         self.weight = weight

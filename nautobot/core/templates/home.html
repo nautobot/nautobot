@@ -21,7 +21,7 @@
             <div class="homepage_column" style="columns: 4 360px">
                 {% for panel_name, panel_details in registry.homepage_layout.panels.items %}
                     {% if request.user|has_one_or_more_perms:panel_details.permissions or not settings.HIDE_RESTRICTED_UI %}
-                        <div class="panel panel-default" style="break-inside: avoid">
+                        <div class="panel panel-default" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
                             <div class="panel-heading">
                                 <strong>{{ panel_name }}</strong>
                             </div>
@@ -31,12 +31,14 @@
                                 {% elif panel_details.items %}
                                     {% for item_name, item_details in panel_details.items.items %}
                                         {% if  item_details.rendered_html %}
-                                            {% if request.user|has_perms:item_details.permissions %}
-                                                {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
-                                            {% endif %}
+                                            <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
+                                                {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
+                                                    {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
+                                                {% endif %}
+                                            </div>
                                         {% elif not item_details.items.items %}
                                             {% if request.user|has_one_or_more_perms:item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
-                                                <div class="list-group-item">
+                                                <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
                                                     {% if request.user|has_perms:item_details.permissions %}
                                                         <span class="badge pull-right">{{ item_details.count }}</span>
                                                         <h4 class="list-group-item-heading"><a href="{% url item_details.link %}">{{ item_name }}</a></h4>
@@ -48,7 +50,7 @@
                                                 </div>
                                             {% endif %}
                                         {% else %}
-                                            <div class="list-group-item">
+                                            <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
                                                 <h4 class="list-group-item-heading">{{ item_name }}</h4>
                                                 {% for group_item_name, group_item_details in item_details.items.items %}
                                                     {% if request.user|has_one_or_more_perms:group_item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
