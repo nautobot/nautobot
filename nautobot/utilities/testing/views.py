@@ -366,6 +366,8 @@ class ViewTestCases:
         """
 
         form_data = {}
+        slug_source = None
+        slug_test_object = ""
 
         def test_create_object_without_permission(self):
 
@@ -447,6 +449,30 @@ class ViewTestCases:
                 self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
             else:
                 self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+
+        def test_slug_autocreation(self):
+            """Test that slug is autocreated through ORM."""
+            # This really should go on a models test page, but we don't have test structures for models.
+            if self.slug_source is not None:
+                filter = self.slug_source + "__contains"
+                object = self.model.objects.filter(**{ filter: self.slug_test_object })[0]
+                expected_slug = slugify(getattr(object, self.slug_source))
+                self.assertEqual(object.slug, expected_slug)
+
+        def test_slug_not_modified(self):
+            """Ensure save method does not modify slug that is passed in."""
+            # This really should go on a models test page, but we don't have test structures for models.
+            if self.slug_source is not None:
+                filter = self.slug_source + "__contains"
+                object = self.model.objects.filter(**{ filter: self.slug_test_object })[0]
+                expected_slug = slugify(getattr(object, self.slug_source))
+                # Update slug source field str
+                self.model.objects.filter(**{ filter: self.slug_test_object }).update(**{ self.slug_source: "Test"})
+
+                object.refresh_from_db()
+                self.assertEqual(getattr(object, self.slug_source), "Test")
+                self.assertEqual(object.slug, expected_slug)
+                
 
     class EditObjectViewTestCase(ModelViewTestCase):
         """

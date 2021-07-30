@@ -210,6 +210,9 @@ class ConfigContextSchemaTestCase(
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
         ),
+        ConfigContextSchema.objects.create(
+            name="Schema 4", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
+        ),
 
         cls.form_data = {
             "name": "Schema X",
@@ -220,6 +223,9 @@ class ConfigContextSchemaTestCase(
         cls.bulk_edit_data = {
             "description": "New description",
         }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Schema 4"
 
 
 # TODO: Convert to StandardTestCases.Views
@@ -292,11 +298,12 @@ class GitRepositoryTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        # Create three GitRepository records
+        # Create four GitRepository records
         repos = (
             GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
             GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
             GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git"),
         )
         for repo in repos:
             repo.save(trigger_resync=False)
@@ -314,6 +321,8 @@ class GitRepositoryTestCase(
             ],
         }
 
+        cls.slug_source = "name"
+        cls.slug_test_object = "Repo 4"
 
 class StatusTestCase(
     ViewTestCases.CreateObjectViewTestCase,
@@ -332,6 +341,7 @@ class StatusTestCase(
         Status.objects.create(name="Status 1", slug="status-1")
         Status.objects.create(name="Status 2", slug="status-2")
         Status.objects.create(name="Status 3", slug="status-3")
+        Status.objects.create(name="Status 4")
 
         content_type = ContentType.objects.get_for_model(Device)
 
@@ -348,12 +358,15 @@ class StatusTestCase(
             'test_status1,test-status1,ffffff,"dcim.device"'
             'test_status2,test-status2,ffffff,"dcim.device,dcim.rack"'
             'test_status3,test-status3,ffffff,"dcim.device,dcim.site"'
+            'test_status4,,ffffff,"dcim.device,dcim.site"'
         )
 
         cls.bulk_edit_data = {
             "color": "000000",
         }
 
+        cls.slug_source = "name"
+        cls.slug_test_object = "Status 4"
 
 class ExportTemplateTestCase(
     ViewTestCases.CreateObjectViewTestCase,
@@ -624,6 +637,10 @@ query ($device: String!) {
   }
 }""",
             ),
+            GraphQLQuery(
+                name="Graphql Query 5",
+                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            ),
         )
 
         for query in graphqlqueries:
@@ -635,6 +652,9 @@ query ($device: String!) {
             "slug": "graphql-query-4",
             "query": "{query: sites {name}}",
         }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Graphql Query 5"
 
 
 class RelationshipTestCase(
@@ -669,7 +689,6 @@ class RelationshipTestCase(
         )
         Relationship.objects.create(
             name="Primary Interface",
-            slug="primary-interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
@@ -688,6 +707,9 @@ class RelationshipTestCase(
             "destination_hidden": True,
             "destination_filter": None,
         }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Primary Interface"
 
 
 class RelationshipAssociationTestCase(
@@ -789,6 +811,13 @@ class ComputedFieldTestCase(
                 fallback_value="Template error",
                 weight=100,
             ),
+            ComputedField(
+                content_type=obj_type,
+                label="Computed Field Four",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
         )
 
         cls.site1 = Site(name="NYC")
@@ -805,3 +834,6 @@ class ComputedFieldTestCase(
             "fallback_value": ":skull_emoji:",
             "weight": 100,
         }
+
+        cls.slug_source = "label"
+        cls.slug_test_object = "Computed Field Four"

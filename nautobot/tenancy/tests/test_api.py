@@ -19,6 +19,7 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -48,6 +49,10 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
                 "slug": "tenant-group-6",
                 "parent": parent_tenant_groups[1].pk,
             },
+            {
+                "name": "Tenant Group 7",
+                "parent": parent_tenant_groups[1].pk,
+            },
         ]
 
 
@@ -57,6 +62,7 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -84,6 +90,10 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Tenant 6",
                 "slug": "tenant-6",
+                "group": tenant_groups[1].pk,
+            },
+                        {
+                "name": "Tenant 7",
                 "group": tenant_groups[1].pk,
             },
         ]
