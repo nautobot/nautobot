@@ -34,7 +34,7 @@ layout = (
         items=(
             HomePageItem(
                 name="Custom Dummy Plugin",
-                custom_template="panel_dummy_example.html",
+                custom_template="item_dummy_example.html",
                 custom_data={"dummy_data": get_dummy_data},
                 permissions=["dummy_plugin.view_dummymodel"],
                 weight=100,
