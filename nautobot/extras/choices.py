@@ -2,6 +2,27 @@ from nautobot.utilities.choices import ChoiceSet
 
 
 #
+# Banners (currently plugin-specific)
+#
+
+
+class BannerClassChoices(ChoiceSet):
+    """Styling choices for custom banners."""
+
+    CLASS_SUCCESS = "success"
+    CLASS_INFO = "info"
+    CLASS_WARNING = "warning"
+    CLASS_DANGER = "danger"
+
+    CHOICES = (
+        (CLASS_SUCCESS, "Success"),
+        (CLASS_INFO, "Info"),
+        (CLASS_WARNING, "Warning"),
+        (CLASS_DANGER, "Danger"),
+    )
+
+
+#
 # CustomFields
 #
 

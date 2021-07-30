@@ -16,6 +16,7 @@ from nautobot.core.apps import (
     register_menu_items,
     register_homepage_panels,
 )
+from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
@@ -24,6 +25,7 @@ from nautobot.utilities.choices import ButtonColorChoices
 
 # Initialize plugin registry stores
 # registry['datasource_content'] is a non-plugin-exclusive registry and is initialized in extras.registry
+registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
@@ -73,6 +75,7 @@ class PluginConfig(NautobotConfig):
 
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
+    banner_function = "banner.banner"
     custom_validators = "custom_validators.custom_validators"
     datasource_contents = "datasources.datasource_contents"
     graphql_types = "graphql.types.graphql_types"
@@ -83,6 +86,11 @@ class PluginConfig(NautobotConfig):
     jinja_filters = "jinja_filters"
 
     def ready(self):
+        """Callback after plugin app is loaded."""
+        # Register banner function (if defined)
+        banner_function = import_object(f"{self.__module__}.{self.banner_function}")
+        if banner_function is not None:
+            register_banner_function(banner_function)
 
         # Register model validators (if defined)
         validators = import_object(f"{self.__module__}.{self.custom_validators}")
@@ -255,6 +263,23 @@ def register_template_extensions(class_list):
             raise TypeError(f"PluginTemplateExtension class {template_extension} does not define a valid model!")
 
         registry["plugin_template_extensions"][template_extension.model].append(template_extension)
+
+
+class PluginBanner:
+    """Class that may be returned by a registered plugin_banners function."""
+
+    def __init__(self, content, banner_class=BannerClassChoices.CLASS_INFO):
+        self.content = content
+        if banner_class not in BannerClassChoices.values():
+            raise ValueError("Banner class must be a choice within BannerClassChoices.")
+        self.banner_class = banner_class
+
+
+def register_banner_function(function):
+    """
+    Register a function that may return a Banner object.
+    """
+    registry["plugin_banners"].append(function)
 
 
 def register_graphql_types(class_list):
