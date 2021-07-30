@@ -9,6 +9,7 @@ from nautobot.dcim.constants import *
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
@@ -47,7 +48,7 @@ class Region(MPTTModel, OrganizationalModel):
         db_index=True,
     )
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
     description = models.CharField(max_length=200, blank=True)
 
     objects = TreeManager()
@@ -107,7 +108,7 @@ class Site(PrimaryModel, StatusModel):
 
     name = models.CharField(max_length=100, unique=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
     region = models.ForeignKey(
         to="dcim.Region",
         on_delete=models.SET_NULL,

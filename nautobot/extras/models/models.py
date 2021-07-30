@@ -29,6 +29,7 @@ from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.utilities.utils import deepmerge, render_jinja2
@@ -629,7 +630,7 @@ class ConfigContextSchema(OrganizationalModel):
 
     name = models.CharField(max_length=200, unique=True)
     description = models.CharField(max_length=200, blank=True)
-    slug = models.SlugField()
+    slug = AutoSlugField(populate_from="name", blank=True)
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -935,7 +936,7 @@ class JobResult(BaseModel, CustomFieldModel):
 @extras_features("graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel):
     name = models.CharField(max_length=100, unique=True)
-    slug = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 

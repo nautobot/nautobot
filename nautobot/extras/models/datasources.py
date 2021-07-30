@@ -10,6 +10,7 @@ from django.urls import reverse
 from django_cryptography.fields import encrypt
 
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 
 
@@ -30,9 +31,11 @@ class GitRepository(PrimaryModel):
         max_length=100,
         unique=True,
     )
-    slug = models.SlugField(
+    slug = AutoSlugField(
+        populate_from="name",
         max_length=100,
         unique=True,
+        blank=True
     )
 
     remote_url = models.URLField(
