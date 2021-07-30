@@ -1,6 +1,6 @@
 # Nautobot v1.1
 
-This document describes all new features and changes in Nautobot 1.1
+This document describes all new features and changes in Nautobot 1.1.
 
 If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation.
 
