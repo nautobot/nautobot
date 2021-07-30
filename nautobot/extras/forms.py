@@ -773,8 +773,7 @@ class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
         queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()).order_by(
             "app_label", "model"
         ),
-        required=False,
-        label="Content Types",
+        label="Content Type",
     )
 
     class Meta:
@@ -797,15 +796,14 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
             "app_label", "model"
         ),
         required=False,
-        label="Content Types",
+        label="Content Type",
     )
 
 
 class CustomLinkForm(BootstrapMixin, forms.ModelForm):
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
-        required=False,
-        label="Content Types",
+        label="Content Type",
     )
 
     class Meta:
@@ -828,7 +826,7 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
         required=False,
-        label="Content Types",
+        label="Content Type",
     )
 
 
