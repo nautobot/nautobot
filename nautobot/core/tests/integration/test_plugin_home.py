@@ -86,10 +86,9 @@ class PluginHomeTestCase(SeleniumTestCase):
             columns_html[0].find_element_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, item_details in panel_details.items():
                 item_html = columns_html[0].find_element_by_xpath(f".//a[contains(text(), '{item_name}')]")
-                if item_details.get("model"):
-                    counter = item_details["model"].objects.count()
-                    counter_html = int(item_html.find_element_by_xpath("./../../span").get_property("innerHTML"))
-                    self.assertEqual(counter, counter_html)
+                counter = item_details["model"].objects.count()
+                counter_html = int(item_html.find_element_by_xpath("./../../span").get_property("innerHTML"))
+                self.assertEqual(counter, counter_html)
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_no_permissions(self):
