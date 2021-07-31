@@ -813,7 +813,7 @@ class ComputedFieldTestCase(
             ),
             ComputedField(
                 content_type=obj_type,
-                label="Computed Field Four",
+                label="Computed Field Five",
                 template="Site name is {{ obj.name }}",
                 fallback_value="Template error",
                 weight=100,
@@ -836,4 +836,4 @@ class ComputedFieldTestCase(
         }
 
         cls.slug_source = "label"
-        cls.slug_test_object = "Computed Field Four"
+        cls.slug_test_object = "Computed Field Five"
