@@ -103,7 +103,7 @@ class AutoSlugField(models.SlugField):
 
         if not value:
             from_field_value = getattr(model_instance, self.populate_from)
-            value = self.slugify(from_field_value)
+            value = self.slugify(from_field_value)[: self.max_length]
 
             if any(
                 (
@@ -118,7 +118,7 @@ class AutoSlugField(models.SlugField):
 
             setattr(model_instance, self.attname, value)
 
-        return value[: self.max_length]
+        return value
 
     def _get_unique_lookups(self, instance):
         # Combine "uniqueness" lookups into single query to retrieve
