@@ -333,6 +333,16 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
     ![Adding the run action to a permission](../../media/admin_ui_run_permission.png)
 
+It is a key concept to understand the 3 `class_path` elements:
+
+- `grouping_name`: which can be one of `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `module_name`: which is the Python path to the job definition file, for a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename` or `nautobot_golden_config.jobs` and is the importable Python path name (which would not include the `.py` extension, as per Python syntax standards).
+- `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
+The `class_path` is often represented as a string in the format of `<grouping_name>/<module_name>/<JobClassName>`, such as
+`local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the defintions of these
+elements will be important in running jobs programmatically.
+
 ### Via the Web UI
 
 Jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Job" button.
@@ -360,21 +370,25 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 --data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
 ```
 
-The URL contains the `class_path` element that is composed of 3 elements, from the above example:
-
-- `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
-- `example` - path to the job definition file; in this example, a locally installed `example.py` file. For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename`.
-- `MyJobWithVars` - name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+!!! note
+    See above for `class_path` defintions.
 
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob local/<module>/<JobName> [--commit]
+nautobot-server runjob <grouping_name>/<module>/<JobName> [--commit]
 ```
 
-where ``<module>`` is the name of the python file (minus the ``.py`` extension) and ``<JobName>`` is the Python class name within that module.
+!!! note
+    See above for `class_path` defintions.
+
+Using the same example shown in the API:
+
+```no-highlight
+nautobot-server runjob local/example/MyJobWithVars
+```
 
 Provision of user inputs via the CLI is not supported at this time.
 
