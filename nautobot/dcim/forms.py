@@ -450,7 +450,6 @@ class RackRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RackRoleCSVForm(CustomFieldModelCSVForm):
-
     class Meta:
         model = RackRole
         fields = RackRole.csv_headers
@@ -1571,7 +1570,6 @@ class DeviceRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm
 
 
 class DeviceRoleCSVForm(CustomFieldModelCSVForm):
-
     class Meta:
         model = DeviceRole
         fields = DeviceRole.csv_headers

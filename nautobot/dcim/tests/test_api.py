@@ -106,9 +106,7 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
             "name": "Region 6",
             "slug": "region-6",
         },
-        {
-            "name": "Region 7"
-        }
+        {"name": "Region 7"},
     ]
     bulk_update_data = {
         "description": "New description",
@@ -171,11 +169,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
                 "region": regions[1].pk,
                 "status": "active",
             },
-            {
-                "name": "Site 7",
-                "region": regions[1].pk,
-                "status": "active"
-            }
+            {"name": "Site 7", "region": regions[1].pk, "status": "active"},
         ]
 
     def test_time_zone_field_post_null(self):

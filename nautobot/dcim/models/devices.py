@@ -52,7 +52,7 @@ class Manufacturer(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from='name', max_length=100, unique=True, blank=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = ["name", "slug", "description"]

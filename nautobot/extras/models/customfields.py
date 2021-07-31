@@ -58,7 +58,9 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
     )
-    slug = AutoSlugField(populate_from="label", max_length=100, unique=True, blank=True, help_text="Internal field name")
+    slug = AutoSlugField(
+        populate_from="label", max_length=100, unique=True, blank=True, help_text="Internal field name"
+    )
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")

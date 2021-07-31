@@ -55,7 +55,7 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             Region.objects.create(name="Region ɑ", slug="region-alpha"),
             Region.objects.create(name="Region β", slug="region-beta"),
             Region.objects.create(name="Region γ", slug="region-gamma"),
-            Region.objects.create(name="Region 8")
+            Region.objects.create(name="Region 8"),
         )
 
         cls.form_data = {
@@ -124,7 +124,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 region=regions[0],
                 status=status_planned,
                 _custom_field_data={"contact_slack": "@site-8-manager"},
-            )
+            ),
         )
 
         cls.relationships = (
@@ -214,7 +214,7 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Site 1,Rack Group 4,rack-group-4,Fourth rack group",
             "Site 1,Rack Group 5,rack-group-5,Fifth rack group",
             "Site 1,Rack Group 6,rack-group-6,Sixth rack group",
-            "Site 1,Rack Group 7,,Seventh rack group"
+            "Site 1,Rack Group 7,,Seventh rack group",
         )
         cls.slug_test_object = "Rack Group 8"
         cls.slug_source = "name"
@@ -243,7 +243,7 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Rack Role 4,rack-role-4,ff0000",
             "Rack Role 5,rack-role-5,00ff00",
             "Rack Role 6,rack-role-6,0000ff",
-            "Rack Role 7,,0000ff"
+            "Rack Role 7,,0000ff",
         )
         cls.slug_source = "name"
         cls.slug_test_object = "Rack Role 8"

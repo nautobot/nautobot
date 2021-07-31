@@ -36,7 +36,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "Provider 4,provider-4",
             "Provider 5,provider-5",
             "Provider 6,provider-6",
-            "Provider 7,"
+            "Provider 7,",
         )
 
         cls.bulk_edit_data = {
@@ -74,7 +74,7 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Circuit Type 4,circuit-type-4",
             "Circuit Type 5,circuit-type-5",
             "Circuit Type 6,circuit-type-6",
-            "Circuit Type 7,"
+            "Circuit Type 7,",
         )
 
         cls.slug_source = "name"

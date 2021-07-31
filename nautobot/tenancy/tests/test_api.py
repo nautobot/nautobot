@@ -92,7 +92,7 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
                 "slug": "tenant-6",
                 "group": tenant_groups[1].pk,
             },
-                        {
+            {
                 "name": "Tenant 7",
                 "group": tenant_groups[1].pk,
             },

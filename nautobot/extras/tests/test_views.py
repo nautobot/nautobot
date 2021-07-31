@@ -324,6 +324,7 @@ class GitRepositoryTestCase(
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
 
+
 class StatusTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -367,6 +368,7 @@ class StatusTestCase(
 
         cls.slug_source = "name"
         cls.slug_test_object = "Status 4"
+
 
 class ExportTemplateTestCase(
     ViewTestCases.CreateObjectViewTestCase,

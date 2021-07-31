@@ -7,18 +7,18 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('virtualization', '0002_virtualmachine_local_context_schema'),
+        ("virtualization", "0002_virtualmachine_local_context_schema"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='clustergroup',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="clustergroup",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
         migrations.AlterField(
-            model_name='clustertype',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="clustertype",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
     ]

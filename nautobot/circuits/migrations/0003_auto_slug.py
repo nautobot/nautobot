@@ -7,18 +7,18 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('circuits', '0002_initial_part_2'),
+        ("circuits", "0002_initial_part_2"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='circuittype',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="circuittype",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
         migrations.AlterField(
-            model_name='provider',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="provider",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
     ]

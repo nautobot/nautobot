@@ -31,12 +31,7 @@ class GitRepository(PrimaryModel):
         max_length=100,
         unique=True,
     )
-    slug = AutoSlugField(
-        populate_from="name",
-        max_length=100,
-        unique=True,
-        blank=True
-    )
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
 
     remote_url = models.URLField(
         max_length=255,

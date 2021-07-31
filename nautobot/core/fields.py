@@ -22,6 +22,7 @@ class AutoSlugField(models.SlugField):
     prevent a unique constraint violation. This field also supports max_length, but cannot
     guarantee the uniqueness suffix.
     """
+
     def __init__(self, populate_from, slugify=None, *args, **kwargs):
         """Generate slug value from the populate_from field.
 
@@ -51,10 +52,10 @@ class AutoSlugField(models.SlugField):
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
 
-        kwargs['populate_from'] = self.populate_from
+        kwargs["populate_from"] = self.populate_from
 
         if self.slugify != django_slugify:
-            kwargs['slugify'] = self.slugify
+            kwargs["slugify"] = self.slugify
 
         return name, path, args, kwargs
 
@@ -65,12 +66,12 @@ class AutoSlugField(models.SlugField):
         return errors
 
     def _check_callable_attributes(self):
-        if self.slugify.__name__ == '<lambda>':
+        if self.slugify.__name__ == "<lambda>":
             return [
                 checks.Error(
-                    '`slugify` argument must be named top-level function.',
+                    "`slugify` argument must be named top-level function.",
                     obj=self,
-                    id='slugger.E001',
+                    id="slugger.E001",
                 )
             ]
 
@@ -80,10 +81,9 @@ class AutoSlugField(models.SlugField):
         if self.populate_from == self.attname:
             return [
                 checks.Error(
-                    '`populate_from` argument cannot reference its own '
-                    'field name.',
+                    "`populate_from` argument cannot reference its own " "field name.",
                     obj=self,
-                    id='slugger.E002',
+                    id="slugger.E002",
                 )
             ]
 
@@ -91,7 +91,7 @@ class AutoSlugField(models.SlugField):
 
     def formfield(self, **kwargs):
         defaults = {
-            'required': False,
+            "required": False,
         }
 
         defaults.update(kwargs)
@@ -105,14 +105,20 @@ class AutoSlugField(models.SlugField):
             from_field_value = getattr(model_instance, self.populate_from)
             value = self.slugify(from_field_value)
 
-            if any((self.unique, self.unique_for_date,
-                    self.unique_for_month, self.unique_for_year,
-                    self.model._meta.unique_together)):
+            if any(
+                (
+                    self.unique,
+                    self.unique_for_date,
+                    self.unique_for_month,
+                    self.unique_for_year,
+                    self.model._meta.unique_together,
+                )
+            ):
                 value = self.get_unique_slug(value, model_instance)
 
             setattr(model_instance, self.attname, value)
 
-        return value[:self.max_length]
+        return value[: self.max_length]
 
     def _get_unique_lookups(self, instance):
         # Combine "uniqueness" lookups into single query to retrieve
@@ -128,39 +134,39 @@ class AutoSlugField(models.SlugField):
         # use separate lookups to handle both DateField and DateTimeField
         if self.unique_for_date:
             lookup_value = getattr(instance, self.unique_for_date)
-            lookups.append({
-                '%s__day' % self.unique_for_date: lookup_value.day,
-                '%s__month' % self.unique_for_date: lookup_value.month,
-                '%s__year' % self.unique_for_date: lookup_value.year,
-            })
+            lookups.append(
+                {
+                    "%s__day" % self.unique_for_date: lookup_value.day,
+                    "%s__month" % self.unique_for_date: lookup_value.month,
+                    "%s__year" % self.unique_for_date: lookup_value.year,
+                }
+            )
 
         if self.unique_for_month:
             lookup_value = getattr(instance, self.unique_for_month)
-            lookups.append({
-                '%s__month' % self.unique_for_month: lookup_value.month,
-            })
+            lookups.append(
+                {
+                    "%s__month" % self.unique_for_month: lookup_value.month,
+                }
+            )
 
         if self.unique_for_year:
             lookup_value = getattr(instance, self.unique_for_year)
-            lookups.append({
-                '%s__year' % self.unique_for_year: lookup_value.year,
-            })
+            lookups.append(
+                {
+                    "%s__year" % self.unique_for_year: lookup_value.year,
+                }
+            )
 
         def _get_unique_together_groups():
             for field_group in self.model._meta.unique_together:
                 if self.attname in field_group:
-                    yield (field_name for field_name in field_group
-                           if field_name != self.attname)
+                    yield (field_name for field_name in field_group if field_name != self.attname)
 
         for field_group in _get_unique_together_groups():
-            lookups.append({field_name: getattr(instance, field_name)
-                            for field_name in field_group})
+            lookups.append({field_name: getattr(instance, field_name) for field_name in field_group})
 
-        return reduce(
-            or_,
-            (Q(**lookup) for lookup in lookups),
-            Q()
-        )
+        return reduce(or_, (Q(**lookup) for lookup in lookups), Q())
 
     def get_unique_slug(self, slug, instance):
         conflicts = self.model._default_manager.filter(
@@ -168,9 +174,9 @@ class AutoSlugField(models.SlugField):
             self._get_unique_lookups(instance),
         )
 
-        taken_slugs = sorted(conflicts.filter(
-            **{'%s__regex' % self.attname: r'^%s(-\d+)?$' % slug}
-        ).values_list(self.attname, flat=True))
+        taken_slugs = sorted(
+            conflicts.filter(**{"%s__regex" % self.attname: r"^%s(-\d+)?$" % slug}).values_list(self.attname, flat=True)
+        )
 
         if slug not in taken_slugs:
             return slug
@@ -185,5 +191,4 @@ class AutoSlugField(models.SlugField):
 
             i += 1
 
-        return '%s-%s' % (slug, i)
-
+        return "%s-%s" % (slug, i)

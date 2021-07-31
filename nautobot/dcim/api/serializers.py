@@ -206,7 +206,7 @@ class RackGroupSerializer(CustomFieldModelSerializer):
     parent = NestedRackGroupSerializer(required=False, allow_null=True)
     rack_count = serializers.IntegerField(read_only=True)
     _depth = serializers.IntegerField(source="level", read_only=True)
-    slug = serializers.SlugField(default='')
+    slug = serializers.SlugField(default="")
 
     class Meta:
         model = RackGroup
@@ -395,7 +395,7 @@ class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     manufacturer = NestedManufacturerSerializer()
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
-    slug = serializers.SlugField(default='')
+    slug = serializers.SlugField(default="")
 
     class Meta:
         model = DeviceType

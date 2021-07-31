@@ -7,38 +7,38 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0011_fileattachment_fileproxy'),
+        ("extras", "0011_fileattachment_fileproxy"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='computedfield',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='label', unique=True),
+            model_name="computedfield",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="label", unique=True),
         ),
         migrations.AlterField(
-            model_name='configcontextschema',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, populate_from='name'),
+            model_name="configcontextschema",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, populate_from="name"),
         ),
         migrations.AlterField(
-            model_name='gitrepository',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="gitrepository",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
         migrations.AlterField(
-            model_name='graphqlquery',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="graphqlquery",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
         migrations.AlterField(
-            model_name='relationship',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="relationship",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
         migrations.AlterField(
-            model_name='status',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, populate_from='name', unique=True),
+            model_name="status",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, populate_from="name", unique=True),
         ),
     ]

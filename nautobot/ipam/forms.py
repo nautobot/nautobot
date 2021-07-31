@@ -213,7 +213,6 @@ class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RIRCSVForm(CustomFieldModelCSVForm):
-
     class Meta:
         model = RIR
         fields = RIR.csv_headers
@@ -328,7 +327,6 @@ class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RoleCSVForm(CustomFieldModelCSVForm):
-
     class Meta:
         model = Role
         fields = Role.csv_headers

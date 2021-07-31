@@ -196,7 +196,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Role 4,role-4,1000",
             "Role 5,role-5,1000",
             "Role 6,role-6,1000",
-            "Role 7,,1000"
+            "Role 7,,1000",
         )
         cls.slug_source = "name"
         cls.slug_test_object = "Role 8"
@@ -359,7 +359,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "VLAN Group 4,vlan-group-4,Fourth VLAN group",
             "VLAN Group 5,vlan-group-5,Fifth VLAN group",
             "VLAN Group 6,vlan-group-6,Sixth VLAN group",
-            "VLAN Group 7,,Seventh VLAN group"
+            "VLAN Group 7,,Seventh VLAN group",
         )
         cls.slug_source = "name"
         cls.slug_test_object = "VLAN Group 8"

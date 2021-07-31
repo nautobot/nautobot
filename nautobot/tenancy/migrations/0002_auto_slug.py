@@ -7,18 +7,18 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tenancy', '0001_initial'),
+        ("tenancy", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='tenant',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="tenant",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
         migrations.AlterField(
-            model_name='tenantgroup',
-            name='slug',
-            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True),
+            model_name="tenantgroup",
+            name="slug",
+            field=nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
         ),
     ]
