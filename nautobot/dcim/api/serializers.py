@@ -206,7 +206,6 @@ class RackGroupSerializer(CustomFieldModelSerializer):
     parent = NestedRackGroupSerializer(required=False, allow_null=True)
     rack_count = serializers.IntegerField(read_only=True)
     _depth = serializers.IntegerField(source="level", read_only=True)
-    slug = serializers.SlugField(default="")
 
     class Meta:
         model = RackGroup
@@ -226,6 +225,20 @@ class RackGroupSerializer(CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
+        # prevents slug from being interpreted as a required field.
+        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "name"))]
+
+    def validate(self, data):
+        # Validate uniqueness of (site, slug) since we omitted the automatically-created validator from Meta.
+        if data.get("slug", None):
+            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "slug"))
+            validator(data, self)
+
+        # Enforce model validation
+        super().validate(data)
+
+        return data
 
 
 class RackRoleSerializer(CustomFieldModelSerializer):
@@ -395,7 +408,6 @@ class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
     manufacturer = NestedManufacturerSerializer()
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
-    slug = serializers.SlugField(default="")
 
     class Meta:
         model = DeviceType
@@ -420,6 +432,20 @@ class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
+        # prevents slug from being interpreted as a required field.
+        validators = [UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "model"))]
+
+    def validate(self, data):
+        # Validate uniqueness of (manufacturer, slug) since we omitted the automatically-created validator from Meta.
+        if data.get("slug", None):
+            validator = UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "slug"))
+            validator(data, self)
+
+        # Enforce model validation
+        super().validate(data)
+
+        return data
 
 
 class ConsolePortTemplateSerializer(CustomFieldModelSerializer):
