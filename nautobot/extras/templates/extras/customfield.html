@@ -1,6 +1,19 @@
 {% extends 'generic/object_detail.html' %}
+{% load buttons %}
 {% load helpers %}
 
+
+{% block buttons %}
+        {% if perms.extras.add_customfield %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_customfield %}
+            {% edit_button object key="name" %}
+        {% endif %}
+        {% if perms.extras.delete_customfield %}
+            {% delete_button object key="name" %}
+        {% endif %}
+{% endblock buttons %}
 
 {% block content_left_page %}
             <div class="panel panel-default">
@@ -14,7 +27,7 @@
                     </tr>
                     <tr>
                         <td>Label</td>
-                        <td><span>{{ object.label }}</span></td>
+                        <td><span>{{ object.label | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Type</td>
@@ -36,7 +49,7 @@
                     </tr>
                     <tr>
                         <td>Description</td>
-                        <td><span>{{ object.description }}</span></td>
+                        <td><span>{{ object.description | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Default</td>
@@ -58,19 +71,19 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Minimum Value</td>
-                        <td><span>{{ object.validation_minimum }}</span></td>
+                        <td><span>{{ object.validation_minimum | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Maximum Value Type</td>
-                        <td><span>{{ object.validation_maximum }}</span></td>
+                        <td><span>{{ object.validation_maximum | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Validation Regex</td>
                         <td>
                             {% if object.validation_regex %}
-                                <code>{{ object.validation_regex }}</code>
+                                <code>{{ object.validation_regex | placeholder }}</code>
                             {% else %}
-                                <span>None</span>
+                                <span>{{ object.validation_regex | placeholder }}</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -84,9 +97,11 @@
                     <tr>
                         <td>Content Types</td>
                         <td>
-                            {% for ct in object.content_types.all %}
-                                {{ ct }}<br>
-                            {% endfor %}
+                            <ul>
+                                {% for ct in object.content_types.all %}
+                                    <li>{{ ct }}</li>
+                                {% endfor %}
+                            </ul>
                         </td>
                     </tr>
                 </table>

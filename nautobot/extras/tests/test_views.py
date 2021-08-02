@@ -818,24 +818,6 @@ class CustomFieldTestCase(
 ):
     model = CustomField
 
-    def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
-        super().test_create_object_without_permission()
-
-    def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
-        super().test_create_object_with_permission()
-
-    def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
-        super().test_create_object_with_constrained_permission()
-
     @classmethod
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Site)
@@ -874,3 +856,21 @@ class CustomFieldTestCase(
             "filter_logic": "loose",
             "weight": 100,
         }
+
+    def test_create_object_without_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_without_permission()
+
+    def test_create_object_with_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_with_permission()
+
+    def test_create_object_with_constrained_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_with_constrained_permission()

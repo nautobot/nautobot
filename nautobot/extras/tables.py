@@ -498,7 +498,7 @@ class ComputedFieldTable(BaseTable):
 
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True, verbose_name="Slug")
+    slug = tables.Column(linkify=True, accessor="name")
     content_types = ContentTypesColumn(truncate_words=15)
     required = BooleanColumn()
 
@@ -506,7 +506,7 @@ class CustomFieldTable(BaseTable):
         model = CustomField
         fields = (
             "pk",
-            "name",
+            "slug",
             "content_types",
             "type",
             "label",
@@ -514,13 +514,10 @@ class CustomFieldTable(BaseTable):
             "required",
             "default",
             "weight",
-            "validation_minimum",
-            "validation_maximum",
-            "validation_regex",
         )
         default_columns = (
             "pk",
-            "name",
+            "slug",
             "content_types",
             "type",
             "label",

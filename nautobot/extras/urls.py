@@ -405,14 +405,14 @@ urlpatterns = [
         views.CustomFieldBulkDeleteView.as_view(),
         name="customfield_bulk_delete",
     ),
-    path("custom-fields/<uuid:pk>/", views.CustomFieldView.as_view(), name="customfield"),
+    path("custom-fields/<str:name>/", views.CustomFieldView.as_view(), name="customfield"),
     path(
-        "custom-fields/<uuid:pk>/edit/",
+        "custom-fields/<str:name>/edit/",
         views.CustomFieldEditView.as_view(),
         name="customfield_edit",
     ),
     path(
-        "custom-fields/<uuid:pk>/delete/",
+        "custom-fields/<str:name>/delete/",
         views.CustomFieldDeleteView.as_view(),
         name="customfield_delete",
     ),

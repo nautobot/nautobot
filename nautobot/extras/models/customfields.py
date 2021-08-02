@@ -255,6 +255,10 @@ class CustomField(BaseModel):
     def __str__(self):
         return self.label or self.name.replace("_", " ").capitalize()
 
+    @property
+    def slug(self):
+        return self.name
+
     def clean(self):
         super().clean()
 
@@ -457,7 +461,7 @@ class CustomField(BaseModel):
         delete_custom_field_data.delay(self.name, content_types)
 
     def get_absolute_url(self):
-        return reverse("extras:customfield", args=[self.pk])
+        return reverse("extras:customfield", args=[self.name])
 
 
 class CustomFieldChoice(BaseModel):
