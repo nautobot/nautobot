@@ -373,7 +373,7 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 ```
 
 !!! note
-    See above for `class_path` defintions.
+    In this example, `local/example/MyJobWithVars` is the job's `class_path` - see above for information on constructing the `class_path` for any given Job.
 
 ### Via the CLI
 
