@@ -528,13 +528,13 @@ menu_items = (
                         ],
                         buttons=(
                             NavMenuImportButton(
-                                link="dcim:powerfeed_import",
+                                link="dcim:powerfeed_add",
                                 permissions=[
                                     "dcim.add_powerfeed",
                                 ],
                             ),
                             NavMenuAddButton(
-                                link="dcim:powerfeed_add",
+                                link="dcim:powerfeed_import",
                                 permissions=[
                                     "dcim.add_powerfeed",
                                 ],
@@ -549,13 +549,13 @@ menu_items = (
                         ],
                         buttons=(
                             NavMenuImportButton(
-                                link="dcim:powerpanel_import",
+                                link="dcim:powerpanel_add",
                                 permissions=[
                                     "dcim.add_powerpanel",
                                 ],
                             ),
                             NavMenuAddButton(
-                                link="dcim:powerpanel_add",
+                                link="dcim:powerpanel_import",
                                 permissions=[
                                     "dcim.add_powerpanel",
                                 ],
