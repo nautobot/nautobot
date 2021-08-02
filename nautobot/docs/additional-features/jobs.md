@@ -333,6 +333,8 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
     ![Adding the run action to a permission](../../media/admin_ui_run_permission.png)
 
+### Jobs and `class_path`
+
 It is a key concept to understand the 3 `class_path` elements:
 
 - `grouping_name`: which can be one of `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
