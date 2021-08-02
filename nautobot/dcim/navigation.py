@@ -548,13 +548,13 @@ menu_items = (
                             "dcim.view_powerpanel",
                         ],
                         buttons=(
-                            NavMenuImportButton(
+                            NavMenuAddButton(
                                 link="dcim:powerpanel_add",
                                 permissions=[
                                     "dcim.add_powerpanel",
                                 ],
                             ),
-                            NavMenuAddButton(
+                            NavMenuImportButton(
                                 link="dcim:powerpanel_import",
                                 permissions=[
                                     "dcim.add_powerpanel",
