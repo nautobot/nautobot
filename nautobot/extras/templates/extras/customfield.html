@@ -1,53 +1,8 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
-{% load plugins %}
-{% load static %}
-{% load tz %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:customfield_list' %}">Custom Fields</a></li>
-                {% if object.name %}
-                    <li><a href="{% url 'extras:customfield' pk=object.pk %}">{{ object.name }}</a></li>
-                {% endif %}
-            </ol>
-        </div>
-    </div>
 
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.extras.add_customfield %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.extras.change_customfield %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.extras.delete_customfield %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-
-    <ul class="nav nav-tabs">
-        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}">Custom Fields</a>
-        </li>
-    </ul>
-
-{% endblock %}
-
-{% block content %}
-
-    <div class="row">
-        <div class="col-md-6">
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Custom Field</strong>
@@ -93,8 +48,9 @@
                     </tr>
                 </table>
             </div>
-        </div>
-        <div class="col-md-6">
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Validation Rules</strong>
@@ -120,10 +76,6 @@
                     </tr>
                 </table>
             </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Assignment</strong>
@@ -139,7 +91,4 @@
                     </tr>
                 </table>
             </div>
-        </div>
-    </div>
-
-{% endblock %}
+{% endblock content_right_page %}
