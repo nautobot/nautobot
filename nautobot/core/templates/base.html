@@ -1,5 +1,6 @@
 {% load static %}
 {% load helpers %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -58,10 +59,10 @@
                 {{ message }}
             </div>
         {% endfor %}
-        {% block header %}{% endblock %}
-        {% block content %}{% endblock %}
+        {% block header %}{% endblock header %}
+        {% block content %}{% endblock content %}
         <div class="push"></div>
-         {% if settings.BANNER_BOTTOM %}
+        {% if settings.BANNER_BOTTOM %}
             <div class="alert alert-info text-center banner-bottom" role="alert">
                  {{ settings.BANNER_BOTTOM|safe }}
             </div>

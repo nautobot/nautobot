@@ -106,8 +106,10 @@ nav:
         - Extending Models: 'development/extending-models.md'
         - Application Registry: 'development/application-registry.md'
         - Navigation Menu: 'development/navigation-menu.md'
+        - Home Page Panels: 'development/homepage.md'
         - User Preferences: 'development/user-preferences.md'
         - Release Checklist: 'development/release-checklist.md'
     - Release Notes:
         - Version 1.0: 'release-notes/version-1.0.md'
         - Version 1.1: 'release-notes/version-1.1.md'
+        - Version 1.2: 'release-notes/version-1.2.md'

@@ -11,6 +11,8 @@ Plugins can do a lot, including:
 * Inject template content and navigation links
 * Establish their own GraphQL types and REST API endpoints
 * Add custom request/response middleware
+* Add content to the Nautobot navigation menu bar
+* Add content to the Nautobot home page
 
 Keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
@@ -36,6 +38,7 @@ plugin_name/
     - datasources.py        # Loading Data from a Git Repository
     - graphql/
       - types.py            # GraphQL Type Objects
+    - homepage.py           # Home Page Content
     - jinja_filters.py      # Jinja Filters
     - jobs.py               # Job classes
     - middleware.py         # Request/response middleware
@@ -456,27 +459,6 @@ Arguments:
 
 Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
 
-Usage in a view:
-
-``` python
-from nautobot.core.graphql import execute_saved_query
-
-
-class GraphQLModelView(ModelViewSet):
-    queryset = GraphQLModelQuery.objects.all()
-
-    @action(detail=True, methods=["post"])
-    def run(self, request, pk):
-        try:
-            result = execute_saved_query(pk, variable=request.data, request=request).to_dict()
-            return Response(result)
-        except GraphQLError as error:
-            return Response(
-                {"errors": [GraphQLView.format_error(error)]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-```
-
 ## REST API Endpoints
 
 Plugins can declare custom endpoints on Nautobot's REST API to retrieve or manipulate models or other data. These behave very similarly to views, except that instead of rendering arbitrary content using a template, data is returned in JSON format using a serializer. Nautobot uses the [Django REST Framework](https://www.django-rest-framework.org/), which makes writing API serializers and views very simple.
@@ -541,6 +523,12 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 Plugins can modify the existing navigation bar layout by defining `menu_items` inside of `navigation.py`. Using the key and weight system, a developer can integrate the plugin amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
 
 More documentation and examples can be found [here](../development/navigation-menu.md)
+
+## Home Page Content
+
+Plugins can add content to the Nautobot home page by defining `layout` inside of `homepage.py`. Using the key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
+
+More documentation and examples can be found [here](../development/homepage.md)
 
 ## Extending Core Templates
 

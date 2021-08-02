@@ -238,7 +238,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
     """
 
     queryset = ConfigContextSchema.objects.all()
-    template_name = "extras/configcontextschema/validation.html"
+    template_name = "extras/configcontextschema_validation.html"
 
     def get_extra_context(self, request, instance):
         """
@@ -439,6 +439,8 @@ class ObjectChangeLogView(View):
             "extras/object_changelog.html",
             {
                 "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
