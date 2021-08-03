@@ -817,6 +817,7 @@ class CustomFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
+    reverse_url_attribute = "name"
 
     @classmethod
     def setUpTestData(cls):
