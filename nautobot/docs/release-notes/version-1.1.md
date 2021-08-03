@@ -82,6 +82,10 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ## v1.1.1 (2021-??-??)
 
+### Added
+
+- [#506](https://github.com/nautobot/nautobot/issues/506) - `nautobot-server` now detects and rejects the misconfiguration of setting `MAINTENANCE_MODE` while using database-backed session storage (`django.contrib.sessions.backends.db`)
+
 ### Fixed
 
 - [#727](https://github.com/nautobot/nautobot/issues/727) - Fixed broken REST API endpoint (`/api/extras/graphql-queries/<uuid>/run/`) for running saved GraphQL queries.
