@@ -225,7 +225,7 @@ class ModelViewTestCase(ModelTestCase):
     Base TestCase for model views. Subclass to test individual views.
     """
 
-    reverse_attribute = None
+    reverse_url_attribute = None
 
     def _get_base_url(self):
         """
