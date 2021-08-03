@@ -99,7 +99,9 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
         query_params[f"{side}_id"] = self.pk
-        queryset_ids = gql_optimizer.query(RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True), info)
+        queryset_ids = gql_optimizer.query(
+            RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True), info
+        )
 
         if relationship.has_many(peer_side):
             return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids), info)
