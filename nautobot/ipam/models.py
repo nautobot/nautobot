@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import F
 from django.urls import reverse
 from django.utils.functional import classproperty
+from django_extensions.db.fields import AutoSlugField
 
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import ObjectChange, Status, StatusModel
@@ -172,7 +173,7 @@ class RIR(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
@@ -381,7 +382,7 @@ class Role(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     weight = models.PositiveSmallIntegerField(default=1000)
     description = models.CharField(
         max_length=200,
@@ -976,7 +977,7 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100)
+    slug = AutoSlugField(populate_from="name", max_length=100, editable=True, overwrite_on_add=False)
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,

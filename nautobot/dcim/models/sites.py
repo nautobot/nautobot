@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.urls import reverse
+from django_extensions.db.fields import AutoSlugField
 from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
 
@@ -47,7 +48,7 @@ class Region(MPTTModel, OrganizationalModel):
         db_index=True,
     )
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     description = models.CharField(max_length=200, blank=True)
 
     objects = TreeManager()
@@ -107,7 +108,7 @@ class Site(PrimaryModel, StatusModel):
 
     name = models.CharField(max_length=100, unique=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     region = models.ForeignKey(
         to="dcim.Region",
         on_delete=models.SET_NULL,

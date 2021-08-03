@@ -11,6 +11,7 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django_extensions.db.fields import AutoSlugField
 
 from nautobot.extras.choices import *
 from nautobot.extras.models import ChangeLoggedModel
@@ -57,7 +58,14 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
     )
-    slug = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
+    slug = AutoSlugField(
+        populate_from="label",
+        max_length=100,
+        unique=True,
+        editable=True,
+        overwrite_on_add=False,
+        help_text="Internal field name",
+    )
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")

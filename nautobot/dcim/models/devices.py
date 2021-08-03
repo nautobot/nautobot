@@ -10,6 +10,7 @@ from django.db import models
 from django.db.models import F, ProtectedError
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django_extensions.db.fields import AutoSlugField
 
 from nautobot.dcim.choices import *
 from nautobot.dcim.constants import *
@@ -51,7 +52,7 @@ class Manufacturer(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = ["name", "slug", "description"]
@@ -96,7 +97,7 @@ class DeviceType(PrimaryModel):
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
     model = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100)
+    slug = AutoSlugField(populate_from="model", max_length=100, editable=True, overwrite_on_add=False)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     is_full_depth = models.BooleanField(
@@ -327,7 +328,7 @@ class DeviceRole(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     color = ColorField(default=ColorChoices.COLOR_GREY)
     vm_role = models.BooleanField(
         default=True,
@@ -369,7 +370,7 @@ class Platform(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
