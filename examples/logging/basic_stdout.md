@@ -1,5 +1,5 @@
-This example provides adequate logging for basic deployments where the logs to stdout are caputured by
-some external process such as docker or kubernetes:
+This example provides adequate logging for basic deployments where the logs to stdout are captured by
+some external process such as Docker or Kubernetes:
 
 ```python
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
