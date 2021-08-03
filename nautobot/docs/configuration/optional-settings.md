@@ -457,6 +457,8 @@ LOGGING = {
 }
 ```
 
+Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
+
 ### Available Loggers
 
 * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
