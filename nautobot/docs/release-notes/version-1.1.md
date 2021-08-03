@@ -85,6 +85,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 ### Fixed
 
 - [#727](https://github.com/nautobot/nautobot/issues/727) - Fixed broken REST API endpoint (`/api/extras/graphql-queries/<uuid>/run/`) for running saved GraphQL queries.
+- [#759](https://github.com/nautobot/nautobot/issues/759) - Corrected backwards add/import links for Power Feed and Power Panel in navigation bar
 
 ## v1.1.0 (2021-07-20)
 
