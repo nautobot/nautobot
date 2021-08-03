@@ -23,7 +23,7 @@ from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import serialize_object
+from nautobot.utilities.utils import UtilizationData, serialize_object
 
 
 __all__ = (
@@ -376,6 +376,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
             "maximum": self.maximum_draw or 0,
             "outlet_count": PowerOutlet.objects.filter(power_port=self).count(),
             "legs": [],
+            "utilization_data": UtilizationData(numerator=self.allocated_draw or 0, denominator=self.maximum_draw or 0)
         }
 
 
