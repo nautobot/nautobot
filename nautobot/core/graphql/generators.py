@@ -2,8 +2,8 @@
 
 import logging
 
-import django_filters.fields
 import graphene
+import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 
@@ -99,12 +99,12 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
         query_params[f"{side}_id"] = self.pk
-        queryset_ids = RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True)
+        queryset_ids = gql_optimizer.query(RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True), info)
 
         if relationship.has_many(peer_side):
-            return peer_model.objects.filter(id__in=queryset_ids)
+            return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids), info)
 
-        return peer_model.objects.filter(id__in=queryset_ids).first()
+        return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids).first(), info)
 
     resolve_relationship.__name__ = resolver_name
     return resolve_relationship
@@ -178,7 +178,7 @@ def generate_single_item_resolver(schema_type, resolver_name):
 
         obj_id = kwargs.get("id", None)
         if obj_id:
-            return model.objects.restrict(info.context.user, "view").get(pk=obj_id)
+            return gql_optimizer.query(model.objects.restrict(info.context.user, "view").get(pk=obj_id), info)
         return None
 
     single_resolver.__name__ = resolver_name
@@ -219,9 +219,9 @@ def generate_list_resolver(schema_type, resolver_name):
                 # Raising this exception will send the error message in the response of the GraphQL request
                 raise GraphQLError(errors)
 
-            return resolved_obj.qs.all()
+            return gql_optimizer.query(resolved_obj.qs.all(), info)
 
-        return model.objects.restrict(info.context.user, "view").all()
+        return gql_optimizer.query(model.objects.restrict(info.context.user, "view").all(), info)
 
     list_resolver.__name__ = resolver_name
     return list_resolver

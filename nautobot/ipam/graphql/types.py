@@ -1,5 +1,5 @@
 import graphene
-from graphene_django import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
 from graphene_django.converter import convert_django_field, convert_field_to_string
 
 from nautobot.dcim.graphql.types import InterfaceType
@@ -12,7 +12,7 @@ from nautobot.virtualization.graphql.types import VMInterfaceType
 convert_django_field.register(fields.VarbinaryIPField)(convert_field_to_string)
 
 
-class AggregateType(DjangoObjectType):
+class AggregateType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Aggregate model."""
 
     prefix = graphene.String()
@@ -37,7 +37,7 @@ class AssignedObjectType(graphene.Union):
         return None
 
 
-class IPAddressType(DjangoObjectType):
+class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for IPAddress model."""
 
     address = graphene.String()
@@ -49,18 +49,24 @@ class IPAddressType(DjangoObjectType):
         model = models.IPAddress
         filterset_class = filters.IPAddressFilterSet
 
+    @gql_optimizer.resolver_hints(
+        model_field="assigned_object",
+    )
     def resolve_interface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
             return self.assigned_object
         return None
 
+    @gql_optimizer.resolver_hints(
+        model_field="assigned_object",
+    )
     def resolve_vminterface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "VMInterface":
             return self.assigned_object
         return None
 
 
-class PrefixType(DjangoObjectType):
+class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Prefix model."""
 
     prefix = graphene.String()

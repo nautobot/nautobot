@@ -1,11 +1,11 @@
 import graphene
-from graphene_django import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
 
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.filters import VirtualMachineFilterSet, VMInterfaceFilterSet
 
 
-class VirtualMachineType(DjangoObjectType):
+class VirtualMachineType(gql_optimizer.OptimizedDjangoObjectType):
     """GraphQL type object for VirtualMachine model."""
 
     class Meta:
@@ -13,7 +13,7 @@ class VirtualMachineType(DjangoObjectType):
         filterset_class = VirtualMachineFilterSet
 
 
-class VMInterfaceType(DjangoObjectType):
+class VMInterfaceType(gql_optimizer.OptimizedDjangoObjectType):
     """GraphQL type object for VMInterface model."""
 
     class Meta:
@@ -23,5 +23,8 @@ class VMInterfaceType(DjangoObjectType):
 
     ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
+    @gql_optimizer.resolver_hints(
+        model_field='ip_addresses',
+    )
     def resolve_ip_addresses(self, args):
         return self.ip_addresses.all()

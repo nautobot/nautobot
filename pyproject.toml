@@ -100,6 +100,7 @@ PyYAML = "~5.4.1"
 social-auth-app-django = "^4.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.1"
+graphene-django-optimizer = "^0.8.0"
 
 [tool.poetry.extras]
 mysql = ["mysqlclient"]
