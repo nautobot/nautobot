@@ -3,6 +3,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from django_extensions.db.fields import AutoSlugField
 from taggit.managers import TaggableManager
 
 from nautobot.dcim.models import BaseInterface, Device
@@ -15,7 +16,6 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
@@ -50,7 +50,7 @@ class ClusterType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = ["name", "slug", "description"]
@@ -89,7 +89,7 @@ class ClusterGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = ["name", "slug", "description"]

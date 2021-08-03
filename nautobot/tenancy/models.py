@@ -1,11 +1,11 @@
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
+from django_extensions.db.fields import AutoSlugField
 from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.extras.models import ObjectChange
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.utils import serialize_object
@@ -29,7 +29,7 @@ class TenantGroup(MPTTModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     parent = TreeForeignKey(
         to="self",
         on_delete=models.CASCADE,
@@ -90,7 +90,7 @@ class Tenant(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     group = models.ForeignKey(
         to="tenancy.TenantGroup",
         on_delete=models.SET_NULL,

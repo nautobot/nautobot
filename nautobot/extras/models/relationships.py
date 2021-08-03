@@ -5,11 +5,11 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError
 from django.db import models
+from django_extensions.db.fields import AutoSlugField
 
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.utils import get_filterset_for_model
 from nautobot.utilities.forms import (
@@ -180,7 +180,7 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
 class Relationship(BaseModel, ChangeLoggedModel):
 
     name = models.CharField(max_length=100, unique=True, help_text="Internal relationship name")
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, blank=True)
+    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
     description = models.CharField(max_length=200, blank=True)
     type = models.CharField(
         max_length=50,
