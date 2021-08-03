@@ -1,6 +1,5 @@
 from django.db import models
 from django.urls import reverse
-from django_extensions.db.fields import AutoSlugField
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
@@ -36,7 +35,7 @@ class Provider(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = models.SlugField(max_length=100, unique=True)
     asn = ASNField(
         blank=True,
         null=True,
@@ -97,7 +96,7 @@ class CircuitType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = models.SlugField(max_length=100, unique=True)
     description = models.CharField(
         max_length=200,
         blank=True,

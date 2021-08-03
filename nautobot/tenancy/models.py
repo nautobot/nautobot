@@ -1,7 +1,5 @@
 from django.db import models
 from django.urls import reverse
-from django.utils.text import slugify
-from django_extensions.db.fields import AutoSlugField
 from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.extras.models import ObjectChange
@@ -29,7 +27,7 @@ class TenantGroup(MPTTModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = models.SlugField(max_length=100, unique=True)
     parent = TreeForeignKey(
         to="self",
         on_delete=models.CASCADE,
@@ -90,7 +88,7 @@ class Tenant(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = models.SlugField(max_length=100, unique=True)
     group = models.ForeignKey(
         to="tenancy.TenantGroup",
         on_delete=models.SET_NULL,

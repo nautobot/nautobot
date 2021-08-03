@@ -14,7 +14,6 @@ from django.db import models
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
-from django_extensions.db.fields import AutoSlugField
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
@@ -630,7 +629,7 @@ class ConfigContextSchema(OrganizationalModel):
 
     name = models.CharField(max_length=200, unique=True)
     description = models.CharField(max_length=200, blank=True)
-    slug = AutoSlugField(populate_from="name", editable=True, overwrite_on_add=False)
+    slug = models.SlugField()
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -936,7 +935,7 @@ class JobResult(BaseModel, CustomFieldModel):
 @extras_features("graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel):
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = models.CharField(max_length=100, unique=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 

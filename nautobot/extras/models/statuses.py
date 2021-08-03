@@ -5,7 +5,6 @@ from django.db import models
 from django.urls import reverse
 from django.utils.encoding import force_str
 from django.utils.hashable import make_hashable
-from django_extensions.db.fields import AutoSlugField
 
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.extras.models import ChangeLoggedModel
@@ -50,7 +49,7 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     )
     name = models.CharField(max_length=50, unique=True)
     color = ColorField(default=ColorChoices.COLOR_GREY)
-    slug = AutoSlugField(populate_from="name", max_length=50, unique=True, editable=True, overwrite_on_add=False)
+    slug = models.SlugField(max_length=50, unique=True)
     description = models.CharField(
         max_length=200,
         blank=True,

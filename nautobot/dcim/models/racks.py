@@ -8,7 +8,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Sum
 from django.urls import reverse
-from django_extensions.db.fields import AutoSlugField
 from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.dcim.choices import *
@@ -53,7 +52,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
-    slug = AutoSlugField(populate_from="name", max_length=100, editable=True, overwrite_on_add=False)
+    slug = models.SlugField(max_length=100)
     site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     parent = TreeForeignKey(
         to="self",
@@ -123,7 +122,7 @@ class RackRole(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = models.SlugField(max_length=100, unique=True)
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
