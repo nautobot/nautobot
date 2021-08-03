@@ -224,6 +224,7 @@ class ModelViewTestCase(ModelTestCase):
     """
     Base TestCase for model views. Subclass to test individual views.
     """
+
     reverse_attribute = None
 
     def _get_base_url(self):
@@ -246,7 +247,10 @@ class ModelViewTestCase(ModelTestCase):
             return reverse(url_format.format(action))
 
         if self.reverse_url_attribute:
-            return reverse(url_format.format(action), kwargs={self.reverse_url_attribute: getattr(instance, self.reverse_url_attribute)})
+            return reverse(
+                url_format.format(action),
+                kwargs={self.reverse_url_attribute: getattr(instance, self.reverse_url_attribute)},
+            )
 
         # Attempt to resolve using slug as the unique identifier if one exists
         if hasattr(self.model, "slug"):
