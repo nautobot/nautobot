@@ -48,7 +48,7 @@ def edit_button(instance, use_pk=False, key="slug"):
 
     Args:
         instance: Model record.
-        use_pk: If True, use the primary key instead of the slug.
+        use_pk: If True, use the primary key instead of the slug. (Deprecated, use "key" instead)
         key: The attribute in model used in reverse lookup.
     """
     viewname = _get_viewname(instance, "edit")
@@ -73,7 +73,7 @@ def delete_button(instance, use_pk=False, key="slug"):
 
     Args:
         instance: Model record.
-        use_pk: If True, use the primary key instead of the slug.
+        use_pk: If True, use the primary key instead of the slug. (Deprecated, use "key" instead)
         key: The attribute in model used in reverse lookup.
     """
     viewname = _get_viewname(instance, "delete")

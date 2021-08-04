@@ -57,6 +57,29 @@ from .utils import FeatureQuery
 #
 
 
+class CustomFieldForm(BootstrapMixin, forms.ModelForm):
+    # TODO: Migrate custom field model from name to slug #464
+    name = forms.CharField(required=True, label="Slug")
+    content_types = MultipleContentTypeField(feature="custom_fields")
+
+    class Meta:
+        model = CustomField
+        fields = (
+            "content_types",
+            "type",
+            "label",
+            "name",
+            "description",
+            "required",
+            "filter_logic",
+            "default",
+            "weight",
+            "validation_minimum",
+            "validation_maximum",
+            "validation_regex",
+        )
+
+
 class CustomFieldModelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
 
@@ -153,9 +176,6 @@ class CustomFieldFilterForm(forms.Form):
         for cf in custom_fields:
             field_name = "cf_{}".format(cf.name)
             self.fields[field_name] = cf.to_form_field(set_initial=True, enforce_required=False)
-
-    class Meta:
-        model = CustomField
 
 
 #
@@ -1022,28 +1042,3 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Content Type",
     )
-
-
-# Custom Fields
-
-
-class CustomFieldForm(BootstrapMixin, forms.ModelForm):
-    # TODO: Migrate custom field model from name to slug #464
-    name = forms.CharField(required=True, label="Slug")
-
-    class Meta:
-        model = CustomField
-        fields = (
-            "content_types",
-            "type",
-            "name",
-            "label",
-            "description",
-            "required",
-            "filter_logic",
-            "default",
-            "weight",
-            "validation_minimum",
-            "validation_maximum",
-            "validation_regex",
-        )
