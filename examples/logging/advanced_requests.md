@@ -47,7 +47,10 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
-        "django": {"handlers": ["normal_console"], "level": "INFO"},
+        "django": {
+            "handlers": ["normal_console"],
+            "level": "INFO"
+        },
         "nautobot": {
             "handlers": ["normal_console"],
             "level": LOG_LEVEL,
@@ -60,16 +63,10 @@ LOGGING = {
 
 ```no-highlight
 20:50:57.972 INFO    django.server:  "GET /health/ HTTP/1.1" 200 11743
-20:50:57.972 INFO    django.server:  "GET /health/ HTTP/1.1" 200 11743
-20:50:58.769 INFO    django.server:  "GET /login/?next=/ HTTP/1.1" 200 18336
 20:50:58.769 INFO    django.server:  "GET /login/?next=/ HTTP/1.1" 200 18336
 20:51:04.710 INFO    django.server:  "GET /health/ HTTP/1.1" 200 11741
-20:51:04.710 INFO    django.server:  "GET /health/ HTTP/1.1" 200 11741
-20:51:05.836 INFO    nautobot.auth.login:  User admin successfully authenticated
 20:51:05.836 INFO    nautobot.auth.login:  User admin successfully authenticated
 20:51:07.340 INFO    django.server:  "POST /login/ HTTP/1.1" 302 0
-20:51:07.340 INFO    django.server:  "POST /login/ HTTP/1.1" 302 0
-20:51:10.182 INFO    django.server:  "GET / HTTP/1.1" 200 118573
 20:51:10.182 INFO    django.server:  "GET / HTTP/1.1" 200 118573
 21:02:25.928 WARNING django.request: user=admin Not Found: /api/ipam/ip-addresses/63b38cc7-979d-52c4-b26f-e44dd5f390ca/
 21:02:25.945 WARNING django.server: "GET /api/ipam/ip-addresses/63b38cc7-979d-52c4-b26f-e44dd5f390ca/ HTTP/1.1" 404 15611
