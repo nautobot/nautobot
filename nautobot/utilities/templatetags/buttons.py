@@ -43,6 +43,14 @@ def clone_button(instance):
 
 @register.inclusion_tag("buttons/edit.html")
 def edit_button(instance, use_pk=False, key="slug"):
+    """
+    Render a button to edit a model instance.
+
+    Args:
+        instance: Model record.
+        use_pk: If True, use the primary key instead of the slug.
+        key: The attribute in model used in reverse lookup.
+    """
     viewname = _get_viewname(instance, "edit")
 
     # Assign kwargs
@@ -60,6 +68,14 @@ def edit_button(instance, use_pk=False, key="slug"):
 
 @register.inclusion_tag("buttons/delete.html")
 def delete_button(instance, use_pk=False, key="slug"):
+    """
+    Render a button to delete a model instance.
+
+    Args:
+        instance: Model record.
+        use_pk: If True, use the primary key instead of the slug.
+        key: The attribute in model used in reverse lookup.
+    """
     viewname = _get_viewname(instance, "delete")
 
     # Assign kwargs

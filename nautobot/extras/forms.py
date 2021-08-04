@@ -1028,6 +1028,7 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
+    # TODO: Migrate custom field model from name to slug #464
     name = forms.CharField(required=True, label="Slug")
 
     class Meta:

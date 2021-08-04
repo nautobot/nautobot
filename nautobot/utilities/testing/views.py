@@ -226,6 +226,11 @@ class ModelViewTestCase(ModelTestCase):
     """
 
     reverse_url_attribute = None
+    """
+    Name of instance field to pass as a kwarg when looking up action URLs for creating/editing/deleting a model instance.
+
+    If unspecified, "slug" and "pk" will be tried, in that order.
+    """
 
     def _get_base_url(self):
         """

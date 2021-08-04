@@ -405,6 +405,7 @@ urlpatterns = [
         views.CustomFieldBulkDeleteView.as_view(),
         name="customfield_bulk_delete",
     ),
+    # TODO: Migrate custom field model from name to slug #464
     path("custom-fields/<str:name>/", views.CustomFieldView.as_view(), name="customfield"),
     path(
         "custom-fields/<str:name>/edit/",
