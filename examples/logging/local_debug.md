@@ -19,12 +19,12 @@ LOGGING = {
     "handlers": {
         "normal_console": {
             "level": "INFO",
-            "class": "rq.utils.ColorizingStreamHandler",
+            "class": "logging.StreamHandler",
             "formatter": "normal",
         },
         "verbose_console": {
             "level": "DEBUG",
-            "class": "rq.utils.ColorizingStreamHandler",
+            "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
     },
@@ -34,10 +34,34 @@ LOGGING = {
             "handlers": ["verbose_console" if DEBUG else "normal_console"],
             "level": LOG_LEVEL,
         },
-        "rq.worker": {
-            "handlers": ["verbose_console" if DEBUG else "normal_console"],
-            "level": LOG_LEVEL,
-        },
     },
 }
+```
+
+## Example Logs
+
+```no-highlight
+  "GET / HTTP/1.1" 200 29109
+20:23:04.320 INFO    django.server :
+  "GET /static/debug_toolbar/css/toolbar.css HTTP/1.1" 200 11461
+20:23:04.326 INFO    django.server :
+  "GET /static/debug_toolbar/js/toolbar.js HTTP/1.1" 200 10452
+20:23:04.957 INFO    django.server :
+  "GET /static/debug_toolbar/css/print.css HTTP/1.1" 200 43
+20:23:05.013 INFO    django.server :
+  "GET /static/debug_toolbar/js/utils.js HTTP/1.1" 200 2988
+20:23:06.901 INFO    django.server :
+  "GET /login/?next=/ HTTP/1.1" 200 18334
+20:23:10.246 DEBUG   nautobot.auth.login  views.py                                  post() :
+  Login form validation was successful
+20:23:10.335 INFO    nautobot.auth.login  views.py                                  post() :
+  User admin successfully authenticated
+20:23:10.335 DEBUG   nautobot.auth.login  views.py                      redirect_to_next() :
+  Redirecting user to /
+20:23:10.801 INFO    django.server :
+  "POST /login/ HTTP/1.1" 302 0
+20:23:11.254 DEBUG   nautobot.releases    releases.py                 get_latest_release() :
+  Skipping release check; RELEASE_CHECK_URL not defined
+20:23:12.806 INFO    django.server :
+  "GET / HTTP/1.1" 200 118574
 ```
