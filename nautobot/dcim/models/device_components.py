@@ -370,6 +370,11 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 
             return ret
 
+        if self.connected_endpoint and hasattr(self.connected_endpoint, "availalble_power"):
+            denominator = self.connected_endpoint.available_power or 0
+        else:
+            denominator = 0
+
         # Default to administratively defined values
         return {
             "allocated": self.allocated_draw or 0,
@@ -377,7 +382,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
             "outlet_count": PowerOutlet.objects.filter(power_port=self).count(),
             "legs": [],
             "utilization_data": UtilizationData(
-                numerator=self.allocated_draw or 0, denominator=self.connected_endpoint.available_power or 0
+                numerator=self.allocated_draw or 0, denominator=denominator
             ),
         }
 
