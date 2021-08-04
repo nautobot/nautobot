@@ -6,7 +6,7 @@ Nautobot supports optionally exposing native Prometheus metrics from the applica
 
 Metrics are not exposed by default. Metric exposition can be toggled with the `METRICS_ENABLED` configuration setting which exposes metrics at the `/metrics` HTTP endpoint, e.g. `https://nautobot.local/metrics`. 
 
-In addition to the `METRICS_ENABLED` database and caching metrics can also be enabled by changing the database engine and caching backend:
+In addition to the `METRICS_ENABLED` setting, database and caching metrics can also be enabled by changing the database engine and caching backend:
 
 ```python
 DATABASES = {
