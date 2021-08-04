@@ -6,12 +6,12 @@ Nautobot supports optionally exposing native Prometheus metrics from the applica
 
 Metrics are not exposed by default. Metric exposition can be toggled with the `METRICS_ENABLED` configuration setting which exposes metrics at the `/metrics` HTTP endpoint, e.g. `https://nautobot.local/metrics`. 
 
-In addition to the `METRICS_ENABLED` setting, database and caching metrics can also be enabled by changing the database engine and caching backend:
+In addition to the `METRICS_ENABLED` setting, database and/or caching metrics can also be enabled by changing the database engine and/or caching backends from `django.db.backends` / `django_redis.cache` to `django_promethus.db.backends` / `django_promethus.cache.backends.redis`:
 
 ```python
 DATABASES = {
     "default": {
-        # Other setttings...
+        # Other settings...
         "ENGINE": "django_prometheus.db.backends.postgresql",  # use "django_prometheus.db.backends.mysql" with MySQL
     }
 }
@@ -19,7 +19,7 @@ DATABASES = {
 # Other settings...
 CACHES = {
     "default": {
-        # Other setttings...
+        # Other settings...
         "BACKEND": "django_prometheus.cache.backends.redis.RedisCache",
     }
 }
