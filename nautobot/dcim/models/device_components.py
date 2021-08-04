@@ -370,7 +370,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 
             return ret
 
-        if self.connected_endpoint and hasattr(self.connected_endpoint, "availalble_power"):
+        if self.connected_endpoint and hasattr(self.connected_endpoint, "available_power"):
             denominator = self.connected_endpoint.available_power or 0
         else:
             denominator = 0
