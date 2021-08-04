@@ -367,6 +367,12 @@ class BaseJob:
                 return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
             elif isinstance(var, FileVar):
                 return_data[field_name] = cls.load_file(value)
+            # IPAddressVar is a netaddr.IPAddress object
+            elif isinstance(var, IPAddressVar):
+                return_data[field_name] = netaddr.IPAddress(value)
+            # IPAddressWithMaskVar, IPNetworkVar are a netaddr.IPNetwork objects
+            elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
+                return_data[field_name] = netaddr.IPNetwork(value)
             else:
                 return_data[field_name] = value
 
