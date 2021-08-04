@@ -5,14 +5,18 @@ This documentation covers the development of custom plugins for Nautobot. Plugin
 Plugins can do a lot, including:
 
 * Create Django models to store data in the database
+* Inject additional content into the Nautobot UI:
+
+    * Add content and navigation links to existing object views
+    * Provide new "views" (pages) in the user interface
+    * Add a banner to any Nautobot view(s)
+    * Add menus and menu items to the Nautobot navigation menu bar
+    * Add panels and items to the Nautobot home page
+
 * Add custom validation logic to apply to existing data models
-* Provide their own "pages" (views) in the web user interface
 * Provide [Jobs](../additional-features/jobs.md)
-* Inject template content and navigation links
 * Establish their own GraphQL types and REST API endpoints
 * Add custom request/response middleware
-* Add content to the Nautobot navigation menu bar
-* Add content to the Nautobot home page
 
 Keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
@@ -34,6 +38,7 @@ plugin_name/
       - serializers.py      # REST API Model serializers
       - urls.py             # REST API URL patterns
       - views.py            # REST API view sets
+    - banner.py             # Banners
     - custom_validators.py  # Custom Validators
     - datasources.py        # Loading Data from a Git Repository
     - graphql/
@@ -142,6 +147,7 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | ---- | ----------- |
 | `author` | Name of plugin's author |
 | `author_email` | Author's public email address |
+| `banner_function` | The dotted path to a function that can render a custom banner (default: `banner.banner`) |
 | `base_url` | (Optional) Base path to use for plugin URLs. If not specified, the project's `name` will be used. |
 | `caching_config` | Plugin-specific cache configuration |
 | `custom_validators` | The dotted path to the list of custom validator classes (default: `custom_validators.custom_validators`) |
@@ -286,6 +292,51 @@ This will display the plugin and its model in the admin UI. Staff users can crea
 
 ## Web UI Views
 
+### Extending Core Templates
+
+Plugins can inject custom content into certain areas of the detail views of applicable models. This is accomplished by subclassing `PluginTemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Four methods are available:
+
+* `left_page()` - Inject content on the left side of the page
+* `right_page()` - Inject content on the right side of the page
+* `full_width_page()` - Inject content across the entire bottom of the page
+* `buttons()` - Add buttons to the top of the page
+
+Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
+
+When a PluginTemplateExtension is instantiated, context data is assigned to `self.context`. Available data include:
+
+* `object` - The object being viewed
+* `request` - The current request
+* `settings` - Global Nautobot settings
+* `config` - Plugin-specific configuration parameters
+
+For example, accessing `{{ request.user }}` within a template will return the current user.
+
+Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the plugin's `PluginConfig`.) An example is below.
+
+```python
+# template_content.py
+from nautobot.extras.plugins import PluginTemplateExtension
+
+from .models import Animal
+
+
+class SiteAnimalCount(PluginTemplateExtension):
+    """Template extension to display animal count on the right side of the page."""
+
+    model = 'dcim.site'
+
+    def right_page(self):
+        return self.render('nautobot_animal_sounds/inc/animal_count.html', extra_context={
+            'animal_count': Animal.objects.count(),
+        })
+
+
+template_extensions = [SiteAnimalCount]
+```
+
+### Adding New Views
+
 If your plugin needs its own page or pages in the Nautobot web UI, you'll need to define views. A view is a particular page tied to a URL within Nautobot, which renders content using a template. Views are typically defined in `views.py`, and URL patterns in `urls.py`. As an example, let's write a view which displays a random animal and the sound it makes. First, create the view in `views.py`:
 
 ```python
@@ -308,7 +359,7 @@ class RandomAnimalView(View):
 
 This view retrieves a random animal from the database and and passes it as a context variable when rendering a template named `animal.html`, which doesn't exist yet. To create this template, first create a directory named `templates/nautobot_animal_sounds/` within the plugin source directory. (We use the plugin's name as a subdirectory to guard against naming collisions with other plugins.) Then, create a template named `animal.html` as described below.
 
-### Extending the Base Template
+#### Extending the Base Template
 
 Nautobot provides a base template to ensure a consistent user experience, which plugins can extend with their own content. This template includes four content blocks:
 
@@ -347,6 +398,8 @@ The first line of the template instructs Django to extend the Nautobot base temp
 !!! note
     Django renders templates with its own custom [template language](https://docs.djangoproject.com/en/stable/topics/templates/#the-django-template-language). This template language is very similar to Jinja2, however there are some important differences to keep in mind.
 
+#### Registering URL Patterns
+
 Finally, to make the view accessible to users, we need to register a URL for it. We do this in `urls.py` by defining a `urlpatterns` variable containing a list of paths.
 
 ```python
@@ -368,6 +421,42 @@ A URL pattern has three components:
 * `name` - A short name used to identify the URL path internally
 
 This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
+
+### Banners
+
+A plugin can provide a function that renders a custom banner on any number of Nautobot views by defining a function `banner()` inside of `banner.py`. This function currently receives a single argument, `context`, which is the [Django request context](https://docs.djangoproject.com/en/stable/ref/templates/api/#using-requestcontext) in which the current page is being rendered. The function can return `None` if no banner is needed for a given page view, or can return a `PluginBanner` object describing the banner contents. Here's a simple example `banner.py`:
+
+```python
+# banner.py
+from django.utils.html import format_html
+
+from nautobot.extras.choices import BannerClassChoices
+from nautobot.extras.plugins import PluginBanner
+
+def banner(context, *args, **kwargs):
+    """Greet the user, if logged in."""
+    # Request parameters can be accessed via context.request
+    if not context.request.user.is_authenticated:
+        # No banner if the user isn't logged in
+        return None
+    else:
+        return PluginBanner(
+            content=format_html("Hello, <strong>{}</strong>! 👋", context.request.user),
+            banner_class=BannerClassChoices.CLASS_SUCCESS,
+        )
+```
+
+### Navigation Menu Items
+
+Plugins can modify the existing navigation bar layout by defining `menu_items` inside of `navigation.py`. Using the key and weight system, a developer can integrate the plugin amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
+
+More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
+
+### Home Page Content
+
+Plugins can add content to the Nautobot home page by defining `layout` inside of `homepage.py`. Using the key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
+
+More documentation and examples can be found in the guide on [Home Page Panels](../development/homepage.md).
 
 ## Integrating with GraphQL
 
@@ -517,61 +606,6 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 
 !!! warning
     This example is provided as a minimal reference implementation only. It does not address authentication, performance, or the myriad of other concerns that plugin authors should have.
-
-## Navigation Menu Items
-
-Plugins can modify the existing navigation bar layout by defining `menu_items` inside of `navigation.py`. Using the key and weight system, a developer can integrate the plugin amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
-
-More documentation and examples can be found [here](../development/navigation-menu.md)
-
-## Home Page Content
-
-Plugins can add content to the Nautobot home page by defining `layout` inside of `homepage.py`. Using the key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
-
-More documentation and examples can be found [here](../development/homepage.md)
-
-## Extending Core Templates
-
-Plugins can inject custom content into certain areas of the detail views of applicable models. This is accomplished by subclassing `PluginTemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Four methods are available:
-
-* `left_page()` - Inject content on the left side of the page
-* `right_page()` - Inject content on the right side of the page
-* `full_width_page()` - Inject content across the entire bottom of the page
-* `buttons()` - Add buttons to the top of the page
-
-Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
-
-When a PluginTemplateExtension is instantiated, context data is assigned to `self.context`. Available data include:
-
-* `object` - The object being viewed
-* `request` - The current request
-* `settings` - Global Nautobot settings
-* `config` - Plugin-specific configuration parameters
-
-For example, accessing `{{ request.user }}` within a template will return the current user.
-
-Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the plugin's `PluginConfig`.) An example is below.
-
-```python
-# template_content.py
-from nautobot.extras.plugins import PluginTemplateExtension
-
-from .models import Animal
-
-
-class SiteAnimalCount(PluginTemplateExtension):
-    """Template extension to display animal count on the right side of the page."""
-
-    model = 'dcim.site'
-
-    def right_page(self):
-        return self.render('nautobot_animal_sounds/inc/animal_count.html', extra_context={
-            'animal_count': Animal.objects.count(),
-        })
-
-
-template_extensions = [SiteAnimalCount]
-```
 
 ## Including Jinja2 Filters
 
