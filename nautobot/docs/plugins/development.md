@@ -424,7 +424,7 @@ This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Rem
 
 ### Banners
 
-A plugin can provide a function that renders a custom banner on any number of Nautobot views by defining a function `banner()` inside of `banner.py`. This function currently receives a single argument, `context`, which is the [Django request context](https://docs.djangoproject.com/en/3.2/ref/templates/api/#using-requestcontext) in which the current page is being rendered. The function can return `None` if no banner is needed for a given page view, or can return a `PluginBanner` object describing the banner contents. Here's a simple example `banner.py`:
+A plugin can provide a function that renders a custom banner on any number of Nautobot views by defining a function `banner()` inside of `banner.py`. This function currently receives a single argument, `context`, which is the [Django request context](https://docs.djangoproject.com/en/stable/ref/templates/api/#using-requestcontext) in which the current page is being rendered. The function can return `None` if no banner is needed for a given page view, or can return a `PluginBanner` object describing the banner contents. Here's a simple example `banner.py`:
 
 ```python
 # banner.py
@@ -450,13 +450,13 @@ def banner(context, *args, **kwargs):
 
 Plugins can modify the existing navigation bar layout by defining `menu_items` inside of `navigation.py`. Using the key and weight system, a developer can integrate the plugin amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
 
-More documentation and examples can be found [here](../development/navigation-menu.md).
+More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
 
 ### Home Page Content
 
 Plugins can add content to the Nautobot home page by defining `layout` inside of `homepage.py`. Using the key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
 
-More documentation and examples can be found [here](../development/homepage.md).
+More documentation and examples can be found in the guide on [Home Page Panels](../development/homepage.md).
 
 ## Integrating with GraphQL
 
