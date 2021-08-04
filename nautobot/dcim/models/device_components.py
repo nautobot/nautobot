@@ -381,9 +381,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
             "maximum": self.maximum_draw or 0,
             "outlet_count": PowerOutlet.objects.filter(power_port=self).count(),
             "legs": [],
-            "utilization_data": UtilizationData(
-                numerator=self.allocated_draw or 0, denominator=denominator
-            ),
+            "utilization_data": UtilizationData(numerator=self.allocated_draw or 0, denominator=denominator),
         }
 
 
