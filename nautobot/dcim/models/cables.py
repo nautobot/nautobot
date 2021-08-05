@@ -112,29 +112,6 @@ class Cable(PrimaryModel, StatusModel):
             ("termination_b_type", "termination_b_id"),
         )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # A copy of the PK to be used by __str__ in case the object is deleted
-        self._pk = self.pk
-
-        # Cache the original status so we can check later if it's been changed
-        self._orig_status = self.status
-
-    @classmethod
-    def from_db(cls, db, field_names, values):
-        """
-        Cache the original A and B terminations of existing Cable instances for later reference inside clean().
-        """
-        instance = super().from_db(db, field_names, values)
-
-        instance._orig_termination_a_type_id = instance.termination_a_type_id
-        instance._orig_termination_a_id = instance.termination_a_id
-        instance._orig_termination_b_type_id = instance.termination_b_type_id
-        instance._orig_termination_b_id = instance.termination_b_id
-
-        return instance
-
     def __str__(self):
         pk = self.pk or self._pk
         return self.label or f"#{pk}"
@@ -171,14 +148,17 @@ class Cable(PrimaryModel, StatusModel):
         # If editing an existing Cable instance, check that neither termination has been modified.
         if self.present_in_database:
             err_msg = "Cable termination points may not be modified. Delete and recreate the cable instead."
+
+            existing_obj = Cable.objects.get(pk=self.pk)
+
             if (
-                self.termination_a_type_id != self._orig_termination_a_type_id
-                or self.termination_a_id != self._orig_termination_a_id
+                self.termination_a_type_id != existing_obj.termination_a_type_id
+                or self.termination_a_id != existing_obj.termination_a_id
             ):
                 raise ValidationError({"termination_a": err_msg})
             if (
-                self.termination_b_type_id != self._orig_termination_b_type_id
-                or self.termination_b_id != self._orig_termination_b_id
+                self.termination_b_type_id != existing_obj.termination_b_type_id
+                or self.termination_b_id != existing_obj.termination_b_id
             ):
                 raise ValidationError({"termination_b": err_msg})
 
@@ -263,6 +243,9 @@ class Cable(PrimaryModel, StatusModel):
             self._termination_a_device = self.termination_a.device
         if hasattr(self.termination_b, "device"):
             self._termination_b_device = self.termination_b.device
+
+        # Cache the original status so we can check later if it's been changed
+        self._orig_status = self.status
 
         super().save(*args, **kwargs)
 

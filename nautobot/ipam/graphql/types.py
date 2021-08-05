@@ -50,7 +50,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = filters.IPAddressFilterSet
 
     @gql_optimizer.resolver_hints(
-        model_field="assigned_object",
+        model_field="assigned_object_type",
     )
     def resolve_interface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
@@ -58,7 +58,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         return None
 
     @gql_optimizer.resolver_hints(
-        model_field="assigned_object",
+        model_field="assigned_object_type",
     )
     def resolve_vminterface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "VMInterface":
