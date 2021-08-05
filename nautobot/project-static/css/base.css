@@ -47,13 +47,13 @@ footer p {
 }
 
 /* Hide the search bar in the navigation menu on displays less than 1440px wide */
-@media (max-width: 1440px) {
+@media (max-width: 1439px) {
     #navbar_search {
         display: none;
     }
 }
 
-/* Hide the queries tab in the navigation menu on displays less than 1249px wide */
+/* Hide the queries tab in the navigation menu on displays less than 1250px wide */
 @media (max-width: 1249px) {
     #navbar_queries {
         display: none;
@@ -81,7 +81,7 @@ footer p {
     }
 }
 
-/* Collapse the nav menu on displays less than 1098px wide */
+/* Collapse the nav menu on displays less than 1099px wide */
 @media (max-width: 1098px) {
     #navbar {
         max-height: calc(80vh - 50px);
