@@ -16,7 +16,7 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 
 ## Writing Jobs
 
-Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `~/.nautobot/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 !!! warning
     The jobs path must include a file named `__init__.py`, which registers the path as a Python module. Do not delete this file.
@@ -52,6 +52,9 @@ You can implement the entire job within the `run()` function, but for more compl
     Your job can of course define additional Python methods to compartmentalize and reuse logic as required; however the `run`, `test_*`, and `post_run` methods are the only ones that will be automatically invoked by Nautobot.
 
 It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database as [`JobResult`](../models/extras/jobresult.md) records.
+
+!!! note
+    When actively developing a Job utilizing a development environment it's important to understand that the "reload on code changes" debugging functionality does **not** automatically restart the `nautobot_worker`; therefore, it is required to restart the `worker` after each update to your Job source code.
 
 ### Module Attributes
 

@@ -35,6 +35,7 @@ from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
@@ -443,7 +444,6 @@ class TagBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
 
 
 class ConfigContextForm(BootstrapMixin, forms.ModelForm):
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
@@ -1044,3 +1044,37 @@ class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
 class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):
     model = GraphQLQuery
     q = forms.CharField(required=False, label="Search")
+
+
+# Computed Fields
+
+
+class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=True,
+        label="Content Type",
+    )
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "content_type",
+            "slug",
+            "label",
+            "description",
+            "template",
+            "fallback_value",
+            "weight",
+        )
+
+
+class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
+    model = ComputedField
+    q = forms.CharField(required=False, label="Search")
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )

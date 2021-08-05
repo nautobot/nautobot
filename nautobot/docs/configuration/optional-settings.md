@@ -105,13 +105,43 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_BROKER_URL
+
+Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_RESULT_BACKEND
+
+Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery result backend used to tell workers where to store task results (tombstones).
+
+---
+
+## CELERY_TASK_SOFT_TIME_LIMIT
+
+Default: `300` (5 minutes)
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT`
+
+The global Celery task soft timeout (in seconds). Any background task that exceeds this duration will receive a `SoftTimeLimitExceeded` exception and is responsible for handling this exception and performing any necessary cleanup or final operations before ending. See also `CELERY_TASK_TIME_LIMIT` below.
+
+---
+
 ## CELERY_TASK_TIME_LIMIT
 
-Default: `1800`
+Default: `600` (10 minutes)
 
 Environment Variable: `NAUTOBOT_CELERY_TASK_TIME_LIMIT`
 
-The global Celery task timeout (in seconds)
+The global Celery task hard timeout (in seconds). Any background task that exceeds this duration will be forcibly killed with a `SIGKILL` signal.
 
 ---
 
@@ -449,6 +479,9 @@ Environment Variable: `NAUTOBOT_MAINTENANCE_MODE`
 
 Setting this to `True` will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
 
+!!! note
+    The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
+
 ---
 
 ## MAX_PAGE_SIZE
@@ -659,6 +692,7 @@ Default: `'django.contrib.sessions.backends.db'`
 
 Controls where Nautobot stores session data.
 
+To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
 To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
 
 See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.

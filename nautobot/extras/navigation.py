@@ -15,7 +15,7 @@ menu_items = (
                         name="Tags",
                         weight=100,
                         permissions=[
-                            "extras.view_tags",
+                            "extras.view_tag",
                         ],
                         buttons=(
                             NavMenuAddButton(
@@ -267,9 +267,25 @@ menu_items = (
                 weight=600,
                 items=(
                     NavMenuItem(
+                        link="extras:computedfield_list",
+                        name="Computed Fields",
+                        weight=100,
+                        permissions=[
+                            "extras.view_computedfield",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:computedfield_add",
+                                permissions=[
+                                    "extras.add_computedfield",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="extras:customlink_list",
                         name="Custom Links",
-                        weight=100,
+                        weight=200,
                         permissions=[
                             "extras.view_customlink",
                         ],

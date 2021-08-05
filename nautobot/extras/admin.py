@@ -1,3 +1,4 @@
+from db_file_storage.form_widgets import DBAdminClearableFileInput
 from django import forms
 from django.contrib import admin, messages
 from django.db import transaction
@@ -6,7 +7,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 
 from nautobot.utilities.forms import LaxURLField
-from .models import CustomField, CustomFieldChoice, CustomLink, ExportTemplate, JobResult, Webhook
+from .models import CustomField, CustomFieldChoice, CustomLink, ExportTemplate, FileProxy, JobResult, Webhook
 
 
 def order_content_types(field):
@@ -305,6 +306,27 @@ class ExportTemplateAdmin(admin.ModelAdmin):
         "owner_content_type",
     ]
     form = ExportTemplateForm
+
+
+#
+# File attachments
+#
+
+
+class FileProxyForm(forms.ModelForm):
+    class Meta:
+        model = FileProxy
+        exclude = []
+        widgets = {
+            "file": DBAdminClearableFileInput,
+        }
+
+
+@admin.register(FileProxy)
+class FileProxyAdmin(admin.ModelAdmin):
+    form = FileProxyForm
+    list_display = ["name", "uploaded_at"]
+    list_filter = ["uploaded_at"]
 
 
 #

@@ -171,8 +171,9 @@ Available tasks:
 A development environment can be easily started up from the root of the project using the following commands:
 
 - `invoke build` - Builds Nautobot docker images
+- `invoke migrate` - Performs database migration operation in Django    
 - `invoke createsuperuser` - Creates a superuser account for the Nautobot application
-- `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, and the Jobs worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
+- `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers.
 
 Additional useful commands for the development environment:
 
@@ -243,12 +244,12 @@ The `docker-entrypoint.sh` script will run any migrations and then look for spec
  Any variables defined in this file will override the defaults. The `override.env` should look like the following:
 
 ```bash
-# Superuser information. CREATE_SUPERUSER defaults to false.
-CREATE_SUPERUSER=true
-SUPERUSER_NAME=admin
-SUPERUSER_EMAIL=admin@example.com
-SUPERUSER_PASSWORD=admin
-SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
+# Superuser information. NAUTOBOT_CREATE_SUPERUSER defaults to false.
+NAUTOBOT_CREATE_SUPERUSER=true
+NAUTOBOT_SUPERUSER_NAME=admin
+NAUTOBOT_SUPERUSER_EMAIL=admin@example.com
+NAUTOBOT_SUPERUSER_PASSWORD=admin
+NAUTOBOT_SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 ```
 
 !!! warning

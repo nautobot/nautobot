@@ -193,6 +193,10 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
+#### MySQL Unicode Settings
+
+If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for more information.
+
 ## Optional Settings
 
 All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.
@@ -298,8 +302,7 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected. Some platforms (such as CentOS) have a firewall enabled by default.  If you are unable to connect to the server url on port 8080, verify the firewall policy to allow the appropriate connections, or select an already permitted port.
 
 !!! important
-    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server rqworker` separately. For production use, both Nautobot and the worker should be managed by systemd rather than started manually, as described in the next section of this documentation.
-
+    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` (for background tasks) or `nautobot-server rqworker` (for jobs) separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
 Note that the initial user interface will be locked down for non-authenticated users.
 
@@ -309,4 +312,4 @@ Try logging in using the superuser account we just created. Once authenticated, 
 
 ![Nautobot UI as seen by an administrator](../media/installation/nautobot_ui_admin.png)
 
-Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](../wsgi).
+Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).

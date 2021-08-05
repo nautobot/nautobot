@@ -1,6 +1,6 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
 from .statuses import Status, StatusField, StatusModel
-from .customfields import CustomField, CustomFieldChoice, CustomFieldModel
+from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
 from .relationships import Relationship, RelationshipModel, RelationshipAssociation
 from .models import (
@@ -9,6 +9,8 @@ from .models import (
     ConfigContextSchema,
     CustomLink,
     ExportTemplate,
+    FileAttachment,
+    FileProxy,
     GraphQLQuery,
     ImageAttachment,
     Job,
@@ -21,17 +23,17 @@ from .tags import Tag, TaggedItem
 
 __all__ = (
     "ChangeLoggedModel",
+    "ComputedField",
     "ConfigContext",
     "ConfigContextModel",
     "ConfigContextSchema",
-    "Status",
-    "StatusField",
-    "StatusModel",
     "CustomField",
     "CustomFieldChoice",
     "CustomFieldModel",
     "CustomLink",
     "ExportTemplate",
+    "FileAttachment",
+    "FileProxy",
     "GitRepository",
     "GraphQLQuery",
     "ImageAttachment",
@@ -43,6 +45,9 @@ __all__ = (
     "RelationshipAssociation",
     "ScheduledJob",
     "ScheduledJobs",
+    "Status",
+    "StatusField",
+    "StatusModel",
     "Tag",
     "TaggedItem",
     "Webhook",

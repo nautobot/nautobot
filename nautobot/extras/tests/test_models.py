@@ -5,9 +5,9 @@ import uuid
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase, TransactionTestCase
 
 from nautobot.dcim.models import (
     Device,
@@ -19,10 +19,22 @@ from nautobot.dcim.models import (
     Region,
 )
 from nautobot.extras.jobs import get_job, Job
-from nautobot.extras.models import ConfigContext, ConfigContextSchema, GitRepository, JobResult, Status, Tag
+from nautobot.extras.models import (
+    ComputedField,
+    ConfigContext,
+    ConfigContextSchema,
+    ExportTemplate,
+    FileAttachment,
+    FileProxy,
+    GitRepository,
+    JobResult,
+    Status,
+    Tag,
+)
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -83,6 +95,27 @@ class ConfigContextTest(TestCase):
 
         expected_data = {"a": 123, "b": 456, "c": 789}
         self.assertEqual(self.device.get_config_context(), expected_data)
+
+    def test_name_uniqueness(self):
+        """
+        Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
+        """
+        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
+        with self.assertRaises(ValidationError):
+            duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
+            duplicate_context.validated_save()
+
+        # If a different context is owned by a GitRepository, that's not considered a duplicate
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+
+        nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
+        nonduplicate_context.validated_save()
 
     def test_annotation_same_as_get_for_object(self):
         """
@@ -222,6 +255,38 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+
+
+class ExportTemplateTest(TestCase):
+    """
+    Tests for the ExportTemplate model class.
+    """
+
+    def test_name_contenttype_uniqueness(self):
+        """
+        The pair of (name, content_type) must be unique for an un-owned ExportTemplate.
+
+        See GitHub issue #431.
+        """
+        device_ct = ContentType.objects.get_for_model(Device)
+        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
+
+        with self.assertRaises(ValidationError):
+            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
+            duplicate_template.validated_save()
+
+        # A differently owned ExportTemplate may have the same name
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+        nonduplicate_template = ExportTemplate(
+            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
+        )
+        nonduplicate_template.validated_save()
 
 
 class GitRepositoryTest(TransactionTestCase):
@@ -631,3 +696,64 @@ class ConfigContextSchemaTestCase(TestCase):
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
+
+
+class ComputedFieldTest(TestCase):
+    """
+    Tests for the `ComputedField` Model
+    """
+
+    def setUp(self):
+        self.good_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="good_computed_field",
+            label="Good Computed Field",
+            template="{{ obj.name }} is awesome!",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ not_in_context | not_a_filter }} is horrible!",
+            fallback_value="An error occurred while rendering this template.",
+            weight=50,
+        )
+        self.site1 = Site.objects.create(name="NYC")
+
+    def test_render_method(self):
+        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+
+    def test_render_method_bad_template(self):
+        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+
+class FileProxyTest(TestCase):
+    def setUp(self):
+        self.dummy_file = SimpleUploadedFile(name="dummy.txt", content=b"I am content.\n")
+
+    def test_create_file_proxy(self):
+        """Test creation of `FileProxy` object."""
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+
+        # Now refresh it and make sure it was saved and retrieved correctly.
+        fp.refresh_from_db()
+        self.dummy_file.seek(0)  # Reset cursor since it was previously read
+        self.assertEqual(fp.name, self.dummy_file.name)
+        self.assertEqual(fp.file.read(), self.dummy_file.read())
+
+    def test_delete_file_proxy(self):
+        """Test deletion of `FileProxy` object."""
+        fp = FileProxy.objects.create(name=self.dummy_file.name, file=self.dummy_file)
+
+        # Assert counts before delete
+        self.assertEqual(FileProxy.objects.count(), 1)
+        self.assertEqual(FileAttachment.objects.count(), 1)
+
+        # Assert counts after delete
+        fp.delete()
+        self.assertEqual(FileProxy.objects.count(), 0)
+        self.assertEqual(FileAttachment.objects.count(), 0)
