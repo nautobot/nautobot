@@ -46,9 +46,16 @@ footer p {
     }
 }
 
-/* Hide the search bar in the navigation menu on displays less than 1250px wide */
-@media (max-width: 1249px) {
+/* Hide the search bar in the navigation menu on displays less than 1440px wide */
+@media (max-width: 1440px) {
     #navbar_search {
+        display: none;
+    }
+}
+
+/* Hide the queries tab in the navigation menu on displays less than 1249px wide */
+@media (max-width: 1249px) {
+    #navbar_queries {
         display: none;
     }
 }
@@ -74,8 +81,8 @@ footer p {
     }
 }
 
-/* Collapse the nav menu on displays less than 980px wide */
-@media (max-width: 979px) {
+/* Collapse the nav menu on displays less than 1098px wide */
+@media (max-width: 1098px) {
     #navbar {
         max-height: calc(80vh - 50px);
         overflow-y: auto;
@@ -98,7 +105,7 @@ footer p {
         border-width: 0 0 1px;
     }
     .navbar-collapse.collapse {
-        display: none!important;
+        display: none !important;
         max-height: none;
     }
     .navbar-nav {

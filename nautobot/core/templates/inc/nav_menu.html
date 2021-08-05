@@ -88,42 +88,43 @@
                     </span>
                 </div>
             </form>
+
             {% comment %}
             The following if statement means the Query tab is only rendered when the GraphiQL
             is rendered.
             {% endcomment %}
             {% if  graphiql and perms.extras.view_graphqlquery %}
-
-                <ul class="nav navbar-nav navbar-right">
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-                            <span>Queries </span>
-                            <span class="caret"></span>
-                        </a>
-                        <ul class="dropdown-menu" id="graphql-queries-menu">
-                            <li class="dropdown-header">Saved Queries</li>
-                            {% for query in saved_graphiql_queries %}
+                <div id="navbar_queries">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                <span>Queries </span>
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu" id="graphql-queries-menu">
+                                <li class="dropdown-header">Saved Queries</li>
+                                {% for query in saved_graphiql_queries %}
+                                    <li>
+                                        {% if request.GET.id|slugify == query.id|slugify %}
+                                            <div class="buttons pull-right">
+                                                <button type="button" class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</button>
+                                            </div>
+                                            <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                                                <strong>{{ query.name }}</strong>
+                                            </a>
+                                        {% else %}
+                                            <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                                <li class="divider" role="separator"></li>
                                 <li>
-                                    {% if request.GET.id|slugify == query.id|slugify %}
-                                        <div class="buttons pull-right">
-                                            <button type="button" class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</button>
-                                        </div>
-                                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
-                                            <strong>{{ query.name }}</strong>
-                                        </a>
-                                    {% else %}
-                                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
-                                    {% endif %}
+                                    <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
                                 </li>
-                            {% endfor %}
-                            <li class="divider" role="separator"></li>
-                            <li>
-                                <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
-                            </li>
-                        </ul>
-                    <li>
-                </ul>
-
+                            </ul>
+                        <li>
+                    </ul>
+                </div>
             {% endif %}
         </div>
     </div>
