@@ -935,12 +935,16 @@ class JobJobResultView(ContentTypePermissionRequiredMixin, View):
 class ScheduledJobListView(generic.ObjectListView):
     queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
     table = tables.ScheduledJobsTable
+    filterset = filters.ScheduledJobFilterSet
+    filterset_form = forms.ScheduledJobFilterForm
     action_buttons = ()
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
     queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
     table = tables.ScheduledJobsApprovalQueueTable
+    filterset = filters.ScheduledJobFilterSet
+    filterset_form = forms.ScheduledJobFilterForm
     action_buttons = ()
     template_name = "extras/scheduled_jobs_approval_queue_list.html"
 
