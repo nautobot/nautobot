@@ -1,22 +1,7 @@
-{% extends 'base.html' %}
-{% load buttons %}
-{% load custom_links %}
-{% load plugins %}
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
 
-{% block header %}
-    <div class="row">
-        <div class="col">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:gitrepository_list' %}">Git Repositories</a></li>
-                <li>{{ object }}</li>
-            </ol>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        {% plugin_buttons object %}
-        {% if perms.extras.add_gitrepository %}
-            {% clone_button object %}
-        {% endif %}
+{% block extra_buttons %}
         {% if perms.extras.change_gitrepository %}
             <form class="form-inline" style="display: inline-block"
                   method="post" action="{% url 'extras:gitrepository_sync' slug=object.slug %}">
@@ -25,35 +10,24 @@
                     <i class="mdi mdi-source-branch-sync" aria-hidden="true"></i> Sync
                 </button>
             </form>
-            {% edit_button object %}
         {% endif %}
-        {% if perms.extras.delete_gitrepository %}
-            {% delete_button object %}
-        {% endif %}
-    </div>
-    <h1>{% block title %}{{ object }}{% endblock %}</h1>
-    {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
-        {% custom_links object %}
-    </div>
-    <ul class="nav nav-tabs">
+{% endblock extra_buttons %}
+
+{% block nav_tabs %}
         <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}">Git Repository</a>
         </li>
         <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
-            <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
+             <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
         </li>
         {% if perms.extras.view_objectchange %}
             <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
                 <a href="{% url 'extras:gitrepository_changelog' slug=object.slug %}">Change Log</a>
             </li>
         {% endif %}
-    </ul>
-{% endblock %}
+{% endblock nav_tabs %}
 
-{% block content %}
-    <div class="row">
-        <div class="col-md-8">
+{% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Repository Details</strong>
@@ -80,11 +54,9 @@
                     </tr>
                 </table>
             </div>
-            {% include 'inc/custom_fields_panel.html' %}
-            {% include 'inc/relationships_panel.html' %}
-            {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='extras:gitrepository_list' %}
-        </div>
-        <div class="col-md-4">
+{% endblock content_left_page %}
+
+{% block content_right_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Provided Data Types</strong>
@@ -108,6 +80,4 @@
                     {% endfor %}
                 </table>
             </div>
-        </div>
-    </div>
 {% endblock %}

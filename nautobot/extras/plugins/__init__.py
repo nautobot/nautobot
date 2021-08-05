@@ -7,7 +7,15 @@ from packaging import version
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 
-from nautobot.core.apps import NautobotConfig, NavMenuButton, NavMenuGroup, NavMenuItem, NavMenuTab, register_menu_items
+from nautobot.core.apps import (
+    NautobotConfig,
+    NavMenuButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+    register_menu_items,
+    register_homepage_panels,
+)
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
@@ -68,6 +76,7 @@ class PluginConfig(NautobotConfig):
     custom_validators = "custom_validators.custom_validators"
     datasource_contents = "datasources.datasource_contents"
     graphql_types = "graphql.types.graphql_types"
+    homepage_layout = "homepage.layout"
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
     template_extensions = "template_content.template_extensions"
@@ -99,6 +108,10 @@ class PluginConfig(NautobotConfig):
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
         if menu_items is not None:
             register_plugin_menu_items(self.verbose_name, menu_items)
+
+        homepage_layout = import_object(f"{self.__module__}.{self.homepage_layout}")
+        if homepage_layout is not None:
+            register_homepage_panels(self.path, self.label, homepage_layout)
 
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
