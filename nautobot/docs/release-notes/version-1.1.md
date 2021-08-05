@@ -83,6 +83,15 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
 
+## v1.1.2 (2021-??-??)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- [#723](https://github.com/nautobot/nautobot/issues/723) - Fixed power draw not providing a `UtilizationData` type for use in graphing power draw utilization
 
 ## v1.1.1 (2021-08-05)
 
