@@ -6,10 +6,10 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models, transaction
 from django.urls import reverse
-from django_extensions.db.fields import AutoSlugField
 from django_cryptography.fields import encrypt
 
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 
 
@@ -30,7 +30,7 @@ class GitRepository(PrimaryModel):
         max_length=100,
         unique=True,
     )
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = AutoSlugField(populate_from="name")
 
     remote_url = models.URLField(
         max_length=255,

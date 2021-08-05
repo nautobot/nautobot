@@ -8,11 +8,11 @@ from django.db import models
 from django.db.models import F
 from django.urls import reverse
 from django.utils.functional import classproperty
-from django_extensions.db.fields import AutoSlugField
 
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import ObjectChange, Status, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -173,7 +173,7 @@ class RIR(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = AutoSlugField(populate_from="name")
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
@@ -382,7 +382,7 @@ class Role(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100, unique=True, editable=True, overwrite_on_add=False)
+    slug = AutoSlugField(populate_from="name")
     weight = models.PositiveSmallIntegerField(default=1000)
     description = models.CharField(
         max_length=200,
@@ -977,7 +977,7 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
-    slug = AutoSlugField(populate_from="name", max_length=100, editable=True, overwrite_on_add=False)
+    slug = AutoSlugField(populate_from="name", unique=None)
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
