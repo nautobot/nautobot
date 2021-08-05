@@ -43,6 +43,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job,
     JobResult,
     ObjectChange,
     Relationship,
@@ -823,6 +824,13 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(),
     )
+
+
+class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
+    model = ScheduledJob
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    total_run_count = forms.IntegerField(required=False)
 
 
 class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
