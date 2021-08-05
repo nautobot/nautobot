@@ -738,7 +738,7 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
 
 class GraphQLQuerySerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
-    variables = serializers.DictField(allow_null=True, default={})
+    variables = serializers.DictField(required=False, allow_null=True, default={})
 
     class Meta:
         model = GraphQLQuery
@@ -750,6 +750,14 @@ class GraphQLQuerySerializer(ValidatedModelSerializer):
             "query",
             "variables",
         )
+
+
+class GraphQLQueryInputSerializer(serializers.Serializer):
+    variables = serializers.DictField(allow_null=True, default={})
+
+
+class GraphQLQueryOutputSerializer(serializers.Serializer):
+    data = serializers.DictField(default={})
 
 
 # Computed Fields

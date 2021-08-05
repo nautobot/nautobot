@@ -22,6 +22,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.functional import classproperty
+import netaddr
 import yaml
 
 
@@ -321,6 +322,9 @@ class BaseJob:
             # FileVar (Save each FileVar as a FileProxy)
             elif isinstance(value, InMemoryUploadedFile):
                 return_data[field_name] = BaseJob.save_file(value)
+            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
+            elif isinstance(value, netaddr.ip.BaseIP):
+                return_data[field_name] = str(value)
             # Everything else...
             else:
                 return_data[field_name] = value
@@ -343,7 +347,12 @@ class BaseJob:
         return_data = {}
 
         for field_name, value in data.items():
-            var = vars[field_name]
+            # If a field isn't a var, skip it (e.g. `_commit`).
+            try:
+                var = vars[field_name]
+            except KeyError:
+                continue
+
             if isinstance(var, MultiObjectVar):
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)
                 if queryset.count() < len(value):
@@ -358,6 +367,12 @@ class BaseJob:
                 return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
             elif isinstance(var, FileVar):
                 return_data[field_name] = cls.load_file(value)
+            # IPAddressVar is a netaddr.IPAddress object
+            elif isinstance(var, IPAddressVar):
+                return_data[field_name] = netaddr.IPAddress(value)
+            # IPAddressWithMaskVar, IPNetworkVar are netaddr.IPNetwork objects
+            elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
+                return_data[field_name] = netaddr.IPNetwork(value)
             else:
                 return_data[field_name] = value
 

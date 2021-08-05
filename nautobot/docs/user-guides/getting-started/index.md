@@ -27,5 +27,5 @@ the included exercises, the user should have a good feel for:
 
 ## Requirements
 
-1. A functional Nautobot [installation](../installation/index.md)
+1. A functional Nautobot [installation](../../installation/index.md)
 

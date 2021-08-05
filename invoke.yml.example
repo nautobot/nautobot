@@ -1,5 +1,6 @@
 ---
 nautobot:
+  project_name: "nautobot"
   local: False
   python_ver: "3.7"
   compose_dir: "/full/path/to/nautobot/development"

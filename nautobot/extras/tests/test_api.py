@@ -852,11 +852,11 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        graphqlqueries = (
+        cls.graphqlqueries = (
             GraphQLQuery(
                 name="graphql-query-1",
                 slug="graphql-query-1",
-                query="{ query: sites {name} }",
+                query="{ sites {name} }",
             ),
             GraphQLQuery(
                 name="graphql-query-2",
@@ -867,7 +867,7 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
                 name="graphql-query-3",
                 slug="graphql-query-3",
                 query="""
-query ($device: String!) {
+query ($device: [String!]) {
   devices(name: $device) {
     config_context
     name
@@ -958,9 +958,25 @@ query ($device: String!) {
             ),
         )
 
-        for query in graphqlqueries:
+        for query in cls.graphqlqueries:
             query.full_clean()
             query.save()
+
+    def test_run_saved_query(self):
+        """Exercise the /run/ API endpoint."""
+        self.add_permissions("extras.add_graphqlquery")
+        self.add_permissions("extras.change_graphqlquery")
+        self.add_permissions("extras.view_graphqlquery")
+
+        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[0].pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual({"data": {"sites": []}}, response.data)
+
+        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[2].pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual({"data": {"devices": []}}, response.data)
 
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
