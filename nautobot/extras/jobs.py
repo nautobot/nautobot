@@ -370,7 +370,7 @@ class BaseJob:
             # IPAddressVar is a netaddr.IPAddress object
             elif isinstance(var, IPAddressVar):
                 return_data[field_name] = netaddr.IPAddress(value)
-            # IPAddressWithMaskVar, IPNetworkVar are a netaddr.IPNetwork objects
+            # IPAddressWithMaskVar, IPNetworkVar are netaddr.IPNetwork objects
             elif isinstance(var, (IPAddressWithMaskVar, IPNetworkVar)):
                 return_data[field_name] = netaddr.IPNetwork(value)
             else:

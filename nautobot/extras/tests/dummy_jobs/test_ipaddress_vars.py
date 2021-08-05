@@ -17,7 +17,7 @@ class TestIPAddresses(Job):
         description="IPv4 with mask",
     )
     ipv4_network = IPAddressWithMaskVar(
-        description="IPv4 with mask",
+        description="IPv4 network",
     )
     ipv6_address = IPAddressVar(
         description="IPv6 Address",
@@ -26,7 +26,7 @@ class TestIPAddresses(Job):
         description="IPv6 with mask",
     )
     ipv6_network = IPAddressWithMaskVar(
-        description="IPv6 with mask",
+        description="IPv6 network",
     )
 
     def run(self, data, commit):
