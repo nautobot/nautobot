@@ -53,6 +53,7 @@ from nautobot.tenancy.api.nested_serializers import (
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.utils import copy_safe_request
 from nautobot.virtualization.api.nested_serializers import (
     NestedClusterGroupSerializer,
     NestedClusterSerializer,
@@ -514,6 +515,35 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
         ]
 
 
+class NestedJobScheduleSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    start_time = serializers.DateTimeField()
+    interval = serializers.ChoiceField(choices=JobExecutionType)
+
+    def create_schedule(self, data, commit, job, request):
+        job_kwargs = {
+            "data": data,
+            "request": copy_safe_request(request),
+            "user": request.user.pk,
+            "commit": commit,
+            "name": job.class_path,
+        }
+        scheduled_job = ScheduledJob(
+            name=name,
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job.class_path,
+            start_time=start_time,
+            description=f"Nautobot job scheduled by {request.user} on {schedule_datetime}",
+            kwargs=job_kwargs,
+            interval=interval,
+            one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
+            user=request.user,
+            approval_required=job_class.approval_required,
+        )
+        scheduled_job.save()
+        return scheduled_job
+
+
 #
 # Jobs (fka Custom Scripts, Reports)
 #
@@ -543,6 +573,7 @@ class JobDetailSerializer(JobSerializer):
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default="")
     commit = serializers.BooleanField(required=False, default=None)
+    schedule = NestedJobScheduleSerializer(required=False)
 
 
 #
