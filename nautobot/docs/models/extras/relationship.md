@@ -9,11 +9,16 @@ Sometimes it is desirable to create a new kind of relationship between one (or m
 
 ## Relationship Filters
 
-Filters can be defined to restrict the type or selection of objects for either side of the connection. From the FEX example above, you can restrict the FEX side of the connection to only of devices with the FEX role, and restrict the controller side to only devices with Controller roles.
+Filters can be defined to restrict the type or selection of objects for either side of the connection. 
+
+### Relationship Filter Example
+
+As an example, let's create a relationship between Circuits and Devices. 
+In our situation 
 
 ## Relationship Labels
 
-Realtionship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name. From the VLANs example above, you might label the relationship so that on the VLANs side the connection appears as 'Devices' and on the Device side the connection appears as 'VLANs'. 
+Relationship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name. From the VLANs example above, you might label the relationship so that on the VLANs side the connection appears as 'Devices' and on the Device side the connection appears as 'VLANs'. 
 
 ### Options
 
