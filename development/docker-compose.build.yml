@@ -10,3 +10,5 @@ services:
       - 8443:8443
   worker:
     image: "networktocode/nautobot-py${PYTHON_VER}:local"
+  celery_worker:
+    image: "networktocode/nautobot-py${PYTHON_VER}:local"
