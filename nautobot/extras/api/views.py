@@ -294,6 +294,10 @@ class JobViewSet(ViewSet):
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
+        schedule = input_serializer.data.get("schedule")
+        if schedule:
+            schedule = schedule.create_schedule(data, commit, job, request)
+
         job_result = JobResult.enqueue_job(
             run_job,
             job.class_path,
@@ -302,6 +306,7 @@ class JobViewSet(ViewSet):
             data=data,
             request=copy_safe_request(request),
             commit=commit,
+            schedule=schedule,
         )
         job.result = job_result
 
