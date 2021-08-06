@@ -479,6 +479,9 @@ Environment Variable: `NAUTOBOT_MAINTENANCE_MODE`
 
 Setting this to `True` will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
 
+!!! note
+    The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
+
 ---
 
 ## MAX_PAGE_SIZE
@@ -689,6 +692,7 @@ Default: `'django.contrib.sessions.backends.db'`
 
 Controls where Nautobot stores session data.
 
+To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
 To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
 
 See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.

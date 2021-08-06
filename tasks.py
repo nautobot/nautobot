@@ -51,15 +51,21 @@ namespace.configure(
                 "docker-compose.yml",
                 "docker-compose.dev.yml",
             ],
+            # Image names to use when building from "main" branch
             "docker_image_names_main": [
+                # Production containers - not containing development tools
                 "networktocode/nautobot",
                 "ghcr.io/nautobot/nautobot",
+                # Development containers - include development tools like linters
                 "networktocode/nautobot-dev",
                 "ghcr.io/nautobot/nautobot-dev",
             ],
+            # Image names to use when building from "develop" branch
             "docker_image_names_develop": [
+                # Production containers - not containing development tools
                 "networktocode/nautobot",
                 "ghcr.io/nautobot/nautobot",
+                # Development containers - include development tools like linters
                 "networktocode/nautobot-dev",
                 "ghcr.io/nautobot/nautobot-dev",
             ],
@@ -222,8 +228,10 @@ def docker_push(context, branch, commit="", datestamp=""):
     for image_name in docker_image_names:
         for image_tag in docker_image_tags:
             if image_name.endswith("-dev"):
+                # Use the development image as the basis for this tag and push
                 local_image = f"networktocode/nautobot-dev-py{context.nautobot.python_ver}:local"
             else:
+                # Use the production image as the basis for this tag and push
                 local_image = f"networktocode/nautobot-py{context.nautobot.python_ver}:local"
             new_image = f"{image_name}:{image_tag}"
             tag_command = f"docker tag {local_image} {new_image}"

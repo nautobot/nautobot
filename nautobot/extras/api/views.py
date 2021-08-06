@@ -434,11 +434,16 @@ class GraphQLQueryViewSet(ModelViewSet):
     serializer_class = serializers.GraphQLQuerySerializer
     filterset_class = filters.GraphQLQueryFilterSet
 
-    @swagger_auto_schema(method="post", request_body=serializers.GraphQLQuerySerializer)
+    @swagger_auto_schema(
+        method="post",
+        request_body=serializers.GraphQLQueryInputSerializer,
+        responses={"200": serializers.GraphQLQueryOutputSerializer},
+    )
     @action(detail=True, methods=["post"])
     def run(self, request, pk):
         try:
-            result = execute_saved_query(pk, variables=request.data, request=request).to_dict()
+            query = get_object_or_404(self.queryset, pk=pk)
+            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(
