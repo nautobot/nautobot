@@ -237,14 +237,14 @@ class JobViewSet(ViewSet):
             "name": job.class_path,
         }
         scheduled_job = ScheduledJob(
-            name=serializer.name,
+            name=serializer["name"],
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job.class_path,
-            start_time=serializer.start_time,
-            description=f"Nautobot job scheduled by {request.user} on {serializer.start_time}",
+            start_time=serializer.get("start_time"),
+            description=f"Nautobot job scheduled by {request.user} on {serializer.get('start_time')}",
             kwargs=job_kwargs,
-            interval=serializer.interval,
-            one_off=serializer.interval == JobExecutionType.TYPE_FUTURE,
+            interval=serializer["interval"],
+            one_off=serializer["interval"] == JobExecutionType.TYPE_FUTURE,
             user=request.user,
             approval_required=job_class.approval_required,
         )
