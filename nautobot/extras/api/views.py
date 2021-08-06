@@ -348,7 +348,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
-    queryset = ScheduledJob.objects.prefetch_related("user", "task")
+    queryset = ScheduledJob.objects.prefetch_related("user")
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
 
