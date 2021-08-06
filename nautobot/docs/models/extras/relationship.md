@@ -31,6 +31,14 @@ For context, here is an image of the entire Relationship:
 
 ![Image of Relationship with json filter](../../img/relationship_w_json_filter.png)
 
+Now, the Circuit Relationship field will show up on a Device with an `edge` role:
+
+![Image of Edge Device Relationships](../../img/edge_dev_ckt_relationship.png)
+
+The Circuit Relationship field will *not* show up on a Device with a role `leaf`:
+
+![Image of Leaf Device Relationships](../../img/leaf_dev_no_ckt_relationship.png)
+
 
 ## Relationship Labels
 
