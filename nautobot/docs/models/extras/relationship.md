@@ -14,7 +14,23 @@ Filters can be defined to restrict the type or selection of objects for either s
 ### Relationship Filter Example
 
 As an example, let's create a relationship between Circuits and Devices. 
-In our situation 
+In our situation we only would terminate Circuits on Devices with the Role of `edge`.
+
+To prevent the Circuit Relationship from showing up on any other Device, use a JSON filter to 
+limit the Relationship to only Devices with Role of `edge`:
+
+```
+{
+    "role": [
+        "edge"
+    ]
+}
+```
+
+For context, here is an image of the entire Relationship:
+
+![Image of Relationship with json filter](../../img/relationship_w_json_filter.png)
+
 
 ## Relationship Labels
 
