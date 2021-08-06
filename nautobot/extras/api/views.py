@@ -18,7 +18,7 @@ from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
     ConfigContext,
@@ -228,6 +228,29 @@ class JobViewSet(ViewSet):
 
         return job_class
 
+    def _create_schedule(self, serializer, data, commit, job, job_class, request):
+        job_kwargs = {
+            "data": data,
+            "request": copy_safe_request(request),
+            "user": request.user.pk,
+            "commit": commit,
+            "name": job.class_path,
+        }
+        scheduled_job = ScheduledJob(
+            name=serializer.name,
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job.class_path,
+            start_time=serializer.start_time,
+            description=f"Nautobot job scheduled by {request.user} on {serializer.start_time}",
+            kwargs=job_kwargs,
+            interval=serializer.interval,
+            one_off=serializer.interval == JobExecutionType.TYPE_FUTURE,
+            user=request.user,
+            approval_required=job_class.approval_required,
+        )
+        scheduled_job.save()
+        return scheduled_job
+
     def list(self, request):
         if not request.user.has_perm("extras.view_job"):
             raise PermissionDenied("This user does not have permission to view jobs.")
@@ -296,7 +319,7 @@ class JobViewSet(ViewSet):
 
         schedule = input_serializer.data.get("schedule")
         if schedule:
-            schedule = schedule.create_schedule(data, commit, job, request)
+            schedule = self._create_schedule(schedule, data, commit, job, job_class, request)
 
         job_result = JobResult.enqueue_job(
             run_job,
