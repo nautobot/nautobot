@@ -33,6 +33,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Status,
+    ScheduledJob,
     Tag,
     TaggedItem,
     Webhook,
@@ -338,6 +339,21 @@ class JobResultViewSet(ModelViewSet):
     queryset = JobResult.objects.prefetch_related("user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
+
+
+#
+# Scheduled Jobs
+#
+
+
+class ScheduledJobViewSet(ReadOnlyModelViewSet):
+    """
+    Retrieve a list of scheduled jobs
+    """
+
+    queryset = ScheduledJob.objects.prefetch_related("user", "task")
+    serializer_class = serializers.ScheduledJobSerializer
+    filterset_class = filters.ScheduledJobFilterSet
 
 
 #

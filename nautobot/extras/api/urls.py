@@ -36,6 +36,9 @@ router.register("object-changes", views.ObjectChangeViewSet)
 # Job Results
 router.register("job-results", views.JobResultViewSet)
 
+# Scheduled Jobs
+router.register("scheduled-jobs", views.ScheduledJobViewSet)
+
 # ContentTypes
 router.register("content-types", views.ContentTypeViewSet)
 

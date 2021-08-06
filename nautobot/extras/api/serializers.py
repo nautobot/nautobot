@@ -38,6 +38,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     Webhook,
@@ -475,6 +476,38 @@ class JobResultSerializer(serializers.ModelSerializer):
             "user",
             "data",
             "job_id",
+        ]
+
+
+#
+# Scheduled Jobs
+#
+
+
+class ScheduledJobSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
+    user = NestedUserSerializer(read_only=True)
+    approved_by_user = NestedUserSerializer(read_only=True)
+
+    class Meta:
+        model = ScheduledJob
+        fields = [
+            "id",
+            "url",
+            "name",
+            "user",
+            "task",
+            "interval",
+            "queue",
+            "job_class",
+            "last_run_at",
+            "total_run_count",
+            "date_changed",
+            "description",
+            "user",
+            "approved_by_user",
+            "approval_required",
+            "approved_at",
         ]
 
 
