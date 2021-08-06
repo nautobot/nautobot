@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 from drf_yasg.utils import swagger_serializer_method
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
@@ -515,9 +516,30 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
 
 
 class NestedJobScheduleSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=255)
-    start_time = serializers.DateTimeField()
+    name = serializers.CharField(max_length=255, required=False)
+    start_time = serializers.DateTimeField(required=False)
     interval = serializers.ChoiceField(choices=JobExecutionType)
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        if data["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+            if not data["name"]:
+                raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
+
+            if ScheduledJob.objects.filter(name=data["name"]).exists():
+                # django_celery_beat.models.PeriodicTask enforces unique values for the name field, so we need to check
+                # for existing instances with the same name.
+                raise serializers.ValidationError({"name": "Scheduled job with this name already exists!"})
+
+            if not data["start_time"] or data["start_time"] < timezone.now():
+                raise serializers.ValidationError(
+                    {
+                        "start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+        return data
 
 
 #
