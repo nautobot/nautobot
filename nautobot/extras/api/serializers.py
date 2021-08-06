@@ -543,7 +543,7 @@ class JobSerializer(serializers.Serializer):
 
 
 class JobDetailSerializer(JobSerializer):
-    result = JobResultSerializer()
+    result = JobResultSerializer(required=False)
 
 
 class JobInputSerializer(serializers.Serializer):
