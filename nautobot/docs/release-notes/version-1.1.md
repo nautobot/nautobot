@@ -92,6 +92,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Fixed
 
 - [#723](https://github.com/nautobot/nautobot/issues/723) - Fixed power draw not providing a `UtilizationData` type for use in graphing power draw utilization
+- [#782](https://github.com/nautobot/nautobot/pull/782) - Corrected documentation regarding the use of `docker-compose.override.yml`
 
 ## v1.1.1 (2021-08-05)
 
