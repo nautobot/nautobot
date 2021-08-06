@@ -320,18 +320,18 @@ class JobViewSet(ViewSet):
         schedule = input_serializer.data.get("schedule")
         if schedule:
             schedule = self._create_schedule(schedule, data, commit, job, job_class, request)
-
-        job_result = JobResult.enqueue_job(
-            run_job,
-            job.class_path,
-            job_content_type,
-            request.user,
-            data=data,
-            request=copy_safe_request(request),
-            commit=commit,
-            schedule=schedule,
-        )
-        job.result = job_result
+        else:
+            job_result = JobResult.enqueue_job(
+                run_job,
+                job.class_path,
+                job_content_type,
+                request.user,
+                data=data,
+                request=copy_safe_request(request),
+                commit=commit,
+                schedule=schedule,
+            )
+            job.result = job_result
 
         serializer = serializers.JobDetailSerializer(job, context={"request": request})
 
