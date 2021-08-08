@@ -163,7 +163,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Args</td>
+                        <td>Arguments</td>
                         <td>
                             <ul>
                                 {% for arg in object.args %}
@@ -173,14 +173,33 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Keyword Args</td>
+                        <td>Request</td>
                         <td>
-                            <dl>
-                                {% for key, value in object.kwargs.items %}
-                                    <dt>{{ key }}</dt>
-                                    <dd><code>{{ value }}</code></dd>
-                                {% endfor %}
-                            </dl>
+                          <table class="table table-hover panel-body attr-table">
+                            {% with request=object.kwargs.request %}
+                              {% for key, value in request.items %}
+                                <tr>
+                                  <td>{{ key }}</td>
+                                  <td><details><code>{{ value }}</code></details></td>
+                                </tr>
+                              {% endfor %}
+                            {% endwith %}
+                          </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Keyword Arguments</td>
+                        <td>
+                          <table class="table table-hover panel-body attr-table">
+                            {% for key, value in object.kwargs.items %}
+                                {% if not key == 'request' %}
+                                  <tr>
+                                    <td>{{ key }}</td>
+                                    <td><details><code>{{ value }}</code></details></td>
+                                  </tr>
+                                {% endif %}
+                            {% endfor %}
+                          </table>
                         </td>
                     </tr>
                 </table>
