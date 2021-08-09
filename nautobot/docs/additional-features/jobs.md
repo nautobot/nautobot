@@ -384,7 +384,7 @@ nautobot-server runjob <grouping_name>/<module>/<JobName> [--commit]
 ```
 
 !!! note
-    [See above](./#jobs_and_class_path) for `class_path` defintions.
+    [See above](#jobs-and-class_path) for `class_path` definitions.
 
 Using the same example shown in the API:
 
