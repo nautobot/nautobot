@@ -482,6 +482,12 @@ Setting this to `True` will display a "maintenance mode" banner at the top of ev
 !!! note
     The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
 
+!!! note
+    The docker container attempts to run migrations on startup, if the database is in a read-only state the docker container will fail to start.  Setting [`NAUTOBOT_DOCKER_SKIP_INIT`](/docker/#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
+
+!!! note
+    The Nautobot [health check](../additional-features/healthcheck.md) will fail if the database is in read-only mode.
+
 ---
 
 ## MAX_PAGE_SIZE
