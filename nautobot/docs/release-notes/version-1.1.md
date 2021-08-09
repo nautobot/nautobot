@@ -87,7 +87,13 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 ### Added
 
+- [#758](https://github.com/nautobot/nautobot/pull/758) - Added documentation about the Job `class_path` concept.
+- [#771](https://github.com/nautobot/nautobot/pull/771) - Added examples of various possible logging configurations.
+- [#773](https://github.com/nautobot/nautobot/pull/773) - Added documentation around enabling Prometheus metrics for database and caching backends.
+
 ### Changed
+
+- [#742](https://github.com/nautobot/nautobot/pull/742) - The development environment now respects the setting of the `NAUTOBOT_DEBUG` environment variable if present.
 
 ### Fixed
 
