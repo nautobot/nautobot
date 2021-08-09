@@ -1,22 +1,34 @@
+import json
+import uuid
+from unittest.mock import patch
 from unittest import skipIf
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
+from requests import Session
 
 from nautobot.dcim.models import Site
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
+from nautobot.extras.models import Webhook
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
+from nautobot.extras.tasks import process_webhook
+from nautobot.extras.utils import generate_signature
 from nautobot.utilities.testing import APITestCase, APIViewTestCases, TestCase, ViewTestCases
 
-from dummy_plugin.models import DummyModel
 from dummy_plugin import config as dummy_config
 from dummy_plugin.datasources import refresh_git_text_files
+from dummy_plugin.models import DummyModel
+from dummy_plugin.api.serializers import DummyModelSerializer
+
 
 
 @skipIf(
@@ -271,6 +283,84 @@ class PluginTest(TestCase):
             )
         )
 
+@skipIf(
+    "dummy_plugin" not in settings.PLUGINS,
+    "dummy_plugin not in settings.PLUGINS",
+)
+class PluginWebhookTest(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        dummy_ct = ContentType.objects.get_for_model(DummyModel)
+        DUMMY_URL = "http://localhost/"
+        DUMMY_SECRET = "LOOKATMEIMASECRETSTRING"
+
+        webhooks = (
+            Webhook.objects.create(
+                name="DummyModel Create Webhook",
+                type_create=True,
+                payload_url=DUMMY_URL,
+                secret=DUMMY_SECRET,
+                additional_headers="X-Foo: Bar",
+            ),
+        )
+        for webhook in webhooks:
+            webhook.content_types.set([dummy_ct])
+
+    def test_webhooks_process_webhook(self):
+        """
+        Mock a Session.send to inspect the result of `process_webhook()`.
+        Note that process_webhook is called directly, not via a celery task.
+        """
+
+        request_id = uuid.uuid4()
+        webhook = Webhook.objects.get(type_create=True)
+        timestamp = str(timezone.now())
+
+        def dummy_send(_, request, **kwargs):
+            """
+            A dummy implementation of Session.send() to be used for testing.
+            Always returns a 200 HTTP response.
+            """
+            signature = generate_signature(request.body, webhook.secret)
+
+            # Validate the outgoing request headers
+            self.assertEqual(request.headers["Content-Type"], webhook.http_content_type)
+            self.assertEqual(request.headers["X-Hook-Signature"], signature)
+            self.assertEqual(request.headers["X-Foo"], "Bar")
+
+            # Validate the outgoing request body
+            body = json.loads(request.body)
+            self.assertEqual(body["event"], "created")
+            self.assertEqual(body["timestamp"], timestamp)
+            self.assertEqual(body["model"], "dummymodel")
+            self.assertEqual(body["username"], "testuser")
+            self.assertEqual(body["request_id"], str(request_id))
+            self.assertEqual(body["data"]["name"], "dummy model 1")
+            self.assertEqual(body["data"]["number"], 100)
+
+            class FakeResponse:
+                ok = True
+                status_code = 200
+
+            return FakeResponse()
+
+        # Patch the Session object with our dummy_send() method, then process the webhook for sending
+        with patch.object(Session, "send", dummy_send):
+            record = DummyModel.objects.create(name="dummy model 1", number=100)
+            serializer_context = {
+                "request": None,
+            }
+            serializer = DummyModelSerializer(record, context=serializer_context)
+
+            process_webhook(
+                webhook.pk,
+                serializer.data,
+                DummyModel._meta.model_name,
+                ObjectChangeActionChoices.ACTION_CREATE,
+                timestamp,
+                self.user.username,
+                request_id,
+            )
 
 @skipIf(
     "dummy_plugin" not in settings.PLUGINS,
