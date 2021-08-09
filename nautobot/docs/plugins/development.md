@@ -379,6 +379,7 @@ All GraphQL model types defined by your plugin, regardless of which method is ch
 * Include any [custom fields](../additional-features/custom-fields.md) defined for their `Model`
 * Include any [relationships](../models/extras/relationship.md) defined for their `Model`
 * Include [tags](../models/extras/tag.md), if the `Model` supports them
+* Include any [webhooks](../models/extras/webhooks.md) defined for their `Model`
 
 ### Using the `@extras_features` Decorator for GraphQL
 
