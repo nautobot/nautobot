@@ -342,7 +342,7 @@ It is a key concept to understand the 3 `class_path` elements:
 - `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
 
 The `class_path` is often represented as a string in the format of `<grouping_name>/<module_name>/<JobClassName>`, such as
-`local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the defintions of these
+`local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the definitions of these
 elements will be important in running jobs programmatically.
 
 ### Via the Web UI
