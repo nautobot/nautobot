@@ -30,7 +30,6 @@ from dummy_plugin.models import DummyModel
 from dummy_plugin.api.serializers import DummyModelSerializer
 
 
-
 @skipIf(
     "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
@@ -283,6 +282,7 @@ class PluginTest(TestCase):
             )
         )
 
+
 @skipIf(
     "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
@@ -361,6 +361,7 @@ class PluginWebhookTest(APITestCase):
                 self.user.username,
                 request_id,
             )
+
 
 @skipIf(
     "dummy_plugin" not in settings.PLUGINS,
