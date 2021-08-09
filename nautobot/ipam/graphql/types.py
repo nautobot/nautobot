@@ -1,3 +1,4 @@
+from django.db.models.query import Prefetch
 import graphene
 import graphene_django_optimizer as gql_optimizer
 from graphene_django.converter import convert_django_field, convert_field_to_string
@@ -50,17 +51,25 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = filters.IPAddressFilterSet
 
     @gql_optimizer.resolver_hints(
-        model_field="assigned_object_type",
+        prefetch_related=lambda *args: Prefetch(
+            'assigned_object',
+            queryset=gql_optimizer.query(models.IPAddress.objects.filter(pk=interface_id), info),
+            to_attr='assigned_object'
+        )
     )
-    def resolve_interface(self, args):
+    def resolve_interface(self, info, interface_id):
         if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
             return self.assigned_object
         return None
 
     @gql_optimizer.resolver_hints(
-        model_field="assigned_object_type",
+        prefetch_related=lambda info, vminterface_id: Prefetch(
+            'assigned_object',
+            queryset=gql_optimizer.query(models.IPAddress.objects.filter(vminterface_id=vminterface_id), info),
+            to_attr='gql_vminterface_id_' + vminterface_id
+        )
     )
-    def resolve_vminterface(self, args):
+    def resolve_vminterface(self, info, vminterface_id):
         if self.assigned_object and type(self.assigned_object).__name__ == "VMInterface":
             return self.assigned_object
         return None
