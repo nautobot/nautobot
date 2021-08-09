@@ -389,7 +389,7 @@ nautobot-server runjob <grouping_name>/<module>/<JobName> [--commit]
 Using the same example shown in the API:
 
 ```no-highlight
-nautobot-server runjob local/example/MyJobWithVars
+nautobot-server runjob local/example/MyJobWithNoVars
 ```
 
 Provision of user inputs via the CLI is not supported at this time.
