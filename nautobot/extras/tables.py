@@ -498,6 +498,7 @@ class ComputedFieldTable(BaseTable):
 
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
+    # TODO: Replace name column with slug #464
     slug = tables.Column(linkify=True, accessor="name")
     content_types = ContentTypesColumn(truncate_words=15)
     required = BooleanColumn()
