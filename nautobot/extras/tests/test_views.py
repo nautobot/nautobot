@@ -6,11 +6,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import *
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -805,3 +806,72 @@ class ComputedFieldTestCase(
             "fallback_value": ":skull_emoji:",
             "weight": 100,
         }
+
+
+class CustomFieldTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = CustomField
+    reverse_url_attribute = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        custom_fields = [
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_BOOLEAN,
+                name="Custom Field Boolean",
+                label="Custom Field Boolean",
+                default="",
+            ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_TEXT,
+                name="Custom Field Text",
+                label="Custom Field Text",
+                default="",
+            ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_INTEGER,
+                name="Custom Field Integer",
+                label="Custom Field Integer",
+                default="",
+            ),
+        ]
+
+        for custom_field in custom_fields:
+            custom_field.validated_save()
+            custom_field.content_types.set([obj_type])
+
+        cls.form_data = {
+            "content_types": [obj_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+            "name": "Custom Field Boolean",
+            "label": "Custom Field Boolean",
+            "default": None,
+            "filter_logic": "loose",
+            "weight": 100,
+        }
+
+    def test_create_object_without_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_without_permission()
+
+    def test_create_object_with_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_with_permission()
+
+    def test_create_object_with_constrained_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_with_constrained_permission()

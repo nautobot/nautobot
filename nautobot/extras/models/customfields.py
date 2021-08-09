@@ -199,6 +199,7 @@ class CustomField(BaseModel):
         choices=CustomFieldTypeChoices,
         default=CustomFieldTypeChoices.TYPE_TEXT,
     )
+    # TODO: Migrate custom field model from name to slug #464
     name = models.CharField(max_length=50, unique=True, help_text="Internal field name")
     label = models.CharField(
         max_length=50,
@@ -254,6 +255,11 @@ class CustomField(BaseModel):
 
     def __str__(self):
         return self.label or self.name.replace("_", " ").capitalize()
+
+    # TODO: Migrate property to actual model attribute #464
+    @property
+    def slug(self):
+        return self.name
 
     def clean(self):
         super().clean()
@@ -455,6 +461,9 @@ class CustomField(BaseModel):
         super().delete(*args, **kwargs)
 
         delete_custom_field_data.delay(self.name, content_types)
+
+    def get_absolute_url(self):
+        return reverse("extras:customfield", args=[self.name])
 
 
 class CustomFieldChoice(BaseModel):

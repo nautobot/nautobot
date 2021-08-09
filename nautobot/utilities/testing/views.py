@@ -225,6 +225,13 @@ class ModelViewTestCase(ModelTestCase):
     Base TestCase for model views. Subclass to test individual views.
     """
 
+    reverse_url_attribute = None
+    """
+    Name of instance field to pass as a kwarg when looking up action URLs for creating/editing/deleting a model instance.
+
+    If unspecified, "slug" and "pk" will be tried, in that order.
+    """
+
     def _get_base_url(self):
         """
         Return the base format for a URL for the test's model. Override this to test for a model which belongs
@@ -243,6 +250,12 @@ class ModelViewTestCase(ModelTestCase):
         # If no instance was provided, assume we don't need a unique identifier
         if instance is None:
             return reverse(url_format.format(action))
+
+        if self.reverse_url_attribute:
+            return reverse(
+                url_format.format(action),
+                kwargs={self.reverse_url_attribute: getattr(instance, self.reverse_url_attribute)},
+            )
 
         # Attempt to resolve using slug as the unique identifier if one exists
         if hasattr(self.model, "slug"):
