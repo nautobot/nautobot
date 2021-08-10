@@ -1,6 +1,10 @@
+from nautobot.core.graphql.generators import generate_list_search_parameters
+from graphql import GraphQLError
 import graphene
+from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.converter import convert_django_field
+from graphene_django.filter.fields import DjangoFilterConnectionField
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.dcim.fields import MACAddressField
@@ -32,24 +36,6 @@ class SiteType(DjangoObjectType):
         exclude = ["images", "_name"]
 
 
-class DeviceType(DjangoObjectType):
-    """Graphql Type Object for Device model."""
-
-    class Meta:
-        model = Device
-        filterset_class = DeviceFilterSet
-        exclude = ["_name"]
-
-
-class RackType(DjangoObjectType):
-    """Graphql Type Object for Rack model."""
-
-    class Meta:
-        model = Rack
-        filterset_class = RackFilterSet
-        exclude = ["images"]
-
-
 class InterfaceType(DjangoObjectType, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
@@ -62,6 +48,27 @@ class InterfaceType(DjangoObjectType, PathEndpointMixin):
 
     def resolve_ip_addresses(self, args):
         return self.ip_addresses.all()
+
+
+class DeviceType(DjangoObjectType):
+    """Graphql Type Object for Device model."""
+
+    class Meta:
+        model = Device
+        filterset_class = DeviceFilterSet
+        exclude = ["_name"]
+
+    interfaces = graphene.List(InterfaceType, **generate_list_search_parameters(InterfaceType))
+
+
+
+class RackType(DjangoObjectType):
+    """Graphql Type Object for Rack model."""
+
+    class Meta:
+        model = Rack
+        filterset_class = RackFilterSet
+        exclude = ["images"]
 
 
 class ConsoleServerPortType(DjangoObjectType, PathEndpointMixin):

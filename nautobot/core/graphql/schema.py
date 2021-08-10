@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
 
 import graphene
 from graphene.types import generic
@@ -14,6 +15,8 @@ from nautobot.core.graphql.generators import (
     generate_attrs_for_schema_type,
     generate_computed_field_resolver,
     generate_custom_field_resolver,
+    generate_filter_resolver,
+    generate_list_search_parameters,
     generate_relationship_resolver,
     generate_restricted_queryset,
     generate_schema_type,
@@ -120,6 +123,8 @@ def extend_schema_type(schema_type):
     #
     schema_type = extend_schema_type_null_field_choice(schema_type, model)
 
+    schema_type = extend_schema_type_many(schema_type, model)
+
     return schema_type
 
 
@@ -156,6 +161,20 @@ def extend_schema_type_null_field_choice(schema_type, model):
             generate_null_choices_resolver(field.name, resolver_name),
         )
 
+    return schema_type
+
+
+def extend_schema_type_many(schema_type, model):
+    for field_name in dir(model):
+        attr = getattr(model, field_name)
+        if isinstance(attr, ReverseManyToOneDescriptor):
+            child_schema_type = registry["graphql_types"].get(attr.field.model._meta.label_lower)
+            if child_schema_type:
+                resolver_name = f"resolve_{field_name}"
+                setattr(schema_type, field_name, graphene.List(child_schema_type, **generate_list_search_parameters(child_schema_type)))
+                setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field_name))
+    if model._meta.model_name == "device":
+                    print("oadjfoandm")
     return schema_type
 
 

@@ -53,6 +53,34 @@ def generate_null_choices_resolver(name, resolver_name):
     return resolve_fields_w_choices
 
 
+def generate_filter_resolver(schema_type, resolver_name, field_name):
+    filterset_class = schema_type._meta.filterset_class
+    field_name = field_name
+
+    def resolve_filter(self, *args, **kwargs):
+        if filterset_class is not None:
+            resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
+
+            # Check result filter for errors.
+            if resolved_obj.errors:
+                errors = {}
+
+                # Build error message from results
+                # Error messages are collected from each filter object
+                for key in resolved_obj.errors:
+                    errors[key] = resolved_obj.errors[key]
+
+                # Raising this exception will send the error message in the response of the GraphQL request
+                raise GraphQLError(errors)
+
+            return resolved_obj.qs.all()
+
+        return getattr(self, field_name).all()
+
+    resolve_filter.__name__ = resolver_name
+    return resolve_filter
+
+
 def generate_custom_field_resolver(name, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 
