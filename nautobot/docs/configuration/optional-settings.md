@@ -428,7 +428,7 @@ Default: `{}` (Empty dictionary)
 
 By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
 
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself and from the RQ worker process to the console with added verbosity and colorization:
+The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
 
 ```python
 LOGGING = {
@@ -446,16 +446,17 @@ LOGGING = {
     },
     'handlers': {
         'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'verbose'},
+        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
+        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
     },
     'loggers': {
         'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
         'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
-        'rq.worker': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
     },
 }
 ```
+
+Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
 
 ### Available Loggers
 
