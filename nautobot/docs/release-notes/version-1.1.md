@@ -99,6 +99,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 - [#723](https://github.com/nautobot/nautobot/issues/723) - Fixed power draw not providing a `UtilizationData` type for use in graphing power draw utilization
 - [#782](https://github.com/nautobot/nautobot/pull/782) - Corrected documentation regarding the use of `docker-compose.override.yml`
+- [#789](https://github.com/nautobot/nautobot/pull/789) - Avoid a `NoReverseMatch` exception at startup time if an app or plugin defines a nav menu item with an invalid link reference.
 
 ## v1.1.1 (2021-08-05)
 
