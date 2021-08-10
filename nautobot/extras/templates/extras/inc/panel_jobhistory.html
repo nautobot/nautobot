@@ -2,14 +2,7 @@
     {% for result in job_results %}
         <div class="list-group-item">
             <a href="{% url 'extras:jobresult' pk=result.pk %}">
-                {{ result.obj_type.name }} -
-                {% if result.related_object.Meta.name %}
-                    {{ result.related_object.Meta.name }}
-                {% elif result.related_object %}
-                    {{ result.related_object }}
-                {% else %}
-                    {{ result.name }}
-                {% endif %}
+                {{ result.obj_type.name }} - {{ result.related_name }}
             </a>
             <span class="pull-right" title="{{ result.created }}">{% include 'extras/inc/job_label.html' %}</span>
             <br>

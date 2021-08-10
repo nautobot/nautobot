@@ -60,16 +60,6 @@ GITREPOSITORY_BUTTONS = """
 <button data-url="{% url 'extras:gitrepository_sync' slug=record.slug %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
 
-JOB_RESULT_JOB = """
-{% if record.related_object.Meta.name %}
-{{ record.related_object.Meta.name }}
-{% elif record.related_object %}
-{{ record.related_object }}
-{% else %}
-{{ record.name }}
-{% endif %}
-"""
-
 OBJECTCHANGE_OBJECT = """
 {% if record.changed_object and record.changed_object.get_absolute_url %}
     <a href="{{ record.changed_object.get_absolute_url }}">{{ record.object_repr }}</a>
@@ -269,8 +259,8 @@ def job_creator_link(value, record):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    job = tables.TemplateColumn(template_code=JOB_RESULT_JOB, linkify=job_creator_link)
-    name = tables.Column(linkify=job_creator_link)
+    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
+    name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
@@ -292,16 +282,16 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "created",
-            "obj_type",
-            "job",
             "name",
+            "obj_type",
+            "related_object",
             "duration",
             "completed",
             "user",
             "status",
             "data",
         )
-        default_columns = ("pk", "created", "job", "user", "status", "data")
+        default_columns = ("pk", "created", "related_object", "user", "status", "data")
 
 
 class ObjectChangeTable(BaseTable):
