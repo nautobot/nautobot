@@ -61,7 +61,7 @@ GITREPOSITORY_BUTTONS = """
 """
 
 JOB_RESULT_JOB = """
-{% if record.related_object and record.related_object.Meta and record.related_object.Meta.name %}
+{% if record.related_object.Meta.name %}
 {{ record.related_object.Meta.name }}
 {% elif record.related_object %}
 {{ record.related_object }}
