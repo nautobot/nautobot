@@ -45,7 +45,6 @@ This table defines repository parameters that are required to establish a reposi
 - [GitLab Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 - [Bitbucket Personal Access Token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
 
-
 ## Using Git Data Sources
 
 This section will focus on examples and use the `user-guide` branch on the `demo-git-datasources` repo: `https://github.com/nautobot/demo-git-datasource/tree/user-guide`.
@@ -78,6 +77,10 @@ Fill out the details for the Git repository. More information on the inputs can 
 ![Example Details Export-Templates](./images/git-as-data-source/03-git-data-source.png)
 
 As soon as you click on **Create**, Nautobot will clone and sync the repository and provide status of the job.
+
+!!! note
+    If you are using a self-signed git repository, you will need to set the environment variable GIT_SSL_NO_VERIFY="1"
+    in order for the repository to sync.
 
 ![View of Synchronization Status](./images/git-as-data-source/04-git-data-source.png)
 ![Status of Export-Templates](./images/git-as-data-source/06-git-data-source.png)

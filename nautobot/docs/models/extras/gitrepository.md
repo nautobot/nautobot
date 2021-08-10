@@ -25,6 +25,10 @@ Whenever a Git repository record is created, updated, or deleted, Nautobot autom
 !!! important
     The repository branch must exist and have a commit against it. At this time, Nautobot will not initialize an empty repository.
 
+!!! note
+    If you are using a self-signed git repository, you will need to set the environment variable GIT_SSL_NO_VERIFY="1"
+    in order for the repository to sync.
+
 ## Repository Structure
 
 ### Jobs
