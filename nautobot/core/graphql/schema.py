@@ -123,7 +123,10 @@ def extend_schema_type(schema_type):
     #
     schema_type = extend_schema_type_null_field_choice(schema_type, model)
 
-    schema_type = extend_schema_type_many(schema_type, model)
+    #
+    # Add multiple layers of filtering
+    #
+    schema_type = extend_schema_type_filter(schema_type, model)
 
     return schema_type
 
@@ -164,18 +167,31 @@ def extend_schema_type_null_field_choice(schema_type, model):
     return schema_type
 
 
-def extend_schema_type_many(schema_type, model):
+def extend_schema_type_filter(schema_type, model):
+    """Extend schema_type object to be able to filter on multiple levels of a query
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
     for field_name in dir(model):
         attr = getattr(model, field_name)
-        if isinstance(attr, ReverseManyToOneDescriptor):
-            child_schema_type = registry["graphql_types"].get(attr.field.model._meta.label_lower)
-            if child_schema_type:
-                if model._meta.model_name == "device":
-                    if field_name == "interfaces":
-                        print("oeifnfien")
-                resolver_name = f"resolve_{field_name}"
-                setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field_name))
-                setattr(schema_type, field_name, graphene.List(child_schema_type, **generate_list_search_parameters(child_schema_type)))
+        # Check attribute is a ManyToOne field
+        if not isinstance(attr, ReverseManyToOneDescriptor):
+            continue
+
+        child_schema_type = registry["graphql_types"].get(attr.field.model._meta.label_lower)
+        if child_schema_type:
+            resolver_name = f"resolve_{field_name}"
+            search_params = generate_list_search_parameters(child_schema_type)
+            # Add OneToMany field to schema_type
+            schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.List(child_schema_type, **search_params))
+            # Add resolve function to schema_type
+            setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field_name))
+
     return schema_type
 
 

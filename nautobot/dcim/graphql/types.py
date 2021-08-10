@@ -36,6 +36,24 @@ class SiteType(DjangoObjectType):
         exclude = ["images", "_name"]
 
 
+class DeviceType(DjangoObjectType):
+    """Graphql Type Object for Device model."""
+
+    class Meta:
+        model = Device
+        filterset_class = DeviceFilterSet
+        exclude = ["_name"]
+
+
+class RackType(DjangoObjectType):
+    """Graphql Type Object for Rack model."""
+
+    class Meta:
+        model = Rack
+        filterset_class = RackFilterSet
+        exclude = ["images"]
+
+
 class InterfaceType(DjangoObjectType, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
@@ -48,26 +66,6 @@ class InterfaceType(DjangoObjectType, PathEndpointMixin):
 
     def resolve_ip_addresses(self, args):
         return self.ip_addresses.all()
-
-
-class DeviceType(DjangoObjectType):
-    """Graphql Type Object for Device model."""
-
-    class Meta:
-        model = Device
-        filterset_class = DeviceFilterSet
-        exclude = ["_name"]
-
-    interfaces = graphene.List(InterfaceType, **generate_list_search_parameters(InterfaceType))
-
-
-class RackType(DjangoObjectType):
-    """Graphql Type Object for Rack model."""
-
-    class Meta:
-        model = Rack
-        filterset_class = RackFilterSet
-        exclude = ["images"]
 
 
 class ConsoleServerPortType(DjangoObjectType, PathEndpointMixin):

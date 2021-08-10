@@ -54,6 +54,14 @@ def generate_null_choices_resolver(name, resolver_name):
 
 
 def generate_filter_resolver(schema_type, resolver_name, field_name):
+    """
+    Generate function to resolve OneToMany filtering.
+
+    Args:
+        schema_type (DjangoObjectType): DjangoObjectType for a given model
+        resolver_name (str): name of the resolver
+        field_name (str): name of OneToMany field to filter
+    """
     filterset_class = schema_type._meta.filterset_class
     field_name = field_name
 
