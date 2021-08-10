@@ -2,7 +2,6 @@ import logging
 
 from abc import ABC, abstractproperty
 from django.apps import AppConfig
-from django.urls import reverse
 from operator import getitem
 from collections import OrderedDict
 
@@ -232,8 +231,6 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     def __init__(self, link, name, permissions=None, buttons=(), weight=1000):
         """Ensure item properties."""
         super().__init__(permissions)
-        # Reverse lookup sanity check
-        reverse(link)
         self.link = link
         self.name = name
         self.weight = weight
@@ -282,8 +279,6 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
     ):
         """Ensure button properties."""
         super().__init__(permissions)
-        # Reverse lookup sanity check
-        reverse(link)
         self.link = link
         self.title = title
         self.icon_class = icon_class

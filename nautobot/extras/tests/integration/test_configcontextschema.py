@@ -31,7 +31,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_text("Config Context Schemas").click()
+        self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
         # Click add add button
         self.browser.find_by_xpath("/html/body/div/div[1]/a").click()
@@ -58,7 +58,7 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_text("Config Context Schemas").click()
+        self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
         # Click add add button
         self.browser.find_by_xpath("/html/body/div/div[1]/a").click()
