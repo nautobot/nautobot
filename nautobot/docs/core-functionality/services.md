@@ -1,3 +1,6 @@
 # Service Mapping
 
-{!docs/models/ipam/service.md!}
+{%
+    include-markdown "../models/ipam/service.md"
+    heading-offset=1
+%}

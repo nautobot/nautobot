@@ -38,7 +38,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
@@ -125,6 +125,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "planned",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -166,6 +167,85 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
                 "status": "active",
             },
         ]
+
+    def test_time_zone_field_post_null(self):
+        """
+        Test allow_null to time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": None}
+
+        # Attempt to create new site with null time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], None)
+
+    def test_time_zone_field_post_blank(self):
+        """
+        Test disallowed blank time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": ""}
+
+        # Attempt to create new site with blank time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+
+    def test_time_zone_field_post_valid(self):
+        """
+        Test valid time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        time_zone = "UTC"
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+
+        # Attempt to create new site with valid time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], time_zone)
+
+    def test_time_zone_field_post_invalid(self):
+        """
+        Test invalid time_zone field on site.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+        self.add_permissions("dcim.add_site")
+        url = reverse("dcim-api:site-list")
+        time_zone = "IDONOTEXIST"
+        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+
+        # Attempt to create new site with invalid time_zone attr.
+        response = self.client.post(url, **self.header, data=site, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["time_zone"],
+            ["A valid timezone is required."],
+        )
+
+    def test_time_zone_field_get_blank(self):
+        """
+        Test that a site's time_zone field defaults to null.
+
+        See: https://github.com/nautobot/nautobot/issues/342
+        """
+
+        self.add_permissions("dcim.view_site")
+        site = Site.objects.get(slug="site-1")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["time_zone"], None)
 
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
@@ -267,6 +347,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "planned",
     }
+    choices_fields = ["outer_unit", "status", "type", "width"]
 
     @classmethod
     def setUpTestData(cls):
@@ -478,6 +559,7 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "part_number": "ABC123",
     }
+    choices_fields = ["subdevice_role"]
 
     @classmethod
     def setUpTestData(cls):
@@ -516,6 +598,7 @@ class ConsolePortTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -548,6 +631,7 @@ class ConsoleServerPortTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -580,6 +664,7 @@ class PowerPortTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -612,6 +697,7 @@ class PowerOutletTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["feed_leg", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -644,6 +730,7 @@ class InterfaceTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -679,6 +766,7 @@ class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -768,6 +856,7 @@ class RearPortTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -913,6 +1002,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "failed",
     }
+    choices_fields = ["face", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1055,6 +1145,44 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    def test_local_context_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a device with local context that conforms to that schema
+        Assert that the local context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+        )
+        self.add_permissions("dcim.change_device")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+
+    def test_local_context_schema_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a device with local context that *does not* conform to that schema
+        Assert that the local context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+        )
+        # Add object-level permission
+        self.add_permissions("dcim.change_device")
+
+        patch_data = {"local_context_schema": str(schema.pk)}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
 
 class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
     model = ConsolePort
@@ -1063,6 +1191,7 @@ class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
         "description": "New description",
     }
     peer_termination_type = ConsoleServerPort
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1099,6 +1228,7 @@ class ConsoleServerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIView
         "description": "New description",
     }
     peer_termination_type = ConsolePort
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1135,6 +1265,7 @@ class PowerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
         "description": "New description",
     }
     peer_termination_type = PowerOutlet
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1171,6 +1302,7 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
         "description": "New description",
     }
     peer_termination_type = PowerPort
+    choices_fields = ["feed_leg", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1207,6 +1339,7 @@ class InterfaceTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
         "description": "New description",
     }
     peer_termination_type = Interface
+    choices_fields = ["mode", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1261,6 +1394,7 @@ class FrontPortTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     peer_termination_type = Interface
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1330,6 +1464,7 @@ class RearPortTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     peer_termination_type = Interface
+    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1485,6 +1620,7 @@ class CableTest(APIViewTestCases.APIViewTestCase):
         "length": 100,
         "length_unit": "m",
     }
+    choices_fields = ["termination_a_type", "termination_b_type", "type", "status", "length_unit"]
 
     # TODO: Allow updating cable terminations
     test_update_object = None
@@ -1820,6 +1956,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "planned",
     }
+    choices_fields = ["phase", "status", "supply", "type"]
 
     @classmethod
     def setUpTestData(cls):

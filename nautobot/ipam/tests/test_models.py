@@ -198,6 +198,18 @@ class TestPrefix(TestCase):
         # VRF container is limited to its own VRF
         self.assertSetEqual(child_ip_pks, {ips[1].pk})
 
+        # Make sure /31 is handled correctly
+        parent_prefix_31 = Prefix.objects.create(
+            prefix=netaddr.IPNetwork("10.0.4.0/31"), status=Prefix.STATUS_CONTAINER
+        )
+        ips_31 = (
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.0/31"), vrf=None),
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.1/31"), vrf=None),
+        )
+
+        child_ip_pks = {p.pk for p in parent_prefix_31.get_child_ips()}
+        self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
+
     def test_get_available_prefixes(self):
 
         prefixes = Prefix.objects.bulk_create(

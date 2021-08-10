@@ -2,7 +2,7 @@ import os
 import sys
 
 from nautobot.core.settings import *  # noqa F401,F403
-from nautobot.core.settings_funcs import is_truthy
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 #########################
 #                       #
@@ -14,9 +14,9 @@ from nautobot.core.settings_funcs import is_truthy
 # access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
 #
 # Example: ALLOWED_HOSTS = ['nautobot.example.com', 'nautobot.internal.local']
-ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS").split(",")
+ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
-# PostgreSQL database configuration. See the Django documentation for a complete list of available parameters:
+# Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {
@@ -25,8 +25,11 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),  # Database password
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),  # Database server
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
-        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),  # Database timeout
-        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postgres only supported!)
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),  # Database timeout
+        "ENGINE": os.getenv(
+            "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
+        ),  # Database driver ("mysql" or "postgresql")
+        # "OPTIONS": {"charset": "utf8mb4"},  # For MySQL unicode emoji support, uncomment this line
     }
 }
 
@@ -51,25 +54,17 @@ RQ_QUEUES = {
 
 # Nautobot uses Cacheops for database query caching. These are the following defaults.
 # For detailed configuration see: https://github.com/Suor/django-cacheops#setup
-# Set Cache Ops variables
-redis_protocol = "rediss" if is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)) else "redis"
-cache_ops_pwd = os.getenv("NAUTOBOT_REDIS_PASSWORD")
-cache_ops_host = os.getenv("NAUTOBOT_REDIS_HOST", "localhost")
-cache_ops_user = os.getenv("NAUTOBOT_REDIS_USER")
-cache_ops_port = int(os.getenv("NAUTOBOT_REDIS_PORT", 6379))
-
-CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", f"{redis_protocol}://:{cache_ops_pwd}@{cache_ops_host}:{cache_ops_port}/1")
+CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"{redis_protocol}://:{cache_ops_pwd}@{cache_ops_host}:{cache_ops_port}/0",
+        "LOCATION": parse_redis_connection(redis_database=0),
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PASSWORD": "",
         },
     }
 }

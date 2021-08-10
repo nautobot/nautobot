@@ -6,6 +6,7 @@ If you wish to receive JSON, provide the header "Accept: application/json" or
 add "&raw" to the end of the URL within a browser.
 -->
 {% load static %}
+{% load helpers %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -51,25 +52,20 @@ add "&raw" to the end of the URL within a browser.
       width: 100%;
     }
   </style>
-  <link href="https://cdn.jsdelivr.net/npm/graphiql@{{graphiql_version}}/graphiql.min.css"
-        integrity="{{graphiql_css_sri}}"
-        rel="stylesheet"
-        crossorigin="anonymous" />
-  <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@{{whatwg_fetch_version}}/dist/fetch.umd.js"
-          integrity="{{whatwg_fetch_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react@{{react_version}}/umd/react.production.min.js"
-          integrity="{{react_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@{{react_version}}/umd/react-dom.production.min.js"
-          integrity="{{react_dom_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/graphiql@{{graphiql_version}}/graphiql.min.js"
-          integrity="{{graphiql_sri}}"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/subscriptions-transport-ws@{{subscriptions_transport_ws_version}}/browser/client.js"
-          integrity="{{subscriptions_transport_ws_sri}}"
-          crossorigin="anonymous"></script>
+  <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
+  <link rel="stylesheet"
+        href="{% static 'graphiql-1.0.3/graphiql.min.css' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=graphiql-1.0.3/graphiql.min.css'">
+  <script src="{% static 'whatwg-fetch-3.2.0/fetch.umd.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=whatwg-fetch-3.2.0/fetch.umd.js'"></script>
+  <script src="{% static 'react-16.13.1/react.production.min.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=react-16.13.1/react.production.min.js'"></script>
+  <script src="{% static 'react-dom-16.13.1/react-dom.production.min.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=react-dom-16.13.1/react-dom.production.min.js'"></script>
+  <script src="{% static 'graphiql-1.0.3/graphiql.min.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=graphiql-1.0.3/graphiql.min.js'"></script>
+  <script src="{% static 'subscriptions-transport-ws-0.9.17/client.js' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=subscriptions-transport-ws-0.9.17/client.js'"></script>
   <!-- Custom CSS to address some conflicts between the two -->
   <style>
     body {
@@ -119,5 +115,87 @@ add "&raw" to the end of the URL within a browser.
     };
   </script>
   <script src="{% static 'graphene_django/graphiql.js' %}"></script>
+  <script>
+
+    function reload(id, query, variables) {
+      if (variables == null){
+          variables = '{}';
+      }
+      window.location.replace("#");
+      window.location.hash = 'query=' + query + "&variables=" + variables;
+
+      search = new URLSearchParams(location.search);
+      search.set('id', id);
+      location.search = search.toString();
+    }
+
+    function getHashParams() {
+      // Retrieve fragments (# params) from URL
+      // All fragments are converted into a JSON object
+      // To modify the GraphiQL termial, hash fragments in the URL need to be set,
+      // this then adds text to the query, vairable and output text boxes in the UI.
+      var hashParams = {};
+      var matches,
+          re_match_plus = /\+/g,  // Regex for replacing addition symbol with a space
+          re_match_query_param_and_value = /([^&;=]+)=?([^&;]*)/g,
+          decode_and_replace_plus_with_space = function (s) { return decodeURIComponent(s.replace(re_match_plus, " ")); },
+          query_text = window.location.hash.substring(1);
+
+      while (matches = re_match_query_param_and_value.exec(query_text))
+        hashParams[decode_and_replace_plus_with_space(matches[1])] = decode_and_replace_plus_with_space(matches[2]);
+
+      return hashParams;
+    }
+
+    function save() {
+      graphql_data = getHashParams();
+      var url = new URL(window.location.href);
+      var id = url.searchParams.get("id");
+      var result_window = $(".result-window").find(".CodeMirror-code");
+      if (!id) {
+        var html = `
+<pre class="CodeMirror-code">
+  <span role="presentation" style="padding-right: 0.1px">
+    <span class="cm-def">Unable to find query ID.</span>
+  </span>
+</pre>
+        `;
+        result_window.html(html);
+        return
+      };
+
+      $.ajax({
+        url: `{% url 'extras-api:graphqlquery-list' %}${id}/`,
+        method: "PATCH",
+        headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+        dataType: "json",
+        data: graphql_data,
+        success: function(data) {
+            data = JSON.stringify(data, undefined, 2).split("\n");
+            var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">Success:</span></span></pre>`;
+            for(var i = 0;i < data.length;i++){
+              html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">${data[i]}</span></span></pre>`;
+            };
+            result_window.html(html);
+        },
+        error: function(error) {
+            error = JSON.stringify(error, undefined, 2).split("\n");
+            var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">Failure:</span></span></pre>`;
+            for(var i = 0;i < error.length;i++){
+              html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">${error[i]}</span></span></pre>`;
+            };
+            result_window.html(html);
+        }
+      });
+    }
+
+    function populate_model() {
+      query = getHashParams().query;
+      model_query = $("#id_query");
+      model_query.val(query);
+    }
+
+  </script>
+  {% modal_form_as_dialog form editing=editing form_name="GraphQLQueries" obj=obj obj_type="GraphQLQueries" %}
 </body>
 </html>

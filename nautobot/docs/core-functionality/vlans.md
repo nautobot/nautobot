@@ -1,4 +1,10 @@
 # VLAN Management
 
-{!docs/models/ipam/vlan.md!}
-{!docs/models/ipam/vlangroup.md!}
+{%
+    include-markdown "../models/ipam/vlan.md"
+    heading-offset=1
+%}
+{%
+    include-markdown "../models/ipam/vlangroup.md"
+    heading-offset=1
+%}

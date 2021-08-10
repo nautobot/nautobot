@@ -17,12 +17,40 @@ RESOLVER_PREFIX = "resolve_"
 
 
 def generate_restricted_queryset():
-    """Generate a function to return a restricted queryset compatible with the internal permissions system."""
+    """
+    Generate a function to return a restricted queryset compatible with the internal permissions system.
+
+    Note that for built-in models such as ContentType the queryset has no `restrict` method, so we have to
+    fail gracefully in that case.
+    """
 
     def get_queryset(queryset, info):
+        if not hasattr(queryset, "restrict"):
+            logger.debug(f"Queryset {queryset} is not restrictable")
+            return queryset
         return queryset.restrict(info.context.user, "view")
 
     return get_queryset
+
+
+def generate_null_choices_resolver(name, resolver_name):
+    """
+    Generate function to resolve appropriate type when a field has `null=False` (default), `blank=True`, and
+    `choices` defined.
+
+    Args:
+        name (str): name of the field to resolve
+        resolver_name (str): name of the resolver as declare in DjangoObjectType
+    """
+
+    def resolve_fields_w_choices(model, info, **kwargs):
+        field_value = getattr(model, name)
+        if field_value:
+            return field_value
+        return None
+
+    resolve_fields_w_choices.__name__ = resolver_name
+    return resolve_fields_w_choices
 
 
 def generate_custom_field_resolver(name, resolver_name):
@@ -38,6 +66,21 @@ def generate_custom_field_resolver(name, resolver_name):
 
     resolve_custom_field.__name__ = resolver_name
     return resolve_custom_field
+
+
+def generate_computed_field_resolver(name, resolver_name):
+    """Generate an instance method for resolving an individual computed field within a given DjangoObjectType.
+
+    Args:
+        name (str): name of the computed field to resolve
+        resolver_name (str): name of the resolver as declare in DjangoObjectType
+    """
+
+    def resolve_computed_field(self, info, **kwargs):
+        return self.get_computed_field(slug=name)
+
+    resolve_computed_field.__name__ = resolver_name
+    return resolve_computed_field
 
 
 def generate_relationship_resolver(name, resolver_name, relationship, side, peer_model):

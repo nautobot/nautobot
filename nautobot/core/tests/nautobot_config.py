@@ -6,7 +6,7 @@
 import os
 
 from nautobot.core.settings import *  # noqa: F401,F403
-from nautobot.core.settings_funcs import is_truthy
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 
 ALLOWED_HOSTS = ["*"]
@@ -17,29 +17,20 @@ DATABASES = {
         "USER": os.getenv("NAUTOBOT_DB_USER", ""),
         "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
-        "PORT": "",
-        "CONN_MAX_AGE": 300,
-        "ENGINE": "django.db.backends.postgresql",
+        "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
 PLUGINS = [
-    "nautobot.extras.tests.dummy_plugin",
+    "dummy_plugin",
 ]
 
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 
 # Redis variables
-REDIS_HOST = os.getenv("NAUTOBOT_REDIS_HOST", "localhost")
-REDIS_PORT = os.getenv("NAUTOBOT_REDIS_PORT", 6379)
-REDIS_PASSWORD = os.getenv("NAUTOBOT_REDIS_PASSWORD", "")
-
-# Check for Redis SSL
-REDIS_SCHEME = "redis"
-REDIS_SSL = is_truthy(os.environ.get("NAUTOBOT_REDIS_SSL", False))
-if REDIS_SSL:
-    REDIS_SCHEME = "rediss"
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
@@ -49,11 +40,10 @@ if REDIS_SSL:
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"{REDIS_SCHEME}://{REDIS_HOST}:{REDIS_PORT}/2",
+        "LOCATION": parse_redis_connection(redis_database=2),
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PASSWORD": REDIS_PASSWORD,
         },
     }
 }
@@ -62,4 +52,12 @@ CACHES = {
 # up top via `from nautobot.core.settings import *`.
 
 # REDIS CACHEOPS
-CACHEOPS_REDIS = f"{REDIS_SCHEME}://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/3"
+CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
+
+# Testing storages within cli.py
+STORAGE_CONFIG = {
+    "AWS_ACCESS_KEY_ID": "ASFWDAMWWOQMEOQMWPMDA<WPDA",
+    "AWS_SECRET_ACCESS_KEY": "ASFKMWADMsacasdaw/dawrt1231541231231",
+    "AWS_STORAGE_BUCKET_NAME": "nautobot",
+    "AWS_S3_REGION_NAME": "us-west-1",
+}

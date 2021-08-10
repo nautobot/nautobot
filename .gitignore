@@ -1,7 +1,5 @@
 *.pyc
 *.swp
-/nautobot/core/configuration.py
-/nautobot/core/ldap_config.py
 /site/
 /venv/
 /dist/
@@ -18,6 +16,10 @@ nautobot.pid
 .coverage
 .vscode
 docker-compose.override.yml
-override.env
+*.env
+!dev.env
 *.egg-info
 .python-version
+db_output.*
+geckodriver.log
+uwsgi.ini

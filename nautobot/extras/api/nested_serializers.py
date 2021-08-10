@@ -7,10 +7,12 @@ from nautobot.users.api.nested_serializers import NestedUserSerializer
 
 __all__ = [
     "NestedConfigContextSerializer",
+    "NestedConfigContextSchemaSerializer",
     "NestedCustomFieldSerializer",
     "NestedCustomLinkSerializer",
     "NestedExportTemplateSerializer",
     "NestedGitRepositorySerializer",
+    "NestedGraphQLQuerySerializer",
     "NestedImageAttachmentSerializer",
     "NestedJobResultSerializer",
     "NestedRelationshipSerializer",
@@ -35,6 +37,14 @@ class NestedConfigContextSerializer(WritableNestedSerializer):
     class Meta:
         model = models.ConfigContext
         fields = ["id", "url", "name"]
+
+
+class NestedConfigContextSchemaSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:configcontextschema-detail")
+
+    class Meta:
+        model = models.ConfigContextSchema
+        fields = ["id", "url", "name", "slug"]
 
 
 class NestedExportTemplateSerializer(WritableNestedSerializer):
@@ -112,6 +122,14 @@ class NestedRelationshipSerializer(WritableNestedSerializer):
     class Meta:
         model = models.Relationship
         fields = ["id", "url", "name", "slug"]
+
+
+class NestedGraphQLQuerySerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
+
+    class Meta:
+        model = models.GraphQLQuery
+        fields = ["id", "url", "name"]
 
 
 class NestedRelationshipAssociationSerializer(WritableNestedSerializer):

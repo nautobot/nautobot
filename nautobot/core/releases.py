@@ -4,7 +4,7 @@ from cacheops import CacheMiss, cache
 from django.conf import settings
 from django_rq import get_queue
 
-from nautobot.utilities.background_tasks import get_releases
+from nautobot.utilities.tasks import get_releases
 
 logger = logging.getLogger("nautobot.releases")
 

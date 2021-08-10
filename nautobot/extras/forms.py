@@ -1,10 +1,12 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields import TextField
+from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRole, Platform, Region, Site
+from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
@@ -30,11 +32,14 @@ from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -437,6 +442,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
+    device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
@@ -451,10 +457,12 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
             "name",
             "weight",
             "description",
+            "schema",
             "is_active",
             "regions",
             "sites",
             "roles",
+            "device_types",
             "platforms",
             "cluster_groups",
             "clusters",
@@ -467,6 +475,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
 
 class ConfigContextBulkEditForm(BootstrapMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
     description = forms.CharField(required=False, max_length=100)
@@ -474,15 +483,18 @@ class ConfigContextBulkEditForm(BootstrapMixin, BulkEditForm):
     class Meta:
         nullable_fields = [
             "description",
+            "schema",
         ]
 
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
     # FIXME(glenn) filtering by owner_content_type
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
+    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(), to_field_name="slug", required=False
@@ -500,12 +512,69 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class LocalConfigContextFilterForm(forms.Form):
+class LocalContextFilterForm(forms.Form):
     local_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    local_context_schema = DynamicModelMultipleChoiceField(
+        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
+    )
+
+
+#
+# Model form for local config context data
+#
+
+
+class LocalContextModelForm(forms.ModelForm):
+    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_context_data = JSONField(required=False, label="")
+
+
+class LocalContextModelBulkEditForm(BulkEditForm):
+    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # append nullable fields
+        self.nullable_fields.append("local_context_schema")
+
+
+#
+# Config context schemas
+#
+
+
+class ConfigContextSchemaForm(BootstrapMixin, forms.ModelForm):
+    data_schema = JSONField(label="")
+    slug = SlugField()
+
+    class Meta:
+        model = ConfigContextSchema
+        fields = (
+            "name",
+            "slug",
+            "description",
+            "data_schema",
+        )
+
+
+class ConfigContextSchemaBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ConfigContextSchema.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(required=False, max_length=100)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
+class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
+    q = forms.CharField(required=False, label="Search")
+    # FIXME(glenn) filtering by owner_content_type
 
 
 #
@@ -896,4 +965,60 @@ class StatusModelCSVFormMixin(CSVModelForm):
         queryset=Status.objects.all(),
         to_field_name="slug",
         help_text="Operational status",
+    )
+
+
+class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
+    slug = SlugField()
+    query = TextField()
+
+    class Meta:
+        model = GraphQLQuery
+        fields = (
+            "name",
+            "slug",
+            "query",
+        )
+
+    def get_action_url(self):
+        return reverse("extras:graphqlquery_add")
+
+
+class GraphQLQueryFilterForm(BootstrapMixin, forms.Form):
+    model = GraphQLQuery
+    q = forms.CharField(required=False, label="Search")
+
+
+# Computed Fields
+
+
+class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
+
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=True,
+        label="Content Type",
+    )
+    slug = SlugField(slug_source="label")
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "content_type",
+            "label",
+            "slug",
+            "description",
+            "template",
+            "fallback_value",
+            "weight",
+        )
+
+
+class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
+    model = ComputedField
+    q = forms.CharField(required=False, label="Search")
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
     )

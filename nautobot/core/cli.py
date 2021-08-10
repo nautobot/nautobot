@@ -10,8 +10,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
 
-from nautobot.extras.plugins.utils import load_plugins, get_sso_backend_name
-from .runner import run_app
+from nautobot.core.runner import run_app
+from nautobot.extras.plugins.utils import load_plugins
 
 
 # Default file location for the generated config emitted by `init`
@@ -161,11 +161,11 @@ def _configure_settings(config):
                     )
                 raise e
 
-            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG
+            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG or fall back to settings
             def _setting(name, default=None):
                 if name in settings.STORAGE_CONFIG:
                     return settings.STORAGE_CONFIG[name]
-                return globals().get(name, default)
+                return getattr(settings, name, default)
 
             storages.utils.setting = _setting
 

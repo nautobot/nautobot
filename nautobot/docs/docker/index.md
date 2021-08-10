@@ -41,7 +41,7 @@ Currently images are pushed for the following python versions:
 
 ## Getting Started
 
-Nautobot requires a PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with `docker-compose`.
+Nautobot requires a MySQL or PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with `docker-compose`, which will install and configure PostgreSQL and Redis containers for you automatically.
 
 ## Configuration
 
@@ -128,10 +128,19 @@ REPOSITORY                                                                TAG   
 networktocode/nautobot-dev                                                local                  25487d93fc1f   16 seconds ago   630MB
 ```
 
-If you need to build or test the final image set the `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE` environment variable:
+If you need to build or test the final image, you must set your `invoke.yml` to use `docker-compose.build.yml` in place of `docker-compose.dev.yml`:
+
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.build.yml"
+```
+
+Then you can re-run the `invoke build` command:
 
 ```no-highlight
-$ export INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
 $ invoke build
 ...
 $ docker images
