@@ -61,7 +61,6 @@ class DeviceType(DjangoObjectType):
     interfaces = graphene.List(InterfaceType, **generate_list_search_parameters(InterfaceType))
 
 
-
 class RackType(DjangoObjectType):
     """Graphql Type Object for Rack model."""
 

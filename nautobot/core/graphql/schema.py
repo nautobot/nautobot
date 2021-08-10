@@ -170,11 +170,12 @@ def extend_schema_type_many(schema_type, model):
         if isinstance(attr, ReverseManyToOneDescriptor):
             child_schema_type = registry["graphql_types"].get(attr.field.model._meta.label_lower)
             if child_schema_type:
+                if model._meta.model_name == "device":
+                    if field_name == "interfaces":
+                        print("oeifnfien")
                 resolver_name = f"resolve_{field_name}"
-                setattr(schema_type, field_name, graphene.List(child_schema_type, **generate_list_search_parameters(child_schema_type)))
                 setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field_name))
-    if model._meta.model_name == "device":
-                    print("oadjfoandm")
+                setattr(schema_type, field_name, graphene.List(child_schema_type, **generate_list_search_parameters(child_schema_type)))
     return schema_type
 
 
