@@ -501,8 +501,6 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             weight (int): The weight of this item.
         """
         super().__init__(permissions)
-        # Reverse lookup sanity check
-        reverse(link)
         self.link = link
         self.name = name
         self.weight = weight
@@ -561,8 +559,6 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             weight (int): The weight of this button.
         """
         super().__init__(permissions)
-        # Reverse lookup sanity check
-        reverse(link)
         self.link = link
         self.title = title
         self.icon_class = icon_class

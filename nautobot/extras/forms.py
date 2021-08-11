@@ -1020,13 +1020,14 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         required=True,
         label="Content Type",
     )
+    slug = SlugField(slug_source="label")
 
     class Meta:
         model = ComputedField
         fields = (
             "content_type",
-            "slug",
             "label",
+            "slug",
             "description",
             "template",
             "fallback_value",

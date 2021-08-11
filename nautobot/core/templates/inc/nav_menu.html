@@ -33,11 +33,40 @@
                                                         <div class="buttons pull-right">
                                                             {% for button_title, button_details in item_details.buttons.items %}
                                                                 {% if request.user|has_perms:button_details.permissions %}
-                                                                    <a href="{% url button_details.link %}" data-button-weight="{{ button_details.weight }}" class="btn btn-xs btn-{{ button_details.button_class }}" title="{{ button_title }}"><i class="mdi {{ button_details.icon_class }}"></i></a>
+                                                                    {% comment %}
+                                                                        Use 'url xxx as variable' so that an invalid
+                                                                        link doesn't throw a NoReverseMatch exception.
+                                                                    {% endcomment %}
+                                                                    {% url button_details.link as button_url %}
+                                                                    {% if button_url %}
+                                                                        <a href="{{ button_url }}"
+                                                                           data-button-weight="{{ button_details.weight }}"
+                                                                           class="btn btn-xs btn-{{ button_details.button_class }}"
+                                                                           title="{{ button_title }}">
+                                                                            <i class="mdi {{ button_details.icon_class }}"></i>
+                                                                        </a>
+                                                                    {% else %}
+                                                                        <a class="btn btn-xs btn-danger"
+                                                                           title="ERROR: Invalid link!">
+                                                                            <i class="mdi mdi-alert"></i>
+                                                                        </a>
+                                                                    {% endif %}
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>
-                                                        <a href="{% url item_link %}" data-item-weight="{{ item_details.weight }}">{{ item_details.name }}</a>
+                                                        {% comment %}
+                                                            Use 'url xxx as variable' so that an invalid
+                                                            link doesn't throw a NoReverseMatch exception.
+                                                        {% endcomment %}
+                                                        {% url item_link as item_url %}
+                                                        {% if item_url %}
+                                                            <a href="{{ item_url }}"
+                                                               data-item-weight="{{ item_details.weight }}">
+                                                                {{ item_details.name }}
+                                                            </a>
+                                                        {% else %}
+                                                            <a>ERROR: Invalid link!</a>
+                                                        {% endif %}
                                                     </li>
                                                 {% endif %}
                                             {% endfor %}

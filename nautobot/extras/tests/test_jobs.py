@@ -1,3 +1,4 @@
+import json
 import os
 import uuid
 
@@ -19,6 +20,10 @@ class JobTest(TestCase):
 
     maxDiff = None
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
+
     def test_job_pass(self):
         """
         Job test with pass result.
@@ -28,11 +33,10 @@ class JobTest(TestCase):
             module = "test_pass"
             name = "TestPass"
             job_class = get_job(f"local/{module}/{name}")
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
             job_result = JobResult.objects.create(
                 name=job_class.class_path,
-                obj_type=job_content_type,
+                obj_type=self.job_content_type,
                 user=None,
                 job_id=uuid.uuid4(),
             )
@@ -50,10 +54,9 @@ class JobTest(TestCase):
             module = "test_fail"
             name = "TestFail"
             job_class = get_job(f"local/{module}/{name}")
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
             job_result = JobResult.objects.create(
                 name=job_class.class_path,
-                obj_type=job_content_type,
+                obj_type=self.job_content_type,
                 user=None,
                 job_id=uuid.uuid4(),
             )
@@ -120,11 +123,10 @@ class JobTest(TestCase):
             module = "test_read_only_pass"
             name = "TestReadOnlyPass"
             job_class = get_job(f"local/{module}/{name}")
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
             job_result = JobResult.objects.create(
                 name=job_class.class_path,
-                obj_type=job_content_type,
+                obj_type=self.job_content_type,
                 user=None,
                 job_id=uuid.uuid4(),
             )
@@ -143,10 +145,9 @@ class JobTest(TestCase):
             module = "test_read_only_fail"
             name = "TestReadOnlyFail"
             job_class = get_job(f"local/{module}/{name}")
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
             job_result = JobResult.objects.create(
                 name=job_class.class_path,
-                obj_type=job_content_type,
+                obj_type=self.job_content_type,
                 user=None,
                 job_id=uuid.uuid4(),
             )
@@ -178,6 +179,53 @@ class JobTest(TestCase):
 <br><span class="helptext">Hello</span><input id="id__commit" name="_commit" type="hidden" value="False"></td></tr>""",
             )
 
+    def test_ip_address_vars(self):
+        """
+        Test that IPAddress variable fields behave as expected.
+
+        This test case exercises the following types for both IPv4 and IPv6:
+
+        - IPAddressVar
+        - IPAddressWithMaskVar
+        - IPNetworkVar
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+
+            module = "test_ipaddress_vars"
+            name = "TestIPAddresses"
+            job_class = get_job(f"local/{module}/{name}")
+
+            # Fill out the form
+            form_data = dict(
+                ipv4_address="1.2.3.4",
+                ipv4_with_mask="1.2.3.4/32",
+                ipv4_network="1.2.3.0/24",
+                ipv6_address="2001:db8::1",
+                ipv6_with_mask="2001:db8::1/64",
+                ipv6_network="2001:db8::/64",
+            )
+            form = job_class().as_form(form_data)
+            self.assertTrue(form.is_valid())
+
+            # Prepare the job data
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+            data = job_class.serialize_data(form.cleaned_data)
+
+            # Run the job and extract the job payload data
+            run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+            job_payload = job_result.data["run"]["log"][0][2]  # Indexing makes me sad.
+            job_result_data = json.loads(job_payload)
+
+            # Assert stuff
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+            self.assertEqual(form_data, job_result_data)
+
 
 class JobFileUploadTest(TestCase):
     """Test a job that uploads/deletes files."""
@@ -196,7 +244,6 @@ class JobFileUploadTest(TestCase):
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
             job_name = "local/test_file_upload_pass/TestFileUploadPass"
             job_class = get_job(job_name)
-            job = job_class()
 
             job_result = JobResult.objects.create(
                 name=job_class.class_path,
@@ -207,7 +254,9 @@ class JobFileUploadTest(TestCase):
 
             # Serialize the file to FileProxy
             data = {"file": self.dummy_file}
-            serialized_data = job.serialize_data(data)
+            form = job_class().as_form(files=data)
+            self.assertTrue(form.is_valid())
+            serialized_data = job_class.serialize_data(form.cleaned_data)
 
             # Assert that the file was serialized to a FileProxy
             self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
@@ -231,7 +280,6 @@ class JobFileUploadTest(TestCase):
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
             job_name = "local/test_file_upload_fail/TestFileUploadFail"
             job_class = get_job(job_name)
-            job = job_class()
 
             job_result = JobResult.objects.create(
                 name=job_class.class_path,
@@ -242,7 +290,9 @@ class JobFileUploadTest(TestCase):
 
             # Serialize the file to FileProxy
             data = {"file": self.dummy_file}
-            serialized_data = job.serialize_data(data)
+            form = job_class().as_form(files=data)
+            self.assertTrue(form.is_valid())
+            serialized_data = job_class.serialize_data(form.cleaned_data)
 
             # Assert that the file was serialized to a FileProxy
             self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
