@@ -1,7 +1,9 @@
 {% if job_results and perms.extras.view_jobresult %}
     {% for result in job_results %}
         <div class="list-group-item">
-            <a href="{% url 'extras:jobresult' pk=result.pk %}">{{ result.obj_type.name }} - {{ result.name }}</a>
+            <a href="{% url 'extras:jobresult' pk=result.pk %}">
+                {{ result.obj_type.name }} - {{ result.related_name }}
+            </a>
             <span class="pull-right" title="{{ result.created }}">{% include 'extras/inc/job_label.html' %}</span>
             <br>
             <small>
