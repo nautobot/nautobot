@@ -8,7 +8,8 @@ set -e
 DB_WAIT_TIMEOUT=${DB_WAIT_TIMEOUT-3}
 MAX_DB_WAIT_TIME=${MAX_DB_WAIT_TIME-30}
 CUR_DB_WAIT_TIME=0
-if [ ! "$NAUTOBOT_DOCKER_SKIP_INIT" ]; then
+NAUTOBOT_DOCKER_SKIP_INIT=${NAUTOBOT_DOCKER_SKIP_INIT-false}
+if [ "$NAUTOBOT_DOCKER_SKIP_INIT" == "false" ]; then
   while ! nautobot-server post_upgrade --no-invalidate-all 2>&1 && [ "${CUR_DB_WAIT_TIME}" -lt "${MAX_DB_WAIT_TIME}" ]; do
     echo "⏳ Waiting on DB... (${CUR_DB_WAIT_TIME}s / ${MAX_DB_WAIT_TIME}s)"
     sleep "${DB_WAIT_TIMEOUT}"
