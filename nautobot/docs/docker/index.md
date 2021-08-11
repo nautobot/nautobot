@@ -63,13 +63,13 @@ services:
 
 ### Docker only configuration
 
-The entry point for the docker container has some additional features that can be configured via additional environment variables, these are all optional variables:
+The entry point for the Docker container has some additional features that can be configured via additional environment variables. The following are all optional variables:
 
 #### `NAUTOBOT_CREATE_SUPERUSER`
 
 Default: unset
 
-Enables creation of a super user specified by [`NAUTOBOT_SUPERUSER_NAME`](#nautobot_superuser_name), [`NAUTOBOT_SUPERUSER_EMAIL`]((#nautobot_superuser_email)), [`NAUTOBOT_SUPERUSER_PASSWORD`](#nautobot_superuser_password), and [`NAUTOBOT_SUPERUSER_API_TOKEN`](#nautobot_superuser_api_token).
+Enables creation of a super user specified by [`NAUTOBOT_SUPERUSER_NAME`](#nautobot_superuser_name), [`NAUTOBOT_SUPERUSER_EMAIL`](#nautobot_superuser_email), [`NAUTOBOT_SUPERUSER_PASSWORD`](#nautobot_superuser_password), and [`NAUTOBOT_SUPERUSER_API_TOKEN`](#nautobot_superuser_api_token).
 
 ---
 
@@ -85,7 +85,7 @@ When starting, the container attempts to connect to the database and run databas
 
 Default: unset
 
-If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_superuser_name) is true `NAUTOBOT_SUPERUSER_API_TOKEN` specifies the api token of the super user to be created alternatively the `/run/secrets/superuser_api_token` file contents are read for the token.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_API_TOKEN` specifies the API token of the super user to be created; alternatively the `/run/secrets/superuser_api_token` file contents are read for the token.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
 
 ---
 
@@ -93,7 +93,7 @@ If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_superuser_name) is true `NAUTOBOT_SUP
 
 Default: `admin@example.com`
 
-If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_superuser_name) is true `NAUTOBOT_SUPERUSER_EMAIL` specifies the email address of the super user to be created.
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_EMAIL` specifies the email address of the super user to be created.
 
 ---
 
@@ -101,7 +101,7 @@ If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_superuser_name) is true `NAUTOBOT_SUP
 
 Default: `admin`
 
-If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_superuser_name) is true `NAUTOBOT_SUPERUSER_NAME` specifies the username of the super user to be created.
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_NAME` specifies the username of the super user to be created.
 
 ---
 
@@ -109,7 +109,7 @@ If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_superuser_name) is true `NAUTOBOT_SUP
 
 Default: unset
 
-If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_superuser_name) is true `NAUTOBOT_SUPERUSER_PASSWORD` specifies the password of the super user to be created alternatively the `/run/secrets/superuser_password` file contents are read for the password.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_PASSWORD` specifies the password of the super user to be created; alternatively the `/run/secrets/superuser_password` file contents are read for the password.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
 
 ---
 
