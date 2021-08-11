@@ -163,45 +163,14 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Arguments</td>
-                        <td>
-                            <ul>
-                                {% for arg in object.args %}
-                                    <li>{{ arg }}</li>
-                                {% endfor %}
-                            </ul>
-                        </td>
+                        <td>User Inputs</td>
                     </tr>
+                    {% for key, value in object.kwargs.data %}
                     <tr>
-                        <td>Request</td>
-                        <td>
-                          <table class="table table-hover panel-body attr-table">
-                            {% with request=object.kwargs.request %}
-                              {% for key, value in request.items %}
-                                <tr>
-                                  <td>{{ key }}</td>
-                                  <td><details><code>{{ value }}</code></details></td>
-                                </tr>
-                              {% endfor %}
-                            {% endwith %}
-                          </table>
-                        </td>
+                      <td>{{ key }}</td>
+                      <td><details><code>{{ value }}</code></details></td>
                     </tr>
-                    <tr>
-                        <td>Keyword Arguments</td>
-                        <td>
-                          <table class="table table-hover panel-body attr-table">
-                            {% for key, value in object.kwargs.items %}
-                                {% if not key == 'request' %}
-                                  <tr>
-                                    <td>{{ key }}</td>
-                                    <td><details><code>{{ value }}</code></details></td>
-                                  </tr>
-                                {% endif %}
-                            {% endfor %}
-                          </table>
-                        </td>
-                    </tr>
+                    {% endfor %}
                 </table>
             </div>
             {% plugin_right_page object %}
