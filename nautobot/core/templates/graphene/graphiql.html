@@ -116,6 +116,42 @@ add "&raw" to the end of the URL within a browser.
   </script>
   <script src="{% static 'graphene_django/graphiql.js' %}"></script>
   <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      queries_tab = `
+        <button class="toolbar-button" id="navbar_queries">
+          <ul class="nav">
+              <li class="dropdown">
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="color: inherit;">
+                      <span>Queries </span>
+                      <span class="caret"></span>
+                  </a>
+                  <ul class="dropdown-menu" id="graphql-queries-menu">
+                      <li class="dropdown-header">Saved Queries</li>
+                      {% for query in saved_graphiql_queries %}
+                          <li>
+                              {% if request.GET.id|slugify == query.id|slugify %}
+                                  <div class="buttons pull-right">
+                                      <button type="button" class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</button>
+                                  </div>
+                                  <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                                      <strong>{{ query.name }}</strong>
+                                  </a>
+                              {% else %}
+                                  <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                              {% endif %}
+                          </li>
+                      {% endfor %}
+                      <li class="divider" role="separator"></li>
+                      <li>
+                          <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
+                      </li>
+                  </ul>
+              <li>
+          </ul>
+      </button>
+      `
+      $(".toolbar").append(queries_tab);
+    }, false);
 
     function reload(id, query, variables) {
       if (variables == null){
