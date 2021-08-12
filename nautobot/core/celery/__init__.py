@@ -4,6 +4,7 @@ import logging
 import nautobot
 
 from celery import Celery, shared_task
+from celery.fixups.django import DjangoFixup
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.module_loading import import_string
 from kombu.serialization import register
@@ -30,6 +31,11 @@ app = Celery("nautobot")
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings", namespace="CELERY")
+
+# Because of the chicken-and-egg Django settings bootstrapping issue,
+# Celery doesn't automatically install its Django-specific patches.
+# So we need to explicitly do so ourselves:
+DjangoFixup(app).install()
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()

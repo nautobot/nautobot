@@ -16,7 +16,8 @@ nautobot.pid
 .coverage
 .vscode
 docker-compose.override.yml
-override.env
+*.env
+!dev.env
 *.egg-info
 .python-version
 db_output.*

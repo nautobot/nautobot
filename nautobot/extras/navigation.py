@@ -283,9 +283,25 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
+                        link="extras:customfield_list",
+                        name="Custom Fields",
+                        weight=200,
+                        permissions=[
+                            "extras.view_customfield",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:customfield_add",
+                                permissions=[
+                                    "extras.add_customfield",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="extras:customlink_list",
                         name="Custom Links",
-                        weight=200,
+                        weight=300,
                         permissions=[
                             "extras.view_customlink",
                         ],

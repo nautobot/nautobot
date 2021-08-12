@@ -834,6 +834,18 @@ class JobResult(BaseModel, CustomFieldModel):
 
         return None
 
+    @property
+    def related_name(self):
+        """
+        Similar to self.name, but if there's an appropriate `related_object`, use its name instead.
+        """
+        related_object = self.related_object
+        if not related_object:
+            return self.name
+        if hasattr(related_object, "name"):
+            return related_object.name
+        return str(related_object)
+
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
 

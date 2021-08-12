@@ -66,6 +66,9 @@ disable-logging = true
 log-4xx = true
 log-5xx = true
 
+; Enable HTTP 1.1 keepalive support
+http-keepalive = 1
+
 ;
 ; Advanced settings (disabled by default)
 ; Customize these for your environment if and only if you need them.

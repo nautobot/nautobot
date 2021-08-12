@@ -12,6 +12,10 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 All "object detail" views (pages displaying details of a single Nautobot record) now inherit from a common base template, providing improved UI consistency, reducing the amount of boilerplate code needed to create a new detail view, and fixing a number of bugs in various views. Plugin developers are encouraged to make use of this new template (`generic/object_detail.html`) to take advantage of these improvements.
 
+#### Custom Fields are now User Configurable ([#229](https://github.com/nautobot/nautobot/issues/229))
+
+Creation and management of Custom Field definitions can now be performed by any user with appropriate permissions. (Previously, only admin users were able to manage Custom Fields.)
+
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
 Each plugin is now able to inject a custom banner into any of the Nautobot core views.
@@ -25,8 +29,12 @@ Nautobot core applications and plugins can now both define panels, groups, and i
 
 ### Added
 
+- [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
 - [#534](https://github.com/nautobot/nautobot/issues/534) - Added ability to inject a banner from a plugin
 - [#674](https://github.com/nautobot/nautobot/pull/674) - Plugins can now add items to the Nautobot home page
-- [#716](https://github.com/nautobot/nautobot/pull/716) - Nautobot home page content is now dynamically populated based on installed apps and plugins. 
-- 
+- [#716](https://github.com/nautobot/nautobot/pull/716) - Nautobot home page content is now dynamically populated based on installed apps and plugins.
+
+### Changed
+
+- [#472](https://github.com/nautobot/nautobot/issues/472) - `JobResult` lists now show the associated Job's name (if available) instead of the Job's `class_path`.

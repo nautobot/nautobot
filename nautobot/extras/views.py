@@ -36,6 +36,7 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -1239,3 +1240,33 @@ class ComputedFieldDeleteView(generic.ObjectDeleteView):
 class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = ComputedField.objects.all()
     table = tables.ComputedFieldTable
+
+
+#
+# Custom fields
+#
+
+
+class CustomFieldListView(generic.ObjectListView):
+    queryset = CustomField.objects.all()
+    table = tables.CustomFieldTable
+    filterset = filters.CustomFieldFilterSet
+    action_buttons = ("add",)
+
+
+class CustomFieldView(generic.ObjectView):
+    queryset = CustomField.objects.all()
+
+
+class CustomFieldEditView(generic.ObjectEditView):
+    queryset = CustomField.objects.all()
+    model_form = forms.CustomFieldForm
+
+
+class CustomFieldDeleteView(generic.ObjectDeleteView):
+    queryset = CustomField.objects.all()
+
+
+class CustomFieldBulkDeleteView(generic.BulkDeleteView):
+    queryset = CustomField.objects.all()
+    table = tables.CustomFieldTable

@@ -24,6 +24,7 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -266,8 +267,8 @@ def job_creator_link(value, record):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     obj_type = tables.Column(verbose_name="Object Type", accessor="obj_type.name")
-    name = tables.Column(linkify=job_creator_link)
-    job_id = tables.Column(linkify=job_creator_link, verbose_name="Job ID")
+    related_object = tables.Column(verbose_name="Related Object", linkify=job_creator_link, accessor="related_name")
+    name = tables.Column()
     created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
@@ -289,16 +290,16 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "created",
-            "obj_type",
             "name",
-            "job_id",
+            "obj_type",
+            "related_object",
             "duration",
             "completed",
             "user",
             "status",
             "data",
         )
-        default_columns = ("pk", "created", "name", "user", "status", "data")
+        default_columns = ("pk", "created", "related_object", "user", "status", "data")
 
 
 #
@@ -531,4 +532,35 @@ class ComputedFieldTable(BaseTable):
             "slug",
             "content_type",
             "description",
+        )
+
+
+class CustomFieldTable(BaseTable):
+    pk = ToggleColumn()
+    # TODO: Replace name column with slug #464
+    slug = tables.Column(linkify=True, accessor="name")
+    content_types = ContentTypesColumn(truncate_words=15)
+    required = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomField
+        fields = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "description",
+            "required",
+            "default",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "required",
+            "weight",
         )
