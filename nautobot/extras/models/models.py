@@ -1081,7 +1081,7 @@ class ScheduledJob(BaseModel):
     no_changes = False
 
     def __str__(self):
-        return "{0.name}: {0.interval}".format(self)
+        return f"{self.name}: {self.interval}"
 
     def get_absolute_url(self):
         return reverse("extras:scheduledjob", kwargs={"pk": self.pk})

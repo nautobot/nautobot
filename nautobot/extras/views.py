@@ -790,7 +790,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
 
 class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
-    """ "
+    """
     This view handles requests to view and approve a Job execution request.
     It renders the Job's form in much the same way as `JobView` except all
     form fields are disabled and actions on the form relate to approval of the
@@ -880,7 +880,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
     def get(self, request, scheduled_job):
         """
         Render the job form with data from the scheduled_job instance, but mark all fields as disabled.
-        We don't care to actually get any data back from the form as we will not every change it.
+        We don't care to actually get any data back from the form as we will not ever change it.
         Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
         """
         scheduled_job = get_object_or_404(ScheduledJob, pk=scheduled_job)
