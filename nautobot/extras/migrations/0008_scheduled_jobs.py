@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("extras", "0007_configcontextschema"),
+        ("extras", "0011_fileattachment_fileproxy"),
     ]
 
     operations = [

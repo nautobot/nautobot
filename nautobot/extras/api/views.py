@@ -21,6 +21,7 @@ from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomLink,
@@ -300,10 +301,6 @@ class JobViewSet(ViewSet):
         if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("This user does not have permission to run jobs.")
 
-        # Check that at least one RQ worker is running
-        if not Worker.count(get_connection("default")):
-            raise RQWorkerNotRunningException()
-
         job_class = self._get_job_class(class_path)
         job = job_class()
 
@@ -481,14 +478,34 @@ class GraphQLQueryViewSet(ModelViewSet):
     serializer_class = serializers.GraphQLQuerySerializer
     filterset_class = filters.GraphQLQueryFilterSet
 
-    @swagger_auto_schema(method="post", request_body=serializers.GraphQLQuerySerializer)
+    @swagger_auto_schema(
+        method="post",
+        request_body=serializers.GraphQLQueryInputSerializer,
+        responses={"200": serializers.GraphQLQueryOutputSerializer},
+    )
     @action(detail=True, methods=["post"])
     def run(self, request, pk):
         try:
-            result = execute_saved_query(pk, variables=request.data, request=request).to_dict()
+            query = get_object_or_404(self.queryset, pk=pk)
+            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(
                 {"errors": [GraphQLView.format_error(error)]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldViewSet(ModelViewSet):
+    """
+    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = ComputedField.objects.all()
+    serializer_class = serializers.ComputedFieldSerializer
+    filterset_class = filters.ComputedFieldFilterSet

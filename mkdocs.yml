@@ -26,7 +26,7 @@ nav:
     - Installation:
         - Installing Prerequisites: 'installation/index.md'
         - Installing Nautobot: 'installation/nautobot.md'
-        - Deploying Nautobot: 'installation/wsgi.md'
+        - Deploying Nautobot Services: 'installation/services.md'
         - Configuring an HTTP Server: 'installation/http-server.md'
         - External Authentication (Optional): 'installation/external-authentication.md'
     - Docker:
@@ -45,6 +45,16 @@ nav:
     - User Guides:
         - Git as a Data Source: 'user-guides/git-data-source.md'
         - GraphQL: 'user-guides/graphql.md'
+    - Getting Started In the Web UI:
+        - 'user-guides/getting-started/index.md'
+        - Creating Devices: 'user-guides/getting-started/creating-devices.md'
+        - Regions: 'user-guides/getting-started/regions.md'
+        - Platforms: 'user-guides/getting-started/platforms.md'
+        - Tenants: 'user-guides/getting-started/tenants.md'
+        - Interfaces: 'user-guides/getting-started/interfaces.md'
+        - VLANS and VLAN Groups: 'user-guides/getting-started/vlans-and-vlan-groups.md'
+        - IP Address Management: 'user-guides/getting-started/ipam.md'
+        - The Search Bar: 'user-guides/getting-started/search-bar.md'
     - Core Functionality:
         - IP Address Management: 'core-functionality/ipam.md'
         - VLAN Management: 'core-functionality/vlans.md'
@@ -59,6 +69,7 @@ nav:
     - Additional Features:
         - Caching: 'additional-features/caching.md'
         - Change Logging: 'additional-features/change-logging.md'
+        - Computed Fields: 'additional-features/computed-fields.md'
         - Context Data: 'additional-features/config-contexts.md'
         - Custom Fields: 'additional-features/custom-fields.md'
         - Custom Links: 'models/extras/customlink.md'
@@ -95,8 +106,10 @@ nav:
         - Extending Models: 'development/extending-models.md'
         - Application Registry: 'development/application-registry.md'
         - Navigation Menu: 'development/navigation-menu.md'
+        - Home Page Panels: 'development/homepage.md'
         - User Preferences: 'development/user-preferences.md'
         - Release Checklist: 'development/release-checklist.md'
     - Release Notes:
         - Version 1.0: 'release-notes/version-1.0.md'
         - Version 1.1: 'release-notes/version-1.1.md'
+        - Version 1.2: 'release-notes/version-1.2.md'

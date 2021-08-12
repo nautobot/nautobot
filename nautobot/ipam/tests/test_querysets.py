@@ -116,7 +116,7 @@ class IPAddressQuerySet(TestCase):
         address = self.queryset.net_in(["10.0.0.1/24"])[0]
         self.assertEqual(self.queryset.filter(address="10.0.0.1/24")[0], address)
 
-    def test_string_search_parse_as_network_string(self):
+    def test_string_search_parse_network_string(self):
         """
         Tests that the parsing underlying `string_search` behaves as expected.
         """
@@ -131,6 +131,7 @@ class IPAddressQuerySet(TestCase):
             "2001": "2001::/16",
             "2001:": "2001::/16",
             "2001::": "2001::/16",
+            "2001:db8": "2001:db8::/32",
             "2001:db8:": "2001:db8::/32",
             "2001:0db8::": "2001:db8::/32",
             "2001:db8:abcd:0012::0/64": "2001:db8:abcd:12::/128",
@@ -142,7 +143,7 @@ class IPAddressQuerySet(TestCase):
         }
 
         for test, expected in tests.items():
-            self.assertEqual(str(self.queryset._parse_as_network_string(test)), expected)
+            self.assertEqual(str(self.queryset.parse_network_string(test)), expected)
 
     def test_string_search(self):
         search_terms = {
@@ -154,6 +155,8 @@ class IPAddressQuerySet(TestCase):
             "11": 0,
             "2001": 3,
             "2001::": 3,
+            "2001:db8": 3,
+            "2001:db8:": 3,
             "2001:db8::": 3,
             "2001:db8::1": 1,
             "fe80::": 0,
@@ -246,3 +249,31 @@ class PrefixQuerysetTestCase(TestCase):
     def test_filter_by_prefix(self):
         prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
         self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)
+
+    def test_string_search(self):
+        # This test case also applies to Aggregate objects.
+        search_terms = {
+            "192": 7,
+            "192.": 7,
+            "192.168": 7,
+            "192.168.": 7,
+            "192.168.1": 2,
+            "192.168.1.0": 2,
+            "192.168.3": 5,
+            "192.168.3.192/26": 3,
+            "192.168.0.0/16": 1,
+            "11": 0,
+            "fd78": 3,
+            "fd78::": 3,
+            "fd78:da4f": 3,
+            "fd78:da4f:": 3,
+            "fd78:da4f:e596": 3,
+            "fd78:da4f:e596:c217": 3,
+            "fd78:da4f:e596:c217::": 3,
+            "fd78:da4f:e596:c217::/64": 3,
+            "fd78:da4f:e596:c217::/120": 3,
+            "fd78:da4f:e596:c217::/122": 3,
+            "fe80::": 0,
+        }
+        for term, cnt in search_terms.items():
+            self.assertEqual(self.queryset.string_search(term).count(), cnt)

@@ -1,7 +1,5 @@
 *.pyc
 *.swp
-/nautobot/core/configuration.py
-/nautobot/core/ldap_config.py
 /site/
 /venv/
 /dist/
@@ -24,3 +22,4 @@ override.env
 db_output.*
 celerybeat-schedule
 geckodriver.log
+uwsgi.ini

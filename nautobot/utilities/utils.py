@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.serializers import serialize
 from django.db.models import Count, OuterRef, Subquery, Model
 from django.db.models.functions import Coalesce
-from jinja2 import Environment
+from django.template import engines
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.extras.utils import is_taggable
@@ -231,7 +231,9 @@ def render_jinja2(template_code, context):
     """
     Render a Jinja2 template with the provided context. Return the rendered content.
     """
-    return Environment().from_string(source=template_code).render(**context)
+    rendering_engine = engines["jinja"]
+    template = rendering_engine.from_string(template_code)
+    return template.render(context=context)
 
 
 def prepare_cloned_fields(instance):
@@ -359,18 +361,20 @@ def copy_safe_request(request):
     """
     Copy selected attributes from a request object into a new fake request object. This is needed in places where
     thread safe pickling of the useful request data is needed.
+
+    Note that `request.FILES` is explicitly omitted because they cannot be uniformly serialized.
     """
     meta = {
         k: request.META[k]
         for k in HTTP_REQUEST_META_SAFE_COPY
         if k in request.META and isinstance(request.META[k], str)
     }
+
     return NautobotFakeRequest(
         {
             "META": meta,
             "POST": request.POST,
             "GET": request.GET,
-            "FILES": request.FILES,
             "user": request.user,
             "path": request.path,
             "id": getattr(request, "id", None),  # UUID assigned by middleware

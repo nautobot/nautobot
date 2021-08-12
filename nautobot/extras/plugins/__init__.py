@@ -1,11 +1,21 @@
 import collections
 import inspect
+from importlib import import_module
+
 from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 
-from nautobot.core.apps import NautobotConfig, NavMenuButton, NavMenuGroup, NavMenuItem, NavMenuTab, register_menu_items
+from nautobot.core.apps import (
+    NautobotConfig,
+    NavMenuButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+    register_menu_items,
+    register_homepage_panels,
+)
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
@@ -66,9 +76,11 @@ class PluginConfig(NautobotConfig):
     custom_validators = "custom_validators.custom_validators"
     datasource_contents = "datasources.datasource_contents"
     graphql_types = "graphql.types.graphql_types"
+    homepage_layout = "homepage.layout"
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
     template_extensions = "template_content.template_extensions"
+    jinja_filters = "jinja_filters"
 
     def ready(self):
 
@@ -97,10 +109,20 @@ class PluginConfig(NautobotConfig):
         if menu_items is not None:
             register_plugin_menu_items(self.verbose_name, menu_items)
 
+        homepage_layout = import_object(f"{self.__module__}.{self.homepage_layout}")
+        if homepage_layout is not None:
+            register_homepage_panels(self.path, self.label, homepage_layout)
+
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+
+        # Register custom jinja filters
+        try:
+            import_module(f"{self.__module__}.{self.jinja_filters}")
+        except ModuleNotFoundError:
+            pass
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -330,6 +352,8 @@ def register_plugin_menu_items(section_name, menu_items):
 
     nav_menu_items = set()
 
+    permissions = set()
+
     for menu_item in menu_items:
         if isinstance(menu_item, PluginMenuItem):
             # translate old-style plugin menu definitions into the new nav-menu items and buttons
@@ -359,6 +383,7 @@ def register_plugin_menu_items(section_name, menu_items):
                 )
             )
             new_menu_item_weight += 100
+            permissions = permissions.union(menu_item.permissions)
         elif isinstance(menu_item, NavMenuTab):
             nav_menu_items.add(menu_item)
         else:
@@ -368,7 +393,9 @@ def register_plugin_menu_items(section_name, menu_items):
         # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
         if registry["nav_menu"]["tabs"].get("Plugins"):
             weight = (
-                registry["nav_menu"]["tabs"]["Plugins"][list(registry["nav_menu"]["tabs"]["Plugins"])[-1]]["weight"]
+                registry["nav_menu"]["tabs"]["Plugins"]["groups"][
+                    list(registry["nav_menu"]["tabs"]["Plugins"]["groups"])[-1]
+                ]["weight"]
                 + 100
             )
         else:
@@ -377,6 +404,8 @@ def register_plugin_menu_items(section_name, menu_items):
             NavMenuTab(
                 name="Plugins",
                 weight=5000,
+                # Permissions cast to tuple to match development pattern.
+                permissions=tuple(permissions),
                 groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
             ),
         )

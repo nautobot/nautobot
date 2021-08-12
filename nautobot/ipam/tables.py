@@ -40,7 +40,7 @@ PREFIX_LINK = """
 {% for i in record.parents|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
-<a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if parent.vrf %}&vrf={{ parent.vrf.pk }}{% endif %}{% if parent.site %}&site={{ parent.site.pk }}{% endif %}{% if parent.tenant %}&tenant_group={{ parent.tenant.group.pk }}&tenant={{ parent.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
+<a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
 """
 
 PREFIX_ROLE_LINK = """
@@ -55,7 +55,7 @@ IPADDRESS_LINK = """
 {% if record.present_in_database %}
     <a href="{{ record.get_absolute_url }}">{{ record.address }}</a>
 {% elif perms.ipam.add_ipaddress %}
-    <a href="{% url 'ipam:ipaddress_add' %}?address={{ record.1 }}{% if prefix.vrf %}&vrf={{ prefix.vrf.pk }}{% endif %}{% if prefix.tenant %}&tenant={{ prefix.tenant.pk }}{% endif %}" class="btn btn-xs btn-success">{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
+    <a href="{% url 'ipam:ipaddress_add' %}?address={{ record.1 }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}" class="btn btn-xs btn-success">{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
 {% else %}
     {% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available
 {% endif %}
@@ -68,8 +68,8 @@ IPADDRESS_ASSIGN_LINK = """
 VRF_LINK = """
 {% if record.vrf %}
     <a href="{{ record.vrf.get_absolute_url }}">{{ record.vrf }}</a>
-{% elif prefix.vrf %}
-    {{ prefix.vrf }}
+{% elif object.vrf %}
+    <a href="{{ object.vrf.get_absolute_url }}">{{ object.vrf }}</a>
 {% else %}
     Global
 {% endif %}
@@ -132,6 +132,8 @@ TENANT_LINK = """
     <a href="{% url 'tenancy:tenant' slug=record.tenant.slug %}" title="{{ record.tenant.description }}">{{ record.tenant }}</a>
 {% elif record.vrf.tenant %}
     <a href="{% url 'tenancy:tenant' slug=record.vrf.tenant.slug %}" title="{{ record.vrf.tenant.description }}">{{ record.vrf.tenant }}</a>*
+{% elif object.tenant %}
+    <a href="{% url 'tenancy:tenant' slug=object.tenant.slug %}" title="{{ object.tenant.description }}">{{ object.tenant }}</a>
 {% else %}
     &mdash;
 {% endif %}

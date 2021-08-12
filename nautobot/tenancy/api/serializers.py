@@ -31,7 +31,9 @@ class TenantGroupSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
@@ -72,4 +74,6 @@ class TenantSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "vlan_count",
             "vrf_count",
             "cluster_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]

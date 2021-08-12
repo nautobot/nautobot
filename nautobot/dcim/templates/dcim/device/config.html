@@ -1,5 +1,4 @@
 {% extends 'dcim/device/base.html' %}
-{% load static %}
 
 {% block title %}{{ object }} - Config{% endblock %}
 
@@ -30,7 +29,7 @@
             </div>
         </div>
     </div>
-{% endblock %}
+{% endblock content %}
 
 {% block javascript %}
 <script type="text/javascript">
@@ -49,4 +48,4 @@ $(document).ready(function() {
     });
 });
 </script>
-{% endblock %}
+{% endblock javascript %}

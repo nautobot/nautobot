@@ -11,6 +11,8 @@ Plugins can do a lot, including:
 * Inject template content and navigation links
 * Establish their own GraphQL types and REST API endpoints
 * Add custom request/response middleware
+* Add content to the Nautobot navigation menu bar
+* Add content to the Nautobot home page
 
 Keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
@@ -36,6 +38,8 @@ plugin_name/
     - datasources.py        # Loading Data from a Git Repository
     - graphql/
       - types.py            # GraphQL Type Objects
+    - homepage.py           # Home Page Content
+    - jinja_filters.py      # Jinja Filters
     - jobs.py               # Job classes
     - middleware.py         # Request/response middleware
     - migrations/
@@ -146,6 +150,7 @@ The configurable attributes for a `PluginConfig` are listed below in alphabetica
 | `description` | Brief description of the plugin's purpose |
 | `graphql_types` | The dotted path to the list of GraphQL type classes (default: `graphql.types.graphql_types)` |
 | `installed_apps` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
+| `jinja_filters` | The path to the file that contains jinja filters to be registered (default: `jinja_filters`) |
 | `jobs` | The dotted path to the list of Job classes (default: `jobs.jobs`) |
 | `max_version` | Maximum version of Nautobot with which the plugin is compatible |
 | `menu_items` | The dotted path to the list of menu items provided by the plugin (default: `navigation.menu_items`) |
@@ -432,8 +437,8 @@ graphql_types = [AnimalType]
 
 GraphQL utility functions:
 
-1) `execute_query()`: Runs string as a query against GraphQL.
-2) `execute_saved_query()`: Execute a saved query from Nautobot database.
+1. `execute_query()`: Runs string as a query against GraphQL.
+2. `execute_saved_query()`: Execute a saved query from Nautobot database.
 
 Both functions have the same arguments other than `execute_saved_query()` which requires a slug to identify the saved query rather than a string holding a query.
 
@@ -442,38 +447,17 @@ For authentication either a request object or user object needs to be passed in.
 Arguments:
 
 * `execute_query()`:
-  * query (str): String with GraphQL query.
-  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
-  * request (django.test.client.RequestFactory, optional): Used to authenticate.
-  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+    * query (str): String with GraphQL query.
+    * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+    * request (django.test.client.RequestFactory, optional): Used to authenticate.
+    * user (django.contrib.auth.models.User, optional): Used to authenticate.
 * `execute_saved_query()`:
-  * saved_query_slug (str): Slug of a saved GraphQL query.
-  * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
-  * request (django.test.client.RequestFactory, optional): Used to authenticate.
-  * user (django.contrib.auth.models.User, optional): Used to authenticate.
+    * saved_query_slug (str): Slug of a saved GraphQL query.
+    * variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
+    * request (django.test.client.RequestFactory, optional): Used to authenticate.
+    * user (django.contrib.auth.models.User, optional): Used to authenticate.
 
 Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
-
-Usage in a view:
-
-``` python
-from nautobot.core.graphql import execute_saved_query
-
-
-class GraphQLModelView(ModelViewSet):
-    queryset = GraphQLModelQuery.objects.all()
-
-    @action(detail=True, methods=["post"])
-    def run(self, request, pk):
-        try:
-            result = execute_saved_query(pk, variable=request.data, request=request).to_dict()
-            return Response(result)
-        except GraphQLError as error:
-            return Response(
-                {"errors": [GraphQLView.format_error(error)]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-```
 
 ## REST API Endpoints
 
@@ -540,6 +524,12 @@ Plugins can modify the existing navigation bar layout by defining `menu_items` i
 
 More documentation and examples can be found [here](../development/navigation-menu.md)
 
+## Home Page Content
+
+Plugins can add content to the Nautobot home page by defining `layout` inside of `homepage.py`. Using the key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
+
+More documentation and examples can be found [here](../development/homepage.md)
+
 ## Extending Core Templates
 
 Plugins can inject custom content into certain areas of the detail views of applicable models. This is accomplished by subclassing `PluginTemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Four methods are available:
@@ -582,6 +572,33 @@ class SiteAnimalCount(PluginTemplateExtension):
 
 template_extensions = [SiteAnimalCount]
 ```
+
+## Including Jinja2 Filters
+
+Plugins can define custom Jinja2 filters to be used when rendering templates defined in computed fields. Check out the [official Jinja2 documentation](https://jinja.palletsprojects.com/en/3.0.x/api/#custom-filters) on how to create filter functions.
+
+In the file that defines your filters (by default `jinja_filters.py`, but configurable in the [PluginConfig](#pluginconfig-attributes) if desired), you must import the `library` module from the `django_jinja` library. Filters must then be decorated with `@library.filter`. See an example below that defines a filter called `leet_speak`.
+
+```python
+from django_jinja import library
+
+
+@library.filter
+def leet_speak(input_str):
+    charset = {"a": "4", "e": "3", "l": "1", "o": "0", "s": "5", "t": "7"}
+    output_str = ""
+    for char in input_str:
+        output_str += charset.get(char.lower(), char)
+    return output_str
+```
+
+This filter will then be available for use in computed field templates like so:
+
+```
+{{ "HELLO WORLD" | leet_speak }}
+```
+The output of this template results in the string `"H3110 W0R1D"`.
+
 
 ## Including Jobs
 

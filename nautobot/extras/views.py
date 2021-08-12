@@ -14,12 +14,12 @@ from django.utils.timezone import make_aware
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
-from rq import Worker
 
 from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import (
     copy_safe_request,
@@ -33,6 +33,7 @@ from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobResultStatusChoices
 from .models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomLink,
@@ -243,7 +244,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
     """
 
     queryset = ConfigContextSchema.objects.all()
-    template_name = "extras/configcontextschema/validation.html"
+    template_name = "extras/configcontextschema_validation.html"
 
     def get_extra_context(self, request, instance):
         """
@@ -444,6 +445,8 @@ class ObjectChangeLogView(View):
             "extras/object_changelog.html",
             {
                 "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
@@ -549,7 +552,11 @@ class GitRepositorySyncView(View):
 
         repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
-        enqueue_pull_git_repository_and_refresh_data(repository, request)
+        # Allow execution only if a worker process is running.
+        if not get_worker_count(request):
+            messages.error(request, "Unable to run job: Celery worker process not running.")
+        else:
+            enqueue_pull_git_repository_and_refresh_data(repository, request)
 
         return redirect("extras:gitrepository_result", slug=slug)
 
@@ -699,7 +706,10 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         job_form = job.as_form(request.POST, request.FILES)
         schedule_form = forms.JobScheduleForm(request.POST)
 
-        if job_form.is_valid() and schedule_form.is_valid():
+        # Allow execution only if a worker process is running.
+        if not get_worker_count(request):
+            messages.error(request, "Unable to run job: Celery worker process not running.")
+        elif job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
@@ -822,7 +832,8 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
                 job.class_path,
                 job_content_type,
                 scheduled_job.user,
-                data=initial,
+                request.user,
+                data=job_class.serialize_data(initial),
                 request=copy_safe_request(request),
                 commit=False,  # force a dry-run
             )
@@ -997,6 +1008,7 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
             {
                 "associated_record": associated_record,
                 "job": job,
+                "object": job_result,
                 "result": job_result,
             },
         )
@@ -1201,3 +1213,29 @@ class GraphQLQueryDeleteView(generic.ObjectDeleteView):
 class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
     queryset = GraphQLQuery.objects.all()
     table = tables.GraphQLQueryTable
+
+
+class ComputedFieldListView(generic.ObjectListView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
+    filterset_form = forms.ComputedFieldFilterForm
+    action_buttons = ("add",)
+
+
+class ComputedFieldView(generic.ObjectView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldEditView(generic.ObjectEditView):
+    queryset = ComputedField.objects.all()
+    model_form = forms.ComputedFieldForm
+
+
+class ComputedFieldDeleteView(generic.ObjectDeleteView):
+    queryset = ComputedField.objects.all()
+
+
+class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable

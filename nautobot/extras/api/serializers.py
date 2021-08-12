@@ -26,6 +26,7 @@ from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack,
 from nautobot.extras.choices import *
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
@@ -239,7 +240,9 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
             "created",
             "last_updated",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
         """
@@ -797,7 +800,7 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
 
 class GraphQLQuerySerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
-    variables = serializers.DictField(allow_null=True, default={})
+    variables = serializers.DictField(required=False, allow_null=True, default={})
 
     class Meta:
         model = GraphQLQuery
@@ -808,4 +811,36 @@ class GraphQLQuerySerializer(ValidatedModelSerializer):
             "slug",
             "query",
             "variables",
+        )
+
+
+class GraphQLQueryInputSerializer(serializers.Serializer):
+    variables = serializers.DictField(allow_null=True, default={})
+
+
+class GraphQLQueryOutputSerializer(serializers.Serializer):
+    data = serializers.DictField(default={})
+
+
+# Computed Fields
+
+
+class ComputedFieldSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "id",
+            "url",
+            "slug",
+            "label",
+            "description",
+            "content_type",
+            "template",
+            "fallback_value",
+            "weight",
         )

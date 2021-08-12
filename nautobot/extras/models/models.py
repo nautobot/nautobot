@@ -5,6 +5,8 @@ from collections import OrderedDict
 from datetime import timedelta
 
 from celery import schedules
+from db_file_storage.model_utils import delete_file, delete_file_if_needed
+from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -32,6 +34,7 @@ from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import *
 from nautobot.extras.constants import *
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -306,10 +309,85 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
         if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
 
+        # Don't allow two ExportTemplates with the same name, content_type, and owner.
+        # This is necessary because Django doesn't consider NULL=NULL, and so if owner is NULL the unique_together
+        # condition will never be matched even if name and content_type are the same.
+        if (
+            ExportTemplate.objects.exclude(pk=self.pk)
+            .filter(
+                name=self.name,
+                content_type=self.content_type,
+                owner_content_type=self.owner_content_type,
+                owner_object_id=self.owner_object_id,
+            )
+            .exists()
+        ):
+            raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
+
 
 #
-# Image attachments
+# File attachments
 #
+
+
+class FileAttachment(BaseModel):
+    """An object for storing the contents and metadata of a file in the database.
+
+    This object is used by `FileProxy` objects to retrieve file contents and is
+    not intended to be used standalone.
+    """
+
+    bytes = models.BinaryField()
+    filename = models.CharField(max_length=255)
+    mimetype = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.filename
+
+    class Meta:
+        ordering = ["filename"]
+
+
+def database_storage():
+    """Returns storage backend used by `FileProxy.file` to store files in the database."""
+    return DatabaseFileStorage()
+
+
+class FileProxy(BaseModel):
+    """An object to store a file in the database.
+
+    The `file` field can be used like a file handle. The file contents are stored and retrieved from
+    `FileAttachment` objects.
+
+    The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
+    should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
+    are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
+    In most cases, it is better to iterate over a queryset of `FileProxy` objects and call
+    `delete()` on each one individually.
+    """
+
+    name = models.CharField(max_length=255)
+    file = models.FileField(
+        upload_to="extras.FileAttachment/bytes/filename/mimetype",
+        storage=database_storage,  # Use only this backend
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        get_latest_by = "uploaded_at"
+        ordering = ["name"]
+        verbose_name_plural = "file proxies"
+
+    def save(self, *args, **kwargs):
+        delete_file_if_needed(self, "file")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        delete_file(self, "file")
 
 
 class ImageAttachment(BaseModel):
@@ -466,6 +544,15 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         # Validate data against schema
         self._validate_with_schema("data", "schema")
 
+        # Check for a duplicated `name`. This is necessary because Django does not consider two NULL fields to be equal,
+        # and thus if the `owner` is NULL, a duplicate `name` will not otherwise automatically raise an exception.
+        if (
+            ConfigContext.objects.exclude(pk=self.pk)
+            .filter(name=self.name, owner_content_type=self.owner_content_type, owner_object_id=self.owner_object_id)
+            .exists()
+        ):
+            raise ValidationError({"name": "A ConfigContext with this name already exists."})
+
 
 class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     """
@@ -569,6 +656,8 @@ class ConfigContextSchema(OrganizationalModel):
     )
 
     def __str__(self):
+        if self.owner:
+            return f"[{self.owner}] {self.name}"
         return self.name
 
     def get_absolute_url(self):
@@ -617,10 +706,11 @@ class Job(models.Model):
 # Job results
 #
 @extras_features(
+    "custom_fields",
     "custom_links",
     "graphql",
 )
-class JobResult(BaseModel):
+class JobResult(BaseModel, CustomFieldModel):
     """
     This model stores the results from running a user-defined report.
     """
@@ -688,6 +778,7 @@ class JobResult(BaseModel):
 
     class Meta:
         ordering = ["-created"]
+        get_latest_by = "created"
 
     def __str__(self):
         return str(self.job_id)
