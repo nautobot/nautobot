@@ -116,16 +116,17 @@ add "&raw" to the end of the URL within a browser.
   </script>
   <script src="{% static 'graphene_django/graphiql.js' %}"></script>
   <script>
+  {% if perms.extras.view_graphqlquery %}
     document.addEventListener('DOMContentLoaded', function() {
       queries_tab = `
         <button class="toolbar-button" id="navbar_queries">
           <div>
             <ul class="nav">
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="color: inherit;">
+                    <div href="#" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="color: inherit;">
                         <span>Queries </span>
                         <span class="caret"></span>
-                    </a>
+                    </div>
                     <ul class="dropdown-menu" id="graphql-queries-menu">
                         <li class="dropdown-header">Saved Queries</li>
                         {% for query in saved_graphiql_queries %}
@@ -154,7 +155,7 @@ add "&raw" to the end of the URL within a browser.
       `
       $(".toolbar").append(queries_tab);
     }, false);
-
+  {% endif %}
     function reload(id, query, variables) {
       if (variables == null){
           variables = '{}';
