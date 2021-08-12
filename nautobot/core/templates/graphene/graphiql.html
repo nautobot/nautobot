@@ -119,39 +119,33 @@ add "&raw" to the end of the URL within a browser.
   {% if perms.extras.view_graphqlquery %}
     document.addEventListener('DOMContentLoaded', function() {
       queries_tab = `
-        <button class="toolbar-button" id="navbar_queries">
-          <div>
-            <ul class="nav">
-                <li class="dropdown">
-                    <div href="#" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="color: inherit;">
-                        <span>Queries </span>
-                        <span class="caret"></span>
-                    </div>
-                    <ul class="dropdown-menu" id="graphql-queries-menu">
-                        <li class="dropdown-header">Saved Queries</li>
-                        {% for query in saved_graphiql_queries %}
-                            <li>
-                                {% if request.GET.id|slugify == query.id|slugify %}
-                                    <div class="buttons pull-right">
-                                        <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
-                                    </div>
-                                    <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
-                                        <strong>{{ query.name }}</strong>
-                                    </a>
-                                {% else %}
-                                    <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
-                                {% endif %}
-                            </li>
-                        {% endfor %}
-                        <li class="divider" role="separator"></li>
-                        <li>
-                            <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
-                        </li>
-                    </ul>
+        <div class="btn-group" role="button">
+          <button class="toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+              <span>Queries </span>
+              <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu" id="graphql-queries-menu">
+            <li class="dropdown-header">Saved Queries</li>
+              {% for query in saved_graphiql_queries %}
                 <li>
+                    {% if request.GET.id|slugify == query.id|slugify %}
+                        <div class="buttons pull-right">
+                            <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
+                        </div>
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                            <strong>{{ query.name }}</strong>
+                        </a>
+                    {% else %}
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                    {% endif %}
+                </li>
+              {% endfor %}
+              <li class="divider" role="separator"></li>
+                <li>
+                    <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
+                </li>
             </ul>
-          </div>
-        </button>
+        </div>
       `
       $(".toolbar").append(queries_tab);
     }, false);
