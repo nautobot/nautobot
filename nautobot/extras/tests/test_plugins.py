@@ -1,34 +1,32 @@
-import json
-import uuid
-from unittest.mock import patch
+import os
 from unittest import skipIf
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
-from django.utils import timezone
-from requests import Session
 
 from nautobot.dcim.models import Site
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import WebhookHttpMethodChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
 from nautobot.extras.models import Webhook
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.extras.tasks import process_webhook
-from nautobot.extras.utils import generate_signature
-from nautobot.utilities.testing import APITestCase, APIViewTestCases, TestCase, ViewTestCases
+from nautobot.users.models import Token
+from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases
+from nautobot.utilities.testing.integration import SplinterTestCase
 
 from dummy_plugin import config as dummy_config
 from dummy_plugin.datasources import refresh_git_text_files
 from dummy_plugin.models import DummyModel
-from dummy_plugin.api.serializers import DummyModelSerializer
 
+User = get_user_model()
 
 @skipIf(
     "dummy_plugin" not in settings.PLUGINS,
@@ -287,80 +285,87 @@ class PluginTest(TestCase):
     "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",
 )
-class PluginWebhookTest(APITestCase):
-    @classmethod
-    def setUpTestData(cls):
-        dummy_ct = ContentType.objects.get_for_model(DummyModel)
-        DUMMY_URL = "http://localhost/"
-        DUMMY_SECRET = "LOOKATMEIMASECRETSTRING"
+class PluginWebhookTest(SplinterTestCase):
+    """
+    This test case proves that plugins can use the webhook functions when making changes on a model.
 
-        webhooks = (
-            Webhook.objects.create(
-                name="DummyModel Create Webhook",
-                type_create=True,
-                payload_url=DUMMY_URL,
-                secret=DUMMY_SECRET,
-                additional_headers="X-Foo: Bar",
-            ),
+    Because webhooks use celery a class variable is set to True called `requires_celery`. This starts
+    a celery instance in a separate thread.
+    """
+
+    requires_celery = True
+
+    def setUp(self):
+        super().setUp()
+        self.url = f"http://localhost:{self.server_thread.port}" + reverse(
+            "plugins-api:dummy_plugin-api:dummymodel_webhook"
         )
-        for webhook in webhooks:
-            webhook.content_types.set([dummy_ct])
+        self.login(self.user.username, self.password)
+        self.token = Token.objects.create(user=self.user)
+        self.header = f"Authorization: Token {self.token.key}"
+        self.webhook = Webhook.objects.create(
+            name="DummyModel",
+            type_create=True,
+            type_update=True,
+            type_delete=True,
+            payload_url=self.url,
+            http_method=WebhookHttpMethodChoices.METHOD_GET,
+            additional_headers=self.header,
+        )
+        dummy_ct = ContentType.objects.get_for_model(DummyModel)
+        self.webhook.content_types.set([dummy_ct])
 
-    def test_webhooks_process_webhook(self):
+    def update_headers(self, new_header):
         """
-        Mock a Session.send to inspect the result of `process_webhook()`.
-        Note that process_webhook is called directly, not via a celery task.
+        Update webhook additional headers with the name of the running test.
         """
+        headers = self.header + f"\nTest-Name: {new_header}"
+        self.webhook.additional_headers = headers
+        self.webhook.validated_save()
 
-        request_id = uuid.uuid4()
-        webhook = Webhook.objects.get(type_create=True)
-        timestamp = str(timezone.now())
+    def test_plugin_webhook_create(self):
+        """
+        Test `process_webhook` from a model create.
+        """
+        self.update_headers("test_plugin_webhook_create")
+        self.clear_worker()
+        # Make change to model
+        with web_request_context(self.user):
+            DummyModel.objects.create(name="foo", number=100)
+        self.wait_on_active_tasks()
+        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_create"))
+        os.remove("/tmp/test_plugin_webhook_create")
 
-        def dummy_send(_, request, **kwargs):
-            """
-            A dummy implementation of Session.send() to be used for testing.
-            Always returns a 200 HTTP response.
-            """
-            signature = generate_signature(request.body, webhook.secret)
+    def test_plugin_webhook_update(self):
+        """
+        Test `process_webhook` from a model update.
+        """
+        self.update_headers("test_plugin_webhook_update")
+        obj = DummyModel.objects.create(name="foo", number=100)
 
-            # Validate the outgoing request headers
-            self.assertEqual(request.headers["Content-Type"], webhook.http_content_type)
-            self.assertEqual(request.headers["X-Hook-Signature"], signature)
-            self.assertEqual(request.headers["X-Foo"], "Bar")
+        self.clear_worker()
+        # Make change to model
+        with web_request_context(self.user):
+            obj.number = 200
+            obj.validated_save()
+        self.wait_on_active_tasks()
+        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_update"))
+        os.remove("/tmp/test_plugin_webhook_update")
 
-            # Validate the outgoing request body
-            body = json.loads(request.body)
-            self.assertEqual(body["event"], "created")
-            self.assertEqual(body["timestamp"], timestamp)
-            self.assertEqual(body["model"], "dummymodel")
-            self.assertEqual(body["username"], "testuser")
-            self.assertEqual(body["request_id"], str(request_id))
-            self.assertEqual(body["data"]["name"], "dummy model 1")
-            self.assertEqual(body["data"]["number"], 100)
+    def test_plugin_webhook_delete(self):
+        """
+        Test `process_webhook` from a model delete.
+        """
+        self.update_headers("test_plugin_webhook_delete")
+        obj = DummyModel.objects.create(name="foo", number=100)
 
-            class FakeResponse:
-                ok = True
-                status_code = 200
-
-            return FakeResponse()
-
-        # Patch the Session object with our dummy_send() method, then process the webhook for sending
-        with patch.object(Session, "send", dummy_send):
-            record = DummyModel.objects.create(name="dummy model 1", number=100)
-            serializer_context = {
-                "request": None,
-            }
-            serializer = DummyModelSerializer(record, context=serializer_context)
-
-            process_webhook(
-                webhook.pk,
-                serializer.data,
-                DummyModel._meta.model_name,
-                ObjectChangeActionChoices.ACTION_CREATE,
-                timestamp,
-                self.user.username,
-                request_id,
-            )
+        self.clear_worker()
+        # Make change to model
+        with web_request_context(self.user):
+            obj.delete()
+        self.wait_on_active_tasks()
+        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_delete"))
+        os.remove("/tmp/test_plugin_webhook_delete")
 
 
 @skipIf(
