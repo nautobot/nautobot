@@ -18,6 +18,7 @@ from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.testing import TestCase
 
+from nautobot.core.settings_funcs import sso_auth_enabled
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -157,39 +158,46 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertSetEqual({groups[0], groups[1]}, set(new_user.groups.all()))
 
     @override_settings(
-        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
-        REMOTE_AUTH_AUTO_CREATE_USER=True,
-        EXTERNAL_AUTH_DEFAULT_PERMISSIONS={
-            "dcim.add_site": None,
-            "dcim.change_site": None,
-        },
+        SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
     )
-    def test_external_auth_default_permissions(self):
+    def test_custom_social_auth_backend_prefix_sso_enabled_true(self):
         """
-        Test enabling remote authentication with the default configuration.
+        Test specifying custom social auth backend prefix for custom auth plugins return True with matching backend prefix.
         """
-        headers = {
-            "HTTP_REMOTE_USER": "remoteuser2",
-        }
 
-        self.assertTrue("nautobot.core.authentication.RemoteUserBackend" in settings.AUTHENTICATION_BACKENDS)
-        self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
-        self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
-        self.assertEqual(
-            settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS,
-            {"dcim.add_site": None, "dcim.change_site": None},
+        self.assertEqual(settings.SOCIAL_AUTH_BACKEND_PREFIX, "custom_auth.backend")
+        self.assertTrue(
+            sso_auth_enabled(("custom_auth.backend.pingid", "nautobot.core.authentication.ObjectPermissionBackend"))
         )
 
-        response = self.client.get(reverse("home"), follow=True, **headers)
-        self.assertEqual(response.status_code, 200)
+    @override_settings(
+        SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
+    )
+    def test_custom_social_auth_backend_prefix_sso_enabled_false(self):
+        """
+        Test specifying custom social auth backend prefix for custom auth plugins with no matching custom backend.
+        """
 
-        new_user = User.objects.get(username="remoteuser2")
-        self.assertEqual(
-            uuid.UUID(self.client.session.get("_auth_user_id")),
-            new_user.pk,
-            msg="Authentication failed",
+        self.assertEqual(settings.SOCIAL_AUTH_BACKEND_PREFIX, "custom_auth.backend")
+        self.assertFalse(sso_auth_enabled(tuple(TEST_AUTHENTICATION_BACKENDS)))
+
+    def test_default_social_auth_backend_prefix_sso_enabled_true(self):
+        """
+        Test default check for 'social_core.backends' with backend specified that starts with default backend prefix.
+        """
+
+        self.assertTrue(
+            sso_auth_enabled(
+                ("social_core.backends.google.GoogleOath2", "nautobot.core.authentication.ObjectPermissionBackend")
+            )
         )
-        self.assertTrue(new_user.has_perms(["dcim.add_site", "dcim.change_site"]))
+
+    def test_default_social_auth_backend_prefix_sso_enabled_false(self):
+        """
+        Test default check for 'social_core.backends' with no backends specified that startswith prefix.
+        """
+
+        self.assertFalse(sso_auth_enabled(tuple(TEST_AUTHENTICATION_BACKENDS)))
 
 
 class ObjectPermissionAPIViewTestCase(TestCase):

@@ -56,7 +56,7 @@ Please see the SAML configuration guide below for an example of how to configure
 
 To use external authentcation, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
 
-- Insert the desired external authentication backend as the first item in the list.
+- Insert the desired external authentication backend as the first item in the list. This step is key to properly redirecting when users click the login button.
 - You must also ensure that `nautobot.core.authentication.ObjectPermissionBackend` is always the second item in the list. It is an error to exclude this backend.
 
 !!! note
@@ -77,6 +77,17 @@ AUTHENTICATION_BACKENDS = [
 !!! warning
 	You should only enable one social authentication authentication backend. It is technically possible to use multiple backends but we cannot officially support more than one at this time.
 
+
+### Custom Authentication Backends
+
+The default external authentication supported is [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) as stated above. If you have developed your own external authentication backend, you can specify `SOCIAL_AUTH_BACKEND_PREFIX` to enable the SSO redirect when the login button is clicked. Currently, Nautobot will look for `social_core.backends` within `AUTHENTICATION_BACKENDS` to endable the redirect.Let's take a look at an example for a custom authentication backend available at `custom_auth.backends.custom.Oauth2`.
+
+```python
+SOCIAL_AUTH_BACKEND_PREFIX = "custom_auth.backends"
+```
+
+`SOCIAL_AUTH_BACKEND_PREFIX` was set to `custom_auth.backends` as we may have more than one custom backend. This will enable the SSO redirect for users when they click the login button.
+
 ---
 
 ### Select your Authentication Backend
@@ -85,19 +96,19 @@ You will need to select the correct social authentication module name for your d
 
 Some common backend module names include:
 
-| Backend | Social Auth Backend Module Name |
-|---------|---------------------------------|
-| [Microsoft Azure Active Directory](https://python-social-auth.readthedocs.io/en/latest/backends/azuread.html) | `social_core.backends.azuread.AzureADOAuth2` |
-| | `social_core.backends.azuread_b2c.AzureADB2COAuth2` |
-| | `social_core.backends.azuread_tenant.AzureADTenantOAuth2` |
-| | `social_core.backends.azuread_tenant.AzureADV2TenantOAuth2` |
-| [Google](https://python-social-auth.readthedocs.io/en/latest/backends/google.html) | `social_core.backends.gae.GoogleAppEngineAuth` |
-| | `social_core.backends.google.GoogleOAuth2` |
-| | `social_core.backends.google.GoogleOAuth` |
-| | `social_core.backends.google_openidconnect.GoogleOpenIdConnect` |
-| [Okta](https://python-social-auth.readthedocs.io/en/latest/backends/okta.html) | `social_core.backends.okta.OktaOAuth2` |
-| | `social_core.backends.okta_openidconnect.OktaOpenIdConnect` |
-| [SAML](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) | `social_core.backends.saml.SAMLAuth` |
+| Backend                                                                                                       | Social Auth Backend Module Name                                 |
+| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [Microsoft Azure Active Directory](https://python-social-auth.readthedocs.io/en/latest/backends/azuread.html) | `social_core.backends.azuread.AzureADOAuth2`                    |
+|                                                                                                               | `social_core.backends.azuread_b2c.AzureADB2COAuth2`             |
+|                                                                                                               | `social_core.backends.azuread_tenant.AzureADTenantOAuth2`       |
+|                                                                                                               | `social_core.backends.azuread_tenant.AzureADV2TenantOAuth2`     |
+| [Google](https://python-social-auth.readthedocs.io/en/latest/backends/google.html)                            | `social_core.backends.gae.GoogleAppEngineAuth`                  |
+|                                                                                                               | `social_core.backends.google.GoogleOAuth2`                      |
+|                                                                                                               | `social_core.backends.google.GoogleOAuth`                       |
+|                                                                                                               | `social_core.backends.google_openidconnect.GoogleOpenIdConnect` |
+| [Okta](https://python-social-auth.readthedocs.io/en/latest/backends/okta.html)                                | `social_core.backends.okta.OktaOAuth2`                          |
+|                                                                                                               | `social_core.backends.okta_openidconnect.OktaOpenIdConnect`     |
+| [SAML](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html)                                | `social_core.backends.saml.SAMLAuth`                            |
 
 ### User Permissions
 
