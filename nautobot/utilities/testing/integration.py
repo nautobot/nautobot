@@ -40,7 +40,7 @@ class NautobotRemote(webdriver.Remote):
         return self.find_element_by_xpath(f'//button[text()="{button_text}"]')
 
     def find_elements_by_class_name(self, name):
-        return self.find_elements_by_xpath(f"//*[@class='{name}']")
+        return self.find_elements_by_xpath(f"//*[contains(@class, '{name}')]")
 
 
 FIREFOX_PROFILE_PREFERENCES = {

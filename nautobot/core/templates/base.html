@@ -1,5 +1,6 @@
 {% load static %}
 {% load helpers %}
+{% load plugins %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -51,6 +52,7 @@
                 <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
             </div>
         {% endif %}
+        {% plugin_banners %}
         {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">

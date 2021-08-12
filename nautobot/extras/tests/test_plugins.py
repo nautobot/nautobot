@@ -47,7 +47,15 @@ class PluginTest(TestCase):
         url = reverse("admin:dummy_plugin_dummymodel_add")
         self.assertEqual(url, "/admin/dummy_plugin/dummymodel/add/")
 
-    def test_template_extensions(self):
+    def test_banner_registration(self):
+        """
+        Check that plugin Banner is registered.
+        """
+        from dummy_plugin.banner import banner
+
+        self.assertIn(banner, registry["plugin_banners"])
+
+    def test_template_extensions_registration(self):
         """
         Check that plugin TemplateExtensions are registered.
         """
@@ -75,7 +83,7 @@ class PluginTest(TestCase):
 
         self.assertEqual(leet_speak, rendering_engine.env.filters[leet_speak.__name__])
 
-    def test_graphql_types(self):
+    def test_graphql_types_registration(self):
         """
         Check that plugin GraphQL Types are registered.
         """
@@ -125,7 +133,7 @@ class PluginTest(TestCase):
             jobs_dict["plugins"]["dummy_plugin.jobs"]["jobs"]["DummyJob"],
         )
 
-    def test_git_datasource_contents(self):
+    def test_git_datasource_contents_registration(self):
         """
         Check that plugin DatasourceContents are registered.
         """
