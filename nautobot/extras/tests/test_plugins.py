@@ -28,6 +28,7 @@ from dummy_plugin.models import DummyModel
 
 User = get_user_model()
 
+
 @skipIf(
     "dummy_plugin" not in settings.PLUGINS,
     "dummy_plugin not in settings.PLUGINS",

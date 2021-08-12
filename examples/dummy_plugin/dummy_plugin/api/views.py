@@ -19,6 +19,7 @@ class DummyViewSet(ModelViewSet):
 # Webhook Testing
 #
 
+
 class DummyModelWebhook(APIView):
     """
     Dummy view used in testing webhooks for plugins.
@@ -27,6 +28,6 @@ class DummyModelWebhook(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
-        with open(f'/tmp/{self.request.META.get("HTTP_TEST_NAME", "NO-TEST-NAME")}', 'w') as f:
+        with open(f'/tmp/{self.request.META.get("HTTP_TEST_NAME", "NO-TEST-NAME")}', "w") as f:
             f.write("Test flag.")
         return Response("Submitted")
