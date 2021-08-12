@@ -786,7 +786,6 @@ class ComputedFieldTestCase(
                 slug="computed_field_three",
                 label="Computed Field Three",
                 template="Site name is {{ obj.name }}",
-                fallback_value="Template error",
                 weight=100,
             ),
         )

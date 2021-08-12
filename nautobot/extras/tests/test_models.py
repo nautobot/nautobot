@@ -720,11 +720,22 @@ class ComputedFieldTest(TestCase):
             fallback_value="An error occurred while rendering this template.",
             weight=50,
         )
+        self.blank_fallback_value = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="blank_fallback_value",
+            label="Blank Fallback Value",
+            template="{{ obj.location }}",
+            weight=50,
+        )
         self.site1 = Site.objects.create(name="NYC")
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.site1})
         self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+
+    def test_render_method_undefined_error(self):
+        rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, "Unable to generate Blank Fallback Value.")
 
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
