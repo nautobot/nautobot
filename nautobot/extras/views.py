@@ -790,7 +790,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
 
 class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
-    """ "
+    """
     This view handles requests to view and approve a Job execution request.
     It renders the Job's form in much the same way as `JobView` except all
     form fields are disabled and actions on the form relate to approval of the
