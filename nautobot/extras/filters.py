@@ -446,7 +446,9 @@ class ScheduledJobFilterSet(BaseFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(Q(name__icontains=value) | Q(job_class__icontains=value) | Q(task__icontains=value))
+        return queryset.filter(
+            Q(name__icontains=value) | Q(job_class__icontains=value) | Q(description__icontains=value)
+        )
 
 
 #

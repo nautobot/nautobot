@@ -230,6 +230,11 @@ class JobViewSet(ViewSet):
         return job_class
 
     def _create_schedule(self, serializer, data, commit, job, job_class, request):
+        """
+        This is an internal function to create a scheduled job from API data.
+        It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
+        jobs.
+        """
         job_kwargs = {
             "data": data,
             "request": copy_safe_request(request),
@@ -242,10 +247,10 @@ class JobViewSet(ViewSet):
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job.class_path,
             start_time=serializer.get("start_time"),
-            description=f"Nautobot job scheduled by {request.user} on {serializer.get('start_time')}",
+            description=f"Nautobot job {serializer['name']} scheduled by {request.user} on {serializer.get('start_time')}",
             kwargs=job_kwargs,
             interval=serializer["interval"],
-            one_off=serializer["interval"] == JobExecutionType.TYPE_FUTURE,
+            one_off=(serializer["interval"] == JobExecutionType.TYPE_FUTURE),
             user=request.user,
             approval_required=job_class.approval_required,
         )

@@ -956,7 +956,7 @@ class JobResult(BaseModel, CustomFieldModel):
 class ScheduledJobs(models.Model):
     """Helper table for tracking updates to scheduled tasks.
     This stores a single row with ident=1.  last_update is updated
-    via django signals whenever anything is changed in the ScheduledTask model.
+    via django signals whenever anything is changed in the ScheduledJob model.
     Basically this acts like a DB data audit trigger.
     Doing this so we also track deletions, and not just insert/update.
     """
@@ -968,15 +968,18 @@ class ScheduledJobs(models.Model):
 
     @classmethod
     def changed(cls, instance, **kwargs):
+        """This function acts as a signal handler to track changes to the scheduled job that is triggered before a change"""
         if not instance.no_changes:
             cls.update_changed()
 
     @classmethod
     def update_changed(cls, **kwargs):
+        """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
 
     @classmethod
     def last_change(cls):
+        """This function acts as a getter for the last update on scheduled jobs"""
         try:
             return cls.objects.get(ident=1).last_update
         except cls.DoesNotExist:
@@ -995,7 +998,7 @@ class ScheduledJob(BaseModel):
     task = models.CharField(
         max_length=200,
         verbose_name="Task Name",
-        help_text='The Name of the Celery Task that Should be Run. (Example: "proj.tasks.import_contacts")',
+        help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
     )
     job_class = models.CharField(
         max_length=255, verbose_name="Job Class", help_text="Name of the fully qualified Nautobot Job class"
@@ -1026,8 +1029,6 @@ class ScheduledJob(BaseModel):
         help_text="Set to False to disable the schedule",
     )
     last_run_at = models.DateTimeField(
-        auto_now=False,
-        auto_now_add=False,
         editable=False,
         blank=True,
         null=True,
@@ -1069,8 +1070,6 @@ class ScheduledJob(BaseModel):
     )
     approval_required = models.BooleanField(default=False)
     approved_at = models.DateTimeField(
-        auto_now=False,
-        auto_now_add=False,
         editable=False,
         blank=True,
         null=True,
@@ -1114,6 +1113,9 @@ class ScheduledJob(BaseModel):
         """
         if self.user and self.approved_by_user and self.user == self.approved_by_user:
             raise ValidationError("The requesting and approving users cannot be the same")
+        # bitwise xor also works on booleans, but not on complex values
+        if bool(self.approved_by_user) ^ bool(self.approved_at):
+            raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
 
     @property
     def schedule(self):
