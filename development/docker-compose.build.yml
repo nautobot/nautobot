@@ -1,6 +1,6 @@
 # Used to run the final container images vs the dev containers
 ---
-version: "3"
+version: "3.1"
 services:
   nautobot:
     build:
