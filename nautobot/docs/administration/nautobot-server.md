@@ -165,7 +165,6 @@ Run health checks and exit 0 if everything went well.
 
 ```no-highlight
 $ nautobot-server health_check
-Cache backend: default   ... working
 DatabaseBackend          ... working
 DefaultFileStorageHealthCheck ... working
 ```
