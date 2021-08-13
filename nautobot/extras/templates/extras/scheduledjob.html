@@ -165,7 +165,7 @@
                     {% for key, value in object.kwargs.data.items %}
                     <tr>
                       <td>{{ key }}</td>
-                      <td><code>{{ value }}</code></td>
+                      <td>{% if value is None %}–{% else %}<code>{{ value }}</code>{% endif %}</td>
                     </tr>
                     {% empty %}
                       <tr><td>—</td></tr>
