@@ -135,12 +135,12 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-### Nautobot Worker Service
+### Nautobot Worker Services
 
 !!! note
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
-Next, we will setup the `systemd` unit for the Celery worker. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+Next, we will setup the `systemd` unit for the Celery and Celery beat workers. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 
 ```
 [Unit]
@@ -159,6 +159,34 @@ PIDFile=/var/tmp/nautobot-worker.pid
 WorkingDirectory=/opt/nautobot
 
 ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker.pid
+
+Restart=always
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Additionally, paste the following into `/etc/systemd/system/nautobot-beat-worker.service`:
+
+```
+[Unit]
+Description=Nautobot Celery Beat Worker
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
+
+User=nautobot
+Group=nautobot
+PIDFile=/var/tmp/nautobot-beat-worker.pid
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/.local/bin/nautobot-server celery beat --loglevel INFO --pidfile /var/tmp/nautobot-beat-worker.pid --scheduler nautobot.core.celery.schedulers:NautobotDatabaseScheduler
 
 Restart=always
 RestartSec=30
@@ -253,7 +281,7 @@ $ sudo systemctl daemon-reload
 Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
 
 ```no-highlight
-$ sudo systemctl enable --now nautobot nautobot-worker
+$ sudo systemctl enable --now nautobot nautobot-worker nautobot-beat-worker
 ```
 
 If you are also running the RQ worker, repeat the above command for the RQ service:
