@@ -167,6 +167,8 @@
                       <td>{{ key }}</td>
                       <td><code>{{ value }}</code></td>
                     </tr>
+                    {% empty %}
+                      <tr><td>—</td></tr>
                     {% endfor %}
                 </table>
             </div>
