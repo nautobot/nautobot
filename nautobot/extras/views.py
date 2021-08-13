@@ -6,6 +6,7 @@ from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -952,6 +953,17 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
 
 class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
+
+    def get_extra_context(self, request, instance):
+        job_class = get_job(instance.job_class)
+        labels = {}
+        for name, var in job_class._get_vars().items():
+            field = var.as_field()
+            if field.label:
+                labels[name] = var
+            else:
+                labels[name] = pretty_name(name)
+        return {"labels": labels}
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
