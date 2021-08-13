@@ -165,7 +165,7 @@
                     <tr>
                         <td>User Inputs</td>
                     </tr>
-                    {% for key, value in object.kwargs.data %}
+                    {% for key, value in object.kwargs.data.items %}
                     <tr>
                       <td>{{ key }}</td>
                       <td><details><code>{{ value }}</code></details></td>
