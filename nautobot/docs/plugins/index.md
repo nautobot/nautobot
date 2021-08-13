@@ -19,6 +19,7 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 * **Provide Jobs.** A plugin can serve as a convenient way to package and install [Jobs](../additional-features/jobs.md).
 * **Add additional Git data types.** A plugin can add support for processing additional types of data stored in a [Git repository](../models/extras/gitrepository.md).
 * **Register additional Jinja2 filters.** A plugin can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
+* **Populate extensibility features in the database.** A plugin can add content to the Nautobot database when installed, such as automatically creating new custom fields, relationships, and so forth.
 
 ### Add entirely new features
 

@@ -439,6 +439,64 @@ datasource_contents = [
 
 With this code, once your plugin is installed, the Git repository creation/editing UI will now include "Animals" as an option for the type(s) of data that a given repository may provide. If this option is selected for a given Git repository, your `refresh_git_animals` function will be automatically called when the repository is synced.
 
+### Populating Extensibility Features
+
+In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../../additional-features/custom-fields) or [relationships](../../models/extras/relationship/). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
+
+To make this possible, Nautobot provides a custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/), `nautobot_database_ready`, that plugins can register to listen for. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing a plugin, and provides an opportunity for the plugin to make any desired additions to the database at this time.
+
+For example, maybe we want our plugin to make use of a Relationship allowing each Site to be linked to our Animal model. We would define our callback function that makes sure this Relationship exists, by convention in a `signals.py` file:
+
+```python
+# signals.py
+
+from nautobot.extras.choices import RelationshipTypeChoices
+
+def create_site_to_animal_relationship(sender, apps, **kwargs):
+    """Create a Site-to-Animal Relationship if it doesn't already exist."""
+    # Use apps.get_model to look up Nautobot core models
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    Relationship = apps.get_model("extras", "Relationship")
+    Site = apps.get_model("dcim", "Site")
+    # Use sender.get_model to look up models from this plugin
+    Animal = sender.get_model("Animal")
+
+    # Ensure that the Relationship exists
+    Relationship.objects.update_or_create(
+        slug="site-favorite-animal",
+        defaults={
+            "name": "Site's Favorite Animal",
+            "type": RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+            "source_type": ContentType.objects.get_for_model(Animal),
+            "source_label": "Sites that love this Animal",
+            "destination_type": ContentType.objects.get_for_model(Site),
+            "destination_label": "Favorite Animal",
+        },
+    )
+```
+
+Then, in the `PluginConfig` `ready()` function, we connect this callback function to the `nautobot_database_ready` signal:
+
+```python
+# __init__.py
+
+from nautobot.core.signals import nautobot_database_ready
+from nautobot.extras.plugins import PluginConfig
+
+from .signals import create_site_to_animal_relationship
+
+class AnimalSoundsConfig(PluginConfig):
+    # ...
+
+    def ready(self):
+        super().ready()
+        nautobot_database_ready.connect(create_site_to_animal_relationship, sender=self)
+
+config = AnimalSoundsConfig
+```
+
+After writing this code, run `nautobot-server migrate` or `nautobot_server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.
+
 ## Adding Database Models
 
 If your plugin introduces a new type of object in Nautobot, you'll probably want to create a [Django model](https://docs.djangoproject.com/en/stable/topics/db/models/) for it. A model is essentially a Python representation of a database table, with attributes that represent individual columns. Model instances can be created, manipulated, and deleted using [queries](https://docs.djangoproject.com/en/stable/topics/db/queries/). Models must be defined within a file named `models.py`.
