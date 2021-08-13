@@ -732,7 +732,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                     schedule_name = f"{job.name} - {schedule_datetime}"
 
                 job_kwargs = {
-                    "data": job_form.cleaned_data,
+                    "data": job_class.serialize_data(job_form.cleaned_data),
                     "request": copy_safe_request(request),
                     "user": request.user.pk,
                     "commit": commit,
