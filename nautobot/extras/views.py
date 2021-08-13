@@ -744,7 +744,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                     task="nautobot.extras.jobs.scheduled_job_handler",
                     job_class=job.class_path,
                     start_time=schedule_datetime,
-                    description=f"Nautobot job scheduled by {request.user} on {schedule_datetime}",
+                    description=f"Nautobot job {schedule_name} scheduled by {request.user} on {schedule_datetime}",
                     kwargs=job_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == choices.JobExecutionType.TYPE_FUTURE,
