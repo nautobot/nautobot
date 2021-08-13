@@ -1,32 +1,22 @@
-import os
 from unittest import skipIf
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.dcim.models import Site
-from nautobot.extras.choices import WebhookHttpMethodChoices
-from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
-from nautobot.extras.models import Webhook
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.users.models import Token
 from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases
-from nautobot.utilities.testing.integration import SplinterTestCase
 
 from dummy_plugin import config as dummy_config
 from dummy_plugin.datasources import refresh_git_text_files
 from dummy_plugin.models import DummyModel
-
-User = get_user_model()
 
 
 @skipIf(
@@ -280,93 +270,6 @@ class PluginTest(TestCase):
                 "plugins:dummy_plugin:dummymodel_list"
             )
         )
-
-
-@skipIf(
-    "dummy_plugin" not in settings.PLUGINS,
-    "dummy_plugin not in settings.PLUGINS",
-)
-class PluginWebhookTest(SplinterTestCase):
-    """
-    This test case proves that plugins can use the webhook functions when making changes on a model.
-
-    Because webhooks use celery a class variable is set to True called `requires_celery`. This starts
-    a celery instance in a separate thread.
-    """
-
-    requires_celery = True
-
-    def setUp(self):
-        super().setUp()
-        self.url = f"http://localhost:{self.server_thread.port}" + reverse(
-            "plugins-api:dummy_plugin-api:dummymodel_webhook"
-        )
-        self.login(self.user.username, self.password)
-        self.token = Token.objects.create(user=self.user)
-        self.header = f"Authorization: Token {self.token.key}"
-        self.webhook = Webhook.objects.create(
-            name="DummyModel",
-            type_create=True,
-            type_update=True,
-            type_delete=True,
-            payload_url=self.url,
-            http_method=WebhookHttpMethodChoices.METHOD_GET,
-            additional_headers=self.header,
-        )
-        dummy_ct = ContentType.objects.get_for_model(DummyModel)
-        self.webhook.content_types.set([dummy_ct])
-
-    def update_headers(self, new_header):
-        """
-        Update webhook additional headers with the name of the running test.
-        """
-        headers = self.header + f"\nTest-Name: {new_header}"
-        self.webhook.additional_headers = headers
-        self.webhook.validated_save()
-
-    def test_plugin_webhook_create(self):
-        """
-        Test `process_webhook` from a model create.
-        """
-        self.update_headers("test_plugin_webhook_create")
-        self.clear_worker()
-        # Make change to model
-        with web_request_context(self.user):
-            DummyModel.objects.create(name="foo", number=100)
-        self.wait_on_active_tasks()
-        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_create"))
-        os.remove("/tmp/test_plugin_webhook_create")
-
-    def test_plugin_webhook_update(self):
-        """
-        Test `process_webhook` from a model update.
-        """
-        self.update_headers("test_plugin_webhook_update")
-        obj = DummyModel.objects.create(name="foo", number=100)
-
-        self.clear_worker()
-        # Make change to model
-        with web_request_context(self.user):
-            obj.number = 200
-            obj.validated_save()
-        self.wait_on_active_tasks()
-        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_update"))
-        os.remove("/tmp/test_plugin_webhook_update")
-
-    def test_plugin_webhook_delete(self):
-        """
-        Test `process_webhook` from a model delete.
-        """
-        self.update_headers("test_plugin_webhook_delete")
-        obj = DummyModel.objects.create(name="foo", number=100)
-
-        self.clear_worker()
-        # Make change to model
-        with web_request_context(self.user):
-            obj.delete()
-        self.wait_on_active_tasks()
-        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_delete"))
-        os.remove("/tmp/test_plugin_webhook_delete")
 
 
 @skipIf(
