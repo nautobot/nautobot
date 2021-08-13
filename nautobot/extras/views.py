@@ -769,7 +769,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                     job.class_path,
                     job_content_type,
                     request.user,
-                    data=job_form.cleaned_data,
+                    data=job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
                 )
