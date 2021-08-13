@@ -1,5 +1,6 @@
 """Signal handlers for the example dummy_plugin."""
 
+
 def nautobot_database_ready_callback(sender, apps, **kwargs):
     """
     Callback function triggered by the nautobot_database_ready signal when the Nautobot database is fully ready.
@@ -34,4 +35,3 @@ def nautobot_database_ready_callback(sender, apps, **kwargs):
         },
     )
     field.content_types.set([ContentType.objects.get_for_model(Site)])
-
