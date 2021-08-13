@@ -2,10 +2,12 @@ import logging
 import os
 
 from abc import ABC, abstractproperty
-from django.apps import AppConfig
+from django.apps import AppConfig, apps as global_apps
+from django.db.models.signals import post_migrate
 from django.urls import reverse
 from collections import OrderedDict
 
+from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
 from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
@@ -18,10 +20,12 @@ registry["homepage_layout"] = {"panels": {}}
 
 class NautobotConfig(AppConfig):
     """
-    Custom AppConfig for Nautobot application.
+    Custom AppConfig for Nautobot applications.
 
-    Adds functionality to generate the HTML navigation menu using `navigation.py` files from nautbot
-    applications.
+    All core apps should inherit from this class instead of using AppConfig directly.
+
+    Adds functionality to generate the HTML navigation menu and homepage content using `navigation.py`
+    and `homepage.py` files from installed Nautobot applications and plugins.
     """
 
     homepage_layout = "homepage.layout"
@@ -38,6 +42,29 @@ class NautobotConfig(AppConfig):
         menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
             register_menu_items(menu_items)
+
+
+def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):
+    """
+    Send the `nautobot_database_ready` signal to all installed apps and plugins.
+
+    Signal handler for Django's post_migrate() signal.
+    """
+    for app_conf in global_apps.get_app_configs():
+        nautobot_database_ready.send(sender=app_conf, app_config=app_conf, **kwargs)
+
+
+class CoreConfig(NautobotConfig):
+    """
+    NautobotConfig for nautobot.core app.
+    """
+
+    name = "nautobot.core"
+    verbose_name = "Nautobot Core"
+
+    def ready(self):
+        post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
+        super().ready()
 
 
 def create_or_check_entry(grouping, record, key, path):
@@ -126,7 +153,8 @@ def register_homepage_panels(path, label, homepage_layout):
     These objects are converted into a dictionary to be stored inside of the Nautobot registry.
 
     Args:
-        path (str): Absolute filesystem path to the app which defines the homepage layout; typically this will be an `AppConfig.path` property
+        path (str): Absolute filesystem path to the app which defines the homepage layout;
+                    typically this will be an `AppConfig.path` property
         label (str): Label of the app which defines the homepage layout, for example `dcim` or `my_nautobot_plugin`
         homepage_layout (list): A list of HomePagePanel instances to contribute to the homepage layout.
     """
