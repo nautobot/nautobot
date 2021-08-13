@@ -93,6 +93,12 @@
                             {{ object.approved_at | placeholder }}
                         </td>
                     </tr>
+                    <tr>
+                        <td>Job Class</td>
+                        <td>
+                            {{ object.job_class }}
+                        </td>
+                    </tr>
                 </table>
             </div>
             <div class="panel panel-default">
@@ -153,18 +159,9 @@
         <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <strong>Parameters</strong>
+                    <strong>User Inputs</strong>
                 </div>
                 <table class="table table-hover panel-body attr-table">
-                    <tr>
-                        <td>Job Class</td>
-                        <td>
-                            {{ object.job_class }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>User Inputs</td>
-                    </tr>
                     {% for key, value in object.kwargs.data.items %}
                     <tr>
                       <td>{{ key }}</td>
