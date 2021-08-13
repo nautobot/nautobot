@@ -30,7 +30,7 @@
             {% plugin_buttons object %}
             <!-- TODO clone_button, edit_button? -->
             {% if perms.extras.delete_scheduledjob %}
-                {% delete_button object %}
+                {% delete_button object key='pk' %}
             {% endif %}
         </div>
     </div>
