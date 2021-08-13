@@ -319,7 +319,7 @@ class JobResultTable(BaseTable):
 #
 
 
-class ScheduledJobsTable(BaseTable):
+class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     job_class = tables.Column(verbose_name="Job")
@@ -333,7 +333,7 @@ class ScheduledJobsTable(BaseTable):
         fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
 
 
-class ScheduledJobsApprovalQueueTable(BaseTable):
+class ScheduledJobApprovalQueueTable(BaseTable):
     name = tables.LinkColumn(viewname="extras:scheduled_jobs_approval_request_view", args=[tables.A("pk")])
     job_class = tables.Column(verbose_name="Job")
     interval = tables.Column(verbose_name="Execution Type")
