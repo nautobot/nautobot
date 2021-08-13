@@ -756,10 +756,10 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 scheduled_job.save()
 
                 if job_class.approval_required:
-                    messages.success(request, "Job successfully submitted for approval")
+                    messages.success(request, f"Job {schedule_name} successfully submitted for approval")
                     return redirect("extras:scheduled_jobs_approval_queue_list")
                 else:
-                    messages.success(request, "Job successfully scheduled")
+                    messages.success(request, f"Job {schedule_name} successfully scheduled")
                     return redirect("extras:scheduled_jobs_list")
 
             else:

@@ -140,7 +140,11 @@ WantedBy=multi-user.target
 !!! note
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
-Next, we will setup the `systemd` unit for the Celery and Celery beat workers. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+Next, we will setup the `systemd` unit for the Celery and Celery Beat workers.
+
+#### Celery Worker
+
+Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 
 ```
 [Unit]
@@ -168,6 +172,8 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
+#### Celery Beat Worker
+
 Additionally, paste the following into `/etc/systemd/system/nautobot-beat-worker.service`:
 
 ```
@@ -186,7 +192,7 @@ Group=nautobot
 PIDFile=/var/tmp/nautobot-beat-worker.pid
 WorkingDirectory=/opt/nautobot
 
-ExecStart=/opt/nautobot/.local/bin/nautobot-server celery beat --loglevel INFO --pidfile /var/tmp/nautobot-beat-worker.pid --scheduler nautobot.core.celery.schedulers:NautobotDatabaseScheduler
+ExecStart=/opt/nautobot/bin/nautobot-server celery beat --loglevel INFO --pidfile /var/tmp/nautobot-beat-worker.pid
 
 Restart=always
 RestartSec=30
@@ -278,7 +284,7 @@ Because we just added new service files, you'll need to reload the systemd daemo
 $ sudo systemctl daemon-reload
 ```
 
-Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
+Then, start the `nautobot`, `nautobot-worker`, and `nautobot-beat-worker` services and enable them to initiate at boot time:
 
 ```no-highlight
 $ sudo systemctl enable --now nautobot nautobot-worker nautobot-beat-worker
