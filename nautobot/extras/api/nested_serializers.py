@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 from rest_framework import serializers
 
 from nautobot.core.api import ChoiceField, ContentTypeField, WritableNestedSerializer
@@ -20,6 +21,7 @@ __all__ = [
     "NestedStatusSerializer",
     "NestedTagSerializer",
     "NestedWebhookSerializer",
+    "NestedJobScheduleSerializer",
 ]
 
 
@@ -138,3 +140,25 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
     class Meta:
         model = models.RelationshipAssociation
         fields = ["id", "url", "relationship", "source_id", "destination_id"]
+
+
+class NestedJobScheduleSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
+    start_time = serializers.DateTimeField(required=False)
+    interval = serializers.ChoiceField(choices=choices.JobExecutionType)
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        if data["interval"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+            if not data["name"]:
+                raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
+
+            if not data["start_time"] or data["start_time"] < timezone.now():
+                raise serializers.ValidationError(
+                    {
+                        "start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+        return data

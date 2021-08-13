@@ -991,7 +991,6 @@ class ScheduledJob(BaseModel):
 
     name = models.CharField(
         max_length=200,
-        unique=True,
         verbose_name="Name",
         help_text="Short Description For This Task",
     )
@@ -1045,12 +1044,12 @@ class ScheduledJob(BaseModel):
     date_changed = models.DateTimeField(
         auto_now=True,
         verbose_name="Last Modified",
-        help_text="Datetime that this PeriodicTask was last modified",
+        help_text="Datetime that this scheduled job was last modified",
     )
     description = models.TextField(
         blank=True,
         verbose_name="Description",
-        help_text="Detailed description about the details of this Periodic Task",
+        help_text="Detailed description about the details of this scheduled job",
     )
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,

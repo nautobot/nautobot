@@ -816,11 +816,6 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
             if not cleaned_data["_schedule_name"]:
                 raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 
-            if ScheduledJob.objects.filter(name=cleaned_data["_schedule_name"]).exists():
-                # django_celery_beat.models.PeriodicTask enforces unique values for the name field, so we need to check
-                # for existing instances with the same name.
-                raise ValidationError({"_schedule_name": "Scheduled job with this name already exists!"})
-
             if not cleaned_data["_schedule_start_time"] or cleaned_data["_schedule_start_time"] < timezone.now():
                 raise ValidationError(
                     {

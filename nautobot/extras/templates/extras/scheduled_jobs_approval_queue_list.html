@@ -4,6 +4,7 @@
 
 {% block javascript %}
 {{ block.super }}
+{# this function serves as a helper for attaching data for post on the job approval endpoint. valid values for action are _dry_run, _accept, and _deny. the url gets injected by the caller. #}
 <script>
     function handleDetailPostAction(url, action) {
         var form = $("<form />", {

@@ -18,7 +18,7 @@ class NautobotScheduleEntry(ModelEntry):
     def __init__(self, model, app=None):
         """Initialize the model entry."""
         self.app = app or current_app._get_current_object()
-        self.name = model.name
+        self.name = "{}_{}".format(model.name, model.pk)
         self.task = model.task
         self.args = model.args
         self.kwargs = model.kwargs
