@@ -50,6 +50,7 @@ def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwar
 
     Signal handler for Django's post_migrate() signal.
     """
+    kwargs.setdefault("apps", global_apps)
     for app_conf in global_apps.get_app_configs():
         nautobot_database_ready.send(sender=app_conf, app_config=app_conf, **kwargs)
 
