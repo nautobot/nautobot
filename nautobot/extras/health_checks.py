@@ -2,15 +2,14 @@
 from django.conf import settings
 from django.db import DatabaseError, IntegrityError, connection
 from health_check.backends import BaseHealthCheckBackend
-from health_check.exceptions import (
-    ServiceReturnedUnexpectedResult, ServiceUnavailable
-)
+from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
 
 from .models import HealthCheckTestModel
 
 
 class DatabaseBackend(BaseHealthCheckBackend):
     """Check database connectivity, test read/write if available."""
+
     def check_status(self):
         """Check the database connection is available."""
         try:

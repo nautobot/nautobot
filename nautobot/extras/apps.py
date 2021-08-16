@@ -29,4 +29,5 @@ class ExtrasConfig(NautobotConfig):
 
         # Register the DatabaseBackend health check
         from nautobot.extras.health_checks import DatabaseBackend
+
         plugin_dir.register(DatabaseBackend)

@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0011_fileattachment_fileproxy'),
+        ("extras", "0011_fileattachment_fileproxy"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='HealthCheckTestModel',
+            name="HealthCheckTestModel",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False)),
-                ('title', models.CharField(max_length=128)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("title", models.CharField(max_length=128)),
             ],
             options={
-                'db_table': 'health_check_db_testmodel',
+                "db_table": "health_check_db_testmodel",
             },
         ),
     ]
