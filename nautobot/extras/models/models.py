@@ -988,7 +988,7 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
 #
 
 
-class HealthCheckTestModel(models.Model):
+class HealthCheckTestModel(BaseModel):
     title = models.CharField(max_length=128)
 
     class Meta:
