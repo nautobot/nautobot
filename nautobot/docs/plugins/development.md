@@ -495,7 +495,7 @@ class AnimalSoundsConfig(PluginConfig):
 config = AnimalSoundsConfig
 ```
 
-After writing this code, run `nautobot-server migrate` or `nautobot_server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.
+After writing this code, run `nautobot-server migrate` or `nautobot-server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.
 
 ## Adding Database Models
 
