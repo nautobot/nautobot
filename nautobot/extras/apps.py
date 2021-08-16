@@ -1,5 +1,6 @@
 import logging
 
+from health_check.plugins import plugin_dir
 from nautobot.core.apps import NautobotConfig
 from django.db.utils import ProgrammingError
 
@@ -25,3 +26,7 @@ class ExtrasConfig(NautobotConfig):
                 "the ContentType table was not available or populated. This is normal "
                 "during the execution of the migration command for the first time."
             )
+
+        # Register the DatabaseBackend health check
+        from nautobot.extras.health_checks import DatabaseBackend
+        plugin_dir.register(DatabaseBackend)
