@@ -7,18 +7,23 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0011_fileattachment_fileproxy'),
+        ("extras", "0011_fileattachment_fileproxy"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='HealthCheckTestModel',
+            name="HealthCheckTestModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('title', models.CharField(max_length=128)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("title", models.CharField(max_length=128)),
             ],
             options={
-                'db_table': 'health_check_db_testmodel',
+                "db_table": "health_check_db_testmodel",
             },
         ),
     ]
