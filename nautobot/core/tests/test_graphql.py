@@ -426,7 +426,7 @@ class GraphQLAPIPermissionTest(TestCase):
         """
 
     def test_graphql_api_token_with_perm(self):
-        """Validate a users can query basedo n their permissions."""
+        """Validate that users can query based on their permissions."""
         # First user
         response = self.clients[0].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -450,7 +450,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
 
     def test_graphql_api_token_no_group(self):
-        """Validate User with no permission users are not able to query anything by default."""
+        """Validate users with no permission are not able to query anything by default."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -459,7 +459,7 @@ class GraphQLAPIPermissionTest(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_api_token_no_group_exempt(self):
-        """Validate User with no permission users are able to query based on the exempt permissions."""
+        """Validate users with no permission are able to query based on the exempt permissions."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
