@@ -363,6 +363,7 @@ class CustomField(BaseModel):
         delete_custom_field_data.delay(self.name, content_types)
 
 
+@extras_features("webhooks")
 class CustomFieldChoice(BaseModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field
