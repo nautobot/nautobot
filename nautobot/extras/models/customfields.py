@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.extras.choices import *
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import FeatureQuery
+from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
@@ -91,6 +91,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
         return self.get_queryset().filter(content_types=content_type)
 
 
+@extras_features("webhooks")
 class CustomField(BaseModel):
     content_types = models.ManyToManyField(
         to=ContentType,
