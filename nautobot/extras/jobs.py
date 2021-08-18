@@ -387,10 +387,13 @@ class BaseJob:
 
         for k, v in data.items():
             if k not in vars:
-                raise ValidationError(f"Job data contained an unknown property: {k}")
+                raise ValidationError({k: "Job data contained an unknown property"})
 
             # defer validation to the form field object
-            vars[k].as_field().clean(v)
+            try:
+                vars[k].as_field().clean(v)
+            except ValidationError as e:
+                raise ValidationError({k: e.message})
 
     @staticmethod
     def load_file(pk):
