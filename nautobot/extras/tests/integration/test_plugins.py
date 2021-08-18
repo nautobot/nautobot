@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from unittest import skipIf
 
 from django.conf import settings
@@ -68,8 +69,8 @@ class PluginWebhookTest(SplinterTestCase):
         with web_request_context(self.user):
             DummyModel.objects.create(name="foo", number=100)
         self.wait_on_active_tasks()
-        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_create"))
-        os.remove("/tmp/test_plugin_webhook_create")
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create")))
+        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create"))
 
     def test_plugin_webhook_update(self):
         """
@@ -84,23 +85,23 @@ class PluginWebhookTest(SplinterTestCase):
             obj.number = 200
             obj.validated_save()
         self.wait_on_active_tasks()
-        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_update"))
-        os.remove("/tmp/test_plugin_webhook_update")
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update")))
+        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update"))
 
     def test_plugin_webhook_delete(self):
         """
         Test `process_webhook` from a model delete.
         """
         self.clear_worker()
-        self.update_headers("test_plugin_webhook_delete")
+        self.update_headers(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
         obj = DummyModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
             obj.delete()
         self.wait_on_active_tasks()
-        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_delete"))
-        os.remove("/tmp/test_plugin_webhook_delete")
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete")))
+        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
 
     def test_plugin_webhook_with_body(self):
         self.clear_worker()
@@ -114,7 +115,7 @@ class PluginWebhookTest(SplinterTestCase):
             DummyModel.objects.create(name="bar", number=100)
 
         self.wait_on_active_tasks()
-        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_with_body"))
-        with open("/tmp/test_plugin_webhook_with_body", "r") as f:
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body")))
+        with open(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"), "r") as f:
             self.assertEqual(json.loads(f.read()), {"message": "created"})
-        os.remove("/tmp/test_plugin_webhook_with_body")
+        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"))
