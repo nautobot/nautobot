@@ -424,7 +424,7 @@ class JobTest(APITestCase):
             name = "Test job"
 
         var1 = StringVar()
-        var2 = IntegerVar()
+        var2 = IntegerVar(required=True)
         var3 = BooleanVar()
 
         def run(self, data, commit=True):
@@ -537,6 +537,59 @@ class JobTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["result"]["status"]["value"], "pending")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_with_invalid_data(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "data": "invalid",
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"errors": ["Job data needs to be a dict"]})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_with_wrong_data(self):
+        self.add_permissions("extras.run_job")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": "wrong",
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"errors": ["Job data contained an unknown property"]})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_with_missing_data(self):
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var1": "FooBar",
+            "var3": False,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"errors": ["This field is required."]})
 
 
 class JobResultTest(APITestCase):

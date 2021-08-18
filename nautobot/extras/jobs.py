@@ -383,17 +383,16 @@ class BaseJob:
         vars = self._get_vars()
 
         if type(data) is not dict:
-            raise ValidationError("Job data needs to be a dict!")
+            raise ValidationError("Job data needs to be a dict")
 
         for k, v in data.items():
             if k not in vars:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
-            # defer validation to the form field object
-            try:
-                vars[k].as_field().clean(v)
-            except ValidationError as e:
-                raise ValidationError({k: e.message})
+        # defer validation to the form object
+        f = self.as_form(data=data)
+        if not f.is_valid():
+            raise ValidationError(f.errors)
 
     @staticmethod
     def load_file(pk):

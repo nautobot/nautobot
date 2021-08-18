@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.forms import ValidationError
+from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django_rq.queues import get_connection
@@ -284,15 +284,15 @@ class JobViewSet(ViewSet):
         input_serializer = serializers.JobInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
-        data = input_serializer.data["data"]
+        data = input_serializer.data["data"] or {}
         commit = input_serializer.data["commit"]
         if commit is None:
             commit = getattr(job_class.Meta, "commit_default", True)
 
         try:
             job.validate_data(data)
-        except ValidationError as e:
-            return Response(e.message, status=400)
+        except FormsValidationError as e:
+            return Response({"errors": e.messages}, status=400)
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
