@@ -816,7 +816,10 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
             if not cleaned_data["_schedule_name"]:
                 raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 
-            if not cleaned_data["_schedule_start_time"] or cleaned_data["_schedule_start_time"] < timezone.now():
+            if (
+                not cleaned_data["_schedule_start_time"]
+                or cleaned_data["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
+            ):
                 raise ValidationError(
                     {
                         "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."

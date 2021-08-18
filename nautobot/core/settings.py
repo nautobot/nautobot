@@ -24,6 +24,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUTH_USER_MODEL = "users.User"
 
 # Set the default AutoField for 3rd party apps
+# N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
+#      we can’t do that yet
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 

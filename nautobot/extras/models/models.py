@@ -983,7 +983,7 @@ class ScheduledJobs(models.Model):
         try:
             return cls.objects.get(ident=1).last_update
         except cls.DoesNotExist:
-            pass
+            return None
 
 
 class ScheduledJob(BaseModel):
@@ -1000,7 +1000,7 @@ class ScheduledJob(BaseModel):
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
     )
     job_class = models.CharField(
-        max_length=255, verbose_name="Job Class", help_text="Name of the fully qualified Nautobot Job class"
+        max_length=255, verbose_name="Job Class", help_text="Name of the fully qualified Nautobot Job class path"
     )
     interval = models.CharField(choices=JobExecutionType, max_length=255)
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
@@ -1128,6 +1128,10 @@ class ScheduledJob(BaseModel):
             timedelta(**{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: every}),
             nowfun=lambda: make_aware(now()),
         )
+
+    @staticmethod
+    def earliest_possible_time():
+        return timezone.now() + timedelta(seconds=15)
 
 
 signals.pre_delete.connect(ScheduledJobs.changed, sender=ScheduledJob)

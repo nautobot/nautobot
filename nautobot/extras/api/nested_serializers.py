@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.utils import timezone
 from rest_framework import serializers
 
 from nautobot.core.api import ChoiceField, ContentTypeField, WritableNestedSerializer
@@ -154,7 +153,7 @@ class NestedJobScheduleSerializer(serializers.Serializer):
             if not data["name"]:
                 raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
 
-            if not data["start_time"] or data["start_time"] < timezone.now():
+            if not data["start_time"] or data["start_time"] < models.ScheduledJob.earliest_possible_time():
                 raise serializers.ValidationError(
                     {
                         "start_time": "Please enter a valid date and time greater than or equal to the current date and time."
