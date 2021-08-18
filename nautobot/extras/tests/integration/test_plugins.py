@@ -61,7 +61,7 @@ class PluginWebhookTest(SplinterTestCase):
 
     def test_plugin_webhook_create(self):
         """
-        Test `process_webhook` from a model create.
+        Test that webhooks are correctly triggered by a plugin model create.
         """
         self.clear_worker()
         self.update_headers("test_plugin_webhook_create")
@@ -74,7 +74,7 @@ class PluginWebhookTest(SplinterTestCase):
 
     def test_plugin_webhook_update(self):
         """
-        Test `process_webhook` from a model update.
+        Test that webhooks are correctly triggered by a plugin model update.
         """
         self.clear_worker()
         self.update_headers("test_plugin_webhook_update")
@@ -90,7 +90,7 @@ class PluginWebhookTest(SplinterTestCase):
 
     def test_plugin_webhook_delete(self):
         """
-        Test `process_webhook` from a model delete.
+        Test that webhooks are correctly triggered by a plugin model delete.
         """
         self.clear_worker()
         self.update_headers(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
@@ -104,6 +104,9 @@ class PluginWebhookTest(SplinterTestCase):
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
 
     def test_plugin_webhook_with_body(self):
+        """
+        Verify that webhook body_template is correctly used.
+        """
         self.clear_worker()
         self.update_headers("test_plugin_webhook_with_body")
 
