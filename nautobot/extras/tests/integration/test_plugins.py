@@ -45,7 +45,7 @@ class PluginWebhookTest(SplinterTestCase):
             type_delete=True,
             payload_url=self.url,
             http_method=WebhookHttpMethodChoices.METHOD_GET,
-            http_content_type = "application/json",
+            http_content_type="application/json",
         )
         self.dummy_ct = ContentType.objects.get_for_model(DummyModel)
         self.webhook.content_types.set([self.dummy_ct])
