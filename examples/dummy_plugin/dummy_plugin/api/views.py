@@ -1,4 +1,6 @@
-from rest_framework.permissions import IsAuthenticated
+import json
+
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -25,9 +27,9 @@ class DummyModelWebhook(APIView):
     Dummy view used in testing webhooks for plugins.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, format=None):
-        with open(f'/tmp/{self.request.META.get("HTTP_TEST_NAME", "NO-TEST-NAME")}', "w") as f:
-            f.write("Test flag.")
-        return Response("Submitted")
+        with open(f'/tmp/{self.request.META.get("HTTP_TEST_NAME", "NO-TEST-NAME")}', "w+") as f:
+            f.write(json.dumps(self.request.data, indent=4))
+        return Response({"message": "Submitted"})

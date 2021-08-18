@@ -1,5 +1,4 @@
 import os
-import re
 from unittest import skipIf
 
 from django.conf import settings
@@ -10,7 +9,6 @@ from django.urls import reverse
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
-from nautobot.users.models import Token
 from nautobot.utilities.testing.integration import SplinterTestCase
 
 from dummy_plugin.models import DummyModel
@@ -33,15 +31,12 @@ class PluginWebhookTest(SplinterTestCase):
     def setUp(self):
         super().setUp()
         for f in os.listdir("/tmp"):
-            if re.search("test_plugin_webhook_.+", f):
-                os.remove(os.path("/tmp", f))
+            if f.startswith("test_plugin_webhook_"):
+                os.remove(os.path.join("/tmp", f))
 
         self.url = f"http://localhost:{self.server_thread.port}" + reverse(
             "plugins-api:dummy_plugin-api:dummymodel_webhook"
         )
-        self.login(self.user.username, self.password)
-        self.token = Token.objects.create(user=self.user)
-        self.header = f"Authorization: Token {self.token.key}"
         self.webhook = Webhook.objects.create(
             name="DummyModel",
             type_create=True,
@@ -49,16 +44,15 @@ class PluginWebhookTest(SplinterTestCase):
             type_delete=True,
             payload_url=self.url,
             http_method=WebhookHttpMethodChoices.METHOD_GET,
-            additional_headers=self.header,
         )
-        dummy_ct = ContentType.objects.get_for_model(DummyModel)
-        self.webhook.content_types.set([dummy_ct])
+        self.dummy_ct = ContentType.objects.get_for_model(DummyModel)
+        self.webhook.content_types.set([self.dummy_ct])
 
     def update_headers(self, new_header):
         """
         Update webhook additional headers with the name of the running test.
         """
-        headers = self.header + f"\nTest-Name: {new_header}"
+        headers = f"Test-Name: {new_header}"
         self.webhook.additional_headers = headers
         self.webhook.validated_save()
 
@@ -66,8 +60,8 @@ class PluginWebhookTest(SplinterTestCase):
         """
         Test `process_webhook` from a model create.
         """
-        self.update_headers("test_plugin_webhook_create")
         self.clear_worker()
+        self.update_headers("test_plugin_webhook_create")
         # Make change to model
         with web_request_context(self.user):
             DummyModel.objects.create(name="foo", number=100)
@@ -79,10 +73,10 @@ class PluginWebhookTest(SplinterTestCase):
         """
         Test `process_webhook` from a model update.
         """
+        self.clear_worker()
         self.update_headers("test_plugin_webhook_update")
         obj = DummyModel.objects.create(name="foo", number=100)
 
-        self.clear_worker()
         # Make change to model
         with web_request_context(self.user):
             obj.number = 200
@@ -95,13 +89,36 @@ class PluginWebhookTest(SplinterTestCase):
         """
         Test `process_webhook` from a model delete.
         """
+        self.clear_worker()
         self.update_headers("test_plugin_webhook_delete")
         obj = DummyModel.objects.create(name="foo", number=100)
 
-        self.clear_worker()
         # Make change to model
         with web_request_context(self.user):
             obj.delete()
         self.wait_on_active_tasks()
         self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_delete"))
         os.remove("/tmp/test_plugin_webhook_delete")
+
+    def test_plugin_webhook_with_body(self):
+        webhook_with_body = Webhook.objects.create(
+            name="DummyModel with template",
+            type_create=True,
+            type_update=False,
+            type_delete=False,
+            payload_url=self.url,
+            http_method=WebhookHttpMethodChoices.METHOD_GET,
+            body_template="<code>event</code>",
+            http_content_type="application/json",
+        )
+        webhook_with_body.content_types.set([self.dummy_ct])
+        self.clear_worker()
+        self.update_headers("test_plugin_webhook_with_body")
+        # Make change to model
+        with web_request_context(self.user):
+            DummyModel.objects.create(name="bar", number=100)
+        self.wait_on_active_tasks()
+        self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_with_body"))
+        with open("/tmp/test_plugin_webhook_with_body", "r") as f:
+            self.assertEqual(f.read(), "created")
+        os.remove("/tmp/test_plugin_webhook_with_body")
