@@ -1,3 +1,4 @@
+import json
 import os
 from unittest import skipIf
 
@@ -44,6 +45,7 @@ class PluginWebhookTest(SplinterTestCase):
             type_delete=True,
             payload_url=self.url,
             http_method=WebhookHttpMethodChoices.METHOD_GET,
+            http_content_type = "application/json",
         )
         self.dummy_ct = ContentType.objects.get_for_model(DummyModel)
         self.webhook.content_types.set([self.dummy_ct])
@@ -101,24 +103,18 @@ class PluginWebhookTest(SplinterTestCase):
         os.remove("/tmp/test_plugin_webhook_delete")
 
     def test_plugin_webhook_with_body(self):
-        webhook_with_body = Webhook.objects.create(
-            name="DummyModel with template",
-            type_create=True,
-            type_update=False,
-            type_delete=False,
-            payload_url=self.url,
-            http_method=WebhookHttpMethodChoices.METHOD_GET,
-            body_template="<code>event</code>",
-            http_content_type="application/json",
-        )
-        webhook_with_body.content_types.set([self.dummy_ct])
         self.clear_worker()
         self.update_headers("test_plugin_webhook_with_body")
+
+        self.webhook.body_template = '{"message": "{{ event }}"}'
+        self.webhook.save()
+
         # Make change to model
         with web_request_context(self.user):
             DummyModel.objects.create(name="bar", number=100)
+
         self.wait_on_active_tasks()
         self.assertTrue(os.path.exists("/tmp/test_plugin_webhook_with_body"))
         with open("/tmp/test_plugin_webhook_with_body", "r") as f:
-            self.assertEqual(f.read(), "created")
+            self.assertEqual(json.loads(f.read()), {"message": "created"})
         os.remove("/tmp/test_plugin_webhook_with_body")
