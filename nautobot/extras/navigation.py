@@ -172,7 +172,7 @@ menu_items = (
                         buttons=(),
                     ),
                     NavMenuItem(
-                        link="extras:scheduled_jobs_list",
+                        link="extras:scheduledjob_list",
                         name="Scheduled Jobs",
                         weight=300,
                         permissions=[
