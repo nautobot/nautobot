@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -242,15 +243,22 @@ class JobViewSet(ViewSet):
             "commit": commit,
             "name": job.class_path,
         }
+        type_ = serializer["interval"]
+        if type_ == JobExecutionType.TYPE_IMMEDIATELY:
+            time = datetime.now()
+            name = f"{job.name} - {time}"
+        else:
+            time = serializer["start_time"]
+            name = serializer["name"]
         scheduled_job = ScheduledJob(
-            name=serializer["name"],
+            name=name,
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job.class_path,
-            start_time=serializer.get("start_time"),
-            description=f"Nautobot job {serializer['name']} scheduled by {request.user} on {serializer.get('start_time')}",
+            start_time=time,
+            description=f"Nautobot job {name} scheduled by {request.user} on {time}",
             kwargs=job_kwargs,
-            interval=serializer["interval"],
-            one_off=(serializer["interval"] == JobExecutionType.TYPE_FUTURE),
+            interval=type_,
+            one_off=(type_ == JobExecutionType.TYPE_FUTURE),
             user=request.user,
             approval_required=job_class.approval_required,
         )
@@ -331,7 +339,6 @@ class JobViewSet(ViewSet):
                 data=data,
                 request=copy_safe_request(request),
                 commit=commit,
-                schedule=schedule,
             )
             job.result = job_result
 

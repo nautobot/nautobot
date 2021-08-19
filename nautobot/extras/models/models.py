@@ -1031,7 +1031,7 @@ class ScheduledJob(BaseModel):
         editable=False,
         blank=True,
         null=True,
-        verbose_name="Last Run Datetime",
+        verbose_name="Most Recent Run",
         help_text="Datetime that the schedule last triggered the task to run. "
         "Reset to None if enabled is set to False.",
     )

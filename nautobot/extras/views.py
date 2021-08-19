@@ -32,7 +32,7 @@ from nautobot.utilities.views import ContentTypePermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
-from .choices import JobResultStatusChoices
+from .choices import JobExecutionType, JobResultStatusChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -58,7 +58,6 @@ from .datasources import (
     get_datasource_contents,
     enqueue_pull_git_repository_and_refresh_data,
 )
-from nautobot.extras import choices
 
 
 #
@@ -716,9 +715,9 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if job_class.approval_required or schedule_type in choices.JobExecutionType.SCHEDULE_CHOICES:
+            if job_class.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
 
-                if schedule_type in choices.JobExecutionType.SCHEDULE_CHOICES:
+                if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                     # Schedule the job instead of running it now
                     schedule_name = schedule_form.cleaned_data["_schedule_name"]
                     schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
@@ -728,7 +727,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                     # If the schedule_type is immediate, we still create the task, but mark it for approval
                     # as a once in the future task with the due date set to the current time. This means
                     # when approval is granted, the task is immediately due for execution.
-                    schedule_type = choices.JobExecutionType.TYPE_FUTURE
+                    schedule_type = JobExecutionType.TYPE_FUTURE
                     schedule_datetime = datetime.now()
                     schedule_name = f"{job.name} - {schedule_datetime}"
 
@@ -748,7 +747,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} on {schedule_datetime}",
                     kwargs=job_kwargs,
                     interval=schedule_type,
-                    one_off=schedule_type == choices.JobExecutionType.TYPE_FUTURE,
+                    one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     user=request.user,
                     approval_required=job_class.approval_required,
                 )

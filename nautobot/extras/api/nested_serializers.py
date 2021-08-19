@@ -161,3 +161,7 @@ class NestedJobScheduleSerializer(serializers.Serializer):
                 )
 
         return data
+
+    class Meta:
+        model = models.ScheduledJob
+        fields = ["name", "start_time", "interval"]

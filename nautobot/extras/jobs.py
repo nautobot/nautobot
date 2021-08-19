@@ -14,6 +14,7 @@ from cacheops import cached
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
@@ -41,12 +42,14 @@ from nautobot.ipam.validators import (
     MinPrefixLengthValidator,
     prefix_validator,
 )
-from nautobot.users.models import User
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+
+
+User = get_user_model()
 
 
 __all__ = [

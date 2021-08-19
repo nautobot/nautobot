@@ -465,6 +465,7 @@ class JobResultSerializer(serializers.ModelSerializer):
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
     obj_type = ContentTypeField(read_only=True)
+    schedule = NestedJobScheduleSerializer(read_only=True)
 
     class Meta:
         model = JobResult
@@ -479,6 +480,7 @@ class JobResultSerializer(serializers.ModelSerializer):
             "user",
             "data",
             "job_id",
+            "schedule",
         ]
 
 

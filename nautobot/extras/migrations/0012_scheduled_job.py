@@ -9,8 +9,6 @@ import uuid
 
 class Migration(migrations.Migration):
 
-    replaces = [("extras", "0008_scheduled_jobs"), ("extras", "0013_scheduled_job_name")]
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("extras", "0011_fileattachment_fileproxy"),

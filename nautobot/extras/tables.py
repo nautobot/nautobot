@@ -325,7 +325,7 @@ class ScheduledJobTable(BaseTable):
     job_class = tables.Column(verbose_name="Job")
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="First Run")
-    last_run_at = tables.Column(verbose_name="Last Run")
+    last_run_at = tables.Column(verbose_name="Most Recent Run")
     total_run_count = tables.Column(verbose_name="Total Run Count")
 
     class Meta(BaseTable.Meta):
