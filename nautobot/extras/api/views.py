@@ -292,7 +292,7 @@ class JobViewSet(ViewSet):
         try:
             job.validate_data(data)
         except FormsValidationError as e:
-            return Response({"errors": e.messages}, status=400)
+            return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 

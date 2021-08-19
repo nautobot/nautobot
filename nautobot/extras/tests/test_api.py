@@ -570,7 +570,7 @@ class JobTest(APITestCase):
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"errors": ["Job data contained an unknown property"]})
+        self.assertEqual(response.data, {"errors": {"var4": ["Job data contained an unknown property"]}})
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_with_missing_data(self):
@@ -589,7 +589,7 @@ class JobTest(APITestCase):
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"errors": ["This field is required."]})
+        self.assertEqual(response.data, {"errors": {"var2": ["This field is required."]}})
 
 
 class JobResultTest(APITestCase):
