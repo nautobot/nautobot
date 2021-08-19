@@ -74,23 +74,13 @@ PLUGINS_CONFIG = {
 }
 ```
 
-### Run Database Migrations
+### Run Post Upgrade
 
 !!! warning
     Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
 
-If the plugin introduces new database models, run the provided schema migrations:
-
 ```no-highlight
-$ nautobot-server migrate
-```
-
-### Collect Static Files
-
-Plugins may package static files to be served directly by the HTTP front end. Ensure that these are copied to the static root directory with the `collectstatic` management command:
-
-```no-highlight
-$ nautobot-server collectstatic
+$ nautobot-server post_upgrade
 ```
 
 ### Restart the WSGI Service
