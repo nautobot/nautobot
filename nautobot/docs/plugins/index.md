@@ -74,13 +74,39 @@ PLUGINS_CONFIG = {
 }
 ```
 
-### Run Post Upgrade
+### Run `nautobot-server post_upgrade`
 
-!!! warning
-    Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
+After installing or upgrading a plugin, you should always run [`nautobot-server post_upgrade`](../administration/nautobot-server.md#post_upgrade). This command will ensure that any necessary post-installation tasks are run, for example:
+
+- Migrating the database to include any new or updated data models from the plugin
+- Collecting any static files provided by the plugin
+- Etc.
 
 ```no-highlight
-$ nautobot-server post_upgrade
+# nautobot-server post_upgrade
+# nautobot-server post_upgrade
+Performing database migrations...
+Operations to perform:
+  Apply all migrations: admin, auth, circuits, contenttypes, db, dcim, extras, ipam,
+nautobot_plugin_example, sessions, social_django, taggit, tenancy, users, virtualization
+Running migrations:
+  No migrations to apply.
+Generating cable paths...
+Found no missing circuit termination paths; skipping
+Found no missing console port paths; skipping
+Found no missing console server port paths; skipping
+Found no missing interface paths; skipping
+Found no missing power feed paths; skipping
+Found no missing power outlet paths; skipping
+Found no missing power port paths; skipping
+Finished.
+
+Collecting static files...
+0 static files copied to '/opt/nautobot/static', 972 unmodified.
+Removing stale content types...
+Removing expired sessions...
+Invalidating cache...
+
 ```
 
 ### Restart the WSGI Service
