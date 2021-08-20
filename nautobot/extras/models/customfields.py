@@ -89,19 +89,10 @@ class ComputedField(BaseModel, ChangeLoggedModel):
             # Doesn't raise an exception either most likely due to using Undefined rather
             # than StrictUndefined, but return fallback_value if None is returned
             if not rendered:
-                return self.fallback_value
-            return rendered
+                return self.fallback_value or f"Unable to generate {self.label}."
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.slug, exc)
             return self.fallback_value
-
-    def save(self, *args, **kwargs):
-
-        # If the user does not provide a fallback value, generate default one.
-        if not self.fallback_value:
-            self.fallback_value = f"Unable to generate {self.label}."
-
-        super().save(*args, **kwargs)
 
 
 class CustomFieldModel(models.Model):
