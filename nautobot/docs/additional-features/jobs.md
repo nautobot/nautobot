@@ -366,6 +366,14 @@ The URL contains the `class_path` element that is composed of 3 elements, from t
 - `example` - path to the job definition file; in this example, a locally installed `example.py` file. For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename`.
 - `MyJobWithVars` - name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
 
+Additionally, it is possible to specify complex values contained in `ObjectVar`s, `MultiObjectVar`s, and `IPAddressVar`s.
+
+`ObjectVar`s can be queried by either using their primary key directly as the value, or as a dictionary containing a more complicated query that gets passed into the Django ORM as keyword arguments.
+
+`MultiObjectVar`s can be queried using a list of primary keys.
+
+`IPAddressVar`s can be provided as strings in CIDR notation.
+
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
