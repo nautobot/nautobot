@@ -186,6 +186,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
         return self.get_queryset().filter(content_types=content_type)
 
 
+@extras_features("webhooks")
 class CustomField(BaseModel):
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -466,6 +467,7 @@ class CustomField(BaseModel):
         return reverse("extras:customfield", args=[self.name])
 
 
+@extras_features("webhooks")
 class CustomFieldChoice(BaseModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field
