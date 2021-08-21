@@ -57,6 +57,29 @@ from .utils import FeatureQuery
 #
 
 
+class CustomFieldForm(BootstrapMixin, forms.ModelForm):
+    # TODO: Migrate custom field model from name to slug #464
+    name = forms.CharField(required=True, label="Slug")
+    content_types = MultipleContentTypeField(feature="custom_fields")
+
+    class Meta:
+        model = CustomField
+        fields = (
+            "content_types",
+            "type",
+            "label",
+            "name",
+            "description",
+            "required",
+            "filter_logic",
+            "default",
+            "weight",
+            "validation_minimum",
+            "validation_maximum",
+            "validation_regex",
+        )
+
+
 class CustomFieldModelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
 
@@ -996,13 +1019,14 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         required=True,
         label="Content Type",
     )
+    slug = SlugField(slug_source="label")
 
     class Meta:
         model = ComputedField
         fields = (
             "content_type",
-            "slug",
             "label",
+            "slug",
             "description",
             "template",
             "fallback_value",

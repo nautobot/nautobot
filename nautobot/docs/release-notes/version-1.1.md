@@ -8,10 +8,6 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
-#### App Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/485))
-
-Applications can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/application-registry.md) for more details.
-
 #### Computed Fields ([#4](https://github.com/nautobot/nautobot/issues/4))
 
 [Computed fields](../additional-features/computed-fields.md) offers users the ability to create read-only custom fields using existing data already stored in the database. Users define Jinja2 templates that populate the value of these fields. Computed fields are available on all data models that currently support custom fields.
@@ -22,12 +18,9 @@ While config contexts allow for arbitrary data structures to be stored within Na
 
 Just like config contexts, config context JSON schemas can optionally be [managed via a Git repository](../models/extras/gitrepository.md#configuration-context-schemas).
 
-#### GraphQL ORM Functions
+#### Dynamic Navigation Menus ([#12](https://github.com/nautobot/nautobot/issues/12))
 
-Two new [GraphQL utility functions](../plugins/development.md#using-graphql-orm-utility) have been added to allow easy access to the GraphQL system from source code. Both can be accessed by using `from nautobot.core.graphql import execute_saved_query, execute_query`.
-
-1. `execute_query()`: Runs string as a query against GraphQL.
-2. `execute_saved_query()`: Execute a saved query from Nautobot database.
+Applications and plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/application-registry.md) for more details.
 
 #### MySQL Database Support ([#17](https://github.com/nautobot/nautobot/issues/17))
 
@@ -48,10 +41,6 @@ Plugins can now define custom Jinja2 filters to be used when rendering templates
 
 Please see the [plugin development documentation on including Jinja2 filters](../plugins/development.md#including-jinja2-filters) to get started.
 
-#### Plugin Defined Navigation ([#12](https://github.com/nautobot/nautobot/pull/572))
-
-Plugins can now define tabs, groups, items and buttons in the navigation menu. Using navigation objects a developer can add items to any section of the navigation using key names and weight values. Please see [Application Registry](../development/navigation-menu.md) for more details.
-
 #### Read Only Jobs ([#200](https://github.com/nautobot/nautobot/issues/200))
 
 Jobs may be optionally marked as read only by setting the `read_only = True` meta attribute. This prevents the job from making any changes to nautobot data and suppresses certain log messages. Read only jobs can be a great way to safely develop new jobs, and for working with reporting use cases. Please see the [Jobs documentation](../additional-features/jobs.md) for more details.
@@ -61,6 +50,11 @@ Jobs may be optionally marked as read only by setting the `read_only = True` met
 [Saved GraphQL queries](../additional-features/graphql.md#saved-queries) offers a new model where reusable queries can be stored in Nautobot. New views for managing saved queries are available; additionally, the GraphiQL interface has been augmented to allow populating the interface from a saved query, editing and saving new queries.
 
 Saved queries can easily be imported into the GraphiQL interface by using the new navigation tab located on the right side of the navbar. Inside the new tab are also buttons for editing and saving queries directly into Nautobot's databases.
+
+Additionally, two new [GraphQL utility functions](../plugins/development.md#using-graphql-orm-utility) have been added to allow easy access to the GraphQL system from source code. Both functions can be imported from `nautobot.core.graphql`:
+
+1. `execute_query()`: Runs string as a query against GraphQL.
+2. `execute_saved_query()`: Execute a saved query from Nautobot database.
 
 ### Changed
 
@@ -80,11 +74,54 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 !!! warning
     If you are running plugins that use background tasks requiring the RQ worker, you will need to run both the RQ and Celery workers concurrently until the plugins are converted to use the Celery worker. See the [Migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for details.
 
-## v1.1.1 (2021-??-??)
+### Fixed
+
+#### HTTP "Remote end closed connection" errors ([#725](https://github.com/nautobot/nautobot/issues/725))
+
+The example `uwsgi.ini` provided in earlier versions of the Nautobot documentation was missing a recommendation to include the configuration `http-keepalive = 1` which enables support for HTTP/1.1 keep-alive headers.
+
+!!! warning
+    If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
+
+## v1.1.2 (2021-08-10)
+
+### Added
+
+- [#758](https://github.com/nautobot/nautobot/pull/758) - Added documentation about the Job `class_path` concept.
+- [#771](https://github.com/nautobot/nautobot/pull/771) - Added examples of various possible logging configurations.
+- [#773](https://github.com/nautobot/nautobot/pull/773) - Added documentation around enabling Prometheus metrics for database and caching backends.
+
+### Changed
+
+- [#742](https://github.com/nautobot/nautobot/pull/742) - The development environment now respects the setting of the `NAUTOBOT_DEBUG` environment variable if present.
 
 ### Fixed
 
+- [#723](https://github.com/nautobot/nautobot/issues/723) - Fixed power draw not providing a `UtilizationData` type for use in graphing power draw utilization
+- [#782](https://github.com/nautobot/nautobot/pull/782) - Corrected documentation regarding the use of `docker-compose.override.yml`
+- [#785](https://github.com/nautobot/nautobot/issues/785) - Fixed plugin loading error when using `final` Docker image.
+- [#786](https://github.com/nautobot/nautobot/issues/786) - Fixed `Unknown command: 'post_upgrade'` when using `final` Docker image.
+- [#789](https://github.com/nautobot/nautobot/pull/789) - Avoid a `NoReverseMatch` exception at startup time if an app or plugin defines a nav menu item with an invalid link reference.
+
+## v1.1.1 (2021-08-05)
+
+### Added
+
+- [#506](https://github.com/nautobot/nautobot/issues/506) - `nautobot-server` now detects and rejects the misconfiguration of setting `MAINTENANCE_MODE` while using database-backed session storage (`django.contrib.sessions.backends.db`)
+- [#681](https://github.com/nautobot/nautobot/pull/681) - Added an example guide on how to use AWS S3 for hosting static files in production.
+
+### Changed
+
+- [#738](https://github.com/nautobot/nautobot/issues/738) - Added `*.env` (except `dev.env`) to `.gitignore` to prevent local environment variable files from accidentally being committed to Git
+
+### Fixed
+
+- [#683](https://github.com/nautobot/nautobot/issues/683) - Fixed slug auto-construction when defining a new ComputedField.
+- [#725](https://github.com/nautobot/nautobot/issues/725) - Added missing `http-keepalive = 1` to recommended `uswgi.ini` configuration.
 - [#727](https://github.com/nautobot/nautobot/issues/727) - Fixed broken REST API endpoint (`/api/extras/graphql-queries/<uuid>/run/`) for running saved GraphQL queries.
+- [#744](https://github.com/nautobot/nautobot/issues/744) - Fixed missing Celery Django fixup that could cause assorted errors when multiple background tasks were run concurrently.
+- [#746](https://github.com/nautobot/nautobot/issues/746) - Fixed data serialization error when running Jobs that used `IPAddressVar`, `IPAddressWithMaskVar`, and/or `IPNetworkVar` variables.
+- [#759](https://github.com/nautobot/nautobot/issues/759) - Corrected backwards add/import links for Power Feed and Power Panel in navigation bar
 
 ## v1.1.0 (2021-07-20)
 
@@ -120,7 +157,7 @@ Please see the section on [migrating to Celery from RQ](../installation/services
 
 ### Security
 
-- [#717](https://github.com/nautobot/nautobot/pull/717) - Bump Pillow from 8.1.2 to 8.2.0 to address numerous critical CVE advisories
+- [#717](https://github.com/nautobot/nautobot/pull/717) - Bump Pillow dependency version from 8.1.2 to 8.2.0 to address numerous critical CVE advisories
 
 ## v1.1.0b2 (2021-07-09)
 

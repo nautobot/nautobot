@@ -357,4 +357,4 @@ $ nautobot-server generate_secret_key
 !!! warning
     In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
 
-For more details see [Nautobot Configuration](..).
+For more details see [Nautobot Configuration](index.md).

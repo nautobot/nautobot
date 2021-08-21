@@ -80,10 +80,10 @@ class PluginConfig(NautobotConfig):
     datasource_contents = "datasources.datasource_contents"
     graphql_types = "graphql.types.graphql_types"
     homepage_layout = "homepage.layout"
+    jinja_filters = "jinja_filters"
     jobs = "jobs.jobs"
     menu_items = "navigation.menu_items"
     template_extensions = "template_content.template_extensions"
-    jinja_filters = "jinja_filters"
 
     def ready(self):
         """Callback after plugin app is loaded."""

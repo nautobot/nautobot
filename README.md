@@ -34,6 +34,12 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 Please see [the documentation](https://nautobot.readthedocs.io/en/stable/installation/) for instructions on installing Nautobot.
 
+## Application Stack
+
+Below is a simplified overview of the Nautobot application stack for reference:
+
+![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
+
 ## Providing Feedback
 
 The best platform for general feedback, assistance, and other discussion is our [GitHub discussions](https://github.com/nautobot/nautobot/discussions). To report a bug or request a specific feature, please open a GitHub issue using the [appropriate template](https://github.com/nautobot/nautobot/issues/new/choose).
