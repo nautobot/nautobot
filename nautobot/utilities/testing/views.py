@@ -454,8 +454,7 @@ class ViewTestCases:
             """Test that slug is autocreated through ORM."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
-                filter = self.slug_source + "__contains"
-                object = self.model.objects.filter(**{filter: self.slug_test_object})[0]
+                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = slugify(getattr(object, self.slug_source))
                 self.assertEqual(object.slug, expected_slug)
 
@@ -463,10 +462,10 @@ class ViewTestCases:
             """Ensure save method does not modify slug that is passed in."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
-                filter = self.slug_source + "__contains"
-                object = self.model.objects.filter(**{filter: self.slug_test_object})[0]
+                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = slugify(getattr(object, self.slug_source))
                 # Update slug source field str
+                filter = self.slug_source + "__contains"
                 self.model.objects.filter(**{filter: self.slug_test_object}).update(**{self.slug_source: "Test"})
 
                 object.refresh_from_db()

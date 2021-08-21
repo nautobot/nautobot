@@ -48,3 +48,18 @@ Nautobot provides a convenience method that both enforces model validation and s
 The intended audience for the `validated_save()` convenience method is Job authors and anyone writing scripts for, or interacting with the ORM directly through the `nbshell` command. It is generally not recommended however, to use `validated_save()` as a blanket replacement for the `save()` method in the core of Nautobot.
 
 During execution, should model validation fail, `validated_save()` will raise `django.core.exceptions.ValidationError` in the normal Django fashion.
+
+## Slug Field
+
+Moving forward in Nautobot, all models should have a Slug field. This field can be safely/correctly used in URL patterns, dictionary keys, GraphQL and REST API. Nautobot has provided the `AutoSlugField` to handle creating the Slug field automatically from another field. All models should be populated from the `name` field. Below is an example on creating the Slug field.
+
+```python
+from django.db import models
+
+from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.generics import PrimaryModel
+
+class ExampleModel(PrimaryModel):
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from='name')
+```
