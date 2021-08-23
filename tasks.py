@@ -291,7 +291,7 @@ def vscode(context):
     """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
     command = "code nautobot.code-workspace"
 
-    context.run(command)
+    context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 
 # ------------------------------------------------------------------------------

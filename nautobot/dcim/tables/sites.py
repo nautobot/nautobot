@@ -2,7 +2,7 @@ import django_tables2 as tables
 
 from nautobot.dcim.models import Region, Site
 from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import COL_TENANT
+from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     ButtonsColumn,
@@ -43,7 +43,7 @@ class SiteTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(order_by=("_name",))
     region = tables.Column(linkify=True)
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:site_list")
 
     class Meta(BaseTable.Meta):

@@ -15,7 +15,7 @@ LOGGING = {
     "handlers": {
         "normal_console": {
             "level": "DEBUG",
-            "class": "rq.utils.ColorizingStreamHandler",
+            "class": "logging.StreamHandler",
             "formatter": "normal",
         },
     },

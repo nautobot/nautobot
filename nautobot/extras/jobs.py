@@ -364,7 +364,10 @@ class BaseJob:
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
             elif isinstance(var, ObjectVar):
-                return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
+                if type(value) is dict:
+                    return_data[field_name] = var.field_attrs["queryset"].get(**value)
+                else:
+                    return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
             elif isinstance(var, FileVar):
                 return_data[field_name] = cls.load_file(value)
             # IPAddressVar is a netaddr.IPAddress object

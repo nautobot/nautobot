@@ -1,6 +1,6 @@
 # Used to run the final container images vs the dev containers
 ---
-version: "3"
+version: "3.4"
 services:
   nautobot:
     build:
@@ -9,4 +9,6 @@ services:
     ports:
       - 8443:8443
   worker:
+    image: "networktocode/nautobot-py${PYTHON_VER}:local"
+  celery_worker:
     image: "networktocode/nautobot-py${PYTHON_VER}:local"
