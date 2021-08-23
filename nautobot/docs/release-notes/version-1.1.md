@@ -83,6 +83,47 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
 
+## v1.1.3 (2021-??-??)
+
+### Added
+
+- [#791](https://github.com/nautobot/nautobot/issues/791) - Added support for `NAUTOBOT_DOCKER_SKIP_INIT` variable to allow running the Docker container with a read-only database.
+
+### Changed
+
+- [#812](https://github.com/nautobot/nautobot/pull/812) - In the GraphiQL interface, the "Queries" dropdown now appears alongside the other GraphiQL interface buttons instead of appearing in the main Nautobot navigation bar.
+- [#832](https://github.com/nautobot/nautobot/issues/832) - Plugin installation documentation now recommends `nautobot-server post_upgrade` instead of separately running `nautobot-server migrate` and `nautobot-server collectstatic`.
+
+### Fixed
+
+- [#464](https://github.com/nautobot/nautobot/issues/464) - Fixed GraphQL schema generation error when certain custom field names are used.
+- [#715](https://github.com/nautobot/nautobot/issues/715) - Fixed display of GraphiQL interface in narrow browser windows.
+- [#718](https://github.com/nautobot/nautobot/issues/718) - Fixed rendering of long template values in Computed Field detail view.
+- [#731](https://github.com/nautobot/nautobot/issues/731) - Config context schemas including `format` properties (such as `"format": "ipv4"`) are now correctly enforced.
+- [#779](https://github.com/nautobot/nautobot/issues/779) - Fixed incorrect Tenant display in Prefix "Duplicate Prefixes" table. (Port of [two](https://github.com/netbox-community/netbox/commit/20a85c1ef264ecfffcbe8602ab103baed5a7cf5b) [fixes](https://github.com/netbox-community/netbox/commit/0a1531ce8a5597333f2ac87fcc795c83a052fd47) originally from NetBox)
+- [#809](https://github.com/nautobot/nautobot/issues/809) - Fixed docker-compose file `version` values to work correctly with older versions of docker-compose.
+- [#818](https://github.com/nautobot/nautobot/issues/818) - Database health-check now reports as healthy even when in `MAINTENANCE_MODE`.
+- [#825](https://github.com/nautobot/nautobot/issues/825) - Removed unnecessary `-B` flag from development Celery worker invocation.
+
+## v1.1.2 (2021-08-10)
+
+### Added
+
+- [#758](https://github.com/nautobot/nautobot/pull/758) - Added documentation about the Job `class_path` concept.
+- [#771](https://github.com/nautobot/nautobot/pull/771) - Added examples of various possible logging configurations.
+- [#773](https://github.com/nautobot/nautobot/pull/773) - Added documentation around enabling Prometheus metrics for database and caching backends.
+
+### Changed
+
+- [#742](https://github.com/nautobot/nautobot/pull/742) - The development environment now respects the setting of the `NAUTOBOT_DEBUG` environment variable if present.
+
+### Fixed
+
+- [#723](https://github.com/nautobot/nautobot/issues/723) - Fixed power draw not providing a `UtilizationData` type for use in graphing power draw utilization
+- [#782](https://github.com/nautobot/nautobot/pull/782) - Corrected documentation regarding the use of `docker-compose.override.yml`
+- [#785](https://github.com/nautobot/nautobot/issues/785) - Fixed plugin loading error when using `final` Docker image.
+- [#786](https://github.com/nautobot/nautobot/issues/786) - Fixed `Unknown command: 'post_upgrade'` when using `final` Docker image.
+- [#789](https://github.com/nautobot/nautobot/pull/789) - Avoid a `NoReverseMatch` exception at startup time if an app or plugin defines a nav menu item with an invalid link reference.
 
 ## v1.1.1 (2021-08-05)
 
