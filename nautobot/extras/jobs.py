@@ -1094,7 +1094,7 @@ def scheduled_job_handler(*args, **kwargs):
     A thin wrapper around JobResult.enqueue_job() that allows for it to be called as an async task
     for the purposes of enqueuing scheduled jobs at their recurring intervals. Thus, JobResult.enqueue_job()
     is responsible for enqueuing the actual job for execution and this method is the task executed
-    by the schedular to kick off the job execution on a recurring interval.
+    by the scheduler to kick off the job execution on a recurring interval.
     """
     from nautobot.extras.models import JobResult  # avoid circular import
 
