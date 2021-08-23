@@ -228,7 +228,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        self.m2m_1 = Relationship.objects.create(
+        self.m2m_1 = Relationship(
             name="Vlan to Rack",
             slug="vlan-rack",
             source_type=rack_ct,
@@ -237,24 +237,27 @@ class GraphQLExtendSchemaRelationship(TestCase):
             destination_label="My Racks",
             type="many-to-many",
         )
+        self.m2m_1.validated_save()
 
-        self.m2m_2 = Relationship.objects.create(
+        self.m2m_2 = Relationship(
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=rack_ct,
             destination_type=vlan_ct,
             type="many-to-many",
         )
+        self.m2m_2.validated_save()
 
-        self.o2m_1 = Relationship.objects.create(
+        self.o2m_1 = Relationship(
             name="generic site to vlan",
             slug="site-vlan",
             source_type=site_ct,
             destination_type=vlan_ct,
             type="one-to-many",
         )
+        self.o2m_1.validated_save()
 
-        self.o2o_1 = Relationship.objects.create(
+        self.o2o_1 = Relationship(
             name="Primary Rack per Site",
             slug="primary-rack-site",
             source_type=rack_ct,
@@ -263,6 +266,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
             destination_label="Primary Rack",
             type="one-to-one",
         )
+        self.o2o_1.validated_save()
 
         self.sites = [
             Site.objects.create(name="Site A", slug="site-a"),

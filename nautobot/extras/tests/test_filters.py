@@ -313,27 +313,27 @@ class RelationshipTestCase(TestCase):
         interface_type = ContentType.objects.get_for_model(Interface)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
-        Relationship.objects.create(
+        Relationship(
             name="Device VLANs",
             slug="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Primary VLAN",
             slug="primary-vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Primary Interface",
             slug="primary-interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
-        )
+        ).validated_save()
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -366,14 +366,14 @@ class RelationshipAssociationTestCase(TestCase):
         cls.vlan_type = ContentType.objects.get_for_model(VLAN)
 
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="Device VLANs",
                 slug="device-vlans",
                 type="many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.vlan_type,
             ),
-            Relationship.objects.create(
+            Relationship(
                 name="Primary VLAN",
                 slug="primary-vlan",
                 type="one-to-many",
@@ -381,6 +381,8 @@ class RelationshipAssociationTestCase(TestCase):
                 destination_type=cls.device_type,
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
@@ -395,34 +397,34 @@ class RelationshipAssociationTestCase(TestCase):
             VLAN.objects.create(vid=2, name="VLAN 2"),
         )
 
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=cls.relationships[0],
             source_type=cls.device_type,
             source_id=cls.devices[0].pk,
             destination_type=cls.vlan_type,
             destination_id=cls.vlans[0].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationships[0],
             source_type=cls.device_type,
             source_id=cls.devices[1].pk,
             destination_type=cls.vlan_type,
             destination_id=cls.vlans[1].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationships[1],
             source_type=cls.vlan_type,
             source_id=cls.vlans[0].pk,
             destination_type=cls.device_type,
             destination_id=cls.devices[0].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationships[1],
             source_type=cls.vlan_type,
             source_id=cls.vlans[1].pk,
             destination_type=cls.device_type,
             destination_id=cls.devices[1].pk,
-        )
+        ).validated_save()
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}

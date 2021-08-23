@@ -336,9 +336,6 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
     def clean(self):
 
-        if self.source_type == self.destination_type:
-            raise ValidationError("Not supported to have the same Objet type for Source and Destination.")
-
         # Check if source and destination filters are valid
         for side in ["source", "destination"]:
             if not getattr(self, f"{side}_filter"):

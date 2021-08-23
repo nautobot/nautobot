@@ -45,20 +45,22 @@ class RelationshipModelFormTestCase(TestCase):
         cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.site)
         cls.vlangroup_2 = ipam_models.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.site)
 
-        cls.relationship_1 = Relationship.objects.create(
+        cls.relationship_1 = Relationship(
             name="BGP Router-ID",
             slug="bgp-router-id",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
         )
-        cls.relationship_2 = Relationship.objects.create(
+        cls.relationship_1.validated_save()
+        cls.relationship_2 = Relationship(
             name="Device VLAN Groups",
             slug="device-vlan-groups",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.VLANGroup),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
         )
+        cls.relationship_2.validated_save()
 
         cls.device_form_base_data = {
             "name": "New Device",
@@ -154,13 +156,13 @@ class RelationshipModelFormTestCase(TestCase):
         A new record CANNOT create ONE_TO_ONE relations where its "destination" is already associated.
         """
         # Existing ONE_TO_ONE relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_1,
             source_type=self.relationship_1.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_1.destination_type,
             destination_id=self.ipaddress_1.pk,
-        )
+        ).validated_save()
 
         # Can't associate New Device with IP Address 1 (already associated to Device 1)
         form = DeviceForm(
@@ -189,13 +191,13 @@ class RelationshipModelFormTestCase(TestCase):
         A new record CANNOT create ONE_TO_MANY relations where any of its "destinations" are already associated.
         """
         # Existing ONE_TO_MANY relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_2,
             source_type=self.relationship_2.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_2.destination_type,
             destination_id=self.vlangroup_1.pk,
-        )
+        ).validated_save()
 
         # Can't associate New Device with VLAN Group 1 (already associated to Device 1)
         form = DeviceForm(
@@ -215,21 +217,21 @@ class RelationshipModelFormTestCase(TestCase):
         An existing record with an existing ONE_TO_ONE or ONE_TO_MANY association can change its destination(s).
         """
         # Existing ONE_TO_ONE relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_1,
             source_type=self.relationship_1.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_1.destination_type,
             destination_id=self.ipaddress_1.pk,
-        )
+        ).validated_save()
         # Existing ONE_TO_MANY relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_2,
             source_type=self.relationship_2.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_2.destination_type,
             destination_id=self.vlangroup_1.pk,
-        )
+        ).validated_save()
 
         form = DeviceForm(
             instance=self.device_1,
@@ -264,13 +266,13 @@ class RelationshipModelFormTestCase(TestCase):
         An existing record with an existing ONE_TO_ONE association can change its source.
         """
         # Existing ONE_TO_ONE relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_1,
             source_type=self.relationship_1.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_1.destination_type,
             destination_id=self.ipaddress_1.pk,
-        )
+        ).validated_save()
 
         form = IPAddressForm(
             instance=self.ipaddress_1,
@@ -295,13 +297,13 @@ class RelationshipModelFormTestCase(TestCase):
         An existing record with an existing ONE_TO_MANY association can change its source.
         """
         # Existing ONE_TO_MANY relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_2,
             source_type=self.relationship_2.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_2.destination_type,
             destination_id=self.vlangroup_1.pk,
-        )
+        ).validated_save()
 
         form = VLANGroupForm(
             instance=self.vlangroup_1,

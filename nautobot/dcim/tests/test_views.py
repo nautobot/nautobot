@@ -118,7 +118,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="Region related sites",
                 slug="region-related-sites",
                 type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -128,11 +128,13 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 destination_label="Related region",
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         for site in sites:
-            RelationshipAssociation.objects.create(
-                relationship=cls.relationships[0], source=site, destination=regions[1]
-            )
+            RelationshipAssociation(
+                relationship=cls.relationships[0], source=regions[1], destination=site
+            ).validated_save()
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -318,7 +320,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="Backup Sites",
                 slug="backup-sites",
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -328,9 +330,13 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 destination_label="Racks using this site as a backup",
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         for rack in racks:
-            RelationshipAssociation.objects.create(relationship=cls.relationships[0], source=rack, destination=sites[1])
+            RelationshipAssociation(
+                relationship=cls.relationships[0], source=rack, destination=sites[1]
+            ).validated_save()
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -1059,7 +1065,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.relationships = (
-            Relationship.objects.create(
+            Relationship(
                 name="BGP Router-ID",
                 slug="router-id",
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
@@ -1069,6 +1075,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 destination_label="Device using this as BGP router-ID",
             ),
         )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         ipaddresses = (
             IPAddress.objects.create(address="1.1.1.1/32"),
@@ -1077,9 +1085,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
-            RelationshipAssociation.objects.create(
+            RelationshipAssociation(
                 relationship=cls.relationships[0], source=device, destination=ipaddress
-            )
+            ).validated_save()
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
