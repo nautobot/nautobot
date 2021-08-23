@@ -53,6 +53,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None)
     site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     parent = TreeForeignKey(
@@ -73,6 +74,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
         ordering = ["site", "name"]
         unique_together = [
             ["site", "name"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
 

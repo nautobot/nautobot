@@ -356,6 +356,10 @@ class APIViewTestCases:
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
+                if self.slug_source is not None and "slug" not in self.create_data[i]:
+                    object = self._get_queryset().get(pk=obj["id"])
+                    expected_slug = slugify(getattr(object, self.slug_source))
+                    self.assertEqual(object.slug, expected_slug)
 
     class UpdateObjectViewTestCase(APITestCase):
         update_data = {}

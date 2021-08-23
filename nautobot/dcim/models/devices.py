@@ -97,6 +97,7 @@ class DeviceType(PrimaryModel):
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
     model = models.CharField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="model", unique=None)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
@@ -128,6 +129,7 @@ class DeviceType(PrimaryModel):
         ordering = ["manufacturer", "model"]
         unique_together = [
             ["manufacturer", "model"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["manufacturer", "slug"],
         ]
 

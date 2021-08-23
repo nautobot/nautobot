@@ -977,6 +977,7 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None)
     site = models.ForeignKey(
         to="dcim.Site",
@@ -996,6 +997,7 @@ class VLANGroup(OrganizationalModel):
         )  # (site, name) may be non-unique
         unique_together = [
             ["site", "name"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
         verbose_name = "VLAN group"

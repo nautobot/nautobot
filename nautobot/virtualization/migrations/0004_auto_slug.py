@@ -7,7 +7,7 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("virtualization", "0002_virtualmachine_local_context_schema"),
+        ("virtualization", "0003_vminterface_verbose_name"),
     ]
 
     operations = [
