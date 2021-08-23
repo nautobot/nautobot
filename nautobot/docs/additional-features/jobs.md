@@ -375,6 +375,12 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 !!! note
     In this example, `local/example/MyJobWithVars` is the job's `class_path` - [see above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
 
+When providing input data, it is possible to specify complex values contained in `ObjectVar`s, `MultiObjectVar`s, and `IPAddressVar`s.
+
+* `ObjectVar`s can be specified by either using their primary key directly as the value, or as a dictionary containing a more complicated query that gets passed into the Django ORM as keyword arguments.
+* `MultiObjectVar`s can be specified as a list of primary keys.
+* `IPAddressVar`s can be provided as strings in CIDR notation.
+
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
