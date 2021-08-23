@@ -1,6 +1,8 @@
 # Relationships
 Sometimes it is desirable to create a new kind of relationship between one (or more) objects in your source of truth to reflect business logic or other relationships that may be useful to you but that haven't been defined. This is where the Relationships feature comes in: like defining custom fields to hold atributes specific to your use cases, relationships define specific links between objects that might be specific to your network or data.
 
+To create a relationship, from the top-level navigation menu select *Extensibility* --> *Relationships*
+
 ## Relationship Types
 
 * Many to Many -  where both sides of the relationship connection can be connected to multiple objects. e.g. VLANs can be connected to multiple devices and devices will have multiple VLANs.
@@ -11,15 +13,13 @@ Sometimes it is desirable to create a new kind of relationship between one (or m
 
 Filters can be defined to restrict the type or selection of objects for either side of the connection. 
 
-### Relationship Filter Example
-
 As an example, let's create a relationship between Circuits and Devices. 
-In our situation we only would terminate Circuits on Devices with the Role of `edge`.
+In our situation we only would terminate Circuits on Devices with the Device Role of `edge`.
 
 To prevent the Circuit Relationship from showing up on any other Device, use a JSON filter to 
-limit the Relationship to only Devices with Role of `edge`:
+limit the Relationship to only Devices with Device Role whose slug is `edge`:
 
-```
+```json
 {
     "role": [
         "edge"
@@ -27,22 +27,31 @@ limit the Relationship to only Devices with Role of `edge`:
 }
 ```
 
+!!! note
+    There are a few ways to tell what attributes are available to filter on for a given object.
+    In the case of the *Device* object used in the example, the user could:
+    
+    - look at the code `nautobot/dcim/filters.py` -> `DeviceFilterSet` class (available options there include `manufacturer_id`, `manufacturer`, etc)
+    - check the filter options available in the REST API: `https://<server-name>/api/docs`, and in this case checking the `dcim_devices_list` API endpoint for the parameter names
+
 For context, here is an image of the entire Relationship:
 
 ![Image of Relationship with json filter](../../img/relationship_w_json_filter.png)
 
 Now, the Circuit Relationship field will show up on a Device with an `edge` role:
 
-![Image of Edge Device Relationships](../../img/edge_dev_ckt_relationship.png)
+![Image of Edge Device Relationships](../../img/edge_dev_circuit_relationship.png)
 
 The Circuit Relationship field will *not* show up on a Device with a role `leaf`:
 
-![Image of Leaf Device Relationships](../../img/leaf_dev_no_ckt_relationship.png)
+![Image of Leaf Device Relationships](../../img/leaf_dev_no_circuit_relationship.png)
+
 
 
 ## Relationship Labels
 
-Relationship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name. From the VLANs example above, you might label the relationship so that on the VLANs side the connection appears as 'Devices' and on the Device side the connection appears as 'VLANs'. 
+Relationship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name. 
+From the Devices/Circuits example above, you might label the relationship so that on the Device side the connection appears as 'Terminated Circuits' and on the Circuit side the connection appears as 'Terminating Devices'. 
 
 ### Options
 
