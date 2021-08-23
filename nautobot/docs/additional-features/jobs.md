@@ -305,7 +305,7 @@ Messages recorded with `log()` or `log_debug()` will appear in a job's results b
 Markdown rendering is supported for log messages.
 
 !!! note
-    Using `self.log_failure()` marks a specific log as a failure, but it will **not** stop the execution of the job. In order to fail the job utilize a Python `raise` or `return` value.
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job. To end a job early, you can use a Python `raise` or `return` as appropriate.
 
 
 ### Accessing Request Data
