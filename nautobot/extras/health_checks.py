@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db import DatabaseError, IntegrityError, connection
 from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
+from redis import exceptions, from_url
 
 from .models import HealthCheckTestModel
 
@@ -27,11 +28,10 @@ class DatabaseBackend(BaseHealthCheckBackend):
         except DatabaseError:
             raise ServiceUnavailable("Database error")
 
-from redis import exceptions, from_url
-
 
 class RedisBackend(BaseHealthCheckBackend):
     """Health check for Redis."""
+
     redis_url = getattr(settings, "CACHEOPS_REDIS", "redis://localhost:6379/1")
     sentinel_url = getattr(settings, "CACHEOPS_SENTINEL", None)
 
@@ -40,8 +40,9 @@ class RedisBackend(BaseHealthCheckBackend):
         # if CACHEOPS_REDIS is set to False or Sentinel is enabled
         # We need to check Redis using Sentinel
         if not self.redis_url or self.sentinel_url is not None:
-            
+
             from redis.sentinel import Sentinel
+
             try:
                 sentinel = Sentinel(self.sentinel_url["locations"], socket_timeout=self.sentinel_url["socket_timeout"])
                 with sentinel.master_for(self.sentinel_url["service_name"], db=self.sentinel_url["db"]) as master:

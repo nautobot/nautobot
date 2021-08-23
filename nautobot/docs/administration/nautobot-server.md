@@ -167,6 +167,7 @@ Run health checks and exit 0 if everything went well.
 $ nautobot-server health_check
 DatabaseBackend          ... working
 DefaultFileStorageHealthCheck ... working
+RedisBackend             ... working
 ```
 
 Please see the [healthcheck documentation](../additional-features/healthcheck.md) for more information.
