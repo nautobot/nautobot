@@ -51,7 +51,7 @@ During execution, should model validation fail, `validated_save()` will raise `d
 
 ## Slug Field
 
-Moving forward in Nautobot, all models should have a Slug field. This field can be safely/correctly used in URL patterns, dictionary keys, GraphQL and REST API. Nautobot has provided the `AutoSlugField` to handle creating the Slug field automatically from another field. All models should be populated from the `name` field. Below is an example on creating the Slug field.
+Moving forward in Nautobot, all models should have a `slug` field. This field can be safely/correctly used in URL patterns, dictionary keys, GraphQL and REST API. Nautobot has provided the `AutoSlugField` to handle automatically populating the `slug` field from another field(s). Generally speaking model slugs should be populated from the `name` field. Below is an example on defining the `slug` field.
 
 ```python
 from django.db import models
