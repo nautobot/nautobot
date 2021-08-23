@@ -300,7 +300,6 @@ INSTALLED_APPS = [
     "drf_yasg",
     "graphene_django",
     "health_check",
-    "health_check.db",
     "health_check.storage",
 ]
 

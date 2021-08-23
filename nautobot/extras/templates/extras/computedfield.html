@@ -77,10 +77,6 @@
                     <td><span>{{ object.description|placeholder }}</span></td>
                 </tr>
                 <tr>
-                    <td>Template</td>
-                    <td><pre>{{ object.template }}</pre></td>
-                </tr>
-                <tr>
                     <td>Fallback Value</td>
                     <td><span>{{ object.fallback_value }}</span></td>
                 </tr>
@@ -92,5 +88,19 @@
         </div>
     </div>
 </div>
+
+<div class="row">
+	<div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Template</strong>
+            </div>
+            <div class="panel-body">
+                <pre>{{ object.template }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 {% endblock %}
