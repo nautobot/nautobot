@@ -1,6 +1,6 @@
 # Healthcheck Endpoint
 
-Nautobot includes a health check endpoint `/health` which utilizes the [django-health-check](https://github.com/KristianOellegaard/django-health-check) project and some custom health check (database and cache).  This endpoint is designed for use by an optional load balancer placed in front of Nautobot to determine the health of the Nautobot server.  By default the healthcheck enables checks for the following:
+Nautobot includes a health check endpoint `/health` which utilizes the [django-health-check](https://github.com/KristianOellegaard/django-health-check) project and some custom health checks (database connection and cache availability).  This endpoint is designed for use by an optional load balancer placed in front of Nautobot to determine the health of the Nautobot application server.  By default the health check enables checks for the following:
 
 * Database Backend
 * Caching Backend
