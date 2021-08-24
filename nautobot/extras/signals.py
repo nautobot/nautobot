@@ -68,7 +68,7 @@ def _handle_changed_object(request, sender, instance, **kwargs):
             ).update(object_data=instance.to_objectchange(action).object_data)
         else:
             objectchange = instance.to_objectchange(action)
-            objectchange.user = request.user
+            objectchange.user = _get_user_if_authenticated(request, objectchange)
             objectchange.request_id = request.id
             objectchange.save()
 

@@ -13,7 +13,8 @@ from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.models import Tag
+from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.models import ObjectChange, Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
@@ -390,9 +391,18 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
             if hasattr(self.model, "last_updated"):
-                self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
+                instance = self._get_queryset().order_by("last_updated").last()
+                self.assertInstanceEqual(instance, self.form_data)
             else:
-                self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+                instance = self._get_queryset().last()
+                self.assertInstanceEqual(instance, self.form_data)
+
+            # Verify ObjectChange creation
+            objectchanges = ObjectChange.objects.filter(
+                changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
+            )
+            self.assertEqual(len(objectchanges), 1)
+            self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -480,6 +490,13 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), self.form_data)
 
+            # Verify ObjectChange creation
+            objectchanges = ObjectChange.objects.filter(
+                changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
+            )
+            self.assertEqual(len(objectchanges), 1)
+            self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):
             instance1, instance2 = self._get_queryset().all()[:2]
@@ -556,6 +573,13 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 302)
             with self.assertRaises(ObjectDoesNotExist):
                 self._get_queryset().get(pk=instance.pk)
+
+            # Verify ObjectChange creation
+            objectchanges = ObjectChange.objects.filter(
+                changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
+            )
+            self.assertEqual(len(objectchanges), 1)
+            self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_constrained_permission(self):
