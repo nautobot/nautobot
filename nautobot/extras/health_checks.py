@@ -4,6 +4,7 @@ from django.db import DatabaseError, IntegrityError, connection
 from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
 from redis import exceptions, from_url
+from redis.sentinel import Sentinel
 
 from .models import HealthCheckTestModel
 
@@ -40,19 +41,12 @@ class RedisBackend(BaseHealthCheckBackend):
         # if CACHEOPS_REDIS is set to False or Sentinel is enabled
         # We need to check Redis using Sentinel
         if not self.redis_url or self.sentinel_url is not None:
-
-            from redis.sentinel import Sentinel
-
             try:
                 sentinel = Sentinel(self.sentinel_url["locations"], socket_timeout=self.sentinel_url["socket_timeout"])
                 with sentinel.master_for(self.sentinel_url["service_name"], db=self.sentinel_url["db"]) as master:
                     master.ping()
-            except ConnectionRefusedError as e:
-                self.add_error(ServiceUnavailable("Unable to connect to Redis Sentinel: Connection was refused."), e)
-            except exceptions.ConnectionError as e:
-                self.add_error(ServiceUnavailable("Unable to connect to Redis Sentinel: Connection Error"), e)
-            except exceptions.TimeoutError as e:
-                self.add_error(ServiceUnavailable("Unable to connect to Redis Sentinel: Timeout."), e)
+            except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
+                self.add_error(ServiceUnavailable("Unable to connect to Redis Sentinel: %s" % type(e).__name__), e)
             except BaseException as e:
                 self.add_error(ServiceUnavailable("Unknown error"), e)
         # Sentinel is not used, so we check Redis directly
@@ -61,11 +55,7 @@ class RedisBackend(BaseHealthCheckBackend):
                 # conn is used as a context to release opened resources later
                 with from_url(self.redis_url) as conn:
                     conn.ping()  # exceptions may be raised upon ping
-            except ConnectionRefusedError as e:
-                self.add_error(ServiceUnavailable("Unable to connect to Redis: Connection was refused."), e)
-            except exceptions.TimeoutError as e:
-                self.add_error(ServiceUnavailable("Unable to connect to Redis: Timeout."), e)
-            except exceptions.ConnectionError as e:
-                self.add_error(ServiceUnavailable("Unable to connect to Redis: Connection Error"), e)
+            except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
+                self.add_error(ServiceUnavailable("Unable to connect to Redis: %s" % type(e).__name__), e)
             except BaseException as e:
                 self.add_error(ServiceUnavailable("Unknown error"), e)
