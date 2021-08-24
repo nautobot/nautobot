@@ -632,7 +632,9 @@ class JobTest(APITestCase):
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"errors": {"var2": ["This field is required."]}})
+        self.assertEqual(
+            response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
+        )
 
 
 class JobResultTest(APITestCase):
