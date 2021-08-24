@@ -321,7 +321,6 @@ class APIViewTestCases:
                     api=True,
                 )
 
-
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = ObjectChange.objects.filter(
