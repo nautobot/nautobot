@@ -221,7 +221,6 @@ class CustomGraphQLView(GraphQLView):
         if query_slug:
             data["obj"] = GraphQLQuery.objects.get(slug=query_slug)
             data["editing"] = True
-        data["graphiql"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
         return render(request, self.graphiql_template, data)
