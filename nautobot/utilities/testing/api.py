@@ -314,20 +314,21 @@ class APIViewTestCases:
                 response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_201_CREATED)
                 self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
+                instance = self._get_queryset().get(pk=response.data["id"])
                 self.assertInstanceEqual(
-                    self._get_queryset().get(pk=response.data["id"]),
+                    instance,
                     create_data,
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
 
-            # Verify ObjectChange creation
-            if hasattr(self.model, "to_objectchange"):
-                objectchanges = ObjectChange.objects.filter(
-                    changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
-                )
-                self.assertEqual(len(objectchanges), 1)
-                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+                # Verify ObjectChange creation
+                if hasattr(self.model, "to_objectchange"):
+                    objectchanges = ObjectChange.objects.filter(
+                        changed_object_type=ContentType.objects.get_for_model(instance), changed_object_id=instance.pk
+                    )
+                    self.assertEqual(len(objectchanges), 1)
+                    self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
         def test_bulk_create_objects(self):
             """
