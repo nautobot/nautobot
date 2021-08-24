@@ -1,0 +1,84 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Query</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td><span>{{ object.name }}</span></td>
+                </tr>
+                <tr>
+                    <td>Slug</td>
+                    <td><span>{{ object.slug }}</span></td>
+                </tr>
+                <tr>
+                    <td>Query</td>
+                    <td><pre id="query">{{ object.query }}</pre></td>
+                </tr>
+                <tr>
+                    <td>Query Variables</td>
+                    <td><pre>{{ object.variables|render_json }}</pre></td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Response</strong>
+                <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
+            </div>
+            {% if object.variables %}
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Variables:</td>
+                        <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json }}</textarea></td>
+                    </tr>
+                </table>
+            {% endif %}
+            <pre id="query_output">
+
+            </pre>
+        </div>
+{% endblock content_right_page %}
+
+{% block javascript %}
+<script>
+    function test_query() {
+        var output = $("#query_output");
+        var variables = $("#query_variables").val();
+        $.ajax({
+            url: "{% url 'graphql' %}",
+            method: "POST",
+            headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+            dataType: "json",
+            data: {
+                "query": `{{ object.query | escapejs }}`,
+                "variables": variables,
+            },
+            success: function(data) {
+                output.text(JSON.stringify(data, undefined, 2));
+            },
+            error: function(error) {
+                console.log(error);
+                output.text(JSON.stringify(error.responseJSON, undefined, 2));
+            }
+        });
+    };
+
+    textarea = document.querySelector("#query_variables");
+    textarea.addEventListener('input', autoResize, false);
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+
+    function autoResize() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    }
+</script>
+{% endblock javascript %}

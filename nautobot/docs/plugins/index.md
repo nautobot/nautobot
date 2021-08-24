@@ -4,19 +4,37 @@ Plugins are packaged [Django](https://docs.djangoproject.com/) apps that can be 
 
 ## Capabilities
 
-The Nautobot plugin architecture allows for the following:
+The Nautobot plugin architecture allows for plugins to do any or all of the following:
 
-* **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.)
+### Extend the existing Nautobot UI
+
+* **Add content to existing model detail views.** A plugin can inject custom HTML content within the view of a core Nautobot model. This content can appear in the left column, right column, or full width of the page, and can also include custom buttons at the top of the page.
+* **Add navigation menu items.** A plugin can extend the navigation menus with new links and buttons or even entirely new menus.
+* **Add a banner.** A plugin can add a custom banner to the top of any appropriate views.
+* **Add home page content.** A plugin can add custom items or custom panels to the Nautobot home page.
+
+### Extend and customize existing Nautobot functionality
+
 * **Add custom validation logic to existing data models.** A plugin can provide additional logic to customize the rules for validating created/updated data records.
-* **Add new URLs and views.** Plugins can register URLs under the `/plugins` root path to provide browsable views for users.
-* **Provide Jobs.** Plugins can serve as a convenient way to package and install [Jobs](../additional-features/jobs.md).
-* **Add content to existing model templates.** A template content class can be used to inject custom HTML content within the view of a core Nautobot model. This content can appear in the left side, right side, or bottom of the page.
-* **Add navigation menu items.** Each plugin can register new links in the navigation menu. Each link may have a set of buttons for specific actions, similar to the built-in navigation items.
-* **Add new REST API endpoints.** Plugins can register URLs under the `/api/plugins/` root path to provide new REST API views.
-* **Add custom middleware.** Custom Django middleware can be registered by each plugin.
-* **Add additional dependencies.** Custom Django application dependencies can be registered by each plugin.
-* **Declare configuration parameters.** Each plugin can define required, optional, and default configuration parameters within its unique namespace. Plug configuration parameter are defined by the user under `PLUGINS_CONFIG` in `nautobot_config.py`.
+* **Provide Jobs.** A plugin can serve as a convenient way to package and install [Jobs](../additional-features/jobs.md).
+* **Add additional Git data types.** A plugin can add support for processing additional types of data stored in a [Git repository](../models/extras/gitrepository.md).
+* **Register additional Jinja2 filters.** A plugin can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
+* **Populate extensibility features in the database.** A plugin can add content to the Nautobot database when installed, such as automatically creating new custom fields, relationships, and so forth.
+
+### Add entirely new features
+
+* **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.) These models can be integrated with core implmentations of GraphQL, webhooks, logging, custom relationships, custom fields, and tags.
+* **Add new URLs and views.** A plugin can register URLs under the `/plugins/` root path to provide browsable views (pages) for users.
+* **Add new REST API endpoints.** A plugin can register URLs under the `/api/plugins/` root path to provide new REST API views.
+* **Add custom middleware.** A plugin can provide and register custom Django middleware.
+
+### Declare dependencies and requirements
+
+* **Declare configuration parameters.** A plugin can define required, optional, and default configuration parameters within its unique namespace. Plugin configuration parameters are configurable under [`PLUGINS_CONFIG`](../configuration/optional-settings.md#plugins_config) in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** A plugin can specify a minimum and/or maximum Nautobot version with which it is compatible.
+* **Add additional Django dependencies.** A plugin can define additional Django application dependencies to require when the plugin is enabled.
+
+Details on how to implement any of these features are described in the plugin [development](./development.md) documentation.
 
 ## Limitations
 
@@ -72,23 +90,43 @@ PLUGINS_CONFIG = {
 }
 ```
 
-### Run Database Migrations
+### Run `nautobot-server post_upgrade`
 
-!!! warning
-    Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
+After installing or upgrading a plugin, you should always run [`nautobot-server post_upgrade`](../administration/nautobot-server.md#post_upgrade). This command will ensure that any necessary post-installation tasks are run, for example:
 
-If the plugin introduces new database models, run the provided schema migrations:
-
-```no-highlight
-$ nautobot-server migrate
-```
-
-### Collect Static Files
-
-Plugins may package static files to be served directly by the HTTP front end. Ensure that these are copied to the static root directory with the `collectstatic` management command:
+- Migrating the database to include any new or updated data models from the plugin
+- Collecting any static files provided by the plugin
+- Etc.
 
 ```no-highlight
-$ nautobot-server collectstatic
+# nautobot-server post_upgrade
+Performing database migrations...
+Operations to perform:
+  Apply all migrations: admin, auth, circuits, contenttypes, db, dcim, extras, ipam,
+nautobot_plugin_example, sessions, social_django, taggit, tenancy, users, virtualization
+Running migrations:
+  No migrations to apply.
+
+Generating cable paths...
+Found no missing circuit termination paths; skipping
+Found no missing console port paths; skipping
+Found no missing console server port paths; skipping
+Found no missing interface paths; skipping
+Found no missing power feed paths; skipping
+Found no missing power outlet paths; skipping
+Found no missing power port paths; skipping
+Finished.
+
+Collecting static files...
+
+0 static files copied to '/opt/nautobot/static', 972 unmodified.
+
+Removing stale content types...
+
+Removing expired sessions...
+
+Invalidating cache...
+
 ```
 
 ### Restart the WSGI Service

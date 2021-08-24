@@ -1,12 +1,13 @@
 import json
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
-from django.test import Client, TestCase as _TestCase, override_settings
+from django.test import Client, TestCase as _TestCase, override_settings, tag
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from netaddr import IPNetwork
@@ -18,7 +19,7 @@ from nautobot.extras.models import ObjectChange, Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
-from .utils import disable_warnings, extract_form_failures, post_data
+from .utils import disable_warnings, extract_form_failures, extract_page_body, post_data
 
 
 __all__ = (
@@ -33,7 +34,10 @@ __all__ = (
 User = get_user_model()
 
 
+@tag("unit")
 class TestCase(_TestCase):
+    """Base class for all Nautobot-specific unit tests."""
+
     user_permissions = ()
 
     def setUp(self):
@@ -139,8 +143,8 @@ class TestCase(_TestCase):
                 err = response.data
             else:
                 # Attempt to extract form validation errors from the response HTML
-                form_errors = extract_form_failures(response.content)
-                err = form_errors or response.content or "No data"
+                form_errors = extract_form_failures(response.content.decode(response.charset))
+                err = form_errors or response.content.decode(response.charset) or "No data"
             err_message = f"Expected HTTP status {expected_status}; received {response.status_code}: {err}"
         self.assertEqual(response.status_code, expected_status, err_message)
 
@@ -222,11 +226,20 @@ class ModelViewTestCase(ModelTestCase):
     Base TestCase for model views. Subclass to test individual views.
     """
 
+    reverse_url_attribute = None
+    """
+    Name of instance field to pass as a kwarg when looking up action URLs for creating/editing/deleting a model instance.
+
+    If unspecified, "slug" and "pk" will be tried, in that order.
+    """
+
     def _get_base_url(self):
         """
         Return the base format for a URL for the test's model. Override this to test for a model which belongs
         to a different app (e.g. testing Interfaces within the virtualization app).
         """
+        if self.model._meta.app_label in settings.PLUGINS:
+            return "plugins:{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
         return "{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
 
     def _get_url(self, action, instance=None):
@@ -239,6 +252,12 @@ class ModelViewTestCase(ModelTestCase):
         if instance is None:
             return reverse(url_format.format(action))
 
+        if self.reverse_url_attribute:
+            return reverse(
+                url_format.format(action),
+                kwargs={self.reverse_url_attribute: getattr(instance, self.reverse_url_attribute)},
+            )
+
         # Attempt to resolve using slug as the unique identifier if one exists
         if hasattr(self.model, "slug"):
             try:
@@ -250,6 +269,7 @@ class ModelViewTestCase(ModelTestCase):
         return reverse(url_format.format(action), kwargs={"pk": instance.pk})
 
 
+@tag("unit")
 class ViewTestCases:
     """
     We keep any TestCases with test_* methods inside a class to prevent unittest from trying to run them.
@@ -289,8 +309,10 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
             self.assertHttpStatus(response, 200)
 
+            response_body = extract_page_body(response.content.decode(response.charset))
+
             # The object's display name or string representation should appear in the response
-            self.assertIn(getattr(instance, "display", str(instance)), str(response.content))
+            self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships:
@@ -298,22 +320,26 @@ class ViewTestCases:
                     content_type = ContentType.objects.get_for_model(instance)
                     if content_type == relationship.source_type:
                         self.assertIn(
-                            relationship.get_label(RelationshipSideChoices.SIDE_SOURCE), str(response.content)
+                            relationship.get_label(RelationshipSideChoices.SIDE_SOURCE),
+                            response_body,
+                            msg=response_body,
                         )
                     if content_type == relationship.destination_type:
                         self.assertIn(
-                            relationship.get_label(RelationshipSideChoices.SIDE_DESTINATION), str(response.content)
+                            relationship.get_label(RelationshipSideChoices.SIDE_DESTINATION),
+                            response_body,
+                            msg=response_body,
                         )
 
             # If any Custom Fields are defined, they should appear in the response
             if self.custom_fields:
                 for custom_field in self.custom_fields:
-                    self.assertIn(str(custom_field), str(response.content))
+                    self.assertIn(str(custom_field), response_body, msg=response_body)
                     if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                         for value in instance.cf.get(custom_field.name):
-                            self.assertIn(str(value), str(response.content))
+                            self.assertIn(str(value), response_body, msg=response_body)
                     else:
-                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), str(response.content))
+                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
@@ -672,13 +698,14 @@ class ViewTestCases:
             # Try GET with object-level permission
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
-            content = str(response.content)
+            content = extract_page_body(response.content.decode(response.charset))
+            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
-                self.assertIn(instance1.name, content)
-                self.assertNotIn(instance2.name, content)
+                self.assertIn(instance1.name, content, msg=content)
+                self.assertNotIn(instance2.name, content, msg=content)
             elif hasattr(self.model, "get_absolute_url"):
-                self.assertIn(instance1.get_absolute_url(), content)
-                self.assertNotIn(instance2.get_absolute_url(), content)
+                self.assertIn(instance1.get_absolute_url(), content, msg=content)
+                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """

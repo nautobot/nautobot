@@ -143,9 +143,10 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
             RIR.objects.create(name="RIR 2", slug="rir-2"),
         )
 
-        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("2001:db8:abcd::/64"), rir=rirs[0])
 
         cls.create_data = [
             {
@@ -153,7 +154,7 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
                 "rir": rirs[1].pk,
             },
             {
-                "prefix": "101.0.0.0/8",
+                "prefix": "2001:db8:abcd:12::/64",
                 "rir": rirs[1].pk,
             },
             {
@@ -205,7 +206,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             "status": "active",
         },
         {
-            "prefix": "192.168.5.0/24",
+            "prefix": "2001:db8:abcd:12::/80",
             "status": "active",
         },
         {
@@ -216,6 +217,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["status"]
 
     def setUp(self):
         super().setUp()
@@ -230,6 +232,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Prefix.objects.create(prefix=IPNetwork("192.168.1.0/24"), status=statuses[0])
         Prefix.objects.create(prefix=IPNetwork("192.168.2.0/24"), status=statuses[0])
         Prefix.objects.create(prefix=IPNetwork("192.168.3.0/24"), status=statuses[0])
+        Prefix.objects.create(prefix=IPNetwork("2001:db8:abcd::/80"), status=statuses[0])
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -453,7 +456,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             "status": "active",
         },
         {
-            "address": "192.168.0.5/24",
+            "address": "2001:db8:abcd:12::20/128",
             "status": "active",
         },
         {
@@ -464,6 +467,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["assigned_object_type", "role", "status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -473,6 +477,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         IPAddress.objects.create(address=IPNetwork("192.168.0.1/24"), status=statuses[0])
         IPAddress.objects.create(address=IPNetwork("192.168.0.2/24"), status=statuses[0])
         IPAddress.objects.create(address=IPNetwork("192.168.0.3/24"), status=statuses[0])
+        IPAddress.objects.create(address=IPNetwork("2001:db8:abcd::20/128"), status=statuses[0])
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -481,6 +486,17 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         # The test code for `utilities.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
+
+    def test_create_invalid_address(self):
+        """Pass various invalid inputs and confirm they are rejected cleanly."""
+        self.add_permissions("ipam.add_ipaddress")
+
+        for bad_address in ("", "192.168.0.0.100/24", "192.168.0.0/35", "2001:db8:1:2:3:4:5:6:7:8/64"):
+            response = self.client.post(
+                self._get_list_url(), {"address": bad_address, "status": "active"}, format="json", **self.header
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("address", response.data)
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
@@ -521,6 +537,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -590,6 +607,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["protocol"]
 
     @classmethod
     def setUpTestData(cls):

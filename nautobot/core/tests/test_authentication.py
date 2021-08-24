@@ -154,7 +154,7 @@ class ExternalAuthenticationTestCase(TestCase):
             new_user.pk,
             msg="Authentication failed",
         )
-        self.assertListEqual([groups[0], groups[1]], list(new_user.groups.all()))
+        self.assertSetEqual({groups[0], groups[1]}, set(new_user.groups.all()))
 
     @override_settings(
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,

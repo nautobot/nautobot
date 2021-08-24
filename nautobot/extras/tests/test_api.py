@@ -5,6 +5,7 @@ from unittest import skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
@@ -25,11 +26,14 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.views import JobViewSet
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     Relationship,
@@ -42,16 +46,13 @@ from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
-
 rq_worker_running = Worker.count(get_connection("default"))
-
 
 THIS_DIRECTORY = os.path.dirname(__file__)
 
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("extras-api:api-root")
         response = self.client.get("{}?format=api".format(url), **self.header)
 
@@ -86,6 +87,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["filter_logic", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -123,6 +125,7 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["owner_content_type", "content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -168,7 +171,6 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Tag.objects.create(name="Tag 1", slug="tag-1")
         Tag.objects.create(name="Tag 2", slug="tag-2")
         Tag.objects.create(name="Tag 3", slug="tag-3")
@@ -197,6 +199,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "branch": "develop",
     }
+    choices_fields = ["provided_contents"]
 
     @classmethod
     def setUpTestData(cls):
@@ -241,6 +244,7 @@ class ImageAttachmentTest(
 ):
     model = ImageAttachment
     brief_fields = ["display", "id", "image", "name", "url"]
+    choices_fields = ["content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -297,7 +301,6 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
@@ -339,6 +342,80 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext6.sites.add(site2)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["bar"], 456)
+
+    def test_schema_validation_pass(self):
+        """
+        Given a config context schema
+        And a config context that conforms to that schema
+        Assert that the config context passes schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+
+        data = {"name": "Config Context with schema", "weight": 100, "data": {"foo": "bar"}, "schema": str(schema.pk)}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["schema"]["id"], str(schema.pk))
+
+    def test_schema_validation_fails(self):
+        """
+        Given a config context schema
+        And a config context that *does not* conform to that schema
+        Assert that the config context fails schema validation via full_clean()
+        """
+        schema = ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+        )
+        self.add_permissions("extras.add_configcontext")
+
+        data = {
+            "name": "Config Context with bad schema",
+            "weight": 100,
+            "data": {"foo": "bar"},
+            "schema": str(schema.pk),
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+
+class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
+    model = ConfigContextSchema
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "Schema 4",
+            "slug": "schema-4",
+            "data_schema": {"type": "object", "properties": {"foo": {"type": "string"}}},
+        },
+        {
+            "name": "Schema 5",
+            "slug": "schema-5",
+            "data_schema": {"type": "object", "properties": {"bar": {"type": "string"}}},
+        },
+        {
+            "name": "Schema 6",
+            "slug": "schema-6",
+            "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = []
+
+    @classmethod
+    def setUpTestData(cls):
+        ConfigContextSchema.objects.create(
+            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
+        ),
+        ConfigContextSchema.objects.create(
+            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
+        ),
 
 
 class JobTest(APITestCase):
@@ -386,7 +463,7 @@ class JobTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     @skipIf(
-        "nautobot.extras.tests.dummy_plugin" not in settings.PLUGINS,
+        "dummy_plugin" not in settings.PLUGINS,
         "dummy_plugin not in settings.PLUGINS",
     )
     def test_list_jobs_with_permission(self):
@@ -398,7 +475,7 @@ class JobTest(APITestCase):
         # At a minimum, the job provided by the dummy plugin should be present
         self.assertNotEqual(response.data, [])
         self.assertIn(
-            "plugins/nautobot.extras.tests.dummy_plugin.jobs/DummyJob",
+            "plugins/dummy_plugin.jobs/DummyJob",
             [job["id"] for job in response.data],
         )
 
@@ -491,7 +568,6 @@ class JobResultTest(APITestCase):
 
 class CreatedUpdatedFilterTest(APITestCase):
     def setUp(self):
-
         super().setUp()
 
         self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
@@ -613,6 +689,7 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
             "new_window": False,
         },
     ]
+    choices_fields = ["button_class"]
 
     @classmethod
     def setUpTestData(cls):
@@ -676,6 +753,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "ssl_verification": True,
         },
     ]
+    choices_fields = ["http_method"]
 
     @classmethod
     def setUpTestData(cls):
@@ -755,6 +833,152 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
         """
 
 
+class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
+    model = GraphQLQuery
+    brief_fields = ["display", "id", "name", "url"]
+
+    create_data = [
+        {
+            "name": "graphql-query-4",
+            "slug": "graphql-query-4",
+            "query": "{ query: sites {name} }",
+        },
+        {
+            "name": "graphql-query-5",
+            "slug": "graphql-query-5",
+            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+        },
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.graphqlqueries = (
+            GraphQLQuery(
+                name="graphql-query-1",
+                slug="graphql-query-1",
+                query="{ sites {name} }",
+            ),
+            GraphQLQuery(
+                name="graphql-query-2",
+                slug="graphql-query-2",
+                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            ),
+            GraphQLQuery(
+                name="graphql-query-3",
+                slug="graphql-query-3",
+                query="""
+query ($device: [String!]) {
+  devices(name: $device) {
+    config_context
+    name
+    position
+    serial
+    primary_ip4 {
+      id
+      primary_ip4_for {
+        id
+        name
+      }
+    }
+    tenant {
+      name
+    }
+    tags {
+      name
+      slug
+    }
+    device_role {
+      name
+    }
+    platform {
+      name
+      slug
+      manufacturer {
+        name
+      }
+      napalm_driver
+    }
+    site {
+      name
+      slug
+      vlans {
+        id
+        name
+        vid
+      }
+      vlan_groups {
+        id
+      }
+    }
+    interfaces {
+      description
+      mac_address
+      enabled
+      name
+      ip_addresses {
+        address
+        tags {
+          id
+        }
+      }
+      connected_circuit_termination {
+        circuit {
+          cid
+          commit_rate
+          provider {
+            name
+          }
+        }
+      }
+      tagged_vlans {
+        id
+      }
+      untagged_vlan {
+        id
+      }
+      cable {
+        termination_a_type
+        status {
+          name
+        }
+        color
+      }
+      tagged_vlans {
+        site {
+          name
+        }
+        id
+      }
+      tags {
+        id
+      }
+    }
+  }
+}""",
+            ),
+        )
+
+        for query in cls.graphqlqueries:
+            query.full_clean()
+            query.save()
+
+    def test_run_saved_query(self):
+        """Exercise the /run/ API endpoint."""
+        self.add_permissions("extras.add_graphqlquery")
+        self.add_permissions("extras.change_graphqlquery")
+        self.add_permissions("extras.view_graphqlquery")
+
+        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[0].pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual({"data": {"sites": []}}, response.data)
+
+        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[2].pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual({"data": {"devices": []}}, response.data)
+
+
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
@@ -788,6 +1012,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "destination_filter": {"role": {"slug": "controller"}},
     }
+    choices_fields = ["destination_type", "source_type", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -820,6 +1045,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
+    choices_fields = ["destination_type", "source_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -892,3 +1118,97 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 "destination_id": cls.devices[2].pk,
             },
         ]
+
+
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
+    model = ComputedField
+    brief_fields = [
+        "content_type",
+        "description",
+        "display",
+        "fallback_value",
+        "id",
+        "label",
+        "slug",
+        "template",
+        "url",
+        "weight",
+    ]
+    create_data = [
+        {
+            "content_type": "dcim.site",
+            "slug": "cf4",
+            "label": "Computed Field 4",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
+        {
+            "content_type": "dcim.site",
+            "slug": "cf5",
+            "label": "Computed Field 5",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
+        {
+            "content_type": "dcim.site",
+            "slug": "cf6",
+            "label": "Computed Field 6",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
+    ]
+    update_data = {
+        "content_type": "dcim.site",
+        "slug": "cf1",
+        "label": "My Computed Field",
+    }
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        site_ct = ContentType.objects.get_for_model(Site)
+
+        ComputedField.objects.create(
+            slug="cf1",
+            label="Computed Field One",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        ),
+        ComputedField.objects.create(
+            slug="cf2",
+            label="Computed Field Two",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        ),
+        ComputedField.objects.create(
+            slug="cf3",
+            label="Computed Field Three",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        )
+
+        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+
+    def test_computed_field_include(self):
+        """Test that explicitly including a computed field behaves as expected."""
+        self.add_permissions("dcim.view_site")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk})
+
+        # First get the object without computed fields.
+        response = self.client.get(url, **self.header)
+        self.assertNotIn("computed_fields", response.json())
+
+        # Now get it with computed fields.
+        params = {"include": "computed_fields"}
+        response = self.client.get(url, data=params, **self.header)
+        self.assertIn("computed_fields", response.json())

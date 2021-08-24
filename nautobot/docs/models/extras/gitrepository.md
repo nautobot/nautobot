@@ -22,6 +22,9 @@ The token implementation can vary from Git provider to Git provider, the followi
 
 Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../../../configuration/optional-settings/#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
+!!! important
+    The repository branch must exist and have a commit against it. At this time, Nautobot will not initialize an empty repository.
+
 ## Repository Structure
 
 ### Jobs
@@ -64,7 +67,8 @@ After loading and potentially extending the JSON or YAML data with any implied s
         "weight": 1000,
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
-        "regions": [{"slug": "nyc"}]
+        "regions": [{"slug": "nyc"}],
+        "schema": "Config Context Schema 1"
     },
     "ntp-servers": [
         "172.16.10.22",
@@ -77,7 +81,7 @@ After loading and potentially extending the JSON or YAML data with any implied s
 }
 ```
 
-Within the `_metadata`, the `name` key is always required; all other metadata keys are optional and will take on default values if omitted.
+Within the `_metadata`, the `name` key is always required; all other metadata keys are optional and will take on default values if omitted. The optional field `schema` defines the name of a config context schema to validate data.
 
 For files in the root of the `/config_contexts/` directory, a single file may define a single config context as above, or alternatively it may contain a list of config context data definitions, as in the following example:
 
@@ -114,10 +118,121 @@ Files in a `config_contexts/devices/` and/or `config_contexts/virtual_machines/`
 !!! note
     While virtual machines are always uniquely identified by their name, it is possible for devices associated with different sites and/or tenants to share an identical name. Currently, Nautobot is unable to automatically apply local config context via Git to devices that have a non-globally-unique name (or no name at all).
 
+### Configuration Context Schemas
+
+Config context schemas may be provided as JSON or YAML files located in `/config_context_schemas/`.
+
+Files in the root of the `/config_context_schemas/` directory will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context schema will be taken from the `_metadata` within the file, not the filename). Similar to config context definitions, a single file may define a single config context schema or a list of such schemas - see examples below.
+
+```shell
+config_context_schemas/
+  context_schema_1.json
+  context_schema_2.yaml
+```
+
+When loading the schema, the key `_metadata` will be extracted from the loaded data and used to define the config context schema's metadata, while the actual config context data schema will be based on the key `data_schema`.
+
+JSON single example:
+
+``` json
+{
+  "_metadata": {
+    "name": "Config Context Schema 1",
+    "description": "Schema for defining first names."
+  },
+  "data_schema": {
+    "title": "Person",
+    "properties": {
+      "firstName": {
+        "type": "string",
+        "description": "The person's first name."
+      }
+    }
+  }
+}
+```
+
+JSON list example:
+
+``` json
+[
+  {
+    "_metadata": {
+      "name": "Config Context Schema 1",
+      "description": "Schema for defining first names."
+    },
+    "data_schema": {
+      "title": "Person",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "The person's first name."
+        },
+      }
+    }
+  },
+  {
+    "_metadata": {
+      "name": "Config Context Schema 2",
+      "description": "Schema for defining last names."
+    },
+    "data_schema": {
+      "title": "Person",
+      "properties": {
+        "lastName": {
+          "type": "string",
+          "description": "The person's last name."
+        },
+      }
+    }
+  },
+]
+```
+
+YAML single example:
+
+``` yaml
+---
+_metadata:
+  name: "Config Context Schema 1"
+  description: "Schema for defining first names."
+data_schema:
+  title: "Person"
+  properties:
+    firstName:
+      type: "string"
+      description: "The person's first name"
+```
+
+YAML list example:
+
+``` yaml
+---
+- _metadata:
+    name: "Config Context Schema 1"
+    description: "Schema for defining first names."
+  data_schema:
+    title: "Person"
+    properties:
+      firstName:
+        type: "string"
+        description: "The person's first name"
+- _metadata:
+    name: "Config Context Schema 2"
+    description: "Schema for defining last names."
+  data_schema:
+    title: "Person"
+    properties:
+      lastName:
+        type: "string"
+        description: "The person's last name"
+```
+
+
 ### Export Templates
 
 Export templates may be provided as files located in `/export_templates/<grouping>/<model>/<template_file>`; for example, a JSON export template for Device records might be `/export_templates/dcim/device/mytemplate.json`.
 
 * The name of a discovered export template will be presented in Nautobot as `<repository name>: <filename>`.
-* The MIME type of a file rendered from a discovered export template will always be the default `text/plain`.
+* The MIME type of a file rendered from a discovered export template will try to match the extension to [`IANA's list`](https://www.iana.org/assignments/media-types/media-types.xhtml). If not detected, it will default to `text/plain`.
 * The file extension of a file rendered from a discovered export template will match that of the template itself (so, in the above example, the extension would be `.json`)

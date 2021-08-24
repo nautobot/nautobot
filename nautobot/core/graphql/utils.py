@@ -1,7 +1,8 @@
 from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
 import graphene
 
-from nautobot.utilities.filters import MultiValueNumberFilter
+from nautobot.core.graphql import BigInteger
+from nautobot.utilities.filters import MultiValueBigNumberFilter, MultiValueNumberFilter
 
 
 def str_to_var_name(verbose_name):
@@ -33,11 +34,16 @@ def get_filtering_args_from_filterset(filterset_class):
     instance = filterset_class()
 
     for filter_name, filter_field in instance.filters.items():
+        # For general safety, but especially for the case of custom fields
+        # (https://github.com/nautobot/nautobot/issues/464)
+        filter_name = str_to_var_name(filter_name)
 
         field_type = graphene.String
         filter_field_class = type(filter_field)
 
-        if issubclass(filter_field_class, MultiValueNumberFilter):
+        if issubclass(filter_field_class, MultiValueBigNumberFilter):
+            field_type = graphene.List(BigInteger)
+        elif issubclass(filter_field_class, MultiValueNumberFilter):
             field_type = graphene.List(graphene.Int)
         else:
             if issubclass(filter_field_class, BooleanFilter):

@@ -3,48 +3,68 @@ version: "3"
 services:
   nautobot:
     build:
+      args:
+        PYTHON_VER: "${PYTHON_VER}"
       context: ../
-      dockerfile: development/Dockerfile
-    image: "nautobot/nautobot-py${PYTHON_VER}"
-    command: "nautobot-server runserver 0.0.0.0:8000 --insecure"
+      dockerfile: docker/Dockerfile
+      target: dev
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     ports:
-      - "8000:8000"
+      - "8080:8080"
     depends_on:
       - postgres
       - redis
+      - selenium
     env_file:
       - dev.env
-    volumes:
-      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
-      - ../:/opt/nautobot
     tty: true
   worker:
-    build:
-      context: ../
-      dockerfile: development/Dockerfile
-    image: "nautobot/nautobot-py${PYTHON_VER}"
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
     entrypoint: "nautobot-server rqworker"
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "health_check"]
     depends_on:
       - nautobot
     env_file:
       - ./dev.env
-    volumes:
-      - ./nautobot_config.py:/etc/nautobot/nautobot_config.py
-      - ../:/opt/nautobot
+    tty: true
+  celery_worker:
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "nautobot-server celery worker -B -l INFO"
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "health_check"]
+    depends_on:
+      - nautobot
+      - redis
+    env_file:
+      - ./dev.env
     tty: true
   postgres:
-    image: postgres:10
+    image: postgres:13
     env_file:
       - dev.env
     volumes:
       - pgdata_nautobot:/var/lib/postgresql/data
   redis:
-    image: redis:5-alpine
+    image: redis:6-alpine
     command:
       - sh
       - -c # this is to evaluate the $REDIS_PASSWORD from the env
       - redis-server --appendonly yes --requirepass $$REDIS_PASSWORD ## $$ because of docker-compose
     env_file:
       - dev.env
+  selenium:
+    image: selenium/standalone-firefox:latest
+    ports:
+        - "4444:4444"
+    shm_size: 2g
 volumes:
   pgdata_nautobot:

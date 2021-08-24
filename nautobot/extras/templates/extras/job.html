@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
-{% load helpers %}
 {% load form_helpers %}
-{% load log_levels %}
+{% load helpers %}
 
 {% block title %}{{ job }}{% endblock %}
 
@@ -17,6 +16,9 @@
         </div>
     </div>
     <h1>{{ job }}</h1>
+    {% if job.read_only %}
+        <label class="label label-default">Read-only</label>
+    {% endif %}
     <p>{{ job.description }}</p>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">

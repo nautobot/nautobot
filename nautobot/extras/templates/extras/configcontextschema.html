@@ -1,0 +1,56 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block nav_tabs %}
+        <li role="presentation"{% if active_tab == 'configcontextschema' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Config Context Schema</a>
+        </li>
+        <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
+            <a href="{% url 'extras:configcontextschema_object_validation' slug=object.slug %}">Validation</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:configcontextschema_changelog' slug=object.slug %}">Change Log</a>
+            </li>
+        {% endif %}
+{% endblock nav_tabs %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Config Context Schema</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            {{ object.name }}
+                        </td>
+                    </tr>
+                    {% if object.owner %}
+                        <tr>
+                            <td>Owner</td>
+                            <td>
+                                <a href="{{ object.owner.get_absolute_url }}">{{ object.owner }}</a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Data Schema</strong>
+                    {% include 'extras/inc/json_format.html' %}
+                </div>
+                <div class="panel-body">
+                    {% include 'extras/inc/json_data.html' with data=object.data_schema format=format %}
+                </div>
+            </div>
+{% endblock content_right_page %}

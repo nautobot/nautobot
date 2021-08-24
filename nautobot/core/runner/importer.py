@@ -34,13 +34,21 @@ installed = False
 
 
 def install(name, config_path, default_settings, **kwargs):
+    """Install our custom module importer logic.
+
+    Args:
+      name (str): Module name to handle specially (e.g., "nautobot_config")
+      config_path (str): Absolute path to the module in question (e.g., "/opt/nautobot/nautobot_config.py")
+      default_settings (str): Settings module name to inherit settings from (e.g., "nautobot.core.settings")
+    """
     global installed
 
     if installed:
         # TODO: reinstall
         return
 
-    sys.meta_path.append(LoganImporter(name, config_path, default_settings, **kwargs))
+    # Ensure that our custom importer for the config module takes precedence over standard Python import machinery
+    sys.meta_path.insert(0, LoganImporter(name, config_path, default_settings, **kwargs))
     installed = True
 
 
@@ -49,7 +57,18 @@ class ConfigurationError(Exception):
 
 
 class LoganImporter(object):
+    """Implementation of importlib.abc.MetaPathFinder interface."""
+
     def __init__(self, name, config_path, default_settings=None, allow_extras=True, callback=None):
+        """Instantiate the custom meta path finder.
+
+        Args:
+          name (str): Module name to handle specially (e.g., "nautobot_config")
+          config_path (str): Absolute path to the module in question (e.g., "/opt/nautobot/nautobot_config.py")
+          default_settings (str): Settings module name to inherit settings from (e.g., "nautobot.core.settings")
+          allow_extras (bool): Whether to allow extension of settings variables via "EXTRA_<setting>" values
+          callback (func): Callback function to invoke after loading the module into settings
+        """
         self.name = name
         self.config_path = config_path
         self.default_settings = default_settings
@@ -70,6 +89,13 @@ class LoganImporter(object):
             raise ConfigurationError(unicode(e), exc_info[2])
 
     def find_module(self, fullname, path=None):
+        """Meta path finder API function implementation.
+
+        Ref: https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder.find_module
+
+        TODO: find_module() API is deprecated, convert this to find_spec() instead.
+        """
+        # Only find/load the module matching self.name - otherwise let the standard Python import machinery handle it
         if fullname != self.name:
             return
 
@@ -83,6 +109,8 @@ class LoganImporter(object):
 
 
 class LoganLoader(object):
+    """Implementation of importlib.abc.Loader interface."""
+
     def __init__(self, name, config_path, default_settings=None, allow_extras=True, callback=None):
         self.name = name
         self.config_path = config_path
@@ -91,6 +119,10 @@ class LoganLoader(object):
         self.callback = callback
 
     def load_module(self, fullname):
+        """Loader API function implementation.
+
+        TODO: load_module() API is deprecated, convert this to create_module()/exec_module() instead.
+        """
         try:
             return self._load_module(fullname)
         except Exception as e:

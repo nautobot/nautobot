@@ -2,10 +2,14 @@ from django.urls import path
 
 from nautobot.extras import views
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
+    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     Tag,
     Status,
     Webhook,
@@ -70,6 +74,53 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="configcontext_changelog",
         kwargs={"model": ConfigContext},
+    ),
+    # Config context schema
+    path(
+        "config-context-schemas/",
+        views.ConfigContextSchemaListView.as_view(),
+        name="configcontextschema_list",
+    ),
+    path(
+        "config-context-schemas/add/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_add",
+    ),
+    path(
+        "config-context-schemas/edit/",
+        views.ConfigContextSchemaBulkEditView.as_view(),
+        name="configcontextschema_bulk_edit",
+    ),
+    path(
+        "config-context-schemas/delete/",
+        views.ConfigContextSchemaBulkDeleteView.as_view(),
+        name="configcontextschema_bulk_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/",
+        views.ConfigContextSchemaView.as_view(),
+        name="configcontextschema",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/validation/",
+        views.ConfigContextSchemaObjectValidationView.as_view(),
+        name="configcontextschema_object_validation",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/edit/",
+        views.ConfigContextSchemaEditView.as_view(),
+        name="configcontextschema_edit",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/delete/",
+        views.ConfigContextSchemaDeleteView.as_view(),
+        name="configcontextschema_delete",
+    ),
+    path(
+        "config-context-schemas/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="configcontextschema_changelog",
+        kwargs={"model": ConfigContextSchema},
     ),
     # Git repositories
     path(
@@ -295,5 +346,75 @@ urlpatterns = [
         "relationships/associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
+    ),
+    # GraphQL Queries
+    path("graphql-queries/", views.GraphQLQueryListView.as_view(), name="graphqlquery_list"),
+    path("graphql-queries/add/", views.GraphQLQueryEditView.as_view(), name="graphqlquery_add"),
+    path(
+        "graphql-queries/delete/",
+        views.GraphQLQueryBulkDeleteView.as_view(),
+        name="GraphQLQuery_bulk_delete",
+    ),
+    path("graphql-queries/<str:slug>/", views.GraphQLQueryView.as_view(), name="graphqlquery"),
+    path(
+        "graphql-queries/<str:slug>/edit/",
+        views.GraphQLQueryEditView.as_view(),
+        name="graphqlquery_edit",
+    ),
+    path(
+        "graphql-queries/<str:slug>/delete/",
+        views.GraphQLQueryDeleteView.as_view(),
+        name="graphqlquery_delete",
+    ),
+    path(
+        "graphql-queries/<uuid:pk>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="graphqlquery_changelog",
+        kwargs={"model": GraphQLQuery},
+    ),
+    # Computed Fields
+    path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
+    path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),
+    path(
+        "computed-fields/delete/",
+        views.ComputedFieldBulkDeleteView.as_view(),
+        name="computedfield_bulk_delete",
+    ),
+    path("computed-fields/<slug:slug>/", views.ComputedFieldView.as_view(), name="computedfield"),
+    path(
+        "computed-fields/<slug:slug>/edit/",
+        views.ComputedFieldEditView.as_view(),
+        name="computedfield_edit",
+    ),
+    path(
+        "computed-fields/<slug:slug>/delete/",
+        views.ComputedFieldDeleteView.as_view(),
+        name="computedfield_delete",
+    ),
+    path(
+        "computed-fields/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="computedfield_changelog",
+        kwargs={"model": ComputedField},
+    ),
+    # Custom fields
+    path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
+    path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
+    path(
+        "custom-fields/delete/",
+        views.CustomFieldBulkDeleteView.as_view(),
+        name="customfield_bulk_delete",
+    ),
+    # TODO: Migrate custom field model from name to slug #464
+    path("custom-fields/<str:name>/", views.CustomFieldView.as_view(), name="customfield"),
+    path(
+        "custom-fields/<str:name>/edit/",
+        views.CustomFieldEditView.as_view(),
+        name="customfield_edit",
+    ),
+    path(
+        "custom-fields/<str:name>/delete/",
+        views.CustomFieldDeleteView.as_view(),
+        name="customfield_delete",
     ),
 ]

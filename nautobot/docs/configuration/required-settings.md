@@ -2,6 +2,8 @@
 
 ## ALLOWED_HOSTS
 
+Environment Variable: `NAUTOBOT_ALLOWED_HOSTS` specified as a space-separated quoted string (e.g. `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 example.com"`).
+
 This is a list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the Nautobot service. Usually this is the same as the hostname for the Nautobot server, but can also be different; for example, when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the Nautobot server. To help guard against [HTTP Host header attacks](https://docs.djangoproject.com/en/stable/topics/security/#host-headers-virtual-hosting), Nautobot will not permit access to the server via any other hostnames (or IPs).
 
 Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs.djangoproject.com/en/stable/ref/settings/#use-x-forwarded-host) to `True`, which means that if you're using a reverse proxy, the FQDN used to reach that reverse proxy needs to be in this list.
@@ -31,18 +33,28 @@ ALLOWED_HOSTS = ['*']
 
 ## DATABASES
 
-Nautobot requires access to a PostgreSQL 9.6 or later database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
+Nautobot requires access to a supported database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
 
 * `NAME` - Database name
-* `USER` - PostgreSQL username
-* `PASSWORD` - PostgreSQL password
+* `USER` - Database username
+* `PASSWORD` - Database password
 * `HOST` - Name or IP address of the database server (use `localhost` if running locally)
-* `PORT` - TCP port of the PostgreSQL service; leave blank for default port (TCP/5432)
+* `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
 * `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
+* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
+
+The following environment variables may also be set for each of the above values:
+
+* `NAUTOBOT_DB_NAME`
+* `NAUTOBOT_DB_USER`
+* `NAUTOBOT_DB_PASSWORD`
+* `NAUTOBOT_DB_HOST`
+* `NAUTOBOT_DB_PORT`
+* `NAUTOBOT_DB_TIMEOUT`
+* `NAUTOBOT_DB_ENGINE`
 
 !!! warning
-    Nautobot only supports PostgreSQL as a database backend. Do not modify the `ENGINE` setting or you
-    will be unable to connect to the database.
+    Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
 
 Example:
 
@@ -50,18 +62,40 @@ Example:
 DATABASES = {
     'default': {
         'NAME': 'nautobot',                         # Database name
-        'USER': 'nautobot',                         # PostgreSQL username
-        'PASSWORD': 'awesome_password',             # PostgreSQL password
+        'USER': 'nautobot',                         # Database username
+        'PASSWORD': 'awesome_password',             # Database password
         'HOST': 'localhost',                        # Database server
         'PORT': '',                                 # Database port (leave blank for default)
         'CONN_MAX_AGE': 300,                        # Max database connection age
-        'ENGINE': 'django.db.backends.postgresql',  # Database driver (Do not change this!)
+        'ENGINE': 'django.db.backends.postgresql',  # Database driver ("mysql" or "postgresql")
     }
 }
 ```
 
 !!! note
-    Nautobot supports all PostgreSQL database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
+    Nautobot supports all database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
+
+### MySQL Unicode Settings
+
+When using MySQL as a database backend, and you want to enable support for Unicode characters like the beloved poop emoji, you'll need to update your settings.
+
+If you try to use emojis without this setting, you will encounter a server error along the lines of `Incorrect string value`, because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. The `utf8` encoding in MySQL is limited to 3-bytes per character. Newer Unicode emoji require 4-bytes. 
+
+To properly support using such characters, you will need to create an entry in `DATABASES` -> `default` -> `OPTIONS` with the value `{"charset": "utf8mb4"}` in your `nautobot_config.py` and restart all Nautobot services. This will tell MySQL to always use `utf8mb4` character set for database client connections.
+
+For example:
+
+```python
+DATABASES = {
+    "default": {
+        # Other setttings...
+        "OPTIONS": {"charset": "utf8mb4"},  # Add this line
+    }
+}
+```
+
+!!! tip
+    Starting in v1.1.0, if you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it! 
 
 ---
 
@@ -92,6 +126,8 @@ For more details Nautobot's caching see the guide on [Caching](../../additional-
 #### CACHEOPS_REDIS
 
 Default: `"redis://localhost:6379/1"`
+
+Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
 
 If you wish to use SSL, you may set the URL scheme to `rediss://`, for example:
 
@@ -156,7 +192,6 @@ CACHES = {
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PASSWORD": "",
         },
     }
 }
@@ -226,12 +261,24 @@ RQ_QUEUES = {
 }
 ```
 
-- `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
-- `PORT` - TCP port of the Redis service; leave blank for default port (6379)
-- `PASSWORD` - Redis password (if set)
+* `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
+* `PORT` - TCP port of the Redis service; leave blank for default port (6379)
+* `PASSWORD` - Redis password (if set)
 * `DB` - Numeric database ID
-- `SSL` - Use SSL connection to Redis
-- `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
+* `SSL` - Use SSL connection to Redis
+* `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
+
+The following environment variables may also be set for some of the above values:
+
+* `NAUTOBOT_REDIS_HOST`
+* `NAUTOBOT_REDIS_PORT`
+* `NAUTOBOT_REDIS_PASSWORD`
+* `NAUTOBOT_REDIS_USERNAME`
+* `NAUTOBOT_REDIS_SSL`
+* `NAUTOBOT_REDIS_TIMEOUT`
+
+!!! note
+    If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
 
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
@@ -289,6 +336,8 @@ For more details on configuring RQ with Redis Sentinel, please see the documenta
 
 ## SECRET_KEY
 
+Environment Variable: `NAUTOBOT_SECRET_KEY`
+
 This is a secret, random string used to assist in the creation new cryptographic hashes for passwords and HTTP cookies. The key defined here should not be shared outside of the configuration file. `SECRET_KEY` can be changed at any time, however be aware that doing so will invalidate all existing sessions.
 
 Please note that this key is **not** used directly for hashing user passwords or for the encrypted storage of secret data in Nautobot.
@@ -301,11 +350,11 @@ Please note that this key is **not** used directly for hashing user passwords or
 You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
 ```no-highlight
-$ nautobot-server generate_secret_key.py
+$ nautobot-server generate_secret_key
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
 !!! warning
     In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
 
-For more details see [Nautobot Configuration](..).
+For more details see [Nautobot Configuration](index.md).

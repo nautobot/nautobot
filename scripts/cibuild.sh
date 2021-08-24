@@ -29,6 +29,14 @@ if [[ $RC != 0 ]]; then
 	exit $RC
 fi
 
+# Dockerfile lint with hadolint
+invoke hadolint
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) Dockerfile did not pass hadolint; failing build."
+	exit $RC
+fi
+
 echo -e "\n>> Checking that Python files confirm to PEP 8..."
 invoke flake8
 RC=$?
@@ -45,11 +53,32 @@ if [[ ! -z $SYNTAX ]]; then
 	exit 1
 fi
 
-echo -e "\n>> Running unit tests..."
-invoke unittest --failfast
+if [[ -n "$DOCKER_HUB_PASSWORD" ]]; then
+    echo -e "\n>> Attempting login to Docker Hub..."
+    echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+fi
+
+echo -e "\n>> Starting Selenium container in background..."
+invoke start --service selenium
 RC=$?
 if [[ $RC != 0 ]]; then
-	echo -e "\n$(info) one or more tests failed, failing build."
+	echo -e "\n$(info) Selenium failed to start."
+	exit $RC
+fi
+
+echo -e "\n>> Running unit tests..."
+invoke unittest --failfast --keepdb
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) one or more unit tests failed, failing build."
+	exit $RC
+fi
+
+echo -e "\n>> Running integration tests..."
+invoke integration-test --failfast --keepdb --append
+RC=$?
+if [[ $RC != 0 ]]; then
+	echo -e "\n$(info) one or more integration tests failed, failing build."
 	exit $RC
 fi
 

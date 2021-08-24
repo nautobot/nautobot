@@ -12,11 +12,11 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 ...and so on. Jobs are Python code and exist outside of the official Nautobot code base, so they can be updated and changed without interfering with the core Nautobot installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below.
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](./#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](./#variables).
 
 ## Writing Jobs
 
-Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `~/.nautobot/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+Jobs may be manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`). Each file created within this path is considered a separate module. Each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 !!! warning
     The jobs path must include a file named `__init__.py`, which registers the path as a Python module. Do not delete this file.
@@ -53,6 +53,9 @@ You can implement the entire job within the `run()` function, but for more compl
 
 It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database as [`JobResult`](../models/extras/jobresult.md) records.
 
+!!! note
+    When actively developing a Job utilizing a development environment it's important to understand that the "reload on code changes" debugging functionality does **not** automatically restart the `nautobot_worker`; therefore, it is required to restart the `worker` after each update to your Job source code.
+
 ### Module Attributes
 
 #### `name`
@@ -86,6 +89,14 @@ class MyJob(Job):
     class Meta:
         commit_default = False
 ```
+
+#### `field_order`
+
+A list of strings (field names) representing the order your form fields should appear. If not defined, fields will appear in order of their definition in the code.
+
+#### `read_only`
+
+A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 ### Variables
 
@@ -322,6 +333,18 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
     ![Adding the run action to a permission](../../media/admin_ui_run_permission.png)
 
+### Jobs and `class_path`
+
+It is a key concept to understand the 3 `class_path` elements:
+
+- `grouping_name`: which can be one of `local`, `git`, or `plugin` - depending on where the `Job` has been defined.
+- `module_name`: which is the Python path to the job definition file, for a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename` or `nautobot_golden_config.jobs` and is the importable Python path name (which would not include the `.py` extension, as per Python syntax standards).
+- `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
+
+The `class_path` is often represented as a string in the format of `<grouping_name>/<module_name>/<JobClassName>`, such as
+`local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the definitions of these
+elements will be important in running jobs programmatically.
+
 ### Via the Web UI
 
 Jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Job" button.
@@ -349,15 +372,25 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 --data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
 ```
 
+!!! note
+    In this example, `local/example/MyJobWithVars` is the job's `class_path` - [see above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
+
 ### Via the CLI
 
 Jobs that do not require user input can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob local/<module>/<JobName> [--commit]
+nautobot-server runjob <grouping_name>/<module>/<JobName> [--commit]
 ```
 
-where ``<module>`` is the name of the python file (minus the ``.py`` extension) and ``<JobName>`` is the Python class name within that module.
+!!! note
+    [See above](#jobs-and-class_path) for `class_path` definitions.
+
+Using the same example shown in the API:
+
+```no-highlight
+nautobot-server runjob local/example/MyJobWithNoVars
+```
 
 Provision of user inputs via the CLI is not supported at this time.
 

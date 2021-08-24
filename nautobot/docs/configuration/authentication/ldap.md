@@ -78,13 +78,25 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
 AUTH_LDAP_BIND_DN = "CN=NAUTOBOTSA, OU=Service Accounts,DC=example,DC=com"
 AUTH_LDAP_BIND_PASSWORD = "demo"
 
-# Include this setting if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
-# Note that this is a Nautobot-specific setting which sets:
-#     ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-LDAP_IGNORE_CERT_ERRORS = True
+# Include this `ldap.set_option` call if you want to ignore certificate errors. This might be needed to accept a self-signed cert.
+ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 ```
 
+### TLS Options
+
 STARTTLS can be configured by setting `AUTH_LDAP_START_TLS = True` and using the `ldap://` URI scheme.
+
+Apply TLS settings to the internal SSL context on nautobot by configuring `ldap.OPT_X_TLS_NEWCTX` with value `0`. 
+
+```
+AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
+AUTH_LDAP_START_TLS = True
+# Set the path to the trusted CA certificates and create a new internal SSL context.
+AUTH_LDAP_CONNECTION_OPTIONS = {
+    ldap.OPT_X_TLS_CACERTFILE: "/path/to/ca.pem",
+    ldap.OPT_X_TLS_NEWCTX: 0
+}
+```
 
 ### User Authentication
 

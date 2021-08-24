@@ -47,7 +47,9 @@ class ProviderSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "created",
             "last_updated",
             "circuit_count",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -71,7 +73,9 @@ class CircuitTypeSerializer(CustomFieldModelSerializer):
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
@@ -120,7 +124,9 @@ class CircuitSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cust
             "custom_fields",
             "created",
             "last_updated",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
 
 class CircuitTerminationSerializer(CableTerminationSerializer, ConnectedEndpointSerializer):
