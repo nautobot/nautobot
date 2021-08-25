@@ -107,6 +107,8 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#818](https://github.com/nautobot/nautobot/issues/818) - Database health-check now reports as healthy even when in `MAINTENANCE_MODE`.
 - [#825](https://github.com/nautobot/nautobot/issues/825) - Removed unnecessary `-B` flag from development Celery worker invocation.
 - [#830](https://github.com/nautobot/nautobot/issues/830) - Fixed incorrect database migration introduced by #818.
+- [#845](https://github.com/nautobot/nautobot/pull/845) - Clarified documentation around `nautobot-server init` and `NAUTOBOT_ROOT`.
+- [#848](https://github.com/nautobot/nautobot/pull/848) - Fixed stale links to NAPALM documentation
 
 ## v1.1.2 (2021-08-10)
 
