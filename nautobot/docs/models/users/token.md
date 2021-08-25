@@ -6,7 +6,7 @@ A token is a unique identifier mapped to a Nautobot user account. Each user may 
 2. On the upper right hand corner, select your username, then _Profile_
 3. Select on the left hand side under User Profile select _API Tokens_
 4. Select **+Add a token**
-5. Leave _Key_ blank
+5. Leave _Key_ blank to automatically create a token, or fill one in for yourself
 6. Set an expiration if necessary
 7. Make sure that this key is write enabled
 8. Add a description
