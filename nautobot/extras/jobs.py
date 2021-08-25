@@ -365,7 +365,7 @@ class BaseJob:
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
             elif isinstance(var, ObjectVar):
-                if type(value) is dict:
+                if isinstance(value, dict):
                     return_data[field_name] = var.field_attrs["queryset"].get(**value)
                 else:
                     return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
@@ -385,7 +385,7 @@ class BaseJob:
     def validate_data(self, data):
         vars = self._get_vars()
 
-        if type(data) is not dict:
+        if not isinstance(data, dict):
             raise ValidationError("Job data needs to be a dict")
 
         for k, v in data.items():
