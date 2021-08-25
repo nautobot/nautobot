@@ -654,6 +654,8 @@ Some features require documentation updates or new documentation to be written. 
 
 ### Installing `mkdocs`
 
+If you are using the poetry-based workflow, `mkdocs` should already be installed in your environment. This section mostly applies if you are using Docker to manage your development environment.
+
 The `mkdocs` command can be installed via pip, either globally or in your virtual environment.
 
 ```
