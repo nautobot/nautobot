@@ -246,7 +246,7 @@ class JobViewSet(ViewSet):
         type_ = serializer["interval"]
         if type_ == JobExecutionType.TYPE_IMMEDIATELY:
             time = datetime.now()
-            name = f"{job.name} - {time}"
+            name = serializer.get("name") or f"{job.name} - {time}"
         else:
             time = serializer["start_time"]
             name = serializer["name"]
