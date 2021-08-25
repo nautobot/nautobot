@@ -185,6 +185,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         max_length=50,
         choices=RelationshipTypeChoices,
         default=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        help_text="Cardinality of this relationship"
     )
 
     #
@@ -196,13 +197,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
         related_name="source_relationships",
         verbose_name="Source Object",
         limit_choices_to=FeatureQuery("relationships"),
-        help_text="The source object to which this relationship applies.",
+        help_text="The source object type to which this relationship applies.",
     )
     source_label = models.CharField(
         max_length=50,
         blank=True,
         verbose_name="Source Label",
-        help_text="Name of the relationship as displayed on the source object.",
+        help_text="Label for related destination objects, as displayed on the source object.",
     )
     source_hidden = models.BooleanField(
         default=False,
@@ -225,13 +226,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
         related_name="destination_relationships",
         verbose_name="Destination Object",
         limit_choices_to=FeatureQuery("relationships"),
-        help_text="The destination object to which this relationship applies.",
+        help_text="The destination object type to which this relationship applies.",
     )
     destination_label = models.CharField(
         max_length=50,
         blank=True,
         verbose_name="Destination Label",
-        help_text="Name of the relationship as displayed on the destination object.",
+        help_text="Label for related source objects, as displayed on the destination object.",
     )
     destination_hidden = models.BooleanField(
         default=False,
@@ -296,13 +297,8 @@ class Relationship(BaseModel, ChangeLoggedModel):
         if self.type == RelationshipTypeChoices.TYPE_ONE_TO_ONE:
             return False
 
-        if side == RelationshipSideChoices.SIDE_SOURCE and self.type == RelationshipTypeChoices.TYPE_ONE_TO_MANY:
-            return False
-
-        if side == RelationshipSideChoices.SIDE_DESTINATION and self.type == RelationshipTypeChoices.TYPE_ONE_TO_MANY:
-            return True
-
-        return None
+        # ONE_TO_MANY
+        return (side == RelationshipSideChoices.SIDE_DESTINATION)
 
     def to_form_field(self, side):
         """
@@ -435,16 +431,14 @@ class RelationshipAssociation(BaseModel):
                 {"destination_type": f"destination_type has a different value than defined in {self.relationship}"}
             )
 
-        # Check if a similar relationship already exist
+        # Check if a similar relationship association already exists in violation of relationship type cardinality
         if self.relationship.type != RelationshipTypeChoices.TYPE_MANY_TO_MANY:
-
-            count_dest = RelationshipAssociation.objects.filter(
+            # Either one-to-many or one-to-one, in either case don't allow multiple sources to the same destination
+            if RelationshipAssociation.objects.filter(
                 relationship=self.relationship,
                 destination_type=self.destination_type,
                 destination_id=self.destination_id,
-            ).count()
-
-            if count_dest != 0:
+            ).exists():
                 raise ValidationError(
                     {
                         "destination": f"Unable to create more than one {self.relationship} association to {self.destination} (destination)"
@@ -452,14 +446,12 @@ class RelationshipAssociation(BaseModel):
                 )
 
             if self.relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_ONE:
-
-                count_src = RelationshipAssociation.objects.filter(
+                # Don't allow multiple destinations from the same source
+                if RelationshipAssociation.objects.filter(
                     relationship=self.relationship,
                     source_type=self.source_type,
                     source_id=self.source_id,
-                ).count()
-
-                if count_src != 0:
+                ).exists():
                     raise ValidationError(
                         {
                             "source": f"Unable to create more than one {self.relationship} association to {self.source} (source)"

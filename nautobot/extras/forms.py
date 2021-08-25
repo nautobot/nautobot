@@ -187,18 +187,22 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
     slug = SlugField()
     source_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The source object type to which this relationship applies.",
     )
     source_filter = JSONField(
         required=False,
-        help_text='Enter any filters for the source object in <a href="https://json.org/">JSON</a> format.',
+        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
     destination_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The destination object type to which this relationship applies.",
     )
     destination_filter = JSONField(
         required=False,
-        help_text='Enter any filters for the destination object in <a href="https://json.org/">JSON</a> format.',
+        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 
     class Meta:
