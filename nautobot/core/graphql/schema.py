@@ -188,7 +188,9 @@ def extend_schema_type_filter(schema_type, model):
             resolver_name = f"resolve_{field_name}"
             search_params = generate_list_search_parameters(child_schema_type)
             # Add OneToMany field to schema_type
-            schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.List(child_schema_type, **search_params))
+            schema_type._meta.fields[field_name] = graphene.Field.mounted(
+                graphene.List(child_schema_type, **search_params)
+            )
             # Add resolve function to schema_type
             setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field_name))
 

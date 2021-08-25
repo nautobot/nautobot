@@ -63,7 +63,6 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
         field_name (str): name of OneToMany field to filter
     """
     filterset_class = schema_type._meta.filterset_class
-    field_name = field_name
 
     def resolve_filter(self, *args, **kwargs):
         if filterset_class is not None:
