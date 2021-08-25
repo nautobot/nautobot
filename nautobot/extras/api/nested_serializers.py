@@ -15,9 +15,9 @@ __all__ = [
     "NestedGraphQLQuerySerializer",
     "NestedImageAttachmentSerializer",
     "NestedJobResultSerializer",
-    "NestedJobScheduleSerializer",
     "NestedRelationshipSerializer",
     "NestedRelationshipAssociationSerializer",
+    "NestedScheduledJobSerializer",
     "NestedStatusSerializer",
     "NestedTagSerializer",
     "NestedWebhookSerializer",
@@ -141,10 +141,12 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
         fields = ["id", "url", "relationship", "source_id", "destination_id"]
 
 
-class NestedJobScheduleSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=255, required=False)
-    start_time = serializers.DateTimeField(required=False)
-    interval = serializers.ChoiceField(choices=choices.JobExecutionType)
+class NestedScheduledJobSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
+
+    class Meta:
+        model = models.ScheduledJob
+        fields = ["id", "url", "name", "start_time", "interval"]
 
     def validate(self, data):
         data = super().validate(data)
@@ -161,7 +163,3 @@ class NestedJobScheduleSerializer(serializers.Serializer):
                 )
 
         return data
-
-    class Meta:
-        model = models.ScheduledJob
-        fields = ["name", "start_time", "interval"]

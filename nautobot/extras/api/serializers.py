@@ -465,7 +465,7 @@ class JobResultSerializer(serializers.ModelSerializer):
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
     obj_type = ContentTypeField(read_only=True)
-    schedule = NestedJobScheduleSerializer(read_only=True)
+    schedule = NestedScheduledJobSerializer(read_only=True)
 
     class Meta:
         model = JobResult
@@ -545,7 +545,7 @@ class JobDetailSerializer(JobSerializer):
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default="")
     commit = serializers.BooleanField(required=False, default=None)
-    schedule = NestedJobScheduleSerializer(required=False)
+    schedule = NestedScheduledJobSerializer(required=False)
 
 
 #
