@@ -95,7 +95,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 continue
 
             try:
-                return reverse(route, kwargs={"pk": getattr(instance, field)})
+                return reverse(route, kwargs={field: getattr(instance, field)})
             except NoReverseMatch:
                 continue
 

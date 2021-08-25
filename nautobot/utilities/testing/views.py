@@ -14,7 +14,7 @@ from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.models import Tag
+from nautobot.extras.models import ChangeLoggedModel, Tag
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
@@ -286,6 +286,11 @@ class ViewTestCases:
             response = self.client.get(self._get_queryset().first().get_absolute_url())
             self.assertHttpStatus(response, 200)
 
+            # The "Change Log" tab should appear in the response since we have all exempt permissions
+            if issubclass(self.model, ChangeLoggedModel):
+                response_body = extract_page_body(response.content.decode(response.charset))
+                self.assertIn("Change Log", response_body, msg=response_body)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_without_permission(self):
             instance = self._get_queryset().first()
@@ -348,7 +353,9 @@ class ViewTestCases:
             obj_perm = ObjectPermission(
                 name="Test permission",
                 constraints={"pk": instance1.pk},
-                actions=["view"],
+                # To get a different rendering flow than the `test_get_object_with_permission` test above,
+                # enable additional permissions for this object so that add/edit/delete buttons are rendered.
+                actions=["view", "add", "change", "delete"],
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
