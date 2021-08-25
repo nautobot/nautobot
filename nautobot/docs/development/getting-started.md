@@ -658,14 +658,14 @@ If you are using the poetry-based workflow, `mkdocs` should already be installed
 
 The `mkdocs` command can be installed via pip, either globally or in your virtual environment.
 
+```no-highlight
+$ pip3 install mkdocs mkdocs-include-markdown-plugin
 ```
-pip install mkdocs mkdocs mkdocs-include-markdown-plugin
-```
+
+### Writing Documentation
 
 Once the `mkdocs` command has been installed, you can preview the documentation
 using `mkdocs serve`,  which should start a web server at `http://localhost:8001`.
-
-### Writing documentation
 
 Documentation is written in Markdown. If you need to add additional pages or sections to the documentation, you can add them to `mkdocs.yml` at the root of the repository.
 
