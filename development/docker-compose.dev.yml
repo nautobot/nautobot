@@ -3,7 +3,7 @@
 # any override will need to include these volumes to use them.
 # see:  https://github.com/docker/compose/issues/3729
 ---
-version: "3"
+version: "3.4"
 services:
   nautobot:
     volumes:

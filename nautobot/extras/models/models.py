@@ -18,6 +18,7 @@ from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
 from graphql.language.ast import OperationDefinition
+from jsonschema import draft7_format_checker
 from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
@@ -457,7 +458,7 @@ class ConfigContextSchemaValidationMixin:
         # If schema is None, then no schema has been specified on the instance and thus no validation should occur.
         if schema:
             try:
-                Draft7Validator(schema.data_schema).validate(data)
+                Draft7Validator(schema.data_schema, format_checker=draft7_format_checker).validate(data)
             except JSONSchemaValidationError as e:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
@@ -981,3 +982,12 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
 
     def __str__(self):
         return self.name
+
+
+#
+# Health Check
+#
+
+
+class HealthCheckTestModel(BaseModel):
+    title = models.CharField(max_length=128)
