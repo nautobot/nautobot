@@ -141,12 +141,13 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
         fields = ["id", "url", "relationship", "source_id", "destination_id"]
 
 
-class NestedScheduledJobSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
+class NestedScheduledJobSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255, required=False)
+    start_time = serializers.DateTimeField(required=False)
 
     class Meta:
         model = models.ScheduledJob
-        fields = ["id", "url", "name", "start_time", "interval"]
+        fields = ["name", "start_time", "interval"]
 
     def validate(self, data):
         data = super().validate(data)
