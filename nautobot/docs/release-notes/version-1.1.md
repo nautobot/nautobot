@@ -92,6 +92,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#791](https://github.com/nautobot/nautobot/issues/791) - Added support for `NAUTOBOT_DOCKER_SKIP_INIT` variable to allow running the Docker container with a read-only database.
 - [#841](https://github.com/nautobot/nautobot/pull/841) - Added more detailed documentation around defining Relationship filters.
 - [#850](https://github.com/nautobot/nautobot/pull/850) - Added developer documentation around the installation and use of `mkdocs` to locally preview documentation changes.
+- [#856](https://github.com/nautobot/nautobot/issues/856) - Added more detailed user documentation on how to create an API token.
 
 ### Changed
 
@@ -101,6 +102,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Fixed
 
 - [#464](https://github.com/nautobot/nautobot/issues/464) - Fixed GraphQL schema generation error when certain custom field names are used.
+- [#670](https://github.com/nautobot/nautobot/pull/670) - Clarified Jobs documentation regarding how to fail or abort a Job.
 - [#715](https://github.com/nautobot/nautobot/issues/715) - Fixed display of GraphiQL interface in narrow browser windows.
 - [#718](https://github.com/nautobot/nautobot/issues/718) - Fixed rendering of long template values in Computed Field detail view.
 - [#731](https://github.com/nautobot/nautobot/issues/731) - Config context schemas including `format` properties (such as `"format": "ipv4"`) are now correctly enforced.
