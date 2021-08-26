@@ -195,11 +195,16 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
             "slug": "new-git-repository-3",
             "remote_url": "https://example.com/newrepo3.git",
         },
+        {
+            "name": "New Git Repository 4",
+            "remote_url": "https://example.com/newrepo3.git",
+        },
     ]
     bulk_update_data = {
         "branch": "develop",
     }
     choices_fields = ["provided_contents"]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -399,11 +404,16 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
             "slug": "schema-6",
             "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
         },
+        {
+            "name": "Schema 7",
+            "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
     choices_fields = []
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -817,7 +827,13 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
             "color": "ff0000",
             "content_types": ["dcim.device"],
         },
+        {
+            "name": "Status 1",
+            "color": "ff0000",
+            "content_types": ["dcim.device"],
+        },
     ]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -848,7 +864,12 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             "slug": "graphql-query-5",
             "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
         },
+        {
+            "name": "Graphql Query 6",
+            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+        },
     ]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -1007,12 +1028,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
             "destination_type": "dcim.interface",
             "destination_hidden": True,
         },
+        {
+            "name": "Relationship 1",
+            "type": "one-to-one",
+            "source_type": "dcim.device",
+            "source_label": "primary interface",
+            "destination_type": "dcim.interface",
+            "destination_hidden": True,
+        },
     ]
 
     bulk_update_data = {
         "destination_filter": {"role": {"slug": "controller"}},
     }
     choices_fields = ["destination_type", "source_type", "type"]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -1161,6 +1191,12 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
+        {
+            "content_type": "dcim.site",
+            "label": "Computed Field 7",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
     ]
     update_data = {
         "content_type": "dcim.site",
@@ -1170,6 +1206,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "label"
 
     @classmethod
     def setUpTestData(cls):

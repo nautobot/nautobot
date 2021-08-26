@@ -12,6 +12,7 @@ from django.utils.functional import classproperty
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import ObjectChange, Status, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -172,7 +173,7 @@ class RIR(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
@@ -381,7 +382,7 @@ class Role(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     weight = models.PositiveSmallIntegerField(default=1000)
     description = models.CharField(
         max_length=200,
@@ -976,7 +977,8 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100)
+    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    slug = AutoSlugField(populate_from="name", unique=None)
     site = models.ForeignKey(
         to="dcim.Site",
         on_delete=models.PROTECT,
@@ -995,6 +997,7 @@ class VLANGroup(OrganizationalModel):
         )  # (site, name) may be non-unique
         unique_together = [
             ["site", "name"],
+            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
         verbose_name = "VLAN group"
