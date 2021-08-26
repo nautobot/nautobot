@@ -56,3 +56,8 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#472](https://github.com/nautobot/nautobot/issues/472) - `JobResult` lists now show the associated Job's name (if available) instead of the Job's `class_path`.
 - [#493](https://github.com/nautobot/nautobot/issues/493) - All `slug` fields are now optional when creating records via the REST API, ORM, or CSV import. Slugs will be automatically assigned if unspecified.
+
+### Fixed
+
+- [#852](https://github.com/nautobot/nautobot/issues/852) - Fixed missing "Change Log" tab on certain object detail views
+- [#853](https://github.com/nautobot/nautobot/issues/853) - Fixed `AttributeError` on certain object detail views
