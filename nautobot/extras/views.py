@@ -806,7 +806,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
 
         dry-run will immediately enqueue the job with commit=False and send the user to the normal JobResult view
         deny will delete the scheduled_job instance
-        approve will mark the scheduled_job as approved, allowing the schedular to schedule the ob execution task
+        approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
         """
         if not request.user.has_perm("extras.run_job"):
             return HttpResponseForbidden()
@@ -852,7 +852,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
             return redirect("extras:scheduled_jobs_approval_queue_list")
 
         elif "_approve" in post_data:
-            # Mark the scheduled_job as approved, allowing the schedular to schedule the ob execution task
+            # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
             if request.user == scheduled_job.user:
                 # The requestor *cannot* approve their own job
                 messages.error(request, "You cannot approve your own job request!")

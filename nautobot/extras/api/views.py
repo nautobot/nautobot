@@ -2,8 +2,9 @@ from datetime import datetime
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_rq.queues import get_connection
-from drf_yasg.utils import swagger_auto_schema
+from drf_yasg.utils import no_body, swagger_auto_schema
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -391,6 +392,77 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     queryset = ScheduledJob.objects.prefetch_related("user")
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
+
+    @swagger_auto_schema(
+        method="post",
+        responses={"200": serializers.ScheduledJobSerializer},
+        request_body=no_body,
+    )
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk):
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied()
+
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+
+        # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+        if request.user == scheduled_job.user:
+            # The requestor *cannot* approve their own job
+            return Response("You cannot approve your own job request!", status=403)
+
+        scheduled_job.approved_by_user = request.user
+        scheduled_job.approved_at = timezone.now()
+        scheduled_job.save()
+        serializer = serializers.ScheduledJobSerializer(scheduled_job, context={"request": request})
+
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        method="post",
+        request_body=no_body,
+    )
+    @action(detail=True, methods=["post"])
+    def deny(self, request, pk):
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied()
+
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+
+        scheduled_job.delete()
+
+        return Response(None)
+
+    @swagger_auto_schema(
+        method="post",
+        responses={"200": serializers.JobResultSerializer},
+        request_body=no_body,
+    )
+    @action(detail=True, methods=["post"])
+    def dry_run(self, request, pk):
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied()
+
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        job_class = get_job(scheduled_job.job_class)
+        if job_class is None:
+            raise Http404
+        job = job_class()
+        grouping, module, class_name = job_class.class_path.split("/", 2)
+
+        # Immediately enqueue the job with commit=False
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
+        job_result = JobResult.enqueue_job(
+            run_job,
+            job.class_path,
+            job_content_type,
+            scheduled_job.user,
+            data=scheduled_job.kwargs["data"],
+            request=copy_safe_request(request),
+            commit=False,  # force a dry-run
+        )
+        serializer = serializers.JobResultSerializer(job_result, context={"request": request})
+
+        return Response(serializer.data)
 
 
 #
