@@ -7,7 +7,7 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0011_fileattachment_fileproxy"),
+        ("extras", "0012_healthchecktestmodel"),
     ]
 
     operations = [

@@ -1,5 +1,5 @@
 ---
-version: "3"
+version: "3.4"
 services:
   nautobot:
     build:
@@ -34,7 +34,7 @@ services:
     tty: true
   celery_worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
-    entrypoint: "nautobot-server celery worker -B -l INFO"
+    entrypoint: "nautobot-server celery worker -l INFO"
     healthcheck:
       interval: 5s
       timeout: 5s

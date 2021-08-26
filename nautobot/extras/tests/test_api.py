@@ -42,7 +42,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar
+from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
@@ -436,6 +436,7 @@ class JobTest(APITestCase):
         var1 = StringVar()
         var2 = IntegerVar()
         var3 = BooleanVar()
+        var4 = ObjectVar(model=DeviceRole)
 
         def run(self, data, commit=True):
             self.log_info(message=data["var1"])
@@ -547,6 +548,48 @@ class JobTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["result"]["status"]["value"], "pending")
+
+    @skipIf(not rq_worker_running, "RQ worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_object_var(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {"var4": d.pk}
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
+        response = self.client.get(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
+
+    @skipIf(not rq_worker_running, "RQ worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_object_var_lookup(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {"var4": {"name": "role"}}
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
+        response = self.client.get(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
 
 
 class JobResultTest(APITestCase):
