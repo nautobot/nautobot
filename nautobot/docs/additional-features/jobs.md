@@ -98,6 +98,10 @@ A list of strings (field names) representing the order your form fields should a
 
 A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
+#### `approval_required`
+
+A boolean that will mark this job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](./job_scheduling_and_approvals.md).
+
 ### Variables
 
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
@@ -353,7 +357,7 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint, with the option of specifying any required user input data and/or the `commit` flag.
+To run a job via the REST API, issue a POST request to the job's endpoint, with the option of specifying any required user input data and/or the `commit` flag, as well as optional scheduling information as described in [the section on scheduling and approvals](./job_scheduling_and_approvals.md).
 
 ```no-highlight
 curl -X POST \
