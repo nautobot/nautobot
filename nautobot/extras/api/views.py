@@ -4,6 +4,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django_rq.queues import get_connection
+from drf_yasg import openapi
 from drf_yasg.utils import no_body, swagger_auto_schema
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
@@ -397,6 +398,14 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         method="post",
         responses={"200": serializers.ScheduledJobSerializer},
         request_body=no_body,
+        manual_parameters=[
+            openapi.Parameter(
+                "force",
+                openapi.IN_QUERY,
+                description="force execution even if start time has passed",
+                type=openapi.TYPE_BOOLEAN,
+            )
+        ],
     )
     @action(detail=True, methods=["post"])
     def approve(self, request, pk):
@@ -409,6 +418,16 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         if request.user == scheduled_job.user:
             # The requestor *cannot* approve their own job
             return Response("You cannot approve your own job request!", status=403)
+
+        if (
+            scheduled_job.one_off
+            and scheduled_job.start_time < timezone.now()
+            and not request.query_params.get("force")
+        ):
+            return Response(
+                "The job's start time is in the past. If you want to force a run anyway, add the `force` query parameter.",
+                status=400,
+            )
 
         scheduled_job.approved_by_user = request.user
         scheduled_job.approved_at = timezone.now()
