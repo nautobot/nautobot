@@ -87,9 +87,11 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 ### Added
 
+- [#11](https://github.com/nautobot/nautobot/issues/11) - Added tests to verify that plugin models can support webhooks if appropriately decorated with `@extras_features("webhooks")`
 - [#652](https://github.com/nautobot/nautobot/issues/652) - Jobs REST API `run` endpoint now can look up ObjectVar references via a dictionary of parameters.
 - [#791](https://github.com/nautobot/nautobot/issues/791) - Added support for `NAUTOBOT_DOCKER_SKIP_INIT` variable to allow running the Docker container with a read-only database.
 - [#841](https://github.com/nautobot/nautobot/pull/841) - Added more detailed documentation around defining Relationship filters.
+- [#850](https://github.com/nautobot/nautobot/pull/850) - Added developer documentation around the installation and use of `mkdocs` to locally preview documentation changes.
 
 ### Changed
 
