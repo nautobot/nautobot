@@ -8,7 +8,7 @@
     <div class="row noprint">
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
-                <li><a href="{% url 'plugins:dummy_plugin:dummymodel_list' %}">Custom Links</a></li>
+                <li><a href="{% url 'plugins:dummy_plugin:dummymodel_list' %}">Dummy Model</a></li>
                 {% if object.name %}
                     <li><a href="{% url 'plugins:dummy_plugin:dummymodel' pk=object.pk %}">{{ object.name }}</a></li>
                 {% endif %}
