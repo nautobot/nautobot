@@ -952,6 +952,25 @@ query {
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_filter_second_level(self):
+        """Test custom interface filter fields and boolean, not other concrete fields on second level of query."""
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 2),
+            ('kind: "virtual"', 2),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ("vlan: 100", 1),
+            (f'vlan_id: "{self.vlan1.id}"', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ interfaces(" + filter + "){ id }}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
         """Test querying interfaces for their connected endpoints."""
 
