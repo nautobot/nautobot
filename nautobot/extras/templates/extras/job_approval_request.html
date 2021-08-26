@@ -89,7 +89,7 @@
                             <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-play"></i> Dry Run</button>
                             <button type="submit" name="_approve" id="id__approve" class="btn btn-success"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-check"></i> Approve</button>
                             <button type="submit" name="_deny" id="id__approve" class="btn btn-danger"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}><i class="mdi mdi-close"></i> Deny</button>
-                            <a href="{% url 'extras:scheduled_jobs_approval_queue_list' %}" class="btn btn-default">Cancel</a>
+                            <a href="{% url 'extras:scheduledjob_approval_queue_list' %}" class="btn btn-default">Cancel</a>
                         </div>
                     </form>
                 </div>

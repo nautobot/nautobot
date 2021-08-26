@@ -756,10 +756,10 @@ class JobView(ContentTypePermissionRequiredMixin, View):
 
                 if job_class.approval_required:
                     messages.success(request, f"Job {schedule_name} successfully submitted for approval")
-                    return redirect("extras:scheduled_jobs_approval_queue_list")
+                    return redirect("extras:scheduledjob_approval_queue_list")
                 else:
                     messages.success(request, f"Job {schedule_name} successfully scheduled")
-                    return redirect("extras:scheduled_jobs_list")
+                    return redirect("extras:scheduledjob_list")
 
             else:
                 # Enqueue job for immediate execution
@@ -849,7 +849,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
             else:
                 messages.error(request, f"Approval of {scheduled_job.name} was denied")
 
-            return redirect("extras:scheduled_jobs_approval_queue_list")
+            return redirect("extras:scheduledjob_approval_queue_list")
 
         elif "_approve" in post_data:
             # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
@@ -863,7 +863,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
 
                 messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")
 
-            return redirect("extras:scheduled_jobs_approval_queue_list")
+            return redirect("extras:scheduledjob_approval_queue_list")
 
         return render(
             request,

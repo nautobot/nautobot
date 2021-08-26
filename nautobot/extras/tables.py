@@ -81,17 +81,17 @@ WEBHOOK_CONTENT_TYPES = """
 
 SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduled_jobs_approval_request_view' scheduled_job=record.pk %}', '_dry_run')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_dry_run')"
         class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-play"></i>
 </button>
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduled_jobs_approval_request_view' scheduled_job=record.pk %}', '_approve')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_approve')"
         class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-check"></i>
 </button>
 <button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduled_jobs_approval_request_view' scheduled_job=record.pk %}', '_deny')"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_deny')"
         class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-close"></i>
 </button>
@@ -334,7 +334,7 @@ class ScheduledJobTable(BaseTable):
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
-    name = tables.LinkColumn(viewname="extras:scheduled_jobs_approval_request_view", args=[tables.A("pk")])
+    name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
     job_class = tables.Column(verbose_name="Job")
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
