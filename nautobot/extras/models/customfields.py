@@ -64,7 +64,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
     fallback_value = models.CharField(
         max_length=500,
         blank=True,
-        help_text="Fallback value to be used for the field in the case of a template rendering error. Defaults to 'Unable to generate {Label}'",
+        help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
 
@@ -89,19 +89,11 @@ class ComputedField(BaseModel, ChangeLoggedModel):
             # Doesn't raise an exception either most likely due to using Undefined rather
             # than StrictUndefined, but return fallback_value if None is returned
             if not rendered:
+                logger.warning("Failed to render computed field %s", self.slug)
                 return self.fallback_value
-            return rendered
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.slug, exc)
             return self.fallback_value
-
-    def save(self, *args, **kwargs):
-
-        # If the user does not provide a fallback value, generate default one.
-        if not self.fallback_value:
-            self.fallback_value = f"Unable to generate {self.label}."
-
-        super().save(*args, **kwargs)
 
 
 class CustomFieldModel(models.Model):
