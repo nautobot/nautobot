@@ -180,7 +180,7 @@ def extend_schema_type_filter(schema_type, model):
     for field_name in dir(model):
         attr = getattr(model, field_name)
         # Check attribute is a ManyToOne field
-        if not isinstance(attr, ReverseManyToOneDescriptor):
+        if not isinstance(attr, ReverseManyToOneDescriptor) or not getattr(model, field_name).field.many_to_one:
             continue
 
         child_schema_type = registry["graphql_types"].get(attr.field.model._meta.label_lower)
