@@ -456,7 +456,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         responses={"200": serializers.JobResultSerializer},
         request_body=no_body,
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, url_path="dry-run", methods=["post"])
     def dry_run(self, request, pk):
         if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied()
