@@ -5,6 +5,7 @@ import logging
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
+from django.db.models.fields.reverse_related import ManyToOneRel
 
 import graphene
 from graphene.types import generic
@@ -177,23 +178,20 @@ def extend_schema_type_filter(schema_type, model):
     Returns:
         schema_type (DjangoObjectType)
     """
-    for field_name in dir(model):
-        attr = getattr(model, field_name)
+    for field in model._meta.get_fields():
         # Check attribute is a ManyToOne field
-        if not isinstance(attr, ReverseManyToOneDescriptor) or not getattr(model, field_name).field.many_to_one:
+        if not isinstance(field, ManyToOneRel):
             continue
-
-        child_schema_type = registry["graphql_types"].get(attr.field.model._meta.label_lower)
+        child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
         if child_schema_type:
-            resolver_name = f"resolve_{field_name}"
+            resolver_name = f"resolve_{field.name}"
             search_params = generate_list_search_parameters(child_schema_type)
             # Add OneToMany field to schema_type
-            schema_type._meta.fields[field_name] = graphene.Field.mounted(
+            schema_type._meta.fields[field.name] = graphene.Field.mounted(
                 graphene.List(child_schema_type, **search_params)
             )
             # Add resolve function to schema_type
-            setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field_name))
-
+            setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field.name))
     return schema_type
 
 
