@@ -24,6 +24,19 @@ Webhooks can now be triggered when creating/updating/deleting `CustomField` and 
 
 After running `nautobot-server migrate` or `nautobot-server post_upgrade`, Nautobot now emits a custom signal, `nautobot_database_ready`. This signal is designed for plugins to connect to in order to perform automatic database population (such as defining custom fields, relationships, webhooks, etc.) at install/upgrade time. For more details, refer to [the plugin development documentation](../plugins/development.md#populating-extensibility-features).
 
+#### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
+
+Jobs can now be optionally defined as `approval_required = True`, in which case the Job will not be executed immediately upon submission, but will instead be placed into an approval queue; any user *other than the submitter* can approve or deny a queued Job, at which point it will then be executed as normal.
+
+#### Job Scheduling ([#374](https://github.com/nautobot/nautobot/issues/374))
+
+Jobs can now be scheduled for execution at a future date and time (such as during a planned maintenance window), and can also be scheduled for repeated execution on an hourly, daily, or weekly recurring cadence.
+
+!!! note
+    Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
+
+TODO: add link to relevant documentation on enabling `nautobot-server celery beat` service!
+
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
 Each plugin is now able to inject a custom banner into any of the Nautobot core views.
@@ -45,7 +58,9 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 ### Added
 
 - [#13](https://github.com/nautobot/nautobot/issues/13) - Added `nautobot_database_ready` signal
+- [#125](https://github.com/nautobot/nautobot/issues/125) - Added support for `approval_required = True` on Jobs
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
+- [#374](https://github.com/nautobot/nautobot/issues/374) - Added ability to schedule Jobs for future and/or recurring execution
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
 - [#519](https://github.com/nautobot/nautobot/issues/519) - Added webhook support for `CustomField` and `CustomFieldChoice` models.
 - [#534](https://github.com/nautobot/nautobot/issues/534) - Added ability to inject a banner from a plugin
