@@ -183,6 +183,9 @@ Additional useful commands for the development environment:
 - `invoke start` - Starts all Docker containers to run in the background with debug disabled
 - `invoke stop` - Stops all containers created by `invoke start`
 
+!!! tip
+    To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
+
 ### Python Virtual Environment Workflow
 
 This workflow uses Python and Poetry to work with your development environment locally. It requires that you install the required system dependencies on your system yourself.
