@@ -33,7 +33,19 @@ from nautobot.core.graphql.schema import (
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
-from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, FrontPort, Interface, Manufacturer, Rack, RearPort, Region, Site
+from nautobot.dcim.models import (
+    Cable,
+    Device,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    Interface,
+    Manufacturer,
+    Rack,
+    RearPort,
+    Region,
+    Site,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.utilities.testing.utils import create_test_user
 
@@ -1056,7 +1068,6 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)
-
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
