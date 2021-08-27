@@ -963,7 +963,7 @@ query {
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_cables_filter_second_level(self):
+    def test_query_frontport_filter_second_level(self):
 
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
