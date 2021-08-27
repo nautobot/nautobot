@@ -48,16 +48,16 @@ def edit_button(instance, use_pk=False, key="slug"):
 
     Args:
         instance: Model record.
-        use_pk: If True, use the primary key instead of the slug. (Deprecated, use "key" instead)
-        key: The attribute in model used in reverse lookup.
+        use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
+        key: The attribute on the model to use for reverse URL lookup.
     """
     viewname = _get_viewname(instance, "edit")
 
     # Assign kwargs
-    if use_pk:
-        kwargs = {"pk": instance.pk}
-    else:
+    if hasattr(instance, key) and not use_pk:
         kwargs = {key: getattr(instance, key)}
+    else:
+        kwargs = {"pk": instance.pk}
 
     url = reverse(viewname, kwargs=kwargs)
 
@@ -73,16 +73,16 @@ def delete_button(instance, use_pk=False, key="slug"):
 
     Args:
         instance: Model record.
-        use_pk: If True, use the primary key instead of the slug. (Deprecated, use "key" instead)
-        key: The attribute in model used in reverse lookup.
+        use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
+        key: The attribute on the model to use for reverse URL lookup.
     """
     viewname = _get_viewname(instance, "delete")
 
     # Assign kwargs
-    if use_pk:
-        kwargs = {"pk": instance.pk}
-    else:
+    if hasattr(instance, key) and not use_pk:
         kwargs = {key: getattr(instance, key)}
+    else:
+        kwargs = {"pk": instance.pk}
 
     url = reverse(viewname, kwargs=kwargs)
 

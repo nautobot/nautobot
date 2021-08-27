@@ -16,6 +16,7 @@ from nautobot.extras.choices import *
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
@@ -57,7 +58,7 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
     )
-    slug = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
+    slug = AutoSlugField(populate_from="label", help_text="Internal field name")
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
@@ -186,6 +187,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
         return self.get_queryset().filter(content_types=content_type)
 
 
+@extras_features("webhooks")
 class CustomField(BaseModel):
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -466,6 +468,7 @@ class CustomField(BaseModel):
         return reverse("extras:customfield", args=[self.name])
 
 
+@extras_features("webhooks")
 class CustomFieldChoice(BaseModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field

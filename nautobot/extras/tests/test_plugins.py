@@ -1,22 +1,25 @@
 from unittest import skipIf
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.dcim.models import Site
+from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
+from nautobot.extras.models import CustomField
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.utilities.testing import APITestCase, APIViewTestCases, TestCase, ViewTestCases
+from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases
 
-from dummy_plugin.models import DummyModel
 from dummy_plugin import config as dummy_config
 from dummy_plugin.datasources import refresh_git_text_files
+from dummy_plugin.models import DummyModel
 
 
 @skipIf(
@@ -278,6 +281,16 @@ class PluginTest(TestCase):
                 "plugins:dummy_plugin:dummymodel_list"
             )
         )
+
+    def test_nautobot_database_ready_signal(self):
+        """
+        Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
+        creating a custom field definition in the database.
+        """
+        cf = CustomField.objects.get(name="dummy-plugin-auto-custom-field")
+        self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
+        self.assertEqual(cf.label, "Dummy Plugin Automatically Added Custom Field")
+        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
 
 
 @skipIf(

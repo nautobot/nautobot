@@ -969,7 +969,6 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 class StatusCSVForm(CustomFieldModelCSVForm):
     """Generic CSV bulk import form for `Status` objects."""
 
-    slug = SlugField()
     content_types = CSVMultipleContentTypeField(
         feature="statuses",
         choices_as_strings=True,

@@ -298,11 +298,15 @@ The following instance methods are available to log results from an executing jo
 * `self.log_warning(obj=None, message=None)`
 * `self.log_failure(obj=None, message=None)`
 
-The recording of one or more failure messages will automatically flag the overall job as failed. It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
-
 Messages recorded with `log()` or `log_debug()` will appear in a job's results but are never associated with a particular object; the other `log_*` functions may be invoked with or without a provided object to associate the message with.
 
+It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
+
 Markdown rendering is supported for log messages.
+
+!!! note
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job. To end a job early, you can use a Python `raise` or `return` as appropriate.
+
 
 ### Accessing Request Data
 
@@ -374,6 +378,12 @@ http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
 
 !!! note
     In this example, `local/example/MyJobWithVars` is the job's `class_path` - [see above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
+
+When providing input data, it is possible to specify complex values contained in `ObjectVar`s, `MultiObjectVar`s, and `IPAddressVar`s.
+
+* `ObjectVar`s can be specified by either using their primary key directly as the value, or as a dictionary containing a more complicated query that gets passed into the Django ORM as keyword arguments.
+* `MultiObjectVar`s can be specified as a list of primary keys.
+* `IPAddressVar`s can be provided as strings in CIDR notation.
 
 ### Via the CLI
 

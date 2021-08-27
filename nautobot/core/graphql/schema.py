@@ -359,15 +359,15 @@ def generate_query_mixin():
 
         if single_item_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema type '{single_item_name}' in GraphQL from '{app_name}':'{model_name}',"
-                "there is already another type registered under this name"
+                f"Unable to register the schema single type '{single_item_name}' in GraphQL, "
+                f"there is already another type {class_attrs[single_item_name]._type} registered under this name"
             )
             return True
 
         if list_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema type '{list_name}' in GraphQL from '{app_name}':'{model_name}',"
-                "there is already another type registered under this name"
+                f"Unable to register the schema list type '{list_name}' in GraphQL, "
+                f"there is already another type {class_attrs[list_name]._type} registered under this name"
             )
             return True
 

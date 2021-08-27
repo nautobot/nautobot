@@ -24,11 +24,13 @@ from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
 from graphql.language.ast import OperationDefinition
+from jsonschema import draft7_format_checker
 from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import *
@@ -464,7 +466,7 @@ class ConfigContextSchemaValidationMixin:
         # If schema is None, then no schema has been specified on the instance and thus no validation should occur.
         if schema:
             try:
-                Draft7Validator(schema.data_schema).validate(data)
+                Draft7Validator(schema.data_schema, format_checker=draft7_format_checker).validate(data)
             except JSONSchemaValidationError as e:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
@@ -636,7 +638,7 @@ class ConfigContextSchema(OrganizationalModel):
 
     name = models.CharField(max_length=200, unique=True)
     description = models.CharField(max_length=200, blank=True)
-    slug = models.SlugField()
+    slug = AutoSlugField(populate_from="name", max_length=200, unique=None)
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -1142,7 +1144,7 @@ signals.post_save.connect(ScheduledJobs.update_changed, sender=ScheduledJob)
 @extras_features("graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel):
     name = models.CharField(max_length=100, unique=True)
-    slug = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
@@ -1188,3 +1190,12 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel):
 
     def __str__(self):
         return self.name
+
+
+#
+# Health Check
+#
+
+
+class HealthCheckTestModel(BaseModel):
+    title = models.CharField(max_length=128)

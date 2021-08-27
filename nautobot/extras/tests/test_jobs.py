@@ -6,7 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileAttachment, FileProxy, JobResult
@@ -225,6 +225,40 @@ class JobTest(TestCase):
             # Assert stuff
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
             self.assertEqual(form_data, job_result_data)
+
+    def test_object_vars(self):
+        """
+        Test that Object variable fields behave as expected.
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+
+            module = "test_object_vars"
+            name = "TestObjectVars"
+            job_class = get_job(f"local/{module}/{name}")
+
+            d = DeviceRole.objects.create(name="role", slug="role")
+
+            # Prepare the job data
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+            data = {
+                "role": {"name": "role"},
+                "roles": [d.pk],
+            }
+
+            # Run the job and extract the job payload data
+            run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+            job_payload = job_result.data["run"]["log"][0][2]  # Indexing makes me sad.
+            job_result_data = json.loads(job_payload)
+
+            # Assert stuff
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+            self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
 
 
 class JobFileUploadTest(TestCase):

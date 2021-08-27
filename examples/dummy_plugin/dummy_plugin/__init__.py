@@ -7,7 +7,10 @@ except ImportError:
 __version__ = metadata.version(__name__)
 
 
+from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins import PluginConfig
+
+from dummy_plugin.signals import nautobot_database_ready_callback
 
 
 class DummyPluginConfig(PluginConfig):
@@ -23,6 +26,14 @@ class DummyPluginConfig(PluginConfig):
     default_settings = {
         "dummy_default_key": "dummy_default_value",
     }
+
+    def ready(self):
+        """Callback when this plugin is loaded."""
+        super().ready()
+        # Connect the nautobot_database_ready_callback() function to the nautobot_database_ready signal.
+        # This is by no means a requirement for all plugins, but is a useful way for a plugin to perform
+        # database operations such as defining CustomFields, Relationships, etc. at the appropriate time.
+        nautobot_database_ready.connect(nautobot_database_ready_callback, sender=self)
 
 
 config = DummyPluginConfig

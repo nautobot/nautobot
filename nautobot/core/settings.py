@@ -306,9 +306,9 @@ INSTALLED_APPS = [
     "graphene_django",
     "django_celery_beat",
     "health_check",
-    "health_check.db",
     "health_check.cache",
     "health_check.storage",
+    "django_extensions",
 ]
 
 # Middleware
