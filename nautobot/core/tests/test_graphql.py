@@ -964,6 +964,7 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_frontport_filter_second_level(self):
+        """Test custom frontport filter fields and boolean, not other concrete fields."""
 
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
@@ -977,6 +978,23 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_frontport_filter_third_level(self):
+        """Test custom frontport filter fields and boolean, not other concrete fields."""
+
+        filters = (
+            (f'name: "{self.device1_frontports[0].name}"', 1),
+            (f'device: "{self.device1.name}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ frontports(" + filter + "){ id }}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter(self):
@@ -1003,7 +1021,7 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter_second_level(self):
-        """Test custom interface filter fields and boolean, not other concrete fields on second level of query."""
+        """Test custom interface filter fields, not other concrete fields on second level of query."""
 
         filters = (
             (f'device_id: "{self.device1.id}"', 2),
@@ -1019,6 +1037,26 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_filter_third_level(self):
+        """Test custom interface filter fields, not other concrete fields on second level of query."""
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 2),
+            ('kind: "virtual"', 2),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ("vlan: 100", 1),
+            (f'vlan_id: "{self.vlan1.id}"', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ interfaces(" + filter + "){ id }}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)
+
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
