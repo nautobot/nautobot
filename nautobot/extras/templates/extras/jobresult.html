@@ -57,10 +57,36 @@
     {% if job %}
         <p>{{ job.description }}</p>
     {% endif %}
-    <div class="row">
-        <div class="col-md-12">
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active">
+            <a href="#log" role="tab" data-toggle="tab" class="active">Log</a>
+        </li>
+        {% if result.data.output %}
+            <li role="presentation">
+                <a href="#output" role="tab" data-toggle="tab">Output</a>
+            </li>
+        {% endif %}
+        {% if job %}
+            <li role="presentation">
+                <a href="#source" role="tab" data-toggle="tab">Source</a>
+            </li>
+        {% endif %}
+    </ul>
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="log">
             {% include 'extras/inc/jobresult.html' with result=result %}
         </div>
+    {% if result.data.output %}
+        <div role="tabpanel" class="tab-pane" id="output">
+            <pre>{{ result.data.output }}</pre>
+        </div>
+    {% endif %}
+    {% if job %}
+        <div role="tabpanel" class="tab-pane" id="source">
+            <p><code>{{ job.filename }}</code></p>
+            <pre>{{ job.source }}</pre>
+        </div>
+    {% endif %}
     </div>
     <div class="row">
         <div class="col-md-12">
