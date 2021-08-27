@@ -42,9 +42,11 @@ Jobs can be approved via the UI and API by any user that has the rights to run a
 
 The queue of jobs that need approval can be found under `Extensibility > Job Approval Queue`. There, any job that needs approval before it gets run is listed. To approve a job, select it and click the button to approve. Please note that you will be  asked for confirmation if a job is being approved that is past its scheduled datetime.
 
+If the approver is unsure what a job would do, a dry run can also be started via that same view.
+
 ## Approval via the API
 
-Approvals can also be given via the REST API. The endpoints to approve, deny, and dry run a scheduled job are found on the scheduleb job endpoint under `approve`, `deny`, and `dry-run`, respectively.
+Approvals can also be given via the REST API. The endpoints to approve, deny, and dry run a scheduled job are found on the scheduled job endpoint under `approve`, `deny`, and `dry-run`, respectively.
 
 ```no-highlight
 curl -X POST \
