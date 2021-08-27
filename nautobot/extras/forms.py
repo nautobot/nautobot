@@ -4,7 +4,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import TextField
 from django.urls.base import reverse
 from django.core.validators import ValidationError
-from django.utils import timezone
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
@@ -42,7 +41,6 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    Job,
     JobResult,
     ObjectChange,
     Relationship,
