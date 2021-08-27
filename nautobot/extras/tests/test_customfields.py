@@ -801,7 +801,7 @@ class CustomFieldModelTest(TestCase):
             fallback_value="This template has errored",
             weight=100,
         )
-        # Field whose template will return None and fallback_value gets set during save
+        # Field whose template will return None, with fallback_value defaulting to empty string
         self.bad_attribute_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Site),
             slug="bad_attribute_computed_field",
