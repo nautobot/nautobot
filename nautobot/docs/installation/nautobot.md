@@ -209,7 +209,7 @@ We will cover two examples of common optional settings below.
 
 ### Configuring NAPALM
 
-Nautobot provides built-in support for the [NAPALM automation](https://napalm-automation.net/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
+Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
 To use NAPALM, add `napalm` to your `local_requirements.txt` so that it can be installed and kept up to date:
 

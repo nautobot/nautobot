@@ -297,6 +297,16 @@ print(json.dumps(gql.json, indent=2))
 
 In the updated script, we add the `variables = {"site_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `site`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` site. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
 
+### Saving Queries
+
+Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
+
+Inside of **Extensibility -> Data Management -> GraphQL Queries**, there are views to create and manage GraphQL queries.
+
+Saved queries can be executed from the detailed query view or via a REST API request. The queries can also be populated from the detailed query view into GraphiQL by using the "Open in GraphiQL" button. Additionally, in the GraphiQL UI, there is now a menu item, "Queries", which can be used to populate GraphiQL with any previously saved query.
+
+To execute a stored query via the REST API, a POST request can be sent to `/api/extras/graphql-queries/[slug]/run/`. Any GraphQL variables required by the query can be passed in as JSON data within the request body.
+
 ## Closing
 
 GraphQL is a powerful, yet simple, tool for querying the exact information that is necessary for the task at hand. For further information about GraphQL, be sure to check out the [GraphQL Docs](https://graphql.org/learn/)!

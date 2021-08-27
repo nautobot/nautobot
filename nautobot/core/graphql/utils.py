@@ -34,6 +34,9 @@ def get_filtering_args_from_filterset(filterset_class):
     instance = filterset_class()
 
     for filter_name, filter_field in instance.filters.items():
+        # For general safety, but especially for the case of custom fields
+        # (https://github.com/nautobot/nautobot/issues/464)
+        filter_name = str_to_var_name(filter_name)
 
         field_type = graphene.String
         filter_field_class = type(filter_field)

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0011_fileattachment_fileproxy"),
+        ("extras", "0012_healthchecktestmodel"),
     ]
 
     operations = [
