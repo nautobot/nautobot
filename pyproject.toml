@@ -38,6 +38,8 @@ celery = "~5.1.0"
 Django = "~3.1.12"
 # Caching with Redis
 django-cacheops = "~5.1"
+# Base functionality for task scheduling with Celery
+django-celery-beat = "^2.2.0"
 # Permit cross-domain API requests
 django-cors-headers = "~3.7.0"
 # Support for encrypted database fields

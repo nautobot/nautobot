@@ -33,6 +33,7 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     TaggedItem,
@@ -76,6 +77,24 @@ OBJECTCHANGE_REQUEST_ID = """
 # TODO: Webhook content_types in table order_by
 WEBHOOK_CONTENT_TYPES = """
 {{ value.all|join:", "|truncatewords:15 }}
+"""
+
+SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_dry_run')"
+        class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-play"></i>
+</button>
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_approve')"
+        class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-check"></i>
+</button>
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_deny')"
+        class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-close"></i>
+</button>
 """
 
 
@@ -293,6 +312,38 @@ class JobResultTable(BaseTable):
             "data",
         )
         default_columns = ("pk", "created", "related_object", "user", "status", "data")
+
+
+#
+# ScheduledJobs
+#
+
+
+class ScheduledJobTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    job_class = tables.Column(verbose_name="Job")
+    interval = tables.Column(verbose_name="Execution Type")
+    start_time = tables.Column(verbose_name="First Run")
+    last_run_at = tables.Column(verbose_name="Most Recent Run")
+    total_run_count = tables.Column(verbose_name="Total Run Count")
+
+    class Meta(BaseTable.Meta):
+        model = ScheduledJob
+        fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
+
+
+class ScheduledJobApprovalQueueTable(BaseTable):
+    name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
+    job_class = tables.Column(verbose_name="Job")
+    interval = tables.Column(verbose_name="Execution Type")
+    start_time = tables.Column(verbose_name="Requested")
+    user = tables.Column(verbose_name="Requestor")
+    actions = tables.TemplateColumn(SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS)
+
+    class Meta(BaseTable.Meta):
+        model = ScheduledJob
+        fields = ("name", "job_class", "interval", "user", "start_time", "actions")
 
 
 class ObjectChangeTable(BaseTable):
