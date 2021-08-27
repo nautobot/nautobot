@@ -878,7 +878,7 @@ class CustomFieldModelTest(TestCase):
             "computed_field_one": f"{self.site1.name} is the name of this site.",
             "bad_computed_field": self.bad_computed_field.fallback_value,
             "worse_computed_field": self.worse_computed_field.fallback_value,
-            "bad_attribute_computed_field": f"Unable to generate {self.bad_attribute_computed_field.label}.",
+            "bad_attribute_computed_field": "",
         }
         self.assertDictEqual(self.site1.get_computed_fields(), expected_renderings)
 
@@ -887,7 +887,7 @@ class CustomFieldModelTest(TestCase):
             "Computed Field One": f"{self.site1.name} is the name of this site.",
             "Bad Computed Field": self.bad_computed_field.fallback_value,
             "Worse Computed Field": self.worse_computed_field.fallback_value,
-            "Bad Attribute Computed Field": f"Unable to generate {self.bad_attribute_computed_field.label}.",
+            "Bad Attribute Computed Field": "",
         }
         self.assertDictEqual(self.site1.get_computed_fields(label_as_key=True), expected_renderings)
 

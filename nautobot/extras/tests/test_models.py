@@ -758,7 +758,7 @@ class ComputedFieldTest(TestCase):
 
     def test_render_method_undefined_error(self):
         rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, "Unable to generate Blank Fallback Value.")
+        self.assertEqual(rendered_value, "")
 
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.site1})

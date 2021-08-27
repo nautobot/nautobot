@@ -88,9 +88,10 @@ class ComputedField(BaseModel, ChangeLoggedModel):
             # If there is an undefined variable within a template, it returns nothing
             # Doesn't raise an exception either most likely due to using Undefined rather
             # than StrictUndefined, but return fallback_value if None is returned
-            if not rendered:
+            if rendered is None:
                 logger.warning("Failed to render computed field %s", self.slug)
                 return self.fallback_value
+            return rendered
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.slug, exc)
             return self.fallback_value
