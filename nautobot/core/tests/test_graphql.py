@@ -976,7 +976,7 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_frontport_filter_second_level(self):
-        """Test custom frontport filter fields and boolean, not other concrete fields."""
+        """Test "second-level" filtering of FrontPorts within a Devices query."""
 
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
@@ -993,7 +993,7 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_frontport_filter_third_level(self):
-        """Test custom frontport filter fields and boolean, not other concrete fields."""
+        """Test "third-level" filtering of FrontPorts within Devices within Sites."""
 
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
@@ -1033,7 +1033,7 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter_second_level(self):
-        """Test custom interface filter fields, not other concrete fields on second level of query."""
+        """Test "second-level" filtering of Interfaces within a Devices query."""
 
         filters = (
             (f'device_id: "{self.device1.id}"', 2),
@@ -1052,7 +1052,7 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter_third_level(self):
-        """Test custom interface filter fields, not other concrete fields on second level of query."""
+        """Test "third-level" filtering of Interfaces within Devices within Sites."""
 
         filters = (
             (f'device_id: "{self.device1.id}"', 2),

@@ -65,24 +65,24 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     filterset_class = schema_type._meta.filterset_class
 
     def resolve_filter(self, *args, **kwargs):
-        if filterset_class is not None:
-            resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
+        if not filterset_class:
+            return getattr(self, field_name).all()
 
-            # Check result filter for errors.
-            if resolved_obj.errors:
-                errors = {}
+        resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
 
-                # Build error message from results
-                # Error messages are collected from each filter object
-                for key in resolved_obj.errors:
-                    errors[key] = resolved_obj.errors[key]
-
-                # Raising this exception will send the error message in the response of the GraphQL request
-                raise GraphQLError(errors)
-
+        # Check result filter for errors.
+        if not resolved_obj.errors:
             return resolved_obj.qs.all()
 
-        return getattr(self, field_name).all()
+        errors = {}
+
+        # Build error message from results
+        # Error messages are collected from each filter object
+        for key in resolved_obj.errors:
+            errors[key] = resolved_obj.errors[key]
+
+        # Raising this exception will send the error message in the response of the GraphQL request
+        raise GraphQLError(errors)
 
     resolve_filter.__name__ = resolver_name
     return resolve_filter

@@ -4,7 +4,6 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
 from django.db.models.fields.reverse_related import ManyToOneRel
 
 import graphene
