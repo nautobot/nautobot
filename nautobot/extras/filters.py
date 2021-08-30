@@ -31,6 +31,7 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Secret,
     Status,
     Tag,
     Webhook,
@@ -54,6 +55,7 @@ __all__ = (
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
+    "SecretFilterSet",
     "StatusFilter",
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
@@ -582,6 +584,32 @@ class WebhookFilterSet(BaseFilterSet):
             | Q(additional_headers__icontains=value)
             | Q(body_template__icontains=value)
         )
+
+
+#
+# Secrets
+#
+
+
+class SecretFilterSet(
+    BaseFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+):
+    """Filterset for the Secret model."""
+
+    q = django_filters.CharFilter(method="search", label="Search")
+    # TODO dynamic choices needed
+    # provider = django_filters.MultipleChoiceFilter(choices=..., null_value=None)
+
+    class Meta:
+        model = Secret
+        fields = ["id", "name", "slug", "provider"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
 
 
 #

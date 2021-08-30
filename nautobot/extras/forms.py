@@ -26,6 +26,7 @@ from nautobot.utilities.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
+    TagFilterField,
     BOOLEAN_WITH_BLANK_CHOICES,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -46,6 +47,7 @@ from .models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
     Status,
     Tag,
     Webhook,
@@ -945,6 +947,47 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+
+
+#
+# Secrets
+#
+
+
+class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `Secret` objects."""
+
+    slug = SlugField()
+
+    # TODO dynamicly populated choices here?
+    # provider = forms.ChoiceField(choices=..., widget=StaticSelect2())
+
+    # TODO something more akin to a JobForm with dynamically constructed widgets
+    parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
+
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = Secret
+        fields = [
+            "name",
+            "slug",
+            "provider",
+            "parameters",
+            "tags",
+        ]
+
+
+class SecretCSVForm(CustomFieldModelCSVForm):
+    class Meta:
+        model = Secret
+        fields = Secret.csv_headers
+
+
+class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = Secret
+    q = forms.CharField(required=False, label="Search")
+    tag = TagFilterField(model)
 
 
 #

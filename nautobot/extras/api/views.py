@@ -36,8 +36,9 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
-    Status,
     ScheduledJob,
+    Secret,
+    Status,
     Tag,
     TaggedItem,
     Webhook,
@@ -527,6 +528,21 @@ class WebhooksViewSet(ModelViewSet):
     queryset = Webhook.objects.all()
     serializer_class = serializers.WebhookSerializer
     filterset_class = filters.WebhookFilterSet
+
+
+#
+# Secrets
+#
+
+
+class SecretsViewSet(ModelViewSet):
+    """
+    Manage Secrets through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = Secret.objects.all()
+    serializer_class = serializers.SecretSerializer
+    filterset_class = filters.SecretFilterSet
 
 
 #

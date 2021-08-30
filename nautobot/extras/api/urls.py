@@ -48,6 +48,9 @@ router.register("custom-links", views.CustomLinkViewSet)
 # Webhooks
 router.register("webhooks", views.WebhooksViewSet)
 
+# Secrets
+router.register("secrets", views.SecretsViewSet)
+
 # Statuses
 router.register("statuses", views.StatusViewSet)
 

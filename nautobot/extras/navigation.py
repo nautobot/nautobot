@@ -260,6 +260,28 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="extras:secret_list",
+                        name="Secrets",
+                        weight=500,
+                        permissions=[
+                            "extras.view_secret",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:secret_add",
+                                permissions=[
+                                    "extras.add_secret",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="extras:secret_import",
+                                permissions=[
+                                    "extras.add_secret",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(

@@ -10,8 +10,9 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
-    Tag,
+    Secret,
     Status,
+    Tag,
     Webhook,
 )
 
@@ -309,6 +310,20 @@ urlpatterns = [
         views.ObjectChangeLogView.as_view(),
         name="webhook_changelog",
         kwargs={"model": Webhook},
+    ),
+    # Secrets
+    path("secrets/", views.SecretListView.as_view(), name="secret_list"),
+    path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
+    path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
+    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),
+    path("secrets/<str:slug>/", views.SecretView.as_view(), name="secret"),
+    path("secrets/<str:slug>/edit/", views.SecretEditView.as_view(), name="secret_edit"),
+    path("secrets/<str:slug>/delete/", views.SecretDeleteView.as_view(), name="secret_delete"),
+    path(
+        "secrets/<str:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="secret_changelog",
+        kwargs={"model": Secret},
     ),
     # Custom statuses
     path("statuses/", views.StatusListView.as_view(), name="status_list"),

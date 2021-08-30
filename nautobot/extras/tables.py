@@ -17,6 +17,7 @@ from nautobot.utilities.tables import (
     ColorColumn,
     ColoredLabelColumn,
     ContentTypesColumn,
+    TagColumn,
     ToggleColumn,
 )
 from .jobs import get_job_classpaths, Job
@@ -34,6 +35,7 @@ from .models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
     Status,
     Tag,
     TaggedItem,
@@ -449,6 +451,34 @@ class WebhookTable(BaseTable):
             "payload_url",
             "http_content_type",
             "enabled",
+        )
+
+
+#
+# Secrets
+#
+
+
+class SecretTable(BaseTable):
+    """Table for list view of `Secret` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    tags = TagColumn(url_name="extras:secret_list")
+
+    class Meta(BaseTable.Meta):
+        model = Secret
+        fields = (
+            "pk",
+            "name",
+            "provider",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "provider",
+            "tags",
         )
 
 

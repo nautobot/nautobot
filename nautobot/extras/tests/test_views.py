@@ -19,6 +19,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Secret,
     Status,
     Tag,
     Webhook,
@@ -522,6 +523,63 @@ class WebhookTestCase(
             "http_method": "POST",
             "http_content_type": "application/json",
         }
+
+
+# Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
+class SecretTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkImportObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = Secret
+
+    @classmethod
+    def setUpTestData(cls):
+        tags = cls.create_tags("alpha", "beta", "gamma")
+
+        secrets = (
+            Secret(
+                name="View Test 1",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_1"},
+                tags=[t.pk for t in tags],
+            ),
+            Secret(
+                name="View Test 2",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_2"},
+            ),
+            Secret(
+                name="View Test 3",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_3"},
+            ),
+        )
+
+        for secret in secrets:
+            secret.validated_save()
+
+        cls.form_data = {
+            "name": "View Test 4",
+            "slug": "view-test-4",
+            "provider": "environment-variable",
+            "parameters": '{"variable": "VIEW_TEST_4"}',
+        }
+
+        cls.csv_data = (
+            "name,slug,provider,parameters",
+            'View Test 5,view-test-5,environment-variable,{"variable": "VIEW_TEST_5"}',
+            'View Test 6,,environment-variable,{"variable": "VIEW_TEST_6"}',
+            'View Test 7,,environment-variable,{"variable": "VIEW_TEST_7"}',
+        )
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "View Test 3"
 
 
 class GraphQLQueriesTestCase(

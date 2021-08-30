@@ -40,6 +40,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
     Status,
     Tag,
     Webhook,
@@ -670,6 +671,34 @@ class WebhookSerializer(ValidatedModelSerializer):
             "ssl_verification",
             "ca_file_path",
         ]
+
+
+#
+# Secrets
+#
+
+
+class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+    """Serializer for `Secret` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
+
+    class Meta:
+        model = Secret
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "provider",
+            "parameters",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
 
 
 #

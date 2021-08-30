@@ -38,6 +38,7 @@ from nautobot.extras.models import (
     JobResult,
     Relationship,
     RelationshipAssociation,
+    Secret,
     Status,
     Tag,
     Webhook,
@@ -842,6 +843,61 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         for webhook in webhooks:
             webhook.save()
             webhook.content_types.set([obj_type])
+
+
+class SecretTest(APIViewTestCases.APIViewTestCase):
+    model = Secret
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    bulk_update_data = {}
+
+    create_data = [
+        {
+            "name": "NAPALM Username",
+            "provider": "environment-variable",
+            "parameters": {
+                "variable": "NAPALM_USERNAME",
+            },
+        },
+        {
+            "name": "NAPALM Password",
+            "provider": "environment-variable",
+            "parameters": {
+                "variable": "NAPALM_PASSWORD",
+            },
+        },
+        {
+            "name": "GitHub Token for My Repository",
+            "slug": "github-token-my-repository",
+            "provider": "hashicorp-vault-key-value",
+            "parameters": {
+                "path": "/github-tokens/user/myusername/",
+            },
+        },
+    ]
+    slug_source = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets = (
+            Secret(
+                name="api-test-1",
+                provider="environment-variable",
+                parameters={"variable": "API_TEST_1"},
+            ),
+            Secret(
+                name="api-test-2",
+                provider="environment-variable",
+                parameters={"variable": "API_TEST_2"},
+            ),
+            Secret(
+                name="api-test-3",
+                provider="environment-variable",
+                parameters={"variable": "API_TEST_3"},
+            ),
+        )
+
+        for secret in secrets:
+            secret.validated_save()
 
 
 class StatusTest(APIViewTestCases.APIViewTestCase):

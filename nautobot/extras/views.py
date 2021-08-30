@@ -48,6 +48,7 @@ from .models import (
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
+    Secret,
     Status,
     Tag,
     TaggedItem,
@@ -1105,6 +1106,58 @@ class WebhookDeleteView(generic.ObjectDeleteView):
 class WebhookBulkDeleteView(generic.BulkDeleteView):
     queryset = Webhook.objects.all()
     table = tables.WebhookTable
+
+
+#
+# Secrets
+#
+
+
+class SecretListView(generic.ObjectListView):
+    queryset = Secret.objects.all()
+    filterset = filters.SecretFilterSet
+    filterset_form = forms.SecretFilterForm
+    table = tables.SecretTable
+
+
+class SecretView(generic.ObjectView):
+    queryset = Secret.objects.all()
+
+    def get_extra_context(self, request, instance):
+        # Determine user's preferred output format
+        if request.GET.get("format") in ["json", "yaml"]:
+            format = request.GET.get("format")
+            if request.user.is_authenticated:
+                request.user.set_config("extras.configcontext.format", format, commit=True)
+        elif request.user.is_authenticated:
+            format = request.user.get_config("extras.configcontext.format", "json")
+        else:
+            format = "json"
+
+        return {
+            "format": format,
+        }
+
+
+class SecretEditView(generic.ObjectEditView):
+    queryset = Secret.objects.all()
+    model_form = forms.SecretForm
+
+
+class SecretDeleteView(generic.ObjectDeleteView):
+    queryset = Secret.objects.all()
+
+
+class SecretBulkImportView(generic.BulkImportView):
+    queryset = Secret.objects.all()
+    model_form = forms.SecretCSVForm
+    table = tables.SecretTable
+
+
+class SecretBulkDeleteView(generic.BulkDeleteView):
+    queryset = Secret.objects.all()
+    filterset = filters.SecretFilterSet
+    table = tables.SecretTable
 
 
 #
