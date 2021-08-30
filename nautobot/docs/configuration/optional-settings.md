@@ -373,6 +373,9 @@ Default: Unset
 If you are using a self-signed git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
 in order for the repository to sync.
 
+!!! warning
+    This *must* be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
+
 ---
 
 ## GRAPHQL_CUSTOM_FIELD_PREFIX
