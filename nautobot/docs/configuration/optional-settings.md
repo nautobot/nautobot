@@ -343,7 +343,6 @@ Please see [the object permissions page](../administration/permissions.md) for m
 
 ---
 
-
 ## FORCE_SCRIPT_NAME
 
 Default: `None`
@@ -364,6 +363,15 @@ Default: `os.path.join(NAUTOBOT_ROOT, "git")`
 The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
+
+---
+
+## GIT_SSL_NO_VERIFY
+
+Default: Unset
+
+If you are using a self-signed git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
+in order for the repository to sync.
 
 ---
 
