@@ -24,6 +24,23 @@ Webhooks can now be triggered when creating/updating/deleting `CustomField` and 
 
 After running `nautobot-server migrate` or `nautobot-server post_upgrade`, Nautobot now emits a custom signal, `nautobot_database_ready`. This signal is designed for plugins to connect to in order to perform automatic database population (such as defining custom fields, relationships, webhooks, etc.) at install/upgrade time. For more details, refer to [the plugin development documentation](../plugins/development.md#populating-extensibility-features).
 
+#### GraphQL Filters at All Levels ([#248](https://github.com/nautobot/nautobot/issues/248))
+
+The GraphQL API now supports query filter parameters at any level of a query. For example:
+
+```graphql
+query {
+  sites(name: "ams") {
+    devices(role: "edge") {
+      name
+      interfaces(type: "virtual") {
+        name
+      }
+    }
+  }
+}
+```
+
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 
 Jobs can now be optionally defined as `approval_required = True`, in which case the Job will not be executed immediately upon submission, but will instead be placed into an approval queue; any user *other than the submitter* can approve or deny a queued Job, at which point it will then be executed as normal.
@@ -60,6 +77,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#13](https://github.com/nautobot/nautobot/issues/13) - Added `nautobot_database_ready` signal
 - [#125](https://github.com/nautobot/nautobot/issues/125) - Added support for `approval_required = True` on Jobs
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
+- [#248](https://github.com/nautobot/nautobot/issues/248) - Added support for filtering GraphQL queries at all levels
 - [#374](https://github.com/nautobot/nautobot/issues/374) - Added ability to schedule Jobs for future and/or recurring execution
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
 - [#519](https://github.com/nautobot/nautobot/issues/519) - Added webhook support for `CustomField` and `CustomFieldChoice` models.
