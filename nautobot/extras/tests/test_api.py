@@ -1202,7 +1202,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             "slug": "cf6",
             "label": "Computed Field 6",
             "template": "{{ obj.name }}",
-            "fallback_value": "error",
         },
     ]
     update_data = {
