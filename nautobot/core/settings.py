@@ -23,6 +23,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
 
+# Set the default AutoField for 3rd party apps
+# N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
+#      we can’t do that yet
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
 ###############################################################
 # NAUTOBOT - Settings for Nautobot internals/plugins/defaults #
@@ -299,10 +304,11 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "django_celery_beat",
     "health_check",
-    "health_check.db",
     "health_check.cache",
     "health_check.storage",
+    "django_extensions",
 ]
 
 # Middleware
@@ -524,3 +530,5 @@ CELERY_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_RESULT_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"
+
+CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"

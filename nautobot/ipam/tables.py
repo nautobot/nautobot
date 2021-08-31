@@ -4,7 +4,7 @@ from django_tables2.utils import Accessor
 
 from nautobot.dcim.models import Interface
 from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import COL_TENANT
+from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     BooleanColumn,
@@ -127,19 +127,6 @@ VLAN_MEMBER_TAGGED = """
 {% endif %}
 """
 
-TENANT_LINK = """
-{% if record.tenant %}
-    <a href="{% url 'tenancy:tenant' slug=record.tenant.slug %}" title="{{ record.tenant.description }}">{{ record.tenant }}</a>
-{% elif record.vrf.tenant %}
-    <a href="{% url 'tenancy:tenant' slug=record.vrf.tenant.slug %}" title="{{ record.vrf.tenant.description }}">{{ record.vrf.tenant }}</a>*
-{% elif object.tenant %}
-    <a href="{% url 'tenancy:tenant' slug=object.tenant.slug %}" title="{{ object.tenant.description }}">{{ object.tenant }}</a>
-{% else %}
-    &mdash;
-{% endif %}
-"""
-
-
 #
 # VRFs
 #
@@ -149,7 +136,7 @@ class VRFTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     rd = tables.Column(verbose_name="RD")
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     enforce_unique = BooleanColumn(verbose_name="Unique")
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
@@ -179,7 +166,7 @@ class VRFTable(BaseTable):
 class RouteTargetTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:vrf_list")
 
     class Meta(BaseTable.Meta):
@@ -233,7 +220,7 @@ class RIRTable(BaseTable):
 class AggregateTable(BaseTable):
     pk = ToggleColumn()
     prefix = tables.LinkColumn(verbose_name="Aggregate", order_by=("network", "prefix_length"))
-    tenant = tables.TemplateColumn(template_code=TENANT_LINK)
+    tenant = TenantColumn()
     date_added = tables.DateColumn(format="Y-m-d", verbose_name="Added")
 
     class Meta(BaseTable.Meta):
@@ -319,7 +306,7 @@ class PrefixTable(StatusTableMixin, BaseTable):
         template_code=PREFIX_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
-    tenant = tables.TemplateColumn(template_code=TENANT_LINK)
+    tenant = TenantColumn()
     site = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     role = tables.TemplateColumn(template_code=PREFIX_ROLE_LINK)
@@ -358,7 +345,7 @@ class PrefixTable(StatusTableMixin, BaseTable):
 
 class PrefixDetailTable(PrefixTable):
     utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False)
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:prefix_list")
 
     class Meta(PrefixTable.Meta):
@@ -404,7 +391,7 @@ class IPAddressTable(StatusTableMixin, BaseTable):
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     role = ChoiceFieldColumn()
-    tenant = tables.TemplateColumn(template_code=TENANT_LINK)
+    tenant = TenantColumn()
     assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Interface")
     assigned_object_parent = tables.Column(
         accessor="assigned_object__parent",
@@ -434,7 +421,7 @@ class IPAddressTable(StatusTableMixin, BaseTable):
 
 class IPAddressDetailTable(IPAddressTable):
     nat_inside = tables.Column(linkify=True, orderable=False, verbose_name="NAT (Inside)")
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     assigned = BooleanColumn(accessor="assigned_object_id", verbose_name="Assigned")
     tags = TagColumn(url_name="ipam:ipaddress_list")
 
@@ -491,7 +478,7 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
 
     address = tables.LinkColumn(verbose_name="IP Address")
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
-    tenant = tables.TemplateColumn(template_code=TENANT_LINK)
+    tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -526,7 +513,7 @@ class VLANTable(StatusTableMixin, BaseTable):
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
     site = tables.LinkColumn(viewname="dcim:site", args=[Accessor("site__slug")])
     group = tables.LinkColumn(viewname="ipam:vlangroup", args=[Accessor("group__pk")])
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
 
     class Meta(BaseTable.Meta):
@@ -549,7 +536,7 @@ class VLANTable(StatusTableMixin, BaseTable):
 
 class VLANDetailTable(VLANTable):
     prefixes = tables.TemplateColumn(template_code=VLAN_PREFIXES, orderable=False, verbose_name="Prefixes")
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:vlan_list")
 
     class Meta(VLANTable.Meta):
@@ -616,7 +603,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tagged = BooleanColumn()
     site = tables.Column(linkify=True)
     group = tables.Column(accessor=Accessor("group__name"), verbose_name="Group")
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
 
     class Meta(BaseTable.Meta):

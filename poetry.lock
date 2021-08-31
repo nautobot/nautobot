@@ -330,6 +330,20 @@ redis = ">=3.0.0"
 six = ">=1.4.0"
 
 [[package]]
+name = "django-celery-beat"
+version = "2.2.0"
+description = "Database-backed Periodic Tasks."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+celery = ">=4.4,<6.0"
+Django = ">=2.2,<4.0"
+django-timezone-field = ">=4.1.0,<5.0"
+python-crontab = ">=2.3.4"
+
+[[package]]
 name = "django-cors-headers"
 version = "3.7.0"
 description = "django-cors-headers is a Django application for handling the server headers required for Cross-Origin Resource Sharing (CORS)."
@@ -374,6 +388,17 @@ python-versions = ">=3.6"
 [package.dependencies]
 Django = ">=2.2"
 sqlparse = ">=0.2.0"
+
+[[package]]
+name = "django-extensions"
+version = "3.1.3"
+description = "Extensions for Django"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+Django = ">=2.2"
 
 [[package]]
 name = "django-filter"
@@ -1116,6 +1141,32 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "python-crontab"
+version = "2.5.1"
+description = "Python Crontab API"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+python-dateutil = "*"
+
+[package.extras]
+cron-description = ["cron-descriptor"]
+cron-schedule = ["croniter"]
+
+[[package]]
+name = "python-dateutil"
+version = "2.8.1"
+description = "Extensions to the standard Python datetime module"
+category = "main"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+
+[package.dependencies]
+six = ">=1.5"
+
+[[package]]
 name = "python3-openid"
 version = "3.2.0"
 description = "OpenID support for modern servers and consumers."
@@ -1481,7 +1532,7 @@ mysql = ["mysqlclient"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "4abe0923c58dffa1380a832e92bb9b6cbe106df54b264d16454ac60be3ee73f3"
+content-hash = "711d67c1163fb36addaaa8c3fc28287c45989891c9766fc69bbcb22626e8c223"
 
 [metadata.files]
 amqp = [
@@ -1674,6 +1725,10 @@ django-cacheops = [
     {file = "django-cacheops-5.1.tar.gz", hash = "sha256:d5851cd7bf3087384a1fcecfa8dddb8f55030eedfd6fdf127225b75bca0f99dd"},
     {file = "django_cacheops-5.1-py2.py3-none-any.whl", hash = "sha256:02320df37754c143477c5fbd54abf292bcd8b4ca40631e19ec15efa3cc085532"},
 ]
+django-celery-beat = [
+    {file = "django-celery-beat-2.2.0.tar.gz", hash = "sha256:b8a13afb15e7c53fc04f4f847ac71a6d32088959aba701eb7c4a59f0c28ba543"},
+    {file = "django_celery_beat-2.2.0-py2.py3-none-any.whl", hash = "sha256:c4c72a9579f20eff4c4ccf1b58ebdca5ef940f4210065057db1754ea5f8dffdc"},
+]
 django-cors-headers = [
     {file = "django-cors-headers-3.7.0.tar.gz", hash = "sha256:96069c4aaacace786a34ee7894ff680780ec2644e4268b31181044410fecd12e"},
     {file = "django_cors_headers-3.7.0-py3-none-any.whl", hash = "sha256:1ac2b1213de75a251e2ba04448da15f99bcfcbe164288ae6b5ff929dc49b372f"},
@@ -1688,6 +1743,10 @@ django-db-file-storage = [
 django-debug-toolbar = [
     {file = "django-debug-toolbar-3.2.1.tar.gz", hash = "sha256:a5ff2a54f24bf88286f9872836081078f4baa843dc3735ee88524e89f8821e33"},
     {file = "django_debug_toolbar-3.2.1-py3-none-any.whl", hash = "sha256:e759e63e3fe2d3110e0e519639c166816368701eab4a47fed75d7de7018467b9"},
+]
+django-extensions = [
+    {file = "django-extensions-3.1.3.tar.gz", hash = "sha256:5f0fea7bf131ca303090352577a9e7f8bfbf5489bd9d9c8aea9401db28db34a0"},
+    {file = "django_extensions-3.1.3-py3-none-any.whl", hash = "sha256:50de8977794a66a91575dd40f87d5053608f679561731845edbd325ceeb387e3"},
 ]
 django-filter = [
     {file = "django-filter-2.4.0.tar.gz", hash = "sha256:84e9d5bb93f237e451db814ed422a3a625751cbc9968b484ecc74964a8696b06"},
@@ -2070,6 +2129,13 @@ pyrsistent = [
     {file = "pyrsistent-0.18.0-cp39-cp39-win32.whl", hash = "sha256:f3ef98d7b76da5eb19c37fda834d50262ff9167c65658d1d8f974d2e4d90676b"},
     {file = "pyrsistent-0.18.0-cp39-cp39-win_amd64.whl", hash = "sha256:404e1f1d254d314d55adb8d87f4f465c8693d6f902f67eb6ef5b4526dc58e6ea"},
     {file = "pyrsistent-0.18.0.tar.gz", hash = "sha256:773c781216f8c2900b42a7b638d5b517bb134ae1acbebe4d1e8f1f41ea60eb4b"},
+]
+python-crontab = [
+    {file = "python-crontab-2.5.1.tar.gz", hash = "sha256:4bbe7e720753a132ca4ca9d4094915f40e9d9dc8a807a4564007651018ce8c31"},
+]
+python-dateutil = [
+    {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},
+    {file = "python_dateutil-2.8.1-py2.py3-none-any.whl", hash = "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"},
 ]
 python3-openid = [
     {file = "python3-openid-3.2.0.tar.gz", hash = "sha256:33fbf6928f401e0b790151ed2b5290b02545e8775f982485205a066f874aaeaf"},

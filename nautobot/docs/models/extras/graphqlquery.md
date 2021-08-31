@@ -12,9 +12,9 @@ When queries get saved to the database from the form, the query is first loaded 
 
 Modifications have been made to the GraphiQL page to allow the running, editing and saving of this model.
 
-On the right side of the navigation menu there is a new tab which is only visible when the GraphiQL interface is open called "Queries". Inside this tab will list all saved queries in the database allowing the user to open them into GraphiQL.
+A dropdown button called "Queries" has been added to the GraphiQL toolbar. This lists all saved queries in the database allowing the user to open them into GraphiQL.
 
-If a saved query has been opened, a button will appear next to the name in the "Queries" tab called "Save Changes". This allows the user to save any changes to the model object.
+If a saved query has been opened, a button will appear next to the name inside the "Queries" dropdown called "Save Changes". This allows the user to save any changes to the model object.
 
 If the user wants to create a new query, at the bottom of the "Queries" tab there is an option called "Save Current Query As...". This will open a modal form to input data, such as the name of the query, and then save the query to the database.
 

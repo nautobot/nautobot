@@ -42,7 +42,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar
+from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
@@ -195,11 +195,16 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
             "slug": "new-git-repository-3",
             "remote_url": "https://example.com/newrepo3.git",
         },
+        {
+            "name": "New Git Repository 4",
+            "remote_url": "https://example.com/newrepo3.git",
+        },
     ]
     bulk_update_data = {
         "branch": "develop",
     }
     choices_fields = ["provided_contents"]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -399,11 +404,16 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
             "slug": "schema-6",
             "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
         },
+        {
+            "name": "Schema 7",
+            "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
     choices_fields = []
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -426,6 +436,7 @@ class JobTest(APITestCase):
         var1 = StringVar()
         var2 = IntegerVar()
         var3 = BooleanVar()
+        var4 = ObjectVar(model=DeviceRole)
 
         def run(self, data, commit=True):
             self.log_info(message=data["var1"])
@@ -537,6 +548,48 @@ class JobTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["result"]["status"]["value"], "pending")
+
+    @skipIf(not rq_worker_running, "RQ worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_object_var(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {"var4": d.pk}
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
+        response = self.client.get(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
+
+    @skipIf(not rq_worker_running, "RQ worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_object_var_lookup(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {"var4": {"name": "role"}}
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
+        response = self.client.get(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
 
 
 class JobResultTest(APITestCase):
@@ -817,7 +870,13 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
             "color": "ff0000",
             "content_types": ["dcim.device"],
         },
+        {
+            "name": "Status 1",
+            "color": "ff0000",
+            "content_types": ["dcim.device"],
+        },
     ]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -848,7 +907,12 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             "slug": "graphql-query-5",
             "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
         },
+        {
+            "name": "Graphql Query 6",
+            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+        },
     ]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -1007,12 +1071,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
             "destination_type": "dcim.interface",
             "destination_hidden": True,
         },
+        {
+            "name": "Relationship 1",
+            "type": "one-to-one",
+            "source_type": "dcim.device",
+            "source_label": "primary interface",
+            "destination_type": "dcim.interface",
+            "destination_hidden": True,
+        },
     ]
 
     bulk_update_data = {
         "destination_filter": {"role": {"slug": "controller"}},
     }
     choices_fields = ["destination_type", "source_type", "type"]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -1161,6 +1234,12 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
+        {
+            "content_type": "dcim.site",
+            "label": "Computed Field 7",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
+        },
     ]
     update_data = {
         "content_type": "dcim.site",
@@ -1170,6 +1249,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "label"
 
     @classmethod
     def setUpTestData(cls):
