@@ -450,8 +450,6 @@ class RackRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RackRoleCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = RackRole
         fields = RackRole.csv_headers
@@ -1572,8 +1570,6 @@ class DeviceRoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm
 
 
 class DeviceRoleCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = DeviceRole
         fields = DeviceRole.csv_headers
@@ -1607,7 +1603,6 @@ class PlatformForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class PlatformCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
     manufacturer = CSVModelChoiceField(
         queryset=Manufacturer.objects.all(),
         required=False,

@@ -83,6 +83,37 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
 
+## v1.1.3 (2021-??-??)
+
+### Added
+
+- [#11](https://github.com/nautobot/nautobot/issues/11) - Added tests to verify that plugin models can support webhooks if appropriately decorated with `@extras_features("webhooks")`
+- [#652](https://github.com/nautobot/nautobot/issues/652) - Jobs REST API `run` endpoint now can look up ObjectVar references via a dictionary of parameters.
+- [#791](https://github.com/nautobot/nautobot/issues/791) - Added support for `NAUTOBOT_DOCKER_SKIP_INIT` variable to allow running the Docker container with a read-only database.
+- [#841](https://github.com/nautobot/nautobot/pull/841) - Added more detailed documentation around defining Relationship filters.
+- [#850](https://github.com/nautobot/nautobot/pull/850) - Added developer documentation around the installation and use of `mkdocs` to locally preview documentation changes.
+- [#856](https://github.com/nautobot/nautobot/issues/856) - Added more detailed user documentation on how to create an API token.
+
+### Changed
+
+- [#812](https://github.com/nautobot/nautobot/pull/812) - In the GraphiQL interface, the "Queries" dropdown now appears alongside the other GraphiQL interface buttons instead of appearing in the main Nautobot navigation bar.
+- [#832](https://github.com/nautobot/nautobot/issues/832) - Plugin installation documentation now recommends `nautobot-server post_upgrade` instead of separately running `nautobot-server migrate` and `nautobot-server collectstatic`.
+
+### Fixed
+
+- [#464](https://github.com/nautobot/nautobot/issues/464) - Fixed GraphQL schema generation error when certain custom field names are used.
+- [#670](https://github.com/nautobot/nautobot/pull/670) - Clarified Jobs documentation regarding how to fail or abort a Job.
+- [#715](https://github.com/nautobot/nautobot/issues/715) - Fixed display of GraphiQL interface in narrow browser windows.
+- [#718](https://github.com/nautobot/nautobot/issues/718) - Fixed rendering of long template values in Computed Field detail view.
+- [#731](https://github.com/nautobot/nautobot/issues/731) - Config context schemas including `format` properties (such as `"format": "ipv4"`) are now correctly enforced.
+- [#779](https://github.com/nautobot/nautobot/issues/779) - Fixed incorrect Tenant display in Prefix "Duplicate Prefixes" table. (Port of [two](https://github.com/netbox-community/netbox/commit/20a85c1ef264ecfffcbe8602ab103baed5a7cf5b) [fixes](https://github.com/netbox-community/netbox/commit/0a1531ce8a5597333f2ac87fcc795c83a052fd47) originally from NetBox)
+- [#809](https://github.com/nautobot/nautobot/issues/809) - Fixed docker-compose file `version` values to work correctly with older versions of docker-compose.
+- [#818](https://github.com/nautobot/nautobot/issues/818) - Database health-check now reports as healthy even when in `MAINTENANCE_MODE`.
+- [#825](https://github.com/nautobot/nautobot/issues/825) - Removed unnecessary `-B` flag from development Celery worker invocation.
+- [#830](https://github.com/nautobot/nautobot/issues/830) - Fixed incorrect database migration introduced by #818.
+- [#845](https://github.com/nautobot/nautobot/pull/845) - Clarified documentation around `nautobot-server init` and `NAUTOBOT_ROOT`.
+- [#848](https://github.com/nautobot/nautobot/pull/848) - Fixed stale links to NAPALM documentation
+
 ## v1.1.2 (2021-08-10)
 
 ### Added

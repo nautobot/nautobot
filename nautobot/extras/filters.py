@@ -26,6 +26,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    ScheduledJob,
     JobResult,
     ObjectChange,
     Relationship,
@@ -48,6 +49,7 @@ __all__ = (
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
     "JobResultFilterSet",
+    "ScheduledJobFilterSet",
     "LocalContextFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
@@ -405,7 +407,7 @@ class CreatedUpdatedFilterSet(django_filters.FilterSet):
 
 
 #
-# Job Results
+# Jobs
 #
 
 
@@ -427,6 +429,26 @@ class JobResultFilterSet(BaseFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(Q(name__icontains=value) | Q(user__username__icontains=value))
+
+
+class ScheduledJobFilterSet(BaseFilterSet):
+    q = django_filters.CharFilter(
+        method="search",
+        label="Search",
+    )
+    first_run = django_filters.DateTimeFilter()
+    last_run = django_filters.DateTimeFilter()
+
+    class Meta:
+        model = ScheduledJob
+        fields = ["id", "first_run", "last_run", "total_run_count"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) | Q(job_class__icontains=value) | Q(description__icontains=value)
+        )
 
 
 #

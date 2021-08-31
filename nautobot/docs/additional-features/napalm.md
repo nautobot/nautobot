@@ -1,6 +1,6 @@
 # NAPALM
 
-Nautobot supports integration with the [NAPALM automation](https://napalm-automation.net/) library. NAPALM allows Nautobot to serve a proxy for operational data, fetching live data from network devices and returning it to a requester via its REST API. Note that Nautobot does not store any NAPALM data locally.
+Nautobot supports integration with the [NAPALM automation](https://github.com/napalm-automation/napalm/) library. NAPALM allows Nautobot to serve a proxy for operational data, fetching live data from network devices and returning it to a requester via its REST API. Note that Nautobot does not store any NAPALM data locally.
 
 !!! note
     To enable this integration, the NAPALM library must be installed. See [installation steps](../../installation/nautobot/#napalm) for more information.

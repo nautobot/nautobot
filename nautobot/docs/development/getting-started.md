@@ -648,6 +648,27 @@ To enforce best practices around consistent [coding style](style-guide.md), Naut
 | `invoke flake8`         | `flake8`                     |
 | `invoke black`          | `black`                      |
 
+## Working on Documentation
+
+Some features require documentation updates or new documentation to be written. The documentation files can be found in the `docs` directory. To preview these changes locally, you can use `mkdocs`.
+
+### Installing `mkdocs`
+
+If you are using the poetry-based workflow, `mkdocs` should already be installed in your environment. This section mostly applies if you are using Docker to manage your development environment.
+
+The `mkdocs` command can be installed via pip, either globally or in your virtual environment.
+
+```no-highlight
+$ pip3 install mkdocs mkdocs-include-markdown-plugin
+```
+
+### Writing Documentation
+
+Once the `mkdocs` command has been installed, you can preview the documentation
+using `mkdocs serve`,  which should start a web server at `http://localhost:8001`.
+
+Documentation is written in Markdown. If you need to add additional pages or sections to the documentation, you can add them to `mkdocs.yml` at the root of the repository.
+
 ## Submitting Pull Requests
 
 Once you're happy with your work and have verified that all tests pass, commit your changes and push it upstream to your fork. Always provide descriptive (but not excessively verbose) commit messages. When working on a specific issue, be sure to reference it.

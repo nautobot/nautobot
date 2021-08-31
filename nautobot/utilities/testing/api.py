@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import override_settings, tag
+from django.utils.text import slugify
 from rest_framework import status
 from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
 
@@ -287,6 +288,7 @@ class APIViewTestCases:
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
+        slug_source = None
 
         def test_create_object_without_permission(self):
             """
@@ -321,6 +323,11 @@ class APIViewTestCases:
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
+                # Check if Slug field is automatically created
+                if self.slug_source is not None and "slug" not in create_data:
+                    object = self._get_queryset().get(pk=response.data["id"])
+                    expected_slug = slugify(getattr(object, self.slug_source))
+                    self.assertEqual(object.slug, expected_slug)
 
                 # Verify ObjectChange creation
                 if hasattr(self.model, "to_objectchange"):
@@ -360,6 +367,10 @@ class APIViewTestCases:
                     exclude=self.validation_excluded_fields,
                     api=True,
                 )
+                if self.slug_source is not None and "slug" not in self.create_data[i]:
+                    object = self._get_queryset().get(pk=obj["id"])
+                    expected_slug = slugify(getattr(object, self.slug_source))
+                    self.assertEqual(object.slug, expected_slug)
 
     class UpdateObjectViewTestCase(APITestCase):
         update_data = {}

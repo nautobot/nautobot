@@ -1,16 +1,22 @@
 import inspect
+import json
+from datetime import datetime, time
 
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.timezone import make_aware
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
+from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -26,7 +32,7 @@ from nautobot.utilities.views import ContentTypePermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
-from .choices import JobResultStatusChoices
+from .choices import JobExecutionType, JobResultStatusChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -41,6 +47,7 @@ from .models import (
     JobResult,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     TaggedItem,
@@ -673,7 +680,8 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
-        form = job.as_form(initial=request.GET)
+        job_form = job.as_form(initial=request.GET)
+        schedule_form = forms.JobScheduleForm(initial=request.GET)
 
         return render(
             request,
@@ -682,7 +690,8 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 "grouping": grouping,
                 "module": module,
                 "job": job,
-                "form": form,
+                "job_form": job_form,
+                "schedule_form": schedule_form,
             },
         )
 
@@ -695,27 +704,77 @@ class JobView(ContentTypePermissionRequiredMixin, View):
             raise Http404
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
-        form = job.as_form(request.POST, request.FILES)
+        job_form = job.as_form(request.POST, request.FILES)
+        schedule_form = forms.JobScheduleForm(request.POST)
 
         # Allow execution only if a worker process is running.
         if not get_worker_count(request):
             messages.error(request, "Unable to run job: Celery worker process not running.")
-        elif form.is_valid():
+        elif job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
-            commit = form.cleaned_data.pop("_commit")
+            commit = job_form.cleaned_data.pop("_commit")
+            schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            job_content_type = ContentType.objects.get(app_label="extras", model="job")
-            job_result = JobResult.enqueue_job(
-                run_job,
-                job.class_path,
-                job_content_type,
-                request.user,
-                data=job_class.serialize_data(form.cleaned_data),
-                request=copy_safe_request(request),
-                commit=commit,
-            )
+            if job_class.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
 
-            return redirect("extras:job_jobresult", pk=job_result.pk)
+                if schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+                    # Schedule the job instead of running it now
+                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
+                    schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
+
+                else:
+                    # The job must be approved.
+                    # If the schedule_type is immediate, we still create the task, but mark it for approval
+                    # as a once in the future task with the due date set to the current time. This means
+                    # when approval is granted, the task is immediately due for execution.
+                    schedule_type = JobExecutionType.TYPE_FUTURE
+                    schedule_datetime = datetime.now()
+                    schedule_name = f"{job.name} - {schedule_datetime}"
+
+                job_kwargs = {
+                    "data": job_class.serialize_data(job_form.cleaned_data),
+                    "request": copy_safe_request(request),
+                    "user": request.user.pk,
+                    "commit": commit,
+                    "name": job.class_path,
+                }
+
+                scheduled_job = ScheduledJob(
+                    name=schedule_name,
+                    task="nautobot.extras.jobs.scheduled_job_handler",
+                    job_class=job.class_path,
+                    start_time=schedule_datetime,
+                    description=f"Nautobot job {schedule_name} scheduled by {request.user} on {schedule_datetime}",
+                    kwargs=job_kwargs,
+                    interval=schedule_type,
+                    one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
+                    user=request.user,
+                    approval_required=job_class.approval_required,
+                )
+                scheduled_job.kwargs["scheduled_job_pk"] = scheduled_job.pk
+                scheduled_job.save()
+
+                if job_class.approval_required:
+                    messages.success(request, f"Job {schedule_name} successfully submitted for approval")
+                    return redirect("extras:scheduledjob_approval_queue_list")
+                else:
+                    messages.success(request, f"Job {schedule_name} successfully scheduled")
+                    return redirect("extras:scheduledjob_list")
+
+            else:
+                # Enqueue job for immediate execution
+                job_content_type = ContentType.objects.get(app_label="extras", model="job")
+                job_result = JobResult.enqueue_job(
+                    run_job,
+                    job.class_path,
+                    job_content_type,
+                    request.user,
+                    data=job_class.serialize_data(job_form.cleaned_data),
+                    request=copy_safe_request(request),
+                    commit=commit,
+                )
+
+                return redirect("extras:job_jobresult", pk=job_result.pk)
 
         return render(
             request,
@@ -724,7 +783,127 @@ class JobView(ContentTypePermissionRequiredMixin, View):
                 "grouping": grouping,
                 "module": module,
                 "job": job,
-                "form": form,
+                "job_form": job_form,
+                "schedule_form": schedule_form,
+            },
+        )
+
+
+class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
+    """
+    This view handles requests to view and approve a Job execution request.
+    It renders the Job's form in much the same way as `JobView` except all
+    form fields are disabled and actions on the form relate to approval of the
+    job's execution, rather than initial job form input.
+    """
+
+    def get_required_permission(self):
+        return "extras.view_job"
+
+    def post(self, request, scheduled_job):
+        """
+        Act upon one of the 3 submit button actions from the user.
+
+        dry-run will immediately enqueue the job with commit=False and send the user to the normal JobResult view
+        deny will delete the scheduled_job instance
+        approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+        """
+        if not request.user.has_perm("extras.run_job"):
+            return HttpResponseForbidden()
+
+        scheduled_job = get_object_or_404(ScheduledJob, pk=scheduled_job)
+        job_class = get_job(scheduled_job.job_class)
+        if job_class is None:
+            raise Http404
+        job = job_class()
+        grouping, module, class_name = job_class.class_path.split("/", 2)
+
+        # Render the form will all fields disabled
+        initial = scheduled_job.kwargs.get("data", {})
+        initial["_commit"] = scheduled_job.kwargs.get("commit", True)
+        job_form = job.as_form(initial=initial, approval_view=True)
+
+        post_data = request.POST
+
+        if "_dry_run" in post_data:
+            # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
+            job_content_type = ContentType.objects.get(app_label="extras", model="job")
+            job_result = JobResult.enqueue_job(
+                run_job,
+                job.class_path,
+                job_content_type,
+                scheduled_job.user,
+                request.user,
+                data=job_class.serialize_data(initial),
+                request=copy_safe_request(request),
+                commit=False,  # force a dry-run
+            )
+
+            return redirect("extras:job_jobresult", pk=job_result.pk)
+
+        elif "_deny" in post_data:
+            # Delete the scheduled_job instance
+            scheduled_job.delete()
+            if request.user == scheduled_job.user:
+                messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
+            else:
+                messages.error(request, f"Approval of {scheduled_job.name} was denied")
+
+            return redirect("extras:scheduledjob_approval_queue_list")
+
+        elif "_approve" in post_data:
+            # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+            if request.user == scheduled_job.user:
+                # The requestor *cannot* approve their own job
+                messages.error(request, "You cannot approve your own job request!")
+            else:
+                scheduled_job.approved_by_user = request.user
+                scheduled_job.approved_at = timezone.now()
+                scheduled_job.save()
+
+                messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")
+
+            return redirect("extras:scheduledjob_approval_queue_list")
+
+        return render(
+            request,
+            "extras/job_approval_request.html",
+            {
+                "grouping": grouping,
+                "module": module,
+                "job": job,
+                "job_form": job_form,
+                "scheduled_job": scheduled_job,
+            },
+        )
+
+    def get(self, request, scheduled_job):
+        """
+        Render the job form with data from the scheduled_job instance, but mark all fields as disabled.
+        We don't care to actually get any data back from the form as we will not ever change it.
+        Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
+        """
+        scheduled_job = get_object_or_404(ScheduledJob, pk=scheduled_job)
+        job_class = get_job(scheduled_job.job_class)
+        if job_class is None:
+            raise Http404
+        job = job_class()
+        grouping, module, class_name = job_class.class_path.split("/", 2)
+
+        # Render the form will all fields disabled
+        initial = scheduled_job.kwargs.get("data", {})
+        initial["_commit"] = scheduled_job.kwargs.get("commit", True)
+        job_form = job.as_form(initial=initial, approval_view=True)
+
+        return render(
+            request,
+            "extras/job_approval_request.html",
+            {
+                "grouping": grouping,
+                "module": module,
+                "job": job,
+                "job_form": job_form,
+                "scheduled_job": scheduled_job,
             },
         )
 
@@ -752,6 +931,42 @@ class JobJobResultView(ContentTypePermissionRequiredMixin, View):
                 "result": job_result,
             },
         )
+
+
+class ScheduledJobListView(generic.ObjectListView):
+    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
+    table = tables.ScheduledJobTable
+    filterset = filters.ScheduledJobFilterSet
+    filterset_form = forms.ScheduledJobFilterForm
+    action_buttons = ()
+
+
+class ScheduledJobApprovalQueueListView(generic.ObjectListView):
+    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    table = tables.ScheduledJobApprovalQueueTable
+    filterset = filters.ScheduledJobFilterSet
+    filterset_form = forms.ScheduledJobFilterForm
+    action_buttons = ()
+    template_name = "extras/scheduled_jobs_approval_queue_list.html"
+
+
+class ScheduledJobView(generic.ObjectView):
+    queryset = ScheduledJob.objects.all()
+
+    def get_extra_context(self, request, instance):
+        job_class = get_job(instance.job_class)
+        labels = {}
+        for name, var in job_class._get_vars().items():
+            field = var.as_field()
+            if field.label:
+                labels[name] = var
+            else:
+                labels[name] = pretty_name(name)
+        return {"labels": labels}
+
+
+class ScheduledJobDeleteView(generic.ObjectDeleteView):
+    queryset = ScheduledJob.objects.all()
 
 
 #

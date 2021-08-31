@@ -66,8 +66,6 @@ class ClusterTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFor
 
 
 class ClusterTypeCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterType
         fields = ClusterType.csv_headers
@@ -91,8 +89,6 @@ class ClusterGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFo
 
 
 class ClusterGroupCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterGroup
         fields = ClusterGroup.csv_headers

@@ -45,11 +45,13 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     Webhook,
 )
 from .utils import FeatureQuery
+from nautobot.extras import choices
 
 
 #
@@ -749,6 +751,11 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 class JobForm(BootstrapMixin, forms.Form):
+    """
+    This form is used to render the user input fields for a Job class. Its fields are dynamically
+    controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
+    """
+
     _commit = forms.BooleanField(
         required=False,
         initial=True,
@@ -771,6 +778,51 @@ class JobForm(BootstrapMixin, forms.Form):
         return bool(len(self.fields) > 1)
 
 
+class JobScheduleForm(BootstrapMixin, forms.Form):
+    """
+    This form is rendered alongside the JobForm but deals specifically with the fields needed to either
+    execute the job immediately, or schedule it for later. Each field name is prefixed with an underscore
+    because in the POST body, they share a namespace with the JobForm which includes fields defined by the
+    job author, so the underscore prefix helps to avoid name collisions.
+    """
+
+    _schedule_type = forms.ChoiceField(
+        choices=choices.JobExecutionType,
+        help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
+        label="Type",
+    )
+    _schedule_name = forms.CharField(
+        required=False,
+        label="Schedule name",
+        help_text="Name for the job schedule.",
+    )
+    _schedule_start_time = forms.DateTimeField(
+        required=False,
+        label="Starting date and time",
+        widget=DateTimePicker(),
+    )
+
+    def clean(self):
+        """
+        Validate all required information is present if the job needs to be scheduled
+        """
+        cleaned_data = super().clean()
+
+        if cleaned_data["_schedule_type"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+            if not cleaned_data["_schedule_name"]:
+                raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
+
+            if (
+                not cleaned_data["_schedule_start_time"]
+                or cleaned_data["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
+            ):
+                raise ValidationError(
+                    {
+                        "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+
 class JobResultFilterForm(BootstrapMixin, forms.Form):
     model = JobResult
     q = forms.CharField(required=False, label="Search")
@@ -789,6 +841,13 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(),
     )
+
+
+class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
+    model = ScheduledJob
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    total_run_count = forms.IntegerField(required=False)
 
 
 class ExportTemplateForm(BootstrapMixin, forms.ModelForm):
@@ -908,7 +967,6 @@ class StatusForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 class StatusCSVForm(CustomFieldModelCSVForm):
     """Generic CSV bulk import form for `Status` objects."""
 
-    slug = SlugField()
     content_types = CSVMultipleContentTypeField(
         feature="statuses",
         choices_as_strings=True,
