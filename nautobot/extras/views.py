@@ -61,62 +61,34 @@ from .datasources import (
 
 
 #
-# Tags
+# Computed Fields
 #
 
 
-class TagListView(generic.ObjectListView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    filterset = filters.TagFilterSet
-    filterset_form = forms.TagFilterForm
-    table = tables.TagTable
+class ComputedFieldListView(generic.ObjectListView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
+    filterset_form = forms.ComputedFieldFilterForm
+    action_buttons = ("add",)
 
 
-class TagView(generic.ObjectView):
-    queryset = Tag.objects.all()
-
-    def get_extra_context(self, request, instance):
-        tagged_items = TaggedItem.objects.filter(tag=instance).prefetch_related("content_type", "content_object")
-
-        # Generate a table of all items tagged with this Tag
-        items_table = tables.TaggedItemTable(tagged_items)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(items_table)
-
-        return {
-            "items_count": tagged_items.count(),
-            "items_table": items_table,
-        }
+class ComputedFieldView(generic.ObjectView):
+    queryset = ComputedField.objects.all()
 
 
-class TagEditView(generic.ObjectEditView):
-    queryset = Tag.objects.all()
-    model_form = forms.TagForm
-    template_name = "extras/tag_edit.html"
+class ComputedFieldEditView(generic.ObjectEditView):
+    queryset = ComputedField.objects.all()
+    model_form = forms.ComputedFieldForm
 
 
-class TagDeleteView(generic.ObjectDeleteView):
-    queryset = Tag.objects.all()
+class ComputedFieldDeleteView(generic.ObjectDeleteView):
+    queryset = ComputedField.objects.all()
 
 
-class TagBulkImportView(generic.BulkImportView):
-    queryset = Tag.objects.all()
-    model_form = forms.TagCSVForm
-    table = tables.TagTable
-
-
-class TagBulkEditView(generic.BulkEditView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
-    form = forms.TagBulkEditForm
-
-
-class TagBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
-    table = tables.TagTable
+class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
+    queryset = ComputedField.objects.all()
+    table = tables.ComputedFieldTable
 
 
 #
@@ -342,117 +314,95 @@ class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
 
 
 #
-# Change logging
+# Custom fields
 #
 
 
-class ObjectChangeListView(generic.ObjectListView):
-    queryset = ObjectChange.objects.all()
-    filterset = filters.ObjectChangeFilterSet
-    filterset_form = forms.ObjectChangeFilterForm
-    table = tables.ObjectChangeTable
-    template_name = "extras/objectchange_list.html"
-    action_buttons = ("export",)
+class CustomFieldListView(generic.ObjectListView):
+    queryset = CustomField.objects.all()
+    table = tables.CustomFieldTable
+    filterset = filters.CustomFieldFilterSet
+    action_buttons = ("add",)
 
 
-class ObjectChangeView(generic.ObjectView):
-    queryset = ObjectChange.objects.all()
-
-    def get_extra_context(self, request, instance):
-        related_changes = (
-            ObjectChange.objects.restrict(request.user, "view")
-            .filter(request_id=instance.request_id)
-            .exclude(pk=instance.pk)
-        )
-        related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
-
-        objectchanges = ObjectChange.objects.restrict(request.user, "view").filter(
-            changed_object_type=instance.changed_object_type,
-            changed_object_id=instance.changed_object_id,
-        )
-
-        next_change = objectchanges.filter(time__gt=instance.time).order_by("time").first()
-        prev_change = objectchanges.filter(time__lt=instance.time).order_by("-time").first()
-
-        if prev_change:
-            diff_added = shallow_compare_dict(
-                prev_change.object_data,
-                instance.object_data,
-                exclude=["last_updated"],
-            )
-            diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
-        else:
-            # No previous change; this is the initial change that added the object
-            diff_added = diff_removed = instance.object_data
-
-        return {
-            "diff_added": diff_added,
-            "diff_removed": diff_removed,
-            "next_change": next_change,
-            "prev_change": prev_change,
-            "related_changes_table": related_changes_table,
-            "related_changes_count": related_changes.count(),
-        }
+class CustomFieldView(generic.ObjectView):
+    queryset = CustomField.objects.all()
 
 
-class ObjectChangeLogView(View):
-    """
-    Present a history of changes made to a particular object.
+class CustomFieldEditView(generic.ObjectEditView):
+    queryset = CustomField.objects.all()
+    model_form = forms.CustomFieldForm
 
-    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
-    """
 
-    base_template = None
+class CustomFieldDeleteView(generic.ObjectDeleteView):
+    queryset = CustomField.objects.all()
 
-    def get(self, request, model, **kwargs):
 
-        # Handle QuerySet restriction of parent object if needed
-        if hasattr(model.objects, "restrict"):
-            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
-        else:
-            obj = get_object_or_404(model, **kwargs)
+class CustomFieldBulkDeleteView(generic.BulkDeleteView):
+    queryset = CustomField.objects.all()
+    table = tables.CustomFieldTable
 
-        # Gather all changes for this object (and its related objects)
-        content_type = ContentType.objects.get_for_model(model)
-        objectchanges = (
-            ObjectChange.objects.restrict(request.user, "view")
-            .prefetch_related("user", "changed_object_type")
-            .filter(
-                Q(changed_object_type=content_type, changed_object_id=obj.pk)
-                | Q(related_object_type=content_type, related_object_id=obj.pk)
-            )
-        )
-        objectchanges_table = tables.ObjectChangeTable(data=objectchanges, orderable=False)
 
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(objectchanges_table)
+#
+# Custom Links
+#
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
 
-        return render(
-            request,
-            "extras/object_changelog.html",
-            {
-                "object": obj,
-                "verbose_name": obj._meta.verbose_name,
-                "verbose_name_plural": obj._meta.verbose_name_plural,
-                "table": objectchanges_table,
-                "base_template": self.base_template,
-                "active_tab": "changelog",
-            },
-        )
+class CustomLinkListView(generic.ObjectListView):
+    queryset = CustomLink.objects.all()
+    table = tables.CustomLinkTable
+    filterset = filters.CustomLinkFilterSet
+    filterset_form = forms.CustomLinkFilterForm
+    action_buttons = ("add",)
+
+
+class CustomLinkView(generic.ObjectView):
+    queryset = CustomLink.objects.all()
+
+
+class CustomLinkEditView(generic.ObjectEditView):
+    queryset = CustomLink.objects.all()
+    model_form = forms.CustomLinkForm
+
+
+class CustomLinkDeleteView(generic.ObjectDeleteView):
+    queryset = CustomLink.objects.all()
+
+
+class CustomLinkBulkDeleteView(generic.BulkDeleteView):
+    queryset = CustomLink.objects.all()
+    table = tables.CustomLinkTable
+
+
+#
+# Export Templates
+#
+
+
+class ExportTemplateListView(generic.ObjectListView):
+    queryset = ExportTemplate.objects.all()
+    table = tables.ExportTemplateTable
+    filterset = filters.ExportTemplateFilterSet
+    filterset_form = forms.ExportTemplateFilterForm
+    action_buttons = ("add",)
+
+
+class ExportTemplateView(generic.ObjectView):
+    queryset = ExportTemplate.objects.all()
+
+
+class ExportTemplateEditView(generic.ObjectEditView):
+    queryset = ExportTemplate.objects.all()
+    model_form = forms.ExportTemplateForm
+
+
+class ExportTemplateDeleteView(generic.ObjectDeleteView):
+    queryset = ExportTemplate.objects.all()
+
+
+class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
+    queryset = ExportTemplate.objects.all()
+    table = tables.ExportTemplateTable
 
 
 #
@@ -584,6 +534,37 @@ class GitRepositoryResultView(ContentTypePermissionRequiredMixin, View):
                 "active_tab": "result",
             },
         )
+
+
+#
+# Saved GraphQL queries
+#
+
+
+class GraphQLQueryListView(generic.ObjectListView):
+    queryset = GraphQLQuery.objects.all()
+    table = tables.GraphQLQueryTable
+    filterset = filters.GraphQLQueryFilterSet
+    filterset_form = forms.GraphQLQueryFilterForm
+    action_buttons = ("add",)
+
+
+class GraphQLQueryView(generic.ObjectView):
+    queryset = GraphQLQuery.objects.all()
+
+
+class GraphQLQueryEditView(generic.ObjectEditView):
+    queryset = GraphQLQuery.objects.all()
+    model_form = forms.GraphQLQueryForm
+
+
+class GraphQLQueryDeleteView(generic.ObjectDeleteView):
+    queryset = GraphQLQuery.objects.all()
+
+
+class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
+    queryset = GraphQLQuery.objects.all()
+    table = tables.GraphQLQueryTable
 
 
 #
@@ -1026,85 +1007,152 @@ class JobResultView(ContentTypePermissionRequiredMixin, View):
         )
 
 
-class ExportTemplateListView(generic.ObjectListView):
-    queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
-    filterset = filters.ExportTemplateFilterSet
-    filterset_form = forms.ExportTemplateFilterForm
-    action_buttons = ("add",)
+#
+# Change logging
+#
 
 
-class ExportTemplateView(generic.ObjectView):
-    queryset = ExportTemplate.objects.all()
+class ObjectChangeListView(generic.ObjectListView):
+    queryset = ObjectChange.objects.all()
+    filterset = filters.ObjectChangeFilterSet
+    filterset_form = forms.ObjectChangeFilterForm
+    table = tables.ObjectChangeTable
+    template_name = "extras/objectchange_list.html"
+    action_buttons = ("export",)
 
 
-class ExportTemplateEditView(generic.ObjectEditView):
-    queryset = ExportTemplate.objects.all()
-    model_form = forms.ExportTemplateForm
-
-
-class ExportTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ExportTemplate.objects.all()
-
-
-class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ExportTemplate.objects.all()
-    table = tables.ExportTemplateTable
-
-
-class CustomLinkListView(generic.ObjectListView):
-    queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
-    filterset = filters.CustomLinkFilterSet
-    filterset_form = forms.CustomLinkFilterForm
-    action_buttons = ("add",)
-
-
-class CustomLinkView(generic.ObjectView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkEditView(generic.ObjectEditView):
-    queryset = CustomLink.objects.all()
-    model_form = forms.CustomLinkForm
-
-
-class CustomLinkDeleteView(generic.ObjectDeleteView):
-    queryset = CustomLink.objects.all()
-
-
-class CustomLinkBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomLink.objects.all()
-    table = tables.CustomLinkTable
-
-
-class WebhookListView(generic.ObjectListView):
-    queryset = Webhook.objects.all()
-    table = tables.WebhookTable
-    filterset = filters.WebhookFilterSet
-    filterset_form = forms.WebhookFilterForm
-    action_buttons = ("add",)
-
-
-class WebhookView(generic.ObjectView):
-    queryset = Webhook.objects.all()
+class ObjectChangeView(generic.ObjectView):
+    queryset = ObjectChange.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"content_types": instance.content_types.order_by("app_label", "model")}
+        related_changes = (
+            ObjectChange.objects.restrict(request.user, "view")
+            .filter(request_id=instance.request_id)
+            .exclude(pk=instance.pk)
+        )
+        related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
+
+        objectchanges = ObjectChange.objects.restrict(request.user, "view").filter(
+            changed_object_type=instance.changed_object_type,
+            changed_object_id=instance.changed_object_id,
+        )
+
+        next_change = objectchanges.filter(time__gt=instance.time).order_by("time").first()
+        prev_change = objectchanges.filter(time__lt=instance.time).order_by("-time").first()
+
+        if prev_change:
+            diff_added = shallow_compare_dict(
+                prev_change.object_data,
+                instance.object_data,
+                exclude=["last_updated"],
+            )
+            diff_removed = {x: prev_change.object_data.get(x) for x in diff_added}
+        else:
+            # No previous change; this is the initial change that added the object
+            diff_added = diff_removed = instance.object_data
+
+        return {
+            "diff_added": diff_added,
+            "diff_removed": diff_removed,
+            "next_change": next_change,
+            "prev_change": prev_change,
+            "related_changes_table": related_changes_table,
+            "related_changes_count": related_changes.count(),
+        }
 
 
-class WebhookEditView(generic.ObjectEditView):
-    queryset = Webhook.objects.all()
-    model_form = forms.WebhookForm
+class ObjectChangeLogView(View):
+    """
+    Present a history of changes made to a particular object.
+
+    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+    """
+
+    base_template = None
+
+    def get(self, request, model, **kwargs):
+
+        # Handle QuerySet restriction of parent object if needed
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        # Gather all changes for this object (and its related objects)
+        content_type = ContentType.objects.get_for_model(model)
+        objectchanges = (
+            ObjectChange.objects.restrict(request.user, "view")
+            .prefetch_related("user", "changed_object_type")
+            .filter(
+                Q(changed_object_type=content_type, changed_object_id=obj.pk)
+                | Q(related_object_type=content_type, related_object_id=obj.pk)
+            )
+        )
+        objectchanges_table = tables.ObjectChangeTable(data=objectchanges, orderable=False)
+
+        # Apply the request context
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(objectchanges_table)
+
+        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
+        # fall back to using base.html.
+        if self.base_template is None:
+            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
+            # TODO: This can be removed once an object view has been established for every model.
+            try:
+                template.loader.get_template(self.base_template)
+            except template.TemplateDoesNotExist:
+                self.base_template = "base.html"
+
+        return render(
+            request,
+            "extras/object_changelog.html",
+            {
+                "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "table": objectchanges_table,
+                "base_template": self.base_template,
+                "active_tab": "changelog",
+            },
+        )
 
 
-class WebhookDeleteView(generic.ObjectDeleteView):
-    queryset = Webhook.objects.all()
+#
+# Relationship
+#
 
 
-class WebhookBulkDeleteView(generic.BulkDeleteView):
-    queryset = Webhook.objects.all()
-    table = tables.WebhookTable
+class RelationshipListView(generic.ObjectListView):
+    queryset = Relationship.objects.all()
+    filterset = filters.RelationshipFilterSet
+    filterset_form = forms.RelationshipFilterForm
+    table = tables.RelationshipTable
+    action_buttons = "add"
+
+
+class RelationshipEditView(generic.ObjectEditView):
+    queryset = Relationship.objects.all()
+    model_form = forms.RelationshipForm
+
+
+class RelationshipDeleteView(generic.ObjectDeleteView):
+    queryset = Relationship.objects.all()
+
+
+class RelationshipAssociationListView(generic.ObjectListView):
+    queryset = RelationshipAssociation.objects.all()
+    filterset = filters.RelationshipAssociationFilterSet
+    filterset_form = forms.RelationshipAssociationFilterForm
+    table = tables.RelationshipAssociationTable
+    action_buttons = ()
+
+
+class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
+    queryset = RelationshipAssociation.objects.all()
 
 
 #
@@ -1168,116 +1216,93 @@ class StatusView(generic.ObjectView):
 
 
 #
-# Relationship
+# Tags
 #
 
 
-class RelationshipListView(generic.ObjectListView):
-    queryset = Relationship.objects.all()
-    filterset = filters.RelationshipFilterSet
-    filterset_form = forms.RelationshipFilterForm
-    table = tables.RelationshipTable
-    action_buttons = "add"
+class TagListView(generic.ObjectListView):
+    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
+    filterset = filters.TagFilterSet
+    filterset_form = forms.TagFilterForm
+    table = tables.TagTable
 
 
-class RelationshipEditView(generic.ObjectEditView):
-    queryset = Relationship.objects.all()
-    model_form = forms.RelationshipForm
+class TagView(generic.ObjectView):
+    queryset = Tag.objects.all()
+
+    def get_extra_context(self, request, instance):
+        tagged_items = TaggedItem.objects.filter(tag=instance).prefetch_related("content_type", "content_object")
+
+        # Generate a table of all items tagged with this Tag
+        items_table = tables.TaggedItemTable(tagged_items)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(items_table)
+
+        return {
+            "items_count": tagged_items.count(),
+            "items_table": items_table,
+        }
 
 
-class RelationshipDeleteView(generic.ObjectDeleteView):
-    queryset = Relationship.objects.all()
+class TagEditView(generic.ObjectEditView):
+    queryset = Tag.objects.all()
+    model_form = forms.TagForm
+    template_name = "extras/tag_edit.html"
 
 
-class RelationshipAssociationListView(generic.ObjectListView):
-    queryset = RelationshipAssociation.objects.all()
-    filterset = filters.RelationshipAssociationFilterSet
-    filterset_form = forms.RelationshipAssociationFilterForm
-    table = tables.RelationshipAssociationTable
-    action_buttons = ()
+class TagDeleteView(generic.ObjectDeleteView):
+    queryset = Tag.objects.all()
 
 
-class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
-    queryset = RelationshipAssociation.objects.all()
+class TagBulkImportView(generic.BulkImportView):
+    queryset = Tag.objects.all()
+    model_form = forms.TagCSVForm
+    table = tables.TagTable
 
 
-class GraphQLQueryListView(generic.ObjectListView):
-    queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
-    filterset = filters.GraphQLQueryFilterSet
-    filterset_form = forms.GraphQLQueryFilterForm
-    action_buttons = ("add",)
+class TagBulkEditView(generic.BulkEditView):
+    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
+    table = tables.TagTable
+    form = forms.TagBulkEditForm
 
 
-class GraphQLQueryView(generic.ObjectView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryEditView(generic.ObjectEditView):
-    queryset = GraphQLQuery.objects.all()
-    model_form = forms.GraphQLQueryForm
-
-
-class GraphQLQueryDeleteView(generic.ObjectDeleteView):
-    queryset = GraphQLQuery.objects.all()
-
-
-class GraphQLQueryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GraphQLQuery.objects.all()
-    table = tables.GraphQLQueryTable
-
-
-class ComputedFieldListView(generic.ObjectListView):
-    queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
-    filterset = filters.ComputedFieldFilterSet
-    filterset_form = forms.ComputedFieldFilterForm
-    action_buttons = ("add",)
-
-
-class ComputedFieldView(generic.ObjectView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldEditView(generic.ObjectEditView):
-    queryset = ComputedField.objects.all()
-    model_form = forms.ComputedFieldForm
-
-
-class ComputedFieldDeleteView(generic.ObjectDeleteView):
-    queryset = ComputedField.objects.all()
-
-
-class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = ComputedField.objects.all()
-    table = tables.ComputedFieldTable
+class TagBulkDeleteView(generic.BulkDeleteView):
+    queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
+    table = tables.TagTable
 
 
 #
-# Custom fields
+# Webhooks
 #
 
 
-class CustomFieldListView(generic.ObjectListView):
-    queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
-    filterset = filters.CustomFieldFilterSet
+class WebhookListView(generic.ObjectListView):
+    queryset = Webhook.objects.all()
+    table = tables.WebhookTable
+    filterset = filters.WebhookFilterSet
+    filterset_form = forms.WebhookFilterForm
     action_buttons = ("add",)
 
 
-class CustomFieldView(generic.ObjectView):
-    queryset = CustomField.objects.all()
+class WebhookView(generic.ObjectView):
+    queryset = Webhook.objects.all()
+
+    def get_extra_context(self, request, instance):
+        return {"content_types": instance.content_types.order_by("app_label", "model")}
 
 
-class CustomFieldEditView(generic.ObjectEditView):
-    queryset = CustomField.objects.all()
-    model_form = forms.CustomFieldForm
+class WebhookEditView(generic.ObjectEditView):
+    queryset = Webhook.objects.all()
+    model_form = forms.WebhookForm
 
 
-class CustomFieldDeleteView(generic.ObjectDeleteView):
-    queryset = CustomField.objects.all()
+class WebhookDeleteView(generic.ObjectDeleteView):
+    queryset = Webhook.objects.all()
 
 
-class CustomFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
+class WebhookBulkDeleteView(generic.BulkDeleteView):
+    queryset = Webhook.objects.all()
+    table = tables.WebhookTable

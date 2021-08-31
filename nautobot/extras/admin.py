@@ -19,70 +19,6 @@ def order_content_types(field):
 
 
 #
-# Webhooks
-#
-
-
-class WebhookForm(forms.ModelForm):
-    payload_url = LaxURLField(label="URL")
-
-    class Meta:
-        model = Webhook
-        exclude = ()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if "content_types" in self.fields:
-            order_content_types(self.fields["content_types"])
-
-
-@admin.register(Webhook)
-class WebhookAdmin(admin.ModelAdmin):
-    list_display = [
-        "name",
-        "models",
-        "payload_url",
-        "http_content_type",
-        "enabled",
-        "type_create",
-        "type_update",
-        "type_delete",
-        "ssl_verification",
-    ]
-    list_filter = [
-        "enabled",
-        "type_create",
-        "type_update",
-        "type_delete",
-        "content_types",
-    ]
-    form = WebhookForm
-    fieldsets = (
-        (None, {"fields": ("name", "content_types", "enabled")}),
-        ("Events", {"fields": ("type_create", "type_update", "type_delete")}),
-        (
-            "HTTP Request",
-            {
-                "fields": (
-                    "payload_url",
-                    "http_method",
-                    "http_content_type",
-                    "additional_headers",
-                    "body_template",
-                    "secret",
-                ),
-                "classes": ("monospace",),
-            },
-        ),
-        ("SSL", {"fields": ("ssl_verification", "ca_file_path")}),
-    )
-
-    def models(self, obj):
-        return ", ".join([ct.name for ct in obj.content_types.all()])
-
-
-#
 # Custom fields
 #
 
@@ -361,3 +297,67 @@ class JobResultAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+#
+# Webhooks
+#
+
+
+class WebhookForm(forms.ModelForm):
+    payload_url = LaxURLField(label="URL")
+
+    class Meta:
+        model = Webhook
+        exclude = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if "content_types" in self.fields:
+            order_content_types(self.fields["content_types"])
+
+
+@admin.register(Webhook)
+class WebhookAdmin(admin.ModelAdmin):
+    list_display = [
+        "name",
+        "models",
+        "payload_url",
+        "http_content_type",
+        "enabled",
+        "type_create",
+        "type_update",
+        "type_delete",
+        "ssl_verification",
+    ]
+    list_filter = [
+        "enabled",
+        "type_create",
+        "type_update",
+        "type_delete",
+        "content_types",
+    ]
+    form = WebhookForm
+    fieldsets = (
+        (None, {"fields": ("name", "content_types", "enabled")}),
+        ("Events", {"fields": ("type_create", "type_update", "type_delete")}),
+        (
+            "HTTP Request",
+            {
+                "fields": (
+                    "payload_url",
+                    "http_method",
+                    "http_content_type",
+                    "additional_headers",
+                    "body_template",
+                    "secret",
+                ),
+                "classes": ("monospace",),
+            },
+        ),
+        ("SSL", {"fields": ("ssl_verification", "ca_file_path")}),
+    )
+
+    def models(self, obj):
+        return ", ".join([ct.name for ct in obj.content_types.all()])
