@@ -121,7 +121,7 @@ This workflow uses [Docker](https://docs.docker.com/get-docker/) and [Docker Com
 For the Docker Compose workflow, Nautobot uses [Invoke](http://docs.pyinvoke.org/en/latest/index.html) as a replacement for Make. Invoke was chosen because it is less arcane than make. Instead of a `Makefile`, Invoke reads the `tasks.py` in the project root.
 
 !!! note
-    Although the Docker Compose workflow uses containers, it is important to note that the containers are running the local repository code on your machine. Changes you make to your local code will be picked up by the containers.
+    Although the Docker Compose workflow uses containers, it is important to note that the containers are running the local repository code on your machine. Changes you make to your local code will be picked up and executed by the containers.
 
 #### Install Invoke
 
@@ -185,6 +185,14 @@ Additional useful commands for the development environment:
 
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md/) page.
+
+!!! note
+    If you are making edits to Nautobot's documentation in the Docker Compose workflow or otherwise needing to serve the docs locally, it is necessary to run a Python virtual environment:
+    
+    - `pip3 install poetry`
+    - `poetry shell`
+    - `poetry install`
+    - `mkdocs serve`
 
 ### Python Virtual Environment Workflow
 
