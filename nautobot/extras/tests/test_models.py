@@ -1,5 +1,6 @@
 import os
 import tempfile
+from unittest import mock
 import uuid
 
 from django.conf import settings
@@ -28,6 +29,7 @@ from nautobot.extras.models import (
     FileProxy,
     GitRepository,
     JobResult,
+    Secret,
     Status,
     Tag,
 )
@@ -409,6 +411,41 @@ class JobResultTest(TestCase):
 
         job_result.job_id = uuid.uuid4()
         self.assertIsNone(job_result.related_object)
+
+
+class SecretTest(TestCase):
+    """
+    Tests for the `Secret` model class.
+    """
+
+    def setUp(self):
+        self.secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            slug="env-var",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
+        )
+
+    def test_environment_variable_value_not_found(self):
+        """Failure to retrieve an environment variable returns None."""
+        self.assertIsNone(self.secret.value)
+
+    def test_environment_variable_missing_parameters(self):
+        """A mis-defined environment variable secret returns None."""
+        self.secret.parameters = {}
+        self.secret.save()
+        self.assertIsNone(self.secret.value)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
+    def test_environment_variable_value_success(self):
+        """Successful retrieval of an environment variable secret."""
+        self.assertEqual(self.secret.value, "supersecretvalue")
+
+    def test_unknown_provider(self):
+        """An unknown/unsupported provider returns None."""
+        self.secret.provider = "it-is-a-mystery"
+        self.secret.save()
+        self.assertIsNone(self.secret.value)
 
 
 class StatusTest(TestCase):

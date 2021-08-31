@@ -30,6 +30,9 @@ include = [
     "NOTICE",
 ]
 
+[tool.poetry.plugins."nautobot.secrets.providers"]
+"environment-variable" = "nautobot.extras.secrets.providers:EnvironmentVariable"
+
 [tool.poetry.dependencies]
 python = "^3.6"
 # Background task processing

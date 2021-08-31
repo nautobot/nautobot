@@ -8,6 +8,10 @@ packages = [
     {include = "dummy_plugin"}
 ]
 
+# Register the Constant class in dummy_plugin.secrets as a provider for Secrets of type "constant"
+[tool.poetry.plugins."nautobot.secrets.providers"]
+"constant" = "dummy_plugin.secrets:Constant"
+
 [tool.poetry.dependencies]
 python = "^3.6"
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}

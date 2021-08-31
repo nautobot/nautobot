@@ -10,7 +10,7 @@ from django.urls import reverse
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
-from nautobot.extras.models import CustomField
+from nautobot.extras.models import CustomField, Secret
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
@@ -291,6 +291,19 @@ class PluginTest(TestCase):
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Dummy Plugin Automatically Added Custom Field")
         self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
+
+    def test_secret_provider(self):
+        """
+        Validate that a plugin can provide a custom Secret provider and it will be used.
+        """
+        # The "constant" provider is implemented by the plugin
+        secret = Secret.objects.create(
+            name="Constant Secret",
+            slug="constant-secret",
+            provider="constant",
+            parameters={"constant": "It's a secret to everybody"},
+        )
+        self.assertEqual(secret.value, secret.parameters["constant"])
 
 
 @skipIf(
