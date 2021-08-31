@@ -395,7 +395,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
                 )
 
 
-class RelationshipAssociation(BaseModel, ChangeLoggedModel):
+class RelationshipAssociation(BaseModel):
     relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
 
     source_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")

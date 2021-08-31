@@ -187,7 +187,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel, ChangeLoggedModel):
+class CustomField(BaseModel):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
