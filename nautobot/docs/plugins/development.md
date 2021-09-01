@@ -36,6 +36,7 @@ plugin_name/
       - 0001_initial.py     # Database Models
     - models.py             # Database Models
     - navigation.py         # Navigation Menu Items
+    - secrets.py            # Secret Providers
     - signals.py            # Signal Handler Functions
     - template_content.py   # Extending Core Templates
     - templates/
@@ -496,6 +497,48 @@ config = AnimalSoundsConfig
 ```
 
 After writing this code, run `nautobot-server migrate` or `nautobot-server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.
+
+### Implementing Secrets Providers
+
+A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. For a simple (insecure!) example, we could define a "constant" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
+
+!!! warning
+    This is an intentionally simplistic example and should not be used in practice! Sensitive secret data should never be stored directly in Nautobot's database itself.
+
+```python
+# secrets.py
+from nautobot.extras.secrets import SecretProvider
+
+
+class ConstantSecretProvider(SecretProvider):
+    """
+    Example SecretProvider - this one just returns a user-specified constant value.
+
+    Obviously this is insecure and not something you'd want to actually use!
+    """
+
+    @classmethod
+    def get_value_for_secret(cls, secret):
+        """
+        Return the value defined in the Secret.parameters "constant" key.
+
+        A more realistic SecretProvider would make calls to external APIs, etc.,
+        to retrieve a secret from another system as desired.
+        """
+        return secret.parameters.get("constant")
+```
+
+To make this new `SecretProvider` class discoverable by Nautobot, you will need to register it as a "plugin" in your `pyproject.toml`:
+
+```toml
+# pyproject.toml
+
+# Register ConstantSecretProvider class in my_plugin.secrets as a provider of type "constant"
+[tool.poetry.plugins."nautobot.secrets.providers"]
+"constant" = "my_plugin.secrets:ConstantSecretProvider"
+```
+
+After installing and enabling your plugin, you should now be able to navigate to `Extensibility > Automation > Secrets` and create a new Secret, at which point `"constant"` should now be available as a new secrets provider to use.
 
 ## Adding Database Models
 

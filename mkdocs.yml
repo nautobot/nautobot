@@ -80,6 +80,7 @@ nav:
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
         - Relationships: 'models/extras/relationship.md'
+        - Secrets: 'models/extras/secret.md'
         - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
         - Webhooks: 'models/extras/webhook.md'
