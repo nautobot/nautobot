@@ -1,7 +1,7 @@
 from nautobot.extras.secrets import SecretProvider
 
 
-class Constant(SecretProvider):
+class ConstantSecretProvider(SecretProvider):
     """
     Example of a plugin-provided SecretProvider - this one just uses a user-specified constant value.
 

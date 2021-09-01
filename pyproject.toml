@@ -31,7 +31,8 @@ include = [
 ]
 
 [tool.poetry.plugins."nautobot.secrets.providers"]
-"environment-variable" = "nautobot.extras.secrets.providers:EnvironmentVariable"
+"environment-variable" = "nautobot.extras.secrets.providers:EnvironmentVariableSecretProvider"
+"text-file" = "nautobot.extras.secrets.providers:TextFileSecretProvider"
 
 [tool.poetry.dependencies]
 python = "^3.6"
