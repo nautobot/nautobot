@@ -52,6 +52,7 @@ from .models import (
     Tag,
     Webhook,
 )
+from .secrets import SecretProvider
 from .utils import FeatureQuery
 from nautobot.extras import choices
 
@@ -954,13 +955,16 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
 #
 
 
+def provider_choices():
+    return [(name, SecretProvider.name_to_display(name)) for name in SecretProvider.available_provider_names()]
+
+
 class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Create/update form for `Secret` objects."""
 
     slug = SlugField()
 
-    # TODO dynamicly populated choices here?
-    # provider = forms.ChoiceField(choices=..., widget=StaticSelect2())
+    provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
     # TODO something more akin to a JobForm with dynamically constructed widgets
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')

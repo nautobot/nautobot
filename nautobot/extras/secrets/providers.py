@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 import logging
 import os
 
+import pkg_resources
+
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +19,31 @@ class SecretProvider(ABC):
     @abstractmethod
     def get_value_for_secret(cls, secret):
         """Retrieve the stored value described by the given Secret record."""
+
+    @staticmethod
+    def available_provider_names():
+        """Get the listing of registered provider names currently available."""
+        return sorted(
+            set(entry_point.name for entry_point in pkg_resources.iter_entry_points("nautobot.secrets.providers"))
+        )
+
+    @staticmethod
+    def get_providers(name):
+        """Get the provider class(es) registered under the given name."""
+        # Should only be one matching entry point but in theory multiple plugins could register the same name...
+        for entry_point in pkg_resources.iter_entry_points("nautobot.secrets.providers", name=name):
+            yield entry_point.load()
+
+    @staticmethod
+    def name_to_display(name):
+        """Convert a provider entrypoint name to a more user-friendly display name.
+
+        provider_name_to_display("constant-value") -> "Constant Value"
+        provider_name_to_display("AWS-secrets-manager") -> "AWS Secrets Manager"
+        """
+        # For display value, replace "-" with " " in the provider names, and convert to title-case where appropriate.
+        # See also nautobot.utilities.templatetags.helpers.bettertitle()
+        return " ".join(w[0].upper() + w[1:] for w in name.split("-"))
 
 
 class EnvironmentVariableSecretProvider(SecretProvider):

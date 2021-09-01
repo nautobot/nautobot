@@ -33,6 +33,11 @@ from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobExecutionType, JobResultStatusChoices
+from .datasources import (
+    get_datasource_contents,
+    enqueue_pull_git_repository_and_refresh_data,
+)
+from .jobs import get_job, get_jobs, run_job, Job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -54,11 +59,7 @@ from .models import (
     TaggedItem,
     Webhook,
 )
-from .jobs import get_job, get_jobs, run_job, Job
-from .datasources import (
-    get_datasource_contents,
-    enqueue_pull_git_repository_and_refresh_data,
-)
+from .secrets import SecretProvider
 
 
 #
@@ -1136,6 +1137,7 @@ class SecretView(generic.ObjectView):
 
         return {
             "format": format,
+            "provider_display": SecretProvider.name_to_display(instance.provider),
         }
 
 

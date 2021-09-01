@@ -500,7 +500,7 @@ After writing this code, run `nautobot-server migrate` or `nautobot-server post_
 
 ### Implementing Secrets Providers
 
-A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. For a simple (insecure!) example, we could define a "constant" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
+A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
 
 !!! warning
     This is an intentionally simplistic example and should not be used in practice! Sensitive secret data should never be stored directly in Nautobot's database itself.
@@ -510,7 +510,7 @@ A plugin can define and register additional providers (sources) for [Secrets](..
 from nautobot.extras.secrets import SecretProvider
 
 
-class ConstantSecretProvider(SecretProvider):
+class ConstantValueSecretProvider(SecretProvider):
     """
     Example SecretProvider - this one just returns a user-specified constant value.
 
@@ -533,12 +533,18 @@ To make this new `SecretProvider` class discoverable by Nautobot, you will need 
 ```toml
 # pyproject.toml
 
-# Register ConstantSecretProvider class in my_plugin.secrets as a provider of type "constant"
+# The name "constant-value" refers to ConstantValueSecretProvider in my_plugin.secrets
 [tool.poetry.plugins."nautobot.secrets.providers"]
-"constant" = "my_plugin.secrets:ConstantSecretProvider"
+"constant-value" = "my_plugin.secrets:ConstantValueSecretProvider"
 ```
 
-After installing and enabling your plugin, you should now be able to navigate to `Extensibility > Automation > Secrets` and create a new Secret, at which point `"constant"` should now be available as a new secrets provider to use.
+!!! note
+    The name that you register the provider under must use dashes in place of spaces. It will be automatically converted to title case for display purposes, so you can generally use lower-case names, but you may include capitalized acronyms where appropriate:
+
+    - `"constant-value"` not `"constant value"`
+    - `"AWS-secrets-manager"` not `"AWS secrets manager"` or `"AWS-Secrets-Manager"`
+
+After installing and enabling your plugin, you should now be able to navigate to `Extensibility > Automation > Secrets` and create a new Secret, at which point `"constant-value"` should now be available as a new secrets provider to use.
 
 ## Adding Database Models
 

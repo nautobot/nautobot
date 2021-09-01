@@ -8,6 +8,7 @@ import pkg_resources
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.secrets import SecretProvider
 from nautobot.extras.utils import extras_features
 
 
@@ -68,8 +69,7 @@ class Secret(PrimaryModel):
         provider = None
         value = None
         # Should only be one matching entry point but in theory multiple plugins could register the same name...
-        for entry_point in pkg_resources.iter_entry_points("nautobot.secrets.providers", name=self.provider):
-            provider = entry_point.load()
+        for provider in SecretProvider.get_providers(self.provider):
             value = provider.get_value_for_secret(self)
             if value:
                 return value

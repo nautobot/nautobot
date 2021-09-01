@@ -300,7 +300,7 @@ class PluginTest(TestCase):
         secret = Secret.objects.create(
             name="Constant Secret",
             slug="constant-secret",
-            provider="constant",
+            provider="constant-value",
             parameters={"constant": "It's a secret to everybody"},
         )
         self.assertEqual(secret.value, secret.parameters["constant"])

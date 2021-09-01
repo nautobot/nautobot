@@ -41,6 +41,8 @@ from .models import (
     TaggedItem,
     Webhook,
 )
+from .secrets import SecretProvider
+
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -480,6 +482,9 @@ class SecretTable(BaseTable):
             "provider",
             "tags",
         )
+
+    def render_provider(self, value):
+        return SecretProvider.name_to_display(value)
 
 
 #
