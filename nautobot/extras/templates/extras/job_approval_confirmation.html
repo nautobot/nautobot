@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load helpers %}
 
-{% block title %}{{ job }} - Confirm Approval{% endblock %}
+{% block title %}{{ scheduled_job }} - Confirm Approval{% endblock %}
 
 {% block content %}
     <div class="row">
@@ -9,7 +9,7 @@
             <div class="panel panel-danger">
                 <div class="panel-heading"><strong>Confirm Approval</strong></div>
                 <div class="panel-body">
-                    <p><strong>Warning:</strong> You are approving a job that is past its scheduled date. It will run immediately after approval.</p>
+                    <p><strong>Warning:</strong> You are approving a job that is past its scheduled date ({{ scheduled_job.start_time }}). It will run immediately after approval.</p>
                     {% block message_extra %}{% endblock %}
                 </div>
             </div>
