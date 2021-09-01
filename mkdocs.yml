@@ -77,7 +77,7 @@ nav:
         - Git Repositories: 'models/extras/gitrepository.md'
         - Health Check: 'additional-features/healthcheck.md'
         - Jobs: 'additional-features/jobs.md'
-        - Job Scheduling and Approvals: 'additional-features/job_scheduling_and_approvals.md'
+        - Job Scheduling and Approvals: 'additional-features/job-scheduling-and-approvals.md'
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
         - Relationships: 'models/extras/relationship.md'
