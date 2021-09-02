@@ -1131,12 +1131,13 @@ class ScheduledJob(BaseModel):
         return timezone.now() + timedelta(seconds=15)
 
     def to_cron(self):
+        t = self.start_time
         if self.interval == TYPE_HOURLY:
-            return schedules.crontab(minute=0)
+            return schedules.crontab(minute=t.minute)
         elif self.interval == TYPE_DAILY:
-            return schedules.crontab(minute=0, hour=0)
+            return schedules.crontab(minute=t.minute, hour=t.hour)
         elif self.interval == TYPE_WEEKLY:
-            return schedules.crontab(minute=0, hour=0, day_of_week="mon")
+            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
 
 
 signals.pre_delete.connect(ScheduledJobs.changed, sender=ScheduledJob)
