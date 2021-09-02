@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.admin import site as admin_site
+from social_django.models import Association, Nonce, UserSocialAuth
 from taggit.models import Tag
 
 
@@ -11,3 +12,7 @@ admin_site.index_template = "admin/nautobot_index.html"
 
 # Unregister the unused stock Tag model provided by django-taggit
 admin_site.unregister(Tag)
+
+admin_site.unregister(Association)
+admin_site.unregister(Nonce)
+admin_site.unregister(UserSocialAuth)
