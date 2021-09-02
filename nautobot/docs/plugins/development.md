@@ -173,6 +173,7 @@ The following `PluginConfig` attributes can be configured to customize where Nau
 | `jinja_filters` | `"jinja_filters"` | Path to a module that contains jinja filters to be registered |
 | `jobs` | `"jobs.jobs"` | Dotted path to a list of Job classes |
 | `menu_items` | `"navigation.menu_items"` | Dotted path to a list of menu items provided by the plugin |
+| `secrets_providers` | `"secrets.secrets_providers"` | Dotted path to a list of secrets providers in the plugin |
 | `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of template extension classes |
 
 ### Install the Plugin for Development
@@ -500,49 +501,41 @@ After writing this code, run `nautobot-server migrate` or `nautobot-server post_
 
 ### Implementing Secrets Providers
 
-A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
+A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. By default, Nautobot looks for an iterable named `secrets_providers` within a `secrets.py` file. (This can be overridden by setting `secrets_providers` to a custom value on the plugin's `PluginConfig`.)
+
+For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand. An example is below.
 
 !!! warning
     This is an intentionally simplistic example and should not be used in practice! Sensitive secret data should never be stored directly in Nautobot's database itself.
 
 ```python
 # secrets.py
-from nautobot.extras.secrets import SecretProvider
+from nautobot.extras.secrets import SecretsProvider
 
 
-class ConstantValueSecretProvider(SecretProvider):
+class ConstantValueSecretsProvider(SecretsProvider):
     """
-    Example SecretProvider - this one just returns a user-specified constant value.
+    Example SecretsProvider - this one just returns a user-specified constant value.
 
     Obviously this is insecure and not something you'd want to actually use!
     """
+
+    slug = "constant-value"
+    name = "constant value"
 
     @classmethod
     def get_value_for_secret(cls, secret):
         """
         Return the value defined in the Secret.parameters "constant" key.
 
-        A more realistic SecretProvider would make calls to external APIs, etc.,
+        A more realistic SecretsProvider would make calls to external APIs, etc.,
         to retrieve a secret from another system as desired.
         """
         return secret.parameters.get("constant")
+
+
+secrets_providers = [ConstantValueSecretsProvider]
 ```
-
-To make this new `SecretProvider` class discoverable by Nautobot, you will need to register it as a "plugin" in your `pyproject.toml`:
-
-```toml
-# pyproject.toml
-
-# The name "constant-value" refers to ConstantValueSecretProvider in my_plugin.secrets
-[tool.poetry.plugins."nautobot.secrets.providers"]
-"constant-value" = "my_plugin.secrets:ConstantValueSecretProvider"
-```
-
-!!! note
-    The name that you register the provider under must use dashes in place of spaces. It will be automatically converted to title case for display purposes, so you can generally use lower-case names, but you may include capitalized acronyms where appropriate:
-
-    - `"constant-value"` not `"constant value"`
-    - `"AWS-secrets-manager"` not `"AWS secrets manager"` or `"AWS-Secrets-Manager"`
 
 After installing and enabling your plugin, you should now be able to navigate to `Extensibility > Automation > Secrets` and create a new Secret, at which point `"constant-value"` should now be available as a new secrets provider to use.
 

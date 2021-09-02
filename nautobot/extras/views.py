@@ -59,7 +59,7 @@ from .models import (
     TaggedItem,
     Webhook,
 )
-from .secrets import SecretProvider
+from .registry import registry
 
 
 #
@@ -1135,9 +1135,11 @@ class SecretView(generic.ObjectView):
         else:
             format = "json"
 
+        provider = registry["secrets_providers"].get(instance.provider)
+
         return {
             "format": format,
-            "provider_display": SecretProvider.name_to_display(instance.provider),
+            "provider_name": provider.name if provider else instance.provider,
         }
 
 

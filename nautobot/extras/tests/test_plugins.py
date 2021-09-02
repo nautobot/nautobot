@@ -292,11 +292,11 @@ class PluginTest(TestCase):
         self.assertEqual(cf.label, "Dummy Plugin Automatically Added Custom Field")
         self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
 
-    def test_secret_provider(self):
+    def test_secrets_provider(self):
         """
         Validate that a plugin can provide a custom Secret provider and it will be used.
         """
-        # The "constant" provider is implemented by the plugin
+        # The "constant-value" provider is implemented by the plugin
         secret = Secret.objects.create(
             name="Constant Secret",
             slug="constant-secret",

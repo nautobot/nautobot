@@ -41,7 +41,7 @@ from .models import (
     TaggedItem,
     Webhook,
 )
-from .secrets import SecretProvider
+from .registry import registry
 
 
 TAGGED_ITEM = """
@@ -484,7 +484,7 @@ class SecretTable(BaseTable):
         )
 
     def render_provider(self, value):
-        return SecretProvider.name_to_display(value)
+        return registry["secrets_providers"][value].name if value in registry["secrets_providers"] else value
 
 
 #

@@ -8,8 +8,8 @@ However, any number of Nautobot features (including, but not limited to, device 
 
 Each Secret is associated with a secrets provider (not to be confused with a circuit provider), which provides the functionality needed to retrieve a value from a particular source of secrets. Nautobot includes the following built-in secrets providers:
 
-- `EnvironmentVariableSecretProvider` - for retrieving a secret value defined in an environment variable
-- `TextFileSecretProvider` - for retrieving a secret value stored in a text file
+- `EnvironmentVariableSecretsProvider` - for retrieving a secret value defined in an environment variable
+- `TextFileSecretsProvider` - for retrieving a secret value stored in a text file
 
 Nautobot plugins can also [implement and provide](../../plugins/development.md#implementing-secrets-providers) additional secrets providers as desired to support other sources such as Hashicorp Vault or AWS Secrets Manager.
 
@@ -17,7 +17,7 @@ Nautobot plugins can also [implement and provide](../../plugins/development.md#i
 
 Each secrets provider defines a set of provider-specific parameters that a Secret must specify in order to successfully retrieve the specific secret value desired. For example:
 
-- `EnvironmentVariableSecretProvider` requires a `variable` parameter, specifying the name of the variable to retrieve
-- `TextFileSecretProvider` requires a `path` parameter, specifying the filesystem path to load the secret value from.
+- `EnvironmentVariableSecretsProvider` requires a `variable` parameter, specifying the name of the variable to retrieve
+- `TextFileSecretsProvider` requires a `path` parameter, specifying the filesystem path to load the secret value from.
 
 When defining a new Secret, you will need to select the desired secrets provider and then fill in the specific parameters required by that provider in order to have a completely specified, usable Secret record.

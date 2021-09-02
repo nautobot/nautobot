@@ -8,7 +8,7 @@ import pkg_resources
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.secrets import SecretProvider
+from nautobot.extras.registry import registry
 from nautobot.extras.utils import extras_features
 
 
@@ -66,19 +66,18 @@ class Secret(PrimaryModel):
     @property
     def value(self):
         """Retrieve the secret value that this Secret is a representation of."""
-        provider = None
-        value = None
-        # Should only be one matching entry point but in theory multiple plugins could register the same name...
-        for provider in SecretProvider.get_providers(self.provider):
-            value = provider.get_value_for_secret(self)
-            if value:
-                return value
-            # else, continue to the next entry point with this same provider, if any, just in case...
-
+        provider = registry["secrets_providers"].get(self.provider)
         if not provider:
             logger.error('No registered provider "%s" is available', self.provider)
-        else:
-            logger.error(
-                'No secret value retrievable for provider "%s" with parameters %s', self.provider, self.parameters
-            )
+            return None
+
+        value = provider.get_value_for_secret(self)
+        if value:
+            return value
+
+        logger.error(
+            'No secret value was retrieved for provider "%s" with parameters %s',
+            self.provider,
+            self.parameters,
+        )
         return None
