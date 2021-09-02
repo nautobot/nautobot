@@ -1138,6 +1138,7 @@ class ScheduledJob(BaseModel):
             return schedules.crontab(minute=t.minute, hour=t.hour)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
             return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
+        raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 
 signals.pre_delete.connect(ScheduledJobs.changed, sender=ScheduledJob)
