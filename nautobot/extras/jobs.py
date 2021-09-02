@@ -20,6 +20,7 @@ from django.db import transaction
 from django.db.models import Model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
+from django.forms import ValidationError
 from django.utils import timezone
 from django.utils.functional import classproperty
 import netaddr
@@ -364,7 +365,7 @@ class BaseJob:
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
             elif isinstance(var, ObjectVar):
-                if type(value) is dict:
+                if isinstance(value, dict):
                     return_data[field_name] = var.field_attrs["queryset"].get(**value)
                 else:
                     return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
@@ -380,6 +381,21 @@ class BaseJob:
                 return_data[field_name] = value
 
         return return_data
+
+    def validate_data(self, data):
+        vars = self._get_vars()
+
+        if not isinstance(data, dict):
+            raise ValidationError("Job data needs to be a dict")
+
+        for k, v in data.items():
+            if k not in vars:
+                raise ValidationError({k: "Job data contained an unknown property"})
+
+        # defer validation to the form object
+        f = self.as_form(data=data)
+        if not f.is_valid():
+            raise ValidationError(f.errors)
 
     @staticmethod
     def load_file(pk):
