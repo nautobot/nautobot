@@ -2,7 +2,7 @@
 
 Plugins may define and register additional providers in addition to these.
 """
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 import logging
 import os
 
@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 class SecretsProvider(ABC):
     """Abstract base class for concrete providers of secret retrieval features."""
 
-    slug = None
-    """String uniquely identifying this class; will be used as a key to look up the class owning a given Secret."""
+    @abstractproperty
+    def slug(self):
+        """String uniquely identifying this class; will be used as a key to look up the class owning a given Secret."""
 
     @property
     def name(self):

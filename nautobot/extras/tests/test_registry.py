@@ -39,15 +39,9 @@ class RegistryTest(TestCase):
             # Need to register a class, not a class instance
             register_secrets_provider(EnvironmentVariableSecretsProvider())
 
-        # Concrete subclass must implement a slug
-        class PartiallyImplementedSecretsProvider(SecretsProvider):
-            def get_value_for_secret(secret):
-                return ""
-
-        with self.assertRaises(ValueError):
-            register_secrets_provider(PartiallyImplementedSecretsProvider)
-
         # Duplicate slug
-        PartiallyImplementedSecretsProvider.slug = EnvironmentVariableSecretsProvider.slug
+        class DuplicateSecretsProvider(EnvironmentVariableSecretsProvider):
+            pass
+
         with self.assertRaises(KeyError):
-            register_secrets_provider(PartiallyImplementedSecretsProvider)
+            register_secrets_provider(DuplicateSecretsProvider)
