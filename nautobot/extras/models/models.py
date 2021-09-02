@@ -1132,11 +1132,11 @@ class ScheduledJob(BaseModel):
 
     def to_cron(self):
         t = self.start_time
-        if self.interval == TYPE_HOURLY:
+        if self.interval == JobExecutionType.TYPE_HOURLY:
             return schedules.crontab(minute=t.minute)
-        elif self.interval == TYPE_DAILY:
+        elif self.interval == JobExecutionType.TYPE_DAILY:
             return schedules.crontab(minute=t.minute, hour=t.hour)
-        elif self.interval == TYPE_WEEKLY:
+        elif self.interval == JobExecutionType.TYPE_WEEKLY:
             return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
 
 
