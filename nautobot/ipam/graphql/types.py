@@ -50,25 +50,16 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         model = models.IPAddress
         filterset_class = filters.IPAddressFilterSet
 
-    @gql_optimizer.resolver_hints(
-        prefetch_related=lambda *args: Prefetch(
-            'assigned_object',
-            queryset=gql_optimizer.query(models.IPAddress.objects.filter(pk=interface_id), info),
-            to_attr='assigned_object'
-        )
-    )
+    def resolve_assigned_object(self, args):
+        if self.assigned_object:
+            return self.assigned_object
+        return None
+
     def resolve_interface(self, info, interface_id):
         if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
             return self.assigned_object
         return None
 
-    @gql_optimizer.resolver_hints(
-        prefetch_related=lambda info, vminterface_id: Prefetch(
-            'assigned_object',
-            queryset=gql_optimizer.query(models.IPAddress.objects.filter(vminterface_id=vminterface_id), info),
-            to_attr='gql_vminterface_id_' + vminterface_id
-        )
-    )
     def resolve_vminterface(self, info, vminterface_id):
         if self.assigned_object and type(self.assigned_object).__name__ == "VMInterface":
             return self.assigned_object
