@@ -468,7 +468,10 @@ class CustomField(BaseModel):
         return reverse("extras:customfield", args=[self.name])
 
 
-@extras_features("webhooks")
+@extras_features(
+    "graphql",
+    "webhooks",
+)
 class CustomFieldChoice(BaseModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field
