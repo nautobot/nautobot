@@ -194,6 +194,8 @@ Additional useful commands for the development environment:
     - `poetry install`
     - `mkdocs serve`
 
+Proceed to the [Working in your Development Environment](#working-in-your-development-environment) section
+
 ### Python Virtual Environment Workflow
 
 This workflow uses Python and Poetry to work with your development environment locally. It requires that you install the required system dependencies on your system yourself.
@@ -333,6 +335,14 @@ A newly created configuration includes sane defaults. If you need to customize t
 
 Below are common commands for working your development environment.
 
+### Creating a Superuser
+
+You'll need to create a administrative superuser account to be able to log into the Nautobot Web UI for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
+
+| Docker Compose Workflow | Virtual Environment Workflow   |
+|-------------------------|--------------------------------|
+| `nautobot-server createsuperuser`| `invoke createsuperuser`|
+
 ### Starting the Development Server
 
 Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
@@ -363,6 +373,8 @@ Quit the server with CONTROL-C.
     Do not use `poetry run nautobot-server runserver` as it will crash unless you also pass the `--noreload` flag, which somewhat defeats the purpose of using the development server. It is recommended to use `nautobot-server runserver` from within an active virtualenv (e.g. `poetry shell`). This is a [known issue with Django and Poetry](https://github.com/python-poetry/poetry/issues/2435).
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
+
+You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
 
 ### Starting the Interactive Shell
 
