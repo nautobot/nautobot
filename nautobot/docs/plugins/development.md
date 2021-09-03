@@ -503,7 +503,14 @@ After writing this code, run `nautobot-server migrate` or `nautobot-server post_
 
 A plugin can define and register additional providers (sources) for [Secrets](../models/extras/secret.md), allowing Nautobot to retrieve secret values from additional systems or data sources. By default, Nautobot looks for an iterable named `secrets_providers` within a `secrets.py` file. (This can be overridden by setting `secrets_providers` to a custom value on the plugin's `PluginConfig`.)
 
-For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand. An example is below.
+To define a new `SecretsProvider` subclass, we must specify the following:
+
+- A unique `slug` string identifying this provider
+- A human-readable `name` string (optional; the `slug` will be used if this is not specified)
+- A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
+- An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
+
+For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
 
 !!! warning
     This is an intentionally simplistic example and should not be used in practice! Sensitive secret data should never be stored directly in Nautobot's database itself.
@@ -522,6 +529,15 @@ class ConstantValueSecretsProvider(SecretsProvider):
 
     slug = "constant-value"
     name = "constant value"
+
+    class ParametersForm(BootstrapMixin, forms.Form):
+        """
+        User-friendly form for specifying the required parameters of this provider.
+        """
+        constant = forms.CharField(
+            required=True,
+            help_text="Constant secret value. <strong>DO NOT USE FOR REAL DATA</strong>"
+        )
 
     @classmethod
     def get_value_for_secret(cls, secret):

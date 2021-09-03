@@ -2,30 +2,16 @@
 
 Plugins may define and register additional providers in addition to these.
 """
-from abc import ABC, abstractmethod, abstractproperty
 import logging
 import os
 
+from django import forms
+
+from nautobot.extras.secrets import SecretsProvider
+from nautobot.utilities.forms import BootstrapMixin
+
 
 logger = logging.getLogger(__name__)
-
-
-class SecretsProvider(ABC):
-    """Abstract base class for concrete providers of secret retrieval features."""
-
-    @abstractproperty
-    def slug(self):
-        """String uniquely identifying this class; will be used as a key to look up the class owning a given Secret."""
-
-    @property
-    def name(self):
-        """Human-friendly name for this class, falling back to the slug if not overridden."""
-        return self.slug
-
-    @classmethod
-    @abstractmethod
-    def get_value_for_secret(cls, secret):
-        """Retrieve the stored value described by the given Secret record."""
 
 
 class EnvironmentVariableSecretsProvider(SecretsProvider):
@@ -33,6 +19,9 @@ class EnvironmentVariableSecretsProvider(SecretsProvider):
 
     slug = "environment-variable"
     name = "environment variable"
+
+    class ParametersForm(BootstrapMixin, forms.Form):
+        variable = forms.CharField(required=True, help_text="Environment variable name")
 
     @classmethod
     def get_value_for_secret(cls, secret):
@@ -49,6 +38,9 @@ class TextFileSecretsProvider(SecretsProvider):
 
     slug = "text-file"
     name = "text file"
+
+    class ParametersForm(BootstrapMixin, forms.Form):
+        path = forms.CharField(required=True, help_text="Absolute filesystem path to the file")
 
     @classmethod
     def get_value_for_secret(cls, secret):

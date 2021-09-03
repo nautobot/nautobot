@@ -1143,9 +1143,26 @@ class SecretView(generic.ObjectView):
         }
 
 
+class SecretProviderParametersFormView(View):
+    """
+    Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
+    """
+
+    def get(self, request, provider_slug):
+        provider = registry["secrets_providers"].get(provider_slug)
+        if not provider:
+            raise Http404
+        return render(
+            request,
+            "extras/inc/secret_provider_parameters_form.html",
+            {"form": provider.ParametersForm(initial=request.GET)},
+        )
+
+
 class SecretEditView(generic.ObjectEditView):
     queryset = Secret.objects.all()
     model_form = forms.SecretForm
+    template_name = "extras/secret_edit.html"
 
 
 class SecretDeleteView(generic.ObjectDeleteView):

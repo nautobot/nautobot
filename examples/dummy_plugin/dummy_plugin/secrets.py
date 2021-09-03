@@ -1,3 +1,6 @@
+from django import forms
+
+from nautobot.utilities.forms import BootstrapMixin
 from nautobot.extras.secrets import SecretsProvider
 
 
@@ -10,6 +13,16 @@ class ConstantValueSecretsProvider(SecretsProvider):
 
     slug = "constant-value"
     name = "constant value"
+
+    class ParametersForm(BootstrapMixin, forms.Form):
+        """
+        User-friendly form for specifying the required parameters of this provider.
+        """
+
+        constant = forms.CharField(
+            required=True,
+            help_text="Constant secret value. <strong>Example Only - DO NOT USE FOR REAL SENSITIVE DATA</strong>",
+        )
 
     @classmethod
     def get_value_for_secret(cls, secret):
