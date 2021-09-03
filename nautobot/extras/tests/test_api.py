@@ -453,10 +453,6 @@ class JobTest(APITestCase):
 
             return "Job complete"
 
-        # TODO what is this doing here
-        def test_foo(self):
-            self.log_success(obj=None, message="Test completed")
-
     def get_test_job_class(self, class_path):
         if class_path == "local/test_api/TestJob":
             return self.TestJob
