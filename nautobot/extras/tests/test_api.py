@@ -660,23 +660,6 @@ class ScheduledJobTest(APITestCase):
             start_time=now(),
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["extras.scheduledjob"])
-    def test_list_objects(self):
-        count = ScheduledJob.objects.count()
-
-        response = self.client.get(reverse("extras-api:scheduledjob-list"), **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], count)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["extras.scheduledjob"])
-    def test_get_object(self):
-        job = ScheduledJob.objects.first()
-
-        url = reverse("extras-api:scheduledjob-detail", kwargs={"pk": job.pk})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEquals(response.data["name"], job.name)
-
 
 class JobApprovalTest(APITestCase):
     @classmethod
