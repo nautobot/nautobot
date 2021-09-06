@@ -151,7 +151,7 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 
     class Meta:
         model = CustomFieldChoice
-        fields = ["id", "value", "weight"]
+        fields = ["id", "value", "weight", "field"]
 
     def search(self, queryset, name, value):
         if not value.strip():
