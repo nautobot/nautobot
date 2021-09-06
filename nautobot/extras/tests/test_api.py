@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os.path
 import uuid
 from unittest import skipIf
@@ -710,6 +710,44 @@ class JobApprovalTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_in_past(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        user = User.objects.get(username="user1")
+        scheduled_job = ScheduledJob.objects.create(
+            name="test",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_FUTURE,
+            one_off=True,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_in_past_force(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        user = User.objects.get(username="user1")
+        scheduled_job = ScheduledJob.objects.create(
+            name="test",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_FUTURE,
+            one_off=True,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": scheduled_job.pk})
+        response = self.client.post(url + "?force=true", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_job_without_permission(self):
         url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": 1})
         with disable_warnings("django.request"):
@@ -765,8 +803,8 @@ class CreatedUpdatedFilterTest(APITestCase):
 
         # change the created and last_updated of one
         Rack.objects.filter(pk=self.rack2.pk).update(
-            last_updated=make_aware(datetime.datetime(2001, 2, 3, 1, 2, 3, 4)),
-            created=make_aware(datetime.datetime(2001, 2, 3)),
+            last_updated=make_aware(datetime(2001, 2, 3, 1, 2, 3, 4)),
+            created=make_aware(datetime(2001, 2, 3)),
         )
 
     def test_get_rack_created(self):
