@@ -341,7 +341,7 @@ You'll need to create a administrative superuser account to be able to log into 
 
 | Docker Compose Workflow | Virtual Environment Workflow   |
 |-------------------------|--------------------------------|
-| `nautobot-server createsuperuser`| `invoke createsuperuser`|
+| `invoke createsuperuser`| `nautobot-server createsuperuser` |
 
 ### Starting the Development Server
 
