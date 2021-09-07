@@ -1124,16 +1124,21 @@ class ScheduledJob(BaseModel):
             # This is one-time clocked task
             return clocked(clocked_time=self.start_time)
 
-        # A week is 7 days, otherwise the iteration is set to 1
-        every = 7 if self.interval == JobExecutionType.TYPE_WEEKLY else 1
-        return schedules.schedule(
-            timedelta(**{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: every}),
-            nowfun=lambda: make_aware(now()),
-        )
+        return self.to_cron()
 
     @staticmethod
     def earliest_possible_time():
         return timezone.now() + timedelta(seconds=15)
+
+    def to_cron(self):
+        t = self.start_time
+        if self.interval == JobExecutionType.TYPE_HOURLY:
+            return schedules.crontab(minute=t.minute)
+        elif self.interval == JobExecutionType.TYPE_DAILY:
+            return schedules.crontab(minute=t.minute, hour=t.hour)
+        elif self.interval == JobExecutionType.TYPE_WEEKLY:
+            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
+        raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 
 signals.pre_delete.connect(ScheduledJobs.changed, sender=ScheduledJob)

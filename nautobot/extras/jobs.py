@@ -1030,6 +1030,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         If the job is marked as read_only == True, then commit is forced to False and no log messages will be
         emitted related to reverting database changes.
         """
+        started = timezone.now()
         job.results["output"] = ""
         try:
             with transaction.atomic():
@@ -1070,6 +1071,12 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         finally:
             job_result.save()
             job.delete_files(*file_ids)  # Cleanup FileProxy objects
+
+        # record data about this jobrun in the schedule
+        if job_result.schedule:
+            job_result.schedule.total_run_count += 1
+            job_result.schedule.last_run_at = started
+            job_result.schedule.save()
 
         # Perform any post-run tasks
         job.active_test = "post_run"
