@@ -7,7 +7,8 @@ from taggit.models import Tag
 # registering our own class
 admin_site.site_header = "Nautobot Administration"
 admin_site.site_title = "Nautobot"
-admin_site.index_template = "admin/nautobot_index.html"
+#admin_site.index_template = "admin/nautobot_index.html"
+#admin_site.login_template = "admin/login.html"
 
 # Unregister the unused stock Tag model provided by django-taggit
 admin_site.unregister(Tag)

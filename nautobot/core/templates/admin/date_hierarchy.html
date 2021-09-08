@@ -1,0 +1,8 @@
+{% if show %}
+<ul class="nav nav-pills">
+{% if back %}<li class="date-back active"><a href="{{ back.link }}">&lsaquo; {{ back.title }}</a></li>{% endif %}
+{% for choice in choices %}
+    <li><a href="{% if choice.link %}{{ choice.link }}{% else %}#{% endif %}">{{ choice.title }}</a></li>
+{% endfor %}
+</ul>
+{% endif %}

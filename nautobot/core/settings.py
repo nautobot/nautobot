@@ -274,7 +274,6 @@ TIME_ZONE = "UTC"
 
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -293,6 +292,7 @@ INSTALLED_APPS = [
     "taggit",
     "timezone_field",
     "nautobot.core",
+    "django.contrib.admin",
     "nautobot.circuits",
     "nautobot.dcim",
     "nautobot.ipam",

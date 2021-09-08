@@ -1,0 +1,26 @@
+{% load i18n %}
+<div class="form-actions" {% if is_popup %}style="overflow: auto;"{% endif %}>
+
+  {% if show_delete_link %}
+  	 <a href="delete/" class="btn btn-danger deletelink">{% trans "Delete" %}</a>
+  	{% if show_delete_translation %}
+  		<a href="delete-translation/?language={{ language }}" class="btn btn-dangerdeletelink deletetranslation">{% blocktrans with language_name as language %}Delete {{ language }} translation{% endblocktrans %}</a>
+  	{% endif %}
+  {% endif %}
+
+  <div class="pull-right">
+    {% if show_save_as_new %}<button class="btn" type="submit" name="_saveasnew" {{ onclick_attrib }}>{% trans 'Save as new' %}</button>{%endif%}
+    {% if show_save_and_add_another %}<button class="btn" type="submit" name="_addanother" {{ onclick_attrib }}>{% trans 'Save and add another' %}</button>{% endif %}
+    {% if show_save_and_continue %}<button class="btn" type="submit" name="_continue" {{ onclick_attrib }}>{% trans 'Save and continue editing' %}</button>{% endif %}
+    {% if show_save %}<button type="submit" class="btn btn-primary default" name="_save" {{ onclick_attrib }}>{% trans 'Save' %}</button>{% endif %}
+  </div>
+
+<script>
+(function ($) {
+	var i = 0;
+	$('form').submit(function () {
+		i++; if(i > 1) { return false; }
+	});
+})(jQuery);
+</script>
+</div>

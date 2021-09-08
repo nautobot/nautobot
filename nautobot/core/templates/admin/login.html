@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static bootstrapped_goodies_tags %}
+
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block navbar %}{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block usertools %}{% endblock %}
+{% block extrastyle %}
+<style type="text/css">
+@media (min-width: 768px) {
+.form-signin {
+    max-width: 380px;
+    margin: 0 auto 20px;
+    background-color: #fff;
+    border: 1px solid #e5e5e5;
+    -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+    -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.05);
+        -moz-box-shadow: 0 1px 2px rgba(0,0,0,.05);
+        box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+.form-signin-inner{
+    padding: 9px 29px 29px;
+}
+.form-signin .form-signin-heading, .form-signin .checkbox, .form-signin h2 {
+    margin-bottom: 30px;
+}
+.form-signin .form-actions{
+    margin: 0;
+}
+#id_username, #id_password{
+    display: block;
+    font-size: 16px;
+    height: 44px;
+    width: 100%;
+}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+<form class="form-signin" action="{{ app_path }}" method="post" id="login-form">{% csrf_token %}
+  <div class="form-signin-inner">
+  {% blocktrans %}<h2>Login</h2>{% endblocktrans %}
+  {% if form.errors and not form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% if form.errors.items|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+    </div>
+  {% endif %}
+  {% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}
+    <div class="alert alert-danger">
+      {{ error }}
+    </div>
+    {% endfor %}
+  {% endif %}
+  <div class="form-group">
+    {{ form.username.label_tag }}
+    <p class="text-danger">{{ form.username.errors|striptags }}</p>
+    {% dab_field_rendering form.username %}
+  </div>
+  <div class="form-group">
+    {{ form.password.label_tag }}
+    <p class="text-danger">{{ form.password.errors|striptags }}</p>
+    {% dab_field_rendering form.password %}
+    <input type="hidden" name="next" value="{{ next }}" />
+  </div>
+  {% url 'admin_password_reset' as password_reset_url %}
+  {% if password_reset_url %}
+  <div class="form-group">
+    <div class="controls col-sm-offset-2 col-sm-10">
+        <a href="{{ password_reset_url }}">{% trans 'Forgotten your password or username?' %}</a>
+    </div>
+  </div>
+  {% endif %}
+  <div class="form-actions clearfix">
+      <input type="submit" value="{% trans 'Log in' %}" class="btn btn-lg btn-primary btn-block" />
+  </div>
+  </div>
+</form>
+
+<script type="text/javascript">
+(function($) {
+  $(document).ready(function() {
+    $('#id_username').attr('autocapitalize', 'off').focus();
+  });
+})(jQuery);
+</script>
+</div>
+{% endblock %}

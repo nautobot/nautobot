@@ -1,0 +1,50 @@
+{% load bootstrapped_goodies_tags %}
+<fieldset class="_module _aligned" id="fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }}" style="background:transparent">
+    {% if fieldset.name %}
+    <legend>
+        {% if 'collapse' in fieldset.classes %}
+        <a data-toggle="collapse" data-target="#fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }} .fields">
+        {{ fieldset.name }}
+        &nbsp;<span class="btn btn-xs btn-default"><span class="glyphicon glyphglyphicon glyphicon-resize-full"></i></span>
+        </a>
+        {% else %}
+        {{ fieldset.name }}
+        {% endif %}
+    </legend>
+    {% endif %}
+    <div class="fields {% if not errors %}{{ fieldset.classes }}{% endif %}">
+    {% if fieldset.description %}
+        <div class="description">{{ fieldset.description|safe }}</div>
+    {% endif %}
+        {% for line in fieldset %}
+            <div class="row"><div class="control-group {% if line.fields|length_is:'1' and line.errors %} error{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% endfor %}">
+                {% for field in line %}
+                    <div class="col-md-{{ group_column_width }} form-group {% if not line.fields|length_is:'1' %} field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}{% endif %}">
+                        <div class="control-label col-md-3">
+                            {{ field.label_tag }}
+                        </div>
+                        {% if field.is_checkbox %}
+                        <div class="controls col-md-9">
+                            <div class="checkbox">
+                                {% dab_field_rendering field.field %} {% if field.field.help_text %}<span class="help-block">{{ field.field.help_text|safe }}</span>{% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="controls col-md-9">
+                            {% if field.is_readonly %}
+                                <p>{{ field.contents }}</p>
+                            {% else %}
+                                {% dab_field_rendering field.field %}
+                            {% endif %}
+                            {% if not field.is_readonly and field.errors %}<span class="text-danger">{{ field.errors|striptags }}</span>{% endif %}
+                            {% if field.field.help_text %}
+                                <span class="help-block">{{ field.field.help_text|safe }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div></div>
+        {% endfor %}
+    </div>
+</fieldset>

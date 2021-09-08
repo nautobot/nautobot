@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load i18n static bootstrapped_goodies_tags %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+{% get_current_language as LANGUAGE_CODE %}{% get_current_language_bidi as LANGUAGE_BIDI %}
+<html xmlns="http://www.w3.org/1999/xhtml" lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    {% block extrastyle %}{% endblock %}
+
+    <link href="{% static "bootstrap/css/bootstrap.min.css" %}" rel="stylesheet"/>
+    <link rel="stylesheet" type="text/css" href="{% static "admin/css/overrides.css" %}" />
+    {% if LANGUAGE_BIDI %}
+    <link href="{% static "bootstrap-rtl/css/bootstrap-rtl.min.css" %}" rel="stylesheet"/>
+    <link href="{% static "bootstrap-rtl/css/bootstrap-flipped.min.css" %}" rel="stylesheet"/>
+    {% endif %}
+
+    <script type="text/javascript">
+    //<![CDATA[
+        window.__admin_media_prefix__ = "{% filter escapejs %}{% static "admin/" %}{% endfilter %}";
+        window.__admin_utc_offset__ = "{% filter escapejs %}{% now "Z" %}{% endfilter %}";
+    //]]>
+    </script>
+    <script src="{% static "admin/js/jquery-1.9.1.min.js" %}"></script>
+    <script src="{% static "admin/js/jquery-migrate-1.2.1.min.js" %}"></script>
+    <script src="{% static "bootstrap/js/bootstrap.min.js" %}"></script>
+
+    {% block extrahead %}{% endblock %}
+
+    {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE" />{% endblock %}
+    <script type="text/javascript">
+    //<![CDATA[
+            (function($) {
+                $(document).ready(function() {
+                    $('input[type="submit"]').addClass('btn');
+                    $('[title]').tooltip();
+                });
+            }(jQuery));
+    //]]>
+    </script>
+</head>
+{% load i18n %}
+
+<body class="{% if is_popup %}popup {% endif %}{% block bodyclass %}{% endblock %}">
+
+<!-- Container -->
+<div class="container">
+
+    {% if not is_popup %}
+    <!-- Header -->
+    <div class="navbar navbar-default navbar-fixed-top">
+        <div class="navbar-inner">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#header-navbar-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    {% block branding %}{% endblock %}
+                </div>
+                <div id="header-navbar-collapse" class="navbar-collapse collapse navbar-{% if LANGUAGE_BIDI %}left{% else %}right{% endif %}">
+                    <ul class="nav navbar-nav">
+                        {% if has_permission %}
+                        {% block usertools %}
+                        <li class="dropdown">
+                            {% block welcome-msg %}
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">{% trans 'Welcome,' %} <strong>{% filter force_escape %}{% firstof user.get_short_name user.get_username %}{% endfilter %}</strong> <span class="caret"></span></a>
+                            {% endblock %}
+                            <ul class="dropdown-menu">
+                                {% if site_url %}
+                                    <li><a href="{{ site_url }}">{% trans 'View site' %}</a></li>
+                                {% endif %}
+                                {% if user.is_active and user.is_staff %}
+                                    {% url 'django-admindocs-docroot' as docsroot %}
+                                    {% if docsroot %}
+                                        <li><a href="{{ docsroot }}">{% trans 'Documentation' %}</a></li>
+                                    {% endif %}
+                                {% endif %}
+                                {% if user.has_usable_password %}
+                                <li><a href="{% url 'admin:password_change' %}">{% trans 'Change password' %}</a></li>
+                                {% endif %}
+                                <li><a href="{% url 'admin:logout' %}">{% trans 'Log out' %}</a></li>
+                            </ul>
+                        </li>
+                        {% endblock %}
+                        {% block languages %}
+                        <li class="divider-vertical"></li>
+                        {% language_selector %}
+                        {% endblock languages %}
+                        {% block logs %}
+                        <li class="dropdown" id="recent-actions-module">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">{% trans 'Recent Actions' %} <b class="caret"></b></a>
+                            {% load log %}
+                            {% get_admin_log 10 as admin_log for_user user %}
+                            <ul class="dropdown-menu">
+                                {% for entry in admin_log %}
+                                <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                                    <a href="{% if entry.is_deletion or not entry.get_admin_url %}#{% else %}{{ entry.get_admin_url }}{% endif %}">
+                                        <i class="glyphicon glyphicon-{% if entry.is_addition %}plus{% endif %}{% if entry.is_change %}edit{% endif %}{% if entry.is_deletion %}remove{% endif %}"></i>
+                                        {{ entry.object_repr }}
+                                        {% if entry.content_type %}
+                                        <span class="mini quiet">({% filter capfirst %}{{ entry.content_type }}{% endfilter %})</span>
+                                        {% else %}
+                                        <span class="mini quiet">({% trans 'Unknown content' %})</span>
+                                        {% endif %}
+                                    </a>
+                                </li>
+                                {% empty %}
+                                <li class="disabled"><a href="#">{% trans 'None available' %}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                        {% endblock %}
+                        {% block userlinks %}
+                        {% url 'django-admindocs-docroot' as docsroot %}
+                        {% if docsroot %}
+                        <li class="divider-vertical"></li>
+                        <li><a href="{{ docsroot }}">{% trans 'Documentation' %}</a></li>
+                        {% endif %}
+                        {% endblock %}
+                        {% endif %}
+                        {% block nav-global %}{% endblock %}
+                    </ul>
+                </div><!--/.nav-collapse -->
+            </div>
+        </div>
+    </div>
+    <!-- END Header -->
+    <div class="row">
+        <div class="col-sm-12">
+            {% block breadcrumbs %}{% endblock %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Content -->
+    <div id="content" class="{% block coltype %}colM{% endblock %}">
+        {% block navbar %}
+        <div class="navbar navbar-default">
+            <div class="navbar-inner">
+                {% block pretitle %}{% endblock %}
+                    <div class="navbar-header">
+                        {% block content-navbar-collapse %}
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#content-navbar-collapse" aria-expanded="false" aria-controls="navbar">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        {% endblock %}
+                    {% block content_title %}
+                    {% if title %}
+                        <span class="navbar-brand">{% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}</span>
+                    {% endif %}
+                    {% endblock %}
+                    </div>
+                {% block object-tools %}{% endblock %}
+            </div>
+        </div>
+        {% endblock navbar %}
+
+        {% block messages %}
+        {% if messages %}
+        <div class="row">
+            <div class="col-sm-12">
+                {% for message in messages %}
+                <div class="alert {{ message.tags|default:"alert-info" }}">
+                    {{ message|capfirst }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endblock messages %}
+
+        {% block content %}{{ content }}{% endblock %}
+        {% block sidebar %}{% endblock %}
+    </div>
+    <!-- END Content -->
+
+    {% block footer %}<footer id="footer"></footer>{% endblock %}
+</div>
+<!-- END Container -->
+
+</body>
+</html>
