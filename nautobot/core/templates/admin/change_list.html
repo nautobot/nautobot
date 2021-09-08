@@ -31,45 +31,42 @@
 {% block bodyclass %}{{ block.super }} {{ opts.app_label }}-{{ opts.object_model }} change-list{% endblock %}
 
 {% if not is_popup %}
-{% block breadcrumbs %}
-<ul class="breadcrumb">
-<li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
-<!--<li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% render_with_template_if_exist app_label|lower|add:"/admin_app_name.html" app_label %}</a></li>-->
-<li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% with app_label=cl.opts.app_config.verbose_name|default:cl.opts.app_label %}{{ app_label|title }}{% endwith %}</a></li>
-<li>{{ cl.opts.verbose_name_plural|capfirst }}</li>
-</ul>
-{% endblock %}
+    {% block breadcrumbs %}
+        <ul class="breadcrumb">
+            <li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+            <!--<li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% render_with_template_if_exist app_label|lower|add:"/admin_app_name.html" app_label %}</a></li>-->
+            <li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% with app_label=cl.opts.app_config.verbose_name|default:cl.opts.app_label %}{{ app_label|title }}{% endwith %}</a></li>
+            <li>{{ cl.opts.verbose_name_plural|capfirst }}</li>
+        </ul>
+    {% endblock %}
 {% endif %}
 
 {% block coltype %}flex{% endblock %}
 
 {% block object-tools %}
 <div id="content-navbar-collapse" class="navbar-collapse collapse">
-    <ul class="object-tools nav navbar-nav">
-        {% block object-tools-items %}
+    {% block object-tools-items %}
         {% if has_add_permission %}
-        <li>
-        {% url cl.opts|admin_urlname:'add' as add_url %}
-        <a role="button" href="{% add_preserved_filters add_url is_popup %}" class="btn btn-primary">
-            <span class="glyphicon glyphicon-plus"></span> {% blocktrans with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktrans %}
-        </a>
-        </li>
+                {% url cl.opts|admin_urlname:'add' as add_url %}
+                <a role="button" href="{% add_preserved_filters add_url is_popup %}" class="btn btn-primary">
+                    <span class="glyphicon glyphicon-plus"></span> {% blocktrans with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktrans %}
+                </a>
+            </li>
         {% endif %}
-        {% endblock %}
-    </ul>
+    {% endblock %}
 
-    {% if cl.has_filters %}
-    <ul class="nav navbar-nav navbar-right">
-        <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">{% trans 'Filter' %} <span class="caret"></span></a>
-            <ul class="dropdown-menu pull-right scrollable-dropdown-menu">
-                {% for spec in cl.filter_specs %}
-                    {% admin_list_filter cl spec %}
-                {% endfor %}
-            </ul>
-        </li>
-    </ul>
-    {% endif %}
+    {% comment %} {% if cl.has_filters %}
+        <ul class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">{% trans 'Filter' %} <span class="caret"></span></a>
+                <ul class="dropdown-menu pull-right scrollable-dropdown-menu">
+                    {% for spec in cl.filter_specs %}
+                        {% admin_list_filter cl spec %}
+                    {% endfor %}
+                </ul>
+            </li>
+        </ul>
+    {% endif %} {% endcomment %}
     {% block search %}{% search_form cl %}{% endblock %}
 </div>
 {% endblock %}
@@ -110,7 +107,7 @@
         {% endblock %}
     </div>
 </div>
-{# {% if cl.formset and cl.result_count %} #}
+{% comment %} {# {% if cl.formset and cl.result_count %} #}
 <div class="navbar navbar-default">
     <div class="navbar-inner">
         <div class="navbar-form pull-left">
@@ -125,7 +122,7 @@
 {% endif %}
     </div>
 </div>
-{# {% endif %} #}
+{# {% endif %} #} {% endcomment %}
 
 {% block pagination %}
     {% pagination cl %}

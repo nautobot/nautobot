@@ -19,7 +19,6 @@
 {% block object-tools %}
 <ul class="nav navbar-nav">
     <li class="dropdown">
-        <a role="button" href="#" class="dropdown-toggle" data-toggle="dropdown">{% trans "Applications" %} <span class="caret"></span></a>
         <ul class="dropdown-menu" role="menu">
             {% for app in app_list %}
             <li>
@@ -30,7 +29,7 @@
                 {% if model.admin_url %}
                     <a href="{{ model.admin_url }}">{{ model.name }}</a>
                 {% else %}
-                   {{ model.name }}
+                    {{ model.name }}
                 {% endif %}
             </li>
             {% endfor %}
