@@ -109,4 +109,4 @@ MIDDLEWARE.append("request_logging.middleware.LoggingMiddleware")
 20:16:13.992 ERROR   django.request: user=admin b'{"circuit_id":["\xe2\x80\x9casdfasdfasdfasdf\xe2\x80\x9d is not a valid UUID."]}'
 ```
 
-The [`django-request-logging`](https://github.com/Rhumbix/django-request-logging) module provides both the request and the response, in the case of a 400-599 response code it also provides detailed information about the request, this may not be ideal for some environments.
+The [`django-request-logging`](https://github.com/Rhumbix/django-request-logging) module provides both the request and the response. In the case of a 400-599 response code it also provides detailed information about the request -- this may not be ideal for some environments.
