@@ -34,7 +34,7 @@ class Secret(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     provider = models.CharField(max_length=100)
-    parameters = models.JSONField(encoder=DjangoJSONEncoder)
+    parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
 
     csv_headers = [
         "name",

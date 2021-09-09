@@ -965,7 +965,6 @@ class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
     provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
-    # TODO something more akin to a JobForm with dynamically constructed widgets
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
 
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
