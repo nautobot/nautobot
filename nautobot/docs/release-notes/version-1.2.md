@@ -86,6 +86,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#642](https://github.com/nautobot/nautobot/issues/642) - Added documentation of the `GIT_SSL_NO_VERIFY` environment variable for using self-signed Git repositories
 - [#674](https://github.com/nautobot/nautobot/pull/674) - Plugins can now add items to the Nautobot home page
 - [#716](https://github.com/nautobot/nautobot/pull/716) - Nautobot home page content is now dynamically populated based on installed apps and plugins.
+- [#866](https://github.com/nautobot/nautobot/pull/866) - Added documentation for job scheduling and approvals
 
 ### Changed
 
