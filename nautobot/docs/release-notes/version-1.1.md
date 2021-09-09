@@ -103,6 +103,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Fixed
 
 - [#464](https://github.com/nautobot/nautobot/issues/464) - Fixed GraphQL schema generation error when certain custom field names are used.
+- [#651](https://github.com/nautobot/nautobot/issues/651) - Fixed Jobs validation enforce schema consistently across UI and API.
 - [#670](https://github.com/nautobot/nautobot/pull/670) - Clarified Jobs documentation regarding how to fail or abort a Job.
 - [#715](https://github.com/nautobot/nautobot/issues/715) - Fixed display of GraphiQL interface in narrow browser windows.
 - [#718](https://github.com/nautobot/nautobot/issues/718) - Fixed rendering of long template values in Computed Field detail view.
@@ -115,6 +116,10 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#845](https://github.com/nautobot/nautobot/pull/845) - Clarified documentation around `nautobot-server init` and `NAUTOBOT_ROOT`.
 - [#848](https://github.com/nautobot/nautobot/pull/848) - Fixed stale links to NAPALM documentation
 
+### Security
+
+- [#893](https://github.com/nautobot/nautobot/pull/893) - Bump Pillow dependency version from 8.2.0 to 8.2.3 to address numerous critical CVE advisories
+-
 ## v1.1.2 (2021-08-10)
 
 ### Added
