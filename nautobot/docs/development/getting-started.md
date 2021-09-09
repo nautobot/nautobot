@@ -189,7 +189,7 @@ Additional useful commands for the development environment:
 !!! note
     If you are making edits to Nautobot's documentation in the Docker Compose workflow or otherwise needing to serve the docs locally, it is necessary to run a Python virtual environment:
     
-    - `pip3 install poetry`
+    - Follow the steps in the Nautobot docs to [install poetry](#install-poetry) 
     - `poetry shell`
     - `poetry install`
     - `mkdocs serve`
