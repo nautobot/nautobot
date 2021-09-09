@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os.path
 import uuid
 from unittest import skipIf
@@ -526,7 +526,6 @@ class JobTest(APITestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-    @skipIf(not worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_without_permission(self):
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
@@ -534,7 +533,6 @@ class JobTest(APITestCase):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @skipIf(not worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_with_permission(self):
         self.add_permissions("extras.run_job")
@@ -554,7 +552,6 @@ class JobTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["result"]["status"]["value"], "pending")
 
-    @skipIf(not worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_object_var(self):
         self.add_permissions("extras.run_job")
@@ -564,37 +561,80 @@ class JobTest(APITestCase):
         data = {
             "data": job_data,
             "commit": True,
+            "schedule": {
+                "name": "test",
+                "interval": "future",
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+            },
         }
 
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
-        response = self.client.get(url, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
+        job = ScheduledJob.objects.last()
+        self.assertEqual(job.kwargs["data"]["var4"], str(d.pk))
 
-    @skipIf(not worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_object_var_lookup(self):
-        self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         job_data = {"var4": {"name": "role"}}
 
+        self.assertEqual(self.TestJob.deserialize_data(job_data), {"var4": d})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_future(self):
+        self.add_permissions("extras.run_job")
+
         data = {
-            "data": job_data,
+            "data": {},
             "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
         }
 
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
-        response = self.client.get(url, format="json", **self.header)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_future_past(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() - timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_interval(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "hourly",
+                "name": "test",
+            },
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
 
 
 class JobResultTest(APITestCase):
@@ -624,7 +664,14 @@ class JobResultTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
 
 
-class ScheduledJobTest(APITestCase):
+class ScheduledJobTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+):
+    model = ScheduledJob
+    brief_fields = ["interval", "name", "start_time"]
+    choices_fields = []
+
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
@@ -655,6 +702,12 @@ class ScheduledJobTest(APITestCase):
             approval_required=True,
             start_time=now(),
         )
+
+    def test_options_objects_returns_display_and_value(self):
+        """Overriden because this test case is not applicable to this viewset"""
+
+    def test_options_returns_expected_choices(self):
+        """Overriden because this test case is not applicable to this viewset"""
 
 
 class JobApprovalTest(APITestCase):
