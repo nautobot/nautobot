@@ -80,10 +80,6 @@ This is the human-friendly name of your job, as will be displayed in the Nautobo
 
 A human-friendly description of what this job does.
 
-#### `approval_required`
-
-A boolean that will mark this job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](./job-scheduling-and-approvals.md).
-
 #### `commit_default`
 
 The checkbox to commit database changes when executing a job is checked by default in the Nautobot UI. You can set `commit_default` to `False` under the `Meta` class if you want this option to instead be unchecked by default.
@@ -361,7 +357,7 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint, with the option of specifying any required user input data and/or the `commit` flag, as well as optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+To run a job via the REST API, issue a POST request to the job's endpoint, with the option of specifying any required user input data and/or the `commit` flag.
 
 ```no-highlight
 curl -X POST \
