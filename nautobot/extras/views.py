@@ -28,7 +28,7 @@ from nautobot.utilities.utils import (
     shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.views import ContentTypePermissionRequiredMixin
+from nautobot.utilities.views import ContentTypePermissionRequiredMixin, ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
@@ -654,10 +654,14 @@ class JobView(ContentTypePermissionRequiredMixin, View):
     def get_required_permission(self):
         return "extras.view_job"
 
-    def get(self, request, class_path):
+    def _get_job(self, class_path):
         job_class = get_job(class_path)
         if job_class is None:
             raise Http404
+        return job_class
+
+    def get(self, request, class_path):
+        job_class = self._get_job(class_path)
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
@@ -680,9 +684,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         if not request.user.has_perm("extras.run_job"):
             return HttpResponseForbidden()
 
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
+        job_class = self._get_job(class_path)
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
         job_form = job.as_form(request.POST, request.FILES)
@@ -940,8 +942,14 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
 class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
+    def _get_job(self, class_path):
+        job_class = get_job(class_path)
+        if job_class is None:
+            raise Http404
+        return job_class
+
     def get_extra_context(self, request, instance):
-        job_class = get_job(instance.job_class)
+        job_class = self._get_job(instance.job_class)
         labels = {}
         for name, var in job_class._get_vars().items():
             field = var.as_field()
@@ -982,16 +990,18 @@ class JobResultBulkDeleteView(generic.BulkDeleteView):
     table = tables.JobResultTable
 
 
-class JobResultView(ContentTypePermissionRequiredMixin, View):
+class JobResultView(ObjectPermissionRequiredMixin, View):
     """
     Display a JobResult and its data.
     """
+
+    queryset = JobResult.objects
 
     def get_required_permission(self):
         return "extras.view_jobresult"
 
     def get(self, request, pk):
-        job_result = get_object_or_404(JobResult.objects.all(), pk=pk)
+        job_result = get_object_or_404(self.queryset, pk=pk)
 
         associated_record = None
         job = None

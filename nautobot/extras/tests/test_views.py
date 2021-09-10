@@ -1,14 +1,17 @@
 from datetime import datetime
+import os.path
 import urllib.parse
 import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings, SimpleTestCase
 from django.urls import reverse
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, ObjectChangeActionChoices
 from nautobot.extras.constants import *
+from nautobot.extras.jobs import Job
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -27,6 +30,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
+from nautobot.extras.views import JobView, ScheduledJobView
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body
 from nautobot.utilities.testing.utils import post_data
@@ -34,6 +38,8 @@ from nautobot.utilities.testing.utils import post_data
 
 # Use the proper swappable User model
 User = get_user_model()
+
+THIS_DIRECTORY = os.path.dirname(__file__)
 
 
 class ComputedFieldTestCase(
@@ -913,8 +919,30 @@ class WebhookTestCase(
         }
 
 
+@override_settings(JOBS_ROOT=THIS_DIRECTORY)
+class TestJobMixin(SimpleTestCase):
+    class TestJob(Job):
+        pass
+
+    def get_test_job_class(self, class_path):
+        if class_path.startswith("local/test_view"):
+            return self.TestJob
+        raise Http404
+
+    def setUp(self):
+        super().setUp()
+
+        # Monkey-patch the viewsets' _get_job methods to return our test class above
+        JobView._get_job = self.get_test_job_class
+        ScheduledJobView._get_job = self.get_test_job_class
+
+
+@override_settings(JOBS_ROOT=THIS_DIRECTORY)
 class ScheduledJobTestCase(
+    TestJobMixin,
+    ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
 ):
     model = ScheduledJob
 
@@ -924,7 +952,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test1",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
+            job_class="local/test_views/TestJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=datetime.now(),
@@ -932,7 +960,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test2",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
+            job_class="local/test_views/TestJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=datetime.now(),
@@ -940,11 +968,28 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test3",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
+            job_class="local/test_views/TestJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=datetime.now(),
         )
+        # this should not appear, since it’s not enabled
+        ScheduledJob.objects.create(
+            enabled=False,
+            name="test4",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_views/TestJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=datetime.now(),
+        )
+
+    def test_only_enabled_is_listed(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
 
 
 class ApprovalQueueTestCase(
@@ -987,10 +1032,31 @@ class ApprovalQueueTestCase(
             approval_required=True,
             start_time=datetime.now(),
         )
+        ScheduledJob.objects.create(
+            name="test4",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=False,
+            start_time=datetime.now(),
+        )
+
+    def test_only_approvable_is_listed(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
 
 
+@override_settings(JOBS_ROOT=THIS_DIRECTORY)
 class JobResultTestCase(
+    TestJobMixin,
+    ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = JobResult
 
@@ -998,17 +1064,17 @@ class JobResultTestCase(
     def setUpTestData(cls):
         obj_type = ContentType.objects.get(app_label="extras", model="job")
         JobResult.objects.create(
-            name="test1",
+            name="local/test_view/TestJob",
             job_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
-            name="test2",
+            name="local/test_view/TestJob2",
             job_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
-            name="test3",
+            name="local/test_view/TestJob3",
             job_id=uuid.uuid4(),
             obj_type=obj_type,
         )
