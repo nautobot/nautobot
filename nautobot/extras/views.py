@@ -28,7 +28,7 @@ from nautobot.utilities.utils import (
     shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.views import ContentTypePermissionRequiredMixin, ObjectPermissionRequiredMixin
+from nautobot.utilities.views import ContentTypePermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
@@ -990,12 +990,12 @@ class JobResultBulkDeleteView(generic.BulkDeleteView):
     table = tables.JobResultTable
 
 
-class JobResultView(ObjectPermissionRequiredMixin, View):
+class JobResultView(generic.ObjectView):
     """
     Display a JobResult and its data.
     """
 
-    queryset = JobResult.objects
+    queryset = JobResult.objects.all()
 
     def get_required_permission(self):
         return "extras.view_jobresult"
