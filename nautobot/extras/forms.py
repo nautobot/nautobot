@@ -52,8 +52,8 @@ from .models import (
     Tag,
     Webhook,
 )
+from .registry import registry
 from .utils import FeatureQuery
-from nautobot.extras import choices
 
 
 #
@@ -789,7 +789,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
     """
 
     _schedule_type = forms.ChoiceField(
-        choices=choices.JobExecutionType,
+        choices=JobExecutionType,
         help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
         label="Type",
     )
@@ -810,7 +810,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         """
         cleaned_data = super().clean()
 
-        if cleaned_data["_schedule_type"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+        if cleaned_data["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
             if not cleaned_data["_schedule_name"]:
                 raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 
@@ -954,15 +954,17 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
 #
 
 
+def provider_choices():
+    return sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()])
+
+
 class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Create/update form for `Secret` objects."""
 
     slug = SlugField()
 
-    # TODO dynamicly populated choices here?
-    # provider = forms.ChoiceField(choices=..., widget=StaticSelect2())
+    provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
-    # TODO something more akin to a JobForm with dynamically constructed widgets
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
 
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)

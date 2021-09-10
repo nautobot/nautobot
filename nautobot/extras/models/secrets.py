@@ -1,10 +1,18 @@
+import logging
+
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
+import pkg_resources
+
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.registry import registry
 from nautobot.extras.utils import extras_features
+
+
+logger = logging.getLogger(__name__)
 
 
 @extras_features(
@@ -26,7 +34,7 @@ class Secret(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     provider = models.CharField(max_length=100)
-    parameters = models.JSONField(encoder=DjangoJSONEncoder)
+    parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
 
     csv_headers = [
         "name",
@@ -54,3 +62,22 @@ class Secret(PrimaryModel):
             self.provider,
             self.parameters,
         )
+
+    @property
+    def value(self):
+        """Retrieve the secret value that this Secret is a representation of."""
+        provider = registry["secrets_providers"].get(self.provider)
+        if not provider:
+            logger.error('No registered provider "%s" is available', self.provider)
+            return None
+
+        value = provider.get_value_for_secret(self)
+        if value:
+            return value
+
+        logger.error(
+            'No secret value was retrieved for provider "%s" with parameters %s',
+            self.provider,
+            self.parameters,
+        )
+        return None

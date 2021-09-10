@@ -41,6 +41,8 @@ from .models import (
     TaggedItem,
     Webhook,
 )
+from .registry import registry
+
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -480,6 +482,9 @@ class SecretTable(BaseTable):
             "provider",
             "tags",
         )
+
+    def render_provider(self, value):
+        return registry["secrets_providers"][value].name if value in registry["secrets_providers"] else value
 
 
 #

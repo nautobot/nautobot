@@ -1,5 +1,6 @@
 import os
 import tempfile
+from unittest import mock
 import uuid
 
 from django.conf import settings
@@ -28,6 +29,7 @@ from nautobot.extras.models import (
     FileProxy,
     GitRepository,
     JobResult,
+    Secret,
     Status,
     Tag,
 )
@@ -409,6 +411,66 @@ class JobResultTest(TestCase):
 
         job_result.job_id = uuid.uuid4()
         self.assertIsNone(job_result.related_object)
+
+
+class SecretTest(TestCase):
+    """
+    Tests for the `Secret` model class.
+    """
+
+    def setUp(self):
+        self.environment_secret = Secret.objects.create(
+            name="Environment Variable Secret",
+            slug="env-var",
+            provider="environment-variable",
+            parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
+        )
+        self.text_file_secret = Secret.objects.create(
+            name="Text File Secret",
+            slug="text",
+            provider="text-file",
+            parameters={"path": os.path.join(tempfile.gettempdir(), "secret-file.txt")},
+        )
+
+    def test_environment_variable_value_not_found(self):
+        """Failure to retrieve an environment variable returns None."""
+        self.assertIsNone(self.environment_secret.value)
+
+    def test_environment_variable_value_missing_parameters(self):
+        """A mis-defined environment variable secret returns None."""
+        self.environment_secret.parameters = {}
+        self.environment_secret.save()
+        self.assertIsNone(self.environment_secret.value)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
+    def test_environment_variable_value_success(self):
+        """Successful retrieval of an environment variable secret."""
+        self.assertEqual(self.environment_secret.value, "supersecretvalue")
+
+    def test_text_file_value_not_found(self):
+        """Failure to retrieve a file returns None."""
+        self.assertIsNone(self.text_file_secret.value)
+
+    def test_text_file_value_missing_parameters(self):
+        """A mis-defined text file secret returns None."""
+        self.text_file_secret.parameters = {}
+        self.text_file_secret.save()
+        self.assertIsNone(self.text_file_secret.value)
+
+    def test_text_file_value_success(self):
+        """Successful retrieval of a text file secret."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
+            file_handle.write("Hello world!")
+        try:
+            self.assertEqual(self.text_file_secret.value, "Hello world!")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
+    def test_unknown_provider(self):
+        """An unknown/unsupported provider returns None."""
+        self.environment_secret.provider = "it-is-a-mystery"
+        self.environment_secret.save()
+        self.assertIsNone(self.environment_secret.value)
 
 
 class StatusTest(TestCase):

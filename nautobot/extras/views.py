@@ -33,6 +33,11 @@ from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
 from .choices import JobExecutionType, JobResultStatusChoices
+from .datasources import (
+    get_datasource_contents,
+    enqueue_pull_git_repository_and_refresh_data,
+)
+from .jobs import get_job, get_jobs, run_job, Job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -54,11 +59,7 @@ from .models import (
     TaggedItem,
     Webhook,
 )
-from .jobs import get_job, get_jobs, run_job, Job
-from .datasources import (
-    get_datasource_contents,
-    enqueue_pull_git_repository_and_refresh_data,
-)
+from .registry import registry
 
 
 #
@@ -1134,14 +1135,34 @@ class SecretView(generic.ObjectView):
         else:
             format = "json"
 
+        provider = registry["secrets_providers"].get(instance.provider)
+
         return {
             "format": format,
+            "provider_name": provider.name if provider else instance.provider,
         }
+
+
+class SecretProviderParametersFormView(View):
+    """
+    Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
+    """
+
+    def get(self, request, provider_slug):
+        provider = registry["secrets_providers"].get(provider_slug)
+        if not provider:
+            raise Http404
+        return render(
+            request,
+            "extras/inc/secret_provider_parameters_form.html",
+            {"form": provider.ParametersForm(initial=request.GET)},
+        )
 
 
 class SecretEditView(generic.ObjectEditView):
     queryset = Secret.objects.all()
     model_form = forms.SecretForm
+    template_name = "extras/secret_edit.html"
 
 
 class SecretDeleteView(generic.ObjectDeleteView):

@@ -316,6 +316,11 @@ urlpatterns = [
     path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
     path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
     path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),
+    path(
+        "secrets/provider/<str:provider_slug>/form/",
+        views.SecretProviderParametersFormView.as_view(),
+        name="secret_provider_parameters_form",
+    ),
     path("secrets/<str:slug>/", views.SecretView.as_view(), name="secret"),
     path("secrets/<str:slug>/edit/", views.SecretEditView.as_view(), name="secret_edit"),
     path("secrets/<str:slug>/delete/", views.SecretDeleteView.as_view(), name="secret_delete"),
