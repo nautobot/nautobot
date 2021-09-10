@@ -1,3 +1,4 @@
+from datetime import datetime
 import urllib.parse
 import uuid
 
@@ -6,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
-from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, ObjectChangeActionChoices
 from nautobot.extras.constants import *
 from nautobot.extras.models import (
     ConfigContext,
@@ -16,9 +17,11 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
+    JobResult,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     Webhook,
@@ -908,3 +911,104 @@ class WebhookTestCase(
             "http_method": "POST",
             "http_content_type": "application/json",
         }
+
+
+class ScheduledJobTestCase(
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ScheduledJob
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="user1", is_active=True)
+        ScheduledJob.objects.create(
+            name="test1",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test2",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test3",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=datetime.now(),
+        )
+
+
+class ApprovalQueueTestCase(
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ScheduledJob
+
+    def _get_url(self, action, instance=None):
+        if action != "list":
+            raise ValueError("This override is only valid for list test cases")
+        return reverse("extras:scheduledjob_approval_queue_list")
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="user1", is_active=True)
+        ScheduledJob.objects.create(
+            name="test1",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test2",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test3",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=datetime.now(),
+        )
+
+
+class JobResultTestCase(
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = JobResult
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get(app_label="extras", model="job")
+        JobResult.objects.create(
+            name="test1",
+            job_id=uuid.uuid4(),
+            obj_type=obj_type,
+        )
+        JobResult.objects.create(
+            name="test2",
+            job_id=uuid.uuid4(),
+            obj_type=obj_type,
+        )
+        JobResult.objects.create(
+            name="test3",
+            job_id=uuid.uuid4(),
+            obj_type=obj_type,
+        )
