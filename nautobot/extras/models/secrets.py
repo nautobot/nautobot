@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
@@ -33,12 +34,14 @@ class Secret(PrimaryModel):
 
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
+    description = models.CharField(max_length=200, blank=True)
     provider = models.CharField(max_length=100)
     parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
 
     csv_headers = [
         "name",
         "slug",
+        "description",
         "provider",
         "parameters",
     ]
@@ -59,6 +62,7 @@ class Secret(PrimaryModel):
         return (
             self.name,
             self.slug,
+            self.description,
             self.provider,
             self.parameters,
         )
@@ -81,3 +85,13 @@ class Secret(PrimaryModel):
             self.parameters,
         )
         return None
+
+    def clean(self):
+        provider = registry["secrets_providers"].get(self.provider)
+        if not provider:
+            raise ValidationError({"provider": f'No registered provider "{self.provider}" is available'})
+
+        # Apply any provider-specific validation of the parameters
+        form = provider.ParametersForm(self.parameters)
+        form.is_valid()
+        form.clean()

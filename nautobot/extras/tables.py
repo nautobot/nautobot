@@ -473,12 +473,14 @@ class SecretTable(BaseTable):
         fields = (
             "pk",
             "name",
+            "description",
             "provider",
             "tags",
         )
         default_columns = (
             "pk",
             "name",
+            "description",
             "provider",
             "tags",
         )

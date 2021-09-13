@@ -695,6 +695,7 @@ class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "url",
             "name",
             "slug",
+            "description",
             "provider",
             "parameters",
             "tags",

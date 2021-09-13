@@ -468,6 +468,19 @@ class SecretTest(TestCase):
         """Successful retrieval of an environment variable secret."""
         self.assertEqual(self.environment_secret.value, "supersecretvalue")
 
+    def test_text_file_clean_validation(self):
+        secret = Secret.objects.create(
+            name="Path shenanigans",
+            slug="path-shenanigans",
+            provider="text-file",
+            parameters={"path": "relative/path/to/file"},
+        )
+        with self.assertRaises(ValidationError):
+            secret.clean()
+        secret.parameters = {"path": "/opt/nautobot/../../etc/passwd"}
+        with self.assertRaises(ValidationError):
+            secret.clean()
+
     def test_text_file_value_not_found(self):
         """Failure to retrieve a file returns None."""
         self.assertIsNone(self.text_file_secret.value)
@@ -490,6 +503,8 @@ class SecretTest(TestCase):
     def test_unknown_provider(self):
         """An unknown/unsupported provider returns None."""
         self.environment_secret.provider = "it-is-a-mystery"
+        with self.assertRaises(ValidationError):
+            self.environment_secret.clean()
         self.environment_secret.save()
         self.assertIsNone(self.environment_secret.value)
 

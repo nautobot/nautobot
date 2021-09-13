@@ -12,7 +12,7 @@ class ConstantValueSecretsProvider(SecretsProvider):
     """
 
     slug = "constant-value"
-    name = "constant value"
+    name = "Constant Value"
 
     class ParametersForm(BootstrapMixin, forms.Form):
         """

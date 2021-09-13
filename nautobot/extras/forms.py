@@ -1014,6 +1014,7 @@ class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
         fields = [
             "name",
             "slug",
+            "description",
             "provider",
             "parameters",
             "tags",
