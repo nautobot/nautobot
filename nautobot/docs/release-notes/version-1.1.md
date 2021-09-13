@@ -89,6 +89,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 - [#11](https://github.com/nautobot/nautobot/issues/11) - Added tests to verify that plugin models can support webhooks if appropriately decorated with `@extras_features("webhooks")`
 - [#652](https://github.com/nautobot/nautobot/issues/652) - Jobs REST API `run` endpoint now can look up ObjectVar references via a dictionary of parameters.
+- [#755](https://github.com/nautobot/nautobot/issues/755) - Added example showing how to use `django-request-logging` middleware to log the user associated with inbound requests.
 - [#791](https://github.com/nautobot/nautobot/issues/791) - Added support for `NAUTOBOT_DOCKER_SKIP_INIT` variable to allow running the Docker container with a read-only database.
 - [#841](https://github.com/nautobot/nautobot/pull/841) - Added more detailed documentation around defining Relationship filters.
 - [#850](https://github.com/nautobot/nautobot/pull/850) - Added developer documentation around the installation and use of `mkdocs` to locally preview documentation changes.
@@ -96,6 +97,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 ### Changed
 
+- [#601](https://github.com/nautobot/nautobot/issues/601) - Developer documentation for advanced docker-compose use cases is now a separate file.
 - [#709](https://github.com/nautobot/nautobot/issues/709) - Computed fields can now have a blank `fallback_value`.
 - [#812](https://github.com/nautobot/nautobot/pull/812) - In the GraphiQL interface, the "Queries" dropdown now appears alongside the other GraphiQL interface buttons instead of appearing in the main Nautobot navigation bar.
 - [#832](https://github.com/nautobot/nautobot/issues/832) - Plugin installation documentation now recommends `nautobot-server post_upgrade` instead of separately running `nautobot-server migrate` and `nautobot-server collectstatic`.
