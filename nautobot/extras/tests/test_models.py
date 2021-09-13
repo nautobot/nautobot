@@ -351,6 +351,27 @@ class GitRepositoryTest(TransactionTestCase):
                 self.assertIn(self.repo.slug, new_path)
                 self.assertTrue(os.path.isdir(new_path))
 
+    def test_clean_token(self):
+        """The _token and token_secret fields are mutually exclusive."""
+        self.repo._token = self.SAMPLE_TOKEN
+        self.repo.token_secret = Secret.objects.create(
+            name="token", slug="token", provider="environment-variable", parameters={"variable": "IGNORE"}
+        )
+        with self.assertRaises(ValidationError):
+            self.repo.clean()
+        self.repo._token = ""
+        self.repo.clean()
+
+    def test_clean_username(self):
+        """The username and username_secret fields are mutually exclusive."""
+        self.repo.username_secret = Secret.objects.create(
+            name="username", slug="username", provider="text-file", parameters={"path": "/foo/bar"}
+        )
+        with self.assertRaises(ValidationError):
+            self.repo.clean()
+        self.repo.username = ""
+        self.repo.clean()
+
 
 class JobResultTest(TestCase):
     """

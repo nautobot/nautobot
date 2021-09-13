@@ -218,6 +218,9 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
     token = serializers.CharField(source="_token", write_only=True, required=False)
 
+    username_secret = NestedSecretSerializer(required=False, allow_null=True)
+    token_secret = NestedSecretSerializer(required=False, allow_null=True)
+
     provided_contents = MultipleChoiceJSONField(
         choices=get_datasource_content_choices("extras.gitrepository"),
         allow_blank=True,
@@ -235,6 +238,8 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
             "branch",
             "token",
             "username",
+            "username_secret",
+            "token_secret",
             "current_head",
             "provided_contents",
             "created",

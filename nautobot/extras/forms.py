@@ -642,9 +642,23 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a token secret instead.",
     )
 
-    username = forms.CharField(required=False, label="Username", help_text="Username for token authentication.")
+    username = forms.CharField(
+        required=False,
+        label="Username",
+        help_text="Username for token authentication.<br><em>Deprecated</em> - use a username secret instead",
+    )
+
+    username_secret = DynamicModelChoiceField(
+        required=False,
+        queryset=Secret.objects.all(),
+    )
+    token_secret = DynamicModelChoiceField(
+        required=False,
+        queryset=Secret.objects.all(),
+    )
 
     provided_contents = forms.MultipleChoiceField(
         required=False,
@@ -661,11 +675,26 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "slug",
             "remote_url",
             "branch",
-            "_token",
             "username",
+            "_token",
+            "username_secret",
+            "token_secret",
             "provided_contents",
             "tags",
         ]
+
+    def clean(self):
+        """
+        Enforce that username/username_secret and _token/token_secret are each mutually exclusive.
+        """
+        super().clean()
+
+        if self.cleaned_data["_token"] and self.cleaned_data["token_secret"]:
+            raise ValidationError("Token and Token Secret fields are mutually exclusive - please pick just one.")
+        if self.cleaned_data["username"] and self.cleaned_data["username_secret"]:
+            raise ValidationError("Username and Username Secret fields are mutually exclusive - please pick just one.")
+
+        return self.cleaned_data
 
 
 class GitRepositoryCSVForm(CSVModelForm):
@@ -690,10 +719,21 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
+        help_text="<em>Deprecated</em> - use a secret token instead.",
     )
     username = forms.CharField(
         required=False,
         label="Username",
+        help_text="<em>Deprecated</em> - use a secret username instead.",
+    )
+
+    username_secret = DynamicModelChoiceField(
+        required=False,
+        queryset=Secret.objects.all(),
+    )
+    token_secret = DynamicModelChoiceField(
+        required=False,
+        queryset=Secret.objects.all(),
     )
 
     class Meta:

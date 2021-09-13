@@ -122,10 +122,23 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
     """
 
-    # Inject token into source URL if necessary
+    # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
-    token = repository_record._token
-    user = repository_record.username
+
+    if repository_record.token_secret:
+        token = repository_record.token_secret.value
+    elif repository_record._token:
+        token = repository_record._token
+    else:
+        token = None
+
+    if repository_record.username_secret:
+        user = repository_record.username_secret.value
+    elif repository_record.username:
+        user = repository_record.username
+    else:
+        user = None
+
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
         if user:
