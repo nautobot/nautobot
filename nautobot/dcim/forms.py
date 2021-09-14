@@ -1962,6 +1962,8 @@ class DeviceBulkEditForm(
             "tenant",
             "platform",
             "serial",
+            "rack",
+            "rack_group",
         ]
 
 
