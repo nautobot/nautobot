@@ -10,6 +10,7 @@ import pkg_resources
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.registry import registry
+from nautobot.extras.secrets.exceptions import SecretError, SecretProviderError
 from nautobot.extras.utils import extras_features
 
 
@@ -69,22 +70,20 @@ class Secret(PrimaryModel):
 
     @property
     def value(self):
-        """Retrieve the secret value that this Secret is a representation of."""
+        """Retrieve the secret value that this Secret is a representation of.
+
+        May raise a SecretError on failure.
+        """
         provider = registry["secrets_providers"].get(self.provider)
         if not provider:
-            logger.error('No registered provider "%s" is available', self.provider)
-            return None
+            raise SecretProviderError(self, None, f'No registered provider "{self.provider}" is available')
 
-        value = provider.get_value_for_secret(self)
-        if value:
-            return value
-
-        logger.error(
-            'No secret value was retrieved for provider "%s" with parameters %s',
-            self.provider,
-            self.parameters,
-        )
-        return None
+        try:
+            return provider.get_value_for_secret(self)
+        except SecretError:
+            raise
+        except Exception as exc:
+            raise SecretError(self, provider, str(exc)) from exc
 
     def clean(self):
         provider = registry["secrets_providers"].get(self.provider)

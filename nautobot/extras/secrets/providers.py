@@ -2,17 +2,14 @@
 
 Plugins may define and register additional providers in addition to these.
 """
-import logging
 import os
 
 from django import forms
 from django.core.exceptions import ValidationError
 
 from nautobot.extras.secrets import SecretsProvider
+from nautobot.extras.secrets.exceptions import SecretParametersError, SecretValueNotFoundError
 from nautobot.utilities.forms import BootstrapMixin
-
-
-logger = logging.getLogger(__name__)
 
 
 class EnvironmentVariableSecretsProvider(SecretsProvider):
@@ -28,10 +25,13 @@ class EnvironmentVariableSecretsProvider(SecretsProvider):
     def get_value_for_secret(cls, secret):
         """Retrieve the appropriate environment variable's value."""
         if "variable" not in secret.parameters:
-            logger.error('Secret "%s" is lacking a "variable" parameter!', secret)
-        else:
-            return os.getenv(secret.parameters["variable"])
-        return None
+            raise SecretParametersError(secret, cls, 'The "variable" parameter is mandatory!')
+        value = os.getenv(secret.parameters["variable"], default=None)
+        if value is None:
+            raise SecretValueNotFoundError(
+                secret, cls, f'Undefined environment variable "{secret.parameters["variable"]}"!'
+            )
+        return value
 
 
 class TextFileSecretsProvider(SecretsProvider):
@@ -59,10 +59,8 @@ class TextFileSecretsProvider(SecretsProvider):
     def get_value_for_secret(cls, secret):
         """Retrieve the appropriate text file's contents."""
         if "path" not in secret.parameters:
-            logger.error('Secret "%s" is lacking a "path" parameter!', secret)
-        elif not os.path.isfile(secret.parameters["path"]):
-            logger.error('Secret "%s" points to nonexistent file "%s"!', secret, secret.parameters["path"])
-        else:
-            with open(secret.parameters["path"], "rt", encoding="utf8") as file_handle:
-                return file_handle.read()
-        return None
+            raise SecretParametersError(secret, cls, f'The "path" parameter is mandatory!')
+        if not os.path.isfile(secret.parameters["path"]):
+            raise SecretValueNotFoundError(secret, cls, f'File "{secret.parameters["path"]}" not found!')
+        with open(secret.parameters["path"], "rt", encoding="utf8") as file_handle:
+            return file_handle.read()

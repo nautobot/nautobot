@@ -33,6 +33,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
@@ -454,19 +455,25 @@ class SecretTest(TestCase):
         )
 
     def test_environment_variable_value_not_found(self):
-        """Failure to retrieve an environment variable returns None."""
-        self.assertIsNone(self.environment_secret.value)
+        """Failure to retrieve an environment variable raises an exception."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.environment_secret.value
 
     def test_environment_variable_value_missing_parameters(self):
-        """A mis-defined environment variable secret returns None."""
+        """A mis-defined environment variable secret raises an exception on access."""
         self.environment_secret.parameters = {}
-        self.environment_secret.save()
-        self.assertIsNone(self.environment_secret.value)
+        with self.assertRaises(SecretParametersError):
+            self.environment_secret.value
 
     @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
     def test_environment_variable_value_success(self):
         """Successful retrieval of an environment variable secret."""
         self.assertEqual(self.environment_secret.value, "supersecretvalue")
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": ""})
+    def test_environment_variable_value_success_empty(self):
+        """Successful retrieval of an environment variable secret even if set to an empty string."""
+        self.assertEqual(self.environment_secret.value, "")
 
     def test_text_file_clean_validation(self):
         secret = Secret.objects.create(
@@ -482,14 +489,15 @@ class SecretTest(TestCase):
             secret.clean()
 
     def test_text_file_value_not_found(self):
-        """Failure to retrieve a file returns None."""
-        self.assertIsNone(self.text_file_secret.value)
+        """Failure to retrieve a file raises an exception."""
+        with self.assertRaises(SecretValueNotFoundError):
+            self.text_file_secret.value
 
     def test_text_file_value_missing_parameters(self):
-        """A mis-defined text file secret returns None."""
+        """A mis-defined text file secret raises an exception."""
         self.text_file_secret.parameters = {}
-        self.text_file_secret.save()
-        self.assertIsNone(self.text_file_secret.value)
+        with self.assertRaises(SecretParametersError):
+            self.text_file_secret.value
 
     def test_text_file_value_success(self):
         """Successful retrieval of a text file secret."""
@@ -500,13 +508,22 @@ class SecretTest(TestCase):
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
+    def test_text_file_value_success_empty(self):
+        """Successful retrieval of a text file secret from an empty file."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
+            pass
+        try:
+            self.assertEqual(self.text_file_secret.value, "")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
     def test_unknown_provider(self):
-        """An unknown/unsupported provider returns None."""
+        """An unknown/unsupported provider raises an exception."""
         self.environment_secret.provider = "it-is-a-mystery"
         with self.assertRaises(ValidationError):
             self.environment_secret.clean()
-        self.environment_secret.save()
-        self.assertIsNone(self.environment_secret.value)
+        with self.assertRaises(SecretProviderError):
+            self.environment_secret.value
 
 
 class StatusTest(TestCase):

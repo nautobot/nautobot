@@ -17,12 +17,18 @@ class SecretsProvider(ABC):
 
     @abstractproperty
     def ParametersForm(self):
-        """Django Form class with inputs for describing the parameter(s) required for a Secret to use this Provider."""
+        """Django Form class with inputs for describing the parameter(s) required for a Secret to use this Provider.
+
+        The clean() method may be implemented to provide additional input validation.
+        """
 
     @classmethod
     @abstractmethod
     def get_value_for_secret(cls, secret):
-        """Retrieve the stored value described by the given Secret record."""
+        """Retrieve the stored value described by the given Secret record.
+
+        May raise a SecretError or one of its subclasses if an error occurs.
+        """
 
 
 def register_secrets_provider(provider):
