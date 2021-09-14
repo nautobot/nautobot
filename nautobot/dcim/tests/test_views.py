@@ -1125,6 +1125,18 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses.get(slug="decommissioning").pk,
         }
 
+        # Test bulk edit of device data
+        cls.bulk_edit_data = {
+            "site": sites[0].pk,
+            "rack": racks[0].pk,
+            "device_type": devicetypes[1].pk,
+            "device_role": deviceroles[1].pk,
+            "tenant": None,
+            "platform": platforms[1].pk,
+            "serial": "123456",
+            "status": statuses.get(slug="decommissioning").pk,
+        }
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
         device = Device.objects.first()
