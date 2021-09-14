@@ -59,7 +59,7 @@ class TextFileSecretsProvider(SecretsProvider):
     def get_value_for_secret(cls, secret):
         """Retrieve the appropriate text file's contents."""
         if "path" not in secret.parameters:
-            raise SecretParametersError(secret, cls, f'The "path" parameter is mandatory!')
+            raise SecretParametersError(secret, cls, 'The "path" parameter is mandatory!')
         if not os.path.isfile(secret.parameters["path"]):
             raise SecretValueNotFoundError(secret, cls, f'File "{secret.parameters["path"]}" not found!')
         with open(secret.parameters["path"], "rt", encoding="utf8") as file_handle:

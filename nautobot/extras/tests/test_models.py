@@ -510,7 +510,7 @@ class SecretTest(TestCase):
 
     def test_text_file_value_success_empty(self):
         """Successful retrieval of a text file secret from an empty file."""
-        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8"):
             pass
         try:
             self.assertEqual(self.text_file_secret.value, "")
