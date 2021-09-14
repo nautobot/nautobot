@@ -7,7 +7,7 @@ from nautobot.extras.models import ObjectChange
 from nautobot.utilities.utils import serialize_object
 
 
-@extras_features("graphql")
+@extras_features("graphql", "webhooks")
 class DummyModel(BaseModel):
     name = models.CharField(max_length=20, help_text="The name of this Dummy.")
     number = models.IntegerField(default=100, help_text="The number of this Dummy.")
