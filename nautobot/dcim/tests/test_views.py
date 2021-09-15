@@ -1125,7 +1125,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses.get(slug="decommissioning").pk,
         }
 
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
         device = Device.objects.first()
