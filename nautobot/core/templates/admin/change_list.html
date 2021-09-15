@@ -32,12 +32,17 @@
 
 {% if not is_popup %}
     {% block breadcrumbs %}
-        <ul class="breadcrumb">
-            <li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
-            <!--<li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% render_with_template_if_exist app_label|lower|add:"/admin_app_name.html" app_label %}</a></li>-->
-            <li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% with app_label=cl.opts.app_config.verbose_name|default:cl.opts.app_label %}{{ app_label|title }}{% endwith %}</a></li>
-            <li>{{ cl.opts.verbose_name_plural|capfirst }}</li>
-        </ul>
+        <div class="{% if cl.search_fields %}col-sm-8 col-md-9{% else %}col-sm-12 col-md-12{% endif %}">
+            <ul class="breadcrumb">
+                <li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+                <!--<li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% render_with_template_if_exist app_label|lower|add:"/admin_app_name.html" app_label %}</a></li>-->
+                <li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% with app_label=cl.opts.app_config.verbose_name|default:cl.opts.app_label %}{{ app_label|title }}{% endwith %}</a></li>
+                <li>{{ cl.opts.verbose_name_plural|capfirst }}</li>
+            </ul>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            {% block search %}{% search_form cl %}{% endblock %}
+        </div>
     {% endblock %}
 {% endif %}
 
@@ -49,7 +54,7 @@
         {% if has_add_permission %}
                 {% url cl.opts|admin_urlname:'add' as add_url %}
                 <a role="button" href="{% add_preserved_filters add_url is_popup %}" class="btn btn-primary">
-                    <span class="glyphicon glyphicon-plus"></span> {% blocktrans with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktrans %}
+                    <span class="glyphicon glyphicon-plus"></span> {% blocktrans with cl.opts.verbose_name as name %}Add{% endblocktrans %}
                 </a>
             </li>
         {% endif %}
@@ -67,7 +72,6 @@
             </li>
         </ul>
     {% endif %} {% endcomment %}
-    {% block search %}{% search_form cl %}{% endblock %}
 </div>
 {% endblock %}
 
@@ -89,7 +93,7 @@
 {% endwith %}
 
 {% if action_form and actions_on_top and cl.show_admin_actions %}
-<div class='pull-left'>{% admin_actions %}</div>
+    <div>{% admin_actions %}</div>
 {% endif %}
 
 <div id="content-main">

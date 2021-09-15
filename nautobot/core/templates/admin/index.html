@@ -1,20 +1,12 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static bootstrapped_goodies_tags %}
 
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/dashboard.css" %}" />{% endblock %}
-
-{% block coltype %}colMS{% endblock %}
-
-{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
-
 {% block breadcrumbs %}
 <ul class="breadcrumb">
 <li>{% trans 'Home' %}</li>
 </ul>
 {% endblock %}
 
-{% block content-navbar-collapse %}
-{% endblock %}
 
 {% block object-tools %}
 <ul class="nav navbar-nav">
@@ -64,12 +56,12 @@
                             {% if model.add_url or model.admin_url%}
                             <div class="pull-right">
                                 {% if model.add_url %}
-                                <a href="{{ model.add_url }}" class="btn btn-xs addlink"><span class="glyphicon glyphicon-plus"></span>
+                                <a href="{{ model.add_url }}" class="btn btn-xs btn-primary"><span class="glyphicon glyphicon-plus"></span>
                                 {% trans 'Add' %}</a>
                                 {% endif %}
                                 {% if model.admin_url %}
-                                <a href="{{ model.admin_url }}" class="btn btn-xs changelink"><span class="glyphicon glyphicon-edit"></span>
-                                {% trans 'Change' %}</a>
+                                <a href="{{ model.admin_url }}" class="btn btn-xs btn-warning"><span class="glyphicon glyphicon-edit"></span>
+                                {% trans 'Edit' %}</a>
                                 {% endif %}
                             </div>
                             {% endif %}
@@ -83,7 +75,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block sidebar %}
 {% endblock %}
