@@ -934,12 +934,18 @@ class TestJobMixin(SimpleTestCase):
             return self.TestJob
         raise Http404
 
-    def setUp(self):
-        super().setUp()
-
+    @classmethod
+    def setUpClass(cls):
         # Monkey-patch the viewsets' _get_job methods to return our test class above
+        cls.original_method = JobView._get_job
         JobView._get_job = self.get_test_job_class
         ScheduledJobView._get_job = self.get_test_job_class
+
+    @classmethod
+    def tearDownClass(cls):
+        # Undo monkey-patch
+        JobView._get_job = cls.original_method
+        ScheduledJobView._get_job = cls.original_method
 
 
 class ScheduledJobTestCase(
