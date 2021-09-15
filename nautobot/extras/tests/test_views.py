@@ -1133,13 +1133,15 @@ class JobTestCase(
         self.assertEqual(errors, ["_schedule_type: This field is required."])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    def test_run_now_no_worker(self):
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_now_no_worker(self, patched):
         self.add_permissions("extras.run_job")
 
         data = {
             "_schedule_type": "immediately",
         }
 
+        patched.return_value = 0
         response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
 
         self.assertHttpStatus(response, 200)
