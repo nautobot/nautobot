@@ -482,7 +482,7 @@ class ConfigContextSchemaTestCase(TestCase):
     """
 
     def setUp(self):
-        context_data = {"a": 123, "b": 456, "c": 777}
+        context_data = {"a": 123, "b": "456", "c": "10.7.7.7"}
 
         # Schemas
         self.schema_validation_pass = ConfigContextSchema.objects.create(
@@ -491,13 +491,33 @@ class ConfigContextSchemaTestCase(TestCase):
             data_schema={
                 "type": "object",
                 "additionalProperties": False,
-                "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}, "c": {"type": "integer"}},
+                "properties": {
+                    "a": {"type": "integer"},
+                    "b": {"type": "string"},
+                    "c": {"type": "string", "format": "ipv4"},
+                },
             },
         )
-        self.schema_validation_fail = ConfigContextSchema.objects.create(
-            name="schema-fail",
-            slug="schema-fail",
-            data_schema={"type": "object", "additionalProperties": False, "properties": {"foo": {"type": "string"}}},
+        self.schemas_validation_fail = (
+            ConfigContextSchema.objects.create(
+                name="schema fail (wrong properties)",
+                slug="schema-fail-wrong-properties",
+                data_schema={
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {"foo": {"type": "string"}},
+                },
+            ),
+            ConfigContextSchema.objects.create(
+                name="schema fail (wrong type)",
+                slug="schema-fail-wrong-type",
+                data_schema={"type": "object", "properties": {"b": {"type": "integer"}}},
+            ),
+            ConfigContextSchema.objects.create(
+                name="schema fail (wrong format)",
+                slug="schema-fail-wrong-format",
+                data_schema={"type": "object", "properties": {"b": {"type": "string", "format": "ipv4"}}},
+            ),
         )
 
         # ConfigContext
@@ -546,10 +566,11 @@ class ConfigContextSchemaTestCase(TestCase):
         And the config context context data is NOT valid for the schema
         Assert calling clean on the config context object DOES raise a ValidationError
         """
-        self.config_context.schema = self.schema_validation_fail
+        for schema in self.schemas_validation_fail:
+            self.config_context.schema = schema
 
-        with self.assertRaises(ValidationError):
-            self.config_context.full_clean()
+            with self.assertRaises(ValidationError):
+                self.config_context.full_clean()
 
     def test_existing_config_context_with_no_schema_applied(self):
         """
@@ -583,10 +604,11 @@ class ConfigContextSchemaTestCase(TestCase):
         And the device local_context_data is NOT valid for the schema
         Assert calling clean on the device object DOES raise a ValidationError
         """
-        self.device.local_context_schema = self.schema_validation_fail
+        for schema in self.schemas_validation_fail:
+            self.device.local_context_schema = schema
 
-        with self.assertRaises(ValidationError):
-            self.device.full_clean()
+            with self.assertRaises(ValidationError):
+                self.device.full_clean()
 
     def test_existing_device_with_no_schema_applied(self):
         """
@@ -620,10 +642,11 @@ class ConfigContextSchemaTestCase(TestCase):
         And the virtual machine local_context_data is NOT valid for the schema
         Assert calling clean on the virtual machine object DOES raise a ValidationError
         """
-        self.virtual_machine.local_context_schema = self.schema_validation_fail
+        for schema in self.schemas_validation_fail:
+            self.virtual_machine.local_context_schema = schema
 
-        with self.assertRaises(ValidationError):
-            self.virtual_machine.full_clean()
+            with self.assertRaises(ValidationError):
+                self.virtual_machine.full_clean()
 
     def test_existing_virtual_machine_with_no_schema_applied(self):
         """
@@ -720,11 +743,22 @@ class ComputedFieldTest(TestCase):
             fallback_value="An error occurred while rendering this template.",
             weight=50,
         )
+        self.blank_fallback_value = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="blank_fallback_value",
+            label="Blank Fallback Value",
+            template="{{ obj.location }}",
+            weight=50,
+        )
         self.site1 = Site.objects.create(name="NYC")
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.site1})
         self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+
+    def test_render_method_undefined_error(self):
+        rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, "")
 
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
