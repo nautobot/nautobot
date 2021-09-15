@@ -20,7 +20,7 @@ from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
-from nautobot.extras import utils as extras_utils
+from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import (
     copy_safe_request,
@@ -504,7 +504,7 @@ class GitRepositorySyncView(View):
         repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
 
         # Allow execution only if a worker process is running.
-        if not extras_utils.get_worker_count(request):
+        if not get_worker_count(request):
             messages.error(request, "Unable to run job: Celery worker process not running.")
         else:
             enqueue_pull_git_repository_and_refresh_data(repository, request)
@@ -691,7 +691,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         schedule_form = forms.JobScheduleForm(request.POST)
 
         # Allow execution only if a worker process is running.
-        if not extras_utils.get_worker_count(request):
+        if not get_worker_count(request):
             messages.error(request, "Unable to run job: Celery worker process not running.")
         elif job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.

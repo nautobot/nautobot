@@ -1085,6 +1085,13 @@ class JobResultTestCase(
 class JobTestCase(
     TestCase,
 ):
+    """
+    The Job view test cases.
+
+    Since Job is not an actual model, we have to improvise and test the views
+    manually.
+    """
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_without_permission(self):
         self.assertHttpStatus(self.client.get(reverse("extras:job_list")), 403)
@@ -1136,9 +1143,11 @@ class JobTestCase(
         response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
 
         self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Celery worker process not running.", content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.utils.get_worker_count")
+    @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_now(self, patched):
         self.add_permissions("extras.run_job")
 
@@ -1149,7 +1158,8 @@ class JobTestCase(
         patched.return_value = 1
         response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
 
-        self.assertHttpStatus(response, 302)
+        result = JobResult.objects.last()
+        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
     def test_run_now_missing_args(self):
@@ -1168,7 +1178,7 @@ class JobTestCase(
         self.assertEqual(errors, ["var: This field is required."])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.utils.get_worker_count")
+    @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_now_with_args(self, patched):
         self.add_permissions("extras.run_job")
 
@@ -1182,10 +1192,11 @@ class JobTestCase(
             reverse("extras:job", kwargs={"class_path": "local/test_required_args/TestRequired"}), data
         )
 
-        self.assertHttpStatus(response, 302)
+        result = JobResult.objects.last()
+        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.utils.get_worker_count")
+    @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later_missing_name(self, patched):
         self.add_permissions("extras.run_job")
 
@@ -1201,7 +1212,7 @@ class JobTestCase(
         self.assertEqual(errors, ["_schedule_name: Please provide a name for the job schedule."])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.utils.get_worker_count")
+    @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later_missing_date(self, patched):
         self.add_permissions("extras.run_job")
 
@@ -1223,7 +1234,7 @@ class JobTestCase(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.utils.get_worker_count")
+    @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later_date_passed(self, patched):
         self.add_permissions("extras.run_job")
 
@@ -1246,7 +1257,7 @@ class JobTestCase(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.utils.get_worker_count")
+    @mock.patch("nautobot.extras.views.get_worker_count")
     def test_run_later(self, patched):
         self.add_permissions("extras.run_job")
 
@@ -1260,7 +1271,7 @@ class JobTestCase(
         patched.return_value = 1
         response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
 
-        self.assertHttpStatus(response, 302)
+        self.assertRedirects(response, reverse("extras:scheduledjob_list"))
 
         scheduled = ScheduledJob.objects.last()
 
