@@ -14,11 +14,11 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
-from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
+from rest_framework import viewsets
 from rq import Worker
 
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
-from nautobot.core.api.views import ModelViewSet
+from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
@@ -220,7 +220,7 @@ class ConfigContextSchemaViewSet(ModelViewSet):
 #
 
 
-class JobViewSet(ViewSet):
+class JobViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     lookup_field = "class_path"
     lookup_value_regex = "[^/]+/[^/]+/[^/]+"  # e.g. "git.repo_name/module_name/JobName"
@@ -322,7 +322,7 @@ class JobViewSet(ViewSet):
         input_serializer = serializers.JobInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
-        data = input_serializer.data["data"]
+        data = job_class.serialize_data(input_serializer.data["data"])
         commit = input_serializer.data["commit"]
         if commit is None:
             commit = getattr(job_class.Meta, "commit_default", True)
@@ -489,7 +489,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 #
 
 
-class ContentTypeViewSet(ReadOnlyModelViewSet):
+class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
     """

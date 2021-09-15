@@ -1,19 +1,20 @@
-import datetime
+from datetime import datetime, timedelta
 import os.path
 import uuid
 from unittest import skipIf
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
-from django.utils.timezone import make_aware
+from django.utils.timezone import make_aware, now
 from django_rq.queues import get_connection
 from rest_framework import status
-from rq import Worker
 
+from nautobot.core.celery import app
 from nautobot.dcim.models import (
     Device,
     DeviceRole,
@@ -25,6 +26,7 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.api.views import JobViewSet
+from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -38,6 +40,7 @@ from nautobot.extras.models import (
     JobResult,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     Webhook,
@@ -46,7 +49,12 @@ from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectV
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
-rq_worker_running = Worker.count(get_connection("default"))
+
+User = get_user_model()
+
+
+worker_running = len(app.control.inspect().active() or [])
+
 
 THIS_DIRECTORY = os.path.dirname(__file__)
 
@@ -216,7 +224,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         for repo in cls.repos:
             repo.save(trigger_resync=False)
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
+    @skipIf(not worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_nonexistent_repo(self):
         self.add_permissions("extras.add_gitrepository")
@@ -224,14 +232,14 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
+    @skipIf(not worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_without_permissions(self):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
+    @skipIf(not worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_with_permissions(self):
         self.add_permissions("extras.add_gitrepository")
@@ -445,9 +453,6 @@ class JobTest(APITestCase):
 
             return "Job complete"
 
-        def test_foo(self):
-            self.log_success(obj=None, message="Test completed")
-
     def get_test_job_class(self, class_path):
         if class_path == "local/test_api/TestJob":
             return self.TestJob
@@ -521,7 +526,6 @@ class JobTest(APITestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_without_permission(self):
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
@@ -529,7 +533,6 @@ class JobTest(APITestCase):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_with_permission(self):
         self.add_permissions("extras.run_job")
@@ -549,7 +552,6 @@ class JobTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["result"]["status"]["value"], "pending")
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_object_var(self):
         self.add_permissions("extras.run_job")
@@ -559,37 +561,80 @@ class JobTest(APITestCase):
         data = {
             "data": job_data,
             "commit": True,
+            "schedule": {
+                "name": "test",
+                "interval": "future",
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+            },
         }
 
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
-        response = self.client.get(url, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
+        job = ScheduledJob.objects.last()
+        self.assertEqual(job.kwargs["data"]["var4"], str(d.pk))
 
-    @skipIf(not rq_worker_running, "RQ worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_object_var_lookup(self):
-        self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         job_data = {"var4": {"name": "role"}}
 
+        self.assertEqual(self.TestJob.deserialize_data(job_data), {"var4": d})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_future(self):
+        self.add_permissions("extras.run_job")
+
         data = {
-            "data": job_data,
+            "data": {},
             "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
         }
 
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": response.data["result"]["id"]})
-        response = self.client.get(url, format="json", **self.header)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_future_past(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() - timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_interval(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "hourly",
+                "name": "test",
+            },
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["data"]["vars"]["var4"], d.pk)
 
 
 class JobResultTest(APITestCase):
@@ -619,6 +664,174 @@ class JobResultTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
 
 
+class ScheduledJobTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+):
+    model = ScheduledJob
+    brief_fields = ["interval", "name", "start_time"]
+    choices_fields = []
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="user1", is_active=True)
+        ScheduledJob.objects.create(
+            name="test1",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+        ScheduledJob.objects.create(
+            name="test2",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+        ScheduledJob.objects.create(
+            name="test3",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+
+    def test_options_objects_returns_display_and_value(self):
+        """Overriden because this test case is not applicable to this viewset"""
+
+    def test_options_returns_expected_choices(self):
+        """Overriden because this test case is not applicable to this viewset"""
+
+
+class JobApprovalTest(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="user1", is_active=True)
+        cls.scheduled_job = ScheduledJob.objects.create(
+            name="test",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_anonymous(self):
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": 1})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_without_permission(self):
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": 1})
+        with disable_warnings("django.request"):
+            response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_same_user(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        scheduled_job = ScheduledJob.objects.create(
+            name="test",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            approval_required=True,
+            start_time=now(),
+        )
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_in_past(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        user = User.objects.get(username="user1")
+        scheduled_job = ScheduledJob.objects.create(
+            name="test",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_FUTURE,
+            one_off=True,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_job_in_past_force(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        user = User.objects.get(username="user1")
+        scheduled_job = ScheduledJob.objects.create(
+            name="test",
+            task="-",
+            job_class="-",
+            interval=JobExecutionType.TYPE_FUTURE,
+            one_off=True,
+            user=user,
+            approval_required=True,
+            start_time=now(),
+        )
+        url = reverse("extras-api:scheduledjob-approve", kwargs={"pk": scheduled_job.pk})
+        response = self.client.post(url + "?force=true", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_job_without_permission(self):
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": 1})
+        with disable_warnings("django.request"):
+            response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_job(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsNone(ScheduledJob.objects.filter(pk=self.scheduled_job.pk).first())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_dry_run_job_without_permission(self):
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": 1})
+        with disable_warnings("django.request"):
+            response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_dry_run_job(self):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+        url = reverse("extras-api:scheduledjob-deny", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+
 class CreatedUpdatedFilterTest(APITestCase):
     def setUp(self):
         super().setUp()
@@ -643,8 +856,8 @@ class CreatedUpdatedFilterTest(APITestCase):
 
         # change the created and last_updated of one
         Rack.objects.filter(pk=self.rack2.pk).update(
-            last_updated=make_aware(datetime.datetime(2001, 2, 3, 1, 2, 3, 4)),
-            created=make_aware(datetime.datetime(2001, 2, 3)),
+            last_updated=make_aware(datetime(2001, 2, 3, 1, 2, 3, 4)),
+            created=make_aware(datetime(2001, 2, 3)),
         )
 
     def test_get_rack_created(self):
