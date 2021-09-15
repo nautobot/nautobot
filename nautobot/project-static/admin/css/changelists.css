@@ -1,0 +1,16 @@
+/* CHANGELISTS */
+
+.change-list .hiddenfields { display:none; }
+
+/* ACTIONS */
+
+.actions span.all,
+.actions span.action-counter,
+.actions span.clear,
+.actions span.question {
+    display: none;
+}
+
+#action-toggle {
+    display: none;
+}
