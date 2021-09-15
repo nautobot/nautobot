@@ -1097,13 +1097,13 @@ class JobTestCase(
     def test_list_without_permission(self):
         self.assertHttpStatus(self.client.get(reverse("extras:job_list")), 403)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
     def test_list(self):
         response = self.client.get(reverse("extras:job_list"))
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("DummyJob", response_body)
+        self.assertIn("TestPass", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=DUMMY_JOBS)
     def test_get_without_permission(self):
