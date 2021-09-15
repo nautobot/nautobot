@@ -6,6 +6,7 @@ import uuid
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.http import Http404
 from django.test import override_settings, SimpleTestCase
 from django.urls import reverse
 from django.utils import timezone
