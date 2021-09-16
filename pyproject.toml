@@ -75,7 +75,7 @@ djangorestframework = "~3.12.4"
 # Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
-GitPython = "~3.1.15"
+GitPython = "3.1.18"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Package version detection in older versions of Python
