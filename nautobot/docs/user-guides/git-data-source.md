@@ -45,7 +45,7 @@ This table defines repository parameters that are required to establish a reposi
 - [GitLab Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 - [Bitbucket Personal Access Token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
 
-!!! important
+!!! warning
     Beginning in Nautobot 1.2, there are two ways to define a `token` and/or `username` for a Git repository -- either by directly configuring them into the repository definition, or by associating the repository with one or two [Secret](../models/extras/secret.md) records (this latter approach is new in Nautobot 1.2). The direct-configuration approach should be considered as deprecated, as it is less secure and poses a number of maintainability issues. If at all possible, you should use Secrets instead. The direct-configuration approach may be removed altogether as an option in a future release of Nautobot.
 
 ## Using Git Data Sources

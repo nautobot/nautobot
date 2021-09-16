@@ -12,7 +12,6 @@ from django_cryptography.fields import encrypt
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.models.secrets import Secret
 
 
 @extras_features(
@@ -68,7 +67,7 @@ class GitRepository(PrimaryModel):
     )
 
     username_secret = models.ForeignKey(
-        to=Secret,
+        to="extras.Secret",
         related_name="+",
         on_delete=models.SET_NULL,
         default=None,
@@ -76,7 +75,7 @@ class GitRepository(PrimaryModel):
         null=True,
     )
     token_secret = models.ForeignKey(
-        to=Secret,
+        to="extras.Secret",
         related_name="+",
         on_delete=models.SET_NULL,
         default=None,
