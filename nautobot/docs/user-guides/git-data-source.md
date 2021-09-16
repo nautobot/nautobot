@@ -37,13 +37,16 @@ This table defines repository parameters that are required to establish a reposi
 |Slug|Computer-friendly name for the repo. Auto-generated based on the `name` provided, but you can change it if you wish.|
 |Remote URL|The URL pointing to the Git repo. Current git url usage is limited to `http` or `https`.|
 |Branch|The branch in the Git repo to use. Defaults to `main`.|
-|Token|The token is a personal access token for the `username` provided.  For more information on generating a personal access token see the corresponding links below. **Token is the only option supported currently.**|
-|Username|The Git username that corresponds with the personal access token above. Note not required for GitHub, but is for GitLab.|
+|Token|(Optional) A personal access token for the `username` provided.  For more information on generating a personal access token see the corresponding links below.|
+|Username|(Optional) The Git username that corresponds with the personal access token above. Note not required for GitHub, but is for GitLab.|
 |Provides|Resource type(s) provided by this Git repo.|
 
 - [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
 - [GitLab Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 - [Bitbucket Personal Access Token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
+
+!!! warning
+    Beginning in Nautobot 1.2, there are two ways to define a `token` and/or `username` for a Git repository -- either by directly configuring them into the repository definition, or by associating the repository with one or two [Secret](../models/extras/secret.md) records (this latter approach is new in Nautobot 1.2). The direct-configuration approach should be considered as deprecated, as it is less secure and poses a number of maintainability issues. If at all possible, you should use Secrets instead. The direct-configuration approach may be removed altogether as an option in a future release of Nautobot.
 
 ## Using Git Data Sources
 

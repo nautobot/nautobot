@@ -854,6 +854,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "NAPALM Username",
             "provider": "environment-variable",
+            "description": "Username for all NAPALM devices",
             "parameters": {
                 "variable": "NAPALM_USERNAME",
             },
@@ -868,9 +869,9 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "GitHub Token for My Repository",
             "slug": "github-token-my-repository",
-            "provider": "hashicorp-vault-key-value",
+            "provider": "text-file",
             "parameters": {
-                "path": "/github-tokens/user/myusername/",
+                "path": "/github-tokens/user/myusername.txt",
             },
         },
     ]

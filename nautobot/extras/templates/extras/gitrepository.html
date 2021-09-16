@@ -49,8 +49,32 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Token</td>
+                        <td>Username <em>(deprecated)</em></td>
+                        <td>{{ object.username | placeholder }}</td>
+                    <tr>
+                    <tr>
+                        <td>Token <em>(deprecated)</em></td>
                         <td>{{ object.token_rendered }}</td>
+                    </tr>
+                    <tr>
+                        <td>Username Secret</td>
+                        <td>
+                            {% if object.username_secret%}
+                                <a href="{{ object.username_secret.get_absolute_url }}">{{ object.username_secret }}</a>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Token Secret</td>
+                        <td>
+                            {% if object.token_secret %}
+                                <a href="{{ object.token_secret.get_absolute_url }}">{{ object.token_secret }}</a>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
                     </tr>
                 </table>
             </div>
