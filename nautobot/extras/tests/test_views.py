@@ -929,17 +929,18 @@ class TestJobMixin(SimpleTestCase):
     class TestJob(Job):
         pass
 
+    @staticmethod
     def get_test_job_class(self, class_path):
         if class_path.startswith("local/test_view"):
-            return self.TestJob
+            return TestJobMixin.TestJob
         raise Http404
 
     @classmethod
     def setUpClass(cls):
         # Monkey-patch the viewsets' _get_job methods to return our test class above
         cls.original_method = JobView._get_job
-        JobView._get_job = self.get_test_job_class
-        ScheduledJobView._get_job = self.get_test_job_class
+        JobView._get_job = TestJobMixin.get_test_job_class
+        ScheduledJobView._get_job = TestJobMixin.get_test_job_class
 
     @classmethod
     def tearDownClass(cls):
