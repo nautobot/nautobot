@@ -442,7 +442,7 @@ class JobTest(APITestCase):
             name = "Test job"
 
         var1 = StringVar()
-        var2 = IntegerVar()
+        var2 = IntegerVar(required=True)  # explicitly stated, though required=True is the default in any case
         var3 = BooleanVar()
         var4 = ObjectVar(model=DeviceRole)
 
@@ -536,10 +536,12 @@ class JobTest(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_with_permission(self):
         self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
         job_data = {
             "var1": "FooBar",
             "var2": 123,
             "var3": False,
+            "var4": d.pk,
         }
 
         data = {
@@ -556,7 +558,12 @@ class JobTest(APITestCase):
     def test_run_job_object_var(self):
         self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
-        job_data = {"var4": d.pk}
+        job_data = {
+            "var1": "hello, world!",
+            "var2": 22,
+            "var3": True,
+            "var4": d.pk,
+        }
 
         data = {
             "data": job_data,
@@ -585,9 +592,9 @@ class JobTest(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_future(self):
         self.add_permissions("extras.run_job")
-
+        d = DeviceRole.objects.create(name="role", slug="role")
         data = {
-            "data": {},
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
@@ -603,9 +610,9 @@ class JobTest(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_future_past(self):
         self.add_permissions("extras.run_job")
-
+        d = DeviceRole.objects.create(name="role", slug="role")
         data = {
-            "data": {},
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() - timedelta(minutes=1)),
@@ -621,9 +628,9 @@ class JobTest(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_interval(self):
         self.add_permissions("extras.run_job")
-
+        d = DeviceRole.objects.create(name="role", slug="role")
         data = {
-            "data": {},
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
@@ -635,6 +642,61 @@ class JobTest(APITestCase):
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_with_invalid_data(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "data": "invalid",
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"errors": ["Job data needs to be a dict"]})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_with_wrong_data(self):
+        self.add_permissions("extras.run_job")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var5": "wrong",
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"errors": {"var5": ["Job data contained an unknown property"]}})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
+    def test_run_job_with_missing_data(self):
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var1": "FooBar",
+            "var3": False,
+        }
+
+        data = {
+            "data": job_data,
+            "commit": True,
+        }
+
+        url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
+        )
 
 
 class JobResultTest(APITestCase):
@@ -1445,7 +1507,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             "slug": "cf6",
             "label": "Computed Field 6",
             "template": "{{ obj.name }}",
-            "fallback_value": "error",
         },
         {
             "content_type": "dcim.site",

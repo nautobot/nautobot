@@ -1,5 +1,6 @@
 from datetime import datetime
 from django.contrib.contenttypes.models import ContentType
+from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -322,10 +323,18 @@ class JobViewSet(viewsets.ViewSet):
         input_serializer = serializers.JobInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
-        data = job_class.serialize_data(input_serializer.data["data"])
+        data = input_serializer.data["data"] or {}
         commit = input_serializer.data["commit"]
         if commit is None:
             commit = getattr(job_class.Meta, "commit_default", True)
+
+        try:
+            job.validate_data(data)
+        except FormsValidationError as e:
+            # message_dict can only be accessed if ValidationError got a dict
+            # in the constructor (saved as error_dict). Otherwise we get a list
+            # of errors under messages
+            return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 

@@ -102,6 +102,7 @@ nav:
     - Development:
         - Introduction: 'development/index.md'
         - Getting Started: 'development/getting-started.md'
+        - Advanced Docker Compose Usage: 'development/docker-compose-advanced-use-cases.md'
         - Best Practices: 'development/best-practices.md'
         - Style Guide: 'development/style-guide.md'
         - Extending Models: 'development/extending-models.md'
