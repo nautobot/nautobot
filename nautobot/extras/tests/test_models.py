@@ -43,12 +43,48 @@ from nautobot.virtualization.models import (
 )
 
 
-class TagTest(TestCase):
-    def test_create_tag_unicode(self):
-        tag = Tag(name="Testing Unicode: 台灣")
-        tag.save()
+class ComputedFieldTest(TestCase):
+    """
+    Tests for the `ComputedField` Model
+    """
 
-        self.assertEqual(tag.slug, "testing-unicode-台灣")
+    def setUp(self):
+        self.good_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="good_computed_field",
+            label="Good Computed Field",
+            template="{{ obj.name }} is awesome!",
+            fallback_value="This template has errored",
+            weight=100,
+        )
+        self.bad_computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="bad_computed_field",
+            label="Bad Computed Field",
+            template="{{ not_in_context | not_a_filter }} is horrible!",
+            fallback_value="An error occurred while rendering this template.",
+            weight=50,
+        )
+        self.blank_fallback_value = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Site),
+            slug="blank_fallback_value",
+            label="Blank Fallback Value",
+            template="{{ obj.location }}",
+            weight=50,
+        )
+        self.site1 = Site.objects.create(name="NYC")
+
+    def test_render_method(self):
+        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+
+    def test_render_method_undefined_error(self):
+        rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, "")
+
+    def test_render_method_bad_template(self):
+        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
+        self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
 class ConfigContextTest(TestCase):
@@ -255,225 +291,6 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
-
-
-class ExportTemplateTest(TestCase):
-    """
-    Tests for the ExportTemplate model class.
-    """
-
-    def test_name_contenttype_uniqueness(self):
-        """
-        The pair of (name, content_type) must be unique for an un-owned ExportTemplate.
-
-        See GitHub issue #431.
-        """
-        device_ct = ContentType.objects.get_for_model(Device)
-        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
-
-        with self.assertRaises(ValidationError):
-            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
-            duplicate_template.validated_save()
-
-        # A differently owned ExportTemplate may have the same name
-        repo = GitRepository(
-            name="Test Git Repository",
-            slug="test-git-repo",
-            remote_url="http://localhost/git.git",
-            username="oauth2",
-        )
-        repo.save(trigger_resync=False)
-        nonduplicate_template = ExportTemplate(
-            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
-        )
-        nonduplicate_template.validated_save()
-
-
-class GitRepositoryTest(TransactionTestCase):
-    """
-    Tests for the GitRepository model class.
-
-    Note: This is a TransactionTestCase, rather than a TestCase, because the GitRepository save() method uses
-    transaction.on_commit(), which doesn't get triggered in a normal TestCase.
-    """
-
-    SAMPLE_TOKEN = "dc6542736e7b02c159d14bc08f972f9ec1e2c45fa"
-
-    def setUp(self):
-        self.repo = GitRepository(
-            name="Test Git Repository",
-            slug="test-git-repo",
-            remote_url="http://localhost/git.git",
-            username="oauth2",
-        )
-        self.repo.save(trigger_resync=False)
-
-    def test_token_rendered(self):
-        self.assertEqual(self.repo.token_rendered, "—")
-        self.repo._token = self.SAMPLE_TOKEN
-        self.assertEqual(self.repo.token_rendered, GitRepository.TOKEN_PLACEHOLDER)
-        self.repo._token = ""
-        self.assertEqual(self.repo.token_rendered, "—")
-
-    def test_filesystem_path(self):
-        self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
-
-    def test_save_preserve_token(self):
-        self.repo._token = self.SAMPLE_TOKEN
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had submitted an "Edit" form, which displays the token placeholder instead of the actual token
-        self.repo._token = GitRepository.TOKEN_PLACEHOLDER
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had deleted a pre-existing token from the UI
-        self.repo._token = ""
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, "")
-
-    def test_verify_user(self):
-        self.assertEqual(self.repo.username, "oauth2")
-
-    def test_save_relocate_directory(self):
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            with self.settings(GIT_ROOT=tmpdirname):
-                initial_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, initial_path)
-                os.makedirs(initial_path)
-
-                self.repo.slug = "a-new-location"
-                self.repo.save(trigger_resync=False)
-
-                self.assertFalse(os.path.exists(initial_path))
-                new_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, new_path)
-                self.assertTrue(os.path.isdir(new_path))
-
-
-class JobResultTest(TestCase):
-    """
-    Tests for the `JobResult` model class.
-    """
-
-    def test_related_object(self):
-        """Test that the `related_object` property is computed properly."""
-        # Case 1: Job, identified by class_path.
-        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
-            job_class = get_job("local/test_pass/TestPass")
-            job_result = JobResult(
-                name=job_class.class_path,
-                obj_type=ContentType.objects.get(app_label="extras", model="job"),
-                job_id=uuid.uuid4(),
-            )
-
-            # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
-            self.assertEqual(type(job_result.related_object), type)
-            self.assertTrue(issubclass(job_result.related_object, Job))
-            self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
-
-            job_result.name = "local/no_such_job/NoSuchJob"
-            self.assertIsNone(job_result.related_object)
-
-            job_result.name = "not-a-class-path"
-            self.assertIsNone(job_result.related_object)
-
-        # Case 2: GitRepository, identified by name.
-        repo = GitRepository(
-            name="Test Git Repository",
-            slug="test-git-repo",
-            remote_url="http://localhost/git.git",
-            username="oauth2",
-        )
-        repo.save(trigger_resync=False)
-
-        job_result = JobResult(
-            name=repo.name,
-            obj_type=ContentType.objects.get_for_model(repo),
-            job_id=uuid.uuid4(),
-        )
-
-        self.assertEqual(job_result.related_object, repo)
-
-        job_result.name = "No such GitRepository"
-        self.assertIsNone(job_result.related_object)
-
-        # Case 3: Related object with no name, identified by PK/ID
-        ip_address = IPAddress.objects.create(address="1.1.1.1/32")
-        job_result = JobResult(
-            name="irrelevant",
-            obj_type=ContentType.objects.get_for_model(ip_address),
-            job_id=ip_address.pk,
-        )
-
-        self.assertEqual(job_result.related_object, ip_address)
-
-        job_result.job_id = uuid.uuid4()
-        self.assertIsNone(job_result.related_object)
-
-
-class StatusTest(TestCase):
-    """
-    Tests for the `Status` model class.
-    """
-
-    def setUp(self):
-        self.status = Status.objects.create(name="delete_me", slug="delete-me", color=ColorChoices.COLOR_RED)
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1")
-        site = Site.objects.create(name="Site-1")
-
-        self.device = Device.objects.create(
-            name="Device 1",
-            device_type=devicetype,
-            device_role=devicerole,
-            site=site,
-            status=self.status,
-        )
-
-    def test_uniqueness(self):
-        # A `delete_me` Status already exists.
-        with self.assertRaises(IntegrityError):
-            Status.objects.create(name="delete_me")
-
-    def test_delete_protection(self):
-        # Protected delete will fail
-        with self.assertRaises(ProtectedError):
-            self.status.delete()
-
-        # Delete the device
-        self.device.delete()
-
-        # Now that it's not in use, delete will succeed.
-        self.status.delete()
-        self.assertEqual(self.status.pk, None)
-
-    def test_color(self):
-        self.assertEqual(self.status.color, ColorChoices.COLOR_RED)
-
-        # Valid color
-        self.status.color = ColorChoices.COLOR_PURPLE
-        self.status.full_clean()
-
-        # Invalid color
-        self.status.color = "red"
-        with self.assertRaises(ValidationError):
-            self.status.full_clean()
-
-    def test_name(self):
-        # Test a bunch of wackado names.
-        tests = [
-            "CAPSLOCK",
-            "---;;a;l^^^2ZSsljk¡",
-            "-42",
-            "392405834ioafdjskl;ajr30894fjakl;fs___π",
-        ]
-        for test in tests:
-            self.status.name = test
-            self.status.clean()
-            self.status.save()
-            self.assertEquals(str(self.status), test)
 
 
 class ConfigContextSchemaTestCase(TestCase):
@@ -721,48 +538,36 @@ class ConfigContextSchemaTestCase(TestCase):
             invalid_schema.full_clean()
 
 
-class ComputedFieldTest(TestCase):
+class ExportTemplateTest(TestCase):
     """
-    Tests for the `ComputedField` Model
+    Tests for the ExportTemplate model class.
     """
 
-    def setUp(self):
-        self.good_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
-            slug="good_computed_field",
-            label="Good Computed Field",
-            template="{{ obj.name }} is awesome!",
-            fallback_value="This template has errored",
-            weight=100,
-        )
-        self.bad_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
-            slug="bad_computed_field",
-            label="Bad Computed Field",
-            template="{{ not_in_context | not_a_filter }} is horrible!",
-            fallback_value="An error occurred while rendering this template.",
-            weight=50,
-        )
-        self.blank_fallback_value = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
-            slug="blank_fallback_value",
-            label="Blank Fallback Value",
-            template="{{ obj.location }}",
-            weight=50,
-        )
-        self.site1 = Site.objects.create(name="NYC")
+    def test_name_contenttype_uniqueness(self):
+        """
+        The pair of (name, content_type) must be unique for an un-owned ExportTemplate.
 
-    def test_render_method(self):
-        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+        See GitHub issue #431.
+        """
+        device_ct = ContentType.objects.get_for_model(Device)
+        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
 
-    def test_render_method_undefined_error(self):
-        rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, "")
+        with self.assertRaises(ValidationError):
+            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
+            duplicate_template.validated_save()
 
-    def test_render_method_bad_template(self):
-        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+        # A differently owned ExportTemplate may have the same name
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+        nonduplicate_template = ExportTemplate(
+            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
+        )
+        nonduplicate_template.validated_save()
 
 
 class FileProxyTest(TestCase):
@@ -791,3 +596,198 @@ class FileProxyTest(TestCase):
         fp.delete()
         self.assertEqual(FileProxy.objects.count(), 0)
         self.assertEqual(FileAttachment.objects.count(), 0)
+
+
+class GitRepositoryTest(TransactionTestCase):
+    """
+    Tests for the GitRepository model class.
+
+    Note: This is a TransactionTestCase, rather than a TestCase, because the GitRepository save() method uses
+    transaction.on_commit(), which doesn't get triggered in a normal TestCase.
+    """
+
+    SAMPLE_TOKEN = "dc6542736e7b02c159d14bc08f972f9ec1e2c45fa"
+
+    def setUp(self):
+        self.repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        self.repo.save(trigger_resync=False)
+
+    def test_token_rendered(self):
+        self.assertEqual(self.repo.token_rendered, "—")
+        self.repo._token = self.SAMPLE_TOKEN
+        self.assertEqual(self.repo.token_rendered, GitRepository.TOKEN_PLACEHOLDER)
+        self.repo._token = ""
+        self.assertEqual(self.repo.token_rendered, "—")
+
+    def test_filesystem_path(self):
+        self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
+
+    def test_save_preserve_token(self):
+        self.repo._token = self.SAMPLE_TOKEN
+        self.repo.save(trigger_resync=False)
+        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
+        # As if the user had submitted an "Edit" form, which displays the token placeholder instead of the actual token
+        self.repo._token = GitRepository.TOKEN_PLACEHOLDER
+        self.repo.save(trigger_resync=False)
+        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
+        # As if the user had deleted a pre-existing token from the UI
+        self.repo._token = ""
+        self.repo.save(trigger_resync=False)
+        self.assertEqual(self.repo._token, "")
+
+    def test_verify_user(self):
+        self.assertEqual(self.repo.username, "oauth2")
+
+    def test_save_relocate_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            with self.settings(GIT_ROOT=tmpdirname):
+                initial_path = self.repo.filesystem_path
+                self.assertIn(self.repo.slug, initial_path)
+                os.makedirs(initial_path)
+
+                self.repo.slug = "a-new-location"
+                self.repo.save(trigger_resync=False)
+
+                self.assertFalse(os.path.exists(initial_path))
+                new_path = self.repo.filesystem_path
+                self.assertIn(self.repo.slug, new_path)
+                self.assertTrue(os.path.isdir(new_path))
+
+
+class JobResultTest(TestCase):
+    """
+    Tests for the `JobResult` model class.
+    """
+
+    def test_related_object(self):
+        """Test that the `related_object` property is computed properly."""
+        # Case 1: Job, identified by class_path.
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            job_class = get_job("local/test_pass/TestPass")
+            job_result = JobResult(
+                name=job_class.class_path,
+                obj_type=ContentType.objects.get(app_label="extras", model="job"),
+                job_id=uuid.uuid4(),
+            )
+
+            # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
+            self.assertEqual(type(job_result.related_object), type)
+            self.assertTrue(issubclass(job_result.related_object, Job))
+            self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
+
+            job_result.name = "local/no_such_job/NoSuchJob"
+            self.assertIsNone(job_result.related_object)
+
+            job_result.name = "not-a-class-path"
+            self.assertIsNone(job_result.related_object)
+
+        # Case 2: GitRepository, identified by name.
+        repo = GitRepository(
+            name="Test Git Repository",
+            slug="test-git-repo",
+            remote_url="http://localhost/git.git",
+            username="oauth2",
+        )
+        repo.save(trigger_resync=False)
+
+        job_result = JobResult(
+            name=repo.name,
+            obj_type=ContentType.objects.get_for_model(repo),
+            job_id=uuid.uuid4(),
+        )
+
+        self.assertEqual(job_result.related_object, repo)
+
+        job_result.name = "No such GitRepository"
+        self.assertIsNone(job_result.related_object)
+
+        # Case 3: Related object with no name, identified by PK/ID
+        ip_address = IPAddress.objects.create(address="1.1.1.1/32")
+        job_result = JobResult(
+            name="irrelevant",
+            obj_type=ContentType.objects.get_for_model(ip_address),
+            job_id=ip_address.pk,
+        )
+
+        self.assertEqual(job_result.related_object, ip_address)
+
+        job_result.job_id = uuid.uuid4()
+        self.assertIsNone(job_result.related_object)
+
+
+class StatusTest(TestCase):
+    """
+    Tests for the `Status` model class.
+    """
+
+    def setUp(self):
+        self.status = Status.objects.create(name="delete_me", slug="delete-me", color=ColorChoices.COLOR_RED)
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1")
+        site = Site.objects.create(name="Site-1")
+
+        self.device = Device.objects.create(
+            name="Device 1",
+            device_type=devicetype,
+            device_role=devicerole,
+            site=site,
+            status=self.status,
+        )
+
+    def test_uniqueness(self):
+        # A `delete_me` Status already exists.
+        with self.assertRaises(IntegrityError):
+            Status.objects.create(name="delete_me")
+
+    def test_delete_protection(self):
+        # Protected delete will fail
+        with self.assertRaises(ProtectedError):
+            self.status.delete()
+
+        # Delete the device
+        self.device.delete()
+
+        # Now that it's not in use, delete will succeed.
+        self.status.delete()
+        self.assertEqual(self.status.pk, None)
+
+    def test_color(self):
+        self.assertEqual(self.status.color, ColorChoices.COLOR_RED)
+
+        # Valid color
+        self.status.color = ColorChoices.COLOR_PURPLE
+        self.status.full_clean()
+
+        # Invalid color
+        self.status.color = "red"
+        with self.assertRaises(ValidationError):
+            self.status.full_clean()
+
+    def test_name(self):
+        # Test a bunch of wackado names.
+        tests = [
+            "CAPSLOCK",
+            "---;;a;l^^^2ZSsljk¡",
+            "-42",
+            "392405834ioafdjskl;ajr30894fjakl;fs___π",
+        ]
+        for test in tests:
+            self.status.name = test
+            self.status.clean()
+            self.status.save()
+            self.assertEquals(str(self.status), test)
+
+
+class TagTest(TestCase):
+    def test_create_tag_unicode(self):
+        tag = Tag(name="Testing Unicode: 台灣")
+        tag.save()
+
+        self.assertEqual(tag.slug, "testing-unicode-台灣")

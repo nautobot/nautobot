@@ -67,228 +67,104 @@ class AppTest(APITestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class CustomFieldTest(APIViewTestCases.APIViewTestCase):
-    model = CustomField
-    brief_fields = ["display", "id", "name", "url"]
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
+    model = ComputedField
+    brief_fields = [
+        "content_type",
+        "description",
+        "display",
+        "fallback_value",
+        "id",
+        "label",
+        "slug",
+        "template",
+        "url",
+        "weight",
+    ]
     create_data = [
         {
-            "content_types": ["dcim.site"],
-            "name": "cf4",
-            "type": "date",
+            "content_type": "dcim.site",
+            "slug": "cf4",
+            "label": "Computed Field 4",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
         },
         {
-            "content_types": ["dcim.site"],
-            "name": "cf5",
-            "type": "url",
+            "content_type": "dcim.site",
+            "slug": "cf5",
+            "label": "Computed Field 5",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
         },
         {
-            "content_types": ["dcim.site"],
-            "name": "cf6",
-            "type": "select",
+            "content_type": "dcim.site",
+            "slug": "cf6",
+            "label": "Computed Field 6",
+            "template": "{{ obj.name }}",
+        },
+        {
+            "content_type": "dcim.site",
+            "label": "Computed Field 7",
+            "template": "{{ obj.name }}",
+            "fallback_value": "error",
         },
     ]
     update_data = {
-        "content_types": ["dcim.site"],
-        "name": "cf1",
-        "label": "foo",
+        "content_type": "dcim.site",
+        "slug": "cf1",
+        "label": "My Computed Field",
     }
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = ["filter_logic", "type"]
+    slug_source = "label"
 
     @classmethod
     def setUpTestData(cls):
         site_ct = ContentType.objects.get_for_model(Site)
 
-        custom_fields = (
-            CustomField.objects.create(name="cf1", type="text"),
-            CustomField.objects.create(name="cf2", type="integer"),
-            CustomField.objects.create(name="cf3", type="boolean"),
-        )
-        for cf in custom_fields:
-            cf.content_types.add(site_ct)
-
-
-class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
-    model = ExportTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    create_data = [
-        {
-            "content_type": "dcim.device",
-            "name": "Test Export Template 4",
-            "template_code": "{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
-        },
-        {
-            "content_type": "dcim.device",
-            "name": "Test Export Template 5",
-            "template_code": "{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
-        },
-        {
-            "content_type": "dcim.device",
-            "name": "Test Export Template 6",
-            "template_code": "{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["owner_content_type", "content_type"]
-
-    @classmethod
-    def setUpTestData(cls):
-        ct = ContentType.objects.get_for_model(Device)
-
-        ExportTemplate.objects.create(
-            content_type=ct,
-            name="Export Template 1",
-            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
-        )
-        ExportTemplate.objects.create(
-            content_type=ct,
-            name="Export Template 2",
-            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
-        )
-        ExportTemplate.objects.create(
-            content_type=ct,
-            name="Export Template 3",
-            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+        ComputedField.objects.create(
+            slug="cf1",
+            label="Computed Field One",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        ),
+        ComputedField.objects.create(
+            slug="cf2",
+            label="Computed Field Two",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
+        ),
+        ComputedField.objects.create(
+            slug="cf3",
+            label="Computed Field Three",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=site_ct,
         )
 
+        cls.site = Site.objects.create(name="Site 1", slug="site-1")
 
-class TagTest(APIViewTestCases.APIViewTestCase):
-    model = Tag
-    brief_fields = ["color", "display", "id", "name", "slug", "url"]
-    create_data = [
-        {
-            "name": "Tag 4",
-            "slug": "tag-4",
-        },
-        {
-            "name": "Tag 5",
-            "slug": "tag-5",
-        },
-        {
-            "name": "Tag 6",
-            "slug": "tag-6",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
+    def test_computed_field_include(self):
+        """Test that explicitly including a computed field behaves as expected."""
+        self.add_permissions("dcim.view_site")
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk})
 
-    @classmethod
-    def setUpTestData(cls):
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
+        # First get the object without computed fields.
+        response = self.client.get(url, **self.header)
+        self.assertNotIn("computed_fields", response.json())
 
-
-class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
-    model = GitRepository
-    brief_fields = ["display", "id", "name", "url"]
-    create_data = [
-        {
-            "name": "New Git Repository 1",
-            "slug": "new-git-repository-1",
-            "remote_url": "https://example.com/newrepo1.git",
-        },
-        {
-            "name": "New Git Repository 2",
-            "slug": "new-git-repository-2",
-            "remote_url": "https://example.com/newrepo2.git",
-        },
-        {
-            "name": "New Git Repository 3",
-            "slug": "new-git-repository-3",
-            "remote_url": "https://example.com/newrepo3.git",
-        },
-        {
-            "name": "New Git Repository 4",
-            "remote_url": "https://example.com/newrepo3.git",
-        },
-    ]
-    bulk_update_data = {
-        "branch": "develop",
-    }
-    choices_fields = ["provided_contents"]
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.repos = (
-            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
-            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
-        )
-        for repo in cls.repos:
-            repo.save(trigger_resync=False)
-
-    @skipIf(not worker_running, "Celery worker not running")
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_git_sync_nonexistent_repo(self):
-        self.add_permissions("extras.add_gitrepository")
-        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
-        response = self.client.post(url, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-
-    @skipIf(not worker_running, "Celery worker not running")
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_git_sync_without_permissions(self):
-        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
-        response = self.client.post(url, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
-
-    @skipIf(not worker_running, "Celery worker not running")
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_git_sync_with_permissions(self):
-        self.add_permissions("extras.add_gitrepository")
-        self.add_permissions("extras.change_gitrepository")
-        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
-        response = self.client.post(url, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-
-# TODO: Standardize to APIViewTestCase (needs create & update tests)
-class ImageAttachmentTest(
-    APIViewTestCases.GetObjectViewTestCase,
-    APIViewTestCases.ListObjectsViewTestCase,
-    APIViewTestCases.DeleteObjectViewTestCase,
-):
-    model = ImageAttachment
-    brief_fields = ["display", "id", "image", "name", "url"]
-    choices_fields = ["content_type"]
-
-    @classmethod
-    def setUpTestData(cls):
-        ct = ContentType.objects.get_for_model(Site)
-
-        site = Site.objects.create(name="Site 1", slug="site-1")
-
-        ImageAttachment.objects.create(
-            content_type=ct,
-            object_id=site.pk,
-            name="Image Attachment 1",
-            image="http://example.com/image1.png",
-            image_height=100,
-            image_width=100,
-        )
-        ImageAttachment.objects.create(
-            content_type=ct,
-            object_id=site.pk,
-            name="Image Attachment 2",
-            image="http://example.com/image2.png",
-            image_height=100,
-            image_width=100,
-        )
-        ImageAttachment.objects.create(
-            content_type=ct,
-            object_id=site.pk,
-            name="Image Attachment 3",
-            image="http://example.com/image3.png",
-            image_height=100,
-            image_width=100,
-        )
+        # Now get it with computed fields.
+        params = {"include": "computed_fields"}
+        response = self.client.get(url, data=params, **self.header)
+        self.assertIn("computed_fields", response.json())
 
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
@@ -434,6 +310,508 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
         ),
+
+
+class ContentTypeTest(APITestCase):
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
+    def test_list_objects(self):
+        contenttype_count = ContentType.objects.count()
+
+        response = self.client.get(reverse("extras-api:contenttype-list"), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], contenttype_count)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
+    def test_get_object(self):
+        contenttype = ContentType.objects.first()
+
+        url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
+        self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
+
+
+class CreatedUpdatedFilterTest(APITestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        self.rackgroup1 = RackGroup.objects.create(site=self.site1, name="Test Rack Group 1", slug="test-rack-group-1")
+        self.rackrole1 = RackRole.objects.create(name="Test Rack Role 1", slug="test-rack-role-1", color="ff0000")
+        self.rack1 = Rack.objects.create(
+            site=self.site1,
+            group=self.rackgroup1,
+            role=self.rackrole1,
+            name="Test Rack 1",
+            u_height=42,
+        )
+        self.rack2 = Rack.objects.create(
+            site=self.site1,
+            group=self.rackgroup1,
+            role=self.rackrole1,
+            name="Test Rack 2",
+            u_height=42,
+        )
+
+        # change the created and last_updated of one
+        Rack.objects.filter(pk=self.rack2.pk).update(
+            last_updated=make_aware(datetime(2001, 2, 3, 1, 2, 3, 4)),
+            created=make_aware(datetime(2001, 2, 3)),
+        )
+
+    def test_get_rack_created(self):
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-list")
+        response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
+
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
+
+    def test_get_rack_created_gte(self):
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-list")
+        response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
+
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
+
+    def test_get_rack_created_lte(self):
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-list")
+        response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
+
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
+
+    def test_get_rack_last_updated(self):
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-list")
+        response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
+
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
+
+    def test_get_rack_last_updated_gte(self):
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-list")
+        response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
+
+    def test_get_rack_last_updated_lte(self):
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-list")
+        response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
+
+
+class CustomFieldTest(APIViewTestCases.APIViewTestCase):
+    model = CustomField
+    brief_fields = ["display", "id", "name", "url"]
+    create_data = [
+        {
+            "content_types": ["dcim.site"],
+            "name": "cf4",
+            "type": "date",
+        },
+        {
+            "content_types": ["dcim.site"],
+            "name": "cf5",
+            "type": "url",
+        },
+        {
+            "content_types": ["dcim.site"],
+            "name": "cf6",
+            "type": "select",
+        },
+    ]
+    update_data = {
+        "content_types": ["dcim.site"],
+        "name": "cf1",
+        "label": "foo",
+    }
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = ["filter_logic", "type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        site_ct = ContentType.objects.get_for_model(Site)
+
+        custom_fields = (
+            CustomField.objects.create(name="cf1", type="text"),
+            CustomField.objects.create(name="cf2", type="integer"),
+            CustomField.objects.create(name="cf3", type="boolean"),
+        )
+        for cf in custom_fields:
+            cf.content_types.add(site_ct)
+
+
+class CustomLinkTest(APIViewTestCases.APIViewTestCase):
+    model = CustomLink
+    brief_fields = ["content_type", "display", "id", "name", "url"]
+    create_data = [
+        {
+            "content_type": "dcim.site",
+            "name": "api-test-4",
+            "text": "API customlink text 4",
+            "target_url": "http://api-test-4.com/test4",
+            "weight": 100,
+            "new_window": False,
+        },
+        {
+            "content_type": "dcim.site",
+            "name": "api-test-5",
+            "text": "API customlink text 5",
+            "target_url": "http://api-test-5.com/test5",
+            "weight": 100,
+            "new_window": False,
+        },
+        {
+            "content_type": "dcim.site",
+            "name": "api-test-6",
+            "text": "API customlink text 6",
+            "target_url": "http://api-test-6.com/test6",
+            "weight": 100,
+            "new_window": False,
+        },
+    ]
+    choices_fields = ["button_class"]
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        CustomLink.objects.create(
+            content_type=obj_type,
+            name="api-test-1",
+            text="API customlink text 1",
+            target_url="http://api-test-1.com/test1",
+            weight=100,
+            new_window=False,
+        )
+        CustomLink.objects.create(
+            content_type=obj_type,
+            name="api-test-2",
+            text="API customlink text 2",
+            target_url="http://api-test-2.com/test2",
+            weight=100,
+            new_window=False,
+        )
+        CustomLink.objects.create(
+            content_type=obj_type,
+            name="api-test-3",
+            text="API customlink text 3",
+            target_url="http://api-test-3.com/test3",
+            weight=100,
+            new_window=False,
+        )
+
+
+class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
+    model = ExportTemplate
+    brief_fields = ["display", "id", "name", "url"]
+    create_data = [
+        {
+            "content_type": "dcim.device",
+            "name": "Test Export Template 4",
+            "template_code": "{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+        },
+        {
+            "content_type": "dcim.device",
+            "name": "Test Export Template 5",
+            "template_code": "{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+        },
+        {
+            "content_type": "dcim.device",
+            "name": "Test Export Template 6",
+            "template_code": "{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = ["owner_content_type", "content_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        ct = ContentType.objects.get_for_model(Device)
+
+        ExportTemplate.objects.create(
+            content_type=ct,
+            name="Export Template 1",
+            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+        )
+        ExportTemplate.objects.create(
+            content_type=ct,
+            name="Export Template 2",
+            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+        )
+        ExportTemplate.objects.create(
+            content_type=ct,
+            name="Export Template 3",
+            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+        )
+
+
+class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
+    model = GitRepository
+    brief_fields = ["display", "id", "name", "url"]
+    create_data = [
+        {
+            "name": "New Git Repository 1",
+            "slug": "new-git-repository-1",
+            "remote_url": "https://example.com/newrepo1.git",
+        },
+        {
+            "name": "New Git Repository 2",
+            "slug": "new-git-repository-2",
+            "remote_url": "https://example.com/newrepo2.git",
+        },
+        {
+            "name": "New Git Repository 3",
+            "slug": "new-git-repository-3",
+            "remote_url": "https://example.com/newrepo3.git",
+        },
+        {
+            "name": "New Git Repository 4",
+            "remote_url": "https://example.com/newrepo3.git",
+        },
+    ]
+    bulk_update_data = {
+        "branch": "develop",
+    }
+    choices_fields = ["provided_contents"]
+    slug_source = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.repos = (
+            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
+            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+        )
+        for repo in cls.repos:
+            repo.save(trigger_resync=False)
+
+    @skipIf(not worker_running, "Celery worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_git_sync_nonexistent_repo(self):
+        self.add_permissions("extras.add_gitrepository")
+        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+    @skipIf(not worker_running, "Celery worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_git_sync_without_permissions(self):
+        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @skipIf(not worker_running, "Celery worker not running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_git_sync_with_permissions(self):
+        self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
+        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+
+class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
+    model = GraphQLQuery
+    brief_fields = ["display", "id", "name", "url"]
+
+    create_data = [
+        {
+            "name": "graphql-query-4",
+            "slug": "graphql-query-4",
+            "query": "{ query: sites {name} }",
+        },
+        {
+            "name": "graphql-query-5",
+            "slug": "graphql-query-5",
+            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+        },
+        {
+            "name": "Graphql Query 6",
+            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+        },
+    ]
+    slug_source = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.graphqlqueries = (
+            GraphQLQuery(
+                name="graphql-query-1",
+                slug="graphql-query-1",
+                query="{ sites {name} }",
+            ),
+            GraphQLQuery(
+                name="graphql-query-2",
+                slug="graphql-query-2",
+                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            ),
+            GraphQLQuery(
+                name="graphql-query-3",
+                slug="graphql-query-3",
+                query="""
+query ($device: [String!]) {
+  devices(name: $device) {
+    config_context
+    name
+    position
+    serial
+    primary_ip4 {
+      id
+      primary_ip4_for {
+        id
+        name
+      }
+    }
+    tenant {
+      name
+    }
+    tags {
+      name
+      slug
+    }
+    device_role {
+      name
+    }
+    platform {
+      name
+      slug
+      manufacturer {
+        name
+      }
+      napalm_driver
+    }
+    site {
+      name
+      slug
+      vlans {
+        id
+        name
+        vid
+      }
+      vlan_groups {
+        id
+      }
+    }
+    interfaces {
+      description
+      mac_address
+      enabled
+      name
+      ip_addresses {
+        address
+        tags {
+          id
+        }
+      }
+      connected_circuit_termination {
+        circuit {
+          cid
+          commit_rate
+          provider {
+            name
+          }
+        }
+      }
+      tagged_vlans {
+        id
+      }
+      untagged_vlan {
+        id
+      }
+      cable {
+        termination_a_type
+        status {
+          name
+        }
+        color
+      }
+      tagged_vlans {
+        site {
+          name
+        }
+        id
+      }
+      tags {
+        id
+      }
+    }
+  }
+}""",
+            ),
+        )
+
+        for query in cls.graphqlqueries:
+            query.full_clean()
+            query.save()
+
+    def test_run_saved_query(self):
+        """Exercise the /run/ API endpoint."""
+        self.add_permissions("extras.add_graphqlquery")
+        self.add_permissions("extras.change_graphqlquery")
+        self.add_permissions("extras.view_graphqlquery")
+
+        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[0].pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual({"data": {"sites": []}}, response.data)
+
+        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[2].pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual({"data": {"devices": []}}, response.data)
+
+
+# TODO: Standardize to APIViewTestCase (needs create & update tests)
+class ImageAttachmentTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+    APIViewTestCases.DeleteObjectViewTestCase,
+):
+    model = ImageAttachment
+    brief_fields = ["display", "id", "image", "name", "url"]
+    choices_fields = ["content_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        ct = ContentType.objects.get_for_model(Site)
+
+        site = Site.objects.create(name="Site 1", slug="site-1")
+
+        ImageAttachment.objects.create(
+            content_type=ct,
+            object_id=site.pk,
+            name="Image Attachment 1",
+            image="http://example.com/image1.png",
+            image_height=100,
+            image_width=100,
+        )
+        ImageAttachment.objects.create(
+            content_type=ct,
+            object_id=site.pk,
+            name="Image Attachment 2",
+            image="http://example.com/image2.png",
+            image_height=100,
+            image_width=100,
+        )
+        ImageAttachment.objects.create(
+            content_type=ct,
+            object_id=site.pk,
+            name="Image Attachment 3",
+            image="http://example.com/image3.png",
+            image_height=100,
+            image_width=100,
+        )
 
 
 class JobTest(APITestCase):
@@ -894,430 +1272,6 @@ class JobApprovalTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
-class CreatedUpdatedFilterTest(APITestCase):
-    def setUp(self):
-        super().setUp()
-
-        self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
-        self.rackgroup1 = RackGroup.objects.create(site=self.site1, name="Test Rack Group 1", slug="test-rack-group-1")
-        self.rackrole1 = RackRole.objects.create(name="Test Rack Role 1", slug="test-rack-role-1", color="ff0000")
-        self.rack1 = Rack.objects.create(
-            site=self.site1,
-            group=self.rackgroup1,
-            role=self.rackrole1,
-            name="Test Rack 1",
-            u_height=42,
-        )
-        self.rack2 = Rack.objects.create(
-            site=self.site1,
-            group=self.rackgroup1,
-            role=self.rackrole1,
-            name="Test Rack 2",
-            u_height=42,
-        )
-
-        # change the created and last_updated of one
-        Rack.objects.filter(pk=self.rack2.pk).update(
-            last_updated=make_aware(datetime(2001, 2, 3, 1, 2, 3, 4)),
-            created=make_aware(datetime(2001, 2, 3)),
-        )
-
-    def test_get_rack_created(self):
-        self.add_permissions("dcim.view_rack")
-        url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
-
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
-
-    def test_get_rack_created_gte(self):
-        self.add_permissions("dcim.view_rack")
-        url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
-
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
-
-    def test_get_rack_created_lte(self):
-        self.add_permissions("dcim.view_rack")
-        url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
-
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
-
-    def test_get_rack_last_updated(self):
-        self.add_permissions("dcim.view_rack")
-        url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
-
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
-
-    def test_get_rack_last_updated_gte(self):
-        self.add_permissions("dcim.view_rack")
-        url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
-
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
-
-    def test_get_rack_last_updated_lte(self):
-        self.add_permissions("dcim.view_rack")
-        url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
-
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
-
-
-class ContentTypeTest(APITestCase):
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
-    def test_list_objects(self):
-        contenttype_count = ContentType.objects.count()
-
-        response = self.client.get(reverse("extras-api:contenttype-list"), **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], contenttype_count)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
-    def test_get_object(self):
-        contenttype = ContentType.objects.first()
-
-        url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
-        self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
-
-
-class CustomLinkTest(APIViewTestCases.APIViewTestCase):
-    model = CustomLink
-    brief_fields = ["content_type", "display", "id", "name", "url"]
-    create_data = [
-        {
-            "content_type": "dcim.site",
-            "name": "api-test-4",
-            "text": "API customlink text 4",
-            "target_url": "http://api-test-4.com/test4",
-            "weight": 100,
-            "new_window": False,
-        },
-        {
-            "content_type": "dcim.site",
-            "name": "api-test-5",
-            "text": "API customlink text 5",
-            "target_url": "http://api-test-5.com/test5",
-            "weight": 100,
-            "new_window": False,
-        },
-        {
-            "content_type": "dcim.site",
-            "name": "api-test-6",
-            "text": "API customlink text 6",
-            "target_url": "http://api-test-6.com/test6",
-            "weight": 100,
-            "new_window": False,
-        },
-    ]
-    choices_fields = ["button_class"]
-
-    @classmethod
-    def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
-
-        CustomLink.objects.create(
-            content_type=obj_type,
-            name="api-test-1",
-            text="API customlink text 1",
-            target_url="http://api-test-1.com/test1",
-            weight=100,
-            new_window=False,
-        )
-        CustomLink.objects.create(
-            content_type=obj_type,
-            name="api-test-2",
-            text="API customlink text 2",
-            target_url="http://api-test-2.com/test2",
-            weight=100,
-            new_window=False,
-        )
-        CustomLink.objects.create(
-            content_type=obj_type,
-            name="api-test-3",
-            text="API customlink text 3",
-            target_url="http://api-test-3.com/test3",
-            weight=100,
-            new_window=False,
-        )
-
-
-class WebhookTest(APIViewTestCases.APIViewTestCase):
-    model = Webhook
-    brief_fields = ["display", "id", "name", "url"]
-    create_data = [
-        {
-            "content_types": ["dcim.consoleport"],
-            "name": "api-test-4",
-            "type_create": True,
-            "payload_url": "http://api-test-4.com/test4",
-            "http_method": "POST",
-            "http_content_type": "application/json",
-            "ssl_verification": True,
-        },
-        {
-            "content_types": ["dcim.consoleport"],
-            "name": "api-test-5",
-            "type_update": True,
-            "payload_url": "http://api-test-5.com/test5",
-            "http_method": "POST",
-            "http_content_type": "application/json",
-            "ssl_verification": True,
-        },
-        {
-            "content_types": ["dcim.consoleport"],
-            "name": "api-test-6",
-            "type_delete": True,
-            "payload_url": "http://api-test-6.com/test6",
-            "http_method": "POST",
-            "http_content_type": "application/json",
-            "ssl_verification": True,
-        },
-    ]
-    choices_fields = ["http_method"]
-
-    @classmethod
-    def setUpTestData(cls):
-        webhooks = (
-            Webhook(
-                name="api-test-1",
-                type_create=True,
-                payload_url="http://api-test-1.com/test1",
-                http_method="POST",
-                http_content_type="application/json",
-                ssl_verification=True,
-            ),
-            Webhook(
-                name="api-test-2",
-                type_update=True,
-                payload_url="http://api-test-2.com/test2",
-                http_method="POST",
-                http_content_type="application/json",
-                ssl_verification=True,
-            ),
-            Webhook(
-                name="api-test-3",
-                type_delete=True,
-                payload_url="http://api-test-3.com/test3",
-                http_method="POST",
-                http_content_type="application/json",
-                ssl_verification=True,
-            ),
-        )
-
-        obj_type = ContentType.objects.get_for_model(DeviceType)
-
-        for webhook in webhooks:
-            webhook.save()
-            webhook.content_types.set([obj_type])
-
-
-class StatusTest(APIViewTestCases.APIViewTestCase):
-    model = Status
-    brief_fields = ["display", "id", "name", "slug", "url"]
-    bulk_update_data = {
-        "color": "000000",
-    }
-
-    create_data = [
-        {
-            "name": "Pizza",
-            "slug": "pizza",
-            "color": "0000ff",
-            "content_types": ["dcim.device", "dcim.rack"],
-        },
-        {
-            "name": "Oysters",
-            "slug": "oysters",
-            "color": "00ff00",
-            "content_types": ["ipam.ipaddress", "ipam.prefix"],
-        },
-        {
-            "name": "Bad combinations",
-            "slug": "bad-combinations",
-            "color": "ff0000",
-            "content_types": ["dcim.device"],
-        },
-        {
-            "name": "Status 1",
-            "color": "ff0000",
-            "content_types": ["dcim.device"],
-        },
-    ]
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
-
-
-class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
-    model = GraphQLQuery
-    brief_fields = ["display", "id", "name", "url"]
-
-    create_data = [
-        {
-            "name": "graphql-query-4",
-            "slug": "graphql-query-4",
-            "query": "{ query: sites {name} }",
-        },
-        {
-            "name": "graphql-query-5",
-            "slug": "graphql-query-5",
-            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
-        },
-        {
-            "name": "Graphql Query 6",
-            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
-        },
-    ]
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.graphqlqueries = (
-            GraphQLQuery(
-                name="graphql-query-1",
-                slug="graphql-query-1",
-                query="{ sites {name} }",
-            ),
-            GraphQLQuery(
-                name="graphql-query-2",
-                slug="graphql-query-2",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
-            ),
-            GraphQLQuery(
-                name="graphql-query-3",
-                slug="graphql-query-3",
-                query="""
-query ($device: [String!]) {
-  devices(name: $device) {
-    config_context
-    name
-    position
-    serial
-    primary_ip4 {
-      id
-      primary_ip4_for {
-        id
-        name
-      }
-    }
-    tenant {
-      name
-    }
-    tags {
-      name
-      slug
-    }
-    device_role {
-      name
-    }
-    platform {
-      name
-      slug
-      manufacturer {
-        name
-      }
-      napalm_driver
-    }
-    site {
-      name
-      slug
-      vlans {
-        id
-        name
-        vid
-      }
-      vlan_groups {
-        id
-      }
-    }
-    interfaces {
-      description
-      mac_address
-      enabled
-      name
-      ip_addresses {
-        address
-        tags {
-          id
-        }
-      }
-      connected_circuit_termination {
-        circuit {
-          cid
-          commit_rate
-          provider {
-            name
-          }
-        }
-      }
-      tagged_vlans {
-        id
-      }
-      untagged_vlan {
-        id
-      }
-      cable {
-        termination_a_type
-        status {
-          name
-        }
-        color
-      }
-      tagged_vlans {
-        site {
-          name
-        }
-        id
-      }
-      tags {
-        id
-      }
-    }
-  }
-}""",
-            ),
-        )
-
-        for query in cls.graphqlqueries:
-            query.full_clean()
-            query.save()
-
-    def test_run_saved_query(self):
-        """Exercise the /run/ API endpoint."""
-        self.add_permissions("extras.add_graphqlquery")
-        self.add_permissions("extras.change_graphqlquery")
-        self.add_permissions("extras.view_graphqlquery")
-
-        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[0].pk})
-        response = self.client.post(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual({"data": {"sites": []}}, response.data)
-
-        url = reverse("extras-api:graphqlquery-run", kwargs={"pk": self.graphqlqueries[2].pk})
-        response = self.client.post(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual({"data": {"devices": []}}, response.data)
-
-
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
@@ -1468,101 +1422,147 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-#
-#  Computed Fields
-#
+class StatusTest(APIViewTestCases.APIViewTestCase):
+    model = Status
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    bulk_update_data = {
+        "color": "000000",
+    }
 
-
-class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
-    model = ComputedField
-    brief_fields = [
-        "content_type",
-        "description",
-        "display",
-        "fallback_value",
-        "id",
-        "label",
-        "slug",
-        "template",
-        "url",
-        "weight",
-    ]
     create_data = [
         {
-            "content_type": "dcim.site",
-            "slug": "cf4",
-            "label": "Computed Field 4",
-            "template": "{{ obj.name }}",
-            "fallback_value": "error",
+            "name": "Pizza",
+            "slug": "pizza",
+            "color": "0000ff",
+            "content_types": ["dcim.device", "dcim.rack"],
         },
         {
-            "content_type": "dcim.site",
-            "slug": "cf5",
-            "label": "Computed Field 5",
-            "template": "{{ obj.name }}",
-            "fallback_value": "error",
+            "name": "Oysters",
+            "slug": "oysters",
+            "color": "00ff00",
+            "content_types": ["ipam.ipaddress", "ipam.prefix"],
         },
         {
-            "content_type": "dcim.site",
-            "slug": "cf6",
-            "label": "Computed Field 6",
-            "template": "{{ obj.name }}",
+            "name": "Bad combinations",
+            "slug": "bad-combinations",
+            "color": "ff0000",
+            "content_types": ["dcim.device"],
         },
         {
-            "content_type": "dcim.site",
-            "label": "Computed Field 7",
-            "template": "{{ obj.name }}",
-            "fallback_value": "error",
+            "name": "Status 1",
+            "color": "ff0000",
+            "content_types": ["dcim.device"],
         },
     ]
-    update_data = {
-        "content_type": "dcim.site",
-        "slug": "cf1",
-        "label": "My Computed Field",
-    }
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "label"
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-        site_ct = ContentType.objects.get_for_model(Site)
+        """
+        Since many `Status` objects are created as part of data migrations, we're
+        testing against those. If this seems magical, it's because they are
+        imported from `ChoiceSet` enum objects.
 
-        ComputedField.objects.create(
-            slug="cf1",
-            label="Computed Field One",
-            template="{{ obj.name }}",
-            fallback_value="error",
-            content_type=site_ct,
-        ),
-        ComputedField.objects.create(
-            slug="cf2",
-            label="Computed Field Two",
-            template="{{ obj.name }}",
-            fallback_value="error",
-            content_type=site_ct,
-        ),
-        ComputedField.objects.create(
-            slug="cf3",
-            label="Computed Field Three",
-            template="{{ obj.name }}",
-            fallback_value="error",
-            content_type=site_ct,
+        This method is defined just so it's clear that there is no need to
+        create test data for this test case.
+
+        See `extras.management.create_custom_statuses` for context.
+        """
+
+
+class TagTest(APIViewTestCases.APIViewTestCase):
+    model = Tag
+    brief_fields = ["color", "display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "Tag 4",
+            "slug": "tag-4",
+        },
+        {
+            "name": "Tag 5",
+            "slug": "tag-5",
+        },
+        {
+            "name": "Tag 6",
+            "slug": "tag-6",
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        Tag.objects.create(name="Tag 1", slug="tag-1")
+        Tag.objects.create(name="Tag 2", slug="tag-2")
+        Tag.objects.create(name="Tag 3", slug="tag-3")
+
+
+class WebhookTest(APIViewTestCases.APIViewTestCase):
+    model = Webhook
+    brief_fields = ["display", "id", "name", "url"]
+    create_data = [
+        {
+            "content_types": ["dcim.consoleport"],
+            "name": "api-test-4",
+            "type_create": True,
+            "payload_url": "http://api-test-4.com/test4",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "ssl_verification": True,
+        },
+        {
+            "content_types": ["dcim.consoleport"],
+            "name": "api-test-5",
+            "type_update": True,
+            "payload_url": "http://api-test-5.com/test5",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "ssl_verification": True,
+        },
+        {
+            "content_types": ["dcim.consoleport"],
+            "name": "api-test-6",
+            "type_delete": True,
+            "payload_url": "http://api-test-6.com/test6",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "ssl_verification": True,
+        },
+    ]
+    choices_fields = ["http_method"]
+
+    @classmethod
+    def setUpTestData(cls):
+        webhooks = (
+            Webhook(
+                name="api-test-1",
+                type_create=True,
+                payload_url="http://api-test-1.com/test1",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+            Webhook(
+                name="api-test-2",
+                type_update=True,
+                payload_url="http://api-test-2.com/test2",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+            Webhook(
+                name="api-test-3",
+                type_delete=True,
+                payload_url="http://api-test-3.com/test3",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
         )
 
-        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+        obj_type = ContentType.objects.get_for_model(DeviceType)
 
-    def test_computed_field_include(self):
-        """Test that explicitly including a computed field behaves as expected."""
-        self.add_permissions("dcim.view_site")
-        url = reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk})
-
-        # First get the object without computed fields.
-        response = self.client.get(url, **self.header)
-        self.assertNotIn("computed_fields", response.json())
-
-        # Now get it with computed fields.
-        params = {"include": "computed_fields"}
-        response = self.client.get(url, data=params, **self.header)
-        self.assertIn("computed_fields", response.json())
+        for webhook in webhooks:
+            webhook.save()
+            webhook.content_types.set([obj_type])
