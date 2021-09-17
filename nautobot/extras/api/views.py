@@ -1,5 +1,6 @@
 from datetime import datetime
 from django.contrib.contenttypes.models import ContentType
+from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,11 +15,11 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
-from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
+from rest_framework import viewsets
 from rq import Worker
 
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
-from nautobot.core.api.views import ModelViewSet
+from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
@@ -131,7 +132,7 @@ class ConfigContextSchemaViewSet(ModelViewSet):
 #
 
 
-class ContentTypeViewSet(ReadOnlyModelViewSet):
+class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
     """
@@ -282,7 +283,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-class JobViewSet(ViewSet):
+class JobViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     lookup_field = "class_path"
     lookup_value_regex = "[^/]+/[^/]+/[^/]+"  # e.g. "git.repo_name/module_name/JobName"
@@ -384,10 +385,18 @@ class JobViewSet(ViewSet):
         input_serializer = serializers.JobInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
-        data = input_serializer.data["data"]
+        data = input_serializer.data["data"] or {}
         commit = input_serializer.data["commit"]
         if commit is None:
             commit = getattr(job_class.Meta, "commit_default", True)
+
+        try:
+            job.validate_data(data)
+        except FormsValidationError as e:
+            # message_dict can only be accessed if ValidationError got a dict
+            # in the constructor (saved as error_dict). Otherwise we get a list
+            # of errors under messages
+            return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 

@@ -119,7 +119,7 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
 
 class NestedScheduledJobSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255, required=False)
-    start_time = serializers.DateTimeField(required=False)
+    start_time = serializers.DateTimeField(format=None, required=False)
 
     class Meta:
         model = models.ScheduledJob
@@ -129,10 +129,10 @@ class NestedScheduledJobSerializer(serializers.ModelSerializer):
         data = super().validate(data)
 
         if data["interval"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
-            if not data["name"]:
+            if "name" not in data:
                 raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
 
-            if not data["start_time"] or data["start_time"] < models.ScheduledJob.earliest_possible_time():
+            if "start_time" not in data or data["start_time"] < models.ScheduledJob.earliest_possible_time():
                 raise serializers.ValidationError(
                     {
                         "start_time": "Please enter a valid date and time greater than or equal to the current date and time."

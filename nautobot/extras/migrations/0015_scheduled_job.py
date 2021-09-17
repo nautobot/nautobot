@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("extras", "0013_auto_slug"),
+        ("extras", "0014_auto_slug"),
     ]
 
     operations = [

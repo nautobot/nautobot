@@ -806,7 +806,12 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
 
         post_data = request.POST
 
-        if "_dry_run" in post_data:
+        deny = "_deny" in post_data
+        approve = "_approve" in post_data
+        force_approve = "_force_approve" in post_data
+        dry_run = "_dry_run" in post_data
+
+        if dry_run:
             # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
             job_content_type = ContentType.objects.get(app_label="extras", model="job")
             job_result = JobResult.enqueue_job(
@@ -821,8 +826,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
             )
 
             return redirect("extras:job_jobresult", pk=job_result.pk)
-
-        elif "_deny" in post_data:
+        elif deny:
             # Delete the scheduled_job instance
             scheduled_job.delete()
             if request.user == scheduled_job.user:
@@ -832,12 +836,14 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
 
             return redirect("extras:scheduledjob_approval_queue_list")
 
-        elif "_approve" in post_data:
+        elif approve or force_approve:
             # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
             if request.user == scheduled_job.user:
                 # The requestor *cannot* approve their own job
                 messages.error(request, "You cannot approve your own job request!")
             else:
+                if scheduled_job.one_off and scheduled_job.start_time < timezone.now() and not force_approve:
+                    return render(request, "extras/job_approval_confirmation.html", {"scheduled_job": scheduled_job})
                 scheduled_job.approved_by_user = request.user
                 scheduled_job.approved_at = timezone.now()
                 scheduled_job.save()

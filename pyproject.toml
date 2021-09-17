@@ -75,7 +75,7 @@ djangorestframework = "~3.12.4"
 # Swagger schema generation for the REST API
 drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 # Git integrations for Python
-GitPython = "~3.1.15"
+GitPython = "3.1.18"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Package version detection in older versions of Python
@@ -91,7 +91,7 @@ mysqlclient = {version = "~2.0.3", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Image processing library
-Pillow = "~8.2.0"
+Pillow = "~8.3.2"
 # PostgreSQL database adapter
 psycopg2-binary = "~2.8.6"
 # Cryptographic library

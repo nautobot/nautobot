@@ -22,6 +22,7 @@ from django.db import transaction
 from django.db.models import Model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
+from django.forms import ValidationError
 from django.utils import timezone
 from django.utils.functional import classproperty
 import netaddr
@@ -385,7 +386,7 @@ class BaseJob:
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
             elif isinstance(var, ObjectVar):
-                if type(value) is dict:
+                if isinstance(value, dict):
                     return_data[field_name] = var.field_attrs["queryset"].get(**value)
                 else:
                     return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
@@ -401,6 +402,21 @@ class BaseJob:
                 return_data[field_name] = value
 
         return return_data
+
+    def validate_data(self, data):
+        vars = self._get_vars()
+
+        if not isinstance(data, dict):
+            raise ValidationError("Job data needs to be a dict")
+
+        for k, v in data.items():
+            if k not in vars:
+                raise ValidationError({k: "Job data contained an unknown property"})
+
+        # defer validation to the form object
+        f = self.as_form(data=data)
+        if not f.is_valid():
+            raise ValidationError(f.errors)
 
     @staticmethod
     def load_file(pk):
@@ -1030,6 +1046,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         If the job is marked as read_only == True, then commit is forced to False and no log messages will be
         emitted related to reverting database changes.
         """
+        started = timezone.now()
         job.results["output"] = ""
         try:
             with transaction.atomic():
@@ -1070,6 +1087,12 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         finally:
             job_result.save()
             job.delete_files(*file_ids)  # Cleanup FileProxy objects
+
+        # record data about this jobrun in the schedule
+        if job_result.schedule:
+            job_result.schedule.total_run_count += 1
+            job_result.schedule.last_run_at = started
+            job_result.schedule.save()
 
         # Perform any post-run tasks
         job.active_test = "post_run"
