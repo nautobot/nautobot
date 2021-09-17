@@ -33,33 +33,71 @@ from nautobot.utilities.testing.utils import post_data
 User = get_user_model()
 
 
-class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
-    model = Tag
+class ComputedFieldTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ComputedField
 
     @classmethod
     def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
 
-        Tag.objects.create(name="Tag 1", slug="tag-1")
-        Tag.objects.create(name="Tag 2", slug="tag-2")
-        Tag.objects.create(name="Tag 3", slug="tag-3")
-
-        cls.form_data = {
-            "name": "Tag X",
-            "slug": "tag-x",
-            "color": "c0c0c0",
-            "comments": "Some comments",
-        }
-
-        cls.csv_data = (
-            "name,slug,color,description",
-            "Tag 4,tag-4,ff0000,Fourth tag",
-            "Tag 5,tag-5,00ff00,Fifth tag",
-            "Tag 6,tag-6,0000ff,Sixth tag",
+        computed_fields = (
+            ComputedField(
+                content_type=obj_type,
+                label="Computed Field One",
+                slug="computed_field_one",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+            ComputedField(
+                content_type=obj_type,
+                slug="computed_field_two",
+                label="Computed Field Two",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
+            ComputedField(
+                content_type=obj_type,
+                slug="computed_field_three",
+                label="Computed Field Three",
+                template="Site name is {{ obj.name }}",
+                weight=100,
+            ),
+            ComputedField(
+                content_type=obj_type,
+                label="Computed Field Five",
+                template="Site name is {{ obj.name }}",
+                fallback_value="Template error",
+                weight=100,
+            ),
         )
 
-        cls.bulk_edit_data = {
-            "color": "00ff00",
+        cls.site1 = Site(name="NYC")
+        cls.site1.save()
+
+        for cf in computed_fields:
+            cf.save()
+
+        cls.form_data = {
+            "content_type": obj_type.pk,
+            "slug": "computed_field_four",
+            "label": "Computed Field Four",
+            "template": "{{ obj.name }} is the best Site!",
+            "fallback_value": ":skull_emoji:",
+            "weight": 100,
         }
+
+        cls.slug_source = "label"
+        cls.slug_test_object = "Computed Field Five"
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -229,190 +267,6 @@ class ConfigContextSchemaTestCase(
         cls.slug_test_object = "Schema 4"
 
 
-# TODO: Convert to StandardTestCases.Views
-class ObjectChangeTestCase(TestCase):
-    user_permissions = ("extras.view_objectchange",)
-
-    @classmethod
-    def setUpTestData(cls):
-
-        site = Site(name="Site 1", slug="site-1")
-        site.save()
-
-        # Create three ObjectChanges
-        user = User.objects.create_user(username="testuser2")
-        for i in range(1, 4):
-            oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
-            oc.user = user
-            oc.request_id = uuid.uuid4()
-            oc.save()
-
-    def test_objectchange_list(self):
-
-        url = reverse("extras:objectchange_list")
-        params = {
-            "user": User.objects.first().pk,
-        }
-
-        response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
-        self.assertHttpStatus(response, 200)
-
-    def test_objectchange(self):
-
-        objectchange = ObjectChange.objects.first()
-        response = self.client.get(objectchange.get_absolute_url())
-        self.assertHttpStatus(response, 200)
-
-
-class CustomLinkTest(TestCase):
-    user_permissions = ["dcim.view_site"]
-
-    def test_view_object_with_custom_link(self):
-        customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Site),
-            name="Test",
-            text="FOO {{ obj.name }} BAR",
-            target_url="http://example.com/?site={{ obj.slug }}",
-            new_window=False,
-        )
-        customlink.save()
-
-        site = Site(name="Test Site", slug="test-site")
-        site.save()
-
-        response = self.client.get(site.get_absolute_url(), follow=True)
-        self.assertEqual(response.status_code, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f"FOO {site.name} BAR", content, content)
-
-
-class GitRepositoryTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-):
-    model = GitRepository
-
-    @classmethod
-    def setUpTestData(cls):
-
-        # Create four GitRepository records
-        repos = (
-            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
-            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
-            GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git"),
-        )
-        for repo in repos:
-            repo.save(trigger_resync=False)
-
-        cls.form_data = {
-            "name": "A new Git repository",
-            "slug": "a-new-git-repository",
-            "remote_url": "http://example.com/a_new_git_repository.git",
-            "branch": "develop",
-            "_token": "1234567890abcdef1234567890abcdef",
-            "provided_contents": [
-                "extras.configcontext",
-                "extras.job",
-                "extras.exporttemplate",
-            ],
-        }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Repo 4"
-
-
-class StatusTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-):
-    model = Status
-
-    @classmethod
-    def setUpTestData(cls):
-
-        # Status objects to test.
-        Status.objects.create(name="Status 1", slug="status-1")
-        Status.objects.create(name="Status 2", slug="status-2")
-        Status.objects.create(name="Status 3", slug="status-3")
-        Status.objects.create(name="Status 4")
-
-        content_type = ContentType.objects.get_for_model(Device)
-
-        cls.form_data = {
-            "name": "new_status",
-            "slug": "new-status",
-            "description": "I am a new status object.",
-            "color": "ffcc00",
-            "content_types": [content_type.pk],
-        }
-
-        cls.csv_data = (
-            "name,slug,color,content_types"
-            'test_status1,test-status1,ffffff,"dcim.device"'
-            'test_status2,test-status2,ffffff,"dcim.device,dcim.rack"'
-            'test_status3,test-status3,ffffff,"dcim.device,dcim.site"'
-            'test_status4,,ffffff,"dcim.device,dcim.site"'
-        )
-
-        cls.bulk_edit_data = {
-            "color": "000000",
-        }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Status 4"
-
-
-class ExportTemplateTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-):
-    model = ExportTemplate
-
-    @classmethod
-    def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
-
-        templates = (
-            ExportTemplate(
-                name="template-1",
-                template_code="template-1 test1",
-                content_type=obj_type,
-            ),
-            ExportTemplate(
-                name="template-2",
-                template_code="template-2 test2",
-                content_type=obj_type,
-            ),
-            ExportTemplate(
-                name="template-3",
-                template_code="template-3 test3",
-                content_type=obj_type,
-            ),
-        )
-
-        for template in templates:
-            template.save()
-
-        cls.form_data = {
-            "name": "template-4",
-            "content_type": obj_type.pk,
-            "template_code": "template-4 test4",
-        }
-
-
 class CustomLinkTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -471,7 +325,98 @@ class CustomLinkTestCase(
         }
 
 
-class WebhookTestCase(
+class CustomFieldTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = CustomField
+    reverse_url_attribute = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        custom_fields = [
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_BOOLEAN,
+                name="Custom Field Boolean",
+                label="Custom Field Boolean",
+                default="",
+            ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_TEXT,
+                name="Custom Field Text",
+                label="Custom Field Text",
+                default="",
+            ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_INTEGER,
+                name="Custom Field Integer",
+                label="Custom Field Integer",
+                default="",
+            ),
+        ]
+
+        for custom_field in custom_fields:
+            custom_field.validated_save()
+            custom_field.content_types.set([obj_type])
+
+        cls.form_data = {
+            "content_types": [obj_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+            "name": "Custom Field Boolean",
+            "label": "Custom Field Boolean",
+            "default": None,
+            "filter_logic": "loose",
+            "weight": 100,
+        }
+
+    def test_create_object_without_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_without_permission()
+
+    def test_create_object_with_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_with_permission()
+
+    def test_create_object_with_constrained_permission(self):
+        # Can't have two CustomFields with the same "name"
+        for cf in CustomField.objects.all():
+            cf.delete()
+        super().test_create_object_with_constrained_permission()
+
+
+class CustomLinkTest(TestCase):
+    user_permissions = ["dcim.view_site"]
+
+    def test_view_object_with_custom_link(self):
+        customlink = CustomLink(
+            content_type=ContentType.objects.get_for_model(Site),
+            name="Test",
+            text="FOO {{ obj.name }} BAR",
+            target_url="http://example.com/?site={{ obj.slug }}",
+            new_window=False,
+        )
+        customlink.save()
+
+        site = Site(name="Test Site", slug="test-site")
+        site.save()
+
+        response = self.client.get(site.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"FOO {site.name} BAR", content, content)
+
+
+class ExportTemplateTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -479,49 +424,78 @@ class WebhookTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
-    model = Webhook
+    model = ExportTemplate
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = (
-            Webhook(
-                name="webhook-1",
-                enabled=True,
-                type_create=True,
-                payload_url="http://test-url.com/test-1",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        templates = (
+            ExportTemplate(
+                name="template-1",
+                template_code="template-1 test1",
+                content_type=obj_type,
             ),
-            Webhook(
-                name="webhook-2",
-                enabled=True,
-                type_update=True,
-                payload_url="http://test-url.com/test-2",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ExportTemplate(
+                name="template-2",
+                template_code="template-2 test2",
+                content_type=obj_type,
             ),
-            Webhook(
-                name="webhook-3",
-                enabled=True,
-                type_delete=True,
-                payload_url="http://test-url.com/test-3",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ExportTemplate(
+                name="template-3",
+                template_code="template-3 test3",
+                content_type=obj_type,
             ),
         )
 
-        obj_type = ContentType.objects.get_for_model(ConsolePort)
-
-        for webhook in webhooks:
-            webhook.save()
-            webhook.content_types.set([obj_type])
+        for template in templates:
+            template.save()
 
         cls.form_data = {
-            "name": "webhook-4",
-            "content_types": [obj_type.pk],
-            "enabled": True,
-            "type_create": True,
-            "payload_url": "http://test-url.com/test-4",
-            "http_method": "POST",
-            "http_content_type": "application/json",
+            "name": "template-4",
+            "content_type": obj_type.pk,
+            "template_code": "template-4 test4",
         }
+
+
+class GitRepositoryTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = GitRepository
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Create four GitRepository records
+        repos = (
+            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
+            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git"),
+        )
+        for repo in repos:
+            repo.save(trigger_resync=False)
+
+        cls.form_data = {
+            "name": "A new Git repository",
+            "slug": "a-new-git-repository",
+            "remote_url": "http://example.com/a_new_git_repository.git",
+            "branch": "develop",
+            "_token": "1234567890abcdef1234567890abcdef",
+            "provided_contents": [
+                "extras.configcontext",
+                "extras.job",
+                "extras.exporttemplate",
+            ],
+        }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Repo 4"
 
 
 class GraphQLQueriesTestCase(
@@ -660,6 +634,41 @@ query ($device: String!) {
         cls.slug_test_object = "Graphql Query 5"
 
 
+# TODO: Convert to StandardTestCases.Views
+class ObjectChangeTestCase(TestCase):
+    user_permissions = ("extras.view_objectchange",)
+
+    @classmethod
+    def setUpTestData(cls):
+
+        site = Site(name="Site 1", slug="site-1")
+        site.save()
+
+        # Create three ObjectChanges
+        user = User.objects.create_user(username="testuser2")
+        for i in range(1, 4):
+            oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+            oc.user = user
+            oc.request_id = uuid.uuid4()
+            oc.save()
+
+    def test_objectchange_list(self):
+
+        url = reverse("extras:objectchange_list")
+        params = {
+            "user": User.objects.first().pk,
+        }
+
+        response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
+        self.assertHttpStatus(response, 200)
+
+    def test_objectchange(self):
+
+        objectchange = ObjectChange.objects.first()
+        response = self.client.get(objectchange.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+
+
 class RelationshipTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -774,8 +783,7 @@ class RelationshipAssociationTestCase(
         )
 
 
-class ComputedFieldTestCase(
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
+class StatusTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -783,128 +791,120 @@ class ComputedFieldTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
-    model = ComputedField
+    model = Status
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
 
-        computed_fields = (
-            ComputedField(
-                content_type=obj_type,
-                label="Computed Field One",
-                slug="computed_field_one",
-                template="Site name is {{ obj.name }}",
-                fallback_value="Template error",
-                weight=100,
-            ),
-            ComputedField(
-                content_type=obj_type,
-                slug="computed_field_two",
-                label="Computed Field Two",
-                template="Site name is {{ obj.name }}",
-                fallback_value="Template error",
-                weight=100,
-            ),
-            ComputedField(
-                content_type=obj_type,
-                slug="computed_field_three",
-                label="Computed Field Three",
-                template="Site name is {{ obj.name }}",
-                weight=100,
-            ),
-            ComputedField(
-                content_type=obj_type,
-                label="Computed Field Five",
-                template="Site name is {{ obj.name }}",
-                fallback_value="Template error",
-                weight=100,
-            ),
-        )
+        # Status objects to test.
+        Status.objects.create(name="Status 1", slug="status-1")
+        Status.objects.create(name="Status 2", slug="status-2")
+        Status.objects.create(name="Status 3", slug="status-3")
+        Status.objects.create(name="Status 4")
 
-        cls.site1 = Site(name="NYC")
-        cls.site1.save()
-
-        for cf in computed_fields:
-            cf.save()
+        content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
-            "content_type": obj_type.pk,
-            "slug": "computed_field_four",
-            "label": "Computed Field Four",
-            "template": "{{ obj.name }} is the best Site!",
-            "fallback_value": ":skull_emoji:",
-            "weight": 100,
+            "name": "new_status",
+            "slug": "new-status",
+            "description": "I am a new status object.",
+            "color": "ffcc00",
+            "content_types": [content_type.pk],
         }
 
-        cls.slug_source = "label"
-        cls.slug_test_object = "Computed Field Five"
+        cls.csv_data = (
+            "name,slug,color,content_types"
+            'test_status1,test-status1,ffffff,"dcim.device"'
+            'test_status2,test-status2,ffffff,"dcim.device,dcim.rack"'
+            'test_status3,test-status3,ffffff,"dcim.device,dcim.site"'
+            'test_status4,,ffffff,"dcim.device,dcim.site"'
+        )
+
+        cls.bulk_edit_data = {
+            "color": "000000",
+        }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Status 4"
 
 
-class CustomFieldTestCase(
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
+class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+    model = Tag
+
+    @classmethod
+    def setUpTestData(cls):
+
+        Tag.objects.create(name="Tag 1", slug="tag-1")
+        Tag.objects.create(name="Tag 2", slug="tag-2")
+        Tag.objects.create(name="Tag 3", slug="tag-3")
+
+        cls.form_data = {
+            "name": "Tag X",
+            "slug": "tag-x",
+            "color": "c0c0c0",
+            "comments": "Some comments",
+        }
+
+        cls.csv_data = (
+            "name,slug,color,description",
+            "Tag 4,tag-4,ff0000,Fourth tag",
+            "Tag 5,tag-5,00ff00,Fifth tag",
+            "Tag 6,tag-6,0000ff,Sixth tag",
+        )
+
+        cls.bulk_edit_data = {
+            "color": "00ff00",
+        }
+
+
+class WebhookTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
-    model = CustomField
-    reverse_url_attribute = "name"
+    model = Webhook
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
+        webhooks = (
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                payload_url="http://test-url.com/test-1",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_update=True,
+                payload_url="http://test-url.com/test-2",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-3",
+                enabled=True,
+                type_delete=True,
+                payload_url="http://test-url.com/test-3",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+        )
 
-        custom_fields = [
-            CustomField(
-                type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-                name="Custom Field Boolean",
-                label="Custom Field Boolean",
-                default="",
-            ),
-            CustomField(
-                type=CustomFieldTypeChoices.TYPE_TEXT,
-                name="Custom Field Text",
-                label="Custom Field Text",
-                default="",
-            ),
-            CustomField(
-                type=CustomFieldTypeChoices.TYPE_INTEGER,
-                name="Custom Field Integer",
-                label="Custom Field Integer",
-                default="",
-            ),
-        ]
+        obj_type = ContentType.objects.get_for_model(ConsolePort)
 
-        for custom_field in custom_fields:
-            custom_field.validated_save()
-            custom_field.content_types.set([obj_type])
+        for webhook in webhooks:
+            webhook.save()
+            webhook.content_types.set([obj_type])
 
         cls.form_data = {
+            "name": "webhook-4",
             "content_types": [obj_type.pk],
-            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-            "name": "Custom Field Boolean",
-            "label": "Custom Field Boolean",
-            "default": None,
-            "filter_logic": "loose",
-            "weight": 100,
+            "enabled": True,
+            "type_create": True,
+            "payload_url": "http://test-url.com/test-4",
+            "http_method": "POST",
+            "http_content_type": "application/json",
         }
-
-    def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
-        super().test_create_object_without_permission()
-
-    def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
-        super().test_create_object_with_permission()
-
-    def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
-        super().test_create_object_with_constrained_permission()

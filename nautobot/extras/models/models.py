@@ -44,412 +44,6 @@ from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
 #
-# Webhooks
-#
-@extras_features("graphql")
-class Webhook(BaseModel, ChangeLoggedModel):
-    """
-    A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
-    delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.
-    Each Webhook can be limited to firing only on certain actions or certain object types.
-    """
-
-    content_types = models.ManyToManyField(
-        to=ContentType,
-        related_name="webhooks",
-        verbose_name="Object types",
-        limit_choices_to=FeatureQuery("webhooks"),
-        help_text="The object(s) to which this Webhook applies.",
-    )
-    name = models.CharField(max_length=150, unique=True)
-    type_create = models.BooleanField(default=False, help_text="Call this webhook when a matching object is created.")
-    type_update = models.BooleanField(default=False, help_text="Call this webhook when a matching object is updated.")
-    type_delete = models.BooleanField(default=False, help_text="Call this webhook when a matching object is deleted.")
-    payload_url = models.CharField(
-        max_length=500,
-        verbose_name="URL",
-        help_text="A POST will be sent to this URL when the webhook is called.",
-    )
-    enabled = models.BooleanField(default=True)
-    http_method = models.CharField(
-        max_length=30,
-        choices=WebhookHttpMethodChoices,
-        default=WebhookHttpMethodChoices.METHOD_POST,
-        verbose_name="HTTP method",
-    )
-    http_content_type = models.CharField(
-        max_length=100,
-        default=HTTP_CONTENT_TYPE_JSON,
-        verbose_name="HTTP content type",
-        help_text="The complete list of official content types is available "
-        '<a href="https://www.iana.org/assignments/media-types/media-types.xhtml">here</a>.',
-    )
-    additional_headers = models.TextField(
-        blank=True,
-        help_text="User-supplied HTTP headers to be sent with the request in addition to the HTTP content type. "
-        "Headers should be defined in the format <code>Name: Value</code>. Jinja2 template processing is "
-        "support with the same context as the request body (below).",
-    )
-    body_template = models.TextField(
-        blank=True,
-        help_text="Jinja2 template for a custom request body. If blank, a JSON object representing the change will be "
-        "included. Available context data includes: <code>event</code>, <code>model</code>, "
-        "<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.",
-    )
-    secret = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="When provided, the request will include a 'X-Hook-Signature' "
-        "header containing a HMAC hex digest of the payload body using "
-        "the secret as the key. The secret is not transmitted in "
-        "the request.",
-    )
-    ssl_verification = models.BooleanField(
-        default=True,
-        verbose_name="SSL verification",
-        help_text="Enable SSL certificate verification. Disable with caution!",
-    )
-    ca_file_path = models.CharField(
-        max_length=4096,
-        null=True,
-        blank=True,
-        verbose_name="CA File Path",
-        help_text="The specific CA certificate file to use for SSL verification. "
-        "Leave blank to use the system defaults.",
-    )
-
-    class Meta:
-        ordering = ("name",)
-        unique_together = (
-            "payload_url",
-            "type_create",
-            "type_update",
-            "type_delete",
-        )
-
-    def __str__(self):
-        return self.name
-
-    def clean(self):
-        super().clean()
-
-        # At least one action type must be selected
-        if not self.type_create and not self.type_delete and not self.type_update:
-            raise ValidationError("You must select at least one type: create, update, and/or delete.")
-
-        # CA file path requires SSL verification enabled
-        if not self.ssl_verification and self.ca_file_path:
-            raise ValidationError(
-                {"ca_file_path": "Do not specify a CA certificate file if SSL verification is disabled."}
-            )
-
-    def render_headers(self, context):
-        """
-        Render additional_headers and return a dict of Header: Value pairs.
-        """
-        if not self.additional_headers:
-            return {}
-        ret = {}
-        data = render_jinja2(self.additional_headers, context)
-        for line in data.splitlines():
-            header, value = line.split(":")
-            ret[header.strip()] = value.strip()
-        return ret
-
-    def render_body(self, context):
-        """
-        Render the body template, if defined. Otherwise, jump the context as a JSON object.
-        """
-        if self.body_template:
-            return render_jinja2(self.body_template, context)
-        else:
-            return json.dumps(context, cls=JSONEncoder)
-
-    def get_absolute_url(self):
-        return reverse("extras:webhook", kwargs={"pk": self.pk})
-
-
-#
-# Custom links
-#
-@extras_features("graphql")
-class CustomLink(BaseModel, ChangeLoggedModel):
-    """
-    A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
-    code to be rendered with an object as context.
-    """
-
-    content_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery("custom_links"),
-    )
-    name = models.CharField(max_length=100, unique=True)
-    text = models.CharField(
-        max_length=500,
-        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
-    )
-    target_url = models.CharField(
-        max_length=500,
-        verbose_name="URL",
-        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
-    )
-    weight = models.PositiveSmallIntegerField(default=100)
-    group_name = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Links with the same group will appear as a dropdown menu",
-    )
-    button_class = models.CharField(
-        max_length=30,
-        choices=CustomLinkButtonClassChoices,
-        default=CustomLinkButtonClassChoices.CLASS_DEFAULT,
-        help_text="The class of the first link in a group will be used for the dropdown button",
-    )
-    new_window = models.BooleanField(help_text="Force link to open in a new window")
-
-    class Meta:
-        ordering = ["group_name", "weight", "name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:customlink", kwargs={"pk": self.pk})
-
-
-#
-# Export templates
-#
-
-
-@extras_features(
-    "graphql",
-    "relationships",
-)
-class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
-    # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
-    owner_content_type = models.ForeignKey(
-        to=ContentType,
-        related_name="export_template_owners",
-        on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery("export_template_owners"),
-        default=None,
-        null=True,
-        blank=True,
-    )
-    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
-    owner = GenericForeignKey(
-        ct_field="owner_content_type",
-        fk_field="owner_object_id",
-    )
-    content_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery("export_templates"),
-    )
-    name = models.CharField(max_length=100)
-    description = models.CharField(max_length=200, blank=True)
-    template_code = models.TextField(
-        help_text="The list of objects being exported is passed as a context variable named <code>queryset</code>."
-    )
-    mime_type = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name="MIME type",
-        help_text="Defaults to <code>text/plain</code>",
-    )
-    file_extension = models.CharField(
-        max_length=15,
-        blank=True,
-        help_text="Extension to append to the rendered filename",
-    )
-
-    class Meta:
-        ordering = ["content_type", "name"]
-        unique_together = [["content_type", "name", "owner_content_type", "owner_object_id"]]
-
-    def __str__(self):
-        if self.owner:
-            return f"[{self.owner}] {self.content_type}: {self.name}"
-        return "{}: {}".format(self.content_type, self.name)
-
-    def render(self, queryset):
-        """
-        Render the contents of the template.
-        """
-        context = {"queryset": queryset}
-        output = render_jinja2(self.template_code, context)
-
-        # Replace CRLF-style line terminators
-        output = output.replace("\r\n", "\n")
-
-        return output
-
-    def render_to_response(self, queryset):
-        """
-        Render the template to an HTTP response, delivered as a named file attachment
-        """
-        output = self.render(queryset)
-        mime_type = "text/plain" if not self.mime_type else self.mime_type
-
-        # Build the response
-        response = HttpResponse(output, content_type=mime_type)
-        filename = "nautobot_{}{}".format(
-            queryset.model._meta.verbose_name_plural,
-            ".{}".format(self.file_extension) if self.file_extension else "",
-        )
-        response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
-
-        return response
-
-    def get_absolute_url(self):
-        return reverse("extras:exporttemplate", kwargs={"pk": self.pk})
-
-    def clean(self):
-        super().clean()
-        if self.file_extension.startswith("."):
-            self.file_extension = self.file_extension[1:]
-
-        # Don't allow two ExportTemplates with the same name, content_type, and owner.
-        # This is necessary because Django doesn't consider NULL=NULL, and so if owner is NULL the unique_together
-        # condition will never be matched even if name and content_type are the same.
-        if (
-            ExportTemplate.objects.exclude(pk=self.pk)
-            .filter(
-                name=self.name,
-                content_type=self.content_type,
-                owner_content_type=self.owner_content_type,
-                owner_object_id=self.owner_object_id,
-            )
-            .exists()
-        ):
-            raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
-
-
-#
-# File attachments
-#
-
-
-class FileAttachment(BaseModel):
-    """An object for storing the contents and metadata of a file in the database.
-
-    This object is used by `FileProxy` objects to retrieve file contents and is
-    not intended to be used standalone.
-    """
-
-    bytes = models.BinaryField()
-    filename = models.CharField(max_length=255)
-    mimetype = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.filename
-
-    class Meta:
-        ordering = ["filename"]
-
-
-def database_storage():
-    """Returns storage backend used by `FileProxy.file` to store files in the database."""
-    return DatabaseFileStorage()
-
-
-class FileProxy(BaseModel):
-    """An object to store a file in the database.
-
-    The `file` field can be used like a file handle. The file contents are stored and retrieved from
-    `FileAttachment` objects.
-
-    The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
-    should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
-    are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
-    In most cases, it is better to iterate over a queryset of `FileProxy` objects and call
-    `delete()` on each one individually.
-    """
-
-    name = models.CharField(max_length=255)
-    file = models.FileField(
-        upload_to="extras.FileAttachment/bytes/filename/mimetype",
-        storage=database_storage,  # Use only this backend
-    )
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        get_latest_by = "uploaded_at"
-        ordering = ["name"]
-        verbose_name_plural = "file proxies"
-
-    def save(self, *args, **kwargs):
-        delete_file_if_needed(self, "file")
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
-        delete_file(self, "file")
-
-
-class ImageAttachment(BaseModel):
-    """
-    An uploaded image which is associated with an object.
-    """
-
-    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
-    object_id = models.UUIDField()
-    parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
-    image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
-    image_height = models.PositiveSmallIntegerField()
-    image_width = models.PositiveSmallIntegerField()
-    name = models.CharField(max_length=50, blank=True)
-    created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ("name",)  # name may be non-unique
-
-    def __str__(self):
-        if self.name:
-            return self.name
-        filename = self.image.name.rsplit("/", 1)[-1]
-        return filename.split("_", 2)[2]
-
-    def delete(self, *args, **kwargs):
-
-        _name = self.image.name
-
-        super().delete(*args, **kwargs)
-
-        # Delete file from disk
-        self.image.delete(save=False)
-
-        # Deleting the file erases its name. We restore the image's filename here in case we still need to reference it
-        # before the request finishes. (For example, to display a message indicating the ImageAttachment was deleted.)
-        self.image.name = _name
-
-    @property
-    def size(self):
-        """
-        Wrapper around `image.size` to suppress an OSError in case the file is inaccessible. Also opportunistically
-        catch other exceptions that we know other storage back-ends to throw.
-        """
-        expected_exceptions = [OSError]
-
-        try:
-            from botocore.exceptions import ClientError
-
-            expected_exceptions.append(ClientError)
-        except ImportError:
-            pass
-
-        try:
-            return self.image.size
-        except tuple(expected_exceptions):
-            return None
-
-
-#
 # Config contexts
 #
 
@@ -687,6 +281,358 @@ class ConfigContextSchema(OrganizationalModel):
                     "JSON schema must be of type object and specify a set of properties."
                 }
             )
+
+
+#
+# Custom links
+#
+
+
+@extras_features("graphql")
+class CustomLink(BaseModel, ChangeLoggedModel):
+    """
+    A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
+    code to be rendered with an object as context.
+    """
+
+    content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("custom_links"),
+    )
+    name = models.CharField(max_length=100, unique=True)
+    text = models.CharField(
+        max_length=500,
+        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
+    )
+    target_url = models.CharField(
+        max_length=500,
+        verbose_name="URL",
+        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
+    )
+    weight = models.PositiveSmallIntegerField(default=100)
+    group_name = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Links with the same group will appear as a dropdown menu",
+    )
+    button_class = models.CharField(
+        max_length=30,
+        choices=CustomLinkButtonClassChoices,
+        default=CustomLinkButtonClassChoices.CLASS_DEFAULT,
+        help_text="The class of the first link in a group will be used for the dropdown button",
+    )
+    new_window = models.BooleanField(help_text="Force link to open in a new window")
+
+    class Meta:
+        ordering = ["group_name", "weight", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:customlink", kwargs={"pk": self.pk})
+
+
+#
+# Export templates
+#
+
+
+@extras_features(
+    "graphql",
+    "relationships",
+)
+class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
+    # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        related_name="export_template_owners",
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("export_template_owners"),
+        default=None,
+        null=True,
+        blank=True,
+    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    owner = GenericForeignKey(
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
+    )
+    content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("export_templates"),
+    )
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=200, blank=True)
+    template_code = models.TextField(
+        help_text="The list of objects being exported is passed as a context variable named <code>queryset</code>."
+    )
+    mime_type = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="MIME type",
+        help_text="Defaults to <code>text/plain</code>",
+    )
+    file_extension = models.CharField(
+        max_length=15,
+        blank=True,
+        help_text="Extension to append to the rendered filename",
+    )
+
+    class Meta:
+        ordering = ["content_type", "name"]
+        unique_together = [["content_type", "name", "owner_content_type", "owner_object_id"]]
+
+    def __str__(self):
+        if self.owner:
+            return f"[{self.owner}] {self.content_type}: {self.name}"
+        return "{}: {}".format(self.content_type, self.name)
+
+    def render(self, queryset):
+        """
+        Render the contents of the template.
+        """
+        context = {"queryset": queryset}
+        output = render_jinja2(self.template_code, context)
+
+        # Replace CRLF-style line terminators
+        output = output.replace("\r\n", "\n")
+
+        return output
+
+    def render_to_response(self, queryset):
+        """
+        Render the template to an HTTP response, delivered as a named file attachment
+        """
+        output = self.render(queryset)
+        mime_type = "text/plain" if not self.mime_type else self.mime_type
+
+        # Build the response
+        response = HttpResponse(output, content_type=mime_type)
+        filename = "nautobot_{}{}".format(
+            queryset.model._meta.verbose_name_plural,
+            ".{}".format(self.file_extension) if self.file_extension else "",
+        )
+        response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
+
+        return response
+
+    def get_absolute_url(self):
+        return reverse("extras:exporttemplate", kwargs={"pk": self.pk})
+
+    def clean(self):
+        super().clean()
+        if self.file_extension.startswith("."):
+            self.file_extension = self.file_extension[1:]
+
+        # Don't allow two ExportTemplates with the same name, content_type, and owner.
+        # This is necessary because Django doesn't consider NULL=NULL, and so if owner is NULL the unique_together
+        # condition will never be matched even if name and content_type are the same.
+        if (
+            ExportTemplate.objects.exclude(pk=self.pk)
+            .filter(
+                name=self.name,
+                content_type=self.content_type,
+                owner_content_type=self.owner_content_type,
+                owner_object_id=self.owner_object_id,
+            )
+            .exists()
+        ):
+            raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
+
+
+#
+# File attachments
+#
+
+
+class FileAttachment(BaseModel):
+    """An object for storing the contents and metadata of a file in the database.
+
+    This object is used by `FileProxy` objects to retrieve file contents and is
+    not intended to be used standalone.
+    """
+
+    bytes = models.BinaryField()
+    filename = models.CharField(max_length=255)
+    mimetype = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.filename
+
+    class Meta:
+        ordering = ["filename"]
+
+
+def database_storage():
+    """Returns storage backend used by `FileProxy.file` to store files in the database."""
+    return DatabaseFileStorage()
+
+
+class FileProxy(BaseModel):
+    """An object to store a file in the database.
+
+    The `file` field can be used like a file handle. The file contents are stored and retrieved from
+    `FileAttachment` objects.
+
+    The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
+    should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
+    are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
+    In most cases, it is better to iterate over a queryset of `FileProxy` objects and call
+    `delete()` on each one individually.
+    """
+
+    name = models.CharField(max_length=255)
+    file = models.FileField(
+        upload_to="extras.FileAttachment/bytes/filename/mimetype",
+        storage=database_storage,  # Use only this backend
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        get_latest_by = "uploaded_at"
+        ordering = ["name"]
+        verbose_name_plural = "file proxies"
+
+    def save(self, *args, **kwargs):
+        delete_file_if_needed(self, "file")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        delete_file(self, "file")
+
+
+#
+# Saved GraphQL queries
+#
+
+
+@extras_features("graphql")
+class GraphQLQuery(BaseModel, ChangeLoggedModel):
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
+    query = models.TextField()
+    variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+
+    class Meta:
+        ordering = ("slug",)
+        verbose_name = "GraphQL query"
+        verbose_name_plural = "GraphQL queries"
+
+    def get_absolute_url(self):
+        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
+
+    def save(self, *args, **kwargs):
+        variables = {}
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        # Load query into GraphQL backend
+        document = backend.document_from_string(schema, self.query)
+
+        # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
+        # that define one or more variables. For each operation and variable definition, store the variable's
+        # default value (if any) into our own "variables" dict.
+        definitions = [
+            d
+            for d in document.document_ast.definitions
+            if isinstance(d, OperationDefinition) and d.variable_definitions
+        ]
+        for definition in definitions:
+            for variable_definition in definition.variable_definitions:
+                default = variable_definition.default_value.value if variable_definition.default_value else ""
+                variables[variable_definition.variable.name.value] = default
+
+        self.variables = variables
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        schema = graphene_settings.SCHEMA
+        backend = get_default_backend()
+        try:
+            backend.document_from_string(schema, self.query)
+        except GraphQLSyntaxError as error:
+            raise ValidationError({"query": error})
+
+    def __str__(self):
+        return self.name
+
+
+#
+# Health Check
+#
+
+
+class HealthCheckTestModel(BaseModel):
+    title = models.CharField(max_length=128)
+
+
+#
+# Image Attachments
+#
+
+
+class ImageAttachment(BaseModel):
+    """
+    An uploaded image which is associated with an object.
+    """
+
+    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
+    image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
+    image_height = models.PositiveSmallIntegerField()
+    image_width = models.PositiveSmallIntegerField()
+    name = models.CharField(max_length=50, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("name",)  # name may be non-unique
+
+    def __str__(self):
+        if self.name:
+            return self.name
+        filename = self.image.name.rsplit("/", 1)[-1]
+        return filename.split("_", 2)[2]
+
+    def delete(self, *args, **kwargs):
+
+        _name = self.image.name
+
+        super().delete(*args, **kwargs)
+
+        # Delete file from disk
+        self.image.delete(save=False)
+
+        # Deleting the file erases its name. We restore the image's filename here in case we still need to reference it
+        # before the request finishes. (For example, to display a message indicating the ImageAttachment was deleted.)
+        self.image.name = _name
+
+    @property
+    def size(self):
+        """
+        Wrapper around `image.size` to suppress an OSError in case the file is inaccessible. Also opportunistically
+        catch other exceptions that we know other storage back-ends to throw.
+        """
+        expected_exceptions = [OSError]
+
+        try:
+            from botocore.exceptions import ClientError
+
+            expected_exceptions.append(ClientError)
+        except ImportError:
+            pass
+
+        try:
+            return self.image.size
+        except tuple(expected_exceptions):
+            return None
 
 
 #
@@ -1146,61 +1092,129 @@ signals.pre_save.connect(ScheduledJobs.changed, sender=ScheduledJob)
 signals.post_save.connect(ScheduledJobs.update_changed, sender=ScheduledJob)
 
 
+#
+# Webhooks
+#
+
+
 @extras_features("graphql")
-class GraphQLQuery(BaseModel, ChangeLoggedModel):
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    query = models.TextField()
-    variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+class Webhook(BaseModel, ChangeLoggedModel):
+    """
+    A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
+    delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.
+    Each Webhook can be limited to firing only on certain actions or certain object types.
+    """
+
+    content_types = models.ManyToManyField(
+        to=ContentType,
+        related_name="webhooks",
+        verbose_name="Object types",
+        limit_choices_to=FeatureQuery("webhooks"),
+        help_text="The object(s) to which this Webhook applies.",
+    )
+    name = models.CharField(max_length=150, unique=True)
+    type_create = models.BooleanField(default=False, help_text="Call this webhook when a matching object is created.")
+    type_update = models.BooleanField(default=False, help_text="Call this webhook when a matching object is updated.")
+    type_delete = models.BooleanField(default=False, help_text="Call this webhook when a matching object is deleted.")
+    payload_url = models.CharField(
+        max_length=500,
+        verbose_name="URL",
+        help_text="A POST will be sent to this URL when the webhook is called.",
+    )
+    enabled = models.BooleanField(default=True)
+    http_method = models.CharField(
+        max_length=30,
+        choices=WebhookHttpMethodChoices,
+        default=WebhookHttpMethodChoices.METHOD_POST,
+        verbose_name="HTTP method",
+    )
+    http_content_type = models.CharField(
+        max_length=100,
+        default=HTTP_CONTENT_TYPE_JSON,
+        verbose_name="HTTP content type",
+        help_text="The complete list of official content types is available "
+        '<a href="https://www.iana.org/assignments/media-types/media-types.xhtml">here</a>.',
+    )
+    additional_headers = models.TextField(
+        blank=True,
+        help_text="User-supplied HTTP headers to be sent with the request in addition to the HTTP content type. "
+        "Headers should be defined in the format <code>Name: Value</code>. Jinja2 template processing is "
+        "support with the same context as the request body (below).",
+    )
+    body_template = models.TextField(
+        blank=True,
+        help_text="Jinja2 template for a custom request body. If blank, a JSON object representing the change will be "
+        "included. Available context data includes: <code>event</code>, <code>model</code>, "
+        "<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.",
+    )
+    secret = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="When provided, the request will include a 'X-Hook-Signature' "
+        "header containing a HMAC hex digest of the payload body using "
+        "the secret as the key. The secret is not transmitted in "
+        "the request.",
+    )
+    ssl_verification = models.BooleanField(
+        default=True,
+        verbose_name="SSL verification",
+        help_text="Enable SSL certificate verification. Disable with caution!",
+    )
+    ca_file_path = models.CharField(
+        max_length=4096,
+        null=True,
+        blank=True,
+        verbose_name="CA File Path",
+        help_text="The specific CA certificate file to use for SSL verification. "
+        "Leave blank to use the system defaults.",
+    )
 
     class Meta:
-        ordering = ("slug",)
-        verbose_name = "GraphQL query"
-        verbose_name_plural = "GraphQL queries"
-
-    def get_absolute_url(self):
-        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
-
-    def save(self, *args, **kwargs):
-        variables = {}
-        schema = graphene_settings.SCHEMA
-        backend = get_default_backend()
-        # Load query into GraphQL backend
-        document = backend.document_from_string(schema, self.query)
-
-        # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
-        # that define one or more variables. For each operation and variable definition, store the variable's
-        # default value (if any) into our own "variables" dict.
-        definitions = [
-            d
-            for d in document.document_ast.definitions
-            if isinstance(d, OperationDefinition) and d.variable_definitions
-        ]
-        for definition in definitions:
-            for variable_definition in definition.variable_definitions:
-                default = variable_definition.default_value.value if variable_definition.default_value else ""
-                variables[variable_definition.variable.name.value] = default
-
-        self.variables = variables
-        return super().save(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-        schema = graphene_settings.SCHEMA
-        backend = get_default_backend()
-        try:
-            backend.document_from_string(schema, self.query)
-        except GraphQLSyntaxError as error:
-            raise ValidationError({"query": error})
+        ordering = ("name",)
+        unique_together = (
+            "payload_url",
+            "type_create",
+            "type_update",
+            "type_delete",
+        )
 
     def __str__(self):
         return self.name
 
+    def clean(self):
+        super().clean()
 
-#
-# Health Check
-#
+        # At least one action type must be selected
+        if not self.type_create and not self.type_delete and not self.type_update:
+            raise ValidationError("You must select at least one type: create, update, and/or delete.")
 
+        # CA file path requires SSL verification enabled
+        if not self.ssl_verification and self.ca_file_path:
+            raise ValidationError(
+                {"ca_file_path": "Do not specify a CA certificate file if SSL verification is disabled."}
+            )
 
-class HealthCheckTestModel(BaseModel):
-    title = models.CharField(max_length=128)
+    def render_headers(self, context):
+        """
+        Render additional_headers and return a dict of Header: Value pairs.
+        """
+        if not self.additional_headers:
+            return {}
+        ret = {}
+        data = render_jinja2(self.additional_headers, context)
+        for line in data.splitlines():
+            header, value = line.split(":")
+            ret[header.strip()] = value.strip()
+        return ret
+
+    def render_body(self, context):
+        """
+        Render the body template, if defined. Otherwise, jump the context as a JSON object.
+        """
+        if self.body_template:
+            return render_jinja2(self.body_template, context)
+        else:
+            return json.dumps(context, cls=JSONEncoder)
+
+    def get_absolute_url(self):
+        return reverse("extras:webhook", kwargs={"pk": self.pk})

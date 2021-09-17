@@ -59,6 +59,26 @@ class ExtrasRootView(APIRootView):
         return "Extras"
 
 
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldViewSet(ModelViewSet):
+    """
+    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = ComputedField.objects.all()
+    serializer_class = serializers.ComputedFieldSerializer
+    filterset_class = filters.ComputedFieldFilterSet
+
+
+#
+# Config contexts
+#
+
+
 class ConfigContextQuerySetMixin:
     """
     Used by views that work with config context models (device and virtual machine).
@@ -80,6 +100,46 @@ class ConfigContextQuerySetMixin:
         if self.brief or "config_context" in request.query_params.get("exclude", []):
             return queryset
         return queryset.annotate_config_context_data()
+
+
+class ConfigContextViewSet(ModelViewSet):
+    queryset = ConfigContext.objects.prefetch_related(
+        "regions",
+        "sites",
+        "roles",
+        "device_types",
+        "platforms",
+        "tenant_groups",
+        "tenants",
+    )
+    serializer_class = serializers.ConfigContextSerializer
+    filterset_class = filters.ConfigContextFilterSet
+
+
+#
+# Config context schemas
+#
+
+
+class ConfigContextSchemaViewSet(ModelViewSet):
+    queryset = ConfigContextSchema.objects.all()
+    serializer_class = serializers.ConfigContextSchemaSerializer
+    filterset_class = filters.ConfigContextSchemaFilterSet
+
+
+#
+# ContentTypes
+#
+
+
+class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
+    """
+
+    queryset = ContentType.objects.order_by("app_label", "model")
+    serializer_class = serializers.ContentTypeSerializer
+    filterset_class = filters.ContentTypeFilterSet
 
 
 #
@@ -121,6 +181,21 @@ class CustomFieldModelViewSet(ModelViewSet):
 
 
 #
+# Custom Links
+#
+
+
+class CustomLinkViewSet(ModelViewSet):
+    """
+    Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = CustomLink.objects.all()
+    serializer_class = serializers.CustomLinkSerializer
+    filterset_class = filters.CustomLinkFilterSet
+
+
+#
 # Export templates
 #
 
@@ -130,17 +205,6 @@ class ExportTemplateViewSet(ModelViewSet):
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
-
-
-#
-# Tags
-#
-
-
-class TagViewSet(CustomFieldModelViewSet):
-    queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
-    serializer_class = serializers.TagSerializer
-    filterset_class = filters.TagFilterSet
 
 
 #
@@ -175,6 +239,34 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
 
 
 #
+# GraphQL Queries
+#
+
+
+class GraphQLQueryViewSet(ModelViewSet):
+    queryset = GraphQLQuery.objects.all()
+    serializer_class = serializers.GraphQLQuerySerializer
+    filterset_class = filters.GraphQLQueryFilterSet
+
+    @swagger_auto_schema(
+        method="post",
+        request_body=serializers.GraphQLQueryInputSerializer,
+        responses={"200": serializers.GraphQLQueryOutputSerializer},
+    )
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        try:
+            query = get_object_or_404(self.queryset, pk=pk)
+            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
+            return Response(result)
+        except GraphQLError as error:
+            return Response(
+                {"errors": [GraphQLView.format_error(error)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+#
 # Image attachments
 #
 
@@ -184,36 +276,6 @@ class ImageAttachmentViewSet(ModelViewSet):
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
-
-
-#
-# Config contexts
-#
-
-
-class ConfigContextViewSet(ModelViewSet):
-    queryset = ConfigContext.objects.prefetch_related(
-        "regions",
-        "sites",
-        "roles",
-        "device_types",
-        "platforms",
-        "tenant_groups",
-        "tenants",
-    )
-    serializer_class = serializers.ConfigContextSerializer
-    filterset_class = filters.ConfigContextFilterSet
-
-
-#
-# Config context schemas
-#
-
-
-class ConfigContextSchemaViewSet(ModelViewSet):
-    queryset = ConfigContextSchema.objects.all()
-    serializer_class = serializers.ConfigContextSchemaSerializer
-    filterset_class = filters.ConfigContextSchemaFilterSet
 
 
 #
@@ -359,22 +421,6 @@ class JobViewSet(viewsets.ViewSet):
 
 
 #
-# Change logging
-#
-
-
-class ObjectChangeViewSet(ReadOnlyModelViewSet):
-    """
-    Retrieve a list of recent changes.
-    """
-
-    metadata_class = ContentTypeMetadata
-    queryset = ObjectChange.objects.prefetch_related("user")
-    serializer_class = serializers.ObjectChangeSerializer
-    filterset_class = filters.ObjectChangeFilterSet
-
-
-#
 # Job Results
 #
 
@@ -494,48 +540,38 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 
 #
-# ContentTypes
+# Change logging
 #
 
 
-class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
+class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
-    Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
+    Retrieve a list of recent changes.
     """
 
-    queryset = ContentType.objects.order_by("app_label", "model")
-    serializer_class = serializers.ContentTypeSerializer
-    filterset_class = filters.ContentTypeFilterSet
+    metadata_class = ContentTypeMetadata
+    queryset = ObjectChange.objects.prefetch_related("user")
+    serializer_class = serializers.ObjectChangeSerializer
+    filterset_class = filters.ObjectChangeFilterSet
 
 
 #
-# Custom Links
+#  Relationships
 #
 
 
-class CustomLinkViewSet(ModelViewSet):
-    """
-    Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
-    """
-
-    queryset = CustomLink.objects.all()
-    serializer_class = serializers.CustomLinkSerializer
-    filterset_class = filters.CustomLinkFilterSet
+class RelationshipViewSet(ModelViewSet):
+    metadata_class = ContentTypeMetadata
+    queryset = Relationship.objects.all()
+    serializer_class = serializers.RelationshipSerializer
+    filterset_class = filters.RelationshipFilterSet
 
 
-#
-# Webhooks
-#
-
-
-class WebhooksViewSet(ModelViewSet):
-    """
-    Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
-    """
-
-    queryset = Webhook.objects.all()
-    serializer_class = serializers.WebhookSerializer
-    filterset_class = filters.WebhookFilterSet
+class RelationshipAssociationViewSet(ModelViewSet):
+    metadata_class = ContentTypeMetadata
+    queryset = RelationshipAssociation.objects.all()
+    serializer_class = serializers.RelationshipAssociationSerializer
+    filterset_class = filters.RelationshipAssociationFilterSet
 
 
 #
@@ -562,62 +598,26 @@ class StatusViewSetMixin(ModelViewSet):
 
 
 #
-#  Relationships
+# Tags
 #
 
 
-class RelationshipViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
-    queryset = Relationship.objects.all()
-    serializer_class = serializers.RelationshipSerializer
-    filterset_class = filters.RelationshipFilterSet
-
-
-class RelationshipAssociationViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
-    queryset = RelationshipAssociation.objects.all()
-    serializer_class = serializers.RelationshipAssociationSerializer
-    filterset_class = filters.RelationshipAssociationFilterSet
+class TagViewSet(CustomFieldModelViewSet):
+    queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
+    serializer_class = serializers.TagSerializer
+    filterset_class = filters.TagFilterSet
 
 
 #
-# GraphQL Queries
+# Webhooks
 #
 
 
-class GraphQLQueryViewSet(ModelViewSet):
-    queryset = GraphQLQuery.objects.all()
-    serializer_class = serializers.GraphQLQuerySerializer
-    filterset_class = filters.GraphQLQueryFilterSet
-
-    @swagger_auto_schema(
-        method="post",
-        request_body=serializers.GraphQLQueryInputSerializer,
-        responses={"200": serializers.GraphQLQueryOutputSerializer},
-    )
-    @action(detail=True, methods=["post"])
-    def run(self, request, pk):
-        try:
-            query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
-            return Response(result)
-        except GraphQLError as error:
-            return Response(
-                {"errors": [GraphQLView.format_error(error)]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-
-#
-#  Computed Fields
-#
-
-
-class ComputedFieldViewSet(ModelViewSet):
+class WebhooksViewSet(ModelViewSet):
     """
-    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = ComputedField.objects.all()
-    serializer_class = serializers.ComputedFieldSerializer
-    filterset_class = filters.ComputedFieldFilterSet
+    queryset = Webhook.objects.all()
+    serializer_class = serializers.WebhookSerializer
+    filterset_class = filters.WebhookFilterSet
