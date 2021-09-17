@@ -10,7 +10,11 @@
                 <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand" href="{% url 'home' %}">
-                <img src="{% static 'img/nautobot_logo.svg' %}" height="30" />
+                {% if settings.BRANDING_FILEPATHS.logo %}
+                    <img src="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.logo }}" height="30" />
+                {% else %}
+                    <img src="{% static 'img/nautobot_logo.svg' %}" height="30" />
+                {% endif %}
             </a>
         </div>
 

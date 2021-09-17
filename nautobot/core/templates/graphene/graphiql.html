@@ -11,7 +11,7 @@ add "&raw" to the end of the URL within a browser.
 <html>
 <head>
   <!-- Nautobot template requirements -->
-  <title>{% block title %}GraphiQL{% endblock %} - Nautobot</title>
+  <title>{% block title %}GraphiQL{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
   <link rel="stylesheet"
         href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
@@ -33,12 +33,39 @@ add "&raw" to the end of the URL within a browser.
   <link rel="stylesheet"
         href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
         onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
-  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
-  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
-  <link rel="icon" type="image/png" href="{% static 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
-  <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
-  <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+  {% comment %}
+      Attempt to load custom branding assets, or fallback to the Nautobot standard branding.
+  {% endcomment %}
+  {% if settings.BRANDING_FILEPATHS.icon_180 %}
+      <link rel="apple-touch-icon" sizes="180x180" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_180 }}">
+  {% else %}
+      <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
+  {% endif %}
+  {% if settings.BRANDING_FILEPATHS.icon_32 %}
+      <link rel="icon" type="image/png" sizes="32x32" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_32 }}">
+  {% else %}
+      <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
+  {% endif %}
+  {% if settings.BRANDING_FILEPATHS.icon_16 %}
+      <link rel="icon" type="image/png" sizes="16x16" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_16 }}">
+  {% else %}
+      <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
+  {% endif %}
+  {% if settings.BRANDING_FILEPATHS.icon_192 %}
+      <link rel="icon" type="image/png" sizes="192x192" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_192 }}">
+  {% else %}
+      <link rel="icon" type="image/png" sizes="192x192" href="{% static 'img/nautobot_icon_192x192.png' %}">
+  {% endif %}
+  {% if settings.BRANDING_FILEPATHS.icon_mask %}
+      <link rel="mask-icon" type="image/png" color="#0097ff" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_mask }}">
+  {% else %}
+      <link rel="mask-icon" type="image/png" color="#0097ff" href="{% static 'img/nautobot_icon_monochrome.svg' %}">
+  {% endif %}
+  {% if settings.BRANDING_FILEPATHS.favicon %}
+      <link rel="shortcut icon" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.favicon }}">
+  {% else %}
+      <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+  {% endif %}
   <meta name="msapplication-TileColor" content="#2d89ef">
   <meta name="theme-color" content="#ffffff">
   <meta charset="UTF-8">

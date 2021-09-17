@@ -256,7 +256,7 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
 
 class APIRootView(APIView):
     """
-    This is the root of Nautobot's REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
+    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
     """
 
     _ignore_model_permissions = True
@@ -316,7 +316,7 @@ class APIRootView(APIView):
 
 class StatusView(APIView):
     """
-    A lightweight read-only endpoint for conveying Nautobot's current operational status.
+    A lightweight read-only endpoint for conveying the current operational status.
     """
 
     permission_classes = [IsAuthenticated]
