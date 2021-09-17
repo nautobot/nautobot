@@ -17,8 +17,9 @@ from graphene_django.views import GraphQLView
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
+from nautobot.core.graphql.schema_init import generate_schema
 from nautobot.core.releases import get_latest_release
-from nautobot.extras.models import GraphQLQuery
+from nautobot.extras.models import GraphQLQuery, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 
@@ -181,6 +182,9 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
 
 
 class CustomGraphQLView(GraphQLView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, schema=generate_schema())
+
     def render_graphiql(self, request, **data):
         query_slug = request.GET.get("slug")
         if query_slug:

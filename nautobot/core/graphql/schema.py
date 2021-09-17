@@ -211,6 +211,12 @@ def extend_schema_type_custom_field(schema_type, model):
     if settings.GRAPHQL_CUSTOM_FIELD_PREFIX and isinstance(settings.GRAPHQL_CUSTOM_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
+    # clear old custom fields; TODO: safe?
+    for field in dir(schema_type):
+        if field.startswith(f"resolve_{prefix}"):
+            delattr(schema_type, field)
+            del schema_type._meta.fields[field.replace("resolve_", "")]
+
     for field in cfs:
         field_name = f"{prefix}{str_to_var_name(field.name)}"
         resolver_name = f"resolve_{field_name}"
@@ -252,6 +258,12 @@ def extend_schema_type_computed_field(schema_type, model):
     prefix = ""
     if settings.GRAPHQL_COMPUTED_FIELD_PREFIX and isinstance(settings.GRAPHQL_COMPUTED_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
+
+    # clear old custom fields; TODO: safe?
+    for field in dir(schema_type):
+        if field.startswith(f"resolve_{prefix}"):
+            delattr(schema_type, field)
+            del schema_type._meta.fields[field.replace("resolve_", "")]
 
     for field in cfs:
         field_name = f"{prefix}{str_to_var_name(field.slug)}"
@@ -337,6 +349,12 @@ def extend_schema_type_relationships(schema_type, model):
     prefix = ""
     if settings.GRAPHQL_RELATIONSHIP_PREFIX and isinstance(settings.GRAPHQL_RELATIONSHIP_PREFIX, str):
         prefix = f"{settings.GRAPHQL_RELATIONSHIP_PREFIX}_"
+
+    # clear old custom fields; TODO: safe?
+    for field in dir(schema_type):
+        if field.startswith(f"resolve_{prefix}"):
+            delattr(schema_type, field)
+            del schema_type._meta.fields[field.replace("resolve_", "")]
 
     for side, relationships in relationships_by_side.items():
         for relationship in relationships:

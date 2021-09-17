@@ -435,7 +435,6 @@ CORS_ALLOWED_ORIGINS = []
 #
 
 GRAPHENE = {
-    "SCHEMA": "nautobot.core.graphql.schema_init.schema",
     "DJANGO_CHOICE_FIELD_ENUM_V3_NAMING": True,  # any field with a name of type will break in Graphene otherwise.
 }
 GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
