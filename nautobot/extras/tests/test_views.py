@@ -937,6 +937,7 @@ class TestJobMixin(SimpleTestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         # Monkey-patch the viewsets' _get_job methods to return our test class above
         cls.original_method = JobView._get_job
         JobView._get_job = TestJobMixin.get_test_job_class
@@ -944,6 +945,7 @@ class TestJobMixin(SimpleTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        super().tearDownClass()
         # Undo monkey-patch
         JobView._get_job = cls.original_method
         ScheduledJobView._get_job = cls.original_method
