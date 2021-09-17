@@ -106,6 +106,11 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
             level_choice=LogLevelChoices.LOG_INFO,
             logger=logger,
         )
+        job_result.log(
+            f'The current Git repository hash is "{repository_record.current_head}"',
+            level_choice=LogLevelChoices.LOG_INFO,
+            logger=logger,
+        )
         job_result.save()
 
 
