@@ -102,24 +102,27 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 """
 
 
-class TagTable(BaseTable):
+class ComputedFieldTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
-    color = ColorColumn()
-    actions = ButtonsColumn(Tag, pk_field="slug")
+    label = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
-        model = Tag
-        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
-
-
-class TaggedItemTable(BaseTable):
-    content_object = tables.TemplateColumn(template_code=TAGGED_ITEM, orderable=False, verbose_name="Object")
-    content_type = tables.Column(verbose_name="Type")
-
-    class Meta(BaseTable.Meta):
-        model = TaggedItem
-        fields = ("content_object", "content_type")
+        model = ComputedField
+        fields = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+        )
 
 
 class ConfigContextTable(BaseTable):
@@ -187,6 +190,88 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
         # Return a green check (like a boolean column)
         return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
+
+
+class CustomFieldTable(BaseTable):
+    pk = ToggleColumn()
+    # TODO: Replace name column with slug #464
+    slug = tables.Column(linkify=True, accessor="name")
+    content_types = ContentTypesColumn(truncate_words=15)
+    required = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomField
+        fields = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "description",
+            "required",
+            "default",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "required",
+            "weight",
+        )
+
+
+class CustomLinkTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    new_window = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomLink
+        fields = (
+            "pk",
+            "name",
+            "content_type",
+            "text",
+            "target_url",
+            "weight",
+            "group_name",
+            "button_class",
+            "new_window",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "group_name",
+            "weight",
+        )
+
+
+class ExportTemplateTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    owner = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = ExportTemplate
+        fields = (
+            "pk",
+            "owner",
+            "content_type",
+            "name",
+            "description",
+            "mime_type",
+            "file_extension",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "file_extension",
+        )
 
 
 class GitRepositoryTable(BaseTable):
@@ -265,6 +350,19 @@ class GitRepositoryBulkTable(BaseTable):
             "branch",
             "token_rendered",
             "provides",
+        )
+
+
+class GraphQLQueryTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = GraphQLQuery
+        fields = (
+            "pk",
+            "name",
+            "slug",
         )
 
 
@@ -369,91 +467,38 @@ class ObjectChangeTable(BaseTable):
         )
 
 
-class ExportTemplateTable(BaseTable):
+#
+# Relationship
+#
+
+
+class RelationshipTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    owner = tables.LinkColumn()
+    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
-        model = ExportTemplate
+        model = Relationship
         fields = (
-            "pk",
-            "owner",
-            "content_type",
             "name",
             "description",
-            "mime_type",
-            "file_extension",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_type",
-            "file_extension",
+            "type",
+            "source_type",
+            "destination_type",
+            "actions",
         )
 
 
-class CustomLinkTable(BaseTable):
+class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    new_window = BooleanColumn()
+    actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
+
+    source = tables.Column(linkify=True)
+
+    destination = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
-        model = CustomLink
-        fields = (
-            "pk",
-            "name",
-            "content_type",
-            "text",
-            "target_url",
-            "weight",
-            "group_name",
-            "button_class",
-            "new_window",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_type",
-            "group_name",
-            "weight",
-        )
-
-
-class WebhookTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
-    enabled = BooleanColumn()
-    type_create = BooleanColumn()
-    type_update = BooleanColumn()
-    type_delete = BooleanColumn()
-    ssl_verification = BooleanColumn()
-
-    class Meta(BaseTable.Meta):
-        model = Webhook
-        fields = (
-            "pk",
-            "name",
-            "content_types",
-            "payload_url",
-            "http_content_type",
-            "http_method",
-            "enabled",
-            "type_create",
-            "type_update",
-            "type_delete",
-            "ssl_verification",
-            "ca_file_path",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_types",
-            "payload_url",
-            "http_content_type",
-            "enabled",
-        )
+        model = RelationshipAssociation
+        fields = ("relationship", "source", "destination", "actions")
 
 
 #
@@ -514,102 +559,57 @@ class StatusTableMixin(BaseTable):
     status = ColoredLabelColumn()
 
 
-#
-# Relationship
-#
-
-
-class RelationshipTable(BaseTable):
+class TagTable(BaseTable):
     pk = ToggleColumn()
-    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
+    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
+    color = ColorColumn()
+    actions = ButtonsColumn(Tag, pk_field="slug")
 
     class Meta(BaseTable.Meta):
-        model = Relationship
-        fields = (
-            "name",
-            "description",
-            "type",
-            "source_type",
-            "destination_type",
-            "actions",
-        )
+        model = Tag
+        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
 
 
-class RelationshipAssociationTable(BaseTable):
-    pk = ToggleColumn()
-    actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
-
-    source = tables.Column(linkify=True)
-
-    destination = tables.Column(linkify=True)
+class TaggedItemTable(BaseTable):
+    content_object = tables.TemplateColumn(template_code=TAGGED_ITEM, orderable=False, verbose_name="Object")
+    content_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
-        model = RelationshipAssociation
-        fields = ("relationship", "source", "destination", "actions")
+        model = TaggedItem
+        fields = ("content_object", "content_type")
 
 
-class GraphQLQueryTable(BaseTable):
+class WebhookTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
+    enabled = BooleanColumn()
+    type_create = BooleanColumn()
+    type_update = BooleanColumn()
+    type_delete = BooleanColumn()
+    ssl_verification = BooleanColumn()
 
     class Meta(BaseTable.Meta):
-        model = GraphQLQuery
+        model = Webhook
         fields = (
             "pk",
             "name",
-            "slug",
-        )
-
-
-class ComputedFieldTable(BaseTable):
-    pk = ToggleColumn()
-    label = tables.Column(linkify=True)
-
-    class Meta(BaseTable.Meta):
-        model = ComputedField
-        fields = (
-            "pk",
-            "label",
-            "slug",
-            "content_type",
-            "description",
-            "weight",
+            "content_types",
+            "payload_url",
+            "http_content_type",
+            "http_method",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "ssl_verification",
+            "ca_file_path",
         )
         default_columns = (
             "pk",
-            "label",
-            "slug",
-            "content_type",
-            "description",
-        )
-
-
-class CustomFieldTable(BaseTable):
-    pk = ToggleColumn()
-    # TODO: Replace name column with slug #464
-    slug = tables.Column(linkify=True, accessor="name")
-    content_types = ContentTypesColumn(truncate_words=15)
-    required = BooleanColumn()
-
-    class Meta(BaseTable.Meta):
-        model = CustomField
-        fields = (
-            "pk",
-            "slug",
+            "name",
             "content_types",
-            "type",
-            "label",
-            "description",
-            "required",
-            "default",
-            "weight",
-        )
-        default_columns = (
-            "pk",
-            "slug",
-            "content_types",
-            "type",
-            "label",
-            "required",
-            "weight",
+            "payload_url",
+            "http_content_type",
+            "enabled",
         )

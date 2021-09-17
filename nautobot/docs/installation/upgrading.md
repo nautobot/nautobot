@@ -7,6 +7,9 @@ have been published since your current version was released. Although the upgrad
 additional work, certain releases may introduce breaking or backward-incompatible changes. These are called out in the
 release notes under the release in which the change went into effect.
 
+!!! note
+    As of Nautobot v1.2.0, Nautobot supports deferring (“scheduling”) Jobs. To facilitate this, a new service called `celery-beat-worker` is now required. Please review the [service installation documentation](./services.md) to find out how to set it up.
+
 ## Update Prerequisites to Required Versions
 
 Nautobot v1.0.0 and later requires the following:

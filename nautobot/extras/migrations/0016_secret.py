@@ -11,7 +11,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0014_scheduled_job"),
+        ("extras", "0015_scheduled_job"),
     ]
 
     operations = [
