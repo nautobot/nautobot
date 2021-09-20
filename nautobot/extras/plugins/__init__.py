@@ -103,13 +103,13 @@ class PluginConfig(NautobotConfig):
         validators = import_object(f"{self.__module__}.{self.custom_validators}")
         if validators is not None:
             register_custom_validators(validators)
-            self.features["custom_validators"] = validators
+            self.features["custom_validators"] = sorted(set(validator.model for validator in validators))
 
         # Register datasource contents (if defined)
         datasource_contents = import_object(f"{self.__module__}.{self.datasource_contents}")
         if datasource_contents is not None:
             register_datasource_contents(datasource_contents)
-            self.features["git_data"] = datasource_contents
+            self.features["datasource_contents"] = datasource_contents
 
         # Register GraphQL types (if defined)
         graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
@@ -137,7 +137,7 @@ class PluginConfig(NautobotConfig):
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
-            self.features["template_extensions"] = template_extensions
+            self.features["template_extensions"] = sorted(set(extension.model for extension in template_extensions))
 
         # Register custom jinja filters
         try:

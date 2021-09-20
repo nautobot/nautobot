@@ -83,16 +83,48 @@
                                 <td>{% include 'utilities/render_boolean.html' with value=features.banner %}</td>
                             </tr>
                             <tr>
-                                <td>Data Validation</td>
-                                <td>{% include 'utilities/render_boolean.html' with value=features.custom_validators %}</td>
+                                <td>Custom Data Validators</td>
+                                <td>
+                                    {% if features.custom_validators %}
+                                        <ul class="list-unstyled">
+                                            {% for validator in features.custom_validators %}
+                                                <li>{{ validator }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.custom_validators %}
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
                                 <td>Django Apps</td>
-                                <td>{% include 'utilities/render_boolean.html' with value=object.installed_apps %}</td>
+                                <td>
+                                    {% if object.installed_apps %}
+                                        <ul class="list-unstyled">
+                                            {% for app in object.installed_apps %}
+                                                <li><code>{{ app }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=object.installed_apps %}
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
                                 <td>Git Data</td>
-                                <td>{% include 'utilities/render_boolean.html' with value=features.git_data %}</td>
+                                <td>
+                                    {% if features.datasource_contents %}
+                                        <ul class="list-unstyled">
+                                            {% for type, dsc in features.datasource_contents %}
+                                                {% if type == "extras.gitrepository" %}
+                                                    <li><i class = "mdi {{ dsc.icon }}"></i> {{ dsc.name }}</li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.datasource_contents %}
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
                                 <td>Home Page Content</td>
@@ -104,19 +136,49 @@
                             </tr>
                             <tr>
                                 <td>Jobs</td>
-                                <td>{% include 'utilities/render_boolean.html' with value=features.jobs %}</td>
+                                <td>
+                                    {% if features.jobs %}
+                                        <ul class="list-unstyled">
+                                            {% for job in features.jobs %}
+                                            <li><a href="{% url 'extras:job' class_path=job.class_path %}">{{ job }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.jobs %}
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
                                 <td>Middleware</td>
-                                <td>{% include 'utilities/render_boolean.html' with value=object.middleware %}</td>
+                                <td>
+                                    {% if object.middleware %}
+                                        <ul class="list-unstyled">
+                                            {% for middleware in object.middleware %}
+                                                <li><code>{{ middleware }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=object.middleware %}
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
-                                <td>Navigation Menu</td>
+                                <td>Nav Menu Items</td>
                                 <td>{% include 'utilities/render_boolean.html' with value=features.nav_menu %}</td>
                             </tr>
                             <tr>
-                                <td>Template Extensions</td>
-                                <td>{% include 'utilities/render_boolean.html' with value=features.template_extensions %}</td>
+                                <td>Page Template Extensions</td>
+                                <td>
+                                    {% if features.template_extensions %}
+                                        <ul class="list-unstyled">
+                                            {% for extension in features.template_extensions %}
+                                                <li>{{ extension }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.template_extensions %}
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endwith %}
                     </table>
