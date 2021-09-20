@@ -1,7 +1,35 @@
+from django.shortcuts import render
+from django.views.generic import View
+
 from nautobot.core.views import generic
 
 from dummy_plugin.models import DummyModel
 from dummy_plugin import filters, forms, tables
+
+
+class DummyPluginHomeView(View):
+
+    def get(self, request):
+        return render(request, "dummy_plugin/home.html")
+
+
+class DummyPluginConfigView(View):
+
+    def get(self, request):
+        """Render the configuration page for this plugin.
+
+        Just an example - in reality you'd want to use real config data here as appropriate to your plugin, if any.
+        """
+        form = forms.DummyPluginConfigForm({"magic_word": "frobozz", "maximum_velocity": 300000})
+        return render(request, "dummy_plugin/config.html", {"form": form})
+
+    def post(self, request):
+        """Handle configuration changes for this plugin.
+
+        Not actually implemented here.
+        """
+        form = forms.DummyPluginConfigForm({"magic_word": "frobozz", "maximum_velocity": 300000})
+        return render(request, "dummy_plugin/config.html", {"form": form})
 
 
 class DummyModelListView(generic.ObjectListView):

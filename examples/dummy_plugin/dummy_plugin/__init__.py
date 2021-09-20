@@ -30,9 +30,8 @@ class DummyPluginConfig(PluginConfig):
     }
 
     # URL reverse lookup names
-    # This plugin doesn't have real "home" and "config" views, but we want to show the buttons anyway:
-    home_view_name = "plugins:dummy_plugin:dummymodel_list"
-    config_view_name = "plugins:dummy_plugin:dummymodel_list"
+    home_view_name = "plugins:dummy_plugin:home"
+    config_view_name = "plugins:dummy_plugin:config"
 
     def ready(self):
         """Callback when this plugin is loaded."""
