@@ -553,7 +553,7 @@ BRANDING_FILEPATHS = {
 }
 
 # Title to use in place of "Nautobot"
-BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", "Nautobot")
+BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_BRANDING_TITLE", "Nautobot")
 
 # Branging URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
@@ -561,3 +561,6 @@ BRANDING_URLS = {
     "docs": os.getenv("BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),
     "help": os.getenv("BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 }
+
+# Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
+BRANDING_POWERED_BY_URL = "https://www.networktocode.com/nautobot/"
