@@ -1,0 +1,133 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-md-12">
+            <ol class="breadcrumb">
+                {% block breadcrumbs %}
+                    <li><a href="{% url 'plugins:plugins_list' %}">Installed Plugins</a></li>
+                    <li><a href="{% url 'plugins:plugin_detail' plugin=object.name %}">{{ object.verbose_name | bettertitle }}</a></li>
+                {% endblock breadcrumbs %}
+            </ol>
+        </div>
+    </div>
+    <div class="pull-right noprint">
+        {% block buttons %}
+        {% endblock buttons %}
+    </div>
+    {% block masthead %}
+        <h1>{% block title %}{{ object.verbose_name | bettertitle }}{% endblock %}</h1>
+    {% endblock masthead %}
+{% endblock header %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            {% block content_left_page %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Plugin</strong>
+                    </div>
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Package Name</td>
+                            <td><code>{{ object.name }}</code></td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td>{{ object.description }}</td>
+                        </tr>
+                        <tr>
+                            <td>Version</td>
+                            <td>{{ object.version }}</td>
+                        </tr>
+                        <tr>
+                            <td>Author</td>
+                            <td>
+                                {{ object.author | placeholder }}
+                                {% if object.author_email %}
+                                    (<a href="mailto:{{ object.author_email }}">{{ object.author_email }}</a>)
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Compatibility</strong>
+                    </div>
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Min Nautobot Version</td>
+                            <td>{{ object.min_version | placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Max Nautobot Version</td>
+                            <td>{{ object.max_version | placeholder }}</td>
+                        </tr>
+                    </table>
+                </div>
+            {% endblock content_left_page %}
+        </div>
+        <div class="col-md-6">
+            {% block content_right_page %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Features Employed</strong>
+                    </div>
+                    <table class="table table-hover panel-body attr-table">
+                        {% with object.features as features %}
+                            <tr>
+                                <td>Banner</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.banner %}</td>
+                            </tr>
+                            <tr>
+                                <td>Data Validation</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.custom_validators %}</td>
+                            </tr>
+                            <tr>
+                                <td>Django Apps</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=object.installed_apps %}</td>
+                            </tr>
+                            <tr>
+                                <td>Git Data</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.git_data %}</td>
+                            </tr>
+                            <tr>
+                                <td>Home Page Content</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.home_page %}</td>
+                            </tr>
+                            <tr>
+                                <td>Jinja Filters</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.jinja_filters %}</td>
+                            </tr>
+                            <tr>
+                                <td>Jobs</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.jobs %}</td>
+                            </tr>
+                            <tr>
+                                <td>Middleware</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=object.middleware %}</td>
+                            </tr>
+                            <tr>
+                                <td>Navigation Menu</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.nav_menu %}</td>
+                            </tr>
+                            <tr>
+                                <td>Template Extensions</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.template_extensions %}</td>
+                            </tr>
+                        {% endwith %}
+                    </table>
+                </div>
+            {% endblock content_right_page %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% block content_full_width_page %}
+            {% endblock content_full_width_page %}
+        </div>
+    </div>
+{% endblock content %}
