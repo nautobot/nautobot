@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
@@ -18,7 +19,7 @@ from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
 
 
-class InstalledPluginsView(View):
+class InstalledPluginsView(LoginRequiredMixin, View):
     """
     View for listing all installed plugins.
     """
@@ -62,7 +63,7 @@ class InstalledPluginsView(View):
         )
 
 
-class InstalledPluginDetailView(View):
+class InstalledPluginDetailView(LoginRequiredMixin, View):
     """
     View for showing details of an installed plugin.
     """
