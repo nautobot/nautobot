@@ -965,7 +965,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
     from nautobot.extras.models import JobResult  # avoid circular import
 
-    job_result = JobResult.objects.get(pk=job_result_pk)
+    # Getting the correct job result can fail if the stored data cannot be serialized.
+    # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
+    try:
+        job_result = JobResult.objects.get(pk=job_result_pk)
+    except TypeError as e:
+        logger.error(f"Unable to serialize data for job {job_result_pk}")
+        return False
 
     job_class = get_job(job_result.name)
     if not job_class:
@@ -993,7 +999,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     try:
         data = job_class.deserialize_data(data)
-    except ObjectDoesNotExist as e:
+    except Exception as e:
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job.log_failure(message=e)
         job_result.completed = timezone.now()
