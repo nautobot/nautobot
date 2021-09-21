@@ -295,6 +295,7 @@ INSTALLED_APPS = [
     "nautobot.core",
     "django.contrib.admin",
     "django_celery_beat",
+    "db_file_storage",
     "nautobot.circuits",
     "nautobot.dcim",
     "nautobot.ipam",
