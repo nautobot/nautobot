@@ -14,6 +14,16 @@
     </div>
     <div class="pull-right noprint">
         {% block buttons %}
+            {% if object.home_view_name %}
+                <a href="{% url object.home_view_name %}" class="btn btn-success">
+                    <i class="mdi mdi-home"></i> Plugin Home
+                </a>
+            {% endif %}
+            {% if object.config_view_name %}
+                <a href="{% url object.config_view_name %}" class="btn btn-warning">
+                    <i class="mdi mdi-cog"></i> Plugin Configuration
+                </a>
+            {% endif %}
         {% endblock buttons %}
     </div>
     {% block masthead %}
@@ -79,11 +89,21 @@
                     <table class="table table-hover panel-body attr-table">
                         {% with object.features as features %}
                             <tr>
-                                <td>Banner</td>
-                                <td>{% include 'utilities/render_boolean.html' with value=features.banner %}</td>
+                                <td>Data Models</td>
+                                <td>
+                                    {% if features.models %}
+                                        <ul class="list-unstyled">
+                                            {% for model in features.models %}
+                                                <li>{{ model.name | bettertitle }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.models %}
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
-                                <td>Custom Data Validators</td>
+                                <td>Data Validators</td>
                                 <td>
                                     {% if features.custom_validators %}
                                         <ul class="list-unstyled">
@@ -167,6 +187,10 @@
                                 <td>{% include 'utilities/render_boolean.html' with value=features.nav_menu %}</td>
                             </tr>
                             <tr>
+                                <td>Page Banner</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.banner %}</td>
+                            </tr>
+                            <tr>
                                 <td>Page Template Extensions</td>
                                 <td>
                                     {% if features.template_extensions %}
@@ -177,6 +201,34 @@
                                         </ul>
                                     {% else %}
                                         {% include 'utilities/render_boolean.html' with value=features.template_extensions %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>REST API endpoints</td>
+                                <td>
+                                    {% if features.api_urlpatterns %}
+                                        <ul class="list-unstyled">
+                                            {% for urlpattern in features.api_urlpatterns %}
+                                            <li>{{ urlpattern.name | placeholder }} (<code>/api/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.api_urlpatterns %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>UI views/URLs</td>
+                                <td>
+                                    {% if features.urlpatterns %}
+                                        <ul class="list-unstyled">
+                                            {% for urlpattern in features.urlpatterns %}
+                                            <li>{{ urlpattern.name | placeholder }} (<code>/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.urlpatterns %}
                                     {% endif %}
                                 </td>
                             </tr>

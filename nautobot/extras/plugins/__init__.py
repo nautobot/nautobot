@@ -6,6 +6,7 @@ from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
+from django.urls import URLPattern
 
 from nautobot.core.apps import (
     NautobotConfig,
@@ -91,7 +92,23 @@ class PluginConfig(NautobotConfig):
 
     def ready(self):
         """Callback after plugin app is loaded."""
-        self.features = {}
+
+        # Introspect models and URL patterns to make available to the installed-plugins detail UI view.
+        from django.contrib.contenttypes.models import ContentType
+        urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")
+        api_urlpatterns = import_object(f"{self.__module__}.api.urls.urlpatterns")
+
+        self.features = {
+            "api_urlpatterns": sorted(
+                (urlp for urlp in (api_urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
+            ),
+            "models": [ct for ct in ContentType.objects.all() if ct.app_label == self.name],
+            "urlpatterns": sorted(
+                (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern))
+            ),
+        }
 
         # Register banner function (if defined)
         banner_function = import_object(f"{self.__module__}.{self.banner_function}")

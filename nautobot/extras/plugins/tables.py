@@ -21,16 +21,16 @@ class InstalledPluginsTable(tables.Table):
     actions = tables.TemplateColumn(
         template_code="""
             {% if record.actions.home %}
-            <a href="{% url record.actions.home %}" class="btn btn-success btn-xs" title="home">
+            <a href="{% url record.actions.home %}" class="btn btn-success btn-xs" title="Home">
             {% else %}
-            <a href="" class="btn btn-success btn-xs disabled">
+            <a href="" class="btn btn-success btn-xs disabled" title="No home link provided">
             {% endif %}
                 <i class="mdi mdi-home"></i>
             </a>
             {% if record.actions.configure %}
             <a href="{% url record.actions.configure %}" class="btn btn-warning btn-xs" title="Configure">
             {% else %}
-            <a href="" class="btn btn-warning btn-xs disabled">
+            <a href="" class="btn btn-warning btn-xs disabled" title="No configuration link provided">
             {% endif %}
                 <i class="mdi mdi-cog"></i>
             </a>
