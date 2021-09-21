@@ -45,7 +45,6 @@ class InstalledPluginsTable(tables.Table):
         }
         default_columns = ("name", "description", "version", "actions")
 
-
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 

@@ -95,6 +95,7 @@ class PluginConfig(NautobotConfig):
 
         # Introspect models and URL patterns to make available to the installed-plugins detail UI view.
         from django.contrib.contenttypes.models import ContentType
+
         urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")
         api_urlpatterns = import_object(f"{self.__module__}.api.urls.urlpatterns")
 
@@ -106,7 +107,7 @@ class PluginConfig(NautobotConfig):
             "models": [ct for ct in ContentType.objects.all() if ct.app_label == self.name],
             "urlpatterns": sorted(
                 (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
-                key=lambda urlp: (urlp.name, str(urlp.pattern))
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
             ),
         }
 
