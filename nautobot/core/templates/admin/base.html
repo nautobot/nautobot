@@ -35,6 +35,14 @@
     <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
     <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
 
+    <link rel="stylesheet" href="/static/admin/css/widgets.css">
+    <script src="/admin/jsi18n/"></script>
+    <script src="/static/admin/js/core.js"></script>
+    <script src="/static/admin/js/vendor/jquery/jquery.js"></script>
+    <script src="/static/admin/js/calendar.js"></script>
+    <script src="/static/admin/js/jquery.init.js"></script>
+    <script src="/static/admin/js/admin/DateTimeShortcuts.js"></script>
+
     <meta name="msapplication-TileColor" content="#2d89ef">
     <meta name="theme-color" content="#ffffff">
     <meta charset="UTF-8">
@@ -132,30 +140,6 @@
             </div>
         </div>
     </footer>
-    <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
-    <script src="{% static 'jquery-ui-1.12.1/jquery-ui.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.min.js'"></script>
-    <script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
-    <script src="{% static 'select2-4.0.13/dist/js/select2.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/dist/js/select2.min.js'"></script>
-    <script src="{% static 'clipboard.js/clipboard-2.0.6.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'"></script>
-    <script src="{% static 'flatpickr-4.6.3/flatpickr.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.3/flatpickr.min.js'"></script>
-    <script src="{% static 'js/forms.js' %}?v{{ settings.VERSION }}"
-            onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
-    <script type="text/javascript">
-        var nautobot_api_path = "{% url 'api-root' %}";
-        var nautobot_csrf_token = "{{ csrf_token }}";
-        var loading = $(".loading");
-        $(document).ajaxStart(function() {
-            loading.show();
-        }).ajaxStop(function() {
-            loading.hide();
-        });
-    </script>
 {% block javascript %}{% endblock %}
 </body>
 </html>
