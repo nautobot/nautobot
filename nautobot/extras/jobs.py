@@ -971,6 +971,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result = JobResult.objects.get(pk=job_result_pk)
     except TypeError as e:
         logger.error(f"Unable to serialize data for job {job_result_pk}")
+        logger.error(e)
         return False
 
     job_class = get_job(job_result.name)
