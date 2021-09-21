@@ -81,12 +81,12 @@ Default:
     "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
     "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
-    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192pc icon 
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon 
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
 }
 ```
 
-A set of filepaths relative to the `MEDIA_ROOT` which locate image assets used for custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset. This allows for instance, providing your own navbar logo and favicon.
+A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset. This allows for instance, providing your own navbar logo and favicon.
 
 These environment variables may be used to specify the values:
 

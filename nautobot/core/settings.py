@@ -546,7 +546,7 @@ BRANDING_FILEPATHS = {
     "icon_180": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None
     ),  # 180x180px icon - used for the apple-touch-icon header
-    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192pc icon
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
