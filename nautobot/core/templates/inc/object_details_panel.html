@@ -17,6 +17,21 @@
                     </td>
                 </tr>
                 <tr>
+                    <td>Slug</td>
+                    <td>
+                        {% if object.slug %}
+                            <span class="hover_copy">
+                                <span id="slug_copy">{{ object.slug }}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#slug_copy">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        {% else %}
+                            <td><span class="text-muted"></span></td>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
                     <td>Created</td>
                     {% if object.created %}
                         <td>{{ object.created }}</td>
