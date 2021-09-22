@@ -13,7 +13,7 @@ These instructions will guide you through the following actions:
 - Verify the installation using the development/test server
 
 !!! important
-    PostgreSQL and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
+    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
 
 ## Choose your `NAUTOBOT_ROOT`
 
@@ -136,6 +136,20 @@ Use Pip to install Nautobot:
 $ pip3 install nautobot
 ```
 
+!!! hint 
+    If you are using MySQL as your database backend, use `pip3 install nautobot[mysql]` to install Nautobot and the `mysqlclient` library together!
+
+### Install MySQL client library
+
+If you are using MySQL as your database server you must install the `mysqlclient` database client for Python. 
+
+!!! warning
+    If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
+    
+```no-highlight
+$ pip3 install mysqlclient
+```
+
 Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
 
 ## Verify your Nautobot Installation
@@ -168,13 +182,20 @@ Your `nautobot_config.py` provides sane defaults for all of the configuration se
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
 * [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-* [`DATABASES`](../../configuration/required-settings/#databases): PostgreSQL database connection parameters. If you installed PostgreSQL on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here.
+* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
 * **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
+!!! warning
+    If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
+
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
+
+#### MySQL Unicode Settings
+
+If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for more information.
 
 ## Optional Settings
 
@@ -188,7 +209,7 @@ We will cover two examples of common optional settings below.
 
 ### Configuring NAPALM
 
-Nautobot provides built-in support for the [NAPALM automation](https://napalm-automation.net/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
+Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
 To use NAPALM, add `napalm` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
@@ -281,8 +302,7 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected. Some platforms (such as CentOS) have a firewall enabled by default.  If you are unable to connect to the server url on port 8080, verify the firewall policy to allow the appropriate connections, or select an already permitted port.
 
 !!! important
-    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server rqworker` separately. For production use, both Nautobot and the worker should be managed by systemd rather than started manually, as described in the next section of this documentation.
-
+    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` (for background tasks) or `nautobot-server rqworker` (for jobs) separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
 Note that the initial user interface will be locked down for non-authenticated users.
 
@@ -292,4 +312,4 @@ Try logging in using the superuser account we just created. Once authenticated, 
 
 ![Nautobot UI as seen by an administrator](../media/installation/nautobot_ui_admin.png)
 
-Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](../wsgi).
+Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).

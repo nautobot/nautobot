@@ -4,6 +4,7 @@ import platform
 from django.contrib.messages import constants as messages
 
 from nautobot import __version__
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 #
 # Environment setup
@@ -51,10 +52,10 @@ BANNER_LOGIN = ""
 BANNER_TOP = ""
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.environ.get("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
 CHANGELOG_RETENTION = 90
-DOCS_ROOT = os.path.join(os.path.dirname(BASE_DIR), "docs")
+DOCS_ROOT = os.path.join(BASE_DIR, "docs")
 HIDE_RESTRICTED_UI = False
 
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
@@ -71,9 +72,9 @@ EXEMPT_EXCLUDE_MODELS = (
 )
 
 EXEMPT_VIEW_PERMISSIONS = []
-GIT_ROOT = os.environ.get("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
+GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
-JOBS_ROOT = os.environ.get("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
 MAX_PAGE_SIZE = 1000
 
@@ -244,34 +245,13 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": os.getenv("NAUTOBOT_DB_TIMEOUT", 300),
-        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
-#
-# Redis (Caching/Queuing)
-#
-
-REDIS = {
-    "tasks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 0,
-        "SSL": False,
-    },
-    "caching": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "PASSWORD": "",
-        "DATABASE": 1,
-        "SSL": False,
-    },
-}
-
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # Default overrides
 ALLOWED_HOSTS = []
@@ -299,6 +279,7 @@ INSTALLED_APPS = [
     "cacheops",
     "corsheaders",
     "django_filters",
+    "django_jinja",
     "django_tables2",
     "django_prometheus",
     "mptt",
@@ -318,6 +299,9 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "health_check",
+    "health_check.cache",
+    "health_check.storage",
 ]
 
 # Middleware
@@ -343,9 +327,29 @@ ROOT_URLCONF = "nautobot.core.urls"
 
 TEMPLATES = [
     {
+        "NAME": "django",
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.template.context_processors.media",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.sso_auth",
+            ],
+        },
+    },
+    {
+        "NAME": "jinja",
+        "BACKEND": "django_jinja.backend.Jinja2",
+        "DIRS": [],
+        "APP_DIRS": False,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -429,6 +433,7 @@ GRAPHENE = {
 }
 GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 GRAPHQL_RELATIONSHIP_PREFIX = "rel"
+GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 
 
 #
@@ -473,7 +478,7 @@ CACHES = {
 }
 
 #
-# Django RQ (Webhooks backend)
+# Django RQ (used for legacy background processesing)
 #
 
 # These defaults utilize the Django caches setting defined for django-redis.
@@ -492,3 +497,29 @@ RQ_QUEUES = {
         "USE_REDIS_CACHE": "default",
     },
 }
+
+#
+# Celery (used for background processing)
+#
+
+# Celery broker URL used to tell workers where queues are located
+CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
+
+# Celery results backend URL to tell workers where to publish task results
+CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
+
+# Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
+CELERY_TASK_TRACK_STARTED = True
+
+# Global task time limits (seconds)
+# Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,
+# while exceeding the hard limit will result in a SIGKILL.
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", 5 * 60))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 10 * 60))
+
+# These settings define the custom nautobot serialization encoding as an accepted data encoding format
+# and register that format for task input and result serialization
+CELERY_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_RESULT_ACCEPT_CONTENT = ["nautobot_json"]
+CELERY_TASK_SERIALIZER = "nautobot_json"
+CELERY_RESULT_SERIALIZER = "nautobot_json"

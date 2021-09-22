@@ -41,7 +41,7 @@ Currently images are pushed for the following python versions:
 
 ## Getting Started
 
-Nautobot requires a PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with `docker-compose`.
+Nautobot requires a MySQL or PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with `docker-compose`, which will install and configure PostgreSQL and Redis containers for you automatically.
 
 ## Configuration
 
@@ -60,6 +60,58 @@ services:
     volumes:
       - /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py:ro
 ```
+
+### Docker only configuration
+
+The entry point for the Docker container has some additional features that can be configured via additional environment variables. The following are all optional variables:
+
+#### `NAUTOBOT_CREATE_SUPERUSER`
+
+Default: unset
+
+Enables creation of a super user specified by [`NAUTOBOT_SUPERUSER_NAME`](#nautobot_superuser_name), [`NAUTOBOT_SUPERUSER_EMAIL`](#nautobot_superuser_email), [`NAUTOBOT_SUPERUSER_PASSWORD`](#nautobot_superuser_password), and [`NAUTOBOT_SUPERUSER_API_TOKEN`](#nautobot_superuser_api_token).
+
+---
+
+#### `NAUTOBOT_DOCKER_SKIP_INIT`
+
+Default: unset
+
+When starting, the container attempts to connect to the database and run database migrations and upgrade steps necessary when upgrading versions.  In normal operation this is harmless to run on every startup and validates the database is operating correctly.  However, in certain circumstances such as database maintenance when the database is in a read-only mode it may make sense to start Nautobot but skip these steps.  Setting this variable to `true` will start Nautobot without running these initial steps.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_API_TOKEN`
+
+Default: unset
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_API_TOKEN` specifies the API token of the super user to be created; alternatively the `/run/secrets/superuser_api_token` file contents are read for the token.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_EMAIL`
+
+Default: `admin@example.com`
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_EMAIL` specifies the email address of the super user to be created.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_NAME`
+
+Default: `admin`
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_NAME` specifies the username of the super user to be created.
+
+---
+
+#### `NAUTOBOT_SUPERUSER_PASSWORD`
+
+Default: unset
+
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_PASSWORD` specifies the password of the super user to be created; alternatively the `/run/secrets/superuser_password` file contents are read for the password.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+
+---
 
 ### uWSGI
 
@@ -128,10 +180,19 @@ REPOSITORY                                                                TAG   
 networktocode/nautobot-dev                                                local                  25487d93fc1f   16 seconds ago   630MB
 ```
 
-If you need to build or test the final image set the `INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE` environment variable:
+If you need to build or test the final image, you must set your `invoke.yml` to use `docker-compose.build.yml` in place of `docker-compose.dev.yml`:
+
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.build.yml"
+```
+
+Then you can re-run the `invoke build` command:
 
 ```no-highlight
-$ export INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml
 $ invoke build
 ...
 $ docker images

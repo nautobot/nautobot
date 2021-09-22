@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
+from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 from graphene_django.settings import graphene_settings
 from graphql.error.located_error import GraphQLLocatedError
@@ -19,6 +20,7 @@ from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_schema_type,
 )
+from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
     extend_schema_type,
@@ -26,13 +28,24 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_tags,
     extend_schema_type_config_context,
     extend_schema_type_relationships,
+    extend_schema_type_null_field_choice,
 )
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import ChangeLoggedModel, CustomField, ConfigContext, Relationship, Status, Webhook
+from nautobot.utilities.testing.utils import create_test_user
+
+from nautobot.extras.models import (
+    ChangeLoggedModel,
+    CustomField,
+    ConfigContext,
+    GraphQLQuery,
+    Relationship,
+    Status,
+    Webhook,
+)
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
@@ -40,6 +53,49 @@ from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine,
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+class GraphQLTestCase(TestCase):
+    @classmethod
+    def setUp(self):
+        self.user = create_test_user("graphql_testuser")
+        GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
+        GraphQLQuery.objects.create(
+            name="GQL 2", slug="gql-2", query="query ($name: [String!]) { sites(name:$name) {name} }"
+        )
+        self.region = Region.objects.create(name="Region")
+        self.sites = (
+            Site.objects.create(name="Site-1", slug="site-1", region=self.region),
+            Site.objects.create(name="Site-2", slug="site-2", region=self.region),
+            Site.objects.create(name="Site-3", slug="site-3", region=self.region),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query(self):
+        query = "{ query: sites {name} }"
+        resp = execute_query(query, user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+        self.assertEquals(len(resp["data"]["query"]), 3)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_variable(self):
+        query = "query ($name: [String!]) { sites(name:$name) {name} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
+        self.assertFalse(resp.get("error"))
+        self.assertEquals(len(resp["data"]["sites"]), 1)
+
+    def test_execute_query_with_error(self):
+        query = "THIS TEST WILL ERROR"
+        with self.assertRaises(GraphQLError):
+            execute_query(query, user=self.user).to_dict()
+
+    def test_execute_saved_query(self):
+        resp = execute_saved_query("gql-1", user=self.user).to_dict()
+        self.assertFalse(resp["data"].get("error"))
+
+    def test_execute_saved_query_with_variable(self):
+        resp = execute_saved_query("gql-2", user=self.user, variables={"name": "site-1"}).to_dict()
+        self.assertFalse(resp["data"].get("error"))
 
 
 class GraphQLUtilsTestCase(TestCase):
@@ -156,6 +212,13 @@ class GraphQLExtendSchemaType(TestCase):
         self.assertNotIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
+
+    def test_extend_schema_null_field_choices(self):
+
+        schema = extend_schema_type_null_field_choice(self.schema, Interface)
+
+        self.assertTrue(hasattr(schema, "resolve_mode"))
+        self.assertIsInstance(getattr(schema, "resolve_mode"), types.FunctionType)
 
 
 class GraphQLExtendSchemaRelationship(TestCase):
@@ -363,7 +426,7 @@ class GraphQLAPIPermissionTest(TestCase):
         """
 
     def test_graphql_api_token_with_perm(self):
-        """Validate a users can query basedo n their permissions."""
+        """Validate that users can query based on their permissions."""
         # First user
         response = self.clients[0].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -387,7 +450,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
 
     def test_graphql_api_token_no_group(self):
-        """Validate User with no permission users are not able to query anything by default."""
+        """Validate users with no permission are not able to query anything by default."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -396,7 +459,7 @@ class GraphQLAPIPermissionTest(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_api_token_no_group_exempt(self):
-        """Validate User with no permission users are able to query based on the exempt permissions."""
+        """Validate users with no permission are able to query based on the exempt permissions."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -478,7 +541,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(site_names, ["Site 1", "Site 2"])
 
 
-class GraphQLQuery(TestCase):
+class GraphQLQueryTest(TestCase):
     def setUp(self):
         """Initialize the Database with some datas."""
         super().setUp()
@@ -926,6 +989,29 @@ query {
             # TODO: it would be nice to have connections to console server ports and circuit terminations to test!
             self.assertIsNone(interface_entry["connected_console_server_port"])
             self.assertIsNone(interface_entry["connected_circuit_termination"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_mode(self):
+        """Test querying interfaces for their mode and make sure a string or None is returned."""
+
+        query = """\
+query {
+    devices(name: "Device 1") {
+        interfaces {
+            name
+            mode
+        }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        for intf in result.data["devices"][0]["interfaces"]:
+            intf_name = intf["name"]
+            if intf_name == "Int1":
+                self.assertEqual(intf["mode"], InterfaceModeChoices.MODE_ACCESS.upper())
+            elif intf_name == "Int2":
+                self.assertIsNone(intf["mode"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_providers_filter(self):

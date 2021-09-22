@@ -28,6 +28,12 @@ E004 = Error(
     obj=settings,
 )
 
+E005 = Error(
+    "MAINTENANCE_MODE has been set but SESSION_ENGINE is still using the database.  Nautobot can not enter Maintenance mode.",
+    id="nautobot.core.E005",
+    obj=settings,
+)
+
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
@@ -95,3 +101,10 @@ def check_minimum_rq_queues(app_configs, **kwargs):
                 )
             )
     return errors
+
+
+@register(Tags.compatibility)
+def check_maintenance_mode(app_configs, **kwargs):
+    if settings.MAINTENANCE_MODE and settings.SESSION_ENGINE == "django.contrib.sessions.backends.db":
+        return [E005]
+    return []

@@ -105,6 +105,46 @@ The Redis connection string to use for caching.
 
 ---
 
+## CELERY_BROKER_URL
+
+Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_RESULT_BACKEND
+
+Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
+
+Default: `'redis://localhost:6379/0'` (Inherited from `CACHES["default"]["LOCATION"]`)
+
+Celery result backend used to tell workers where to store task results (tombstones).
+
+---
+
+## CELERY_TASK_SOFT_TIME_LIMIT
+
+Default: `300` (5 minutes)
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT`
+
+The global Celery task soft timeout (in seconds). Any background task that exceeds this duration will receive a `SoftTimeLimitExceeded` exception and is responsible for handling this exception and performing any necessary cleanup or final operations before ending. See also `CELERY_TASK_TIME_LIMIT` below.
+
+---
+
+## CELERY_TASK_TIME_LIMIT
+
+Default: `600` (10 minutes)
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_TIME_LIMIT`
+
+The global Celery task hard timeout (in seconds). Any background task that exceeds this duration will be forcibly killed with a `SIGKILL` signal.
+
+---
+
 ## CHANGELOG_RETENTION
 
 Default: `90`
@@ -388,7 +428,7 @@ Default: `{}` (Empty dictionary)
 
 By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
 
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself and from the RQ worker process to the console with added verbosity and colorization:
+The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
 
 ```python
 LOGGING = {
@@ -406,16 +446,17 @@ LOGGING = {
     },
     'handlers': {
         'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'verbose'},
+        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
+        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
     },
     'loggers': {
         'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
         'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
-        'rq.worker': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
     },
 }
 ```
+
+Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
 
 ### Available Loggers
 
@@ -438,6 +479,12 @@ Default: `False`
 Environment Variable: `NAUTOBOT_MAINTENANCE_MODE`
 
 Setting this to `True` will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
+
+!!! note
+    The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
+
+!!! note
+    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting [`NAUTOBOT_DOCKER_SKIP_INIT`](../docker/#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
 
 ---
 
@@ -479,7 +526,7 @@ Default: `""` (Empty string)
 
 Environment Variables: `NAUTOBOT_NAPALM_USERNAME` and `NAUTOBOT_NAPALM_PASSWORD`
 
-Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm-automation.net/), if installed. Both parameters are optional.
+Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm.readthedocs.io), if installed. Both parameters are optional.
 
 !!! note
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
@@ -649,6 +696,7 @@ Default: `'django.contrib.sessions.backends.db'`
 
 Controls where Nautobot stores session data.
 
+To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
 To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
 
 See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.
@@ -661,7 +709,7 @@ Default: `None`
 
 Environment Variable: `NAUTOBOT_SESSION_FILE_PATH`
 
-HTTP session data is used to track authenticated users when they access Nautobot. By default, Nautobot stores session data in its PostgreSQL database. However, this inhibits authentication to a standby instance of Nautobot without write access to the database. Alternatively, a local file path may be specified here and Nautobot will store session data as files instead of using the database. Note that the Nautobot system user must have read and write permissions to this path.
+HTTP session data is used to track authenticated users when they access Nautobot. By default, Nautobot stores session data in its database. However, this inhibits authentication to a standby instance of Nautobot without write access to the database. Alternatively, a local file path may be specified here and Nautobot will store session data as files instead of using the database. Note that the Nautobot system user must have read and write permissions to this path.
 
 When the default value (`None`) is used, Nautobot will use the standard temporary directory for the system.
 

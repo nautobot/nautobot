@@ -423,7 +423,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
     ]
 
     class Meta:
-        verbose_name = "interface"
+        verbose_name = "VM interface"
         ordering = ("virtual_machine", CollateAsChar("_name"))
         unique_together = ("virtual_machine", "name")
 

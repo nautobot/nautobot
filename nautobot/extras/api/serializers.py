@@ -1,6 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_serializer_method
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend
+from graphql.error import GraphQLSyntaxError
 from rest_framework import serializers
 
 from nautobot.core.api import (
@@ -22,12 +25,15 @@ from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack,
 from nautobot.extras.choices import *
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -232,7 +238,9 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
             "created",
             "last_updated",
             "custom_fields",
+            "computed_fields",
         ]
+        opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
         """
@@ -312,6 +320,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
         default=None,
     )
     owner = serializers.SerializerMethodField(read_only=True)
+    schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
     regions = SerializedPKRelatedField(
         queryset=Region.objects.all(),
         serializer=NestedRegionSerializer,
@@ -379,6 +388,7 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "owner",
             "weight",
             "description",
+            "schema",
             "is_active",
             "regions",
             "sites",
@@ -391,6 +401,46 @@ class ConfigContextSerializer(ValidatedModelSerializer):
             "tenants",
             "tags",
             "data",
+            "created",
+            "last_updated",
+        ]
+
+    @swagger_serializer_method(serializer_or_field=serializers.DictField)
+    def get_owner(self, obj):
+        if obj.owner is None:
+            return None
+        serializer = get_serializer_for_model(obj.owner, prefix="Nested")
+        context = {"request": self.context["request"]}
+        return serializer(obj.owner, context=context).data
+
+
+#
+# Config context Schemas
+#
+
+
+class ConfigContextSchemaSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:configcontextschema-detail")
+    owner_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("config_context_owners").get_query()),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+    owner = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ConfigContextSchema
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "owner_content_type",
+            "owner_object_id",
+            "owner",
+            "description",
+            "data_schema",
             "created",
             "last_updated",
         ]
@@ -679,3 +729,56 @@ class RelationshipAssociationSerializer(serializers.ModelSerializer):
             "destination_type",
             "destination_id",
         ]
+
+
+#
+# GraphQL Queries
+#
+
+
+class GraphQLQuerySerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
+    variables = serializers.DictField(required=False, allow_null=True, default={})
+
+    class Meta:
+        model = GraphQLQuery
+        fields = (
+            "id",
+            "url",
+            "name",
+            "slug",
+            "query",
+            "variables",
+        )
+
+
+class GraphQLQueryInputSerializer(serializers.Serializer):
+    variables = serializers.DictField(allow_null=True, default={})
+
+
+class GraphQLQueryOutputSerializer(serializers.Serializer):
+    data = serializers.DictField(default={})
+
+
+# Computed Fields
+
+
+class ComputedFieldSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        model = ComputedField
+        fields = (
+            "id",
+            "url",
+            "slug",
+            "label",
+            "description",
+            "content_type",
+            "template",
+            "fallback_value",
+            "weight",
+        )

@@ -1,8 +1,12 @@
 from django.contrib.contenttypes.models import ContentType
+from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django_rq.queues import get_connection
 from drf_yasg.utils import swagger_auto_schema
+from graphene_django.views import GraphQLView
+from graphql import GraphQLError
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -13,14 +17,18 @@ from rq import Worker
 
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import ModelViewSet
+from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
+    ConfigContextSchema,
     CustomLink,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     ImageAttachment,
     JobResult,
     ObjectChange,
@@ -194,6 +202,17 @@ class ConfigContextViewSet(ModelViewSet):
 
 
 #
+# Config context schemas
+#
+
+
+class ConfigContextSchemaViewSet(ModelViewSet):
+    queryset = ConfigContextSchema.objects.all()
+    serializer_class = serializers.ConfigContextSchemaSerializer
+    filterset_class = filters.ConfigContextSchemaFilterSet
+
+
+#
 # Jobs
 #
 
@@ -259,20 +278,24 @@ class JobViewSet(ViewSet):
         if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("This user does not have permission to run jobs.")
 
-        # Check that at least one RQ worker is running
-        if not Worker.count(get_connection("default")):
-            raise RQWorkerNotRunningException()
-
         job_class = self._get_job_class(class_path)
         job = job_class()
 
         input_serializer = serializers.JobInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
-        data = input_serializer.data["data"]
+        data = input_serializer.data["data"] or {}
         commit = input_serializer.data["commit"]
         if commit is None:
             commit = getattr(job_class.Meta, "commit_default", True)
+
+        try:
+            job.validate_data(data)
+        except FormsValidationError as e:
+            # message_dict can only be accessed if ValidationError got a dict
+            # in the constructor (saved as error_dict). Otherwise we get a list
+            # of errors under messages
+            return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
@@ -408,3 +431,46 @@ class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
+
+
+#
+# GraphQL Queries
+#
+
+
+class GraphQLQueryViewSet(ModelViewSet):
+    queryset = GraphQLQuery.objects.all()
+    serializer_class = serializers.GraphQLQuerySerializer
+    filterset_class = filters.GraphQLQueryFilterSet
+
+    @swagger_auto_schema(
+        method="post",
+        request_body=serializers.GraphQLQueryInputSerializer,
+        responses={"200": serializers.GraphQLQueryOutputSerializer},
+    )
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        try:
+            query = get_object_or_404(self.queryset, pk=pk)
+            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
+            return Response(result)
+        except GraphQLError as error:
+            return Response(
+                {"errors": [GraphQLView.format_error(error)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldViewSet(ModelViewSet):
+    """
+    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = ComputedField.objects.all()
+    serializer_class = serializers.ComputedFieldSerializer
+    filterset_class = filters.ComputedFieldFilterSet

@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li><a href="{% url 'extras:graphqlquery_list' %}">GraphQL Queries</a></li>
+                {% if object.name %}
+                    <li><a href="{% url 'extras:graphqlquery' slug=object.slug %}" value="{{ object }}">{{ object.name }}</a></li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+
+    <div class="pull-right noprint">
+        {% plugin_buttons object %}
+        <a class="btn btn-primary" href="{% url 'graphql' %}?id={{ object.id }}#query={{ object.query|urlencode }}&variables={{ object.variables|render_json|urlencode }}">Open in GraphiQL</a>
+        {% if perms.extras.add_graphqlquery %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_graphqlquery %}
+            {% edit_button object %}
+        {% endif %}
+        {% if perms.extras.delete_graphqlquery %}
+            {% delete_button object %}
+        {% endif %}
+    </div>
+
+    <h1>{% block title %}{{ object.name }}{% endblock %}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">GraphQL Query</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'extras:graphqlquery_changelog' pk=object.pk %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+
+{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="col-md-5">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Query</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td><span>{{ object.name }}</span></td>
+                </tr>
+                <tr>
+                    <td>Slug</td>
+                    <td><span>{{ object.slug }}</span></td>
+                </tr>
+                <tr>
+                    <td>Query</td>
+                    <td><pre id="query">{{ object.query }}</pre></td>
+                </tr>
+                <tr>
+                    <td>Query Variables</td>
+                    <td><pre>{{ object.variables|render_json }}</pre></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Response</strong>
+                <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
+            </div>
+            {% if object.variables %}
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Variables:</td>
+                        <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json }}</textarea></td>
+                    </tr>
+                </table>
+            {% endif %}
+            <pre id="query_output">
+
+            </pre>
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+    function test_query() {
+        var output = $("#query_output");
+        var variables = $("#query_variables").val();
+        $.ajax({
+            url: "{% url 'graphql' %}",
+            method: "POST",
+            headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+            dataType: "json",
+            data: {
+                "query": `{{ object.query | escapejs }}`,
+                "variables": variables,
+            },
+            success: function(data) {
+                output.text(JSON.stringify(data, undefined, 2));
+            },
+            error: function(error) {
+                console.log(error);
+                output.text(JSON.stringify(error.responseJSON, undefined, 2));
+            }
+        });
+    };
+
+    textarea = document.querySelector("#query_variables");
+    textarea.addEventListener('input', autoResize, false);
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+
+    function autoResize() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    }
+</script>
+{% endblock %}

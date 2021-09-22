@@ -6,7 +6,7 @@ Plugins are packaged [Django](https://docs.djangoproject.com/) apps that can be 
 
 The Nautobot plugin architecture allows for the following:
 
-* **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.)
+* **Add new data models.** A plugin can introduce one or more models to hold data. (A model is essentially a table in the SQL database.) These models can be integrated with core implmentations of GraphQL, webhooks, logging, custom relationships, custom fields, and tags.
 * **Add custom validation logic to existing data models.** A plugin can provide additional logic to customize the rules for validating created/updated data records.
 * **Add new URLs and views.** Plugins can register URLs under the `/plugins` root path to provide browsable views for users.
 * **Provide Jobs.** Plugins can serve as a convenient way to package and install [Jobs](../additional-features/jobs.md).
@@ -17,6 +17,8 @@ The Nautobot plugin architecture allows for the following:
 * **Add additional dependencies.** Custom Django application dependencies can be registered by each plugin.
 * **Declare configuration parameters.** Each plugin can define required, optional, and default configuration parameters within its unique namespace. Plug configuration parameter are defined by the user under `PLUGINS_CONFIG` in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** A plugin can specify a minimum and/or maximum Nautobot version with which it is compatible.
+* **Add additional Git Providers.** Add additional Git Providers with a defined callback function to post process data received from the Git Repository.
+* **Register Jinja2 filters.** A plugin can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
 
 ## Limitations
 
@@ -72,23 +74,39 @@ PLUGINS_CONFIG = {
 }
 ```
 
-### Run Database Migrations
+### Run `nautobot-server post_upgrade`
 
-!!! warning
-    Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
+After installing or upgrading a plugin, you should always run [`nautobot-server post_upgrade`](../administration/nautobot-server.md#post_upgrade). This command will ensure that any necessary post-installation tasks are run, for example:
 
-If the plugin introduces new database models, run the provided schema migrations:
-
-```no-highlight
-$ nautobot-server migrate
-```
-
-### Collect Static Files
-
-Plugins may package static files to be served directly by the HTTP front end. Ensure that these are copied to the static root directory with the `collectstatic` management command:
+- Migrating the database to include any new or updated data models from the plugin
+- Collecting any static files provided by the plugin
+- Etc.
 
 ```no-highlight
-$ nautobot-server collectstatic
+# nautobot-server post_upgrade
+# nautobot-server post_upgrade
+Performing database migrations...
+Operations to perform:
+  Apply all migrations: admin, auth, circuits, contenttypes, db, dcim, extras, ipam,
+nautobot_plugin_example, sessions, social_django, taggit, tenancy, users, virtualization
+Running migrations:
+  No migrations to apply.
+Generating cable paths...
+Found no missing circuit termination paths; skipping
+Found no missing console port paths; skipping
+Found no missing console server port paths; skipping
+Found no missing interface paths; skipping
+Found no missing power feed paths; skipping
+Found no missing power outlet paths; skipping
+Found no missing power port paths; skipping
+Finished.
+
+Collecting static files...
+0 static files copied to '/opt/nautobot/static', 972 unmodified.
+Removing stale content types...
+Removing expired sessions...
+Invalidating cache...
+
 ```
 
 ### Restart the WSGI Service

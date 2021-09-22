@@ -5,21 +5,48 @@ import sys
 from nautobot.core.settings import *
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
-ALLOWED_HOSTS = os.environ.get("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+
+#
+# Misc. settings
+#
+
+ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+HIDE_RESTRICTED_UI = os.getenv("HIDE_RESTRICTED_UI", False)
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
+
+#
+# Databases
+#
 
 DATABASES = {
     "default": {
-        "NAME": os.environ.get("NAUTOBOT_DB_NAME", "nautobot"),
-        "USER": os.environ.get("NAUTOBOT_DB_USER", ""),
-        "PASSWORD": os.environ.get("NAUTOBOT_DB_PASSWORD", ""),
-        "HOST": os.environ.get("NAUTOBOT_DB_HOST", "localhost"),
-        "PORT": os.environ.get("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": 300,
-        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
+        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
+        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
+        "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
+        "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
 
-DEBUG = True
+#
+# Debug
+#
+
+DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", True))
+
+# Django Debug Toolbar
+DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
+
+if "debug_toolbar" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("debug_toolbar")
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+#
+# Logging
+#
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
@@ -43,12 +70,12 @@ if not TESTING:
         "handlers": {
             "normal_console": {
                 "level": "INFO",
-                "class": "rq.utils.ColorizingStreamHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "normal",
             },
             "verbose_console": {
                 "level": "DEBUG",
-                "class": "rq.utils.ColorizingStreamHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "verbose",
             },
         },
@@ -65,8 +92,9 @@ if not TESTING:
         },
     }
 
-
-# Redis variables
+#
+# Redis
+#
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
@@ -87,17 +115,10 @@ CACHES = {
 # RQ_QUEUES is not set here because it just uses the default that gets imported
 # up top via `from nautobot.core.settings import *`.
 
-# REDIS CACHEOPS
+# Redis Cacheops
 CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
 
-HIDE_RESTRICTED_UI = os.environ.get("HIDE_RESTRICTED_UI", False)
-
-SECRET_KEY = os.environ.get("NAUTOBOT_SECRET_KEY", "")
-
-# Django Debug Toolbar
-DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
-
-if "debug_toolbar" not in INSTALLED_APPS:
-    INSTALLED_APPS.append("debug_toolbar")
-if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
-    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+#
+# Celery settings are not defined here because they can be overloaded with
+# environment variables. By default they use `CACHES["default"]["LOCATION"]`.
+#
