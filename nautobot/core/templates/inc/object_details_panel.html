@@ -1,0 +1,31 @@
+{% if object.pk %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Object Details</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr>
+                    <td>UUID</td>
+                    <td>{{ object.id }}</td>
+                </tr>
+                <tr>
+                    <td>Created</td>
+                    {% if object.created %}
+                        <td>{{ object.created }}</td>
+                    {% else %}
+                        <td><span class="text-muted"></span></td>
+                    {% endif %}
+                </tr>
+                <tr>
+                    <td>Updated</td>
+                    {% if object.created %}
+                        <td>{{ object.last_updated }}</td>
+                    {% else %}
+                        <td><span class="text-muted"></span></td>
+                    {% endif %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+{% endif %}
