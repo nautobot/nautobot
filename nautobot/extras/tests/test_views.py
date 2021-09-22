@@ -648,6 +648,380 @@ query ($device: String!) {
         cls.slug_test_object = "Graphql Query 5"
 
 
+#
+# Jobs, Scheduling, and Approvals
+#
+
+
+@override_settings(JOBS_ROOT=THIS_DIRECTORY)
+class TestJobMixin(SimpleTestCase):
+    class TestJob(Job):
+        pass
+
+    @staticmethod
+    def get_test_job_class(self, class_path):
+        if class_path.startswith("local/test_view"):
+            return TestJobMixin.TestJob
+        raise Http404
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Monkey-patch the viewsets' _get_job methods to return our test class above
+        cls.original_method = JobView._get_job
+        JobView._get_job = TestJobMixin.get_test_job_class
+        ScheduledJobView._get_job = TestJobMixin.get_test_job_class
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        # Undo monkey-patch
+        JobView._get_job = cls.original_method
+        ScheduledJobView._get_job = cls.original_method
+
+
+class ScheduledJobTestCase(
+    TestJobMixin,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+):
+    model = ScheduledJob
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="user1", is_active=True)
+        ScheduledJob.objects.create(
+            name="test1",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_views/TestJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test2",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_views/TestJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test3",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_views/TestJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=datetime.now(),
+        )
+
+    def test_only_enabled_is_listed(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        # this should not appear, since it’s not enabled
+        ScheduledJob.objects.create(
+            enabled=False,
+            name="test4",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_views/TestJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=datetime.now(),
+        )
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
+
+
+class ApprovalQueueTestCase(
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ScheduledJob
+
+    def _get_url(self, action, instance=None):
+        if action != "list":
+            raise ValueError("This override is only valid for list test cases")
+        return reverse("extras:scheduledjob_approval_queue_list")
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="user1", is_active=True)
+        ScheduledJob.objects.create(
+            name="test1",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test2",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=datetime.now(),
+        )
+        ScheduledJob.objects.create(
+            name="test3",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            approval_required=True,
+            start_time=datetime.now(),
+        )
+
+    def test_only_approvable_is_listed(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        ScheduledJob.objects.create(
+            name="test4",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="-",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            approval_required=False,
+            start_time=datetime.now(),
+        )
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
+
+
+class JobResultTestCase(
+    TestJobMixin,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = JobResult
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get(app_label="extras", model="job")
+        JobResult.objects.create(
+            name="local/test_view/TestJob",
+            job_id=uuid.uuid4(),
+            obj_type=obj_type,
+        )
+        JobResult.objects.create(
+            name="local/test_view/TestJob2",
+            job_id=uuid.uuid4(),
+            obj_type=obj_type,
+        )
+        JobResult.objects.create(
+            name="local/test_view/TestJob3",
+            job_id=uuid.uuid4(),
+            obj_type=obj_type,
+        )
+
+
+class JobTestCase(
+    TestCase,
+):
+    """
+    The Job view test cases.
+
+    Since Job is not an actual model, we have to improvise and test the views
+    manually.
+    """
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_without_permission(self):
+        self.assertHttpStatus(self.client.get(reverse("extras:job_list")), 403)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    def test_list(self):
+        response = self.client.get(reverse("extras:job_list"))
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("TestPass", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=DUMMY_JOBS)
+    def test_get_without_permission(self):
+        response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
+        self.assertHttpStatus(response, 403)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    def test_get(self):
+        response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("TestPass", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=DUMMY_JOBS)
+    def test_post_without_permission(self):
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
+        self.assertHttpStatus(response, 403)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    def test_run_without_schedule(self):
+        self.add_permissions("extras.run_job")
+
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
+
+        self.assertHttpStatus(response, 200)
+        errors = extract_form_failures(response.content.decode(response.charset))
+        self.assertEqual(errors, ["_schedule_type: This field is required."])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_now_no_worker(self, patched):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+
+        patched.return_value = 0
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Celery worker process not running.", content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_now(self, patched):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+
+        patched.return_value = 1
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+
+        result = JobResult.objects.last()
+        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    def test_run_now_missing_args(self):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+
+        response = self.client.post(
+            reverse("extras:job", kwargs={"class_path": "local/test_required_args/TestRequired"}), data
+        )
+
+        self.assertHttpStatus(response, 200)
+        errors = extract_form_failures(response.content.decode(response.charset))
+        self.assertEqual(errors, ["var: This field is required."])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_now_with_args(self, patched):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "_schedule_type": "immediately",
+            "var": "12",
+        }
+
+        patched.return_value = 1
+        response = self.client.post(
+            reverse("extras:job", kwargs={"class_path": "local/test_required_args/TestRequired"}), data
+        )
+
+        result = JobResult.objects.last()
+        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_later_missing_name(self, patched):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "_schedule_type": "future",
+        }
+
+        patched.return_value = 1
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+
+        self.assertHttpStatus(response, 200)
+        errors = extract_form_failures(response.content.decode(response.charset))
+        self.assertEqual(errors, ["_schedule_name: Please provide a name for the job schedule."])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_later_missing_date(self, patched):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+        }
+
+        patched.return_value = 1
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+
+        self.assertHttpStatus(response, 200)
+        errors = extract_form_failures(response.content.decode(response.charset))
+        self.assertEqual(
+            errors,
+            [
+                "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
+            ],
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_later_date_passed(self, patched):
+        self.add_permissions("extras.run_job")
+
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(datetime.now() - timedelta(minutes=1)),
+        }
+
+        patched.return_value = 1
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+
+        self.assertHttpStatus(response, 200)
+        errors = extract_form_failures(response.content.decode(response.charset))
+        self.assertEqual(
+            errors,
+            [
+                "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
+            ],
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
+    @mock.patch("nautobot.extras.views.get_worker_count")
+    def test_run_later(self, patched):
+        self.add_permissions("extras.run_job")
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+
+        patched.return_value = 1
+        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
+
+        self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+
+        scheduled = ScheduledJob.objects.last()
+
+        self.assertEqual(scheduled.name, "test")
+        self.assertEqual(scheduled.start_time, start_time)
+
+
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
     user_permissions = ("extras.view_objectchange",)
@@ -922,370 +1296,3 @@ class WebhookTestCase(
             "http_method": "POST",
             "http_content_type": "application/json",
         }
-
-
-@override_settings(JOBS_ROOT=THIS_DIRECTORY)
-class TestJobMixin(SimpleTestCase):
-    class TestJob(Job):
-        pass
-
-    @staticmethod
-    def get_test_job_class(self, class_path):
-        if class_path.startswith("local/test_view"):
-            return TestJobMixin.TestJob
-        raise Http404
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # Monkey-patch the viewsets' _get_job methods to return our test class above
-        cls.original_method = JobView._get_job
-        JobView._get_job = TestJobMixin.get_test_job_class
-        ScheduledJobView._get_job = TestJobMixin.get_test_job_class
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        # Undo monkey-patch
-        JobView._get_job = cls.original_method
-        ScheduledJobView._get_job = cls.original_method
-
-
-class ScheduledJobTestCase(
-    TestJobMixin,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-):
-    model = ScheduledJob
-
-    @classmethod
-    def setUpTestData(cls):
-        user = User.objects.create(username="user1", is_active=True)
-        ScheduledJob.objects.create(
-            name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            start_time=datetime.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            start_time=datetime.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            start_time=datetime.now(),
-        )
-        # this should not appear, since it’s not enabled
-        ScheduledJob.objects.create(
-            enabled=False,
-            name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_views/TestJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            start_time=datetime.now(),
-        )
-
-    def test_only_enabled_is_listed(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-
-
-class ApprovalQueueTestCase(
-    ViewTestCases.ListObjectsViewTestCase,
-):
-    model = ScheduledJob
-
-    def _get_url(self, action, instance=None):
-        if action != "list":
-            raise ValueError("This override is only valid for list test cases")
-        return reverse("extras:scheduledjob_approval_queue_list")
-
-    @classmethod
-    def setUpTestData(cls):
-        user = User.objects.create(username="user1", is_active=True)
-        ScheduledJob.objects.create(
-            name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            approval_required=True,
-            start_time=datetime.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            approval_required=True,
-            start_time=datetime.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            approval_required=True,
-            start_time=datetime.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="-",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            approval_required=False,
-            start_time=datetime.now(),
-        )
-
-    def test_only_approvable_is_listed(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-
-
-class JobResultTestCase(
-    TestJobMixin,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
-    model = JobResult
-
-    @classmethod
-    def setUpTestData(cls):
-        obj_type = ContentType.objects.get(app_label="extras", model="job")
-        JobResult.objects.create(
-            name="local/test_view/TestJob",
-            job_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_view/TestJob2",
-            job_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_view/TestJob3",
-            job_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-
-
-class JobTestCase(
-    TestCase,
-):
-    """
-    The Job view test cases.
-
-    Since Job is not an actual model, we have to improvise and test the views
-    manually.
-    """
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_list_without_permission(self):
-        self.assertHttpStatus(self.client.get(reverse("extras:job_list")), 403)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    def test_list(self):
-        response = self.client.get(reverse("extras:job_list"))
-        self.assertHttpStatus(response, 200)
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("TestPass", response_body)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=DUMMY_JOBS)
-    def test_get_without_permission(self):
-        response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
-        self.assertHttpStatus(response, 403)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    def test_get(self):
-        response = self.client.get(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
-        self.assertHttpStatus(response, 200)
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("TestPass", response_body)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=DUMMY_JOBS)
-    def test_post_without_permission(self):
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
-        self.assertHttpStatus(response, 403)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    def test_run_without_schedule(self):
-        self.add_permissions("extras.run_job")
-
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}))
-
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(errors, ["_schedule_type: This field is required."])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_now_no_worker(self, patched):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "_schedule_type": "immediately",
-        }
-
-        patched.return_value = 0
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
-
-        self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Celery worker process not running.", content)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_now(self, patched):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "_schedule_type": "immediately",
-        }
-
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
-
-        result = JobResult.objects.last()
-        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    def test_run_now_missing_args(self):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "_schedule_type": "immediately",
-        }
-
-        response = self.client.post(
-            reverse("extras:job", kwargs={"class_path": "local/test_required_args/TestRequired"}), data
-        )
-
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(errors, ["var: This field is required."])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_now_with_args(self, patched):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "_schedule_type": "immediately",
-            "var": "12",
-        }
-
-        patched.return_value = 1
-        response = self.client.post(
-            reverse("extras:job", kwargs={"class_path": "local/test_required_args/TestRequired"}), data
-        )
-
-        result = JobResult.objects.last()
-        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later_missing_name(self, patched):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "_schedule_type": "future",
-        }
-
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
-
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(errors, ["_schedule_name: Please provide a name for the job schedule."])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later_missing_date(self, patched):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-        }
-
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
-
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(
-            errors,
-            [
-                "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
-            ],
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later_date_passed(self, patched):
-        self.add_permissions("extras.run_job")
-
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(datetime.now() - timedelta(minutes=1)),
-        }
-
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
-
-        self.assertHttpStatus(response, 200)
-        errors = extract_form_failures(response.content.decode(response.charset))
-        self.assertEqual(
-            errors,
-            [
-                "_schedule_start_time: Please enter a valid date and time greater than or equal to the current date and time."
-            ],
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=DUMMY_JOBS)
-    @mock.patch("nautobot.extras.views.get_worker_count")
-    def test_run_later(self, patched):
-        self.add_permissions("extras.run_job")
-
-        start_time = timezone.now() + timedelta(minutes=1)
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(start_time),
-        }
-
-        patched.return_value = 1
-        response = self.client.post(reverse("extras:job", kwargs={"class_path": "local/test_pass/TestPass"}), data)
-
-        self.assertRedirects(response, reverse("extras:scheduledjob_list"))
-
-        scheduled = ScheduledJob.objects.last()
-
-        self.assertEqual(scheduled.name, "test")
-        self.assertEqual(scheduled.start_time, start_time)
