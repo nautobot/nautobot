@@ -93,8 +93,8 @@
                                 <td>
                                     {% if features.models %}
                                         <ul class="list-unstyled">
-                                            {% for model in features.models %}
-                                                <li>{{ model.name | bettertitle }}</li>
+                                            {% for model_name in features.models %}
+                                                <li>{{ model_name | bettertitle }}</li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

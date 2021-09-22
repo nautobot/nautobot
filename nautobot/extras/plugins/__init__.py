@@ -93,9 +93,7 @@ class PluginConfig(NautobotConfig):
     def ready(self):
         """Callback after plugin app is loaded."""
 
-        # Introspect models and URL patterns to make available to the installed-plugins detail UI view.
-        from django.contrib.contenttypes.models import ContentType
-
+        # Introspect URL patterns and models to make available to the installed-plugins detail UI view.
         urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")
         api_urlpatterns = import_object(f"{self.__module__}.api.urls.urlpatterns")
 
@@ -104,7 +102,7 @@ class PluginConfig(NautobotConfig):
                 (urlp for urlp in (api_urlpatterns or []) if isinstance(urlp, URLPattern)),
                 key=lambda urlp: (urlp.name, str(urlp.pattern)),
             ),
-            "models": [ct for ct in ContentType.objects.all() if ct.app_label == self.name],
+            "models": sorted(model._meta.verbose_name for model in self.get_models()),
             "urlpatterns": sorted(
                 (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
                 key=lambda urlp: (urlp.name, str(urlp.pattern)),
