@@ -986,19 +986,20 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         return False
-    job = job_class()
-    job.job_result = job_result
-
-    # Capture the file IDs for any FileProxy objects created so we can cleanup later.
-    file_fields = list(job._get_file_vars())
-    file_ids = [data[f] for f in file_fields]
-
-    # Attempt to resolve serialized data back into original form by creating querysets or model instances
-    # If we fail to find any objects, we consider this a job execution error, and fail.
-    # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
-    # or it might be bad input from an API request, or manual execution.
 
     try:
+        job = job_class()
+        job.job_result = job_result
+
+        # Capture the file IDs for any FileProxy objects created so we can cleanup later.
+        file_fields = list(job._get_file_vars())
+        file_ids = [data[f] for f in file_fields]
+
+        # Attempt to resolve serialized data back into original form by creating querysets or model instances
+        # If we fail to find any objects, we consider this a job execution error, and fail.
+        # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
+        # or it might be bad input from an API request, or manual execution.
+
         data = job_class.deserialize_data(data)
     except Exception as e:
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
