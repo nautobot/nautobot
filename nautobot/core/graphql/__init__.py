@@ -63,8 +63,10 @@ def execute_saved_query(saved_query_slug, **kwargs):
     Returns:
         GraphQL Object: Result for query
     """
+    from .schema_init import schema
+
     query = GraphQLQuery.objects.get(slug=saved_query_slug)
-    return execute_query(query=query.query, **kwargs)
+    return execute_query(query=query.query, schema=schema, **kwargs)
 
 
 # See also:

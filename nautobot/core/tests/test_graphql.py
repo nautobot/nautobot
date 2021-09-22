@@ -70,6 +70,9 @@ User = get_user_model()
 class GraphQLTestCase(TestCase):
     @classmethod
     def setUp(self):
+        from nautobot.core.graphql.schema_init import schema
+
+        self.schema = schema
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
         GraphQLQuery.objects.create(
@@ -85,21 +88,21 @@ class GraphQLTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query(self):
         query = "{ query: sites {name} }"
-        resp = execute_query(query, user=self.user).to_dict()
+        resp = execute_query(query, user=self.user, schema=self.schema).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertEquals(len(resp["data"]["query"]), 3)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: [String!]) { sites(name:$name) {name} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
+        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}, schema=self.schema).to_dict()
         self.assertFalse(resp.get("error"))
         self.assertEquals(len(resp["data"]["sites"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"
         with self.assertRaises(GraphQLError):
-            execute_query(query, user=self.user).to_dict()
+            execute_query(query, user=self.user, schema=self.schema).to_dict()
 
     def test_execute_saved_query(self):
         resp = execute_saved_query("gql-1", user=self.user).to_dict()
@@ -565,7 +568,9 @@ class GraphQLQueryTest(TestCase):
         self.request.user = self.user
 
         self.backend = get_default_backend()
-        self.schema = graphene_settings.SCHEMA
+        from nautobot.core.graphql.schema_init import schema
+
+        self.schema = schema
 
         # Populate Data
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")

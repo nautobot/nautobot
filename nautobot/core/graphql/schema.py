@@ -41,26 +41,6 @@ from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfac
 
 logger = logging.getLogger("nautobot.graphql.schema")
 
-registry["graphql_types"] = OrderedDict()
-registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
-registry["graphql_types"]["contenttypes.contenttype"] = ContentTypeType
-registry["graphql_types"]["dcim.cable"] = CableType
-registry["graphql_types"]["dcim.cablepath"] = CablePathType
-registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
-registry["graphql_types"]["dcim.device"] = DeviceType
-registry["graphql_types"]["dcim.interface"] = InterfaceType
-registry["graphql_types"]["dcim.rack"] = RackType
-registry["graphql_types"]["dcim.site"] = SiteType
-registry["graphql_types"]["extras.tag"] = TagType
-registry["graphql_types"]["ipam.aggregate"] = AggregateType
-registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
-registry["graphql_types"]["ipam.prefix"] = PrefixType
-registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
-registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
-
-
-STATIC_TYPES = registry["graphql_types"].keys()
-
 CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_INTEGER: graphene.Int(),
     CustomFieldTypeChoices.TYPE_TEXT: graphene.String(),
@@ -71,7 +51,7 @@ CUSTOM_FIELD_MAPPING = {
 }
 
 
-def extend_schema_type(schema_type):
+def extend_schema_type(reg, schema_type):
     """Extend an existing schema type to add fields dynamically.
 
     The following type of dynamic fields/functions are currently supported:
@@ -111,7 +91,7 @@ def extend_schema_type(schema_type):
     #
     # Relationships
     #
-    schema_type = extend_schema_type_relationships(schema_type, model)
+    schema_type = extend_schema_type_relationships(reg, schema_type, model)
 
     #
     # Computed Fields
@@ -126,7 +106,7 @@ def extend_schema_type(schema_type):
     #
     # Add multiple layers of filtering
     #
-    schema_type = extend_schema_type_filter(schema_type, model)
+    schema_type = extend_schema_type_filter(reg, schema_type, model)
 
     return schema_type
 
@@ -167,7 +147,7 @@ def extend_schema_type_null_field_choice(schema_type, model):
     return schema_type
 
 
-def extend_schema_type_filter(schema_type, model):
+def extend_schema_type_filter(reg, schema_type, model):
     """Extend schema_type object to be able to filter on multiple levels of a query
 
     Args:
@@ -181,7 +161,7 @@ def extend_schema_type_filter(schema_type, model):
         # Check attribute is a ManyToOne field
         if not isinstance(field, ManyToOneRel):
             continue
-        child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
+        child_schema_type = reg.get(field.related_model._meta.label_lower)
         if child_schema_type:
             resolver_name = f"resolve_{field.name}"
             search_params = generate_list_search_parameters(child_schema_type)
@@ -210,12 +190,6 @@ def extend_schema_type_custom_field(schema_type, model):
     prefix = ""
     if settings.GRAPHQL_CUSTOM_FIELD_PREFIX and isinstance(settings.GRAPHQL_CUSTOM_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
-
-    # clear old custom fields; TODO: safe?
-    for field in dir(schema_type):
-        if field.startswith(f"resolve_{prefix}"):
-            delattr(schema_type, field)
-            del schema_type._meta.fields[field.replace("resolve_", "")]
 
     for field in cfs:
         field_name = f"{prefix}{str_to_var_name(field.name)}"
@@ -258,12 +232,6 @@ def extend_schema_type_computed_field(schema_type, model):
     prefix = ""
     if settings.GRAPHQL_COMPUTED_FIELD_PREFIX and isinstance(settings.GRAPHQL_COMPUTED_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
-
-    # clear old custom fields; TODO: safe?
-    for field in dir(schema_type):
-        if field.startswith(f"resolve_{prefix}"):
-            delattr(schema_type, field)
-            del schema_type._meta.fields[field.replace("resolve_", "")]
 
     for field in cfs:
         field_name = f"{prefix}{str_to_var_name(field.slug)}"
@@ -336,7 +304,7 @@ def extend_schema_type_config_context(schema_type, model):
     return schema_type
 
 
-def extend_schema_type_relationships(schema_type, model):
+def extend_schema_type_relationships(reg, schema_type, model):
     """Extend the schema type with attributes and resolvers corresponding
     to the relationships associated with this model."""
 
@@ -349,12 +317,6 @@ def extend_schema_type_relationships(schema_type, model):
     prefix = ""
     if settings.GRAPHQL_RELATIONSHIP_PREFIX and isinstance(settings.GRAPHQL_RELATIONSHIP_PREFIX, str):
         prefix = f"{settings.GRAPHQL_RELATIONSHIP_PREFIX}_"
-
-    # clear old custom fields; TODO: safe?
-    for field in dir(schema_type):
-        if field.startswith(f"resolve_{prefix}"):
-            delattr(schema_type, field)
-            del schema_type._meta.fields[field.replace("resolve_", "")]
 
     for side, relationships in relationships_by_side.items():
         for relationship in relationships:
@@ -378,7 +340,7 @@ def extend_schema_type_relationships(schema_type, model):
             peer_type = getattr(relationship, f"{peer_side}_type")
             peer_model = peer_type.model_class()
             type_identifier = f"{peer_model._meta.app_label}.{peer_model._meta.model_name}"
-            rel_schema_type = registry["graphql_types"].get(type_identifier)
+            rel_schema_type = reg.get(type_identifier)
 
             if not rel_schema_type:
                 logger.warning(f"Unable to identify the GraphQL Object Type for {type_identifier} in the registry.")
@@ -399,10 +361,39 @@ def extend_schema_type_relationships(schema_type, model):
     return schema_type
 
 
+def make_class(cls):
+    class m:
+        model = cls._meta.model
+        fields = list(cls._meta.fields.keys())
+
+    return type(f"{cls.__name__}Copy", (cls,), {"Meta": getattr(cls, "Meta", m)})
+
+
+def make_reg():
+    reg = OrderedDict()
+    reg["circuits.circuittermination"] = make_class(CircuitTerminationType)
+    reg["contenttypes.contenttype"] = make_class(ContentTypeType)
+    reg["dcim.cable"] = make_class(CableType)
+    reg["dcim.cablepath"] = make_class(CablePathType)
+    reg["dcim.consoleserverport"] = make_class(ConsoleServerPortType)
+    reg["dcim.device"] = make_class(DeviceType)
+    reg["dcim.interface"] = make_class(InterfaceType)
+    reg["dcim.rack"] = make_class(RackType)
+    reg["dcim.site"] = make_class(SiteType)
+    reg["extras.tag"] = make_class(TagType)
+    reg["ipam.aggregate"] = make_class(AggregateType)
+    reg["ipam.ipaddress"] = make_class(IPAddressType)
+    reg["ipam.prefix"] = make_class(PrefixType)
+    reg["virtualization.virtualmachine"] = make_class(VirtualMachineType)
+    reg["virtualization.vminterface"] = make_class(VMInterfaceType)
+    return reg
+
+
 def generate_query_mixin():
     """Generates and returns a class definition representing a GraphQL schema."""
 
     class_attrs = {}
+    reg = make_reg()
 
     def already_present(model):
         """Check if a model and its resolvers are staged to added to the Mixin."""
@@ -443,12 +434,12 @@ def generate_query_mixin():
 
             type_identifier = f"{app_name}.{model_name}"
 
-            if type_identifier in registry["graphql_types"].keys():
+            if type_identifier in reg:
                 # Skip models that have been added statically
                 continue
 
             schema_type = generate_schema_type(app_name=app_name, model=model)
-            registry["graphql_types"][type_identifier] = schema_type
+            reg[type_identifier] = schema_type
 
     # Add all objects in the plugin registry to the main registry
     # After checking for conflict
@@ -456,7 +447,7 @@ def generate_query_mixin():
         model = schema_type._meta.model
         type_identifier = f"{model._meta.app_label}.{model._meta.model_name}"
 
-        if type_identifier in registry["graphql_types"]:
+        if type_identifier in reg:
             logger.warning(
                 f'Unable to load schema type for the model "{type_identifier}" as there is already another type '
                 "registered under this name. If you are seeing this message during plugin development, check to "
@@ -464,15 +455,15 @@ def generate_query_mixin():
                 "defining a custom GraphQL type for."
             )
         else:
-            registry["graphql_types"][type_identifier] = schema_type
+            reg[type_identifier] = schema_type
 
     # Extend schema_type with dynamic attributes for all object defined in the registry
-    for schema_type in registry["graphql_types"].values():
+    for schema_type in reg.values():
 
         if already_present(schema_type._meta.model):
             continue
 
-        schema_type = extend_schema_type(schema_type)
+        schema_type = extend_schema_type(reg, schema_type)
         class_attrs.update(generate_attrs_for_schema_type(schema_type))
 
     QueryMixin = type("QueryMixin", (object,), class_attrs)
