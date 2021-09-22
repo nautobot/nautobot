@@ -106,3 +106,21 @@
         </div>
     </div>
 {% endblock content %}
+
+
+{% block javascript %}
+<script src="{% static 'clipboard.js/clipboard-2.0.6.min.js' %}"
+    onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'">
+</script>
+<script>
+    var clipboard = new ClipboardJS('.btn');
+
+    clipboard.on('success', function (e) {
+        console.log(e);
+    });
+
+    clipboard.on('error', function (e) {
+        console.log(e);
+    });
+</script>
+{% endblock javascript %}

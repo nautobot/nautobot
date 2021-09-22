@@ -7,7 +7,14 @@
             <tbody>
                 <tr>
                     <td>UUID</td>
-                    <td>{{ object.id }}</td>
+                    <td>
+                        <span class="hover_copy">
+                            <span id="uuid_copy">{{ object.id }}</span>
+                            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#uuid_copy">
+                                <span class="mdi mdi-content-copy"></span>
+                            </button>
+                        </span>
+                    </td>
                 </tr>
                 <tr>
                     <td>Created</td>
