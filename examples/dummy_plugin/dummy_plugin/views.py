@@ -8,13 +8,11 @@ from dummy_plugin import filters, forms, tables
 
 
 class DummyPluginHomeView(View):
-
     def get(self, request):
         return render(request, "dummy_plugin/home.html")
 
 
 class DummyPluginConfigView(View):
-
     def get(self, request):
         """Render the configuration page for this plugin.
 
