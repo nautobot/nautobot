@@ -685,6 +685,7 @@ class ScheduledJobTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = ScheduledJob
 
