@@ -269,8 +269,6 @@ class JobTest(TestCase):
             name = "TestObjectVars"
             job_class = get_job(f"local/{module}/{name}")
 
-            d = DeviceRole.objects.create(name="role", slug="role")
-
             # Prepare the job data
             job_result = JobResult.objects.create(
                 name=job_class.class_path,
