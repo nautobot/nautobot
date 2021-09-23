@@ -7,6 +7,7 @@ import os
 import pkgutil
 import shutil
 import traceback
+from typing import Type
 import warnings
 
 
@@ -348,7 +349,7 @@ class BaseJob:
         return_data = {}
 
         if not isinstance(data, dict):
-            raise ValueError("Data should be a dictionary.")
+            raise TypeError("Data should be a dictionary.")
 
         for field_name, value in data.items():
             # If a field isn't a var, skip it (e.g. `_commit`).
@@ -992,6 +993,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     try:
         job = job_class()
+        job.active_test = "initialization"
         job.job_result = job_result
 
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.
@@ -1004,7 +1006,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # or it might be bad input from an API request, or manual execution.
 
         data = job_class.deserialize_data(data)
-    except (ObjectDoesNotExist, ValueError) as e:
+    except Exception as e:
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job.log_failure(message=e)
         job_result.completed = timezone.now()

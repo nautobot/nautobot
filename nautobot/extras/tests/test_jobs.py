@@ -281,11 +281,16 @@ class JobTest(TestCase):
             data = "BAD DATA STRING"
             run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
-            job_error_message = job_result.data["null"]["log"][0][4]  # Indexing makes me sad.
 
             # Assert stuff
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
-            self.assertEqual(job_error_message, "Data should be a dictionary.")
+            self.assertIn(
+                "Data should be a dictionary",
+                next(
+                    log[-1]  # actual log message in the logging tuple
+                    for log in job_result.data["initialization"]["log"]
+                ),
+            )
 
 
 class JobFileUploadTest(TestCase):
