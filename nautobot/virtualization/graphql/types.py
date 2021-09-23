@@ -1,11 +1,11 @@
 import graphene
-from graphene_django import DjangoObjectType
 
+from nautobot.core.graphql.base import NautobotObjectType
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.filters import VirtualMachineFilterSet, VMInterfaceFilterSet
 
 
-class VirtualMachineType(DjangoObjectType):
+class VirtualMachineType(NautobotObjectType):
     """GraphQL type object for VirtualMachine model."""
 
     class Meta:
@@ -13,7 +13,7 @@ class VirtualMachineType(DjangoObjectType):
         filterset_class = VirtualMachineFilterSet
 
 
-class VMInterfaceType(DjangoObjectType):
+class VMInterfaceType(NautobotObjectType):
     """GraphQL type object for VMInterface model."""
 
     class Meta:

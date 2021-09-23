@@ -1,7 +1,7 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django.converter import convert_django_field, convert_field_to_string
 
+from nautobot.core.graphql.base import NautobotObjectType
 from nautobot.dcim.graphql.types import InterfaceType
 from nautobot.ipam import models, filters, fields
 from nautobot.extras.graphql.types import TagType  # noqa: F401
@@ -12,7 +12,7 @@ from nautobot.virtualization.graphql.types import VMInterfaceType
 convert_django_field.register(fields.VarbinaryIPField)(convert_field_to_string)
 
 
-class AggregateType(DjangoObjectType):
+class AggregateType(NautobotObjectType):
     """Graphql Type Object for Aggregate model."""
 
     prefix = graphene.String()
@@ -37,7 +37,7 @@ class AssignedObjectType(graphene.Union):
         return None
 
 
-class IPAddressType(DjangoObjectType):
+class IPAddressType(NautobotObjectType):
     """Graphql Type Object for IPAddress model."""
 
     address = graphene.String()
@@ -60,7 +60,7 @@ class IPAddressType(DjangoObjectType):
         return None
 
 
-class PrefixType(DjangoObjectType):
+class PrefixType(NautobotObjectType):
     """Graphql Type Object for Prefix model."""
 
     prefix = graphene.String()

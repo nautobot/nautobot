@@ -1,9 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 
-from graphene_django import DjangoObjectType
+from .base import NautobotObjectType
 
 
-class ContentTypeType(DjangoObjectType):
+class ContentTypeType(NautobotObjectType):
     """
     Graphene-Django object type for ContentType records.
 

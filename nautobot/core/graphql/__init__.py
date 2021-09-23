@@ -43,7 +43,8 @@ def execute_query(query, variables=None, request=None, user=None):
         request = RequestFactory().post("/graphql/")
         request.user = user
     backend = get_default_backend()
-    schema = graphene_settings.SCHEMA
+    from .schema_init import schema
+
     document = backend.document_from_string(schema, query)
     if variables:
         return document.execute(context_value=request, variable_values=variables)
@@ -63,10 +64,8 @@ def execute_saved_query(saved_query_slug, **kwargs):
     Returns:
         GraphQL Object: Result for query
     """
-    from .schema_init import schema
-
     query = GraphQLQuery.objects.get(slug=saved_query_slug)
-    return execute_query(query=query.query, schema=schema, **kwargs)
+    return execute_query(query=query.query, **kwargs)
 
 
 # See also:

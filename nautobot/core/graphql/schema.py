@@ -8,6 +8,7 @@ from django.db.models.fields.reverse_related import ManyToOneRel
 
 import graphene
 from graphene.types import generic
+from graphene_django import DjangoObjectType
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.utils import str_to_var_name
@@ -362,11 +363,7 @@ def extend_schema_type_relationships(reg, schema_type, model):
 
 
 def make_class(cls):
-    class m:
-        model = cls._meta.model
-        fields = list(cls._meta.fields.keys())
-
-    return type(f"{cls.__name__}Copy", (cls,), {"Meta": getattr(cls, "Meta", m)})
+    return type(f"{cls.__name__}Copy", (cls,), {"Meta": cls._cached_meta})
 
 
 def make_reg():
@@ -386,6 +383,33 @@ def make_reg():
     reg["ipam.prefix"] = make_class(PrefixType)
     reg["virtualization.virtualmachine"] = make_class(VirtualMachineType)
     reg["virtualization.vminterface"] = make_class(VMInterfaceType)
+
+    # Generate SchemaType Dynamically for all Models registered in the model_features registry
+    #  - Ensure an attribute/schematype with the same name doesn't already exist
+    registered_models = registry.get("model_features", {}).get("graphql", {})
+    for app_name, models in registered_models.items():
+        for model_name in models:
+
+            try:
+                # Find the model class based on the content type
+                ct = ContentType.objects.get(app_label=app_name, model=model_name)
+                model = ct.model_class()
+            except ContentType.DoesNotExist:
+                logger.warning(
+                    f"Unable to generate a schema type for the model '{app_name}.{model_name}' in GraphQL,"
+                    "this model doesn't have an associated ContentType, please create the Object manually."
+                )
+                continue
+
+            type_identifier = f"{app_name}.{model_name}"
+
+            if type_identifier in reg:
+                # Skip models that have been added statically
+                continue
+
+            schema_type = generate_schema_type(app_name=app_name, model=model)
+            reg[type_identifier] = schema_type
+
     return reg
 
 
@@ -414,32 +438,6 @@ def generate_query_mixin():
                 f"there is already another type {class_attrs[list_name]._type} registered under this name"
             )
             return True
-
-    # Generate SchemaType Dynamically for all Models registered in the model_features registry
-    #  - Ensure an attribute/schematype with the same name doesn't already exist
-    registered_models = registry.get("model_features", {}).get("graphql", {})
-    for app_name, models in registered_models.items():
-        for model_name in models:
-
-            try:
-                # Find the model class based on the content type
-                ct = ContentType.objects.get(app_label=app_name, model=model_name)
-                model = ct.model_class()
-            except ContentType.DoesNotExist:
-                logger.warning(
-                    f"Unable to generate a schema type for the model '{app_name}.{model_name}' in GraphQL,"
-                    "this model doesn't have an associated ContentType, please create the Object manually."
-                )
-                continue
-
-            type_identifier = f"{app_name}.{model_name}"
-
-            if type_identifier in reg:
-                # Skip models that have been added statically
-                continue
-
-            schema_type = generate_schema_type(app_name=app_name, model=model)
-            reg[type_identifier] = schema_type
 
     # Add all objects in the plugin registry to the main registry
     # After checking for conflict

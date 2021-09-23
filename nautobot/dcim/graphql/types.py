@@ -1,8 +1,8 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django.converter import convert_django_field
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
+from nautobot.core.graphql.base import NautobotObjectType
 from nautobot.dcim.fields import MACAddressField
 from nautobot.dcim.graphql.mixins import PathEndpointMixin
 from nautobot.dcim.models import Cable, CablePath, ConsoleServerPort, Device, Interface, Rack, Site
@@ -23,7 +23,7 @@ def convert_field_to_string(field, registry=None):
     return graphene.String()
 
 
-class SiteType(DjangoObjectType):
+class SiteType(NautobotObjectType):
     """Graphql Type Object for Site model."""
 
     class Meta:
@@ -32,7 +32,7 @@ class SiteType(DjangoObjectType):
         exclude = ["images", "_name"]
 
 
-class DeviceType(DjangoObjectType):
+class DeviceType(NautobotObjectType):
     """Graphql Type Object for Device model."""
 
     class Meta:
@@ -41,7 +41,7 @@ class DeviceType(DjangoObjectType):
         exclude = ["_name"]
 
 
-class RackType(DjangoObjectType):
+class RackType(NautobotObjectType):
     """Graphql Type Object for Rack model."""
 
     class Meta:
@@ -50,7 +50,7 @@ class RackType(DjangoObjectType):
         exclude = ["images"]
 
 
-class InterfaceType(DjangoObjectType, PathEndpointMixin):
+class InterfaceType(NautobotObjectType, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
     class Meta:
@@ -64,7 +64,7 @@ class InterfaceType(DjangoObjectType, PathEndpointMixin):
         return self.ip_addresses.all()
 
 
-class ConsoleServerPortType(DjangoObjectType, PathEndpointMixin):
+class ConsoleServerPortType(NautobotObjectType, PathEndpointMixin):
     """Graphql Type Object for ConsoleServerPort model."""
 
     class Meta:
@@ -72,7 +72,7 @@ class ConsoleServerPortType(DjangoObjectType, PathEndpointMixin):
         filterset_class = ConsoleServerPortFilterSet
 
 
-class CableType(DjangoObjectType):
+class CableType(NautobotObjectType):
     """Graphql Type Object for Cable model."""
 
     class Meta:
@@ -96,7 +96,7 @@ class CableType(DjangoObjectType):
         return None
 
 
-class CablePathType(DjangoObjectType):
+class CablePathType(NautobotObjectType):
     """GraphQL type object for CablePath model."""
 
     class Meta:

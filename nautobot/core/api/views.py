@@ -379,7 +379,7 @@ class GraphQLDRFAPIView(APIView):
 
     def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None):
         if not schema:
-            schema = graphene_settings.SCHEMA
+            from nautobot.core.graphql.schema_init import schema
 
         if backend is None:
             backend = get_default_backend()

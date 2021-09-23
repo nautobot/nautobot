@@ -29,6 +29,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_config_context,
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
+    make_reg,
 )
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
@@ -88,21 +89,21 @@ class GraphQLTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query(self):
         query = "{ query: sites {name} }"
-        resp = execute_query(query, user=self.user, schema=self.schema).to_dict()
+        resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertEquals(len(resp["data"]["query"]), 3)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: [String!]) { sites(name:$name) {name} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}, schema=self.schema).to_dict()
+        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
         self.assertFalse(resp.get("error"))
         self.assertEquals(len(resp["data"]["sites"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"
         with self.assertRaises(GraphQLError):
-            execute_query(query, user=self.user, schema=self.schema).to_dict()
+            execute_query(query, user=self.user).to_dict()
 
     def test_execute_saved_query(self):
         resp = execute_saved_query("gql-1", user=self.user).to_dict()
@@ -216,14 +217,14 @@ class GraphQLExtendSchemaType(TestCase):
 
     def test_extend_schema_device(self):
 
-        schema = extend_schema_type(DeviceTypeGraphQL)
+        schema = extend_schema_type(make_reg(), DeviceTypeGraphQL)
         self.assertIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
     def test_extend_schema_site(self):
 
-        schema = extend_schema_type(self.schema)
+        schema = extend_schema_type(make_reg(), self.schema)
         self.assertNotIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
@@ -302,7 +303,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
     @override_settings(GRAPHQL_CUSTOM_RELATIONSHIP_PREFIX="pr")
     def test_extend_relationship_w_prefix(self):
 
-        schema = extend_schema_type_relationships(self.schema, Site)
+        schema = extend_schema_type_relationships(make_reg(), self.schema, Site)
 
         datas = [
             {"field_slug": "primary-rack-site"},
