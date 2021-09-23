@@ -8,9 +8,11 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
-#### Common Base Template for Object Detail Views ([#479](https://github.com/nautobot/nautobot/issues/479))
+#### Common Base Template for Object Detail Views ([#479](https://github.com/nautobot/nautobot/issues/479), [#585](https://github.com/nautobot/nautobot/issues/585))
 
 All "object detail" views (pages displaying details of a single Nautobot record) now inherit from a common base template, providing improved UI consistency, reducing the amount of boilerplate code needed to create a new detail view, and fixing a number of bugs in various views. Plugin developers are encouraged to make use of this new template (`generic/object_detail.html`) to take advantage of these improvements.
+
+Views based on this template now include a new "Advanced" tab - currently this tab includes the UUID and slug (if any) of the object being viewed, but may be extended in the future to include additional information not relevant to the basic object detail view.
 
 #### Custom Fields are now User Configurable ([#229](https://github.com/nautobot/nautobot/issues/229))
 
@@ -83,10 +85,13 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
 - [#519](https://github.com/nautobot/nautobot/issues/519) - Added webhook support for `CustomField` and `CustomFieldChoice` models.
 - [#534](https://github.com/nautobot/nautobot/issues/534) - Added ability to inject a banner from a plugin
+- [#585](https://github.com/nautobot/nautobot/issues/585) - Added "Advanced" tab to object detail views including UUID and slug information.
 - [#642](https://github.com/nautobot/nautobot/issues/642) - Added documentation of the `GIT_SSL_NO_VERIFY` environment variable for using self-signed Git repositories
 - [#674](https://github.com/nautobot/nautobot/pull/674) - Plugins can now add items to the Nautobot home page
 - [#716](https://github.com/nautobot/nautobot/pull/716) - Nautobot home page content is now dynamically populated based on installed apps and plugins.
 - [#866](https://github.com/nautobot/nautobot/pull/866) - Added documentation for job scheduling and approvals
+- [#879](https://github.com/nautobot/nautobot/pull/879) - Added API testing for job scheduling and approvals
+- [#908](https://github.com/nautobot/nautobot/pull/908) - Added UI testing for job scheduling and approvals
 
 ### Changed
 
