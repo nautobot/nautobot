@@ -24,28 +24,28 @@
             <div class="row">
                 <div class="control-group {% if line.fields|length_is:'1' and line.errors %} error{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% endfor %}">
                     {% for field in line %}
-                        <div class="col-md-{{ group_column_width }} form-group {% if not line.fields|length_is:'1' %} field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}{% endif %}">
+                        <div class="col-md-12 form-group {% if not line.fields|length_is:'1' %} field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}{% endif %}">
                             <div class="control-label col-md-3">
                                 {{ field.label_tag }}
                             </div>
                             {% if field.is_checkbox %}
-                            <div class="controls col-md-9">
-                                <div class="checkbox">
-                                    {% dab_field_rendering field.field %} {% if field.field.help_text %}<span class="help-block">{{ field.field.help_text|safe }}</span>{% endif %}
+                                <div class="controls col-md-9">
+                                    <div class="checkbox">
+                                        {% dab_field_rendering field.field %} {% if field.field.help_text %}<span class="help-block">{{ field.field.help_text|safe }}</span>{% endif %}
+                                    </div>
                                 </div>
-                            </div>
                             {% else %}
-                            <div class="controls col-md-9">
-                                {% if field.is_readonly %}
-                                    <p>{{ field.contents }}</p>
-                                {% else %}
-                                    {% dab_field_rendering field.field %}
-                                {% endif %}
-                                {% if not field.is_readonly and field.errors %}<span class="text-danger">{{ field.errors|striptags }}</span>{% endif %}
-                                {% if field.field.help_text %}
-                                    <span class="help-block">{{ field.field.help_text|safe }}</span>
-                                {% endif %}
-                            </div>
+                                <div class="controls col-md-9">
+                                    {% if field.is_readonly %}
+                                        <p>{{ field.contents }}</p>
+                                    {% else %}
+                                        {% dab_field_rendering field.field %}
+                                    {% endif %}
+                                    {% if not field.is_readonly and field.errors %}<span class="text-danger">{{ field.errors|striptags }}</span>{% endif %}
+                                    {% if field.field.help_text %}
+                                        <span class="help-block">{{ field.field.help_text|safe }}</span>
+                                    {% endif %}
+                                </div>
                             {% endif %}
                         </div>
                     {% endfor %}
