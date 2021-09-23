@@ -35,10 +35,16 @@
     <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
     <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
 
+    <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
+    <script src="{% static 'jquery-ui-1.12.1/jquery-ui.min.js' %}"
+            onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.min.js'"></script>
+    <script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
+            onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
+
     <link rel="stylesheet" href="/static/admin/css/widgets.css">
     <script src="/admin/jsi18n/"></script>
     <script src="/static/admin/js/core.js"></script>
-    <script src="/static/admin/js/vendor/jquery/jquery.js"></script>
     <script src="/static/admin/js/calendar.js"></script>
     <script src="/static/admin/js/jquery.init.js"></script>
     <script src="/static/admin/js/admin/DateTimeShortcuts.js"></script>
@@ -47,6 +53,19 @@
     <meta name="theme-color" content="#ffffff">
     <meta charset="UTF-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+
+    <style>
+        .description {
+            padding-bottom: 20px;
+        }
+        .help-block {
+            white-space: initial;
+            word-wrap: break-word;
+        }
+        .related-widget-wrapper {
+            float: none;
+        }
+    </style>
 </head>
 <body>
 {% include 'inc/nav_menu.html' %}
