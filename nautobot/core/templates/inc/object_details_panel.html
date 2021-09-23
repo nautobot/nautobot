@@ -16,37 +16,31 @@
                         </span>
                     </td>
                 </tr>
-                <tr>
-                    <td>Slug</td>
-                    <td>
-                        {% if object.slug %}
+                {% if object.slug %}
+                    <tr>
+                        <td>Slug</td>
+                        <td>
                             <span class="hover_copy">
                                 <span id="slug_copy">{{ object.slug }}</span>
                                 <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#slug_copy">
                                     <span class="mdi mdi-content-copy"></span>
                                 </button>
                             </span>
-                        {% else %}
-                            <td><span class="text-muted"></span></td>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td>Created</td>
-                    {% if object.created %}
+                        </td>
+                    </tr>
+                {% endif %}
+                {% if object.created %}
+                    <tr>
+                        <td>Created</td>
                         <td>{{ object.created }}</td>
-                    {% else %}
-                        <td><span class="text-muted"></span></td>
-                    {% endif %}
-                </tr>
-                <tr>
-                    <td>Updated</td>
-                    {% if object.created %}
+                    </tr>
+                {% endif %}
+                {% if object.created %}
+                    <tr>
+                        <td>Updated</td>
                         <td>{{ object.last_updated }}</td>
-                    {% else %}
-                        <td><span class="text-muted"></span></td>
-                    {% endif %}
-                </tr>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
