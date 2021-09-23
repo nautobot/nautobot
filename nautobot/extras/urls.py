@@ -321,6 +321,11 @@ urlpatterns = [
     path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
     path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
     path(
+        "jobs/scheduled-jobs/delete/",
+        views.ScheduledJobBulkDeleteView.as_view(),
+        name="scheduledjob_bulk_delete",
+    ),
+    path(
         "jobs/scheduled-jobs/approval-queue/",
         views.ScheduledJobApprovalQueueListView.as_view(),
         name="scheduledjob_approval_queue_list",

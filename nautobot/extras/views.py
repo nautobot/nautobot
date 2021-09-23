@@ -927,7 +927,12 @@ class ScheduledJobListView(generic.ObjectListView):
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
-    action_buttons = ()
+    action_buttons = ("delete",)
+
+
+class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
+    queryset = ScheduledJob.objects.all()
+    table = tables.ScheduledJobTable
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
