@@ -1,5 +1,0 @@
-{% load i18n %}
-    <li class="dropdown-header">{% blocktrans with filter_title=title %} By {{ filter_title }} {% endblocktrans %}</li>
-{% for choice in choices %}
-    <li class="{% if choice.selected %}active{% endif %}"><a href="{{ choice.query_string|iriencode }}">{{ choice.display }}</a></li>
-{% endfor %}
