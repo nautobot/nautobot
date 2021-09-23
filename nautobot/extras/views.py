@@ -933,6 +933,7 @@ class ScheduledJobListView(generic.ObjectListView):
 class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
     queryset = ScheduledJob.objects.all()
     table = tables.ScheduledJobTable
+    filterset = filters.ScheduledJobFilterSet
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
