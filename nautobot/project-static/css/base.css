@@ -379,7 +379,9 @@ ul.nav-tabs, ul.nav-pills {
 }
 ul.nav-tabs li a {
     padding: 8px 10px;
+    border: none;
 }
+
 /* Fix progress bar margin inside table cells */
 td .progress {
     margin-bottom: 0;

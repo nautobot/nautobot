@@ -72,9 +72,9 @@
                 {{ verbose_name|bettertitle }}
             </a>
         </li>
-        <li role="presentation"{% if request.GET.tab == 'advance' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#advance" onclick="switch_tab(this.href)" aria-controls="advance" role="tab" data-toggle="tab">
-                Advance
+        <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+                Advanced
             </a>
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
@@ -112,18 +112,18 @@
                 </div>
             </div>
         </div>
-        <div id="advance" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advance' %}active{% else %}fade{% endif %}">
+        <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-md-6">
-                    {% include 'inc/object_details_panel.html' %}
+                    {% include 'inc/object_details_advanced_panel.html' %}
                 </div>
                 <div class="col-md-6">
-                    {% block advance_content_right_page %}{% endblock advance_content_right_page %}
+                    {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-12">
-                    {% block advance_content_full_width_page %}{% endblock advance_content_full_width_page %}
+                    {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
                 </div>
             </div>
         </div>
@@ -145,7 +145,7 @@
     clipboard.on('error', function (e) {});
 
     function switch_tab(tab_href) {
-        if (window.location.href.includes("changelog")) {
+        if (location.pathname != "{{ object.get_absolute_url }}") {
             tab_location = tab_href.split("#");
             window.location.href = `${tab_location[0]}?tab=${tab_location[1]}`;
         };
