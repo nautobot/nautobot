@@ -274,7 +274,6 @@ TIME_ZONE = "UTC"
 
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
-    "bootstrap3",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -293,8 +292,8 @@ INSTALLED_APPS = [
     "taggit",
     "timezone_field",
     "nautobot.core",
-    "django.contrib.admin",
-    "django_celery_beat",
+    "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
+    "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
     "db_file_storage",
     "nautobot.circuits",
     "nautobot.dcim",
@@ -534,5 +533,3 @@ CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"
 
 CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
-
-DAB_FIELD_RENDERER = 'nautobot.core.renderers.BootstrapFieldRenderer'

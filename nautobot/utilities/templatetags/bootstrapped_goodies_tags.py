@@ -1,3 +1,4 @@
+# Credit to https://github.com/django-admin-bootstrapped/django-admin-bootstrapped
 from importlib import import_module
 
 from django import template
@@ -40,16 +41,9 @@ def language_selector(context):
     return output
 
 
-@register.filter(name='column_width')
-def column_width(value):
-    try:
-        return 12 // len(list(value))
-    except ZeroDivisionError:
-        return 12
-
-
 @register.filter(name='form_fieldset_column_width')
 def form_fieldset_column_width(form):
+    """Get column width where multiple fields are in the same row."""
     def max_line(fieldset):
         try:
             return max([len(list(line)) for line in fieldset])
@@ -66,6 +60,7 @@ def form_fieldset_column_width(form):
 
 @register.filter(name='fieldset_column_width')
 def fieldset_column_width(fieldset):
+    """Generate column width using fieldset lines. Default 12."""
     try:
         width = max([len(list(line)) for line in fieldset])
         return 12 // width
