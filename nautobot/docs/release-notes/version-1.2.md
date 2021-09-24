@@ -43,6 +43,16 @@ query {
 }
 ```
 
+#### Installed Plugins List and Detail Views, Plugin Config and Home Views ([#935](https://github.com/nautobot/nautobot/pull/935))
+
+The `Plugins` menu now includes an "Installed Plugins" menu item which provides a list view of information about all installed and enabled plugins, similar to a formerly administrator-only view.
+
+Additionally, when viewing this list, each plugin can now be clicked on for a detail view, which provides an in-depth look at the capabilities of the plugin, including whether it makes use of each or all of the various Nautobot features available to be used by plugins.
+
+Additionally, plugins now have the option of registering specific "home" and/or "configuration" views, which will be linked and accessible directly from the installed-plugins list and detail views.
+
+Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
+
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 
 Jobs can now be optionally defined as `approval_required = True`, in which case the Job will not be executed immediately upon submission, but will instead be placed into an approval queue; any user *other than the submitter* can approve or deny a queued Job, at which point it will then be executed as normal.
@@ -58,7 +68,9 @@ TODO: add link to relevant documentation on enabling `nautobot-server celery bea
 
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
-Each plugin is now able to inject a custom banner into any of the Nautobot core views.
+Each plugin is now able to optionally inject a custom banner into any of the Nautobot core views.
+
+Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
 
 #### Software-Defined Home Page ([#674](https://github.com/nautobot/nautobot/pull/674), [#716](https://github.com/nautobot/nautobot/pull/716))
 
@@ -85,6 +97,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#479](https://github.com/nautobot/nautobot/issues/479) - Added shared generic template for all object detail views
 - [#519](https://github.com/nautobot/nautobot/issues/519) - Added webhook support for `CustomField` and `CustomFieldChoice` models.
 - [#534](https://github.com/nautobot/nautobot/issues/534) - Added ability to inject a banner from a plugin
+- [#580](https://github.com/nautobot/nautobot/issues/580) - Added ability for plugins to register "home" and "configuration" views.
 - [#585](https://github.com/nautobot/nautobot/issues/585) - Added "Advanced" tab to object detail views including UUID and slug information.
 - [#642](https://github.com/nautobot/nautobot/issues/642) - Added documentation of the `GIT_SSL_NO_VERIFY` environment variable for using self-signed Git repositories
 - [#674](https://github.com/nautobot/nautobot/pull/674) - Plugins can now add items to the Nautobot home page
@@ -92,6 +105,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#866](https://github.com/nautobot/nautobot/pull/866) - Added documentation for job scheduling and approvals
 - [#879](https://github.com/nautobot/nautobot/pull/879) - Added API testing for job scheduling and approvals
 - [#908](https://github.com/nautobot/nautobot/pull/908) - Added UI testing for job scheduling and approvals
+- [#935](https://github.com/nautobot/nautobot/pull/935) - Added Installed Plugins list view and detail view
 - [#937](https://github.com/nautobot/nautobot/issues/937) - Added bulk-delete option for scheduled jobs
 - [#938](https://github.com/nautobot/nautobot/issues/938) - Added titles to job approval UI buttons
 
