@@ -11,16 +11,24 @@
 
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}
 
-{% block coltype %}{% if ordered_objects %}colMS{% else %}colM{% endif %}{% endblock %}
-
-{% block bodyclass %}{{ block.super }} {{ opts.app_label }}-{{ opts.object_model }} change-form{% endblock %}
-
 {% if not is_popup %}
     {% block breadcrumbs %}
         <ul class="breadcrumb">
             <li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
-            <li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{% with app_label=opts.app_config.verbose_name|default:opts.app_label %}{{ app_label|title }}{% endwith %}</a></li>
-            <li>{% if has_change_permission %}<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %}</li>
+            <li>
+                <a href="{% url 'admin:app_list' app_label=opts.app_label %}">
+                    {% with app_label=opts.app_config.verbose_name|default:opts.app_label %}{{ app_label|title }}{% endwith %}
+                </a>
+            </li>
+            <li>
+                {% if has_change_permission %}
+                    <a href="{% url opts|admin_urlname:'changelist' %}">
+                        {{ opts.verbose_name_plural|capfirst }}
+                    </a>
+                {% else %}
+                    {{ opts.verbose_name_plural|capfirst }}
+                {% endif %}
+            </li>
             <li>{% if add %}{% trans 'Add' %} {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"18" }}{% endif %}</li>
         </ul>
     {% endblock %}
@@ -36,7 +44,13 @@
                             {% url opts|admin_urlname:'history' original.pk|admin_urlquote as history_url %}
                             <a role="button" href="{% add_preserved_filters history_url %}" class="historylink">{% trans "History" %}</a>
                         </li>
-                        {% if has_absolute_url %}<li><a href="{% url 'admin:view_on_site' content_type_id original.pk %}" class="viewsitelink">{% trans "View on site" %}</a></li>{% endif %}
+                        {% if has_absolute_url %}
+                            <li>
+                                <a href="{% url 'admin:view_on_site' content_type_id original.pk %}" class="viewsitelink">
+                                    {% trans "View on site" %}
+                                </a>
+                            </li>
+                        {% endif %}
                     {% endblock %}
                 </ul>
             </div>
@@ -51,7 +65,10 @@
 {% endwith %}
 
 
-<form class="form-horizontal" {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form" novalidate>{% csrf_token %}{% block form_top %}{% endblock %}
+<form class="form-horizontal" {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form" novalidate>
+    {% csrf_token %}
+    {% block form_top %}{% endblock %}
+
     <div class="alert alert-warning">{% blocktrans %}Fields in <strong>bold</strong> are required.{% endblocktrans %}</div>
     {% if errors %}
         <div class="alert alert-danger">

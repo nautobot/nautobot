@@ -28,8 +28,6 @@
 {% endif %}{% endif %}
 {% endblock %}
 
-{% block bodyclass %}{{ block.super }} {{ opts.app_label }}-{{ opts.object_model }} change-list{% endblock %}
-
 {% if not is_popup %}
     {% block breadcrumbs %}
         <div class="{% if cl.search_fields %}col-sm-8 col-md-9{% else %}col-sm-12 col-md-12{% endif %}">
@@ -45,8 +43,6 @@
         </div>
     {% endblock %}
 {% endif %}
-
-{% block coltype %}flex{% endblock %}
 
 {% block object-tools %}
 <div id="content-navbar-collapse" class="navbar-collapse collapse">

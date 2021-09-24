@@ -42,15 +42,6 @@
     <script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
             onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
 
-    <link rel="stylesheet" href="/static/admin/css/widgets.css">
-    <script src="/admin/jsi18n/"></script>
-    <script src="/static/admin/js/core.js"></script>
-    <script src="/static/admin/js/calendar.js"></script>
-    <script src="/static/admin/js/inlines.js"></script>
-    <script src="/static/admin/js/jquery.init.js"></script>
-    <script src="/static/admin/js/admin/DateTimeShortcuts.js"></script>
-    <script src="/static/admin/js/admin/RelatedObjectLookups.js"></script>
-
     <meta name="msapplication-TileColor" content="#2d89ef">
     <meta name="theme-color" content="#ffffff">
     <meta charset="UTF-8">
@@ -71,6 +62,9 @@
             width: 100%;
         }
     </style>
+
+    {% block extrahead %}{% endblock %}
+    {% block extrastyle %}{% endblock %}
 </head>
 <body>
 {% include 'inc/nav_menu.html' %}
