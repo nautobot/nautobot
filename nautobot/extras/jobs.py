@@ -991,9 +991,17 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    job = job_class()
-    job.active_test = "initialization"
-    job.job_result = job_result
+    try:
+        job = job_class()
+        job.active_test = "initialization"
+        job.job_result = job_result
+    except Exception as e:
+        logger.error(f"Error initializing job object.")
+        logger.error(e)
+        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.completed = timezone.now()
+        job_result.save()
+        return False
 
     try:
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.
