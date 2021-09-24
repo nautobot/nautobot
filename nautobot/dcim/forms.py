@@ -1943,12 +1943,15 @@ class DeviceBulkEditForm(
     BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
+    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
         query_params={"manufacturer_id": "$manufacturer"},
     )
+    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
+    rack_group = DynamicModelChoiceField(queryset=RackGroup.objects.all(), required=False)
     device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
@@ -1959,6 +1962,8 @@ class DeviceBulkEditForm(
             "tenant",
             "platform",
             "serial",
+            "rack",
+            "rack_group",
         ]
 
 
