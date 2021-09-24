@@ -7,7 +7,7 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0012_healthchecktestmodel"),
+        ("extras", "0013_default_fallback_value_computedfield"),
     ]
 
     operations = [
