@@ -362,6 +362,8 @@ def extend_schema_type_relationships(reg, schema_type, model):
     return schema_type
 
 
+# this generates a dynamic copy of the static classes. this is needed to
+# avoid manipulating the classes we define statically directly
 def make_class(cls):
     return type(f"{cls.__name__}Copy", (cls,), {"Meta": cls._cached_meta})
 
