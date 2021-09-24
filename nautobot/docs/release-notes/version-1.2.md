@@ -92,6 +92,8 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#866](https://github.com/nautobot/nautobot/pull/866) - Added documentation for job scheduling and approvals
 - [#879](https://github.com/nautobot/nautobot/pull/879) - Added API testing for job scheduling and approvals
 - [#908](https://github.com/nautobot/nautobot/pull/908) - Added UI testing for job scheduling and approvals
+- [#937](https://github.com/nautobot/nautobot/issues/937) - Added bulk-delete option for scheduled jobs
+- [#938](https://github.com/nautobot/nautobot/issues/938) - Added titles to job approval UI buttons
 
 ### Changed
 
