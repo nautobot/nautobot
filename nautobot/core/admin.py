@@ -8,9 +8,7 @@ from nautobot.utilities.forms.widgets import DateTimePicker
 
 
 class ClockedScheduleAdmin(OverrideClockedScheduleAdmin):
-    formfield_overrides = {
-        models.DateTimeField: {"widget": DateTimePicker}
-    }
+    formfield_overrides = {models.DateTimeField: {"widget": DateTimePicker}}
 
 
 # Override default AdminSite attributes so we can avoid creating and
