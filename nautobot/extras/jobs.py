@@ -991,11 +991,11 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.save()
         return False
 
-    try:
-        job = job_class()
-        job.active_test = "initialization"
-        job.job_result = job_result
+    job = job_class()
+    job.active_test = "initialization"
+    job.job_result = job_result
 
+    try:
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.
         file_fields = list(job._get_file_vars())
         file_ids = [data[f] for f in file_fields]
