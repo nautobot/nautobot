@@ -390,7 +390,7 @@ When providing input data, it is possible to specify complex values contained in
 Jobs that do not require user input can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob <grouping_name>/<module>/<JobName> [--commit]
+nautobot-server runjob [--username <username>] [--commit] <grouping_name>/<module>/<JobName>
 ```
 
 !!! note
@@ -399,10 +399,13 @@ nautobot-server runjob <grouping_name>/<module>/<JobName> [--commit]
 Using the same example shown in the API:
 
 ```no-highlight
-nautobot-server runjob local/example/MyJobWithNoVars
+nautobot-server runjob --username myusername local/example/MyJobWithNoVars
 ```
 
-Provision of user inputs via the CLI is not supported at this time.
+Provision of user input (`data` values) via the CLI is not supported at this time.
+
+!!! note
+    `nautobot-server` commands, like other direct interactions with the Django ORM, are not gated by the usual Nautobot user authentication flow. It is possible to specify any valid `--username` argument to the `nautobot-server runjob` command in order to impersonate any given user as the requester of a job. Use this power wisely and be cautious who you allow to access it.
 
 ## Example Jobs
 
