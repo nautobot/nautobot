@@ -318,4 +318,23 @@ menu_items = (
             ),
         ),
     ),
+    NavMenuTab(
+        name="Plugins",
+        weight=5000,
+        groups=(
+            NavMenuGroup(
+                name="General",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="plugins:plugins_list",
+                        name="Installed Plugins",
+                        weight=100,
+                        permissions=[],
+                        buttons=(),
+                    ),
+                ),
+            ),
+        ),
+    ),
 )
