@@ -90,6 +90,10 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#623](https://github.com/nautobot/nautobot/issues/623) - Git repository sync logs now include the commit hash that was synchronized to.
 - [#861](https://github.com/nautobot/nautobot/issues/861) - Bulk editing of devices can now update their site, rack, and rack-group assignments.
 
+### Security
+
+- [#939](https://github.com/nautobot/nautobot/issues/939) - Nautobot views now default to `X-Frame-Options: DENY` rather than `X-Frame-Options: SAMEORIGIN`, with the exception of the rack-elevation API view (`/api/dcim/rack-elevation/`) which specifically requires `X-Frame-Options: SAMEORIGIN` for functional reasons.
+
 ## v1.1.3 (2021-09-13)
 
 ### Added
