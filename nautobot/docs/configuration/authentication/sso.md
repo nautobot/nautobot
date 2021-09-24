@@ -84,6 +84,11 @@ The default external authentication supported is [social-auth-app-django](https:
 
 ```python
 SOCIAL_AUTH_BACKEND_PREFIX = "custom_auth.backends"
+
+AUTHENTICATION_BACKENDS = [
+    "custom_auth.backends.custom.Oauth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
 ```
 
 `SOCIAL_AUTH_BACKEND_PREFIX` was set to `custom_auth.backends` as we may have more than one custom backend. This will enable the SSO redirect for users when they click the login button.
