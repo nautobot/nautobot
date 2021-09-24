@@ -28,9 +28,8 @@ def sso_auth_enabled(auth_backends):
 
 @lru_cache(maxsize=5)
 def _sso_auth_enabled(auth_backends):
-    sso_backend_prefix = getattr(settings, "SOCIAL_AUTH_BACKEND_PREFIX", "social_core.backends")
     for backend in auth_backends:
-        if backend.startswith(sso_backend_prefix):
+        if backend.startswith(settings.SOCIAL_AUTH_BACKEND_PREFIX):
             return True
     return False
 

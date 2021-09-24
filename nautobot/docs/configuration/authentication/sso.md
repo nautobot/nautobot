@@ -91,7 +91,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 ```
 
-`SOCIAL_AUTH_BACKEND_PREFIX` was set to `custom_auth.backends` as we may have more than one custom backend. This will enable the SSO redirect for users when they click the login button.
+In the example above, `SOCIAL_AUTH_BACKEND_PREFIX` was set to `custom_auth.backends` within the `nautobot_config.py` for our custom authentication plugin we created (**custom_auth.backends.custom.Oauth2**). This will enable the SSO redirect for users when they click the login button.
 
 ---
 
@@ -101,19 +101,19 @@ You will need to select the correct social authentication module name for your d
 
 Some common backend module names include:
 
-| Backend                                                                                                       | Social Auth Backend Module Name                                 |
-| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [Microsoft Azure Active Directory](https://python-social-auth.readthedocs.io/en/latest/backends/azuread.html) | `social_core.backends.azuread.AzureADOAuth2`                    |
-|                                                                                                               | `social_core.backends.azuread_b2c.AzureADB2COAuth2`             |
-|                                                                                                               | `social_core.backends.azuread_tenant.AzureADTenantOAuth2`       |
-|                                                                                                               | `social_core.backends.azuread_tenant.AzureADV2TenantOAuth2`     |
-| [Google](https://python-social-auth.readthedocs.io/en/latest/backends/google.html)                            | `social_core.backends.gae.GoogleAppEngineAuth`                  |
-|                                                                                                               | `social_core.backends.google.GoogleOAuth2`                      |
-|                                                                                                               | `social_core.backends.google.GoogleOAuth`                       |
-|                                                                                                               | `social_core.backends.google_openidconnect.GoogleOpenIdConnect` |
-| [Okta](https://python-social-auth.readthedocs.io/en/latest/backends/okta.html)                                | `social_core.backends.okta.OktaOAuth2`                          |
-|                                                                                                               | `social_core.backends.okta_openidconnect.OktaOpenIdConnect`     |
-| [SAML](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html)                                | `social_core.backends.saml.SAMLAuth`                            |
+| Backend | Social Auth Backend Module Name |
+|---------|---------------------------------|
+| [Microsoft Azure Active Directory](https://python-social-auth.readthedocs.io/en/latest/backends/azuread.html) | `social_core.backends.azuread.AzureADOAuth2` |
+| | `social_core.backends.azuread_b2c.AzureADB2COAuth2` |
+| | `social_core.backends.azuread_tenant.AzureADTenantOAuth2` |
+| | `social_core.backends.azuread_tenant.AzureADV2TenantOAuth2` |
+| [Google](https://python-social-auth.readthedocs.io/en/latest/backends/google.html) | `social_core.backends.gae.GoogleAppEngineAuth` |
+| | `social_core.backends.google.GoogleOAuth2` |
+| | `social_core.backends.google.GoogleOAuth` |
+| | `social_core.backends.google_openidconnect.GoogleOpenIdConnect` |
+| [Okta](https://python-social-auth.readthedocs.io/en/latest/backends/okta.html) | `social_core.backends.okta.OktaOAuth2` |
+| | `social_core.backends.okta_openidconnect.OktaOpenIdConnect` |
+| [SAML](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) | `social_core.backends.saml.SAMLAuth` |
 
 ### User Permissions
 
