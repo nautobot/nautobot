@@ -80,7 +80,7 @@ AUTHENTICATION_BACKENDS = [
 
 ### Custom Authentication Backends
 
-The default external authentication supported is [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) as stated above. If you have developed your own external authentication backend, you can specify `SOCIAL_AUTH_BACKEND_PREFIX` to enable the SSO redirect when the login button is clicked. Currently, Nautobot will look for `social_core.backends` within `AUTHENTICATION_BACKENDS` to endable the redirect.Let's take a look at an example for a custom authentication backend available at `custom_auth.backends.custom.Oauth2`.
+The default external authentication supported is [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) as stated above. If you have developed your own external authentication backend, you will need to configure `SOCIAL_AUTH_BACKEND_PREFIX` to use your backend instead and correctly enable the SSO redirect when the login button is clicked. For example, if your custom authentication backend is available at `custom_auth.backends.custom.Oauth2`, you would set things as follows:
 
 ```python
 SOCIAL_AUTH_BACKEND_PREFIX = "custom_auth.backends"
