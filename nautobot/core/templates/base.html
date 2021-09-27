@@ -27,39 +27,12 @@
     <link rel="stylesheet"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
-    {% comment %}
-        Attempt to load custom branding assets, or fallback to the Nautobot standard branding.
-    {% endcomment %}
-    {% if settings.BRANDING_FILEPATHS.icon_180 %}
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_180 }}">
-    {% else %}
-        <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
-    {% endif %}
-    {% if settings.BRANDING_FILEPATHS.icon_32 %}
-        <link rel="icon" type="image/png" sizes="32x32" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_32 }}">
-    {% else %}
-        <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
-    {% endif %}
-    {% if settings.BRANDING_FILEPATHS.icon_16 %}
-        <link rel="icon" type="image/png" sizes="16x16" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_16 }}">
-    {% else %}
-        <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
-    {% endif %}
-    {% if settings.BRANDING_FILEPATHS.icon_192 %}
-        <link rel="icon" type="image/png" sizes="192x192" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_192 }}">
-    {% else %}
-        <link rel="icon" type="image/png" sizes="192x192" href="{% static 'img/nautobot_icon_192x192.png' %}">
-    {% endif %}
-    {% if settings.BRANDING_FILEPATHS.icon_mask %}
-        <link rel="mask-icon" type="image/png" color="#0097ff" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.icon_mask }}">
-    {% else %}
-        <link rel="mask-icon" type="image/png" color="#0097ff" href="{% static 'img/nautobot_icon_monochrome.svg' %}">
-    {% endif %}
-    {% if settings.BRANDING_FILEPATHS.favicon %}
-        <link rel="shortcut icon" href="{{ settings.MEDIA_URL }}{{ settings.BRANDING_FILEPATHS.favicon }}">
-    {% else %}
-        <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
-    {% endif %}
+    <link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}">
+    <link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.png' %}">
+    <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
     <meta name="msapplication-TileColor" content="#2d89ef">
     <meta name="theme-color" content="#ffffff">
     <meta charset="UTF-8">
@@ -101,7 +74,10 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-4">
-                    <p class="text-muted">{{ settings.HOSTNAME }} (v{{ settings.VERSION }})</p>
+                    <p class="text-muted">
+                        {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}<a href="{{ settings.BRANDING_POWERED_BY_URL }}"><img src="{% static 'img/nautobot_logo.svg' %}" height="20" /> Powered</a> &middot;{% endif %}
+                        {{ settings.HOSTNAME }} (v{{ settings.VERSION }})
+                    </p>
                 </div>
                 <div class="col-xs-4 text-center">
                     <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
@@ -112,8 +88,7 @@
                         <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
                         <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a> &middot;
-                        <i class="powered-by-nautobot text-primary"></i> <a href="{{ settings.BRANDING_POWERED_BY_URL }}">Powered</a>
+                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
                     </p>
                 </div>
             </div>

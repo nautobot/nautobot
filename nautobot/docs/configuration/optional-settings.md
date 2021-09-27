@@ -118,9 +118,9 @@ Default:
 
 ```python
 {
-    "code": os.getenv("BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),  # Code link in the footer
-    "docs": os.getenv("BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),  # Docs link in the footer
-    "help": os.getenv("BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),  # Help link in the footer
+    "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),  # Code link in the footer
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),  # Docs link in the footer
+    "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),  # Help link in the footer
 }
 ```
 
@@ -128,9 +128,9 @@ A set of URLs that correspond to helpful links in the right of the footer on eve
 
 These environment variables may be used to specify the values:
 
-* `BRANDING_URLS_CODE`
-* `BRANDING_URLS_DOCS`
-* `BRANDING_URLS_HELP`
+* `NAUTOBOT_BRANDING_URLS_CODE`
+* `NAUTOBOT_BRANDING_URLS_DOCS`
+* `NAUTOBOT_BRANDING_URLS_HELP`
 
 If a custom URL is not provided for any of the links, the default link within the Nautobot community is used.
 
