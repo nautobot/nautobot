@@ -553,7 +553,7 @@ BRANDING_FILEPATHS = {
 }
 
 # Title to use in place of "Nautobot"
-BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_BRANDING_TITLE", "Nautobot")
+BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
 
 # Branging URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
