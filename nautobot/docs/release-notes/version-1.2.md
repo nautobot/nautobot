@@ -108,6 +108,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#935](https://github.com/nautobot/nautobot/pull/935) - Added Installed Plugins list view and detail view
 - [#937](https://github.com/nautobot/nautobot/issues/937) - Added bulk-delete option for scheduled jobs
 - [#938](https://github.com/nautobot/nautobot/issues/938) - Added titles to job approval UI buttons
+- [#953](https://github.com/nautobot/nautobot/pull/953) - Added option to use MySQL in docker-compose development environment
 
 ### Changed
 
