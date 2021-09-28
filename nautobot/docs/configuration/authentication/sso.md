@@ -54,7 +54,7 @@ Please see the SAML configuration guide below for an example of how to configure
 
 ### Authentication Backends
 
-To use external authentcation, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
+To use external authentication, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
 
 - Insert the desired external authentication backend as the first item in the list. This step is key to properly redirecting when users click the login button.
 - You must also ensure that `nautobot.core.authentication.ObjectPermissionBackend` is always the second item in the list. It is an error to exclude this backend.
