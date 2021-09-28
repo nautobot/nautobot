@@ -725,6 +725,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "fields": self.model_form().fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
+                "active_tab": "csv-data",
             },
         )
 
@@ -796,6 +797,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "fields": self.model_form().fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
+                "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",
             },
         )
 

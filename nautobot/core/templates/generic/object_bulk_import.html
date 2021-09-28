@@ -16,11 +16,11 @@
                 </div>
             {% endif %}
             <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" {% if not form.csv_file.errors %} class="active"{% endif %}><a href="#csv-text" role="tab" data-toggle="tab">CSV Data</a></li>
-                <li role="presentation" {% if form.csv_file.errors %} class="active"{% endif %}><a href="#csv-file" role="tab" data-toggle="tab">CSV File Upload</a></li>
+                <li role="presentation"{% if active_tab == 'csv-data' %} class="active"{% endif %}><a href="#csv-text" role="tab" data-toggle="tab">CSV Data</a></li>
+                <li role="presentation"{% if active_tab == 'csv-file' %} class="active"{% endif %}><a href="#csv-file" role="tab" data-toggle="tab">CSV File Upload</a></li>
             </ul>
             <div class="tab-content">
-                <div role="tabpanel" class="tab-pane {% if not form.csv_file.errors %}active{% endif %}" id="csv-text">
+                <div role="tabpanel" class="tab-pane {% if active_tab == 'csv-data' %}active{% endif %}" id="csv-text">
                     <form action="" method="post" class="form">
                         {% csrf_token %}
                         {% render_field form.csv_data %}
@@ -36,7 +36,7 @@
                     <div class="clearfix"></div>
                     {% include 'generic/inc/bulk_import_field_options.html' %}
                 </div>
-                <div role="tabpanel" class="tab-pane {% if form.csv_file.errors %}active{% endif %}" id="csv-file">
+                <div role="tabpanel" class="tab-pane {% if active_tab == 'csv-file' %}active{% endif %}" id="csv-file">
                     <form action="" method="post" enctype="multipart/form-data" class="form">
                         {% csrf_token %}
                         <input type="hidden" name="csv_data" value="{{ form.csv_data.initial }}">
