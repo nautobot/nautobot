@@ -30,6 +30,10 @@ DATABASES = {
     }
 }
 
+# Ensure proper Unicode handling for MySQL
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+
 #
 # Debug
 #
