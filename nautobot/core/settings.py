@@ -537,7 +537,8 @@ CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseSchedul
 # Custom branding (logo and title)
 #
 
-# Branding logo locations. The logo takes the place of the Nautobot logo in the top right of the nav bar. The filepath should be relative to the `MEDIA_ROOT`.
+# Branding logo locations. The logo takes the place of the Nautobot logo in the top right of the nav bar.
+# The filepath should be relative to the `MEDIA_ROOT`.
 BRANDING_FILEPATHS = {
     "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
     "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
@@ -555,7 +556,7 @@ BRANDING_FILEPATHS = {
 # Title to use in place of "Nautobot"
 BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
 
-# Branging URLs (links in the bottom right of the footer)
+# Branding URLs (links in the bottom right of the footer)
 BRANDING_URLS = {
     "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
     "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),
