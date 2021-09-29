@@ -27,8 +27,6 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v1"
       - name: "Linting: flake8"
         run: "poetry run invoke flake8"
-    needs:
-      - "black"
   hadolint:
     runs-on: "ubuntu-20.04"
     env:
@@ -42,8 +40,6 @@ jobs:
         run: "curl -Lo /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint"
       - name: "Linting: hadolint"
         run: "poetry run invoke hadolint"
-    needs:
-      - "black"
   build:
     strategy:
       matrix:
@@ -76,6 +72,7 @@ jobs:
       - name: "Show files"
         run: "ls -al /tmp/docker"
     needs:
+      - "blacke"
       - "flake8"
       - "hadolint"
   check_migrations:
