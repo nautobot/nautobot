@@ -22,5 +22,5 @@ docker-compose.override.yml
 *.egg-info
 .python-version
 db_output.*
-geckodriver.dev
+geckodriver.log
 uwsgi.ini
