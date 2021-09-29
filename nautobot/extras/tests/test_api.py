@@ -586,7 +586,7 @@ class JobTest(APITestCase):
     def test_run_job_object_var_lookup(self):
         """Job run requests can reference objects by their attributes."""
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        DeviceRole.objects.create(name="role", slug="role")
         job_data = {
             "var1": "FooBar",
             "var2": 123,
