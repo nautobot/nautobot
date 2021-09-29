@@ -88,6 +88,7 @@ nav:
         - Using Plugins: 'plugins/index.md'
         - Developing Plugins: 'plugins/development.md'
         - Porting NetBox Plugins to Nautobot: 'plugins/porting-from-netbox.md'
+        - Templates for Plugins: 'plugins/templates.md'
     - Administration:
         - Nautobot Server: 'administration/nautobot-server.md'
         - Nautobot Shell: 'administration/nautobot-shell.md'
