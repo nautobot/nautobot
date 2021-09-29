@@ -9,6 +9,8 @@ services:
       dockerfile: docker/Dockerfile
       target: dev
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    # The hostname is needed for Selenium to correctly connect to NAUTOBOT_SELENIUM_HOST
+    hostname: "nautobot"
     ports:
       - "8080:8080"
     depends_on:

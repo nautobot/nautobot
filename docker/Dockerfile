@@ -31,6 +31,7 @@ ENV PATH="${PATH}:/root/.poetry/bin"
 # hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install --no-install-recommends -y openssl && \
+    apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -67,7 +68,7 @@ WORKDIR /source
 # Local source code is mounted as volume into container. This approach does not require
 # to rebuild a container when source code change occurs.
 # -------------------------------------------------------------------------------------
-RUN poetry install --no-root --no-ansi
+RUN poetry install --no-root --no-ansi --extras mysql
 
 # Generate required dirs and self signed ssl certificates
 RUN mkdir /opt/nautobot /prom_cache && openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \

@@ -1,0 +1,197 @@
+---
+name: "CI"
+on:  # yamllint disable
+  - "push"
+  - "pull_request"
+
+jobs:
+  black:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Linting: black"
+        run: "poetry run invoke black"
+  flake8:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Linting: flake8"
+        run: "poetry run invoke flake8"
+    needs:
+      - "black"
+  hadolint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Install hadolint"
+        run: "curl -Lo /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint"
+      - name: "Linting: hadolint"
+        run: "poetry run invoke hadolint"
+    needs:
+      - "black"
+  build:
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
+    env:
+      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Create tmp docker dir"
+        run: "mkdir /tmp/docker"
+      - name: "Cache Docker images"
+        uses: "actions/cache@v2"
+        id: "cached-docker-images"
+        with:
+          path: "/tmp/docker"
+          key: "${{ runner.os }}-docker-${{ matrix.python-version }}-${{ hashFiles('./docker/*') }}-1"
+      - name: "Build Container"
+        if: "steps.cached-docker-images.outputs.cache-hit != 'true'"
+        run: "poetry run invoke build"
+      - name: "Show docker images"
+        if: "steps.cached-docker-images.outputs.cache-hit != 'true'"
+        run: "docker image ls"
+      - name: "Save Docker image"
+        if: "steps.cached-docker-images.outputs.cache-hit != 'true'"
+        run: "docker save networktocode/nautobot-dev-py${{ matrix.python-version }} > /tmp/docker/nautobot-dev-py${{ matrix.python-version }}.tar"
+      - name: "Show files"
+        run: "ls -al /tmp/docker"
+    needs:
+      - "flake8"
+      - "hadolint"
+  check_migrations:
+    strategy:
+      matrix:
+        python-version: ["3.6"]
+    env:
+      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Cache Docker images"
+        uses: "actions/cache@v2"
+        id: "cached-docker-images"
+        with:
+          path: "/tmp/docker"
+          key: "${{ runner.os }}-docker-${{ matrix.python-version }}-${{ hashFiles('./docker/*') }}-1"
+      - name: "Load docker image"
+        run: "docker load < /tmp/docker/nautobot-dev-py${{ matrix.python-version }}.tar"
+      - name: "Show docker images"
+        run: "docker image ls"
+      - name: "Check migrations"
+        run: "poetry run invoke check-migrations"
+    needs:
+      - "build"
+  tests-postgres:
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
+    env:
+      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Cache Docker images"
+        uses: "actions/cache@v2"
+        id: "cached-docker-images"
+        with:
+          path: "/tmp/docker"
+          key: "${{ runner.os }}-docker-${{ matrix.python-version }}-${{ hashFiles('./docker/*') }}-1"
+      - name: "Load docker image"
+        run: "docker load < /tmp/docker/nautobot-dev-py${{ matrix.python-version }}.tar"
+      - name: "Show docker images"
+        run: "docker image ls"
+      - name: "Run unittest"
+        run: "poetry run invoke unittest --failfast --keepdb"
+      - name: "Run unittest coverage"
+        run: "poetry run invoke unittest-coverage"
+    needs:
+      - "check_migrations"
+  tests-mysql:
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
+    env:
+      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Cache Docker images"
+        uses: "actions/cache@v2"
+        id: "cached-docker-images"
+        with:
+          path: "/tmp/docker"
+          key: "${{ runner.os }}-docker-${{ matrix.python-version }}-${{ hashFiles('./docker/*') }}-1"
+      - name: "Load docker image"
+        run: "docker load < /tmp/docker/nautobot-dev-py${{ matrix.python-version }}.tar"
+      - name: "Show docker images"
+        run: "docker image ls"
+      - name: "Copy mysql creds"
+        run: "cp ./development/dev-mysql.env ./development/dev.env"
+      - name: "Create Docker network"
+        run: "docker network create --driver bridge nautobot_default"
+      - name: "Start mysql"
+        run: "docker run --name mysql --rm --env-file ./development/dev.env --network nautobot_default -itd mysql"
+      - name: "Run unittest"
+        run: "poetry run invoke unittest --failfast --keepdb"
+      - name: "Run unittest coverage"
+        run: "poetry run invoke unittest-coverage"
+    needs:
+      - "check_migrations"
+  integration-test:
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    env:
+      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v1"
+      - name: "Cache Docker images"
+        uses: "actions/cache@v2"
+        id: "cached-docker-images"
+        with:
+          path: "/tmp/docker"
+          key: "${{ runner.os }}-docker-${{ matrix.python-version }}-${{ hashFiles('./docker/*') }}-1"
+      - name: "Load docker image"
+        run: "docker load < /tmp/docker/nautobot-dev-py${{ matrix.python-version }}.tar"
+      - name: "Show docker images"
+        run: "docker image ls"
+      - name: "Run unittest"
+        run: "poetry run invoke integration-test --keepdb --append"
+      - name: "Run unittest coverage"
+        run: "poetry run invoke unittest-coverage"
+    needs:
+      - "tests-postgres"
+      - "tests-mysql"
