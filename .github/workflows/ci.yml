@@ -72,7 +72,7 @@ jobs:
       - name: "Show files"
         run: "ls -al /tmp/docker"
     needs:
-      - "blacke"
+      - "black"
       - "flake8"
       - "hadolint"
   check_migrations:
