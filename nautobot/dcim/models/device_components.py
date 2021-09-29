@@ -353,7 +353,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 
             # Calculate per-leg aggregates for three-phase feeds
             if getattr(self._cable_peer, "phase", None) == PowerFeedPhaseChoices.PHASE_3PHASE:
-                # Setup numerator and denominator for 
+                # Setup numerator and denominator for later display.
                 numerator = denominator = 0
                 for leg, leg_name in PowerOutletFeedLegChoices:
                     outlet_ids = PowerOutlet.objects.filter(power_port=self, feed_leg=leg).values_list("pk", flat=True)

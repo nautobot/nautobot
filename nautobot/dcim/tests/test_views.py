@@ -301,7 +301,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Rack)
-        cls.status_active = statuses.get(slug="active")
+        cls.statuses = statuses.get(slug="active")
+
+        cable_statuses = Status.objects.get_for_model(Cable)
+        cls.cable_connected = cable_statuses.get(slug="connected")
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
@@ -327,12 +330,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # Create a class racks variable
         cls.racks = racks
-        powerfeed_1 = PowerFeed.objects.create(name="Power Feed 1", power_panel=powerpanels[0], rack=racks[0])
-        powerfeed_2 = PowerFeed.objects.create(name="Power Feed 2", power_panel=powerpanels[0], rack=racks[0])
-        powerfeed_3 = PowerFeed.objects.create(name="Power Feed 3", power_panel=powerpanels[0], rack=racks[0])
 
-        # Assign power feeds for the tests later
-        cls.powerfeeds = (powerfeed_1, powerfeed_2, powerfeed_3)
         cls.relationships = (
             Relationship.objects.create(
                 name="Backup Sites",
@@ -402,18 +400,11 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         device_types = (
             DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturer),
         )
 
-        device_roles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-        )
+        device_roles = (DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),)
 
-        platforms = (
-            Platform.objects.create(name="Platform 1", slug="platform-1"),
-            Platform.objects.create(name="Platform 2", slug="platform-2"),
-        )
+        platforms = (Platform.objects.create(name="Platform 1", slug="platform-1"),)
 
         cls.devices = (
             Device.objects.create(
@@ -423,7 +414,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_type=device_types[0],
                 device_role=device_roles[0],
                 platform=platforms[0],
-                status=cls.status_active
+                status=cls.status_active,
             ),
             Device.objects.create(
                 name="Dev 1",
@@ -432,10 +423,9 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_type=device_types[0],
                 device_role=device_roles[0],
                 platform=platforms[0],
-                status=cls.status_active
-            )
+                status=cls.status_active,
+            ),
         )
-        
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_rack_elevations(self):
@@ -449,22 +439,24 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_powerports(self):
         # Create Power Port for device
         powerport1 = PowerPort.objects.create(device=self.devices[0], name="Power Port 11")
-        powerfeed1 = PowerFeed.objects.create(power_panel=self.powerpanels[0], name="Power Feed 11", phase="three-phase")
-        
+        powerfeed1 = PowerFeed.objects.create(
+            power_panel=self.powerpanels[0], name="Power Feed 11", phase="three-phase"
+        )
+
         # Create power outlet to the power port
         poweroutlet1 = PowerOutlet.objects.create(device=self.devices[0], name="Power Outlet 11")
-        
+
         # connect power port to power feed (3 phase)
-        cable1 = Cable(termination_a=powerfeed1, termination_b=powerport1, status=self.status_active)
+        cable1 = Cable(termination_a=powerfeed1, termination_b=powerport1, status=self.cable_connected)
         cable1.save()
-        
+
         # Create power port for 2nd device
         powerport2 = PowerPort.objects.create(device=self.devices[1], name="Power Port 12")
-        
+
         # Connect power port to power outlet (dev1)
-        cable2 = Cable(termination_a=powerport2, termination_b=poweroutlet1, status=self.status_active)
+        cable2 = Cable(termination_a=powerport2, termination_b=poweroutlet1, status=self.cable_connected)
         cable2.save()
-        
+
         # Test the view
         response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
         self.assertHttpStatus(response, 200)
