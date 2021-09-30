@@ -89,6 +89,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 - [#623](https://github.com/nautobot/nautobot/issues/623) - Git repository sync logs now include the commit hash that was synchronized to.
 - [#861](https://github.com/nautobot/nautobot/issues/861) - Bulk editing of devices can now update their site, rack, and rack-group assignments.
+- [#949](https://github.com/nautobot/nautobot/pull/949/) - Added documentation note about using `MAINTENANCE_MODE` in combination with LDAP.
 
 ### Fixed
 
