@@ -155,6 +155,10 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
           python-version: "${{ matrix.python-version }}"
+      - name: "Install Required Dependencies for MySql Client"
+        run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
+      - name: "Install MySql Dependencies"
+        run: "poetry install --no-interaction --no-root --extras mysql"
 
       # - name: "Check out repository code"
       #   uses: "actions/checkout@v2"
