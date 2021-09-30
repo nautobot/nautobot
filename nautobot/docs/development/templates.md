@@ -1,18 +1,15 @@
-# Templates for Plugins
+# Page Templates
 
-Nautobot comes with a variety of plugins that allow for a lot of flexibility
+Nautobot comes with a variety of page templates that allow for a lot of flexibility
 while keeping the page style consistent with the rest of the application.
 This document presents these templates and their features.
 
-You can use it for your templates by calling `{% extends '<template_name>' %}`
+You can use these templates as the basis for your templates by calling `{% extends '<template_name>' %}`
 at the top of your template file.
 
 ## Object Detail
 
-The most customizable template available to plugin authors is
-`generic/object_detail.html`.
-
-The following blocks are available to you:
+The most customizable template is `generic/object_detail.html`, as object detail views have a wide range of specific requirements to be accommodated. It provides the following blocks:
 
 - `header`: overloading this block allows for changing the entire top row of
   the page, including the title, breadcrumbs, search field, and tabs.
@@ -42,9 +39,7 @@ The following blocks are available to you:
 
 ## Object List
 
-The base view for listing objects is `generic/object_list.html`.
-
-In it, the following blocks may be implemented:
+The base template for listing objects is `generic/object_list.html`, with the following blocks:
 
 - `buttons`: may provide a set of buttons at the top right of the page, to the
   left of the table configuration button.
@@ -54,23 +49,19 @@ In it, the following blocks may be implemented:
 
 ## Object Edit
 
-The base view for object addition or change is `generic/object_edit.html`. It
+The base template for object addition or change is `generic/object_edit.html`. It
 does not provide any blocks for customizing the user experience.
 
 ## Object Import
 
-The base view for object import is `generic/object_import.html`.
-
-The blocks that views may override are:
+The base template for object import is `generic/object_import.html`, with the following blocks:
 
 - `tabs`: may provide tabs at the top of the page. The default import view is
   not tabbed.
 
 ## Object Deletion
 
-The base view for object deletion is `generic/object_delete.html`.
-
-It provides the following custom blocks:
+The base template for object deletion is `generic/object_delete.html`, with the following blocks:
 
 - `message`: is the overridable confirmation message for deletion.
     - `message_extra`: provides a way to add to the default message without
@@ -78,30 +69,26 @@ It provides the following custom blocks:
 
 ## Bulk Edit
 
-The base view for bulk object change is `generic/object_bulk_edit.html`. It
+The base template for bulk object change is `generic/object_bulk_edit.html`. It
 does not provide any blocks for customizing the user experience.
 
 ## Bulk Import
 
-The base view for bulk object import is `generic/object_bulk_import.html`.
-
-The blocks that views may override are:
+The base template for bulk object import is `generic/object_bulk_import.html`, with the following blocks:
 
 - `tabs`: may provide tabs at the top of the page. The default import view is
   not tabbed.
 
 ## Bulk Deletion
 
-The base view for bulk object deletion is `generic/object_bulk_delete.html`.
-
-It provides the following custom blocks:
+The base template for bulk object deletion is `generic/object_bulk_delete.html`, with the following blocks:
 
 - `message_extra`: provides a way to add to the default message.
 
-**Note**: contrary to the deletion of a single object, this view does *not*
+**Note**: contrary to the deletion of a single object, this template does *not*
 provide a way to completely override the deletion message.
 
 ## Bulk Renaming
 
-The base view for renaming object in bulk is `generic/object_bulk_rename.html`.
+The base template for renaming objects in bulk is `generic/object_bulk_rename.html`.
 It does not provide any blocks for customizing the user experience.
