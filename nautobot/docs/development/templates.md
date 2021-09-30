@@ -54,8 +54,12 @@ In it, the following blocks may be implemented:
 
 ## Object Edit
 
-The base view for object addition or change is `generic/object_edit.html`. It
-does not provide any blocks for customizing the user experience.
+The base view for object addition or change is `generic/object_edit.html`, with
+the following blocks:
+
+- `form`: is the block in which the form gets rendered. This can be overriden
+  to provide a custom UI or UX for form views beyond what `render_form`
+  provides.
 
 ## Object Import
 
