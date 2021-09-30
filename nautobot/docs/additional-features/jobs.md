@@ -357,7 +357,12 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint, with the option of specifying any required user input data and/or the `commit` flag.
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<class_path>/run/`. You can optionally provide JSON data to set the `commit` flag and/or specify any required user input `data`.
+
+!!! note
+    [See above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
+
+For example, to run a job with no user inputs and without committing any anything to the database:
 
 ```no-highlight
 curl -X POST \
@@ -367,17 +372,16 @@ curl -X POST \
 http://nautobot/api/extras/jobs/local/example/MyJobWithNoVars/run/
 ```
 
+Or to run a job that expects user inputs, and commit changes to the database:
+
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; indent=4" \
 http://nautobot/api/extras/jobs/local/example/MyJobWithVars/run/ \
---data '{"data": {"foo": "somevalue", "bar": 123}, "commit": true}'
+--data '{"data": {"string_variable": "somevalue", "integer_variable": 123}, "commit": true}'
 ```
-
-!!! note
-    In this example, `local/example/MyJobWithVars` is the job's `class_path` - [see above](#jobs-and-class_path) for information on constructing the `class_path` for any given Job.
 
 When providing input data, it is possible to specify complex values contained in `ObjectVar`s, `MultiObjectVar`s, and `IPAddressVar`s.
 
@@ -390,7 +394,7 @@ When providing input data, it is possible to specify complex values contained in
 Jobs that do not require user input can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob [--username <username>] [--commit] <grouping_name>/<module>/<JobName>
+nautobot-server runjob [--username <username>] [--commit] <class_path>
 ```
 
 !!! note
@@ -404,8 +408,10 @@ nautobot-server runjob --username myusername local/example/MyJobWithNoVars
 
 Provision of user input (`data` values) via the CLI is not supported at this time.
 
-!!! note
-    `nautobot-server` commands, like other direct interactions with the Django ORM, are not gated by the usual Nautobot user authentication flow. It is possible to specify any valid `--username` argument to the `nautobot-server runjob` command in order to impersonate any given user as the requester of a job. Use this power wisely and be cautious who you allow to access it.
+!!! warning
+    The `--username <username>` parameter can be used to specify the user that will be identified as the requester of the job. It is optional if the job will not be modifying the database, but is mandatory if you are running with `--commit`, as the specified user will own any resulting database changes.
+
+    Note that `nautobot-server` commands, like all management commands and other direct interactions with the Django database, are not gated by the usual Nautobot user authentication flow. It is possible to specify any existing `--username` with the `nautobot-server runjob` command in order to impersonate any defined user in Nautobot. Use this power wisely and be cautious who you allow to access it.
 
 ## Example Jobs
 
