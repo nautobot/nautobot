@@ -88,7 +88,6 @@ nav:
         - Using Plugins: 'plugins/index.md'
         - Developing Plugins: 'plugins/development.md'
         - Porting NetBox Plugins to Nautobot: 'plugins/porting-from-netbox.md'
-        - Templates for Plugins: 'plugins/templates.md'
     - Administration:
         - Nautobot Server: 'administration/nautobot-server.md'
         - Nautobot Shell: 'administration/nautobot-shell.md'
@@ -108,6 +107,7 @@ nav:
         - Style Guide: 'development/style-guide.md'
         - Extending Models: 'development/extending-models.md'
         - Application Registry: 'development/application-registry.md'
+        - Templates: 'development/templates.md'
         - Navigation Menu: 'development/navigation-menu.md'
         - Home Page Panels: 'development/homepage.md'
         - User Preferences: 'development/user-preferences.md'

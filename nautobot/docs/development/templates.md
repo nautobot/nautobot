@@ -16,28 +16,29 @@ The following blocks are available to you:
 
 - `header`: overloading this block allows for changing the entire top row of
   the page, including the title, breadcrumbs, search field, and tabs.
-- `breadcrumbs`: overloading this block allows for changing the entire breadcrumbs
-  block.
-- `extra_breadcrumbs`: this enables extending the breadcrumbs block just
-  before the model without having to redefine the entire block.
-- `buttons`: overloading this block allows redefining the entire button
-  section on the right of the page.
-- `extra_buttons`: this block enables extending the buttons block without
-  losing the predefined buttons. Custom buttons will appear between the
-  plugin buttons and clone/edit/delete actions.
-- `masthead`: is the block that contains the title. Overloading it enables
-  to change anything about the title block.
-- `title`: is the block contained by `masthead` and wrapped in a heading block.
-  Overloading it makes it possible to change the heading text.
-- `nav_tabs`: are the navigation tabs. If overloaded, custom tabs can be
-  rendered instead of the default.
-- `extra_nav_tabs`: this block allows to add new tabs without having to
-  override the default ones.
+    - `breadcrumbs`: overloading this block allows for changing the entire
+      breadcrumbs block.
+        - `extra_breadcrumbs`: this enables extending the breadcrumbs block
+          just before the model without having to redefine the entire block.
+    - `buttons`: overloading this block allows redefining the entire button
+      section on the right of the page.
+        - `extra_buttons`: this block enables extending the buttons block
+          without losing the predefined buttons. Custom buttons will appear
+          between the plugin buttons and clone/edit/delete actions.
+    - `masthead`: is the block that contains the title. Overloading it enables
+      to change anything about the title block.
+    - `title`: is the block contained by `masthead` and wrapped in a heading
+      block. Overloading it makes it possible to change the heading text as
+      well as the page title shown in the browser.
+    - `nav_tabs`: are the navigation tabs. If overloaded, custom tabs can be
+      rendered instead of the default.
+        - `extra_nav_tabs`: this block allows to add new tabs without having to
+          override the default ones.
 - `content`: is the entire content of the page below the `header`.
-- `content_left_page`: is a half-width column on the left. Multiple panels can
-  be rendered in a single block.
-- `content_right_page`: is a half-width column on the right.
-- `content_full_width_page`: is a full-width column.
+    - `content_left_page`: is a half-width column on the left. Multiple panels
+      can be rendered in a single block.
+    - `content_right_page`: is a half-width column on the right.
+    - `content_full_width_page`: is a full-width column.
 
 ## Object List
 
@@ -72,8 +73,8 @@ The base view for object deletion is `generic/object_delete.html`.
 It provides the following custom blocks:
 
 - `message`: is the overridable confirmation message for deletion.
-- `message_extra`: provides a way to add to the default message without
-  overriding it.
+    - `message_extra`: provides a way to add to the default message without
+      overriding it.
 
 ## Bulk Edit
 
