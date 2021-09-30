@@ -78,7 +78,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django.db.backends.postgresql"
     services:
       postgres:
-        image: "postgres:13"
+        image: "postgres:13-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
