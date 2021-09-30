@@ -32,7 +32,7 @@
     {% block breadcrumbs %}
         <div class="{% if cl.search_fields %}col-sm-8 col-md-9{% else %}col-sm-12 col-md-12{% endif %}">
             <ul class="breadcrumb">
-                <li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+                <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
                 <!--<li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% render_with_template_if_exist app_label|lower|add:"/admin_app_name.html" app_label %}</a></li>-->
                 <li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% with app_label=cl.opts.app_config.verbose_name|default:cl.opts.app_label %}{{ app_label|title }}{% endwith %}</a></li>
                 <li>{{ cl.opts.verbose_name_plural|capfirst }}</li>

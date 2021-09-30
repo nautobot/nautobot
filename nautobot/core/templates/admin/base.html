@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>{% block title %}Home{% endblock %} - Nautobot</title>
+    <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
     <link rel="stylesheet"
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
@@ -47,6 +47,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
 
+    {% block extrahead %}{% endblock %}
+    {% block extrastyle %}{% endblock %}
+
     <style>
         .description {
             padding-bottom: 20px;
@@ -61,15 +64,31 @@
         .selectfilter {
             width: 100%;
         }
+        .vLargeTextField, .vXMLLargeTextField {
+            width: 100%;
+        }
+        .vTextField {
+            width: 100%;
+        }
+        .related-widget-wrapper > select {
+            width: 100%;
+        }
+        .form-horizontal .control-label {
+            text-align: left;
+        }
+        input[type="checkbox"] {
+            margin-left: 0 !important;
+        }
+        textarea {
+            width: 100%;
+        }
     </style>
-
-    {% block extrahead %}{% endblock %}
-    {% block extrastyle %}{% endblock %}
 </head>
-<body>
-{% include 'inc/nav_menu.html' %}
-
-<div class="container-fluid wrapper">
+<body {% if is_popup %}style="padding-top: 0px;"{% endif %}>
+{% if not is_popup %}
+    {% include 'inc/nav_menu.html' %}
+{% endif %}
+<div class="container-fluid wrapper" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
     {% if settings.BANNER_TOP %}
         <div class="alert alert-info text-center" role="alert">
             {{ settings.BANNER_TOP|safe }}
@@ -136,7 +155,7 @@
         </div>
     {% endif %}
 </div>
-
+{% if not is_popup %}
     <footer class="footer">
         <div class="container-fluid">
             <div class="row">
@@ -158,6 +177,7 @@
             </div>
         </div>
     </footer>
+{% endif %}
 {% block javascript %}{% endblock %}
 </body>
 </html>

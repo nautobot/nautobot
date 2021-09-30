@@ -14,7 +14,7 @@
 {% if not is_popup %}
     {% block breadcrumbs %}
         <ul class="breadcrumb">
-            <li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+            <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
             <li>
                 <a href="{% url 'admin:app_list' app_label=opts.app_label %}">
                     {% with app_label=opts.app_config.verbose_name|default:opts.app_label %}{{ app_label|title }}{% endwith %}
@@ -80,7 +80,7 @@
     {% if save_on_top %}{% block submit_buttons_top %}{% submit_row %}{% endblock %}{% endif %}
 
     <div id="content-main" class="row">
-        <div class="col-md-6 col-md-offset-3">
+        <div {% if is_popup %}class="col-md-12"{% else %}class="col-md-6 col-md-offset-3"{% endif %}>
             {% if is_popup %}<input type="hidden" name="_popup" value="1" />{% endif %}
             {% block field_sets %}
                 {% for fieldset in adminform %}
