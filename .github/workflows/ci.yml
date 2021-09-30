@@ -177,7 +177,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb --append"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
     needs:
