@@ -40,14 +40,14 @@ class Command(BaseCommand):
         request = None
         if options["commit"] and not options["username"]:
             # Job execution with commit=True uses change_logging(), which requires a user as the author of any changes
-            raise CommandError("--username is mandatory when running with --commit as True")
+            raise CommandError("--username is mandatory when --commit is used")
 
         if options["username"]:
             User = get_user_model()
             try:
                 user = User.objects.get(username=options["username"])
             except User.DoesNotExist as exc:
-                raise CommandError("No such username") from exc
+                raise CommandError("No such user") from exc
 
             request = RequestFactory().request(SERVER_NAME="nautobot_server_runjob")
             request.id = uuid.uuid4()
