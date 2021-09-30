@@ -94,6 +94,10 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 - [#944](https://github.com/nautobot/nautobot/issues/944) - Jobs that commit changes to the database could not be invoked successfully from the `nautobot-server runjob` command.
 
+### Security
+
+- [#939](https://github.com/nautobot/nautobot/issues/939) - Nautobot views now default to `X-Frame-Options: DENY` rather than `X-Frame-Options: SAMEORIGIN`, with the exception of the rack-elevation API view (`/api/dcim/rack-elevation/`) which specifically requires `X-Frame-Options: SAMEORIGIN` for functional reasons.
+
 ## v1.1.3 (2021-09-13)
 
 ### Added
