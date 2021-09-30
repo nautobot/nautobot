@@ -90,6 +90,10 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#623](https://github.com/nautobot/nautobot/issues/623) - Git repository sync logs now include the commit hash that was synchronized to.
 - [#861](https://github.com/nautobot/nautobot/issues/861) - Bulk editing of devices can now update their site, rack, and rack-group assignments.
 
+### Fixed
+
+- [#944](https://github.com/nautobot/nautobot/issues/944) - Jobs that commit changes to the database could not be invoked successfully from the `nautobot-server runjob` command.
+
 ### Security
 
 - [#939](https://github.com/nautobot/nautobot/issues/939) - Nautobot views now default to `X-Frame-Options: DENY` rather than `X-Frame-Options: SAMEORIGIN`, with the exception of the rack-elevation API view (`/api/dcim/rack-elevation/`) which specifically requires `X-Frame-Options: SAMEORIGIN` for functional reasons.
@@ -132,7 +136,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Security
 
 - [#893](https://github.com/nautobot/nautobot/pull/893) - Bump Pillow dependency version from 8.2.0 to 8.2.3 to address numerous critical CVE advisories
--
+
 ## v1.1.2 (2021-08-10)
 
 ### Added
