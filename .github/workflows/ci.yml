@@ -37,7 +37,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Install hadolint"
-        run: "curl -Lo /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.0.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint"
+        run: "curl -Lo /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.7.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint"
       - name: "Linting: hadolint"
         run: "poetry run invoke hadolint"
   check-migrations:
@@ -98,24 +98,6 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
           python-version: "${{ matrix.python-version }}"
-
-      # - name: "Set up Python"
-      #   uses: "actions/setup-python@v2"
-      #   id: "python-setup"
-      #   with:
-      #     python-version: "${{ matrix.python-version }}"
-      # - name: "Install Poetry"
-      #   run: "pip install poetry"
-      # - name: "Load Environment From Cache"
-      #   uses: "actions/cache@v2"
-      #   id: "cached-poetry"
-      #   with:
-      #     path: "~/.cache/pypoetry/virtualenvs/"
-      #     key: "${{ runner.os }}-poetry-${{ steps.python-setup.outputs.python-version }}-${{ hashFiles('./poetry.lock') }}"
-      # - name: "Install Dependencies"
-      #   run: "poetry install --no-interaction --no-root"
-      # - name: "Install Nautobot"
-      #   run: "poetry install --no-interaction"
       - name: "Run unittest"
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
@@ -137,7 +119,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django.db.backends.mysql"
     services:
       mysql:
-        image: "mysql"
+        image: "mysql:8"
         env:
           MYSQL_ROOT_PASSWORD: "decinablesprewad"
           MYSQL_PASSWORD: "decinablesprewad"
@@ -159,28 +141,6 @@ jobs:
         run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
       - name: "Install MySql Dependencies"
         run: "poetry install --no-interaction --no-root --extras mysql"
-
-      # - name: "Check out repository code"
-      #   uses: "actions/checkout@v2"
-      # - name: "Set up Python"
-      #   uses: "actions/setup-python@v2"
-      #   id: "python-setup"
-      #   with:
-      #     python-version: "${{ matrix.python-version }}"
-      # - name: "Install Required Dependencies for MySql Client"
-      #   run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
-      # - name: "Install Poetry"
-      #   run: "pip install poetry"
-      # - name: "Load Environment From Cache"
-      #   uses: "actions/cache@v2"
-      #   id: "cached-poetry"
-      #   with:
-      #     path: "~/.cache/pypoetry/virtualenvs/"
-      #     key: "${{ runner.os }}-poetry-${{ steps.python-setup.outputs.python-version }}-${{ hashFiles('./poetry.lock') }}"
-      # - name: "Install Dependencies"
-      #   run: "poetry install --no-interaction --no-root --extras mysql"
-      # - name: "Install Nautobot"
-      #   run: "poetry install --no-interaction"
       - name: "Run unittest"
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
@@ -219,27 +179,6 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
           python-version: "${{ matrix.python-version }}"
-
-
-      # - name: "Check out repository code"
-      #   uses: "actions/checkout@v2"
-      # - name: "Set up Python"
-      #   uses: "actions/setup-python@v2"
-      #   id: "python-setup"
-      #   with:
-      #     python-version: "3.9"
-      # - name: "Install Poetry"
-      #   run: "pip install poetry"
-      # - name: "Load Environment From Cache"
-      #   uses: "actions/cache@v2"
-      #   id: "cached-poetry"
-      #   with:
-      #     path: "~/.cache/pypoetry/virtualenvs/"
-      #     key: "${{ runner.os }}-poetry-${{ steps.python-setup.outputs.python-version }}-${{ hashFiles('./poetry.lock') }}"
-      # - name: "Install Dependencies"
-      #   run: "poetry install --no-interaction --no-root"
-      # - name: "Install Nautobot"
-      #   run: "poetry install --no-interaction"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb --append"
