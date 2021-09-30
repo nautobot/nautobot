@@ -97,7 +97,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
-          python-version: "{{ matrix.python-version }}"
+          python-version: "${{ matrix.python-version }}"
 
       # - name: "Set up Python"
       #   uses: "actions/setup-python@v2"
@@ -154,7 +154,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
-          python-version: "{{ matrix.python-version }}"
+          python-version: "${{ matrix.python-version }}"
 
       # - name: "Check out repository code"
       #   uses: "actions/checkout@v2"
@@ -214,7 +214,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
-          python-version: "{{ matrix.python-version }}"
+          python-version: "${{ matrix.python-version }}"
 
 
       # - name: "Check out repository code"
