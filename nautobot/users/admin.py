@@ -99,6 +99,10 @@ class UserAdmin(UserAdmin_):
     filter_horizontal = ("groups",)
     readonly_fields = ("config_data",)
 
+    formfield_overrides = {
+        models.ManyToManyField: {"widget": StaticSelect2Multiple},
+    }
+
     def get_inlines(self, request, obj):
         if obj is not None:
             return (UserObjectPermissionInline,)
