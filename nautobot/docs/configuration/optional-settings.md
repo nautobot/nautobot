@@ -70,6 +70,72 @@ This defines custom content to be displayed on the login page above the login fo
 
 ---
 
+## BRANDING_FILEPATHS
+
+Default:
+
+```python
+{
+    "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
+    "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
+    "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
+    "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
+    "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon 
+    "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+}
+```
+
+A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset. This allows for instance, providing your own navbar logo and favicon.
+
+These environment variables may be used to specify the values:
+
+* `NAUTOBOT_BRANDING_FILEPATHS_LOGO`
+* `NAUTOBOT_BRANDING_FILEPATHS_FAVICON`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_16`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_32`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+
+If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+
+---
+
+## BRANDING_TITLE
+
+Default: `"Nautobot"`
+
+Environment Variable: `NAUTOBOT_BRANDING_TITLE`
+
+The defines the custom branding title that should be used in place of "Nautobot" within user facing areas of the application like the HTML title of web pages.
+
+---
+
+## BRANDING_URLS
+
+Default:
+
+```python
+{
+    "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),  # Code link in the footer
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),  # Docs link in the footer
+    "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),  # Help link in the footer
+}
+```
+
+A set of URLs that correspond to helpful links in the right of the footer on every web page.
+
+These environment variables may be used to specify the values:
+
+* `NAUTOBOT_BRANDING_URLS_CODE`
+* `NAUTOBOT_BRANDING_URLS_DOCS`
+* `NAUTOBOT_BRANDING_URLS_HELP`
+
+If a custom URL is not provided for any of the links, the default link within the Nautobot community is used.
+
+---
+
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
