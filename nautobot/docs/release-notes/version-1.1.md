@@ -95,10 +95,12 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Changed
 
 - [#956](https://github.com/nautobot/nautobot/pull/956) - Switched CI from Travis to GitHub Actions.
+- [#964](https://github.com/nautobot/nautobot/pull/964) - Updated README.md build status badge to show GitHub status.
 
 ### Fixed
 
 - [#944](https://github.com/nautobot/nautobot/issues/944) - Jobs that commit changes to the database could not be invoked successfully from the `nautobot-server runjob` command.
+- [#955](https://github.com/nautobot/nautobot/issues/955) - REST API endpoint for syncing Git repositories was still checking for RQ workers instead of Celery workers.
 
 ### Security
 
