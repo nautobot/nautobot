@@ -71,9 +71,9 @@ User = get_user_model()
 class GraphQLTestCase(TestCase):
     @classmethod
     def setUp(self):
-        from nautobot.core.graphql.schema_init import schema
+        from nautobot.core.graphql.schema_init import get_schema
 
-        self.schema = schema
+        self.schema = get_schema()
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
         GraphQLQuery.objects.create(
@@ -569,9 +569,9 @@ class GraphQLQueryTest(TestCase):
         self.request.user = self.user
 
         self.backend = get_default_backend()
-        from nautobot.core.graphql.schema_init import schema
+        from nautobot.core.graphql.schema_init import get_schema
 
-        self.schema = schema
+        self.schema = get_schema()
 
         # Populate Data
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")

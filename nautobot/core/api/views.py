@@ -379,7 +379,7 @@ class GraphQLDRFAPIView(APIView):
 
     def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None):
         if not schema:
-            from nautobot.core.graphql.schema_init import schema
+            from nautobot.core.graphql.schema_init import get_schema
 
         if backend is None:
             backend = get_default_backend()
@@ -387,7 +387,7 @@ class GraphQLDRFAPIView(APIView):
         if middleware is None:
             middleware = graphene_settings.MIDDLEWARE
 
-        self.graphql_schema = self.graphql_schema or schema
+        self.graphql_schema = self.graphql_schema or get_schema()
 
         if middleware is not None:
             if isinstance(middleware, MiddlewareManager):

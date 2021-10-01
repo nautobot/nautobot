@@ -182,9 +182,9 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
 
 class CustomGraphQLView(GraphQLView):
     def __init__(self, *args, **kwargs):
-        from nautobot.core.graphql.schema_init import schema
+        from nautobot.core.graphql.schema_init import get_schema
 
-        super().__init__(*args, **kwargs, schema=schema)
+        super().__init__(*args, **kwargs, schema=get_schema())
 
     def render_graphiql(self, request, **data):
         query_slug = request.GET.get("slug")

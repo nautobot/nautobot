@@ -43,9 +43,9 @@ def execute_query(query, variables=None, request=None, user=None):
         request = RequestFactory().post("/graphql/")
         request.user = user
     backend = get_default_backend()
-    from .schema_init import schema
+    from .schema_init import get_schema
 
-    document = backend.document_from_string(schema, query)
+    document = backend.document_from_string(get_schema(), query)
     if variables:
         return document.execute(context_value=request, variable_values=variables)
     else:

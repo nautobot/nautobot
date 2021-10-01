@@ -82,6 +82,6 @@ def parse_redis_connection(redis_database):
     # password because the Redis Python client already does this.
     redis_creds = ""
     if redis_username or redis_password:
-        redis_creds = f"{redis_username}:{redis_password}@"
+        redis_creds = f"{redis_username or 'default'}:{redis_password}@"
 
     return f"{redis_scheme}://{redis_creds}{redis_host}:{redis_port}/{redis_database}"
