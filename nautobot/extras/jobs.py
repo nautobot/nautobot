@@ -997,6 +997,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     except Exception as e:
         logger.error("Error initializing job object.")
         logger.error(e)
+        stacktrace = traceback.format_exc()
+        job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.completed = timezone.now()
         job_result.save()
@@ -1015,7 +1017,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         data = job_class.deserialize_data(data)
     except Exception as e:
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
-        job.log_failure(message=e)
+        stacktrace = traceback.format_exc()
+        job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
+        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.completed = timezone.now()
         job_result.save()
         job.delete_files(*file_ids)  # Cleanup FileProxy objects
