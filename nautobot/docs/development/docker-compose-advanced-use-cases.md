@@ -10,7 +10,7 @@ The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/s
 - `python_ver`: the Python version which is used to build the Docker container (default: `3.7`)
 - `local`: run the commands in the local environment vs the Docker container (default: `False`)
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
-- `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.dev.yml"]`)
+- `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)
 - `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images); you shouldn't generally need to change these.
 
 These setting may be overridden several different ways (from highest to lowest precedence):
@@ -29,6 +29,8 @@ In this directory you'll find the following core files:
 - `docker-compose.build.yml` - Docker compose override file used to start/build the production docker images for local testing.
 - `docker-compose.debug.yml` - Docker compose override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
 - `docker-compose.dev.yml` - Docker compose override file used to mount the Nautobot source code inside the container at `/source` and the `nautobot_config.py` from the same directory as `/opt/nautobot/nautobot_config.py` for the active configuration.
+- `docker-compose.mysql.yml` - Docker compose override file used to add a MySQL container as the database backend for Nautobot.
+- `docker-compose.postgres.yml` - Docker compose override file used to add a Postgres container as the database backend for Nautobot.
 - `dev.env` - Environment variables used to setup the container services
 - `nautobot_config.py` - Nautobot configuration file
 
@@ -50,6 +52,7 @@ If you require changing any of the defaults found in `docker-compose.yml`,  crea
 nautobot:
   compose_files:
     - "docker-compose.yml"
+    - "docker-compose.postgres.yml"
     - "docker-compose.dev.yml"
     - "docker-compose.override.yml"
 ```
@@ -74,7 +77,7 @@ services:
 
 The `docker-entrypoint.sh` script will run any migrations and then look for specific variables set to create the superuser. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
 
- Any variables defined in this file will override the defaults. The `override.env` should look like the following:
+ Any variables defined in this file will override the defaults. The `override.env` should be located in the `development/` directory, and should look like the following:
 
 ```bash
 # Superuser information. NAUTOBOT_CREATE_SUPERUSER defaults to false.
@@ -88,6 +91,44 @@ NAUTOBOT_SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 The variables defined above within `override.env` will signal the `docker-entrypoint.sh` script to create the superuser with the specified username, email, password, and API token.
 
 After these two files are created, you can use the `invoke` tasks to manage the development containers.
+
+### Using MySQL instead of PostgreSQL
+
+By default the Docker development environment is configured to use a PostgreSQL container as the database backend. For development or testing purposes, you might optionally choose to use MySQL instead. In order to do so, you need to make the following changes to your environment:
+
+- Set up `development/override.env` as described above and use it to set the following environment variables:
+
+        NAUTOBOT_DB_HOST=mysql
+        NAUTOBOT_DB_ENGINE=django.db.backends.mysql
+
+- Set up `development/docker-compose.override.yml` to apply your `override.env` to all of the nautobot core containers:
+
+        ---
+        services:
+          nautobot:
+            env_file:
+              - "override.env"
+          worker:
+            env_file:
+              - "override.env"
+          celery_worker:
+            env_file:
+              - "override.env"
+          celery_beat:
+            env_file:
+              - "override.env"
+
+- Set up an `invoke.yml` that overrides the docker-compose files used so that `docker-compose.mysql.yml` is used instead of `docker-compose.postgres.yml` and your `docker-compose.override.yml` is also used:
+
+        ---
+        nautobot:
+          compose_files:
+            - "docker-compose.yml"
+            - "docker-compose.mysql.yml"
+            - "docker-compose.dev.yml"
+            - "docker-compose.override.yml"
+
+Then `invoke stop` (if you previously had the docker environment running with Postgres) and `invoke start` and you should now be running with MySQL.
 
 ## Microsoft Visual Studio Code Integration
 

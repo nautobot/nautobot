@@ -6,6 +6,7 @@ from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
+from django.urls import URLPattern
 
 from nautobot.core.apps import (
     NautobotConfig,
@@ -73,6 +74,10 @@ class PluginConfig(NautobotConfig):
         "*": {"ops": "all"},
     }
 
+    # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure"
+    home_view_name = None
+    config_view_name = None
+
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
     banner_function = "banner.banner"
@@ -87,20 +92,40 @@ class PluginConfig(NautobotConfig):
 
     def ready(self):
         """Callback after plugin app is loaded."""
+
+        # Introspect URL patterns and models to make available to the installed-plugins detail UI view.
+        urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")
+        api_urlpatterns = import_object(f"{self.__module__}.api.urls.urlpatterns")
+
+        self.features = {
+            "api_urlpatterns": sorted(
+                (urlp for urlp in (api_urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
+            ),
+            "models": sorted(model._meta.verbose_name for model in self.get_models()),
+            "urlpatterns": sorted(
+                (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
+                key=lambda urlp: (urlp.name, str(urlp.pattern)),
+            ),
+        }
+
         # Register banner function (if defined)
         banner_function = import_object(f"{self.__module__}.{self.banner_function}")
         if banner_function is not None:
             register_banner_function(banner_function)
+            self.features["banner"] = True
 
         # Register model validators (if defined)
         validators = import_object(f"{self.__module__}.{self.custom_validators}")
         if validators is not None:
             register_custom_validators(validators)
+            self.features["custom_validators"] = sorted(set(validator.model for validator in validators))
 
         # Register datasource contents (if defined)
         datasource_contents = import_object(f"{self.__module__}.{self.datasource_contents}")
         if datasource_contents is not None:
             register_datasource_contents(datasource_contents)
+            self.features["datasource_contents"] = datasource_contents
 
         # Register GraphQL types (if defined)
         graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
@@ -111,24 +136,29 @@ class PluginConfig(NautobotConfig):
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
             register_jobs(jobs)
+            self.features["jobs"] = jobs
 
         # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
         if menu_items is not None:
             register_plugin_menu_items(self.verbose_name, menu_items)
+            self.features["nav_menu"] = menu_items
 
         homepage_layout = import_object(f"{self.__module__}.{self.homepage_layout}")
         if homepage_layout is not None:
             register_homepage_panels(self.path, self.label, homepage_layout)
+            self.features["home_page"] = homepage_layout
 
         # Register template content (if defined)
         template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
         if template_extensions is not None:
             register_template_extensions(template_extensions)
+            self.features["template_extensions"] = sorted(set(extension.model for extension in template_extensions))
 
         # Register custom jinja filters
         try:
             import_module(f"{self.__module__}.{self.jinja_filters}")
+            self.features["jinja_filters"] = True
         except ModuleNotFoundError:
             pass
 

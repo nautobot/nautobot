@@ -5,6 +5,9 @@ This documentation covers the development of custom plugins for Nautobot. Plugin
 Plugins can [do a lot of different things](./index.md#capabilities), all of which will be covered in detail in this document.
 Keep in mind that each piece of functionality is entirely optional. For example, if your plugin merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
+!!! tip
+    The plugin detail view (`/plugins/installed-plugins/<plugin_name>/`, accessible via **Plugins -> Installed Plugins** in the navigation menu, then selecting a specific plugin) provides in-depth information about which features any installed plugin is implementing or making use of.
+
 ## Initial Setup
 
 !!! important "Use a Development Environment, Not Production For Plugin Development"
@@ -141,8 +144,10 @@ Nautobot looks for the `config` variable within a plugin's `__init__.py` to load
 | Name | Default | Description |
 | ---- | ------- | ----------- |
 | `base_url` | Same as specified `name` | Base path to use for plugin URLs |
-| `caching_config` | `{"*": {"ops": "all"}}` | Plugin-specific [query caching configuration](https://github.com/Suor/django-cacheops#setup) |
+| `caching_config` | `{"*":{"ops":"all"}}` | Plugin-specific [query caching configuration](https://github.com/Suor/django-cacheops#setup) |
+| `config_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "configuration" view defined by this plugin |
 | `default_settings` | `{}` | A dictionary of configuration parameters and their default values |
+| `home_view_name` | `None` | [URL name](#adding-links-to-the-installed-plugins-view) for a "home" or "dashboard" view defined by this plugin |
 | `installed_apps` | `[]` | A list of additional Django application dependencies to automatically enable when the plugin is activated (you must still make sure these underlying dependent libraries are installed) |
 | `max_version` | `None` | Maximum version of Nautobot with which the plugin is compatible |
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
@@ -164,15 +169,15 @@ The following `PluginConfig` attributes can be configured to customize where Nau
 
 | Name | Default | Description |
 | ---- | ------- | ----------- |
-| `banner_function` | `"banner.banner"` | Dotted path to a function that can render a custom banner |
-| `custom_validators` | `"custom_validators.custom_validators"` | Dotted path to a list of custom validator classes |
-| `datasource_contents` | `"datasources.datasource_contents"` | Dotted path to a list of datasource (Git, etc.) content types to register |
-| `graphql_types` | `graphql.types.graphql_types` | Dotted path to a list of GraphQL type classes |
-| `homepage_layout` | `"homepage.layout"` | Dotted path to a list of home page items provided by the plugin |
-| `jinja_filters` | `"jinja_filters"` | Path to a module that contains jinja filters to be registered |
-| `jobs` | `"jobs.jobs"` | Dotted path to a list of Job classes |
-| `menu_items` | `"navigation.menu_items"` | Dotted path to a list of menu items provided by the plugin |
-| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of template extension classes |
+| `banner_function` | `"banner.banner"` | Dotted path to a function that can render a custom [banner](#adding-a-banner) |
+| `custom_validators` | `"custom_validators.custom_validators"` | Dotted path to a list of [custom validator classes](#implementing-custom-validators) |
+| `datasource_contents` | `"datasources.datasource_contents"` | Dotted path to a list of [datasource (Git, etc.) content types](#loading-data-from-a-git-repository) to register |
+| `graphql_types` | `graphql.types.graphql_types` | Dotted path to a list of [GraphQL type classes](#creating-your-own-graphql-type-object) |
+| `homepage_layout` | `"homepage.layout"` | Dotted path to a list of [home page items](#adding-home-page-content) provided by the plugin |
+| `jinja_filters` | `"jinja_filters"` | Path to a module that contains [Jinja2 filters](#adding-jinja2-filters) to be registered |
+| `jobs` | `"jobs.jobs"` | Dotted path to a list of [Job classes](#including-jobs) |
+| `menu_items` | `"navigation.menu_items"` | Dotted path to a list of [navigation menu items](#adding-navigation-menu-items) provided by the plugin |
+| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](#extending-object-detail-views) |
 
 ### Install the Plugin for Development
 
@@ -203,6 +208,10 @@ Once the plugin has been installed, add it to the plugin configuration for Nauto
 ```python
 PLUGINS = ["animal_sounds"]
 ```
+
+### Verify that the Plugin is Installed
+
+In the Nautobot UI, navigate to **Plugins -> Installed Plugins**. The newly installed plugin should appear in the displayed table if everything is configured correctly. You can also click on the plugin's name in this table to view more detailed information about this plugin based on its PluginConfig and other contents.
 
 ## Extending the Existing Nautobot UI
 
@@ -283,6 +292,11 @@ Using a key and weight system, a developer can integrate the plugin's menu addit
 
 More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
 
+!!! tip
+    To reduce the amount of clutter in the navigation menu, if your plugin provides a "plugin configuration" view, we recommend [linking it from the main "Installed Plugins" page](#adding-links-to-the-installed-plugins-view) rather than adding it as a separate item in the navigation menu.
+
+    Similarly, if your plugin provides a "plugin home" or "dashboard" view, consider linking it from the "Installed Plugins" page, and/or adding a link from the Nautobot home page (see below), rather than adding it to the navigation menu.
+
 ### Adding Home Page Content
 
 Plugins can add content to the Nautobot home page. By default, Nautobot looks for a `layout` list inside of `homepage.py`. (This can be overridden by setting `homepage_layout` to a custom value on the plugin's `PluginConfig`.)
@@ -290,6 +304,40 @@ Plugins can add content to the Nautobot home page. By default, Nautobot looks fo
 Using a key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
 
 More documentation and examples can be found in the guide on [Home Page Panels](../development/homepage.md).
+
+### Adding Links to the Installed Plugins View
+
+It's common for many plugins to provide a "plugin configuration" [view](#adding-web-ui-views) used for interactive configuration of aspects of the plugin that don't necessarily need to be managed by a system administrator via `PLUGINS_CONFIG`. The `PluginConfig` setting of `config_view_name` lets you provide the URL pattern name defined for this view, which will then be accessible via a button on the **Plugins -> Installed Plugins** UI view.
+
+For example, if the `animal_sounds` plugin provides a configuration view, which is set up in `urls.py` as follows:
+
+```python
+# urls.py
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path("configuration/", views.AnimalSoundsConfigView.as_view(), name="config"),
+]
+```
+
+then in your `AnimalSoundsConfig` you could refer to the view by name:
+
+```python
+# __init__.py
+from nautobot.extras.plugins import PluginConfig
+
+class AnimalSoundsConfig(PluginConfig):
+    # ...
+    config_view_name = "plugins:animal_sounds:config"
+
+config = AnimalSoundsConfig
+```
+
+and now the "Configuration" button that appears in the Installed Plugins table next to "Animal Sounds" will be a link to your configuration view.
+
+Similarly, if your plugin provides a "plugin home" or "dashboard" view, you can provide a link for the "Home" button in the Installed Plugins table by defining `home_view_name` on your `PluginConfig` class.
 
 ## Extending Existing Functionality
 
@@ -763,6 +811,9 @@ A URL pattern has three components:
 * `name` - A short name used to identify the URL path internally
 
 This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
+
+!!! tip
+    As a next step, you would typically want to add links from the Nautobot UI to this view, either from the [navigation menu](#adding-navigation-menu-items), the [Nautobot home page](#adding-home-page-content), and/or the [Installed Plugins view](#adding-links-to-the-installed-plugins-view).
 
 ## Adding REST API Endpoints
 
