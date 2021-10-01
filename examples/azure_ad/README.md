@@ -7,6 +7,11 @@ Create a python module with the `group_sync.py` file in it, this could be done a
 In the nautobot_config.py set the following values with the settings from Azure:
 
 ```python
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.azuread.AzureADOAuth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
 SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = ""
 SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = ""
 SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_TENANT_ID = ""
