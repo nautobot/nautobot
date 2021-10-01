@@ -83,7 +83,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
 
-## v1.1.4 (2021-09-30)
+## v1.1.4 (2021-10-04)
 
 ### Added
 
