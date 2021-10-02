@@ -1,9 +1,35 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.circuits.models import *
-from nautobot.dcim.choices import *
-from nautobot.dcim.models import *
+from nautobot.circuits.models import Provider, CircuitType, Circuit, CircuitTermination
+from nautobot.dcim.choices import DeviceFaceChoices, PowerOutletFeedLegChoices, InterfaceTypeChoices, PortTypeChoices
+from nautobot.dcim.models import (
+    Cable,
+    ConsolePort,
+    ConsolePortTemplate,
+    ConsoleServerPort,
+    ConsoleServerPortTemplate,
+    Device,
+    DeviceBay,
+    DeviceBayTemplate,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    FrontPortTemplate,
+    Interface,
+    InterfaceTemplate,
+    Manufacturer,
+    PowerPort,
+    PowerPortTemplate,
+    PowerOutlet,
+    PowerOutletTemplate,
+    PowerPanel,
+    Rack,
+    RackGroup,
+    RearPort,
+    RearPortTemplate,
+    Site,
+)
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant
 

@@ -11,9 +11,60 @@ from netaddr import EUI
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
-from nautobot.dcim.models import *
+from nautobot.dcim.choices import (
+    RackTypeChoices,
+    RackWidthChoices,
+    RackDimensionUnitChoices,
+    SubdeviceRoleChoices,
+    DeviceFaceChoices,
+    ConsolePortTypeChoices,
+    PowerPortTypeChoices,
+    PowerOutletTypeChoices,
+    PowerOutletFeedLegChoices,
+    InterfaceTypeChoices,
+    InterfaceModeChoices,
+    PortTypeChoices,
+    CableTypeChoices,
+    CableLengthUnitChoices,
+    PowerFeedTypeChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedPhaseChoices,
+)
+
+from nautobot.dcim.models import (
+    Cable,
+    ConsolePort,
+    ConsolePortTemplate,
+    ConsoleServerPort,
+    ConsoleServerPortTemplate,
+    Device,
+    DeviceBay,
+    DeviceBayTemplate,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    FrontPortTemplate,
+    Interface,
+    InterfaceTemplate,
+    Manufacturer,
+    InventoryItem,
+    Platform,
+    PowerFeed,
+    PowerPort,
+    PowerPortTemplate,
+    PowerOutlet,
+    PowerOutletTemplate,
+    PowerPanel,
+    Rack,
+    RackGroup,
+    RackReservation,
+    RackRole,
+    RearPort,
+    RearPortTemplate,
+    Region,
+    Site,
+    VirtualChassis,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ConfigContextSchema,

@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.dcim.models import Site
-from nautobot.extras.choices import *
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
 from nautobot.utilities.testing import APITestCase
 from nautobot.utilities.testing.utils import post_data

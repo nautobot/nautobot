@@ -1,4 +1,3 @@
-from unittest import mock
 import uuid
 
 from django.conf import settings
@@ -11,7 +10,6 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework.test import APIClient
 
-from nautobot.core.middleware import ExternalAuthMiddleware
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix

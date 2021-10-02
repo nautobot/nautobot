@@ -36,8 +36,15 @@ from nautobot.utilities.forms import (
     BOOLEAN_WITH_BLANK_CHOICES,
 )
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
-from .choices import *
-from .constants import *
+from .choices import IPAddressRoleChoices, IPAddressFamilyChoices, ServiceProtocolChoices
+from .constants import (
+    PREFIX_LENGTH_MIN,
+    PREFIX_LENGTH_MAX,
+    IPADDRESS_MASK_LENGTH_MIN,
+    IPADDRESS_MASK_LENGTH_MAX,
+    SERVICE_PORT_MIN,
+    SERVICE_PORT_MAX,
+)
 from .models import (
     Aggregate,
     IPAddress,

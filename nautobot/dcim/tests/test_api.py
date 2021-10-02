@@ -2,8 +2,14 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+from nautobot.dcim.choices import (
+    SubdeviceRoleChoices,
+    InterfaceTypeChoices,
+    InterfaceModeChoices,
+    PortTypeChoices,
+    PowerFeedTypeChoices,
+)
+
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,

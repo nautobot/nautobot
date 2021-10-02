@@ -2,7 +2,6 @@
 
 import logging
 
-import django_filters.fields
 import graphene
 from graphql import GraphQLError
 from graphene_django import DjangoObjectType

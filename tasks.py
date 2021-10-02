@@ -15,11 +15,9 @@ limitations under the License.
 from distutils.util import strtobool
 import os
 import re
-from time import sleep
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
-import requests
 
 
 def is_truthy(arg):

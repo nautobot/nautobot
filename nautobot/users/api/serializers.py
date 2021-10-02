@@ -9,7 +9,11 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.users.models import ObjectPermission
-from .nested_serializers import *
+from .nested_serializers import NestedGroupSerializer, NestedUserSerializer
+
+# This import is separated from the above import, as the variable(s) are not actually used anywhere in this file,
+# but still required for brief fields functionality to work
+from .nested_serializers import NestedObjectPermissionSerializer  # noqa: F401
 
 
 class UserSerializer(ValidatedModelSerializer):

@@ -1,5 +1,4 @@
 """Registry-related APIs for datasources."""
-from collections import OrderedDict
 
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.context_managers import change_logging

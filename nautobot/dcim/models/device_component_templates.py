@@ -2,8 +2,18 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+from nautobot.dcim.choices import (
+    SubdeviceRoleChoices,
+    ConsolePortTypeChoices,
+    PowerPortTypeChoices,
+    PowerOutletTypeChoices,
+    PowerOutletFeedLegChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+)
+
+from nautobot.dcim.constants import REARPORT_POSITIONS_MIN, REARPORT_POSITIONS_MAX
+
 from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel

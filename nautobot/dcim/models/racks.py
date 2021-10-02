@@ -6,12 +6,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+from nautobot.dcim.choices import RackTypeChoices, RackWidthChoices, RackDimensionUnitChoices, DeviceFaceChoices
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
+
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features

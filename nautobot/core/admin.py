@@ -1,4 +1,4 @@
-from django.conf import settings
+from django.conf import settings  # noqa: F401
 from django.contrib.admin import site as admin_site
 from social_django.models import Association, Nonce, UserSocialAuth
 from taggit.models import Tag

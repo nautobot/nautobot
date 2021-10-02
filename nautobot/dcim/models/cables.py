@@ -8,8 +8,9 @@ from django.db.models import Sum
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+from nautobot.dcim.choices import CableTypeChoices, CableLengthUnitChoices
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES
+
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import (
     decompile_path_node,

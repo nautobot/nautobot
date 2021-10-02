@@ -17,8 +17,11 @@ from nautobot.extras.api.serializers import (
     TaggedObjectSerializer,
 )
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from .nested_serializers import *
+from .nested_serializers import NestedCircuitSerializer, NestedCircuitTypeSerializer, NestedProviderSerializer
 
+# This import is separated from the above import, as the variable(s) are not actually used anywhere in this file,
+# but still required for brief fields functionality to work
+from .nested_serializers import NestedCircuitTerminationSerializer  # noqa: F401
 
 #
 # Providers

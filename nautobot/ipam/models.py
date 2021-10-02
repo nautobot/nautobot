@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
@@ -17,8 +17,14 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import array_to_string, serialize_object, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
-from .choices import *
-from .constants import *
+from .choices import IPAddressRoleChoices, ServiceProtocolChoices
+from .constants import (
+    VRF_RD_MAX_LENGTH,
+    IPADDRESS_ASSIGNMENT_MODELS,
+    IPADDRESS_ROLES_NONUNIQUE,
+    SERVICE_PORT_MIN,
+    SERVICE_PORT_MAX,
+)
 from .fields import VarbinaryIPField
 from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet
 from .validators import DNSValidator

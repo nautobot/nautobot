@@ -14,7 +14,7 @@ from unittest import mock
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, ObjectChangeActionChoices
-from nautobot.extras.constants import *
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.jobs import Job
 from nautobot.extras.models import (
     ConfigContext,

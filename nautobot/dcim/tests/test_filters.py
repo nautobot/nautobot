@@ -1,8 +1,57 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.filters import *
+from nautobot.dcim.choices import (
+    RackTypeChoices,
+    RackWidthChoices,
+    RackDimensionUnitChoices,
+    SubdeviceRoleChoices,
+    DeviceFaceChoices,
+    PowerOutletFeedLegChoices,
+    InterfaceTypeChoices,
+    InterfaceModeChoices,
+    PortTypeChoices,
+    CableTypeChoices,
+    CableLengthUnitChoices,
+    PowerFeedTypeChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedPhaseChoices,
+)
+from nautobot.dcim.filters import (
+    RegionFilterSet,
+    SiteFilterSet,
+    RackGroupFilterSet,
+    RackRoleFilterSet,
+    RackFilterSet,
+    RackReservationFilterSet,
+    ManufacturerFilterSet,
+    DeviceTypeFilterSet,
+    ConsolePortTemplateFilterSet,
+    ConsoleServerPortTemplateFilterSet,
+    PowerPortTemplateFilterSet,
+    PowerOutletTemplateFilterSet,
+    InterfaceTemplateFilterSet,
+    FrontPortTemplateFilterSet,
+    RearPortTemplateFilterSet,
+    DeviceBayTemplateFilterSet,
+    DeviceRoleFilterSet,
+    PlatformFilterSet,
+    DeviceFilterSet,
+    ConsolePortFilterSet,
+    ConsoleServerPortFilterSet,
+    PowerPortFilterSet,
+    PowerOutletFilterSet,
+    InterfaceFilterSet,
+    FrontPortFilterSet,
+    RearPortFilterSet,
+    DeviceBayFilterSet,
+    InventoryItemFilterSet,
+    VirtualChassisFilterSet,
+    CableFilterSet,
+    PowerPanelFilterSet,
+    PowerFeedFilterSet,
+)
+
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,

@@ -10,8 +10,21 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.models import Status
-from nautobot.ipam.choices import *
-from nautobot.ipam.filters import *
+from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.ipam.filters import (
+    VRFFilterSet,
+    RouteTargetFilterSet,
+    RIRFilterSet,
+    AggregateFilterSet,
+    RoleFilterSet,
+    PrefixFilterSet,
+    IPAddressFilterSet,
+    VLANGroupFilterSet,
+    VLANFilterSet,
+    ServiceFilterSet,
+)
+
+
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,

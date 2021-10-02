@@ -1,4 +1,4 @@
-from django.db.models import Aggregate, JSONField, Value
+from django.db.models import Aggregate, JSONField
 
 from django.contrib.postgres.aggregates.mixins import OrderableAggMixin
 from django.db import NotSupportedError

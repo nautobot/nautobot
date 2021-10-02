@@ -29,7 +29,6 @@ from nautobot.utilities.forms import (
     BOOLEAN_WITH_BLANK_CHOICES,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
@@ -51,7 +50,14 @@ from .models import (
     Webhook,
 )
 from .utils import FeatureQuery
-from nautobot.extras import choices
+from nautobot.extras.choices import (
+    CustomFieldFilterLogicChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
 
 
 #
@@ -767,7 +773,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
     """
 
     _schedule_type = forms.ChoiceField(
-        choices=choices.JobExecutionType,
+        choices=JobExecutionType,
         help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
         label="Type",
     )
@@ -788,7 +794,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         """
         cleaned_data = super().clean()
 
-        if cleaned_data["_schedule_type"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+        if cleaned_data["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
             if not cleaned_data["_schedule_name"]:
                 raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 

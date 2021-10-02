@@ -12,8 +12,27 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
+
+from nautobot.dcim.choices import (
+    RackTypeChoices,
+    RackWidthChoices,
+    RackDimensionUnitChoices,
+    RackElevationDetailRenderChoices,
+    SubdeviceRoleChoices,
+    DeviceFaceChoices,
+    ConsolePortTypeChoices,
+    PowerPortTypeChoices,
+    PowerOutletTypeChoices,
+    PowerOutletFeedLegChoices,
+    InterfaceTypeChoices,
+    InterfaceModeChoices,
+    PortTypeChoices,
+    CableLengthUnitChoices,
+    PowerFeedTypeChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedPhaseChoices,
+)
+from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, CABLE_TERMINATION_MODELS
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -64,7 +83,45 @@ from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
-from .nested_serializers import *
+from .nested_serializers import (
+    NestedCableSerializer,
+    NestedDeviceBaySerializer,
+    NestedDeviceRoleSerializer,
+    NestedDeviceSerializer,
+    NestedDeviceTypeSerializer,
+    NestedInterfaceSerializer,
+    NestedManufacturerSerializer,
+    NestedPlatformSerializer,
+    NestedPowerPanelSerializer,
+    NestedPowerPortSerializer,
+    NestedPowerPortTemplateSerializer,
+    NestedRackGroupSerializer,
+    NestedRackRoleSerializer,
+    NestedRackSerializer,
+    NestedRearPortTemplateSerializer,
+    NestedRegionSerializer,
+    NestedSiteSerializer,
+    NestedVirtualChassisSerializer,
+)
+
+# This import is separated from the above import, as the variable(s) are not actually used anywhere in this file,
+# but still required for brief fields functionality to work
+from .nested_serializers import (  # noqa: F401
+    NestedConsolePortSerializer,
+    NestedConsolePortTemplateSerializer,
+    NestedConsoleServerPortSerializer,
+    NestedConsoleServerPortTemplateSerializer,
+    NestedDeviceBayTemplateSerializer,
+    NestedFrontPortSerializer,
+    NestedFrontPortTemplateSerializer,
+    NestedInterfaceTemplateSerializer,
+    NestedInventoryItemSerializer,
+    NestedPowerFeedSerializer,
+    NestedPowerOutletSerializer,
+    NestedPowerOutletTemplateSerializer,
+    NestedRackReservationSerializer,
+    NestedRearPortSerializer,
+)
 
 
 class CableTerminationSerializer(serializers.ModelSerializer):

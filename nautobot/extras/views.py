@@ -1,6 +1,5 @@
 import inspect
-import json
-from datetime import datetime, time
+from datetime import datetime
 
 from django import template
 from django.contrib import messages
@@ -11,12 +10,10 @@ from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.timezone import make_aware
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable

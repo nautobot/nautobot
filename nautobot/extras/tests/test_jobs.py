@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileAttachment, FileProxy, JobResult
+from nautobot.extras.models import FileProxy, JobResult
 from nautobot.utilities.testing import TestCase
 
 

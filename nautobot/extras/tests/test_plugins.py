@@ -15,7 +15,7 @@ from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, disable_warnings, extract_page_body
+from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from dummy_plugin import config as dummy_config
 from dummy_plugin.datasources import refresh_git_text_files
