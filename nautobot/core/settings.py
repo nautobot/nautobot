@@ -116,6 +116,8 @@ RELEASE_CHECK_TIMEOUT = 24 * 3600
 
 # SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
+# Nautobot related - May be overridden if using custom social auth backend
+SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 
 # Storage
 STORAGE_BACKEND = None

@@ -88,7 +88,20 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Added
 
 - [#623](https://github.com/nautobot/nautobot/issues/623) - Git repository sync logs now include the commit hash that was synchronized to.
+- [#728](https://github.com/nautobot/nautobot/issues/728) - Added `SOCIAL_AUTH_BACKEND_PREFIX` configuration setting to support custom authentication backends.
 - [#861](https://github.com/nautobot/nautobot/issues/861) - Bulk editing of devices can now update their site, rack, and rack-group assignments.
+- [#949](https://github.com/nautobot/nautobot/pull/949/) - Added documentation note about using `MAINTENANCE_MODE` in combination with LDAP.
+
+### Changed
+
+- [#956](https://github.com/nautobot/nautobot/pull/956) - Switched CI from Travis to GitHub Actions.
+- [#964](https://github.com/nautobot/nautobot/pull/964) - Updated README.md build status badge to show GitHub status.
+
+### Fixed
+
+- [#944](https://github.com/nautobot/nautobot/issues/944) - Jobs that commit changes to the database could not be invoked successfully from the `nautobot-server runjob` command.
+- [#955](https://github.com/nautobot/nautobot/issues/955) - REST API endpoint for syncing Git repositories was still checking for RQ workers instead of Celery workers.
+- [#969](https://github.com/nautobot/nautobot/issues/969) - IPv6 prefixes such as `::1/128` were not being treated correctly.
 
 ### Security
 
@@ -132,7 +145,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Security
 
 - [#893](https://github.com/nautobot/nautobot/pull/893) - Bump Pillow dependency version from 8.2.0 to 8.2.3 to address numerous critical CVE advisories
--
+
 ## v1.1.2 (2021-08-10)
 
 ### Added
