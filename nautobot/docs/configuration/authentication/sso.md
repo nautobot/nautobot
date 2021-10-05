@@ -54,9 +54,9 @@ Please see the SAML configuration guide below for an example of how to configure
 
 ### Authentication Backends
 
-To use external authentcation, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
+To use external authentication, you'll need to define `AUTHENTICATION_BACKENDS` in your `nautobot_config.py`.
 
-- Insert the desired external authentication backend as the first item in the list.
+- Insert the desired external authentication backend as the first item in the list. This step is key to properly redirecting when users click the login button.
 - You must also ensure that `nautobot.core.authentication.ObjectPermissionBackend` is always the second item in the list. It is an error to exclude this backend.
 
 !!! note
@@ -76,6 +76,22 @@ AUTHENTICATION_BACKENDS = [
 
 !!! warning
 	You should only enable one social authentication authentication backend. It is technically possible to use multiple backends but we cannot officially support more than one at this time.
+
+
+### Custom Authentication Backends
+
+The default external authentication supported is [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/configuration/django.html) as stated above. If you have developed your own external authentication backend, you will need to configure `SOCIAL_AUTH_BACKEND_PREFIX` to use your backend instead and correctly enable the SSO redirect when the login button is clicked. For example, if your custom authentication backend is available at `custom_auth.backends.custom.Oauth2`, you would set things as follows:
+
+```python
+SOCIAL_AUTH_BACKEND_PREFIX = "custom_auth.backends"
+
+AUTHENTICATION_BACKENDS = [
+    "custom_auth.backends.custom.Oauth2",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+```
+
+In the example above, `SOCIAL_AUTH_BACKEND_PREFIX` was set to `custom_auth.backends` within the `nautobot_config.py` for our custom authentication plugin we created (**custom_auth.backends.custom.Oauth2**). This will enable the SSO redirect for users when they click the login button.
 
 ---
 
