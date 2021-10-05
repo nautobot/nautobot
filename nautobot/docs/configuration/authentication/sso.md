@@ -409,6 +409,8 @@ SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_SECRET = "<Client Secret From Azure>"
 SOCIAL_AUTH_AZUREAD_TENANT_OAUTH2_TENANT_ID = "<Tenant ID from Azure>"
 ```
 
+---
+
 With those settings in place your users should be able to authenticate against Azure AD and successfully login to Nautobot. However, that user will not be placed in any groups or given any permissions. In order to do so, you'll need to utilize a script to synchronize the groups passed from Azure to Nautobot after authentication succeeds. Any group permissions will need to be set manually in the Nautobot admin panel.
 
 An example to sync groups with Azure is provided in the [`examples/azure_ad`](https://github.com/nautobot/nautobot/tree/develop/examples/azure_ad) folder in the root of the Nautobot repository.
