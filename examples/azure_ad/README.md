@@ -2,9 +2,9 @@
 
 This example shows how to extend the Social Auth Pipeline to read groups from a groups claim in AzureAD and sync those with Nautobot.  
 
-Create a python module with the provided `group_sync.py` file in it, this could be done as part of a plugin or as a standalone python module.
+Create a python module with the provided `group_sync.py` file in it. This could be done as part of a plugin or as a standalone python module.
 
-In the nautobot_config.py set the following values with the settings from Azure:
+In the `nautobot_config.py` set the following values with the settings from Azure:
 
 ```python
 AUTHENTICATION_BACKENDS = [
