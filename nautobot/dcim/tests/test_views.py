@@ -301,7 +301,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(Rack)
-        cls.statuses = statuses.get(slug="active")
+        status_active = statuses.get(slug="active")
 
         cable_statuses = Status.objects.get_for_model(Cable)
         cls.cable_connected = cable_statuses.get(slug="connected")
@@ -318,13 +318,13 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         racks = (
             Rack.objects.create(
-                name="Rack 1", site=sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["red"]}
+                name="Rack 1", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["red"]}
             ),
             Rack.objects.create(
-                name="Rack 2", site=sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["green"]}
+                name="Rack 2", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["green"]}
             ),
             Rack.objects.create(
-                name="Rack 3", site=sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["blue"]}
+                name="Rack 3", site=sites[0], status=status_active, _custom_field_data={"rack-colors": ["blue"]}
             ),
         )
 
