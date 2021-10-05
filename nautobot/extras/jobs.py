@@ -1006,7 +1006,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # or it might be bad input from an API request, or manual execution.
 
         data = job_class.deserialize_data(data)
-    except Exception as e:
+    except Exception:
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         stacktrace = traceback.format_exc()
         job_result.log(
