@@ -124,14 +124,6 @@
                     {% block object-tools %}{% endblock %}
                 </div>
                 <div>
-                    {% comment %} {% block content-navbar-collapse %}
-                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#content-navbar-collapse" aria-expanded="false" aria-controls="navbar">
-                            <span class="sr-only">Toggle navigation</span>
-                            <span class="icon-bar"></span>
-                            <span class="icon-bar"></span>
-                            <span class="icon-bar"></span>
-                        </button>
-                    {% endblock %} {% endcomment %}
                     {% block content_title %}
                         {% if title %}
                             <h1>{% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}</h1>

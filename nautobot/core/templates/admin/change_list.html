@@ -55,19 +55,6 @@
             </li>
         {% endif %}
     {% endblock %}
-
-    {% comment %} {% if cl.has_filters %}
-        <ul class="nav navbar-nav navbar-right">
-            <li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown">{% trans 'Filter' %} <span class="caret"></span></a>
-                <ul class="dropdown-menu pull-right scrollable-dropdown-menu">
-                    {% for spec in cl.filter_specs %}
-                        {% admin_list_filter cl spec %}
-                    {% endfor %}
-                </ul>
-            </li>
-        </ul>
-    {% endif %} {% endcomment %}
 </div>
 {% endblock %}
 
@@ -107,22 +94,6 @@
         {% endblock %}
     </div>
 </div>
-{% comment %} {# {% if cl.formset and cl.result_count %} #}
-<div class="navbar navbar-default">
-    <div class="navbar-inner">
-        <div class="navbar-form pull-left">
-            {% if action_form and actions_on_bottom and cl.show_admin_actions %}
-                {% admin_actions %}
-            {% endif %}
-        </div>
-{% if cl.formset and cl.result_count %}
-        <div class="navbar-form pull-right">
-            <input type="submit" name="_save" class="btn btn-primary default" value="{% trans 'Save' %}"/>
-        </div>
-{% endif %}
-    </div>
-</div>
-{# {% endif %} #} {% endcomment %}
 
 {% block pagination %}
     {% pagination cl %}
