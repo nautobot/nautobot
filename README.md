@@ -15,8 +15,8 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 | Branch      | Status |
 |-------------|------------|
-| **main** | [![Build Status](https://travis-ci.com/nautobot/nautobot.svg?branch=main)](https://travis-ci.com/nautobot/nautobot) |
-| **develop** | [![Build Status](https://travis-ci.com/nautobot/nautobot.svg?branch=develop)](https://travis-ci.com/nautobot/nautobot) |
+| **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
+| **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
 
 ### Screenshots
 
