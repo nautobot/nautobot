@@ -414,7 +414,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_type=device_types[0],
                 device_role=device_roles[0],
                 platform=platforms[0],
-                status=cls.status_active,
+                status=status_active,
             ),
             Device.objects.create(
                 name="Dev 1",
@@ -423,7 +423,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_type=device_types[0],
                 device_role=device_roles[0],
                 platform=platforms[0],
-                status=cls.status_active,
+                status=status_active,
             ),
         )
 
