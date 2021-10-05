@@ -352,7 +352,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
                 "utilization_data": UtilizationData(
                     numerator=numerator,
                     denominator=denominator,
-                )
+                ),
             }
 
             # Calculate per-leg aggregates for three-phase feeds
