@@ -5,6 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError
 from django.db import models
+from django.db.models import Q
 
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery
@@ -63,6 +64,10 @@ class RelationshipModel(models.Model):
                     <relationship #3>: <queryset #3>,
                     <relationship #4>: <queryset #4>,
                 },
+                "peer": {
+                    <relationship #5>: <queryset #5>,
+                    <relationship #6>: <queryset #6>,
+                },
             }
         """
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
@@ -76,6 +81,7 @@ class RelationshipModel(models.Model):
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
             RelationshipSideChoices.SIDE_DESTINATION: OrderedDict(),
+            RelationshipSideChoices.SIDE_PEER: OrderedDict(),
         }
         for side, relationships in sides.items():
             for relationship in relationships:
@@ -95,10 +101,21 @@ class RelationshipModel(models.Model):
 
                 # Construct the queryset to query all RelationshipAssociation for this object and this relationship
                 query_params = {"relationship": relationship}
-                query_params[f"{side}_id"] = self.pk
-                query_params[f"{side}_type"] = content_type
+                if not relationship.symmetric:
+                    # Query for RelationshipAssociations that this object is on the expected side of
+                    query_params[f"{side}_id"] = self.pk
+                    query_params[f"{side}_type"] = content_type
 
-                resp[side][relationship] = RelationshipAssociation.objects.filter(**query_params)
+                    resp[side][relationship] = RelationshipAssociation.objects.filter(**query_params)
+                else:
+                    # Query for RelationshipAssociations involving this object, regardless of side
+                    resp[RelationshipSideChoices.SIDE_PEER][relationship] = RelationshipAssociation.objects.filter(
+                        (
+                            Q(source_id=self.pk, source_type=content_type)
+                            | Q(destination_id=self.pk, destination_type=content_type)
+                        ),
+                        **query_params,
+                    )
 
         return resp
 
@@ -127,6 +144,9 @@ class RelationshipModel(models.Model):
                 "destination": {
                     (same format as source)
                 },
+                "peer": {
+                    (same format as source)
+                },
             }
         """
 
@@ -135,6 +155,7 @@ class RelationshipModel(models.Model):
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: OrderedDict(),
             RelationshipSideChoices.SIDE_DESTINATION: OrderedDict(),
+            RelationshipSideChoices.SIDE_PEER: OrderedDict(),
         }
         for side, relationships in relationships_by_side.items():
             for relationship, queryset in relationships.items():
@@ -143,20 +164,25 @@ class RelationshipModel(models.Model):
 
                 resp[side][relationship] = {
                     "label": relationship.get_label(side),
-                    "peer_type": getattr(relationship, f"{peer_side}_type"),
                     "value": None,
                 }
+                if not relationship.symmetric:
+                    resp[side][relationship]["peer_type"] = getattr(relationship, f"{peer_side}_type")
+                else:
+                    # Symmetric relationship - source_type == destination_type, so it doesn't matter which we choose
+                    resp[side][relationship]["peer_type"] = getattr(relationship, f"source_type")
 
                 resp[side][relationship]["has_many"] = relationship.has_many(peer_side)
 
                 if resp[side][relationship]["has_many"]:
                     resp[side][relationship]["queryset"] = queryset
                 else:
-                    cra = queryset.first()
-                    if not cra:
+                    association = queryset.first()
+                    if not association:
                         continue
 
-                    peer = getattr(cra, peer_side)
+                    peer = association.get_peer(self)
+
                     resp[side][relationship]["value"] = peer
                     resp[side][relationship]["url"] = peer.get_absolute_url()
 
@@ -255,6 +281,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
     def __str__(self):
         return self.name.replace("_", " ")
 
+    @property
+    def symmetric(self):
+        return self.type in (
+            RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+            RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        )
+
     def get_label(self, side):
         """Return the label for a given side, source or destination.
 
@@ -264,6 +297,10 @@ class Relationship(BaseModel, ChangeLoggedModel):
         if side not in VALID_SIDES:
             raise ValueError(f"side value can only be: {','.join(VALID_SIDES)}")
 
+        # Peer "side" implies symmetric relationship, where source and dest are equivalent
+        if side == RelationshipSideChoices.SIDE_PEER:
+            side = RelationshipSideChoices.SIDE_SOURCE
+
         if getattr(self, f"{side}_label"):
             return getattr(self, f"{side}_label")
 
@@ -271,6 +308,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
             destination_model = self.destination_type.model_class()
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
                 RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             ):
                 return destination_model._meta.verbose_name_plural
@@ -279,7 +317,10 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
         elif side == RelationshipSideChoices.SIDE_DESTINATION:
             source_model = self.source_type.model_class()
-            if self.type == RelationshipTypeChoices.TYPE_MANY_TO_MANY:
+            if self.type in (
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+            ):
                 return source_model._meta.verbose_name_plural
             else:
                 return source_model._meta.verbose_name
@@ -292,10 +333,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
         if side not in VALID_SIDES:
             raise ValueError(f"side value can only be: {','.join(VALID_SIDES)}")
 
-        if self.type == RelationshipTypeChoices.TYPE_MANY_TO_MANY:
+        if self.type in (
+            RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+            RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        ):
             return True
 
-        if self.type == RelationshipTypeChoices.TYPE_ONE_TO_ONE:
+        if self.type in (RelationshipTypeChoices.TYPE_ONE_TO_ONE, RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC):
             return False
 
         # ONE_TO_MANY
@@ -311,8 +355,13 @@ class Relationship(BaseModel, ChangeLoggedModel):
 
         peer_side = RelationshipSideChoices.OPPOSITE[side]
 
-        object_type = getattr(self, f"{peer_side}_type")
-        filters = getattr(self, f"{peer_side}_filter") or {}
+        if peer_side != RelationshipSideChoices.SIDE_PEER:
+            object_type = getattr(self, f"{peer_side}_type")
+            filters = getattr(self, f"{peer_side}_filter") or {}
+        else:
+            # Symmetric relationship - source and dest fields are presumed identical, so just use source
+            object_type = getattr(self, f"source_type")
+            filters = getattr(self, f"source_filter") or {}
 
         queryset = object_type.model_class().objects.all()
 
@@ -366,6 +415,31 @@ class Relationship(BaseModel, ChangeLoggedModel):
             if error_messages:
                 raise ValidationError({f"{side}_filter": error_messages})
 
+        if self.symmetric:
+            # For a symmetric relation, source and destination attributes must be equivalent if specified
+            error_messages = {}
+            if self.source_type != self.destination_type:
+                error_messages["destination_type"] = "Must match source_type for a symmetric relationship"
+            if self.source_label != self.destination_label:
+                if not self.source_label:
+                    self.source_label = self.destination_label
+                elif not self.destination_label:
+                    self.destination_label = self.source_label
+                else:
+                    error_messages["destination_label"] = "Must match source_label for a symmetric relationship"
+            if self.source_hidden != self.destination_hidden:
+                error_messages["destination_hidden"] = "Must match source_hidden for a symmetric relationship"
+            if self.source_filter != self.destination_filter:
+                if not self.source_filter:
+                    self.source_filter = self.destination_filter
+                elif not self.destination_filter:
+                    self.destination_filter = self.source_filter
+                else:
+                    error_messages["destination_filter"] = "Must match source_filter for a symmetric relationship"
+
+            if error_messages:
+                raise ValidationError(error_messages)
+
         # If the model already exist, ensure that it's not possible to modify the source or destination type
         if self.present_in_database:
             nbr_existing_cras = RelationshipAssociation.objects.filter(relationship=self).count()
@@ -410,7 +484,10 @@ class RelationshipAssociation(BaseModel):
         )
 
     def __str__(self):
-        return "{} -> {} - {}".format(self.source, self.destination, self.relationship)
+        if self.relationship.symmetric:
+            return "{} <-> {} - {}".format(self.source, self.destination, self.relationship)
+        else:
+            return "{} -> {} - {}".format(self.source, self.destination, self.relationship)
 
     def get_peer(self, obj):
 
@@ -433,7 +510,10 @@ class RelationshipAssociation(BaseModel):
             )
 
         # Check if a similar relationship association already exists in violation of relationship type cardinality
-        if self.relationship.type != RelationshipTypeChoices.TYPE_MANY_TO_MANY:
+        if self.relationship.type not in (
+            RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+            RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        ):
             # Either one-to-many or one-to-one, in either case don't allow multiple sources to the same destination
             if RelationshipAssociation.objects.filter(
                 relationship=self.relationship,

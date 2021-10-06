@@ -133,8 +133,24 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         """Return a queryset or an object depending on the type of the relationship."""
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
-        query_params[f"{side}_id"] = self.pk
-        queryset_ids = RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True)
+        if not relationship.symmetric:
+            # Get the objects on the other side of this relationship
+            query_params[f"{side}_id"] = self.pk
+            queryset_ids = RelationshipAssociation.objects.filter(**query_params).values_list(
+                f"{peer_side}_id", flat=True
+            )
+        else:
+            # Get objects that are peers for this relationship, regardless of side
+            queryset_ids = list(
+                RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
+                    "destination_id", flat=True
+                )
+            )
+            queryset_ids += list(
+                RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
+                    "source_id", flat=True
+                )
+            )
 
         if relationship.has_many(peer_side):
             return peer_model.objects.filter(id__in=queryset_ids)

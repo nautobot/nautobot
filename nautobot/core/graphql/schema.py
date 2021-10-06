@@ -356,7 +356,6 @@ def extend_schema_type_relationships(schema_type, model):
 
             # Identify which object needs to be on the other side of this relationship
             # and check the registry to see if it is available,
-            # the schema_type object are organized by identifier in the registry `dcim.device`
             peer_type = getattr(relationship, f"{peer_side}_type")
             peer_model = peer_type.model_class()
             type_identifier = f"{peer_model._meta.app_label}.{peer_model._meta.model_name}"
