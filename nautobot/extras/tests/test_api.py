@@ -12,7 +12,6 @@ from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
 
-from nautobot.core.celery import app
 from nautobot.dcim.models import (
     Device,
     DeviceRole,

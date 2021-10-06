@@ -10,7 +10,6 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework.test import APIClient
 
-from nautobot.core.middleware import ExternalAuthMiddleware
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status

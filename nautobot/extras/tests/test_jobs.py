@@ -15,7 +15,7 @@ from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, JobResult, Status
-from nautobot.utilities.testing import TestCase
+from nautobot.utilities.testing import CeleryTestCase, TestCase
 
 
 class JobTest(TestCase):
