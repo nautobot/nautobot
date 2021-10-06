@@ -1,15 +1,20 @@
 import json
+from io import StringIO
 import os
 import uuid
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, JobResult
+from nautobot.extras.models import FileProxy, JobResult, Status
 from nautobot.utilities.testing import TestCase
 
 
@@ -346,3 +351,73 @@ class JobFileUploadTest(TestCase):
 
             # Assert that FileProxy was cleaned up
             self.assertEqual(FileProxy.objects.count(), 0)
+
+
+class RunJobManagementCommandTest(CeleryTestCase):
+    """Test cases for the `nautobot-server runjob` management command."""
+
+    def run_command(self, *args):
+        out = StringIO()
+        err = StringIO()
+        call_command(
+            "runjob",
+            *args,
+            stdout=out,
+            stderr=err,
+        )
+
+        return (out.getvalue(), err.getvalue())
+
+    def test_runjob_nochange_successful(self):
+        """Basic success-path test for Jobs that don't modify the Nautobot database."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            out, err = self.run_command("local/test_pass/TestPass")
+            self.assertIn("Running local/test_pass/TestPass...", out)
+            self.assertIn("test_pass: 1 success, 1 info, 0 warning, 0 failure", out)
+            self.assertIn("info: Database changes have been reverted automatically.", out)
+            self.assertIn("local/test_pass/TestPass: SUCCESS", out)
+            self.assertEqual("", err)
+
+    def test_runjob_db_change_no_commit(self):
+        """A job that changes the DB, when run with commit=False, doesn't modify the database."""
+        with self.assertRaises(ObjectDoesNotExist):
+            Status.objects.get(slug="test-status")
+
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            out, err = self.run_command("local/test_modify_db/TestModifyDB")
+            self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
+            self.assertIn("test_modify_db: 0 success, 1 info, 0 warning, 0 failure", out)
+            self.assertIn("info: Database changes have been reverted automatically.", out)
+            self.assertIn("local/test_modify_db/TestModifyDB: SUCCESS", out)
+            self.assertEqual("", err)
+
+        with self.assertRaises(ObjectDoesNotExist):
+            Status.objects.get(slug="test-status")
+
+    def test_runjob_db_change_commit_no_username(self):
+        """A job that changes the DB, when run with commit=True but no username, is rejected."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            with self.assertRaises(CommandError):
+                self.run_command("--commit", "local/test_modify_db/TestModifyDB")
+
+    def test_runjob_db_change_commit_wrong_username(self):
+        """A job that changes the DB, when run with commit=True and a nonexistent username, is rejected."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            with self.assertRaises(CommandError):
+                self.run_command("--commit", "--username", "nosuchuser", "local/test_modify_db/TestModifyDB")
+
+    def test_runjob_db_change_commit_and_username(self):
+        """A job that chagnes the DB, when run with commit=True and a username, successfully updates the DB."""
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            get_user_model().objects.create(username="dummy_user")
+
+            out, err = self.run_command("--commit", "--username", "dummy_user", "local/test_modify_db/TestModifyDB")
+            self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
+            self.assertIn("test_modify_db: 0 success, 0 info, 0 warning, 0 failure", out)
+            self.assertIn("local/test_modify_db/TestModifyDB: SUCCESS", out)
+            self.assertEqual("", err)
+
+        status = Status.objects.get(slug="test-status")
+        self.assertEqual(status.name, "Test Status")
+
+        status.delete()

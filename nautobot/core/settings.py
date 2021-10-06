@@ -121,6 +121,8 @@ RELEASE_CHECK_TIMEOUT = 24 * 3600
 
 # SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
+# Nautobot related - May be overridden if using custom social auth backend
+SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 
 # Storage
 STORAGE_BACKEND = None
@@ -388,7 +390,7 @@ USE_TZ = True
 WSGI_APPLICATION = "nautobot.core.wsgi.application"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
-X_FRAME_OPTIONS = "SAMEORIGIN"
+X_FRAME_OPTIONS = "DENY"
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")

@@ -271,11 +271,14 @@ def restart(context, service=None):
     docker_compose(context, "restart", service=service)
 
 
-@task
-def stop(context):
+@task(help={"service": "If specified, only affect this service."})
+def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
-    docker_compose(context, "down")
+    if not service:
+        docker_compose(context, "down")
+    else:
+        docker_compose(context, "stop", service=service)
 
 
 @task

@@ -1212,6 +1212,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "serial": "123456",
             "status": statuses.get(slug="decommissioning").pk,
+            "site": sites[1].pk,
+            "rack": racks[1].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

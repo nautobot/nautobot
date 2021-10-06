@@ -2,7 +2,7 @@
 *.swp
 /site/
 /venv/
-/dist/
+**/dist/
 /*.sh
 local_requirements.txt
 !upgrade.sh

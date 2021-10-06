@@ -38,12 +38,17 @@ class VarbinaryIPField(models.BinaryField):
         Parse `str`, `bytes` (varbinary), or `netaddr.IPAddress to `netaddr.IPAddress`.
         """
         try:
-            value = int.from_bytes(value, "big")
+            int_value = int.from_bytes(value, "big")
+            # Distinguish between
+            # \x00\x00\x00\x01 (IPv4 0.0.0.1) and
+            # \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01 (IPv6 ::1), among other cases
+            version = 4 if len(value) == 4 else 6
+            value = int_value
         except TypeError:
-            pass  # It's a string
+            version = None  # It's a string, IP version should be self-evident
 
         try:
-            return netaddr.IPAddress(value)
+            return netaddr.IPAddress(value, version=version)
         except netaddr.AddrFormatError:
             raise ValidationError("Invalid IP address format: {}".format(value))
         except (TypeError, ValueError) as e:
