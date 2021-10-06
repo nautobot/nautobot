@@ -19,11 +19,11 @@ from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
 from .choices import IPAddressRoleChoices, ServiceProtocolChoices
 from .constants import (
-    VRF_RD_MAX_LENGTH,
     IPADDRESS_ASSIGNMENT_MODELS,
     IPADDRESS_ROLES_NONUNIQUE,
-    SERVICE_PORT_MIN,
     SERVICE_PORT_MAX,
+    SERVICE_PORT_MIN,
+    VRF_RD_MAX_LENGTH,
 )
 from .fields import VarbinaryIPField
 from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet

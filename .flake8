@@ -10,7 +10,6 @@ ignore =
     W504
 
 per-file-ignores =
-    nautobot/dcim/tables/__init__.py:F401,F403,F405
-    nautobot/dcim/models/__init__.py:F401,F403,F405
-    nautobot/utilities/forms/__init__.py:F401,F403,F405
-    nautobot/utilities/testing/__init__.py:F401,F403,F405
+    nautobot/dcim/tables/__init__.py:F401
+    nautobot/utilities/forms/__init__.py:F401
+    nautobot/utilities/testing/__init__.py:F401

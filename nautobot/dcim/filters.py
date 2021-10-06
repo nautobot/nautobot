@@ -21,15 +21,15 @@ from nautobot.utilities.filters import (
 )
 from nautobot.virtualization.models import Cluster
 from .choices import (
+    CableTypeChoices,
+    ConsolePortTypeChoices,
+    InterfaceTypeChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
     RackTypeChoices,
     RackWidthChoices,
-    ConsolePortTypeChoices,
-    PowerPortTypeChoices,
-    PowerOutletTypeChoices,
-    InterfaceTypeChoices,
-    CableTypeChoices,
 )
-from .constants import VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES, NONCONNECTABLE_IFACE_TYPES
+from .constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES
 from .models import (
     Cable,
     ConsolePort,

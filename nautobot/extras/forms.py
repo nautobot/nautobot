@@ -26,8 +26,8 @@ from nautobot.utilities.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .datasources import get_datasource_content_choices
 from .models import (
@@ -50,7 +50,7 @@ from .models import (
     Webhook,
 )
 from .utils import FeatureQuery
-from nautobot.extras.choices import (
+from .choices import (
     CustomFieldFilterLogicChoices,
     JobExecutionType,
     JobResultStatusChoices,

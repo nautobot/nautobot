@@ -12,7 +12,7 @@ from nautobot.dcim.choices import (
     PortTypeChoices,
 )
 
-from nautobot.dcim.constants import REARPORT_POSITIONS_MIN, REARPORT_POSITIONS_MAX
+from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
 
 from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel
 from nautobot.extras.utils import extras_features

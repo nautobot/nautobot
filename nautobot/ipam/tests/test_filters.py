@@ -12,16 +12,16 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
-    VRFFilterSet,
-    RouteTargetFilterSet,
-    RIRFilterSet,
     AggregateFilterSet,
-    RoleFilterSet,
-    PrefixFilterSet,
     IPAddressFilterSet,
-    VLANGroupFilterSet,
-    VLANFilterSet,
+    PrefixFilterSet,
+    RIRFilterSet,
+    RoleFilterSet,
+    RouteTargetFilterSet,
     ServiceFilterSet,
+    VLANFilterSet,
+    VLANGroupFilterSet,
+    VRFFilterSet,
 )
 
 

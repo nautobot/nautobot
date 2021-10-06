@@ -12,23 +12,23 @@ from netaddr import EUI
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.dcim.choices import (
+    CableLengthUnitChoices,
+    CableTypeChoices,
+    ConsolePortTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    RackDimensionUnitChoices,
     SubdeviceRoleChoices,
-    DeviceFaceChoices,
-    ConsolePortTypeChoices,
-    PowerPortTypeChoices,
-    PowerOutletTypeChoices,
-    PowerOutletFeedLegChoices,
-    InterfaceTypeChoices,
-    InterfaceModeChoices,
-    PortTypeChoices,
-    CableTypeChoices,
-    CableLengthUnitChoices,
-    PowerFeedTypeChoices,
-    PowerFeedSupplyChoices,
-    PowerFeedPhaseChoices,
 )
 
 from nautobot.dcim.models import (

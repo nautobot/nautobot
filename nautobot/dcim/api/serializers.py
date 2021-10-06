@@ -14,25 +14,25 @@ from nautobot.core.api import (
 )
 
 from nautobot.dcim.choices import (
-    RackTypeChoices,
-    RackWidthChoices,
+    CableLengthUnitChoices,
+    ConsolePortTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackElevationDetailRenderChoices,
+    RackTypeChoices,
+    RackWidthChoices,
     SubdeviceRoleChoices,
-    DeviceFaceChoices,
-    ConsolePortTypeChoices,
-    PowerPortTypeChoices,
-    PowerOutletTypeChoices,
-    PowerOutletFeedLegChoices,
-    InterfaceTypeChoices,
-    InterfaceModeChoices,
-    PortTypeChoices,
-    CableLengthUnitChoices,
-    PowerFeedTypeChoices,
-    PowerFeedSupplyChoices,
-    PowerFeedPhaseChoices,
 )
-from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, CABLE_TERMINATION_MODELS
+from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -70,8 +70,8 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.customfields import CustomFieldModelSerializer
 from nautobot.extras.api.serializers import (
-    TaggedObjectSerializer,
     StatusModelSerializerMixin,
+    TaggedObjectSerializer,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
 from nautobot.ipam.api.nested_serializers import (
@@ -83,44 +83,42 @@ from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
-from .nested_serializers import (
-    NestedCableSerializer,
-    NestedDeviceBaySerializer,
-    NestedDeviceRoleSerializer,
-    NestedDeviceSerializer,
-    NestedDeviceTypeSerializer,
-    NestedInterfaceSerializer,
-    NestedManufacturerSerializer,
-    NestedPlatformSerializer,
-    NestedPowerPanelSerializer,
-    NestedPowerPortSerializer,
-    NestedPowerPortTemplateSerializer,
-    NestedRackGroupSerializer,
-    NestedRackRoleSerializer,
-    NestedRackSerializer,
-    NestedRearPortTemplateSerializer,
-    NestedRegionSerializer,
-    NestedSiteSerializer,
-    NestedVirtualChassisSerializer,
-)
 
-# This import is separated from the above import, as the variable(s) are not actually used anywhere in this file,
-# but still required for brief fields functionality to work
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import (  # noqa: F401
+    NestedCableSerializer,
     NestedConsolePortSerializer,
     NestedConsolePortTemplateSerializer,
     NestedConsoleServerPortSerializer,
     NestedConsoleServerPortTemplateSerializer,
+    NestedDeviceBaySerializer,
     NestedDeviceBayTemplateSerializer,
+    NestedDeviceRoleSerializer,
+    NestedDeviceSerializer,
+    NestedDeviceTypeSerializer,
     NestedFrontPortSerializer,
     NestedFrontPortTemplateSerializer,
+    NestedInterfaceSerializer,
     NestedInterfaceTemplateSerializer,
     NestedInventoryItemSerializer,
+    NestedManufacturerSerializer,
+    NestedPlatformSerializer,
     NestedPowerFeedSerializer,
     NestedPowerOutletSerializer,
     NestedPowerOutletTemplateSerializer,
+    NestedPowerPanelSerializer,
+    NestedPowerPortSerializer,
+    NestedPowerPortTemplateSerializer,
+    NestedRackGroupSerializer,
     NestedRackReservationSerializer,
+    NestedRackRoleSerializer,
+    NestedRackSerializer,
     NestedRearPortSerializer,
+    NestedRearPortTemplateSerializer,
+    NestedRegionSerializer,
+    NestedSiteSerializer,
+    NestedVirtualChassisSerializer,
 )
 
 

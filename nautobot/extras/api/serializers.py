@@ -20,10 +20,10 @@ from nautobot.dcim.api.nested_serializers import (
 )
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack, Region, Site
 from nautobot.extras.choices import (
-    CustomFieldTypeChoices,
     CustomFieldFilterLogicChoices,
-    ObjectChangeActionChoices,
+    CustomFieldTypeChoices,
     JobResultStatusChoices,
+    ObjectChangeActionChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -62,26 +62,24 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .customfields import CustomFieldModelSerializer
 from .fields import MultipleChoiceJSONField
-from .nested_serializers import (
-    NestedConfigContextSchemaSerializer,
-    NestedCustomFieldSerializer,
-    NestedJobResultSerializer,
-    NestedRelationshipSerializer,
-    NestedScheduledJobSerializer,
-    NestedTagSerializer,
-)
 
-# This import is separated from the above import, as the variable(s) are not actually used anywhere in this file,
-# but still required for brief fields functionality to work
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import (  # noqa: F401
+    NestedConfigContextSchemaSerializer,
     NestedConfigContextSerializer,
+    NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
     NestedExportTemplateSerializer,
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
+    NestedJobResultSerializer,
     NestedRelationshipAssociationSerializer,
+    NestedRelationshipSerializer,
+    NestedScheduledJobSerializer,
     NestedStatusSerializer,
+    NestedTagSerializer,
     NestedWebhookSerializer,
 )
 

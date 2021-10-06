@@ -6,19 +6,19 @@ from netaddr import IPAddress, IPNetwork
 
 from nautobot.dcim.models import DeviceRole
 from nautobot.extras.scripts import (
-    Script,
-    StringVar,
-    TextVar,
-    IntegerVar,
     BooleanVar,
     ChoiceVar,
-    MultiChoiceVar,
-    ObjectVar,
-    MultiObjectVar,
     FileVar,
+    IntegerVar,
     IPAddressVar,
     IPAddressWithMaskVar,
     IPNetworkVar,
+    MultiChoiceVar,
+    MultiObjectVar,
+    ObjectVar,
+    Script,
+    StringVar,
+    TextVar,
 )
 
 CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))

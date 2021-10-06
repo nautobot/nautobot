@@ -54,34 +54,34 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
+    CableLengthUnitChoices,
+    CableTypeChoices,
+    ConsolePortTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    RackDimensionUnitChoices,
     SubdeviceRoleChoices,
-    DeviceFaceChoices,
-    ConsolePortTypeChoices,
-    PowerPortTypeChoices,
-    PowerOutletTypeChoices,
-    PowerOutletFeedLegChoices,
-    InterfaceTypeChoices,
-    InterfaceModeChoices,
-    PortTypeChoices,
-    CableTypeChoices,
-    CableLengthUnitChoices,
-    PowerFeedTypeChoices,
-    PowerFeedSupplyChoices,
-    PowerFeedPhaseChoices,
 )
 from .constants import (
-    REARPORT_POSITIONS_MIN,
-    REARPORT_POSITIONS_MAX,
-    INTERFACE_MTU_MIN,
-    INTERFACE_MTU_MAX,
     CABLE_TERMINATION_MODELS,
+    INTERFACE_MTU_MAX,
+    INTERFACE_MTU_MIN,
+    REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
 )
 
 from .models import (

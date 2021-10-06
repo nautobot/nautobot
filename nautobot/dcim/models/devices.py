@@ -11,7 +11,7 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.choices import SubdeviceRoleChoices, DeviceFaceChoices
+from nautobot.dcim.choices import DeviceFaceChoices, SubdeviceRoleChoices
 
 from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet

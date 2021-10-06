@@ -38,25 +38,24 @@ from nautobot.utilities.api import get_serializer_for_model
 from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
 )
-from .nested_serializers import (
+
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
     IPFieldSerializer,
+    NestedAggregateSerializer,
     NestedIPAddressSerializer,
+    NestedPrefixSerializer,
     NestedRIRSerializer,
     NestedRoleSerializer,
     NestedRouteTargetSerializer,
+    NestedServiceSerializer,
     NestedVLANGroupSerializer,
     NestedVLANSerializer,
     NestedVRFSerializer,
 )
 
-# This import is separated from the above import, as the variable(s) are not actually used anywhere in this file,
-# but still required for brief fields functionality to work
-from .nested_serializers import (  # noqa: F401
-    NestedAggregateSerializer,
-    NestedPrefixSerializer,
-    NestedServiceSerializer,
-)
-
+#
 # VRFs
 #
 

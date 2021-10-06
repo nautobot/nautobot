@@ -10,8 +10,8 @@ from django.db.models import Count, Sum, Q
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
-from nautobot.dcim.choices import RackTypeChoices, RackWidthChoices, RackDimensionUnitChoices, DeviceFaceChoices
-from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
+from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
+from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import ObjectChange, StatusModel

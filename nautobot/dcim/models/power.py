@@ -3,11 +3,11 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 
-from nautobot.dcim.choices import PowerFeedTypeChoices, PowerFeedSupplyChoices, PowerFeedPhaseChoices
+from nautobot.dcim.choices import PowerFeedPhaseChoices, PowerFeedSupplyChoices, PowerFeedTypeChoices
 from nautobot.dcim.constants import (
-    POWERFEED_VOLTAGE_DEFAULT,
     POWERFEED_AMPERAGE_DEFAULT,
     POWERFEED_MAX_UTILIZATION_DEFAULT,
+    POWERFEED_VOLTAGE_DEFAULT,
 )
 
 from nautobot.extras.models import StatusModel

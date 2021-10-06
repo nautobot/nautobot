@@ -11,20 +11,20 @@ from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
-    PowerPortTypeChoices,
-    PowerOutletTypeChoices,
-    PowerOutletFeedLegChoices,
-    InterfaceTypeChoices,
     InterfaceModeChoices,
+    InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
 )
 from nautobot.dcim.constants import (
-    REARPORT_POSITIONS_MIN,
+    NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
-    NONCONNECTABLE_IFACE_TYPES,
 )
 
 from nautobot.dcim.fields import MACAddressCharField

@@ -2,20 +2,20 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from nautobot.dcim.choices import (
+    CableLengthUnitChoices,
+    CableTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    RackDimensionUnitChoices,
     SubdeviceRoleChoices,
-    DeviceFaceChoices,
-    PowerOutletFeedLegChoices,
-    InterfaceTypeChoices,
-    InterfaceModeChoices,
-    PortTypeChoices,
-    CableTypeChoices,
-    CableLengthUnitChoices,
-    PowerFeedTypeChoices,
-    PowerFeedSupplyChoices,
-    PowerFeedPhaseChoices,
 )
 from nautobot.dcim.filters import (
     RegionFilterSet,

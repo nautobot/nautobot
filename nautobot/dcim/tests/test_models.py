@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.circuits.models import Provider, CircuitType, Circuit, CircuitTermination
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.dcim.choices import DeviceFaceChoices, PowerOutletFeedLegChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.models import (
     Cable,

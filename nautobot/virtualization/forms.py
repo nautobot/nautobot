@@ -41,8 +41,8 @@ from nautobot.utilities.forms import (
     SmallTextarea,
     StaticSelect2,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 

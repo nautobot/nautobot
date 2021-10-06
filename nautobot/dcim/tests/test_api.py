@@ -3,11 +3,11 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.dcim.choices import (
-    SubdeviceRoleChoices,
-    InterfaceTypeChoices,
     InterfaceModeChoices,
+    InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
+    SubdeviceRoleChoices,
 )
 
 from nautobot.dcim.models import (

@@ -31,16 +31,16 @@ from nautobot.virtualization.models import (
     VirtualMachine,
     VMInterface,
 )
-from .nested_serializers import (
+
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
     NestedClusterGroupSerializer,
     NestedClusterSerializer,
     NestedClusterTypeSerializer,
     NestedVirtualMachineSerializer,
+    NestedVMInterfaceSerializer,
 )
-
-# This import is separated from the above import, as the variable(s) are not actually used anywhere in this file,
-# but still required for brief fields functionality to work
-from .nested_serializers import NestedVMInterfaceSerializer  # noqa: F401
 
 #
 # Clusters
