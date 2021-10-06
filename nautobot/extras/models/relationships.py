@@ -186,7 +186,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         max_length=50,
         choices=RelationshipTypeChoices,
         default=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-        help_text="Cardinality of this relationship"
+        help_text="Cardinality of this relationship",
     )
 
     #
@@ -299,7 +299,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
             return False
 
         # ONE_TO_MANY
-        return (side == RelationshipSideChoices.SIDE_DESTINATION)
+        return side == RelationshipSideChoices.SIDE_DESTINATION
 
     def to_form_field(self, side):
         """
