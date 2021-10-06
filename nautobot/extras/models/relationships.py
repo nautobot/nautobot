@@ -509,6 +509,9 @@ class RelationshipAssociation(BaseModel):
                 {"destination_type": f"destination_type has a different value than defined in {self.relationship}"}
             )
 
+        if self.source_type == self.destination_type and self.source_id == self.destination_id:
+            raise ValidationError({"destination_id": "An object cannot form a RelationshipAssociation with itself"})
+
         # Check if a similar relationship association already exists in violation of relationship type cardinality
         if self.relationship.type not in (
             RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -526,7 +529,10 @@ class RelationshipAssociation(BaseModel):
                     }
                 )
 
-            if self.relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_ONE:
+            if self.relationship.type in (
+                RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+                RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+            ):
                 # Don't allow multiple destinations from the same source
                 if RelationshipAssociation.objects.filter(
                     relationship=self.relationship,
@@ -536,5 +542,27 @@ class RelationshipAssociation(BaseModel):
                     raise ValidationError(
                         {
                             "source": f"Unable to create more than one {self.relationship} association to {self.source} (source)"
+                        }
+                    )
+
+            if self.relationship.type == RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC:
+                # Handle the case where the source and destination fields (which are interchangeable for a symmetric
+                # relationship) are swapped around - sneaky!
+                if RelationshipAssociation.objects.filter(
+                    relationship=self.relationship,
+                    destination_id=self.source_id,
+                ).exists():
+                    raise ValidationError(
+                        {
+                            "source": f"Unable to create more than one {self.relationship} association involving {self.source} (peer)"
+                        }
+                    )
+                if RelationshipAssociation.objects.filter(
+                    relationship=self.relationship,
+                    source_id=self.destination_id,
+                ).exists():
+                    raise ValidationError(
+                        {
+                            "destination": f"Unable to create more than one {self.relationship} association involving {self.destination} (peer)"
                         }
                     )
