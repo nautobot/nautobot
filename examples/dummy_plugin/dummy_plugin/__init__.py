@@ -16,6 +16,8 @@ from dummy_plugin.signals import nautobot_database_ready_callback
 class DummyPluginConfig(PluginConfig):
     name = "dummy_plugin"
     verbose_name = "Dummy plugin"
+    author = "Nautobot development team"
+    author_email = "nautobot@example.com"
     version = __version__
     description = "For testing purposes only"
     base_url = "dummy-plugin"
@@ -26,6 +28,10 @@ class DummyPluginConfig(PluginConfig):
     default_settings = {
         "dummy_default_key": "dummy_default_value",
     }
+
+    # URL reverse lookup names
+    home_view_name = "plugins:dummy_plugin:home"
+    config_view_name = "plugins:dummy_plugin:config"
 
     def ready(self):
         """Callback when this plugin is loaded."""

@@ -1,8 +1,12 @@
+from datetime import datetime
 from django.contrib.contenttypes.models import ContentType
+from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_rq.queues import get_connection
-from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from drf_yasg.utils import no_body, swagger_auto_schema
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -11,14 +15,13 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
-from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
-from rq import Worker
+from rest_framework import viewsets
 
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
-from nautobot.core.api.views import ModelViewSet
+from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.models import (
     ComputedField,
@@ -34,13 +37,15 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Status,
+    ScheduledJob,
     Tag,
     TaggedItem,
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, get_jobs, run_job
-from nautobot.utilities.exceptions import RQWorkerNotRunningException
+from nautobot.extras.utils import get_worker_count
+from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
 from . import serializers
 
@@ -52,6 +57,26 @@ class ExtrasRootView(APIRootView):
 
     def get_view_name(self):
         return "Extras"
+
+
+#
+#  Computed Fields
+#
+
+
+class ComputedFieldViewSet(ModelViewSet):
+    """
+    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = ComputedField.objects.all()
+    serializer_class = serializers.ComputedFieldSerializer
+    filterset_class = filters.ComputedFieldFilterSet
+
+
+#
+# Config contexts
+#
 
 
 class ConfigContextQuerySetMixin:
@@ -75,6 +100,46 @@ class ConfigContextQuerySetMixin:
         if self.brief or "config_context" in request.query_params.get("exclude", []):
             return queryset
         return queryset.annotate_config_context_data()
+
+
+class ConfigContextViewSet(ModelViewSet):
+    queryset = ConfigContext.objects.prefetch_related(
+        "regions",
+        "sites",
+        "roles",
+        "device_types",
+        "platforms",
+        "tenant_groups",
+        "tenants",
+    )
+    serializer_class = serializers.ConfigContextSerializer
+    filterset_class = filters.ConfigContextFilterSet
+
+
+#
+# Config context schemas
+#
+
+
+class ConfigContextSchemaViewSet(ModelViewSet):
+    queryset = ConfigContextSchema.objects.all()
+    serializer_class = serializers.ConfigContextSchemaSerializer
+    filterset_class = filters.ConfigContextSchemaFilterSet
+
+
+#
+# ContentTypes
+#
+
+
+class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
+    """
+
+    queryset = ContentType.objects.order_by("app_label", "model")
+    serializer_class = serializers.ContentTypeSerializer
+    filterset_class = filters.ContentTypeFilterSet
 
 
 #
@@ -116,6 +181,21 @@ class CustomFieldModelViewSet(ModelViewSet):
 
 
 #
+# Custom Links
+#
+
+
+class CustomLinkViewSet(ModelViewSet):
+    """
+    Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = CustomLink.objects.all()
+    serializer_class = serializers.CustomLinkSerializer
+    filterset_class = filters.CustomLinkFilterSet
+
+
+#
 # Export templates
 #
 
@@ -125,17 +205,6 @@ class ExportTemplateViewSet(ModelViewSet):
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
-
-
-#
-# Tags
-#
-
-
-class TagViewSet(CustomFieldModelViewSet):
-    queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
-    serializer_class = serializers.TagSerializer
-    filterset_class = filters.TagFilterSet
 
 
 #
@@ -161,12 +230,40 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
         if not request.user.has_perm("extras.change_gitrepository"):
             raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
 
-        if not Worker.count(get_connection("default")):
-            raise RQWorkerNotRunningException()
+        if not get_worker_count():
+            raise CeleryWorkerNotRunningException()
 
         repository = get_object_or_404(GitRepository, id=pk)
         enqueue_pull_git_repository_and_refresh_data(repository, request)
         return Response({"message": f"Repository {repository} sync job added to queue."})
+
+
+#
+# GraphQL Queries
+#
+
+
+class GraphQLQueryViewSet(ModelViewSet):
+    queryset = GraphQLQuery.objects.all()
+    serializer_class = serializers.GraphQLQuerySerializer
+    filterset_class = filters.GraphQLQueryFilterSet
+
+    @swagger_auto_schema(
+        method="post",
+        request_body=serializers.GraphQLQueryInputSerializer,
+        responses={"200": serializers.GraphQLQueryOutputSerializer},
+    )
+    @action(detail=True, methods=["post"])
+    def run(self, request, pk):
+        try:
+            query = get_object_or_404(self.queryset, pk=pk)
+            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
+            return Response(result)
+        except GraphQLError as error:
+            return Response(
+                {"errors": [GraphQLView.format_error(error)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 #
@@ -182,41 +279,11 @@ class ImageAttachmentViewSet(ModelViewSet):
 
 
 #
-# Config contexts
-#
-
-
-class ConfigContextViewSet(ModelViewSet):
-    queryset = ConfigContext.objects.prefetch_related(
-        "regions",
-        "sites",
-        "roles",
-        "device_types",
-        "platforms",
-        "tenant_groups",
-        "tenants",
-    )
-    serializer_class = serializers.ConfigContextSerializer
-    filterset_class = filters.ConfigContextFilterSet
-
-
-#
-# Config context schemas
-#
-
-
-class ConfigContextSchemaViewSet(ModelViewSet):
-    queryset = ConfigContextSchema.objects.all()
-    serializer_class = serializers.ConfigContextSchemaSerializer
-    filterset_class = filters.ConfigContextSchemaFilterSet
-
-
-#
 # Jobs
 #
 
 
-class JobViewSet(ViewSet):
+class JobViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     lookup_field = "class_path"
     lookup_value_regex = "[^/]+/[^/]+/[^/]+"  # e.g. "git.repo_name/module_name/JobName"
@@ -227,6 +294,41 @@ class JobViewSet(ViewSet):
             raise Http404
 
         return job_class
+
+    def _create_schedule(self, serializer, data, commit, job, job_class, request):
+        """
+        This is an internal function to create a scheduled job from API data.
+        It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
+        jobs.
+        """
+        job_kwargs = {
+            "data": data,
+            "request": copy_safe_request(request),
+            "user": request.user.pk,
+            "commit": commit,
+            "name": job.class_path,
+        }
+        type_ = serializer["interval"]
+        if type_ == JobExecutionType.TYPE_IMMEDIATELY:
+            time = datetime.now()
+            name = serializer.get("name") or f"{job.name} - {time}"
+        else:
+            time = serializer["start_time"]
+            name = serializer["name"]
+        scheduled_job = ScheduledJob(
+            name=name,
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=job.class_path,
+            start_time=time,
+            description=f"Nautobot job {name} scheduled by {request.user} on {time}",
+            kwargs=job_kwargs,
+            interval=type_,
+            one_off=(type_ == JobExecutionType.TYPE_FUTURE),
+            user=request.user,
+            approval_required=job_class.approval_required,
+        )
+        scheduled_job.save()
+        return scheduled_job
 
     def list(self, request):
         if not request.user.has_perm("extras.view_job"):
@@ -283,25 +385,159 @@ class JobViewSet(ViewSet):
         input_serializer = serializers.JobInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
-        data = input_serializer.data["data"]
+        data = input_serializer.data["data"] or {}
         commit = input_serializer.data["commit"]
         if commit is None:
             commit = getattr(job_class.Meta, "commit_default", True)
 
+        try:
+            job.validate_data(data)
+        except FormsValidationError as e:
+            # message_dict can only be accessed if ValidationError got a dict
+            # in the constructor (saved as error_dict). Otherwise we get a list
+            # of errors under messages
+            return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
+
+        if not get_worker_count():
+            raise CeleryWorkerNotRunningException()
+
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
+        schedule = input_serializer.data.get("schedule")
+        if schedule:
+            schedule = self._create_schedule(schedule, data, commit, job, job_class, request)
+        else:
+            job_result = JobResult.enqueue_job(
+                run_job,
+                job.class_path,
+                job_content_type,
+                request.user,
+                data=data,
+                request=copy_safe_request(request),
+                commit=commit,
+            )
+            job.result = job_result
+
+        serializer = serializers.JobDetailSerializer(job, context={"request": request})
+
+        return Response(serializer.data)
+
+
+#
+# Job Results
+#
+
+
+class JobResultViewSet(ModelViewSet):
+    """
+    Retrieve a list of job results
+    """
+
+    queryset = JobResult.objects.prefetch_related("user")
+    serializer_class = serializers.JobResultSerializer
+    filterset_class = filters.JobResultFilterSet
+
+
+#
+# Scheduled Jobs
+#
+
+
+class ScheduledJobViewSet(ReadOnlyModelViewSet):
+    """
+    Retrieve a list of scheduled jobs
+    """
+
+    queryset = ScheduledJob.objects.prefetch_related("user")
+    serializer_class = serializers.ScheduledJobSerializer
+    filterset_class = filters.ScheduledJobFilterSet
+
+    @swagger_auto_schema(
+        method="post",
+        responses={"200": serializers.ScheduledJobSerializer},
+        request_body=no_body,
+        manual_parameters=[
+            openapi.Parameter(
+                "force",
+                openapi.IN_QUERY,
+                description="force execution even if start time has passed",
+                type=openapi.TYPE_BOOLEAN,
+            )
+        ],
+    )
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk):
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied()
+
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+
+        # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+        if request.user == scheduled_job.user:
+            # The requestor *cannot* approve their own job
+            return Response("You cannot approve your own job request!", status=403)
+
+        if (
+            scheduled_job.one_off
+            and scheduled_job.start_time < timezone.now()
+            and not request.query_params.get("force")
+        ):
+            return Response(
+                "The job's start time is in the past. If you want to force a run anyway, add the `force` query parameter.",
+                status=400,
+            )
+
+        scheduled_job.approved_by_user = request.user
+        scheduled_job.approved_at = timezone.now()
+        scheduled_job.save()
+        serializer = serializers.ScheduledJobSerializer(scheduled_job, context={"request": request})
+
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        method="post",
+        request_body=no_body,
+    )
+    @action(detail=True, methods=["post"])
+    def deny(self, request, pk):
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied()
+
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+
+        scheduled_job.delete()
+
+        return Response(None)
+
+    @swagger_auto_schema(
+        method="post",
+        responses={"200": serializers.JobResultSerializer},
+        request_body=no_body,
+    )
+    @action(detail=True, url_path="dry-run", methods=["post"])
+    def dry_run(self, request, pk):
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied()
+
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        job_class = get_job(scheduled_job.job_class)
+        if job_class is None:
+            raise Http404
+        job = job_class()
+        grouping, module, class_name = job_class.class_path.split("/", 2)
+
+        # Immediately enqueue the job with commit=False
+        job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = JobResult.enqueue_job(
             run_job,
             job.class_path,
             job_content_type,
-            request.user,
-            data=data,
+            scheduled_job.user,
+            data=scheduled_job.kwargs["data"],
             request=copy_safe_request(request),
-            commit=commit,
+            commit=False,  # force a dry-run
         )
-        job.result = job_result
-
-        serializer = serializers.JobDetailSerializer(job, context={"request": request})
+        serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
         return Response(serializer.data)
 
@@ -323,63 +559,22 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 
 
 #
-# Job Results
+#  Relationships
 #
 
 
-class JobResultViewSet(ModelViewSet):
-    """
-    Retrieve a list of job results
-    """
-
-    queryset = JobResult.objects.prefetch_related("user")
-    serializer_class = serializers.JobResultSerializer
-    filterset_class = filters.JobResultFilterSet
+class RelationshipViewSet(ModelViewSet):
+    metadata_class = ContentTypeMetadata
+    queryset = Relationship.objects.all()
+    serializer_class = serializers.RelationshipSerializer
+    filterset_class = filters.RelationshipFilterSet
 
 
-#
-# ContentTypes
-#
-
-
-class ContentTypeViewSet(ReadOnlyModelViewSet):
-    """
-    Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
-    """
-
-    queryset = ContentType.objects.order_by("app_label", "model")
-    serializer_class = serializers.ContentTypeSerializer
-    filterset_class = filters.ContentTypeFilterSet
-
-
-#
-# Custom Links
-#
-
-
-class CustomLinkViewSet(ModelViewSet):
-    """
-    Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
-    """
-
-    queryset = CustomLink.objects.all()
-    serializer_class = serializers.CustomLinkSerializer
-    filterset_class = filters.CustomLinkFilterSet
-
-
-#
-# Webhooks
-#
-
-
-class WebhooksViewSet(ModelViewSet):
-    """
-    Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
-    """
-
-    queryset = Webhook.objects.all()
-    serializer_class = serializers.WebhookSerializer
-    filterset_class = filters.WebhookFilterSet
+class RelationshipAssociationViewSet(ModelViewSet):
+    metadata_class = ContentTypeMetadata
+    queryset = RelationshipAssociation.objects.all()
+    serializer_class = serializers.RelationshipAssociationSerializer
+    filterset_class = filters.RelationshipAssociationFilterSet
 
 
 #
@@ -406,62 +601,26 @@ class StatusViewSetMixin(ModelViewSet):
 
 
 #
-#  Relationships
+# Tags
 #
 
 
-class RelationshipViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
-    queryset = Relationship.objects.all()
-    serializer_class = serializers.RelationshipSerializer
-    filterset_class = filters.RelationshipFilterSet
-
-
-class RelationshipAssociationViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
-    queryset = RelationshipAssociation.objects.all()
-    serializer_class = serializers.RelationshipAssociationSerializer
-    filterset_class = filters.RelationshipAssociationFilterSet
+class TagViewSet(CustomFieldModelViewSet):
+    queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
+    serializer_class = serializers.TagSerializer
+    filterset_class = filters.TagFilterSet
 
 
 #
-# GraphQL Queries
+# Webhooks
 #
 
 
-class GraphQLQueryViewSet(ModelViewSet):
-    queryset = GraphQLQuery.objects.all()
-    serializer_class = serializers.GraphQLQuerySerializer
-    filterset_class = filters.GraphQLQueryFilterSet
-
-    @swagger_auto_schema(
-        method="post",
-        request_body=serializers.GraphQLQueryInputSerializer,
-        responses={"200": serializers.GraphQLQueryOutputSerializer},
-    )
-    @action(detail=True, methods=["post"])
-    def run(self, request, pk):
-        try:
-            query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
-            return Response(result)
-        except GraphQLError as error:
-            return Response(
-                {"errors": [GraphQLView.format_error(error)]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-
-#
-#  Computed Fields
-#
-
-
-class ComputedFieldViewSet(ModelViewSet):
+class WebhooksViewSet(ModelViewSet):
     """
-    Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
+    Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = ComputedField.objects.all()
-    serializer_class = serializers.ComputedFieldSerializer
-    filterset_class = filters.ComputedFieldFilterSet
+    queryset = Webhook.objects.all()
+    serializer_class = serializers.WebhookSerializer
+    filterset_class = filters.WebhookFilterSet

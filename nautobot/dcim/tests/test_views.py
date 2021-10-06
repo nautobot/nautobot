@@ -55,6 +55,7 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             Region.objects.create(name="Region ɑ", slug="region-alpha"),
             Region.objects.create(name="Region β", slug="region-beta"),
             Region.objects.create(name="Region γ", slug="region-gamma"),
+            Region.objects.create(name="Region 8"),
         )
 
         cls.form_data = {
@@ -69,7 +70,10 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Region δ,region-delta,Fourth region",
             "Region ε,region-epsilon,Fifth region",
             "Region ζ,region-zeta,Sixth region",
+            "Region 7,,Seventh region",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "Region 8"
 
 
 class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -114,6 +118,12 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 region=regions[0],
                 status=status_planned,
                 _custom_field_data={"contact_slack": "@site-3-manager"},
+            ),
+            Site.objects.create(
+                name="Site 8",
+                region=regions[0],
+                status=status_planned,
+                _custom_field_data={"contact_slack": "@site-8-manager"},
             ),
         )
 
@@ -166,6 +176,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "Site 4,site-4,planned",
             "Site 5,site-5,active",
             "Site 6,site-6,staging",
+            "Site 7,,staging",
         )
 
         cls.bulk_edit_data = {
@@ -176,6 +187,8 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "time_zone": pytz.timezone("US/Eastern"),
             "description": "New description",
         }
+        cls.slug_source = "name"
+        cls.slug_test_object = "Site 8"
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -189,6 +202,7 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=site)
         RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=site)
         RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=site)
+        RackGroup.objects.create(name="Rack Group 8", site=site)
 
         cls.form_data = {
             "name": "Rack Group X",
@@ -202,7 +216,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Site 1,Rack Group 4,rack-group-4,Fourth rack group",
             "Site 1,Rack Group 5,rack-group-5,Fifth rack group",
             "Site 1,Rack Group 6,rack-group-6,Sixth rack group",
+            "Site 1,Rack Group 7,,Seventh rack group",
         )
+        cls.slug_test_object = "Rack Group 8"
+        cls.slug_source = "name"
 
 
 class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -214,6 +231,7 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         RackRole.objects.create(name="Rack Role 1", slug="rack-role-1")
         RackRole.objects.create(name="Rack Role 2", slug="rack-role-2")
         RackRole.objects.create(name="Rack Role 3", slug="rack-role-3")
+        RackRole.objects.create(name="Rack Role 8")
 
         cls.form_data = {
             "name": "Rack Role X",
@@ -227,7 +245,10 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Rack Role 4,rack-role-4,ff0000",
             "Rack Role 5,rack-role-5,00ff00",
             "Rack Role 6,rack-role-6,0000ff",
+            "Rack Role 7,,0000ff",
         )
+        cls.slug_source = "name"
+        cls.slug_test_object = "Rack Role 8"
 
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -405,7 +426,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
         Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
-
+        Manufacturer.objects.create(name="Manufacturer 8")
         cls.form_data = {
             "name": "Manufacturer X",
             "slug": "manufacturer-x",
@@ -417,7 +438,10 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Manufacturer 4,manufacturer-4,Fourth manufacturer",
             "Manufacturer 5,manufacturer-5,Fifth manufacturer",
             "Manufacturer 6,manufacturer-6,Sixth manufacturer",
+            "Manufacturer 7,,Seventh manufacturer",
         )
+        cls.slug_test_object = "Manufacturer 8"
+        cls.slug_source = "name"
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -445,6 +469,7 @@ class DeviceTypeTestCase(
         DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturers[0])
         DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturers[0])
         DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Device Type 4", manufacturer=manufacturers[1])
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -465,6 +490,9 @@ class DeviceTypeTestCase(
             "u_height": 3,
             "is_full_depth": False,
         }
+
+        cls.slug_source = "model"
+        cls.slug_test_object = "Device Type 4"
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
@@ -618,7 +646,7 @@ device-bays:
         response = self.client.get("{}?export".format(url))
         self.assertEqual(response.status_code, 200)
         data = list(yaml.load_all(response.content, Loader=yaml.SafeLoader))
-        self.assertEqual(len(data), 3)
+        self.assertEqual(len(data), 4)
         self.assertEqual(data[0]["manufacturer"], "Manufacturer 1")
         self.assertEqual(data[0]["model"], "Device Type 1")
 
@@ -942,6 +970,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
+        DeviceRole.objects.create(name="Device Role 8")
 
         cls.form_data = {
             "name": "Devie Role X",
@@ -956,7 +985,11 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Device Role 4,device-role-4,ff0000",
             "Device Role 5,device-role-5,00ff00",
             "Device Role 6,device-role-6,0000ff",
+            "Device Role 7,,0000ff",
         )
+
+        cls.slug_test_object = "Device Role 8"
+        cls.slug_source = "name"
 
 
 class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -970,6 +1003,7 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         Platform.objects.create(name="Platform 1", slug="platform-1", manufacturer=manufacturer)
         Platform.objects.create(name="Platform 2", slug="platform-2", manufacturer=manufacturer)
         Platform.objects.create(name="Platform 3", slug="platform-3", manufacturer=manufacturer)
+        Platform.objects.create(name="Platform 8", manufacturer=manufacturer)
 
         cls.form_data = {
             "name": "Platform X",
@@ -985,7 +1019,11 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Platform 4,platform-4,Fourth platform",
             "Platform 5,platform-5,Fifth platform",
             "Platform 6,platform-6,Sixth platform",
+            "Platform 7,,Seventh platform",
         )
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Platform 8"
 
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1131,6 +1169,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "serial": "123456",
             "status": statuses.get(slug="decommissioning").pk,
+            "site": sites[1].pk,
+            "rack": racks[1].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

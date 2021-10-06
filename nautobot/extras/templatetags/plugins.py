@@ -87,7 +87,12 @@ def plugin_banners(context):
     """
     banners = []
     for banner_function in registry["plugin_banners"]:
-        banner = banner_function(context)
+        try:
+            banner = banner_function(context)
+        except Exception as exc:
+            logger.error("Plugin banner function %s raised an exception: %s", banner_function, exc)
+            continue
+
         if banner:
             if isinstance(banner, PluginBanner):
                 banners.append(banner)

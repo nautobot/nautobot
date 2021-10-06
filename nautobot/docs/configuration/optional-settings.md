@@ -70,6 +70,72 @@ This defines custom content to be displayed on the login page above the login fo
 
 ---
 
+## BRANDING_FILEPATHS
+
+Default:
+
+```python
+{
+    "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
+    "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
+    "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
+    "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
+    "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon 
+    "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+}
+```
+
+A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset. This allows for instance, providing your own navbar logo and favicon.
+
+These environment variables may be used to specify the values:
+
+* `NAUTOBOT_BRANDING_FILEPATHS_LOGO`
+* `NAUTOBOT_BRANDING_FILEPATHS_FAVICON`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_16`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_32`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
+* `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+
+If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+
+---
+
+## BRANDING_TITLE
+
+Default: `"Nautobot"`
+
+Environment Variable: `NAUTOBOT_BRANDING_TITLE`
+
+The defines the custom branding title that should be used in place of "Nautobot" within user facing areas of the application like the HTML title of web pages.
+
+---
+
+## BRANDING_URLS
+
+Default:
+
+```python
+{
+    "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),  # Code link in the footer
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),  # Docs link in the footer
+    "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),  # Help link in the footer
+}
+```
+
+A set of URLs that correspond to helpful links in the right of the footer on every web page.
+
+These environment variables may be used to specify the values:
+
+* `NAUTOBOT_BRANDING_URLS_CODE`
+* `NAUTOBOT_BRANDING_URLS_DOCS`
+* `NAUTOBOT_BRANDING_URLS_HELP`
+
+If a custom URL is not provided for any of the links, the default link within the Nautobot community is used.
+
+---
+
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
@@ -343,7 +409,6 @@ Please see [the object permissions page](../administration/permissions.md) for m
 
 ---
 
-
 ## FORCE_SCRIPT_NAME
 
 Default: `None`
@@ -364,6 +429,18 @@ Default: `os.path.join(NAUTOBOT_ROOT, "git")`
 The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
+
+---
+
+## GIT_SSL_NO_VERIFY
+
+Default: Unset
+
+If you are using a self-signed git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
+in order for the repository to sync.
+
+!!! warning
+    This *must* be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
 
 ---
 
@@ -483,6 +560,12 @@ Setting this to `True` will display a "maintenance mode" banner at the top of ev
 !!! note
     The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
 
+!!! note
+    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../docker/#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
+
+!!! note
+    If you are using `django-auth-ldap` for LDAP authentication, `django-auth-ldap` by default will try to update a user object on every log in.  If the database is in a read-only state `django-auth-ldap` will fail.  You will also need to set `AUTH_LDAP_ALWAYS_UPDATE_USER=False` and `AUTH_LDAP_NO_NEW_USERS=True` to avoid this, please see the [`django-auth-ldap` documentation](https://django-auth-ldap.readthedocs.io/en/stable/reference.html) for more information.
+
 ---
 
 ## MAX_PAGE_SIZE
@@ -523,7 +606,7 @@ Default: `""` (Empty string)
 
 Environment Variables: `NAUTOBOT_NAPALM_USERNAME` and `NAUTOBOT_NAPALM_PASSWORD`
 
-Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm-automation.net/), if installed. Both parameters are optional.
+Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm.readthedocs.io), if installed. Both parameters are optional.
 
 !!! note
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.

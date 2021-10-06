@@ -12,6 +12,7 @@ from netaddr import IPNetwork
 from rest_framework.test import APIClient
 
 from nautobot.core.middleware import ExternalAuthMiddleware
+from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
@@ -190,6 +191,48 @@ class ExternalAuthenticationTestCase(TestCase):
             msg="Authentication failed",
         )
         self.assertTrue(new_user.has_perms(["dcim.add_site", "dcim.change_site"]))
+
+    @override_settings(
+        SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
+    )
+    def test_custom_social_auth_backend_prefix_sso_enabled_true(self):
+        """
+        Test specifying custom social auth backend prefix for custom auth plugins return True with matching backend prefix.
+        """
+
+        self.assertEqual(settings.SOCIAL_AUTH_BACKEND_PREFIX, "custom_auth.backend")
+        self.assertTrue(
+            sso_auth_enabled(("custom_auth.backend.pingid", "nautobot.core.authentication.ObjectPermissionBackend"))
+        )
+
+    @override_settings(
+        SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
+    )
+    def test_custom_social_auth_backend_prefix_sso_enabled_false(self):
+        """
+        Test specifying custom social auth backend prefix for custom auth plugins with no matching custom backend.
+        """
+
+        self.assertEqual(settings.SOCIAL_AUTH_BACKEND_PREFIX, "custom_auth.backend")
+        self.assertFalse(sso_auth_enabled(tuple(TEST_AUTHENTICATION_BACKENDS)))
+
+    def test_default_social_auth_backend_prefix_sso_enabled_true(self):
+        """
+        Test default check for 'social_core.backends' with backend specified that starts with default backend prefix.
+        """
+
+        self.assertTrue(
+            sso_auth_enabled(
+                ("social_core.backends.google.GoogleOauth2", "nautobot.core.authentication.ObjectPermissionBackend")
+            )
+        )
+
+    def test_default_social_auth_backend_prefix_sso_enabled_false(self):
+        """
+        Test default check for 'social_core.backends' with no backends specified that startswith prefix.
+        """
+
+        self.assertFalse(sso_auth_enabled(tuple(TEST_AUTHENTICATION_BACKENDS)))
 
 
 class ObjectPermissionAPIViewTestCase(TestCase):

@@ -41,7 +41,18 @@
                                                 <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
                                                     {% if request.user|has_perms:item_details.permissions %}
                                                         <span class="badge pull-right">{{ item_details.count }}</span>
-                                                        <h4 class="list-group-item-heading"><a href="{% url item_details.link %}">{{ item_name }}</a></h4>
+                                                        <h4 class="list-group-item-heading">
+                                                            {% comment %}
+                                                                Use 'url xxx as variable' so that an invalid
+                                                                link doesn't throw a NoReverseMatch exception.
+                                                            {% endcomment %}
+                                                            {% url item_details.link as item_url %}
+                                                            {% if item_url %}
+                                                                <a href="{{ item_url }}">{{ item_name }}</a>
+                                                            {% else %}
+                                                                <a>ERROR: Invalid link!</a>
+                                                            {% endif %}
+                                                        </h4>
                                                     {% else %}
                                                         <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
                                                         <h4 class="list-group-item-heading">{{ item_name }}</h4>
@@ -56,7 +67,18 @@
                                                     {% if request.user|has_one_or_more_perms:group_item_details.permissions or not settings.HIDE_RESTRICTED_UI %}
                                                         {% if request.user|has_perms:group_item_details.permissions %}
                                                             <span class="badge pull-right">{{ group_item_details.count }}</span>
-                                                            <p style="padding-left: 20px;"><a href="{% url group_item_details.link %}">{{ group_item_name }}</a></p>
+                                                            <p style="padding-left: 20px;">
+                                                                {% comment %}
+                                                                    Use 'url xxx as variable' so that an invalid
+                                                                    link doesn't throw a NoReverseMatch exception.
+                                                                {% endcomment %}
+                                                                {% url group_item_details.link as group_url %}
+                                                                {% if group_url %}
+                                                                    <a href="{{ group_url }}">{{ group_item_name }}</a>
+                                                                {% else %}
+                                                                    <a>ERROR: Invalid link!</a>
+                                                                {% endif %}
+                                                            </p>
                                                         {% else %}
                                                             <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
                                                             <p style="padding-left: 20px;">{{ group_item_name }}</p>

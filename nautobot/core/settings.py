@@ -23,6 +23,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
 
+# Set the default AutoField for 3rd party apps
+# N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
+#      we can’t do that yet
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
 ###############################################################
 # NAUTOBOT - Settings for Nautobot internals/plugins/defaults #
@@ -116,6 +121,8 @@ RELEASE_CHECK_TIMEOUT = 24 * 3600
 
 # SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
+# Nautobot related - May be overridden if using custom social auth backend
+SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 
 # Storage
 STORAGE_BACKEND = None
@@ -299,10 +306,11 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
+    "django_celery_beat",
     "health_check",
-    "health_check.db",
     "health_check.cache",
     "health_check.storage",
+    "django_extensions",
 ]
 
 # Middleware
@@ -382,7 +390,7 @@ USE_TZ = True
 WSGI_APPLICATION = "nautobot.core.wsgi.application"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
-X_FRAME_OPTIONS = "SAMEORIGIN"
+X_FRAME_OPTIONS = "DENY"
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
@@ -524,3 +532,38 @@ CELERY_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_RESULT_ACCEPT_CONTENT = ["nautobot_json"]
 CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"
+
+CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
+
+#
+# Custom branding (logo and title)
+#
+
+# Branding logo locations. The logo takes the place of the Nautobot logo in the top right of the nav bar.
+# The filepath should be relative to the `MEDIA_ROOT`.
+BRANDING_FILEPATHS = {
+    "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
+    "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
+    "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
+    "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
+    "icon_180": os.getenv(
+        "NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None
+    ),  # 180x180px icon - used for the apple-touch-icon header
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
+    "icon_mask": os.getenv(
+        "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
+    ),  # mono-chrome icon used for the mask-icon header
+}
+
+# Title to use in place of "Nautobot"
+BRANDING_TITLE = os.getenv("NAUTOBOT_BRANDING_TITLE", "Nautobot")
+
+# Branding URLs (links in the bottom right of the footer)
+BRANDING_URLS = {
+    "code": os.getenv("NAUTOBOT_BRANDING_URLS_CODE", "https://github.com/nautobot/nautobot"),
+    "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", "https://nautobot.readthedocs.io/"),
+    "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
+}
+
+# Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
+BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"

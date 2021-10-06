@@ -53,6 +53,41 @@ def generate_null_choices_resolver(name, resolver_name):
     return resolve_fields_w_choices
 
 
+def generate_filter_resolver(schema_type, resolver_name, field_name):
+    """
+    Generate function to resolve OneToMany filtering.
+
+    Args:
+        schema_type (DjangoObjectType): DjangoObjectType for a given model
+        resolver_name (str): name of the resolver
+        field_name (str): name of OneToMany field to filter
+    """
+    filterset_class = schema_type._meta.filterset_class
+
+    def resolve_filter(self, *args, **kwargs):
+        if not filterset_class:
+            return getattr(self, field_name).all()
+
+        resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
+
+        # Check result filter for errors.
+        if not resolved_obj.errors:
+            return resolved_obj.qs.all()
+
+        errors = {}
+
+        # Build error message from results
+        # Error messages are collected from each filter object
+        for key in resolved_obj.errors:
+            errors[key] = resolved_obj.errors[key]
+
+        # Raising this exception will send the error message in the response of the GraphQL request
+        raise GraphQLError(errors)
+
+    resolve_filter.__name__ = resolver_name
+    return resolve_filter
+
+
 def generate_custom_field_resolver(name, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 

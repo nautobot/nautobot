@@ -33,6 +33,7 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    ScheduledJob,
     Status,
     Tag,
     TaggedItem,
@@ -78,25 +79,49 @@ WEBHOOK_CONTENT_TYPES = """
 {{ value.all|join:", "|truncatewords:15 }}
 """
 
+SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_dry_run')"
+        title="Dry Run"
+        class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-play"></i>
+</button>
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_approve')"
+        title="Approve"
+        class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-check"></i>
+</button>
+<button type="button"
+        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' scheduled_job=record.pk %}', '_deny')"
+        title="Deny"
+        class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+    <i class="mdi mdi-close"></i>
+</button>
+"""
 
-class TagTable(BaseTable):
+
+class ComputedFieldTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
-    color = ColorColumn()
-    actions = ButtonsColumn(Tag, pk_field="slug")
+    label = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
-        model = Tag
-        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
-
-
-class TaggedItemTable(BaseTable):
-    content_object = tables.TemplateColumn(template_code=TAGGED_ITEM, orderable=False, verbose_name="Object")
-    content_type = tables.Column(verbose_name="Type")
-
-    class Meta(BaseTable.Meta):
-        model = TaggedItem
-        fields = ("content_object", "content_type")
+        model = ComputedField
+        fields = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "label",
+            "slug",
+            "content_type",
+            "description",
+        )
 
 
 class ConfigContextTable(BaseTable):
@@ -164,6 +189,88 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
         # Return a green check (like a boolean column)
         return mark_safe('<span class="text-success"><i class="mdi mdi-check-bold"></i></span>')
+
+
+class CustomFieldTable(BaseTable):
+    pk = ToggleColumn()
+    # TODO: Replace name column with slug #464
+    slug = tables.Column(linkify=True, accessor="name")
+    content_types = ContentTypesColumn(truncate_words=15)
+    required = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomField
+        fields = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "description",
+            "required",
+            "default",
+            "weight",
+        )
+        default_columns = (
+            "pk",
+            "slug",
+            "content_types",
+            "type",
+            "label",
+            "required",
+            "weight",
+        )
+
+
+class CustomLinkTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    new_window = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = CustomLink
+        fields = (
+            "pk",
+            "name",
+            "content_type",
+            "text",
+            "target_url",
+            "weight",
+            "group_name",
+            "button_class",
+            "new_window",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "group_name",
+            "weight",
+        )
+
+
+class ExportTemplateTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    owner = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = ExportTemplate
+        fields = (
+            "pk",
+            "owner",
+            "content_type",
+            "name",
+            "description",
+            "mime_type",
+            "file_extension",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "file_extension",
+        )
 
 
 class GitRepositoryTable(BaseTable):
@@ -245,6 +352,19 @@ class GitRepositoryBulkTable(BaseTable):
         )
 
 
+class GraphQLQueryTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = GraphQLQuery
+        fields = (
+            "pk",
+            "name",
+            "slug",
+        )
+
+
 def job_creator_link(value, record):
     """
     Get a link to the related object, if any, associated with the given JobResult record.
@@ -295,6 +415,38 @@ class JobResultTable(BaseTable):
         default_columns = ("pk", "created", "related_object", "user", "status", "data")
 
 
+#
+# ScheduledJobs
+#
+
+
+class ScheduledJobTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    job_class = tables.Column(verbose_name="Job")
+    interval = tables.Column(verbose_name="Execution Type")
+    start_time = tables.Column(verbose_name="First Run")
+    last_run_at = tables.Column(verbose_name="Most Recent Run")
+    total_run_count = tables.Column(verbose_name="Total Run Count")
+
+    class Meta(BaseTable.Meta):
+        model = ScheduledJob
+        fields = ("pk", "name", "job_class", "interval", "start_time", "last_run_at")
+
+
+class ScheduledJobApprovalQueueTable(BaseTable):
+    name = tables.LinkColumn(viewname="extras:scheduledjob_approval_request_view", args=[tables.A("pk")])
+    job_class = tables.Column(verbose_name="Job")
+    interval = tables.Column(verbose_name="Execution Type")
+    start_time = tables.Column(verbose_name="Requested")
+    user = tables.Column(verbose_name="Requestor")
+    actions = tables.TemplateColumn(SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS)
+
+    class Meta(BaseTable.Meta):
+        model = ScheduledJob
+        fields = ("name", "job_class", "interval", "user", "start_time", "actions")
+
+
 class ObjectChangeTable(BaseTable):
     time = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     action = ChoiceFieldColumn()
@@ -312,118 +464,6 @@ class ObjectChangeTable(BaseTable):
             "object_repr",
             "request_id",
         )
-
-
-class ExportTemplateTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    owner = tables.LinkColumn()
-
-    class Meta(BaseTable.Meta):
-        model = ExportTemplate
-        fields = (
-            "pk",
-            "owner",
-            "content_type",
-            "name",
-            "description",
-            "mime_type",
-            "file_extension",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_type",
-            "file_extension",
-        )
-
-
-class CustomLinkTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    new_window = BooleanColumn()
-
-    class Meta(BaseTable.Meta):
-        model = CustomLink
-        fields = (
-            "pk",
-            "name",
-            "content_type",
-            "text",
-            "target_url",
-            "weight",
-            "group_name",
-            "button_class",
-            "new_window",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_type",
-            "group_name",
-            "weight",
-        )
-
-
-class WebhookTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
-    enabled = BooleanColumn()
-    type_create = BooleanColumn()
-    type_update = BooleanColumn()
-    type_delete = BooleanColumn()
-    ssl_verification = BooleanColumn()
-
-    class Meta(BaseTable.Meta):
-        model = Webhook
-        fields = (
-            "pk",
-            "name",
-            "content_types",
-            "payload_url",
-            "http_content_type",
-            "http_method",
-            "enabled",
-            "type_create",
-            "type_update",
-            "type_delete",
-            "ssl_verification",
-            "ca_file_path",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "content_types",
-            "payload_url",
-            "http_content_type",
-            "enabled",
-        )
-
-
-#
-# Custom statuses
-#
-
-
-class StatusTable(BaseTable):
-    """Table for list view of `Status` objects."""
-
-    pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
-    color = ColorColumn()
-    actions = ButtonsColumn(Status, pk_field="slug")
-    content_types = ContentTypesColumn(truncate_words=15)
-
-    class Meta(BaseTable.Meta):
-        model = Status
-        fields = ["pk", "name", "slug", "color", "content_types", "description"]
-
-
-class StatusTableMixin(BaseTable):
-    """Mixin to add a `status` field to a table."""
-
-    status = ColoredLabelColumn()
 
 
 #
@@ -463,68 +503,82 @@ class RelationshipAssociationTable(BaseTable):
         default_columns = ("pk", "relationship", "source", "destination", "actions")
 
 
-class GraphQLQueryTable(BaseTable):
+#
+# Custom statuses
+#
+
+
+class StatusTable(BaseTable):
+    """Table for list view of `Status` objects."""
+
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
+    color = ColorColumn()
+    actions = ButtonsColumn(Status, pk_field="slug")
+    content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
-        model = GraphQLQuery
+        model = Status
+        fields = ["pk", "name", "slug", "color", "content_types", "description"]
+
+
+class StatusTableMixin(BaseTable):
+    """Mixin to add a `status` field to a table."""
+
+    status = ColoredLabelColumn()
+
+
+class TagTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
+    color = ColorColumn()
+    actions = ButtonsColumn(Tag, pk_field="slug")
+
+    class Meta(BaseTable.Meta):
+        model = Tag
+        fields = ("pk", "name", "items", "slug", "color", "description", "actions")
+
+
+class TaggedItemTable(BaseTable):
+    content_object = tables.TemplateColumn(template_code=TAGGED_ITEM, orderable=False, verbose_name="Object")
+    content_type = tables.Column(verbose_name="Type")
+
+    class Meta(BaseTable.Meta):
+        model = TaggedItem
+        fields = ("content_object", "content_type")
+
+
+class WebhookTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
+    enabled = BooleanColumn()
+    type_create = BooleanColumn()
+    type_update = BooleanColumn()
+    type_delete = BooleanColumn()
+    ssl_verification = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = Webhook
         fields = (
             "pk",
             "name",
-            "slug",
-        )
-
-
-class ComputedFieldTable(BaseTable):
-    pk = ToggleColumn()
-    label = tables.Column(linkify=True)
-
-    class Meta(BaseTable.Meta):
-        model = ComputedField
-        fields = (
-            "pk",
-            "label",
-            "slug",
-            "content_type",
-            "description",
-            "weight",
+            "content_types",
+            "payload_url",
+            "http_content_type",
+            "http_method",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+            "ssl_verification",
+            "ca_file_path",
         )
         default_columns = (
             "pk",
-            "label",
-            "slug",
-            "content_type",
-            "description",
-        )
-
-
-class CustomFieldTable(BaseTable):
-    pk = ToggleColumn()
-    # TODO: Replace name column with slug #464
-    slug = tables.Column(linkify=True, accessor="name")
-    content_types = ContentTypesColumn(truncate_words=15)
-    required = BooleanColumn()
-
-    class Meta(BaseTable.Meta):
-        model = CustomField
-        fields = (
-            "pk",
-            "slug",
+            "name",
             "content_types",
-            "type",
-            "label",
-            "description",
-            "required",
-            "default",
-            "weight",
-        )
-        default_columns = (
-            "pk",
-            "slug",
-            "content_types",
-            "type",
-            "label",
-            "required",
-            "weight",
+            "payload_url",
+            "http_content_type",
+            "enabled",
         )

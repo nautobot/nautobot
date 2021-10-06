@@ -16,6 +16,7 @@ from nautobot.extras.choices import *
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
@@ -57,12 +58,14 @@ class ComputedField(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
     )
-    slug = models.SlugField(max_length=100, unique=True, help_text="Internal field name")
+    slug = AutoSlugField(populate_from="label", help_text="Internal field name")
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=200, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
     fallback_value = models.CharField(
-        max_length=500, help_text="Fallback value to be used for the field in the case of a template rendering error."
+        max_length=500,
+        blank=True,
+        help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
 
@@ -82,7 +85,14 @@ class ComputedField(BaseModel, ChangeLoggedModel):
 
     def render(self, context):
         try:
-            return render_jinja2(self.template, context)
+            rendered = render_jinja2(self.template, context)
+            # If there is an undefined variable within a template, it returns nothing
+            # Doesn't raise an exception either most likely due to using Undefined rather
+            # than StrictUndefined, but return fallback_value if None is returned
+            if rendered is None:
+                logger.warning("Failed to render computed field %s", self.slug)
+                return self.fallback_value
+            return rendered
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.slug, exc)
             return self.fallback_value
@@ -467,7 +477,10 @@ class CustomField(BaseModel):
         return reverse("extras:customfield", args=[self.name])
 
 
-@extras_features("webhooks")
+@extras_features(
+    "graphql",
+    "webhooks",
+)
 class CustomFieldChoice(BaseModel):
     """
     The custom field choice is used to store the possible set of values for a selection type custom field

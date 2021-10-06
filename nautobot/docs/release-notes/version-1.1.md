@@ -83,6 +83,69 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
 
+## v1.1.4 (2021-10-04)
+
+### Added
+
+- [#623](https://github.com/nautobot/nautobot/issues/623) - Git repository sync logs now include the commit hash that was synchronized to.
+- [#728](https://github.com/nautobot/nautobot/issues/728) - Added `SOCIAL_AUTH_BACKEND_PREFIX` configuration setting to support custom authentication backends.
+- [#861](https://github.com/nautobot/nautobot/issues/861) - Bulk editing of devices can now update their site, rack, and rack-group assignments.
+- [#949](https://github.com/nautobot/nautobot/pull/949/) - Added documentation note about using `MAINTENANCE_MODE` in combination with LDAP.
+
+### Changed
+
+- [#956](https://github.com/nautobot/nautobot/pull/956) - Switched CI from Travis to GitHub Actions.
+- [#964](https://github.com/nautobot/nautobot/pull/964) - Updated README.md build status badge to show GitHub status.
+
+### Fixed
+
+- [#944](https://github.com/nautobot/nautobot/issues/944) - Jobs that commit changes to the database could not be invoked successfully from the `nautobot-server runjob` command.
+- [#955](https://github.com/nautobot/nautobot/issues/955) - REST API endpoint for syncing Git repositories was still checking for RQ workers instead of Celery workers.
+- [#969](https://github.com/nautobot/nautobot/issues/969) - IPv6 prefixes such as `::1/128` were not being treated correctly.
+
+### Security
+
+- [#939](https://github.com/nautobot/nautobot/issues/939) - Nautobot views now default to `X-Frame-Options: DENY` rather than `X-Frame-Options: SAMEORIGIN`, with the exception of the rack-elevation API view (`/api/dcim/rack-elevation/`) which specifically requires `X-Frame-Options: SAMEORIGIN` for functional reasons.
+
+## v1.1.3 (2021-09-13)
+
+### Added
+
+- [#11](https://github.com/nautobot/nautobot/issues/11) - Added tests to verify that plugin models can support webhooks if appropriately decorated with `@extras_features("webhooks")`
+- [#652](https://github.com/nautobot/nautobot/issues/652) - Jobs REST API `run` endpoint now can look up ObjectVar references via a dictionary of parameters.
+- [#755](https://github.com/nautobot/nautobot/issues/755) - Added example showing how to use `django-request-logging` middleware to log the user associated with inbound requests.
+- [#791](https://github.com/nautobot/nautobot/issues/791) - Added support for `NAUTOBOT_DOCKER_SKIP_INIT` variable to allow running the Docker container with a read-only database.
+- [#841](https://github.com/nautobot/nautobot/pull/841) - Added more detailed documentation around defining Relationship filters.
+- [#850](https://github.com/nautobot/nautobot/pull/850) - Added developer documentation around the installation and use of `mkdocs` to locally preview documentation changes.
+- [#856](https://github.com/nautobot/nautobot/issues/856) - Added more detailed user documentation on how to create an API token.
+
+### Changed
+
+- [#601](https://github.com/nautobot/nautobot/issues/601) - Developer documentation for advanced docker-compose use cases is now a separate file.
+- [#709](https://github.com/nautobot/nautobot/issues/709) - Computed fields can now have a blank `fallback_value`.
+- [#812](https://github.com/nautobot/nautobot/pull/812) - In the GraphiQL interface, the "Queries" dropdown now appears alongside the other GraphiQL interface buttons instead of appearing in the main Nautobot navigation bar.
+- [#832](https://github.com/nautobot/nautobot/issues/832) - Plugin installation documentation now recommends `nautobot-server post_upgrade` instead of separately running `nautobot-server migrate` and `nautobot-server collectstatic`.
+
+### Fixed
+
+- [#464](https://github.com/nautobot/nautobot/issues/464) - Fixed GraphQL schema generation error when certain custom field names are used.
+- [#651](https://github.com/nautobot/nautobot/issues/651) - Fixed Jobs validation enforce schema consistently across UI and API.
+- [#670](https://github.com/nautobot/nautobot/pull/670) - Clarified Jobs documentation regarding how to fail or abort a Job.
+- [#715](https://github.com/nautobot/nautobot/issues/715) - Fixed display of GraphiQL interface in narrow browser windows.
+- [#718](https://github.com/nautobot/nautobot/issues/718) - Fixed rendering of long template values in Computed Field detail view.
+- [#731](https://github.com/nautobot/nautobot/issues/731) - Config context schemas including `format` properties (such as `"format": "ipv4"`) are now correctly enforced.
+- [#779](https://github.com/nautobot/nautobot/issues/779) - Fixed incorrect Tenant display in Prefix "Duplicate Prefixes" table. (Port of [two](https://github.com/netbox-community/netbox/commit/20a85c1ef264ecfffcbe8602ab103baed5a7cf5b) [fixes](https://github.com/netbox-community/netbox/commit/0a1531ce8a5597333f2ac87fcc795c83a052fd47) originally from NetBox)
+- [#809](https://github.com/nautobot/nautobot/issues/809) - Fixed docker-compose file `version` values to work correctly with older versions of docker-compose.
+- [#818](https://github.com/nautobot/nautobot/issues/818) - Database health-check now reports as healthy even when in `MAINTENANCE_MODE`.
+- [#825](https://github.com/nautobot/nautobot/issues/825) - Removed unnecessary `-B` flag from development Celery worker invocation.
+- [#830](https://github.com/nautobot/nautobot/issues/830) - Fixed incorrect database migration introduced by #818.
+- [#845](https://github.com/nautobot/nautobot/pull/845) - Clarified documentation around `nautobot-server init` and `NAUTOBOT_ROOT`.
+- [#848](https://github.com/nautobot/nautobot/pull/848) - Fixed stale links to NAPALM documentation
+
+### Security
+
+- [#893](https://github.com/nautobot/nautobot/pull/893) - Bump Pillow dependency version from 8.2.0 to 8.2.3 to address numerous critical CVE advisories
+
 ## v1.1.2 (2021-08-10)
 
 ### Added

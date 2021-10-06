@@ -3,7 +3,7 @@ from django_tables2.utils import Accessor
 
 from nautobot.dcim.models import Rack, RackGroup, RackReservation, RackRole
 from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import COL_TENANT
+from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     ButtonsColumn,
@@ -77,7 +77,7 @@ class RackTable(StatusTableMixin, BaseTable):
     name = tables.Column(order_by=("_name",), linkify=True)
     group = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     role = ColoredLabelColumn()
     u_height = tables.TemplateColumn(template_code="{{ record.u_height }}U", verbose_name="Height")
 
@@ -168,7 +168,7 @@ class RackReservationTable(BaseTable):
     pk = ToggleColumn()
     reservation = tables.Column(accessor="pk", linkify=True)
     site = tables.Column(accessor=Accessor("rack__site"), linkify=True)
-    tenant = tables.TemplateColumn(template_code=COL_TENANT)
+    tenant = TenantColumn()
     rack = tables.Column(linkify=True)
     unit_list = tables.Column(orderable=False, verbose_name="Units")
     tags = TagColumn(url_name="dcim:rackreservation_list")

@@ -136,3 +136,7 @@ Restart the WSGI service to load the new plugin:
 ```no-highlight
 # sudo systemctl restart nautobot nautobot-worker
 ```
+
+### Verify that the Plugin is Installed
+
+In the Nautobot UI, navigate to **Plugins -> Installed Plugins**. The newly installed plugin should appear in the displayed table if everything is configured correctly. You can also click on the plugin's name in this table to view more detailed information about this plugin.

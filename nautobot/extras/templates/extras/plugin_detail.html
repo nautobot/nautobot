@@ -1,0 +1,247 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-md-12">
+            <ol class="breadcrumb">
+                {% block breadcrumbs %}
+                    <li><a href="{% url 'plugins:plugins_list' %}">Installed Plugins</a></li>
+                    <li><a href="{% url 'plugins:plugin_detail' plugin=object.name %}">{{ object.verbose_name | bettertitle }}</a></li>
+                {% endblock breadcrumbs %}
+            </ol>
+        </div>
+    </div>
+    <div class="pull-right noprint">
+        {% block buttons %}
+            {% if object.home_view_name %}
+                <a href="{% url object.home_view_name %}" class="btn btn-success">
+                    <i class="mdi mdi-home"></i> Plugin Home
+                </a>
+            {% endif %}
+            {% if object.config_view_name %}
+                <a href="{% url object.config_view_name %}" class="btn btn-warning">
+                    <i class="mdi mdi-cog"></i> Plugin Configuration
+                </a>
+            {% endif %}
+        {% endblock buttons %}
+    </div>
+    {% block masthead %}
+        <h1>{% block title %}{{ object.verbose_name | bettertitle }}{% endblock %}</h1>
+    {% endblock masthead %}
+{% endblock header %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            {% block content_left_page %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Plugin</strong>
+                    </div>
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Package Name</td>
+                            <td><code>{{ object.name }}</code></td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td>{{ object.description }}</td>
+                        </tr>
+                        <tr>
+                            <td>Version</td>
+                            <td>{{ object.version }}</td>
+                        </tr>
+                        <tr>
+                            <td>Author</td>
+                            <td>
+                                {{ object.author | placeholder }}
+                                {% if object.author_email %}
+                                    (<a href="mailto:{{ object.author_email }}">{{ object.author_email }}</a>)
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Compatibility</strong>
+                    </div>
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Min Nautobot Version</td>
+                            <td>{{ object.min_version | placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Max Nautobot Version</td>
+                            <td>{{ object.max_version | placeholder }}</td>
+                        </tr>
+                    </table>
+                </div>
+            {% endblock content_left_page %}
+        </div>
+        <div class="col-md-6">
+            {% block content_right_page %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Features Employed</strong>
+                    </div>
+                    <table class="table table-hover panel-body attr-table">
+                        {% with object.features as features %}
+                            <tr>
+                                <td>Data Models</td>
+                                <td>
+                                    {% if features.models %}
+                                        <ul class="list-unstyled">
+                                            {% for model_name in features.models %}
+                                                <li>{{ model_name | bettertitle }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.models %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Data Validators</td>
+                                <td>
+                                    {% if features.custom_validators %}
+                                        <ul class="list-unstyled">
+                                            {% for validator in features.custom_validators %}
+                                                <li>{{ validator }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.custom_validators %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Django Apps</td>
+                                <td>
+                                    {% if object.installed_apps %}
+                                        <ul class="list-unstyled">
+                                            {% for app in object.installed_apps %}
+                                                <li><code>{{ app }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=object.installed_apps %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Git Data</td>
+                                <td>
+                                    {% if features.datasource_contents %}
+                                        <ul class="list-unstyled">
+                                            {% for type, dsc in features.datasource_contents %}
+                                                {% if type == "extras.gitrepository" %}
+                                                    <li><i class = "mdi {{ dsc.icon }}"></i> {{ dsc.name }}</li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.datasource_contents %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Home Page Content</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.home_page %}</td>
+                            </tr>
+                            <tr>
+                                <td>Jinja Filters</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.jinja_filters %}</td>
+                            </tr>
+                            <tr>
+                                <td>Jobs</td>
+                                <td>
+                                    {% if features.jobs %}
+                                        <ul class="list-unstyled">
+                                            {% for job in features.jobs %}
+                                            <li><a href="{% url 'extras:job' class_path=job.class_path %}">{{ job }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.jobs %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Middleware</td>
+                                <td>
+                                    {% if object.middleware %}
+                                        <ul class="list-unstyled">
+                                            {% for middleware in object.middleware %}
+                                                <li><code>{{ middleware }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=object.middleware %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Nav Menu Items</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.nav_menu %}</td>
+                            </tr>
+                            <tr>
+                                <td>Page Banner</td>
+                                <td>{% include 'utilities/render_boolean.html' with value=features.banner %}</td>
+                            </tr>
+                            <tr>
+                                <td>Page Template Extensions</td>
+                                <td>
+                                    {% if features.template_extensions %}
+                                        <ul class="list-unstyled">
+                                            {% for extension in features.template_extensions %}
+                                                <li>{{ extension }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.template_extensions %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>REST API Endpoints</td>
+                                <td>
+                                    {% if features.api_urlpatterns %}
+                                        <ul class="list-unstyled">
+                                            {% for urlpattern in features.api_urlpatterns %}
+                                            <li>{{ urlpattern.name | placeholder }} (<code>/api/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.api_urlpatterns %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Views/URLs</td>
+                                <td>
+                                    {% if features.urlpatterns %}
+                                        <ul class="list-unstyled">
+                                            {% for urlpattern in features.urlpatterns %}
+                                            <li>{{ urlpattern.name | placeholder }} (<code>/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.urlpatterns %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endwith %}
+                    </table>
+                </div>
+            {% endblock content_right_page %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {% block content_full_width_page %}
+            {% endblock content_full_width_page %}
+        </div>
+    </div>
+{% endblock content %}
