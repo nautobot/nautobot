@@ -238,6 +238,11 @@ def meters_to_feet(n):
     return float(n) * 3.28084
 
 
+@register.filter
+def get_item(d, key):
+    return d.get(key)
+
+
 #
 # Tags
 #

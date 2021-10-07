@@ -1,5 +1,5 @@
 ---
-version: "3"
+version: "3.4"
 services:
   nautobot:
     build:
@@ -12,7 +12,6 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
       - redis
       - selenium
     env_file:
@@ -34,7 +33,7 @@ services:
     tty: true
   celery_worker:
     image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
-    entrypoint: "nautobot-server celery worker -B -l INFO"
+    entrypoint: "nautobot-server celery worker -l INFO"
     healthcheck:
       interval: 5s
       timeout: 5s
@@ -47,12 +46,21 @@ services:
     env_file:
       - ./dev.env
     tty: true
-  postgres:
-    image: postgres:13
+  celery_beat:
+    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
+    entrypoint: "nautobot-server celery beat -l INFO -s /tmp/celerybeat-schedule"
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+      test: ["CMD", "nautobot-server", "health_check"]
+    depends_on:
+      - nautobot
+      - redis
     env_file:
-      - dev.env
-    volumes:
-      - pgdata_nautobot:/var/lib/postgresql/data
+      - ./dev.env
+    tty: true
   redis:
     image: redis:6-alpine
     command:
@@ -66,5 +74,3 @@ services:
     ports:
         - "4444:4444"
     shm_size: 2g
-volumes:
-  pgdata_nautobot:

@@ -2,6 +2,8 @@ from collections import OrderedDict
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
 from django.views.generic import View
@@ -10,19 +12,72 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
+from django_tables2 import RequestConfig
 
-class InstalledPluginsAdminView(View):
+from nautobot.utilities.forms import TableConfigForm
+from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.extras.plugins.tables import InstalledPluginsTable
+
+
+class InstalledPluginsView(LoginRequiredMixin, View):
     """
-    Admin view for listing all installed plugins
+    View for listing all installed plugins.
     """
+
+    table = InstalledPluginsTable
 
     def get(self, request):
         plugins = [apps.get_app_config(plugin) for plugin in settings.PLUGINS]
+        data = []
+        for plugin in plugins:
+            data.append(
+                {
+                    "name": plugin.verbose_name,
+                    "package_name": plugin.name,
+                    "author": plugin.author,
+                    "author_email": plugin.author_email,
+                    "description": plugin.description,
+                    "version": plugin.version,
+                    "actions": {
+                        "home": plugin.home_view_name,
+                        "configure": plugin.config_view_name,
+                    },
+                }
+            )
+        table = self.table(data, user=request.user)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(table)
+
         return render(
             request,
-            "extras/admin/plugins_list.html",
+            "extras/plugins_list.html",
             {
-                "plugins": plugins,
+                "table": table,
+                "table_config_form": TableConfigForm(table=table),
+                "filter_form": None,
+            },
+        )
+
+
+class InstalledPluginDetailView(LoginRequiredMixin, View):
+    """
+    View for showing details of an installed plugin.
+    """
+
+    def get(self, request, plugin):
+        if plugin not in settings.PLUGINS:
+            raise Http404
+
+        plugin_config = apps.get_app_config(plugin)
+        return render(
+            request,
+            "extras/plugin_detail.html",
+            {
+                "object": plugin_config,
             },
         )
 

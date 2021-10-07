@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.fields.reverse_related import ManyToOneRel
 
 import graphene
 from graphene.types import generic
@@ -14,6 +15,8 @@ from nautobot.core.graphql.generators import (
     generate_attrs_for_schema_type,
     generate_computed_field_resolver,
     generate_custom_field_resolver,
+    generate_filter_resolver,
+    generate_list_search_parameters,
     generate_relationship_resolver,
     generate_restricted_queryset,
     generate_schema_type,
@@ -120,6 +123,11 @@ def extend_schema_type(schema_type):
     #
     schema_type = extend_schema_type_null_field_choice(schema_type, model)
 
+    #
+    # Add multiple layers of filtering
+    #
+    schema_type = extend_schema_type_filter(schema_type, model)
+
     return schema_type
 
 
@@ -156,6 +164,33 @@ def extend_schema_type_null_field_choice(schema_type, model):
             generate_null_choices_resolver(field.name, resolver_name),
         )
 
+    return schema_type
+
+
+def extend_schema_type_filter(schema_type, model):
+    """Extend schema_type object to be able to filter on multiple levels of a query
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        schema_type (DjangoObjectType)
+    """
+    for field in model._meta.get_fields():
+        # Check attribute is a ManyToOne field
+        if not isinstance(field, ManyToOneRel):
+            continue
+        child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
+        if child_schema_type:
+            resolver_name = f"resolve_{field.name}"
+            search_params = generate_list_search_parameters(child_schema_type)
+            # Add OneToMany field to schema_type
+            schema_type._meta.fields[field.name] = graphene.Field.mounted(
+                graphene.List(child_schema_type, **search_params)
+            )
+            # Add resolve function to schema_type
+            setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field.name))
     return schema_type
 
 
@@ -359,15 +394,15 @@ def generate_query_mixin():
 
         if single_item_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema type '{single_item_name}' in GraphQL from '{app_name}':'{model_name}',"
-                "there is already another type registered under this name"
+                f"Unable to register the schema single type '{single_item_name}' in GraphQL, "
+                f"there is already another type {class_attrs[single_item_name]._type} registered under this name"
             )
             return True
 
         if list_name in class_attrs:
             logger.warning(
-                f"Unable to register the schema type '{list_name}' in GraphQL from '{app_name}':'{model_name}',"
-                "there is already another type registered under this name"
+                f"Unable to register the schema list type '{list_name}' in GraphQL, "
+                f"there is already another type {class_attrs[list_name]._type} registered under this name"
             )
             return True
 

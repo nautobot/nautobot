@@ -95,7 +95,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 continue
 
             try:
-                return reverse(route, kwargs={"pk": getattr(instance, field)})
+                return reverse(route, kwargs={field: getattr(instance, field)})
             except NoReverseMatch:
                 continue
 
@@ -278,11 +278,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         # Look up an existing object by slug or PK, if provided.
-        if "slug" in kwargs:
-            return get_object_or_404(self.queryset, slug=kwargs["slug"])
-        elif "pk" in kwargs:
-            return get_object_or_404(self.queryset, pk=kwargs["pk"])
-        # Otherwise, return a new instance.
+        if kwargs:
+            return get_object_or_404(self.queryset, **kwargs)
         return self.queryset.model()
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
@@ -395,10 +392,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         # Look up object by slug if one has been provided. Otherwise, use PK.
-        if "slug" in kwargs:
-            return get_object_or_404(self.queryset, slug=kwargs["slug"])
-        else:
-            return get_object_or_404(self.queryset, pk=kwargs["pk"])
+        return get_object_or_404(self.queryset, **kwargs)
 
     def get(self, request, **kwargs):
         obj = self.get_object(kwargs)

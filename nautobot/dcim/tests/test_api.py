@@ -106,10 +106,12 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
             "name": "Region 6",
             "slug": "region-6",
         },
+        {"name": "Region 7"},
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -126,6 +128,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["status"]
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -166,6 +169,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
                 "region": regions[1].pk,
                 "status": "active",
             },
+            {"name": "Site 7", "region": regions[1].pk, "status": "active"},
         ]
 
     def test_time_zone_field_post_null(self):
@@ -254,6 +258,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -306,6 +311,11 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
                 "site": sites[1].pk,
                 "parent": parent_rack_groups[1].pk,
             },
+            {
+                "name": "Test Rack Group 7",
+                "site": sites[1].pk,
+                "parent": parent_rack_groups[1].pk,
+            },
         ]
 
 
@@ -328,10 +338,15 @@ class RackRoleTest(APIViewTestCases.APIViewTestCase):
             "slug": "rack-role-6",
             "color": "ffff00",
         },
+        {
+            "name": "Rack Role 7",
+            "color": "ffff00",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -532,10 +547,14 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
             "name": "Manufacturer 6",
             "slug": "manufacturer-6",
         },
+        {
+            "name": "Manufacturer 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -560,6 +579,7 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
         "part_number": "ABC123",
     }
     choices_fields = ["subdevice_role"]
+    slug_source = "model"
 
     @classmethod
     def setUpTestData(cls):
@@ -588,6 +608,10 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
                 "manufacturer": manufacturers[1].pk,
                 "model": "Device Type 6",
                 "slug": "device-type-6",
+            },
+            {
+                "manufacturer": manufacturers[1].pk,
+                "model": "Device Type 7",
             },
         ]
 
@@ -954,10 +978,15 @@ class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
             "slug": "device-role-6",
             "color": "ffff00",
         },
+        {
+            "name": "Device Role 7",
+            "color": "ffff00",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -983,10 +1012,14 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
             "name": "Platform 6",
             "slug": "platform-6",
         },
+        {
+            "name": "Platform 7",
+        },
     ]
     bulk_update_data = {
         "description": "New description",
     }
+    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):

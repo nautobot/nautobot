@@ -213,8 +213,6 @@ class RIRForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RIRCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = RIR
         fields = RIR.csv_headers
@@ -329,8 +327,6 @@ class RoleForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
 
 class RoleCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
     class Meta:
         model = Role
         fields = Role.csv_headers
@@ -997,7 +993,6 @@ class VLANGroupCSVForm(CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Assigned site",
     )
-    slug = SlugField()
 
     class Meta:
         model = VLANGroup

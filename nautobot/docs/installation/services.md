@@ -66,6 +66,9 @@ disable-logging = true
 log-4xx = true
 log-5xx = true
 
+; Enable HTTP 1.1 keepalive support
+http-keepalive = 1
+
 ;
 ; Advanced settings (disabled by default)
 ; Customize these for your environment if and only if you need them.
@@ -132,12 +135,16 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
-### Nautobot Worker Service
+### Nautobot Worker Services
 
 !!! note
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ will still work, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
-Next, we will setup the `systemd` unit for the Celery worker. Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+Next, we will setup the `systemd` unit for the Celery and Celery Beat workers.
+
+#### Celery Worker
+
+Copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 
 ```
 [Unit]
@@ -156,6 +163,36 @@ PIDFile=/var/tmp/nautobot-worker.pid
 WorkingDirectory=/opt/nautobot
 
 ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker.pid
+
+Restart=always
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### Celery Beat Worker
+
+Additionally, paste the following into `/etc/systemd/system/nautobot-beat-worker.service`:
+
+```
+[Unit]
+Description=Nautobot Celery Beat Worker
+Documentation=https://nautobot.readthedocs.io/en/stable/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+Environment="NAUTOBOT_ROOT=/opt/nautobot"
+
+User=nautobot
+Group=nautobot
+PIDFile=/var/tmp/nautobot-beat-worker.pid
+WorkingDirectory=/opt/nautobot
+
+ExecStart=/opt/nautobot/bin/nautobot-server celery beat --loglevel INFO --pidfile /var/tmp/nautobot-beat-worker.pid
 
 Restart=always
 RestartSec=30
@@ -247,10 +284,10 @@ Because we just added new service files, you'll need to reload the systemd daemo
 $ sudo systemctl daemon-reload
 ```
 
-Then, start the `nautobot` and `nautobot-worker` services and enable them to initiate at boot time:
+Then, start the `nautobot`, `nautobot-worker`, and `nautobot-beat-worker` services and enable them to initiate at boot time:
 
 ```no-highlight
-$ sudo systemctl enable --now nautobot nautobot-worker
+$ sudo systemctl enable --now nautobot nautobot-worker nautobot-beat-worker
 ```
 
 If you are also running the RQ worker, repeat the above command for the RQ service:

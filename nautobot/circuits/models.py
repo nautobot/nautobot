@@ -5,6 +5,7 @@ from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
 from nautobot.extras.models import ObjectChange, RelationshipModel, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import serialize_object
 from .choices import *
@@ -35,7 +36,7 @@ class Provider(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     asn = ASNField(
         blank=True,
         null=True,
@@ -96,7 +97,7 @@ class CircuitType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
     description = models.CharField(
         max_length=200,
         blank=True,

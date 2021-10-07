@@ -343,7 +343,6 @@ Please see [the object permissions page](../administration/permissions.md) for m
 
 ---
 
-
 ## FORCE_SCRIPT_NAME
 
 Default: `None`
@@ -364,6 +363,18 @@ Default: `os.path.join(NAUTOBOT_ROOT, "git")`
 The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
+
+---
+
+## GIT_SSL_NO_VERIFY
+
+Default: Unset
+
+If you are using a self-signed git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
+in order for the repository to sync.
+
+!!! warning
+    This *must* be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
 
 ---
 
@@ -428,7 +439,7 @@ Default: `{}` (Empty dictionary)
 
 By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
 
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself and from the RQ worker process to the console with added verbosity and colorization:
+The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
 
 ```python
 LOGGING = {
@@ -446,16 +457,17 @@ LOGGING = {
     },
     'handlers': {
         'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'rq.utils.ColorizingStreamHandler', 'formatter': 'verbose'},
+        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
+        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
     },
     'loggers': {
         'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
         'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
-        'rq.worker': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
     },
 }
 ```
+
+Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
 
 ### Available Loggers
 
@@ -478,6 +490,12 @@ Default: `False`
 Environment Variable: `NAUTOBOT_MAINTENANCE_MODE`
 
 Setting this to `True` will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
+
+!!! note
+    The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
+
+!!! note
+    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting [`NAUTOBOT_DOCKER_SKIP_INIT`](../docker/#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
 
 ---
 
@@ -519,7 +537,7 @@ Default: `""` (Empty string)
 
 Environment Variables: `NAUTOBOT_NAPALM_USERNAME` and `NAUTOBOT_NAPALM_PASSWORD`
 
-Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm-automation.net/), if installed. Both parameters are optional.
+Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm.readthedocs.io), if installed. Both parameters are optional.
 
 !!! note
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
@@ -689,6 +707,7 @@ Default: `'django.contrib.sessions.backends.db'`
 
 Controls where Nautobot stores session data.
 
+To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
 To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
 
 See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.

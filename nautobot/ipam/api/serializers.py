@@ -217,12 +217,15 @@ class VLANGroupSerializer(CustomFieldModelSerializer):
             "last_updated",
             "computed_fields",
         ]
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = []
+
         opt_in_fields = ["computed_fields"]
 
     def validate(self, data):
 
         # Validate uniqueness of name and slug if a site has been assigned.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("site", None):
             for field in ["name", "slug"]:
                 validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("site", field))

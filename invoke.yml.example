@@ -1,10 +1,13 @@
 ---
 nautobot:
+  project_name: "nautobot"
   local: False
   python_ver: "3.7"
   compose_dir: "/full/path/to/nautobot/development"
   compose_files:
     - "docker-compose.yml"
+    - "docker-compose.postgres.yml"
+    - "docker-compose.dev.yml"
     - "docker-compose.override.yml"
   docker_image_names_main:
     - "networktocode/nautobot"

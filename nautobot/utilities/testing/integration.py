@@ -1,5 +1,7 @@
 import os
+import time
 
+from celery.contrib.testing.worker import start_worker
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
@@ -11,6 +13,7 @@ from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
 
+from nautobot.core.celery import app
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.permissions import resolve_permission_ct
 
@@ -40,7 +43,7 @@ class NautobotRemote(webdriver.Remote):
         return self.find_element_by_xpath(f'//button[text()="{button_text}"]')
 
     def find_elements_by_class_name(self, name):
-        return self.find_elements_by_xpath(f"//*[@class='{name}']")
+        return self.find_elements_by_xpath(f"//*[contains(@class, '{name}')]")
 
 
 FIREFOX_PROFILE_PREFERENCES = {
@@ -198,12 +201,20 @@ class SplinterTestCase(StaticLiveServerTestCase):
     selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
     user_permissions = ()
 
+    requires_celery = False  # If true, a celery instance will be started. TODO: create celery mixin?
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         # Instantiate the browser object
         profile = cls._create_firefox_profile()
         cls.browser = Browser("remote", command_executor=SELENIUM_URL, browser_profile=profile)
+
+        if cls.requires_celery:
+            app.loader.import_module("celery.contrib.testing.tasks")
+            cls.clear_worker()
+            cls.celery_worker = start_worker(app, concurrency=1)
+            cls.celery_worker.__enter__()
 
     def setUp(self):
         # Setup test user
@@ -232,14 +243,16 @@ class SplinterTestCase(StaticLiveServerTestCase):
     def tearDownClass(cls):
         """Close down the browser after tests are ran."""
         cls.browser.quit()
+        if cls.requires_celery:
+            cls.celery_worker.__exit__(None, None, None)
 
     def login(self, username, password, login_url=LOGIN_URL, button_text="Log In"):
         """
         Navigate to `login_url` and perform a login w/ the provided `username` and `password`.
         """
         self.browser.visit(f"{self.live_server_url}{login_url}")
-        self.browser.fill("username", self.user.username)
-        self.browser.fill("password", self.password)
+        self.browser.fill("username", username)
+        self.browser.fill("password", password)
         self.browser.find_by_xpath(f"//button[text()='{button_text}']").first.click()
 
         if self.browser.is_text_present("Please enter a correct username and password."):
@@ -262,3 +275,18 @@ class SplinterTestCase(StaticLiveServerTestCase):
             profile.set_preference(key, value)
 
         return profile
+
+    @staticmethod
+    def clear_worker():
+        """Purge any running or queued tasks"""
+        app.control.purge()
+
+    @classmethod
+    def wait_on_active_tasks(cls):
+        """Wait on all active tasks to finish before returning"""
+        # TODO(john): admittedly, this is not great, but it seems the standard
+        # celery APIs for inspecting the worker, looping through all active tasks,
+        # and calling `.get()` on them is not working when the worker is in solo mode.
+        # Needs more investigation and until then, these tasks run very quickly, so
+        # simply delaying the test execution provides enough time for them to complete.
+        time.sleep(1)

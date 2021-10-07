@@ -1,0 +1,6 @@
+{% load helpers %}
+{% for banner in banners %}
+    <div class="plugin-banner alert alert-{{ banner.banner_class }} text-center" role="alert">
+        {{ banner.content | safe }}
+    </div>
+{% endfor %}

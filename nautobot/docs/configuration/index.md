@@ -6,12 +6,15 @@ This section describes how to get started with configuring Nautobot.
 
 An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](required-settings.md#secret_key).
 
-By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
+By default (if you haven't set [`NAUTOBOT_ROOT`](#nautobot-root-directory) to some other value), the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
 ```no-highlight
 $ nautobot-server init
-Configuration file created at '/home/example/.nautobot/nautobot_config.py'
+Configuration file created at '/opt/nautobot/nautobot_config.py'
 ```
+
+!!! tip
+    The [Nautobot Installation Docs](../installation/nautobot.md#choose-your-nautobot_root) example sets `NAUTOBOT_ROOT` to `/opt/nautobot`, so `nautobot_config.py` would be found at `/opt/nautobot/nautobot_config.py`. 
 
 You may specify a different location for the configuration as the argument to `init`:
 

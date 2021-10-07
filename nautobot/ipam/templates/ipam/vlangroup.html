@@ -9,10 +9,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.ipam.change_vlangroup %}
-            {% edit_button object use_pk=1 %}
+            {% edit_button object key="pk" %}
         {% endif %}
         {% if perms.ipam.delete_vlangroup %}
-            {% delete_button object use_pk=1 %}
+            {% delete_button object key="pk" %}
         {% endif %}
 {% endblock buttons %}
 

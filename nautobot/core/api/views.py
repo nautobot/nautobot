@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
+from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_yasg.openapi import Schema, TYPE_OBJECT, TYPE_ARRAY
@@ -131,11 +132,7 @@ class BulkDestroyModelMixin:
 #
 
 
-class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
-    """
-    Extend DRF's ModelViewSet to support bulk update and delete functions.
-    """
-
+class ModelViewSetMixin:
     brief = False
     brief_prefetch_fields = []
 
@@ -201,6 +198,12 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
             logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
+
+class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSetMixin, ModelViewSet_):
+    """
+    Extend DRF's ModelViewSet to support bulk update and delete functions.
+    """
+
     def _validate_objects(self, instance):
         """
         Check that the provided instance or list of instances are matched by the current queryset. This confirms that
@@ -247,6 +250,12 @@ class ModelViewSet(BulkUpdateModelMixin, BulkDestroyModelMixin, ModelViewSet_):
         logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
         return super().perform_destroy(instance)
+
+
+class ReadOnlyModelViewSet(ModelViewSetMixin, ReadOnlyModelViewSet_):
+    """
+    Extend DRF's ReadOnlyModelViewSet to support queryset restriction.
+    """
 
 
 #

@@ -31,10 +31,11 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_text("Config Context Schemas").click()
+        self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
-        # Click add add button
-        self.browser.find_by_xpath("/html/body/div/div[1]/a").click()
+        # Click add button
+        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
+        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
 
         # Fill out form
         self.browser.fill("name", "Integration Schema 1")
@@ -58,10 +59,11 @@ class ConfigContextSchemaTestCase(SplinterTestCase):
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_text("Config Context Schemas").click()
+        self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
-        # Click add add button
-        self.browser.find_by_xpath("/html/body/div/div[1]/a").click()
+        # Click add button
+        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
+        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
 
         # Fill out form
         self.browser.fill("name", "Integration Schema 2")

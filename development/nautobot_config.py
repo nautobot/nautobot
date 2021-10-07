@@ -30,11 +30,15 @@ DATABASES = {
     }
 }
 
+# Ensure proper Unicode handling for MySQL
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+
 #
 # Debug
 #
 
-DEBUG = True
+DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", True))
 
 # Django Debug Toolbar
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
@@ -70,12 +74,12 @@ if not TESTING:
         "handlers": {
             "normal_console": {
                 "level": "INFO",
-                "class": "rq.utils.ColorizingStreamHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "normal",
             },
             "verbose_console": {
                 "level": "DEBUG",
-                "class": "rq.utils.ColorizingStreamHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "verbose",
             },
         },

@@ -225,6 +225,22 @@ class RackGroupSerializer(CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
+        # prevents slug from being interpreted as a required field.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "name"))]
+
+    def validate(self, data):
+        # Validate uniqueness of (site, slug) since we omitted the automatically-created validator from Meta.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        if data.get("slug", None):
+            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "slug"))
+            validator(data, self)
+
+        # Enforce model validation
+        super().validate(data)
+
+        return data
 
 
 class RackRoleSerializer(CustomFieldModelSerializer):
@@ -418,6 +434,22 @@ class DeviceTypeSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
+        # prevents slug from being interpreted as a required field.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        validators = [UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "model"))]
+
+    def validate(self, data):
+        # Validate uniqueness of (manufacturer, slug) since we omitted the automatically-created validator from Meta.
+        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        if data.get("slug", None):
+            validator = UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "slug"))
+            validator(data, self)
+
+        # Enforce model validation
+        super().validate(data)
+
+        return data
 
 
 class ConsolePortTemplateSerializer(CustomFieldModelSerializer):

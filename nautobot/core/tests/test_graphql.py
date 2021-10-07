@@ -30,10 +30,22 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
-from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices
+from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
-from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Rack, Region, Site
+from nautobot.dcim.models import (
+    Cable,
+    Device,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    Interface,
+    Manufacturer,
+    Rack,
+    RearPort,
+    Region,
+    Site,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.utilities.testing.utils import create_test_user
 
@@ -426,7 +438,7 @@ class GraphQLAPIPermissionTest(TestCase):
         """
 
     def test_graphql_api_token_with_perm(self):
-        """Validate a users can query basedo n their permissions."""
+        """Validate that users can query based on their permissions."""
         # First user
         response = self.clients[0].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -450,7 +462,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
 
     def test_graphql_api_token_no_group(self):
-        """Validate User with no permission users are not able to query anything by default."""
+        """Validate users with no permission are not able to query anything by default."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -459,7 +471,7 @@ class GraphQLAPIPermissionTest(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_api_token_no_group_exempt(self):
-        """Validate User with no permission users are able to query based on the exempt permissions."""
+        """Validate users with no permission are able to query based on the exempt permissions."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -591,6 +603,40 @@ class GraphQLQueryTest(TestCase):
             face="front",
             comments="First Device",
         )
+
+        self.device1_rear_ports = (
+            RearPort.objects.create(device=self.device1, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=self.device1, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=self.device1, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=self.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
+        )
+
+        self.device1_frontports = [
+            FrontPort.objects.create(
+                device=self.device1,
+                name="Front Port 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.device1_rear_ports[0],
+            ),
+            FrontPort.objects.create(
+                device=self.device1,
+                name="Front Port 2",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.device1_rear_ports[1],
+            ),
+            FrontPort.objects.create(
+                device=self.device1,
+                name="Front Port 3",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.device1_rear_ports[2],
+            ),
+            FrontPort.objects.create(
+                device=self.device1,
+                name="Front Port 4",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.device1_rear_ports[3],
+            ),
+        ]
 
         self.interface11 = Interface.objects.create(
             name="Int1",
@@ -929,6 +975,40 @@ query {
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_frontport_filter_second_level(self):
+        """Test "second-level" filtering of FrontPorts within a Devices query."""
+
+        filters = (
+            (f'name: "{self.device1_frontports[0].name}"', 1),
+            (f'device: "{self.device1.name}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ frontports(" + filter + "){ id }}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_frontport_filter_third_level(self):
+        """Test "third-level" filtering of FrontPorts within Devices within Sites."""
+
+        filters = (
+            (f'name: "{self.device1_frontports[0].name}"', 1),
+            (f'device: "{self.device1.name}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ frontports(" + filter + "){ id }}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter(self):
         """Test custom interface filter fields and boolean, not other concrete fields."""
 
@@ -950,6 +1030,44 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_filter_second_level(self):
+        """Test "second-level" filtering of Interfaces within a Devices query."""
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 2),
+            ('kind: "virtual"', 2),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ("vlan: 100", 1),
+            (f'vlan_id: "{self.vlan1.id}"', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ interfaces(" + filter + "){ id }}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_interfaces_filter_third_level(self):
+        """Test "third-level" filtering of Interfaces within Devices within Sites."""
+
+        filters = (
+            (f'device_id: "{self.device1.id}"', 2),
+            ('kind: "virtual"', 2),
+            ('mac_address: "00:11:11:11:11:11"', 1),
+            ("vlan: 100", 1),
+            (f'vlan_id: "{self.vlan1.id}"', 1),
+        )
+
+        for filter, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ interfaces(" + filter + "){ id }}}}"
+                result = self.execute_query(query)
+                self.assertIsNone(result.errors)
+                self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):

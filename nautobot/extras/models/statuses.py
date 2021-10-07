@@ -10,6 +10,7 @@ from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.choices import ColorChoices
@@ -49,7 +50,7 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     )
     name = models.CharField(max_length=50, unique=True)
     color = ColorField(default=ColorChoices.COLOR_GREY)
-    slug = models.SlugField(max_length=50, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=50)
     description = models.CharField(
         max_length=200,
         blank=True,

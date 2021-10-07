@@ -7,10 +7,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.dcim.change_rackrole %}
-            {% edit_button object use_pk=1 %}
+            {% edit_button object key="pk" %}
         {% endif %}
         {% if perms.dcim.delete_rackrole %}
-            {% delete_button object use_pk=1 %}
+            {% delete_button object key="pk" %}
         {% endif %}
 {% endblock buttons %}
 

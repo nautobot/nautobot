@@ -6,7 +6,7 @@ This document is intended for Nautobot maintainers and covers the steps to perfo
 
 ### Update Requirements
 
-Required Python packages are maintained in two files: `pyproject.toml` and `poetry.lock`. 
+Required Python packages are maintained in two files: `pyproject.toml` and `poetry.lock`.
 
 #### The `pyproject.toml` file
 Python packages are defined inside of `pyproject.toml`. The `[tool.poetry.dependencies]` section of this file contains a list of all the packages required by Nautobot.
@@ -177,12 +177,24 @@ for ver in 3.6 3.7 3.8 3.9; do
 done
 ```
 
-Test the images locally:
+Test the images locally - to do this you need to set the following in your `invoke.yml`:
+
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.build.yml"
+```
+
+!!! warning
+    You should *not* include `docker-compose.dev.yml` in this test scenario!
+
 ```no-highlight
 for ver in 3.6 3.7 3.8 3.9; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
-  INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml invoke stop
-  INVOKE_NAUTOBOT_COMPOSE_OVERRIDE_FILE=docker-compose.build.yml invoke integration-tests
+  invoke stop
+  invoke integration-tests
 done
 ```
 
