@@ -1,54 +1,61 @@
 {% load i18n static admin_urls admin_modify bootstrapped_goodies_tags %}
-<div class="_inline-group" id="{{ inline_admin_formset.formset.prefix }}-group">
+
+<div class="js-inline-admin-formset inline-group" id="{{ inline_admin_formset.formset.prefix }}-group"
+     data-inline-type="tabular"
+     data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
   <div class="tabular inline-related {% if forloop.last %}last-related{% endif %}">
 {{ inline_admin_formset.formset.management_form }}
-<fieldset class="module">
-   <h2>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</h2>
-   {% if inline_admin_formset.formset.non_form_errors %}
-   <div class="alert alert-danger">
-       {{ inline_admin_formset.formset.non_form_errors }}
-   </div>
+<fieldset class="module {{ inline_admin_formset.classes }}">
+   {% if inline_admin_formset.formset.max_num == 1 %}
+     <h2>{{ inline_admin_formset.opts.verbose_name|capfirst }}</h2>
+   {% else %}
+     <h2>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</h2>
    {% endif %}
-
+   {{ inline_admin_formset.formset.non_form_errors }}
    <table class="table table-striped table-bordered">
      <thead><tr>
+       <th class="original"></th>
      {% for field in inline_admin_formset.fields %}
-       {% if not field.widget.is_hidden %}
-         <th{% if field.required %} class="required"{% endif %}>{{ field.label|capfirst }}
-         {% if field.help_text %}<i class="glyphicon glyphicon-comment help help-tooltip" style="margin-left: 4px;" alt="({{ field.help_text|striptags }})" title="{{ field.help_text|striptags }}"></i>{% endif %}
-         </th>
-       {% endif %}
+       <th class="column-{{ field.name }}{% if field.required %} required{% endif %}{% if field.widget.is_hidden %} hidden{% endif %}">{{ field.label|capfirst }}
+       {% if field.help_text %}<img src="{% static "admin/img/icon-unknown.svg" %}" class="help help-tooltip" width="10" height="10" alt="({{ field.help_text|striptags }})" title="{{ field.help_text|striptags }}">{% endif %}
+       </th>
      {% endfor %}
-     {% if inline_admin_formset.formset.can_delete %}<th>{% trans "Delete?" %}</th>{% endif %}
+     {% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission %}<th>{% translate "Delete?" %}</th>{% endif %}
      </tr></thead>
 
      <tbody>
      {% for inline_admin_form in inline_admin_formset %}
         {% if inline_admin_form.form.non_field_errors %}
-        <tr><td colspan="{{ inline_admin_form|cell_count }}"><div class="alert alert-danger">
-{{ inline_admin_form.form.non_field_errors }}</div></td></tr>
+        <tr class="row-form-errors"><td colspan="{{ inline_admin_form|cell_count }}">{{ inline_admin_form.form.non_field_errors }}</td></tr>
         {% endif %}
-        <tr class="form-row {% cycle "row1" "row2" %} {% if inline_admin_form.original or inline_admin_form.show_url %}has_original{% endif %}{% if forloop.last %} empty-form{% endif %}"
+        <tr class="form-row {% if inline_admin_form.original or inline_admin_form.show_url %}has_original{% endif %}{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}"
              id="{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %}">
+        <td class="original">
+          {% if inline_admin_form.original or inline_admin_form.show_url %}<p style="height: 15px;">
+          {% if inline_admin_form.original %}
+          {{ inline_admin_form.original }}
+          {% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %}<a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="{% if inline_admin_formset.has_change_permission %}inlinechangelink{% else %}inlineviewlink{% endif %}">{% if inline_admin_formset.has_change_permission %}{% translate "Change" %}{% else %}{% translate "View" %}{% endif %}</a>{% endif %}
+          {% endif %}
+          {% if inline_admin_form.show_url %}<a href="{{ inline_admin_form.absolute_url }}">{% translate "View on site" %}</a>{% endif %}
+            </p>{% endif %}
+          {% if inline_admin_form.needs_explicit_pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
+          {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+        </td>
         {% for fieldset in inline_admin_form %}
           {% for line in fieldset %}
             {% for field in line %}
-              {% if not field.field.is_hidden %}
-              <td{% if field.field.name %} class="field-{{ field.field.name }}"{% endif %}>
+              <td class="{% if field.field.name %}field-{{ field.field.name }}{% endif %}{% if field.field.is_hidden %} hidden{% endif %}">
               {% if field.is_readonly %}
                   <p>{{ field.contents }}</p>
               {% else %}
-                  {% if field.errors %}
-                  <div class="alert alert-danger">{{ field.errors|striptags }}</div>
-                  {% endif %}
-                  {% dab_field_rendering field.field %}
+                  {{ field.field.errors.as_ul }}
+                  {{ field.field }}
               {% endif %}
               </td>
-              {% endif %}
             {% endfor %}
           {% endfor %}
         {% endfor %}
-        {% if inline_admin_formset.formset.can_delete %}
+        {% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission %}
           <td class="delete">{% if inline_admin_form.original %}{{ inline_admin_form.deletion_field.field }}{% endif %}</td>
         {% endif %}
         </tr>
@@ -58,90 +65,3 @@
 </fieldset>
   </div>
 </div>
-
-<script type="text/javascript">
-(function($) {
-    $(document).ready(function($) {
-        var rows = "#{{ inline_admin_formset.formset.prefix }}-group .tabular.inline-related tbody tr";
-        var alternatingRows = function(row) {
-            $(rows).not(".add-row").removeClass("row1 row2")
-                .filter(":even").addClass("row1").end()
-                .filter(rows + ":odd").addClass("row2");
-        }
-        var reinitDateTimeShortCuts = function() {
-            // Reinitialize the calendar and clock widgets by force
-            if (typeof DateTimeShortcuts != "undefined") {
-                $(".datetimeshortcuts").remove();
-                DateTimeShortcuts.init();
-            }
-        }
-        var updateSelectFilter = function() {
-            // If any SelectFilter widgets are a part of the new form,
-            // instantiate a new SelectFilter instance for it.
-            if (typeof SelectFilter != "undefined"){
-                $(".selectfilter").each(function(index, value){
-                  var namearr = value.name.split('-');
-                  SelectFilter.init(value.id, namearr[namearr.length-1], false, "{% static "admin/" %}");
-                });
-                $(".selectfilterstacked").each(function(index, value){
-                  var namearr = value.name.split('-');
-                  SelectFilter.init(value.id, namearr[namearr.length-1], true, "{% static "admin/" %}");
-                });
-            }
-        }
-        var initPrepopulatedFields = function(row) {
-            row.find('.prepopulated_field').each(function() {
-                var field = $(this);
-                var input = field.find('input, select, textarea');
-                var dependency_list = input.data('dependency_list') || [];
-                var dependencies = [];
-                $.each(dependency_list, function(i, field_name) {
-                  dependencies.push('#' + row.find('.field-' + field_name).find('input, select, textarea').attr('id'));
-                });
-                if (dependencies.length) {
-                    input.prepopulate(dependencies, input.attr('maxlength'));
-                }
-            });
-        }
-        $(rows).formset({
-            prefix: "{{ inline_admin_formset.formset.prefix }}",
-            addText: "{% blocktrans with verbose_name=inline_admin_formset.opts.verbose_name|capfirst %}Add another {{ verbose_name }}{% endblocktrans %}",
-            formCssClass: "dynamic-{{ inline_admin_formset.formset.prefix }}",
-            deleteCssClass: "inline-deletelink",
-            deleteText: "{% trans "Remove" %}",
-            emptyCssClass: "empty-form",
-            removed: alternatingRows,
-            added: (function(row) {
-                initPrepopulatedFields(row);
-                reinitDateTimeShortCuts();
-                updateSelectFilter();
-                alternatingRows(row);
-            })
-        });
-    });
-})($);
-
-// listener for jquery 1.7.2
-(function($) {
-    {% if inline_admin_formset.opts.sortable_field_name %}
-    $('tbody').sortable({
-        // items: '.dynamic-{{ inline_admin_formset.formset.prefix }}',
-        handle: '.drag-handler',
-        items: ".form-row"
-    });
-    $("#{{ opts.model_name }}_form").submit(function(e) {
-        var sortable_field_name = "{{ inline_admin_formset.opts.sortable_field_name }}",
-            i = 0;
-        var initial_form_count = $('#id_{{ inline_admin_formset.formset.prefix }}-INITIAL_FORMS').val();
-
-        $('#{{ inline_admin_formset.formset.prefix }}-group table > tbody').find(".form-row").each(function(i, e) {
-            // make sure we don't assign a position unless extra has been moved
-            if ($(this).find("input[name$='" + sortable_field_name + "']").val() || (i <= initial_form_count - 1 )) {
-                $(this).find("input[name$='" + sortable_field_name + "']").val(i);
-                i++;
-            }
-        });
-    });
-    {% endif %}
-})(jQuery);
-</script>
