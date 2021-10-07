@@ -82,6 +82,10 @@ Organizations may provide custom branding assets to change the logo, icons, and 
 
 ### Changed
 
+#### Admin Site Changes ([#900](https://github.com/nautobot/nautobot/pull/900))
+
+The Admin sub-site within Nautobot (`/admin/` and its child pages) has been revamped in appearance and functionality. It has been re-skinned to resemble the rest of the Nautobot UI, and has been slimmed down to only include those models and features that are still exclusive to admin users, such as user/group/permission management.
+
 #### Slug fields are now Optional in CSV import, REST API and ORM ([#493](https://github.com/nautobot/nautobot/issues/493))
 
 All models that have `slug` fields now use `AutoSlugField` from the `django-extensions` package. This means that when creating a record via the REST API, CSV import, or direct ORM Python calls, the `slug` field is now fully optional; if unspecified, it will be automatically assigned a unique value, just as how a `slug` is auto-populated in the UI when creating a new record.
@@ -121,6 +125,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#472](https://github.com/nautobot/nautobot/issues/472) - `JobResult` lists now show the associated Job's name (if available) instead of the Job's `class_path`.
 - [#493](https://github.com/nautobot/nautobot/issues/493) - All `slug` fields are now optional when creating records via the REST API, ORM, or CSV import. Slugs will be automatically assigned if unspecified.
 - [#877](https://github.com/nautobot/nautobot/pull/877) - Hid unused "Social Auth" section from Django admin page.
+- [#900](https://github.com/nautobot/nautobot/pull/900) - Admin site has been revised and re-skinned to more closely match the core Nautobot UI.
 
 ### Fixed
 
