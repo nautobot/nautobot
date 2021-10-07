@@ -170,7 +170,7 @@ class RelationshipModel(models.Model):
                     resp[side][relationship]["peer_type"] = getattr(relationship, f"{peer_side}_type")
                 else:
                     # Symmetric relationship - source_type == destination_type, so it doesn't matter which we choose
-                    resp[side][relationship]["peer_type"] = getattr(relationship, f"source_type")
+                    resp[side][relationship]["peer_type"] = getattr(relationship, "source_type")
 
                 resp[side][relationship]["has_many"] = relationship.has_many(peer_side)
 
@@ -360,8 +360,8 @@ class Relationship(BaseModel, ChangeLoggedModel):
             filters = getattr(self, f"{peer_side}_filter") or {}
         else:
             # Symmetric relationship - source and dest fields are presumed identical, so just use source
-            object_type = getattr(self, f"source_type")
-            filters = getattr(self, f"source_filter") or {}
+            object_type = getattr(self, "source_type")
+            filters = getattr(self, "source_filter") or {}
 
         queryset = object_type.model_class().objects.all()
 
