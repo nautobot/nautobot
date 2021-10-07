@@ -1,4 +1,3 @@
-import copy
 from unittest import skipIf
 
 import netaddr

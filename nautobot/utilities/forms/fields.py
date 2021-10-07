@@ -18,7 +18,7 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
-from .constants import *
+from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
 from .utils import expand_alphanumeric_pattern, expand_ipaddress_pattern, parse_numeric_range
 
 __all__ = (

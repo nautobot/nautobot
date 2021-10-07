@@ -37,14 +37,12 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
-    JSONField,
     SlugField,
     SmallTextarea,
     StaticSelect2,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
-from .choices import *
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 

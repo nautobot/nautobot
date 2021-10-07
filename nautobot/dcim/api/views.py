@@ -19,7 +19,6 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.api.exceptions import ServiceUnavailable
-from nautobot.core.api.metadata import ContentTypeMetadata
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,

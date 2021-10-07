@@ -4,7 +4,6 @@ Utilities and primitives for the `nautobot-server` CLI command.
 
 from pathlib import Path
 import os
-import warnings
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key

@@ -19,7 +19,7 @@ from nautobot.utilities.tables import (
     ContentTypesColumn,
     ToggleColumn,
 )
-from .jobs import get_job_classpaths, Job
+from .jobs import Job
 from .models import (
     ComputedField,
     ConfigContext,

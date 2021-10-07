@@ -5,8 +5,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.utils.safestring import mark_safe
-import netaddr
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
@@ -27,8 +27,8 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import ConfigContextSchema, Tag
-from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN, IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
+from nautobot.extras.models import Tag
+from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -47,7 +47,6 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
-    JSONField,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -55,11 +54,36 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import *
-from .constants import *
+from .choices import (
+    CableLengthUnitChoices,
+    CableTypeChoices,
+    ConsolePortTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    RackDimensionUnitChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+    SubdeviceRoleChoices,
+)
+from .constants import (
+    CABLE_TERMINATION_MODELS,
+    INTERFACE_MTU_MAX,
+    INTERFACE_MTU_MIN,
+    REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
+)
+
 from .models import (
     Cable,
     DeviceBay,

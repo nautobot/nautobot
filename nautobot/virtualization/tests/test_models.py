@@ -3,7 +3,7 @@ from django.test import TestCase
 
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import *
+from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster
 
 
 class VirtualMachineTestCase(TestCase):

@@ -1,11 +1,10 @@
-import django_rq
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.core.celery import app
 from nautobot.dcim.models import Site
-from nautobot.extras.choices import *
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ObjectChange, Webhook
 

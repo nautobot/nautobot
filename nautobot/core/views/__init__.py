@@ -3,7 +3,6 @@ import platform
 import sys
 
 from django.conf import settings
-from django.db.models import F
 from django.http import HttpResponseServerError
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template

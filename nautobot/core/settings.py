@@ -4,7 +4,7 @@ import platform
 from django.contrib.messages import constants as messages
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
 
 #
 # Environment setup

@@ -3,8 +3,6 @@ from django import forms
 from django.contrib import admin, messages
 from django.db import transaction
 from django.db.models import ProtectedError
-from django.http import HttpResponseRedirect
-from django.urls import reverse
 
 from nautobot.utilities.forms import LaxURLField
 from .models import CustomField, CustomFieldChoice, CustomLink, ExportTemplate, FileProxy, JobResult, Webhook

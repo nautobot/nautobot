@@ -1,7 +1,6 @@
 from django.apps import apps
 from django.conf import settings
 from django.conf.urls import include
-from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import path
 
 from nautobot.extras.plugins.utils import import_object

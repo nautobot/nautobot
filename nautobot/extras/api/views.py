@@ -4,7 +4,6 @@ from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django_rq.queues import get_connection
 from drf_yasg import openapi
 from drf_yasg.utils import no_body, swagger_auto_schema
 from graphene_django.views import GraphQLView

@@ -6,15 +6,12 @@ from unittest import skipIf
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
-from django_rq.queues import get_connection
 from rest_framework import status
 
-from nautobot.core.celery import app
 from nautobot.dcim.models import (
     Device,
     DeviceRole,

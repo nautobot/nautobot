@@ -2,7 +2,6 @@ from django.db.models import JSONField, BigIntegerField
 from django.db.models.fields import BinaryField
 from django.test.client import RequestFactory
 
-from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import GraphQLQuery
 
 import graphene

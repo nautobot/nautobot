@@ -33,11 +33,18 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
-from .choices import *
-from .constants import *
+from .choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from .constants import (
+    IPADDRESS_MASK_LENGTH_MIN,
+    IPADDRESS_MASK_LENGTH_MAX,
+    PREFIX_LENGTH_MAX,
+    PREFIX_LENGTH_MIN,
+    SERVICE_PORT_MAX,
+    SERVICE_PORT_MIN,
+)
 from .models import (
     Aggregate,
     IPAddress,

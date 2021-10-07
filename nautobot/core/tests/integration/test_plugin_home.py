@@ -8,7 +8,6 @@ from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from dummy_plugin.models import DummyModel
-from dummy_plugin.homepage import get_dummy_data
 
 
 @skipIf(

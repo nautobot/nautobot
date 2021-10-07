@@ -5,7 +5,6 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
-    CustomField,
     CustomLink,
     ExportTemplate,
     GitRepository,
