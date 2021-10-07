@@ -512,6 +512,19 @@ class RelationshipAssociation(BaseModel):
         if self.source_type == self.destination_type and self.source_id == self.destination_id:
             raise ValidationError({"destination_id": "An object cannot form a RelationshipAssociation with itself"})
 
+        if self.relationship.symmetric:
+            # Check for a "duplicate" record that exists with source and destination swapped
+            if RelationshipAssociation.objects.filter(
+                relationship=self.relationship,
+                destination_id=self.source_id,
+                source_id=self.destination_id,
+            ).exists():
+                raise ValidationError(
+                    {
+                        "__all__": f"A {self.relationship} association already exists between {self.source} and {self.destination}"
+                    }
+                )
+
         # Check if a similar relationship association already exists in violation of relationship type cardinality
         if self.relationship.type not in (
             RelationshipTypeChoices.TYPE_MANY_TO_MANY,

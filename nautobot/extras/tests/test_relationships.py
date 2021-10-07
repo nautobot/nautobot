@@ -81,6 +81,7 @@ class RelationshipBaseTest(TestCase):
         self.o2o_1.validated_save()
 
         # Relationships between objects of the same type
+
         self.o2o_2 = Relationship(
             name="Alphabetical Sites",
             slug="alphabetical-sites",
@@ -100,6 +101,15 @@ class RelationshipBaseTest(TestCase):
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
         )
         self.o2os_1.validated_save()
+
+        self.m2ms_1 = Relationship(
+            name="Related Sites",
+            slug="related-sites",
+            source_type=self.site_ct,
+            destination_type=self.site_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        )
+        self.m2ms_1.validated_save()
 
 
 class RelationshipTest(RelationshipBaseTest):
@@ -178,6 +188,52 @@ class RelationshipTest(RelationshipBaseTest):
 
         m2m.clean()
 
+    def test_clean_invalid_asymmetric(self):
+        """For a symmetric relationship, source and destination properties must match if specified."""
+        o2os = Relationship(
+            name="Site to Site",
+            slug="site-to-site",
+            source_type=self.site_ct,
+            source_label="Site A",
+            source_hidden=True,
+            source_filter={"name": ["site-a"]},
+            destination_type=self.rack_ct,
+            destination_label="Site B",
+            destination_hidden=False,
+            destination_filter={"name": ["site-b"]},
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+
+        with self.assertRaises(ValidationError) as handler:
+            o2os.clean()
+        expected_errors = {
+            "destination_type": ["Must match source_type for a symmetric relationship"],
+            "destination_label": ["Must match source_label for a symmetric relationship"],
+            "destination_hidden": ["Must match source_hidden for a symmetric relationship"],
+            "destination_filter": ["Must match source_filter for a symmetric relationship"],
+        }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+    def test_clean_valid_symmetric_implicit(self):
+        """For a symmetric relationship, omitted relevant properties are autofilled on clean."""
+        o2os = Relationship(
+            name="Site to Site",
+            slug="site-to-site",
+            source_type=self.site_ct,
+            destination_type=self.site_ct,
+            source_label="Site",
+            destination_filter={"name": ["site-b"]},
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+
+        o2os.clean()
+        self.assertEqual(o2os.destination_label, "Site")
+        self.assertEqual(o2os.source_filter, {"name": ["site-b"]})
+        self.assertEqual(o2os.source_type, o2os.destination_type)
+        self.assertEqual(o2os.source_label, o2os.destination_label)
+        self.assertEqual(o2os.source_hidden, o2os.destination_hidden)
+        self.assertEqual(o2os.source_filter, o2os.destination_filter)
+
     def test_get_label_input(self):
         with self.assertRaises(ValueError):
             self.m2m_1.get_label("wrongside")
@@ -189,6 +245,9 @@ class RelationshipTest(RelationshipBaseTest):
     def test_get_label_without_label_defined(self):
         self.assertEqual(self.m2m_2.get_label("source"), "VLANs")
         self.assertEqual(self.m2m_2.get_label("destination"), "racks")
+        self.assertEqual(self.m2ms_1.get_label("source"), "sites")
+        self.assertEqual(self.m2ms_1.get_label("destination"), "sites")
+        self.assertEqual(self.m2ms_1.get_label("peer"), "sites")
 
     def test_has_many_input(self):
         with self.assertRaises(ValueError):
@@ -206,6 +265,9 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(self.o2os_1.has_many("source"))
         self.assertFalse(self.o2os_1.has_many("destination"))
         self.assertFalse(self.o2os_1.has_many("peer"))
+        self.assertTrue(self.m2ms_1.has_many("source"))
+        self.assertTrue(self.m2ms_1.has_many("destination"))
+        self.assertTrue(self.m2ms_1.has_many("peer"))
 
     def test_to_form_field_m2m(self):
 
@@ -220,6 +282,11 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
         self.assertEqual(field.query_params, {"site": ["site-a"]})
+
+        field = self.m2ms_1.to_form_field("peer")
+        self.assertFalse(field.required)
+        self.assertIsInstance(field, DynamicModelMultipleChoiceField)
+        self.assertEqual(field.query_params, {})
 
     def test_to_form_field_o2m(self):
 
@@ -372,6 +439,16 @@ class RelationshipAssociationTest(RelationshipBaseTest):
                 "and Destination id already exists."
             ],
         }
+        self.assertEqual(handler.exception.message_dict, expected_errors)
+
+        cra = RelationshipAssociation(relationship=self.m2ms_1, source=self.sites[0], destination=self.sites[1])
+        cra.validated_save()
+
+        # Shouldn't be possible to create a mirrored copy of the same symmetric RelationshipAssociation
+        with self.assertRaises(ValidationError) as handler:
+            cra = RelationshipAssociation(relationship=self.m2ms_1, source=self.sites[1], destination=self.sites[0])
+            cra.validated_save()
+        expected_errors = {"__all__": ["A Related Sites association already exists between Site B and Site A"]}
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_get_peer(self):
