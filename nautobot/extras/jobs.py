@@ -1024,7 +1024,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             grouping="initialization",
             logger=logger,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         job_result.completed = timezone.now()
         job_result.save()
         if file_ids:
