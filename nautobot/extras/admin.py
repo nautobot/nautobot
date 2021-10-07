@@ -3,10 +3,8 @@ from django import forms
 from django.contrib import admin, messages
 from django.db import transaction
 from django.db.models import ProtectedError
-from django.contrib import admin
 
 from .models import CustomField, CustomFieldChoice, FileProxy, JobResult
-from .models import FileProxy, JobResult
 
 
 def order_content_types(field):
