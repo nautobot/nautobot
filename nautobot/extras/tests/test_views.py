@@ -1062,6 +1062,7 @@ class RelationshipTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
     # TODO? ViewTestCases.GetObjectViewTestCase,
     # TODO? ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
@@ -1117,6 +1118,7 @@ class RelationshipAssociationTestCase(
     # TODO? ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     # TODO? ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
     # TODO? ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
