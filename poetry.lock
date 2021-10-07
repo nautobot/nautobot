@@ -1543,7 +1543,7 @@ mysql = ["mysqlclient"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "56d9a10a87981d11dde804500ab21cc7daf54ba6e8b8bbb6000f54a0b1141d46"
+content-hash = "9fc732a8bb46e4568f8f0616405b1b10c03989f554f9bf6710be7d0666872699"
 
 [metadata.files]
 amqp = [
@@ -1571,6 +1571,7 @@ billiard = [
     {file = "billiard-3.6.4.0.tar.gz", hash = "sha256:299de5a8da28a783d51b197d496bef4f1595dd023a93a4f59dde1886ae905547"},
 ]
 black = [
+    {file = "black-20.8b1-py3-none-any.whl", hash = "sha256:70b62ef1527c950db59062cda342ea224d772abdf6adc58b86a45421bab20a6b"},
     {file = "black-20.8b1.tar.gz", hash = "sha256:1c02557aa099101b9d21496f8a914e9ed2222ef70336404eeeac8edba836fbea"},
 ]
 cached-property = [

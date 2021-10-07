@@ -1,0 +1,175 @@
+{% load bootstrapped_goodies_tags %}
+{% load i18n %}
+{% load plugins %}
+{% load static%}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
+    <link rel="stylesheet"
+          href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'materialdesignicons-5.4.55/css/materialdesignicons.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-5.4.55/css/materialdesignicons.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'jquery-ui-1.12.1/jquery-ui.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.css'">
+    <link rel="stylesheet"
+          href="{% static 'select2-4.0.13/dist/css/select2.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/dist/css/select2.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'flatpickr-4.6.3/themes/light.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.3/themes/light.css'">
+    <link rel="stylesheet"
+          href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
+    <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
+    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+
+    <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
+    <script src="{% static 'jquery-ui-1.12.1/jquery-ui.min.js' %}"
+            onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.12.1/jquery-ui.min.js'"></script>
+    <script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
+            onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
+
+    <meta name="msapplication-TileColor" content="#2d89ef">
+    <meta name="theme-color" content="#ffffff">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+
+    {% block extrahead %}{% endblock %}
+    {% block extrastyle %}{% endblock %}
+
+    <style>
+        .description {
+            padding-bottom: 20px;
+        }
+        .help-block {
+            white-space: initial;
+            word-wrap: break-word;
+        }
+        .related-widget-wrapper {
+            float: none;
+        }
+        .selectfilter {
+            width: 100%;
+        }
+        .vLargeTextField, .vXMLLargeTextField {
+            width: 100%;
+        }
+        .vTextField {
+            width: 100%;
+        }
+        .related-widget-wrapper > select {
+            width: 100%;
+        }
+        .form-horizontal .control-label {
+            text-align: left;
+        }
+        input[type="checkbox"] {
+            margin-left: 0 !important;
+        }
+        textarea {
+            width: 100%;
+        }
+    </style>
+</head>
+<body {% if is_popup %}style="padding-top: 0px;"{% endif %}>
+{% if not is_popup %}
+    {% include 'inc/nav_menu.html' %}
+{% endif %}
+<div class="container-fluid wrapper" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
+    {% if settings.BANNER_TOP %}
+        <div class="alert alert-info text-center" role="alert">
+            {{ settings.BANNER_TOP|safe }}
+        </div>
+    {% endif %}
+    {% if settings.MAINTENANCE_MODE %}
+        <div class="alert alert-warning text-center" role="alert">
+            <h4><i class="mdi mdi-alert"></i> Maintenance Mode</h4>
+            <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
+        </div>
+    {% endif %}
+    {% plugin_banners %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span>&times;</span>
+            </button>
+            {{ message }}
+        </div>
+    {% endfor %}
+    <!-- Content -->
+    <div class="container-fluid wrapper">
+        {% if not is_popup %}
+            <div class="row noprint">
+                {% block breadcrumbs %}
+                {% endblock %}
+            </div>
+        {% endif %}
+        <div>
+            <div>
+                {% block pretitle %}{% endblock %}
+                <div class="pull-right noprint">
+                    {% block object-tools %}{% endblock %}
+                </div>
+                <div>
+                    {% block content_title %}
+                        {% if title %}
+                            <h1>{% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}</h1>
+                            <ul class="nav nav-tabs"></ul>
+                        {% endif %}
+                    {% endblock %}
+                    <br>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid wrapper">
+            {% block content %}{{ content }}{% endblock %}
+        </div>
+    </div>
+
+    {% block footer %}<footer id="footer"></footer>{% endblock %}
+    <div class="push"></div>
+    {% if settings.BANNER_BOTTOM %}
+        <div class="alert alert-info text-center banner-bottom" role="alert">
+                {{ settings.BANNER_BOTTOM|safe }}
+        </div>
+    {% endif %}
+</div>
+{% if not is_popup %}
+    <footer class="footer">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-4">
+                    <p class="text-muted">{{ settings.HOSTNAME }} (v{{ settings.VERSION }})</p>
+                </div>
+                <div class="col-xs-4 text-center">
+                    <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
+                </div>
+                <div class="col-xs-4 text-right noprint">
+                    <p class="text-muted">
+                        <i class="mdi mdi-book-open-page-variant text-primary"></i> <a href="https://nautobot.readthedocs.io/">Docs</a> &middot;
+                        <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
+                        <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
+                        <i class="mdi mdi-xml text-primary"></i> <a href="https://github.com/nautobot/nautobot">Code</a> &middot;
+                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="https://github.com/nautobot/nautobot/wiki">Help</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+{% endif %}
+{% block javascript %}{% endblock %}
+</body>
+</html>

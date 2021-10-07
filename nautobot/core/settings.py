@@ -276,7 +276,6 @@ TIME_ZONE = "UTC"
 
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -295,6 +294,9 @@ INSTALLED_APPS = [
     "taggit",
     "timezone_field",
     "nautobot.core",
+    "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
+    "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
+    "db_file_storage",
     "nautobot.circuits",
     "nautobot.dcim",
     "nautobot.ipam",
@@ -306,7 +308,6 @@ INSTALLED_APPS = [
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_yasg",
     "graphene_django",
-    "django_celery_beat",
     "health_check",
     "health_check.cache",
     "health_check.storage",
