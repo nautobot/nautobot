@@ -83,6 +83,13 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 !!! warning
     If you are upgrading from an earlier version of Nautobot (including 1.1.0) you should check your `uwsgi.ini` and ensure that it contains this important configuration line.
 
+## v1.1.5 (2021-MM-DD)
+
+### Fixed
+
+- [#816](https://github.com/nautobot/nautobot/issues/816) - `AttributeError` reported when viewing a Rack with certain associated power configurations.
+- [#981](https://github.com/nautobot/nautobot/pull/981) - Incorrect handling of missing custom fields in the `fix_custom_fields` management command.
+
 ## v1.1.4 (2021-10-04)
 
 ### Added
