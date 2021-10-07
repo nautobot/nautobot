@@ -1,7 +1,7 @@
 from django.contrib.admin import site as admin_site
 from social_django.models import Association, Nonce, UserSocialAuth
 from taggit.models import Tag
-from django_celery_beat import admin
+from django_celery_beat import admin  # noqa: F401
 from django_celery_beat.models import (
     ClockedSchedule,
     CrontabSchedule,
