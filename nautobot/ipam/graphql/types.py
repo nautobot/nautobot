@@ -55,12 +55,12 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
             return self.assigned_object
         return None
 
-    def resolve_interface(self, info, interface_id):
+    def resolve_interface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
             return self.assigned_object
         return None
 
-    def resolve_vminterface(self, info, vminterface_id):
+    def resolve_vminterface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "VMInterface":
             return self.assigned_object
         return None
