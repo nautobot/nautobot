@@ -265,6 +265,36 @@ class JobTest(TestCase):
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
             self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
 
+    def test_job_data_as_string(self):
+        """
+        Test that job doesn't error when not a dictionary.
+        """
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+            module = "test_object_vars"
+            name = "TestObjectVars"
+            job_class = get_job(f"local/{module}/{name}")
+
+            # Prepare the job data
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=self.job_content_type,
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+            data = "BAD DATA STRING"
+            run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
+            job_result.refresh_from_db()
+
+            # Assert stuff
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+            self.assertIn(
+                "Data should be a dictionary",
+                next(
+                    log[-1]  # actual log message in the logging tuple
+                    for log in job_result.data["initialization"]["log"]
+                ),
+            )
+
 
 class JobFileUploadTest(TestCase):
     """Test a job that uploads/deletes files."""
