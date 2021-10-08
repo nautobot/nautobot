@@ -1,0 +1,14 @@
+---
+version: "3.4"
+services:
+  nautobot:
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:13
+    env_file:
+      - dev.env
+    volumes:
+      - pgdata_nautobot:/var/lib/postgresql/data
+volumes:
+  pgdata_nautobot:
