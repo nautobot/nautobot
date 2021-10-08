@@ -63,8 +63,13 @@
 {% endblock masthead %}
 
 {% block nav_tabs %}
-        <li role="presentation" {% if active_tab == 'device' %} class="active"{% endif %}>
+        <li role="presentation" {% if active_tab == 'device' and not request.GET.tab or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{% url 'dcim:device' pk=object.pk %}">Device</a>
+        </li>
+        <li role="presentation"{% if active_tab == 'device' and request.GET.tab == 'advanced' %} class="active"{% endif %}>
+            <a href="{% url 'dcim:device' pk=object.pk %}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+                Advanced
+            </a>
         </li>
         {% with interface_count=object.vc_interfaces.count %}
             {% if interface_count %}
@@ -151,20 +156,3 @@
             </li>
         {% endif %}
 {% endblock nav_tabs %}
-
-{% block javascript %}
-<script src="{% static 'clipboard.js/clipboard-2.0.6.min.js' %}"
-    onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js/clipboard-2.0.6.min.js'">
-</script>
-<script>
-    var clipboard = new ClipboardJS('.btn');
-
-    clipboard.on('success', function (e) {
-        console.log(e);
-    });
-
-    clipboard.on('error', function (e) {
-        console.log(e);
-    });
-</script>
-{% endblock javascript %}
