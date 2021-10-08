@@ -18,7 +18,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.db.models import Model
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils import timezone
@@ -1006,6 +1006,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     try:
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.
+        file_ids = None
         file_fields = list(job._get_file_vars())
         file_ids = [data[f] for f in file_fields]
 
