@@ -83,7 +83,10 @@ class JobTest(TestCase):
 
             self.assertHTMLEqual(
                 form.as_table(),
-                """<tr><th><label for="id_var2">Var2:</label></th><td>
+                """<tr><th><label for="id_var1">Var1:</label></th><td>
+<input class="form-control form-control" id="id_var1" name="var1" placeholder="None" required type="file">
+<br><span class="helptext">Some file wants to be first</span></td></tr>
+<tr><th><label for="id_var2">Var2:</label></th><td>
 <input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
 <br><span class="helptext">Hello</span></td></tr>
 <tr><th><label for="id_var23">Var23:</label></th><td>
