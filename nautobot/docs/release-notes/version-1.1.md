@@ -87,6 +87,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 ### Fixed
 
+- [#733](https://github.com/nautobot/nautobot/issues/733) - A Job erroring out early in initialization could result in its associated JobResult staying in Pending state indefinitely.
 - [#816](https://github.com/nautobot/nautobot/issues/816) - `AttributeError` reported when viewing a Rack with certain associated power configurations.
 - [#981](https://github.com/nautobot/nautobot/pull/981) - Incorrect handling of missing custom fields in the `fix_custom_fields` management command.
 
