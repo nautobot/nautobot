@@ -48,6 +48,7 @@
 {% endblock content %}
 
 {% block javascript %}
+    {{ block.super }}
     <script src="{% static 'js/connection_toggles.js' %}?v{{ settings.VERSION }}"></script>
     <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock javascript %}
