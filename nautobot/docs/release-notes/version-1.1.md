@@ -28,9 +28,6 @@ MySQL 8.x is now fully supported as a database backend!
 
 The installation and configuration guides have been revised to include MySQL. If you prefer MySQL or it is more easily supported in your environment, configuring Nautobot to use MySQL is as easy as changing value of `ENGINE` in your `DATABASES` setting to point to `django.db.backends.mysql` and installing the MySQL Python driver using `pip3 install nautobot[mysql]`.
 
-!!! note
-    You will not be able to directly migrate your data from PostgreSQL to MySQL. A fresh start is required.
-
 A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for specifying the desired database engine at runtime without needing to modify your `nautobot_config.py`. Please see the [configuration guide on `DATABASES`](../configuration/required-settings.md#databases) for more details on how to configure Nautobot to use MySQL.
 
 Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-setup) and [CentOS](../installation/centos.md#mysql-setup) to get started.
@@ -85,11 +82,18 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 
 ## v1.1.5 (2021-MM-DD)
 
+### Added
+
+- [#953](https://github.com/nautobot/nautobot/pull/953) - Added option to use MySQL in the docker-compose development environment
+- [#954](https://github.com/nautobot/nautobot/pull/954) - Added documentation for migrating from PostgreSQL to MySQL, improved documentation as to recommended MySQL database configuration.
+
 ### Fixed
 
+- [#555](https://github.com/nautobot/nautobot/issues/555) - Fixed `Status.DoesNotExist` during `nautobot-server loaddata`.
 - [#733](https://github.com/nautobot/nautobot/issues/733) - A Job erroring out early in initialization could result in its associated JobResult staying in Pending state indefinitely.
 - [#816](https://github.com/nautobot/nautobot/issues/816) - `AttributeError` reported when viewing a Rack with certain associated power configurations.
 - [#981](https://github.com/nautobot/nautobot/pull/981) - Incorrect handling of missing custom fields in the `fix_custom_fields` management command.
+- [#986](https://github.com/nautobot/nautobot/issues/986) - Fixed `TemplateDoesNotExist` exception when running a Job containing a `FileVar` variable.
 
 ## v1.1.4 (2021-10-04)
 
