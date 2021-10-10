@@ -124,10 +124,9 @@ class CSVFileField(forms.FileField):
             return None
 
         file = super().to_python(file)
-        if not file.name.endswith(".csv"):
-            raise forms.ValidationError(f'File "{file.name}" is not a CSV file')
-        csv_str = file.read().decode("utf-8").strip()
-        reader = csv.reader(csv_str.splitlines())
+        csv_str = file.read().decode("utf-8-sig").strip()
+        dialect = csv.Sniffer().sniff(csv_str)
+        reader = csv.reader(csv_str.splitlines(), dialect)
         headers, records = parse_csv(reader)
 
         return headers, records
