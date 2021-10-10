@@ -1,12 +1,16 @@
 import time
+import uuid
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand, CommandError
+from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models import JobResult
 from nautobot.extras.jobs import get_job, run_job
+from nautobot.utilities.utils import copy_safe_request
 
 
 class Command(BaseCommand):
@@ -17,7 +21,12 @@ class Command(BaseCommand):
         parser.add_argument(
             "--commit",
             action="store_true",
-            help="Commit changes to DB (defaults to dry-run if unset)",
+            help="Commit changes to DB (defaults to dry-run if unset). --username is mandatory if using this argument",
+        )
+        parser.add_argument(
+            "-u",
+            "--username",
+            help="User account to impersonate as the requester of this job",
         )
 
     def handle(self, *args, **options):
@@ -26,6 +35,23 @@ class Command(BaseCommand):
         job_class = get_job(options["job"])
         if not job_class:
             raise CommandError('Job "%s" not found' % options["job"])
+
+        user = None
+        request = None
+        if options["commit"] and not options["username"]:
+            # Job execution with commit=True uses change_logging(), which requires a user as the author of any changes
+            raise CommandError("--username is mandatory when --commit is used")
+
+        if options["username"]:
+            User = get_user_model()
+            try:
+                user = User.objects.get(username=options["username"])
+            except User.DoesNotExist as exc:
+                raise CommandError("No such user") from exc
+
+            request = RequestFactory().request(SERVER_NAME="nautobot_server_runjob")
+            request.id = uuid.uuid4()
+            request.user = user
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 
@@ -36,9 +62,9 @@ class Command(BaseCommand):
             run_job,
             job_class.class_path,
             job_content_type,
-            None,
+            user,
             data={},  # TODO: parsing CLI args into a data dictionary is not currently implemented
-            request=None,
+            request=copy_safe_request(request) if request else None,
             commit=options["commit"],
         )
 

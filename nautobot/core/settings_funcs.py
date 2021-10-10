@@ -1,5 +1,6 @@
 """Helper functions to detect settings after app initialization (AKA 'dynamic settings')."""
 
+from django.conf import settings
 from distutils.util import strtobool
 from functools import lru_cache
 import os
@@ -28,7 +29,7 @@ def sso_auth_enabled(auth_backends):
 @lru_cache(maxsize=5)
 def _sso_auth_enabled(auth_backends):
     for backend in auth_backends:
-        if backend.startswith("social_core.backends"):
+        if backend.startswith(settings.SOCIAL_AUTH_BACKEND_PREFIX):
             return True
     return False
 

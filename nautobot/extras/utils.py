@@ -100,7 +100,7 @@ def generate_signature(request_body, secret):
     return hmac_prep.hexdigest()
 
 
-def get_worker_count(request):
+def get_worker_count(request=None):
     """
     Return a count of the active Celery workers.
     """
@@ -118,6 +118,7 @@ def get_worker_count(request):
     celery_count = len(active) if active is not None else 0
 
     if rq_count and not celery_count:
-        messages.warning(request, "RQ workers are deprecated. Please migrate your workers to Celery.")
+        if request:
+            messages.warning(request, "RQ workers are deprecated. Please migrate your workers to Celery.")
 
     return celery_count

@@ -357,11 +357,16 @@ Done.
 Run a job (script, report) to validate or update data in Nautobot.
 
 `--commit`<br>
-Commit changes to DB (defaults to dry-run if unset).
+Commit changes to DB (defaults to dry-run if unset). `--username` is mandatory if using this argument.
+
+`--username <username>`<br>
+User account to impersonate as the requester of this job.
 
 ```no-highlight
-$ nautobot-server runjob local/example/MyJobWithVars --commit
+$ nautobot-server runjob --commit --username someuser local/example/MyJobWithNoVars
 ```
+
+Note that there is presently no option to provide input parameters (`data`) for jobs via the CLI.
 
 Please see the [guide on Jobs](../additional-features/jobs.md) for more information on working with and running jobs.
 

@@ -12,7 +12,6 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
       - redis
       - selenium
     env_file:
@@ -47,12 +46,6 @@ services:
     env_file:
       - ./dev.env
     tty: true
-  postgres:
-    image: postgres:13
-    env_file:
-      - dev.env
-    volumes:
-      - pgdata_nautobot:/var/lib/postgresql/data
   redis:
     image: redis:6-alpine
     command:
@@ -66,5 +59,3 @@ services:
     ports: 
         - "4444:4444"
     shm_size: 2g
-volumes:
-  pgdata_nautobot:
