@@ -6,15 +6,12 @@ from unittest import skipIf
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
-from django_rq.queues import get_connection
 from rest_framework import status
 
-from nautobot.core.celery import app
 from nautobot.dcim.models import (
     Device,
     DeviceRole,
@@ -47,6 +44,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
+from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 
@@ -54,7 +52,7 @@ from nautobot.utilities.testing.utils import disable_warnings
 User = get_user_model()
 
 
-worker_running = len(app.control.inspect().active() or [])
+celery_worker_running = bool(get_worker_count())
 
 
 THIS_DIRECTORY = os.path.dirname(__file__)
@@ -597,24 +595,39 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         for repo in cls.repos:
             repo.save(trigger_resync=False)
 
-    @skipIf(not worker_running, "Celery worker not running")
+    @skipIf(celery_worker_running, "Celery worker is running")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_git_sync_no_celery_worker(self):
+        """Git sync cannot be triggered if Celery is not running."""
+        self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
+        url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_nonexistent_repo(self):
+        """Git sync request handles case of a nonexistent repository."""
         self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-    @skipIf(not worker_running, "Celery worker not running")
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_without_permissions(self):
+        """Git sync request verifies user permissions."""
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @skipIf(not worker_running, "Celery worker not running")
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_git_sync_with_permissions(self):
+        """Git sync request can run successfully."""
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
@@ -826,9 +839,10 @@ class JobTest(APITestCase):
         var4 = ObjectVar(model=DeviceRole)
 
         def run(self, data, commit=True):
-            self.log_info(message=data["var1"])
-            self.log_success(message=data["var2"])
-            self.log_failure(message=data["var3"])
+            self.log_debug(message=data["var1"])
+            self.log_info(message=data["var2"])
+            self.log_success(message=data["var3"])
+            self.log_warning(message=data["var4"])
 
             return "Job complete"
 
@@ -905,22 +919,25 @@ class JobTest(APITestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_without_permission(self):
+        """Job run request enforces user permissions."""
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         with disable_warnings("django.request"):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[], JOBS_ROOT=THIS_DIRECTORY)
-    def test_run_job_with_permission(self):
+    @skipIf(celery_worker_running, "Celery worker is running")
+    def test_run_job_no_worker(self):
+        """Job run cannot be requested if Celery is not running."""
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
         job_data = {
             "var1": "FooBar",
             "var2": 123,
             "var3": False,
-            "var4": d.pk,
+            "var4": device_role.pk,
         }
 
         data = {
@@ -930,18 +947,20 @@ class JobTest(APITestCase):
 
         url = reverse("extras-api:job-run", kwargs={"class_path": "local/test_api/TestJob"})
         response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["result"]["status"]["value"], "pending")
+        self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
 
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_object_var(self):
+        """Job run requests can reference objects by their primary keys."""
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
         job_data = {
-            "var1": "hello, world!",
-            "var2": 22,
-            "var3": True,
-            "var4": d.pk,
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": device_role.pk,
         }
 
         data = {
@@ -959,15 +978,25 @@ class JobTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
         job = ScheduledJob.objects.last()
-        self.assertEqual(job.kwargs["data"]["var4"], str(d.pk))
+        self.assertEqual(job.kwargs["data"]["var4"], str(device_role.pk))
 
+    # TODO: needs to be fixed - see https://github.com/nautobot/nautobot/issues/958
+    @skipIf(True, "Disabled due to issue #958")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_object_var_lookup(self):
-        d = DeviceRole.objects.create(name="role", slug="role")
-        job_data = {"var4": {"name": "role"}}
+        """Job run requests can reference objects by their attributes."""
+        self.add_permissions("extras.run_job")
+        device_role = DeviceRole.objects.create(name="role", slug="role")
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": {"name": "role"},
+        }
 
-        self.assertEqual(self.TestJob.deserialize_data(job_data), {"var4": d})
+        self.assertEqual(self.TestJob.deserialize_data(job_data), {"var4": device_role})
 
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_future(self):
         self.add_permissions("extras.run_job")
@@ -986,6 +1015,7 @@ class JobTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_future_past(self):
         self.add_permissions("extras.run_job")
@@ -1004,6 +1034,7 @@ class JobTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    @skipIf(not celery_worker_running, "Celery worker not running")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], JOBS_ROOT=THIS_DIRECTORY)
     def test_run_job_interval(self):
         self.add_permissions("extras.run_job")

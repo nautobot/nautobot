@@ -27,10 +27,17 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import *
+from .choices import (
+    CustomFieldFilterLogicChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,

@@ -1,6 +1,5 @@
 import datetime
 
-from nautobot.circuits.choices import *
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.extras.models import Status
 from nautobot.utilities.testing import ViewTestCases

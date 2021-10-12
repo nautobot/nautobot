@@ -1,7 +1,9 @@
 from django.test import TestCase
 
-from nautobot.dcim.forms import *
-from nautobot.dcim.models import *
+from nautobot.dcim.forms import DeviceForm, InterfaceCreateForm
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices
+
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Rack, Site
 from nautobot.extras.models import Status
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 

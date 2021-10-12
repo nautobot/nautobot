@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from nautobot.extras.registry import Registry
-from nautobot.extras.secrets import SecretsProvider, register_secrets_provider
+from nautobot.extras.secrets import register_secrets_provider
 from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider
 
 

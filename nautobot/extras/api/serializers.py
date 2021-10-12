@@ -1,9 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_serializer_method
-from graphene_django.settings import graphene_settings
-from graphql import get_default_backend
-from graphql.error import GraphQLSyntaxError
 from rest_framework import serializers
 
 from nautobot.core.api import (
@@ -22,7 +19,12 @@ from nautobot.dcim.api.nested_serializers import (
     NestedSiteSerializer,
 )
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Rack, Region, Site
-from nautobot.extras.choices import *
+from nautobot.extras.choices import (
+    CustomFieldFilterLogicChoices,
+    CustomFieldTypeChoices,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+)
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ComputedField,
@@ -61,8 +63,27 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .customfields import CustomFieldModelSerializer
 from .fields import MultipleChoiceJSONField
-from .nested_serializers import *
 
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
+    NestedConfigContextSchemaSerializer,
+    NestedConfigContextSerializer,
+    NestedCustomFieldSerializer,
+    NestedCustomLinkSerializer,
+    NestedExportTemplateSerializer,
+    NestedGitRepositorySerializer,
+    NestedGraphQLQuerySerializer,
+    NestedImageAttachmentSerializer,
+    NestedJobResultSerializer,
+    NestedRelationshipAssociationSerializer,
+    NestedRelationshipSerializer,
+    NestedScheduledJobSerializer,
+    NestedSecretSerializer,
+    NestedStatusSerializer,
+    NestedTagSerializer,
+    NestedWebhookSerializer,
+)
 
 #
 # Mixins

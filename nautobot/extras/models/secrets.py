@@ -5,8 +5,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
-import pkg_resources
-
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.registry import registry

@@ -4,7 +4,6 @@ import os
 from abc import ABC, abstractproperty
 from django.apps import AppConfig, apps as global_apps
 from django.db.models.signals import post_migrate
-from django.urls import reverse
 from collections import OrderedDict
 
 from nautobot.core.signals import nautobot_database_ready
@@ -390,8 +389,6 @@ class HomePageItem(HomePageBase, PermissionsMixin):
             custom_data (dict): Custom data to be passed to the custom template.
         """
         super().__init__(permissions)
-        if link:
-            reverse(link)
 
         self.name = name
         self.custom_template = custom_template

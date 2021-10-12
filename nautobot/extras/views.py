@@ -1,6 +1,5 @@
 import inspect
-import json
-from datetime import datetime, time
+from datetime import datetime
 
 from django import template
 from django.contrib import messages
@@ -11,12 +10,10 @@ from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.timezone import make_aware
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -656,10 +653,14 @@ class JobView(ContentTypePermissionRequiredMixin, View):
     def get_required_permission(self):
         return "extras.view_job"
 
-    def get(self, request, class_path):
+    def _get_job(self, class_path):
         job_class = get_job(class_path)
         if job_class is None:
             raise Http404
+        return job_class
+
+    def get(self, request, class_path):
+        job_class = self._get_job(class_path)
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
 
@@ -682,9 +683,7 @@ class JobView(ContentTypePermissionRequiredMixin, View):
         if not request.user.has_perm("extras.run_job"):
             return HttpResponseForbidden()
 
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
+        job_class = self._get_job(class_path)
         job = job_class()
         grouping, module, class_name = class_path.split("/", 2)
         job_form = job.as_form(request.POST, request.FILES)
@@ -927,7 +926,13 @@ class ScheduledJobListView(generic.ObjectListView):
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
-    action_buttons = ()
+    action_buttons = ("delete",)
+
+
+class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
+    queryset = ScheduledJob.objects.all()
+    table = tables.ScheduledJobTable
+    filterset = filters.ScheduledJobFilterSet
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
@@ -942,8 +947,14 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
 class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
+    def _get_job(self, class_path):
+        job_class = get_job(class_path)
+        if job_class is None:
+            raise Http404
+        return job_class
+
     def get_extra_context(self, request, instance):
-        job_class = get_job(instance.job_class)
+        job_class = self._get_job(instance.job_class)
         labels = {}
         for name, var in job_class._get_vars().items():
             field = var.as_field()
@@ -984,16 +995,18 @@ class JobResultBulkDeleteView(generic.BulkDeleteView):
     table = tables.JobResultTable
 
 
-class JobResultView(ContentTypePermissionRequiredMixin, View):
+class JobResultView(generic.ObjectView):
     """
     Display a JobResult and its data.
     """
+
+    queryset = JobResult.objects.all()
 
     def get_required_permission(self):
         return "extras.view_jobresult"
 
     def get(self, request, pk):
-        job_result = get_object_or_404(JobResult.objects.all(), pk=pk)
+        job_result = get_object_or_404(self.queryset, pk=pk)
 
         associated_record = None
         job = None

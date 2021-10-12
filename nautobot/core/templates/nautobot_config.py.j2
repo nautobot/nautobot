@@ -29,9 +29,12 @@ DATABASES = {
         "ENGINE": os.getenv(
             "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
         ),  # Database driver ("mysql" or "postgresql")
-        # "OPTIONS": {"charset": "utf8mb4"},  # For MySQL unicode emoji support, uncomment this line
     }
 }
+
+# Ensure proper Unicode handling for MySQL
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
 # Nautobot uses RQ for task scheduling. These are the following defaults.
 # For detailed configuration see: https://github.com/rq/django-rq#installation

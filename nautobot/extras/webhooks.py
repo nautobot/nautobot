@@ -2,10 +2,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.extras.choices import *
 from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
+from .choices import ObjectChangeActionChoices
 
 
 def enqueue_webhooks(instance, user, request_id, action):

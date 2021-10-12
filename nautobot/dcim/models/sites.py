@@ -1,11 +1,10 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
+from django.db.models import Q
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
 
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import ObjectChange, StatusModel
 from nautobot.extras.utils import extras_features

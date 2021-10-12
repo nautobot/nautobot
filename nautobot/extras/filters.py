@@ -14,7 +14,7 @@ from nautobot.utilities.filters import (
     TagFilter,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import *
+from .choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices, JobResultStatusChoices
 from .models import (
     ComputedField,
     ConfigContext,

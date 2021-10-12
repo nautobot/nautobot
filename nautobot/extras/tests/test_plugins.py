@@ -15,7 +15,7 @@ from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases
+from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from dummy_plugin import config as dummy_config
 from dummy_plugin.datasources import refresh_git_text_files
@@ -336,6 +336,49 @@ class PluginGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "number": 31337,
         }
+
+
+class PluginListViewTest(TestCase):
+    def test_list_plugins_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        response = self.client.get(reverse("plugins:plugins_list"))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    @skipIf(
+        "dummy_plugin" not in settings.PLUGINS,
+        "dummy_plugin not in settings.PLUGINS",
+    )
+    def test_list_plugins_authenticated(self):
+        response = self.client.get(reverse("plugins:plugins_list"))
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset)).lower()
+        self.assertIn("dummy plugin", response_body, msg=response_body)
+
+
+@skipIf(
+    "dummy_plugin" not in settings.PLUGINS,
+    "dummy_plugin not in settings.PLUGINS",
+)
+class PluginDetailViewTest(TestCase):
+    def test_view_detail_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "dummy_plugin"}))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    def test_view_detail_authenticated(self):
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "dummy_plugin"}))
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset)).lower()
+        # plugin verbose name
+        self.assertIn("dummy plugin", response_body, msg=response_body)
+        # plugin description
+        self.assertIn("for testing purposes only", response_body, msg=response_body)
 
 
 @skipIf(
