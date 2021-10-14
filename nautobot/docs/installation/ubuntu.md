@@ -52,7 +52,9 @@ Type "help" for help.
 
 postgres=# CREATE DATABASE nautobot;
 CREATE DATABASE
-postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
+postgres=# CREATE ROLE nautobot 
+postgres=# LOGIN
+postgres=# PASSWORD 'insecure_password';
 CREATE ROLE
 postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
 GRANT
