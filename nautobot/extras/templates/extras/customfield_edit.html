@@ -1,0 +1,77 @@
+{% extends 'generic/object_edit.html' %}
+{% load static %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Custom Field</strong></div>
+        <div class="panel-body">
+            {% render_field form.type %}
+            {% render_field form.name %}
+            {% render_field form.weight %}
+            {% render_field form.label %}
+            {% render_field form.description %}
+            {% render_field form.required %}
+            {% render_field form.default %}
+            {% render_field form.filter_logic %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.content_types %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Validation Rules</strong></div>
+        <div class="panel-body">
+            {% render_field form.validation_minimum %}
+            {% render_field form.validation_maximum %}
+            {% render_field form.validation_regex %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Custom Field Choices</strong></div>
+        <div class="panel-body">
+            <table class="table">
+              {{ choices.management_form }}
+              {% for form in choices.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                        <tr>
+                            {% for field in form.visible_fields %}
+                                <th>{{ field.label|capfirst }}</th>
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row">
+                        {% for field in form.visible_fields %}
+                            <td>
+                                {# Include the hidden fields in the form #}
+                                {% if forloop.first %}
+                                    {% for hidden in form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field.errors.as_ul }}
+                                {{ field }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+               {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script type="text/javascript">
+        $('.formset_row').formset({
+            addText: 'Add another Custom Field Choice',
+            deleteText: 'Remove',
+            prefix: 'choices'
+        });
+    </script>
+{% endblock %}

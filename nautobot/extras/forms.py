@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import TextField
+from django.forms import inlineformset_factory
 from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
@@ -35,6 +36,7 @@ from .models import (
     ConfigContext,
     ConfigContextSchema,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -400,6 +402,16 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 #
 # Custom fields
 #
+
+
+# CustomFieldChoice inline formset for use with providing dynamic rows when
+# creating/editing choices for `CustomField` objects in UI views.
+CustomFieldChoiceFormSet = inlineformset_factory(
+    parent_model=CustomField,
+    model=CustomFieldChoice,
+    exclude=(),
+    extra=5
+)
 
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):

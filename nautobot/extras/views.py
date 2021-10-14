@@ -1,15 +1,22 @@
 import inspect
-from datetime import datetime
+from datetime import datetime, time
+import json
+import logging
 
 from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
+from django.utils.http import is_safe_url
+from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
@@ -19,6 +26,7 @@ from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.utils import get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
@@ -329,6 +337,87 @@ class CustomFieldView(generic.ObjectView):
 class CustomFieldEditView(generic.ObjectEditView):
     queryset = CustomField.objects.all()
     model_form = forms.CustomFieldForm
+    template_name = "extras/customfield_edit.html"
+
+    def get_extra_context(self, request, instance):
+        ctx = super().get_extra_context(request, instance)
+
+        if request.POST:
+            ctx["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
+        else:
+            ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        logger = logging.getLogger("nautobot.views.ObjectEditView")
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                    # Process the formsets for choices
+                    ctx = self.get_extra_context(request, obj)
+                    choices = ctx["choices"]
+                    if choices.is_valid():
+                        choices.save()
+
+                msg = "{} {}".format(
+                    "Created" if object_created else "Modified",
+                    self.queryset.model._meta.verbose_name,
+                )
+                logger.info(f"{msg} {obj} (PK: {obj.pk})")
+                if hasattr(obj, "get_absolute_url"):
+                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                else:
+                    msg = "{} {}".format(msg, escape(obj))
+                messages.success(request, mark_safe(msg))
+
+                if "_addanother" in request.POST:
+
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(return_url)
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
 
 
 class CustomFieldDeleteView(generic.ObjectDeleteView):
