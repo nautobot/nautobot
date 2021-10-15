@@ -940,6 +940,7 @@ class PortTypeChoices(ChoiceSet):
     TYPE_SPLICE = "splice"
     TYPE_CS = "cs"
     TYPE_SN = "sn"
+    TYPE_URM = "URM"
 
     CHOICES = (
         (
@@ -974,6 +975,7 @@ class PortTypeChoices(ChoiceSet):
                 (TYPE_CS, "CS"),
                 (TYPE_SN, "SN"),
                 (TYPE_SPLICE, "Splice"),
+                (TYPE_URM, "URM"),
             ),
         ),
     )
