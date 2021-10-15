@@ -357,6 +357,11 @@ urlpatterns = [
         name="relationship_add",
     ),
     path(
+        "relationships/delete/",
+        views.RelationshipBulkDeleteView.as_view(),
+        name="relationship_bulk_delete",
+    ),
+    path(
         "relationships/<uuid:pk>/edit/",
         views.RelationshipEditView.as_view(),
         name="relationship_edit",
@@ -370,6 +375,11 @@ urlpatterns = [
         "relationships/associations/",
         views.RelationshipAssociationListView.as_view(),
         name="relationshipassociation_list",
+    ),
+    path(
+        "relationships/associations/delete/",
+        views.RelationshipAssociationBulkDeleteView.as_view(),
+        name="relationshipassociation_bulk_delete",
     ),
     path(
         "relationships/associations/<uuid:pk>/delete/",

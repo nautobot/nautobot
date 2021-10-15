@@ -478,6 +478,7 @@ class RelationshipTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = Relationship
         fields = (
+            "pk",
             "name",
             "description",
             "type",
