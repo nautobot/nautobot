@@ -406,12 +406,7 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 
 # CustomFieldChoice inline formset for use with providing dynamic rows when
 # creating/editing choices for `CustomField` objects in UI views.
-CustomFieldChoiceFormSet = inlineformset_factory(
-    parent_model=CustomField,
-    model=CustomFieldChoice,
-    exclude=(),
-    extra=5
-)
+CustomFieldChoiceFormSet = inlineformset_factory(parent_model=CustomField, model=CustomFieldChoice, exclude=(), extra=5)
 
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
