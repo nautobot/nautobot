@@ -1074,9 +1074,10 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                 if job.failed:
                     job.logger.warning("job failed")
                     job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
-                else:
-                    job.logger.info("job completed successfully")
-                    job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+                    raise AbortTransaction()
+
+                job.logger.info("job completed successfully")
+                job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
 
                 if not commit:
                     raise AbortTransaction()
