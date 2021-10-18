@@ -1,6 +1,5 @@
 import inspect
-from datetime import datetime, time
-import json
+from datetime import datetime
 import logging
 
 from django import template
@@ -30,6 +29,7 @@ from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
+    prepare_cloned_fields,
     shallow_compare_dict,
 )
 from nautobot.utilities.tables import ButtonsColumn
@@ -371,6 +371,8 @@ class CustomFieldEditView(generic.ObjectEditView):
                     choices = ctx["choices"]
                     if choices.is_valid():
                         choices.save()
+                    else:
+                        raise RuntimeError(choices.errors)
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",
@@ -400,6 +402,10 @@ class CustomFieldEditView(generic.ObjectEditView):
 
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except RuntimeError:
+                msg = "Errors encountered when saving custom field choices. See below."
                 logger.debug(msg)
                 form.add_error(None, msg)
 
