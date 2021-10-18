@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -406,6 +406,12 @@ class CustomFieldEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except RuntimeError:
                 msg = "Errors encountered when saving custom field choices. See below."
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except ProtectedError as err:
+                # e.g. Trying to delete a choice that is in use.
+                protected_obj, err_msg = err.args
+                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
 

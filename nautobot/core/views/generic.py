@@ -287,7 +287,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         Return any additional context data for the template.
 
         request: The current request
-        instance: The object being viewed
+        instance: The object being edited
         """
         return {}
 

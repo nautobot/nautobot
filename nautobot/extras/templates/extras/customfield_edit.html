@@ -61,7 +61,7 @@
                         </tr>
                         </thead>
                     {% endif %}
-                    <tr class="formset_row">
+                    <tr class="formset_row-{{ choices.prefix }}">
                         {% for field in choice.visible_fields %}
                             <td>
                                 {# Include the hidden fields in the form #}
@@ -95,10 +95,11 @@
 {% block javascript %}
 <script src="{% static 'jquery/jquery.formset.js' %}"></script>
 <script type="text/javascript">
-    $('.formset_row').formset({
+    $('.formset_row-{{ choices.prefix }}').formset({
         addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Custom Field Choice',
         deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        prefix: 'choices',
+        prefix: '{{ choices.prefix }}',
+        formCssClass: 'dynamic-formset-{{ choices.prefix }}',
         keepFieldValues: 'input[type="number"]'
     });
 </script>
