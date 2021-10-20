@@ -28,6 +28,7 @@ from nautobot.utilities.forms import (
     add_blank_choice,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.utilities.templatetags.helpers import render_markdown
 from nautobot.utilities.utils import render_jinja2
 from nautobot.utilities.validators import validate_regex
 
@@ -402,8 +403,10 @@ class CustomField(BaseModel):
 
         field.model = self
         field.label = str(self)
+
         if self.description:
-            field.help_text = self.description
+            # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input
+            field.help_text = render_markdown(self.description)
 
         return field
 

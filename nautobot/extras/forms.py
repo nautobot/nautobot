@@ -404,7 +404,17 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     # TODO: Migrate custom field model from name to slug #464
-    name = forms.CharField(required=True, label="Slug")
+    # Once that's done we can replace this with a proper (Auto)SlugField,
+    # but for the moment, that field only works with fields specifically named "slug"
+    # We also use a forms.CharField rather than a forms.SlugField here for backwards compatibility,
+    # as users might have preexisting custom field with a non-slugified "name" value.
+    name = forms.CharField(required=True, label="Slug", help_text="URL-friendly unique shorthand")
+    description = forms.CharField(
+        required=False,
+        help_text="Also used as the help text when editing models using this custom field.<br>"
+        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
+        "Markdown</a> syntax is supported.",
+    )
     content_types = MultipleContentTypeField(feature="custom_fields")
 
     class Meta:
