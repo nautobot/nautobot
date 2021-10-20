@@ -1,15 +1,9 @@
-from django.contrib.contenttypes.models import ContentType
-
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import ConfigContext, ConfigContextSchema, Status
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing.integration import SplinterTestCase
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class CustomFieldChoiceTestCase(SplinterTestCase):
+class CustomFieldTestCase(SplinterTestCase):
     """
-    Integration tests for the CustomFieldChoice model
+    Integration tests for the CustomField and CustomFieldChoice models.
     """
 
     def setUp(self):
@@ -22,208 +16,161 @@ class CustomFieldChoiceTestCase(SplinterTestCase):
         self.logout()
         super().tearDown()
 
-    # pass create type=select w/ choices
-    def test_create_type_select_with_choices(self):
+    def _create_custom_field(self, field_name, field_type, choices=None, call_before_create=None):
+        """
+        Repeatable method for creating custom fields.
+
+        Args:
+            field_name (str):
+                Name of the field to create
+            field_type (str):
+                Type of the field to create (must match valid options)
+            choices (list):
+                List of custom field choices to create
+            call_before_create (callable):
+                If set, this will be called before the "Create" button is clicked.
+        """
+
+        if choices is None:
+            choices = []
+
         # Navigate to CustomFields list view
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Extensibility").click()
         self.browser.links.find_by_partial_text("Custom Fields").click()
 
         # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+        self.browser.find_by_id("add-button").click()
 
         # Fill out form
-        type_list = self.browser.find_by_name("type")
-        type_list.select_by_text("Selection")
-        self.browser.fill("name", "test-text")
-        self.browser.fill("content_types", "dev\n")
-        self.browser.fill("choices-0-value", "choice1")
+        self.browser.select("type", field_type)
+        self.browser.fill("name", field_name)
+
+        # Find the "content_types" dynamic multi-select and type into it.
+        # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms
+        ct = self.browser.find_by_css(".select2-search__field")
+        for _ in ct.first.type("dev\n", slowly=True):
+            pass
+
+        # Enumerate and set the choices (if any)
+        for idx, choice in enumerate(choices):
+            self.browser.fill(f"choices-{idx}-value", choice)
+
+        # Do the pre-create stuff
+        if callable(call_before_create):
+            call_before_create()
+
+        # Click that "Create" button
         self.browser.find_by_text("Create").click()
 
         # Verify form redirect
-        self.assertTrue(self.browser.is_text_present("Created custom field Test-text"))
+        self.assertTrue(self.browser.is_text_present(f"Created custom field {field_name.capitalize()}"))
         self.assertTrue(self.browser.is_text_present("Edit"))
 
-    # pass create type=select w/out choices
-    # pass create type=multi-select w/ choices
-    # pass create type=multi-select w/out choices
-    # pass edit type=select adding w/ dynamic row
-    # fail edit type=select editing dynamic row
-    # pass edit type=select updating existing choice (null value)
-    # pass edit type=select create/delete @ same time
-    # pass fail type!=select w/ choices
-    # pass that "add row" includes default values (weight=100)
-    # pass "add another" (clone) w/ and w/out choices
+    def test_create_type_select_with_choices(self):
+        """Test pass create type=select/multi-select with choices."""
+        choices = ["choice1", "choice2"]
+        # pass create type=select w/ choices
+        self._create_custom_field(field_name="test-select", field_type="select", choices=choices)
+        # pass create type=multi-select w/ choices
+        self._create_custom_field(field_name="test-multi-select", field_type="multi-select", choices=choices)
 
-    def _test_create_valid_config_context_schema(self):
-        """
-        Given a clean slate, navigate to and fill out the form for a valid schema object
-        Assert the object is successfully created
-        And the user is redirected to the detail page for the new object
-        """
-        # Navigate to ConfigContextSchema list view
-        self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Config Context Schemas").click()
+    def test_create_type_select_without_choices(self):
+        """Test pass create type=select/multi-select without choices."""
+        # pass create type=select w/out choices
+        self._create_custom_field(field_name="test-select", field_type="select")
+        # pass create type=multi-select w/out choices
+        self._create_custom_field(field_name="test-multi-select", field_type="multi-select")
 
-        # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+    def test_fail_create_invalid_type_with_choices(self):
+        """Test fail type!=select with choices."""
+        with self.assertRaises(AssertionError):
+            self._create_custom_field(field_name="test-text", field_type="text", choices=["bad1"])
 
-        # Fill out form
-        self.browser.fill("name", "Integration Schema 1")
-        self.browser.fill("description", "Description")
-        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
-        self.browser.find_by_text("Create").click()
+        # Assert error state
+        self.assertTrue(self.browser.is_text_present("Editing custom field"))
+        self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
+        self.assertTrue(self.browser.is_text_present("Custom field choices can only be assigned to selection fields"))
 
-        # Verify form redirect
-        self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
-        self.assertTrue(self.browser.is_text_present("Edit"))
+    def test_create_type_select_with_choices_adding_dynamic_row(self):
+        """Test pass create type=select adding w/ dynamic row."""
+        choices = ["choice1", "choice2"]
 
-    def _test_create_invalid_config_context_schema(self):
-        """
-        Given a clean slate, navigate to and fill out the form for an invalid schema object
-        Provide normal details and an invalid JSON schema
-        Assert a validation error is raised
-        And the user is returned to the form
-        And the error details are listed
-        And the form is populated with the user's previous input
-        """
-        # Navigate to ConfigContextSchema list view
-        self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Config Context Schemas").click()
+        def call_before_create():
+            """Do this stuff before "Create" button is clicked."""
+            table = self.browser.find_by_id("custom-field-choices")
 
-        # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+            # Assert that there are 5 choice rows before
+            self.assertEquals(len(table.find_by_css(".formset_row-choices")), 5)
 
-        # Fill out form
-        self.browser.fill("name", "Integration Schema 2")
-        self.browser.fill("description", "Description")
-        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
-        self.browser.find_by_text("Create").click()
+            # And 6 after clicking "Add another..."
+            self.browser.find_by_css(".add-row").click()
+            rows = table.find_by_css(".formset_row-choices")
+            self.assertEquals(len(rows), 6)
+            self.browser.fill("choices-5-value", "choice3")
 
-        # Verify validation error raised to user within form
-        self.assertTrue(self.browser.is_text_present("'not a valid type' is not valid under any of the given schemas"))
-        self.assertTrue(self.browser.is_text_present("Add a new config context schema"))
-        self.assertEqual(self.browser.find_by_name("name").first.value, "Integration Schema 2")
+            # Make sure it the new row has default values while we're at it.
+            self.assertEquals(rows.last.find_by_name("choices-5-weight").value, "100")
 
-    def _test_validation_tab(self):
-        """
-        Given a config context schema that is assigned to a config context, and device, and a virtual machine with valid context data
-        Navigate to the Validation tab
-        Assert all three objects have a green checkmark in the `Validation state` column
-        Then navigate to the schema edit view and modify the schema
-        Then navigate back to the Validation tab
-        Assert all three objects have a red x in the `Validation state` column with an error message
-        Then click on the edit button on the device record
-        And update the device's local context data to be valid for the schema and click Update
-        Asset the device record has green checkmark in the `Validation state` column and all other still have a red x
-        """
-        context_data = {"a": 123, "b": 456, "c": 777}
-
-        # Schemas
-        schema = ConfigContextSchema.objects.create(
-            name="schema",
-            slug="schema",
-            data_schema={
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}, "c": {"type": "integer"}},
-            },
+        self._create_custom_field(
+            field_name="test-select", field_type="select", choices=choices, call_before_create=call_before_create
         )
 
-        # ConfigContext
-        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
+    def test_update_type_select_with_choices_editing_existing_choice(self):
+        """Test edit of existing field and existing choices."""
+        choices = ["replace_me"]
 
-        # Device
-        status = Status.objects.create(name="my-status", slug="my-status", color=ColorChoices.COLOR_RED)
-        status.content_types.add(ContentType.objects.get_for_model(Device))
-        site = Site.objects.create(name="site", slug="site", status=status)
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
-        device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
-        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
-        Device.objects.create(
-            name="device",
-            site=site,
-            device_type=device_type,
-            device_role=device_role,
-            status=status,
-            local_context_data=context_data,
-            local_context_schema=schema,
-        )
+        # Create the field
+        self._create_custom_field(field_name="test-select", field_type="select", choices=choices)
+        detail_url = self.browser.url
 
-        # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
-        cluster = Cluster.objects.create(name="cluster", type=cluster_type)
-        status.content_types.add(ContentType.objects.get_for_model(VirtualMachine))
-        VirtualMachine.objects.create(
-            name="virtual_machine",
-            cluster=cluster,
-            status=status,
-            local_context_data=context_data,
-            local_context_schema=schema,
-        )
+        #
+        # Fail editing dynamic row (nullify value of existing choice)
+        #
 
-        # Navigate to ConfigContextSchema Validation tab
-        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.slug}/")
-        self.browser.links.find_by_text("Validation").click()
+        # Edit it
+        self.browser.find_by_id("edit-button").click()
+        self.assertIn("edit", self.browser.url)
 
-        # Assert Validation states
-        self.assertEqual(
-            len(self.browser.find_by_xpath("//tbody/tr")), 3
-        )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//tbody/tr"):
-            self.assertEqual(
-                row.find_by_tag("td")[-2].html, '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>'
-            )
-
-        # Edit the schema
-        self.browser.links.find_by_partial_text("Edit").click()
-        # Change property "a" to be type string
-        self.browser.fill(
-            "data_schema",
-            '{"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "integer"}, "c": {"type": "integer"}}, "additionalProperties": false}',
-        )
+        # Null out the first choice, click "Update", expect it to fail.
+        self.browser.fill("choices-0-value", "")
+        self.assertEquals(self.browser.find_by_name("choices-0-value").value, "")
         self.browser.find_by_text("Update").click()
+        self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
 
-        # Navigate to ConfigContextSchema Validation tab
-        self.browser.links.find_by_text("Validation").click()
+        #
+        # Pass updating existing choice (changing value of existing choice)
+        #
 
-        # Assert Validation states
-        self.assertEqual(
-            len(self.browser.find_by_xpath("//tbody/tr")), 3
-        )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//tbody/tr"):
-            self.assertEqual(
-                row.find_by_tag("td")[-2].html,
-                '<span class="text-danger"><i class="mdi mdi-close-thick"></i>123 is not of type \'string\'</span>',
-            )
-
-        # Edit the device local context data and redirect back to the validation tab
-        self.browser.find_by_xpath("//tbody/tr")[1].find_by_tag("td")[-1].find_by_tag("a").click()
-        # Update the property "a" to be a string
-        self.browser.fill("local_context_data", '{"a": "foo", "b": 456, "c": 777}')
+        # Fix it, save it, assert correctness.
+        self.browser.fill("choices-0-value", "new_choice")
         self.browser.find_by_text("Update").click()
+        self.assertEquals(self.browser.url, detail_url)
+        self.assertTrue(self.browser.is_text_present("Modified custom field"))
+        self.assertTrue(self.browser.is_text_present("new_choice"))
 
-        # Assert Validation states
-        self.assertEqual(
-            len(self.browser.find_by_xpath("//tbody/tr")), 3
-        )  # 3 rows (config context, device, virtual machine)
-        # Config context still fails
-        self.assertEqual(
-            self.browser.find_by_xpath("//tbody/tr")[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick"></i>123 is not of type \'string\'</span>',
-        )
-        # Device now passes
-        self.assertEqual(
-            self.browser.find_by_xpath("//tbody/tr")[1].find_by_tag("td")[-2].html,
-            '<span class="text-success"><i class="mdi mdi-check-bold"></i></span>',
-        )
-        # Virtual machine still fails
-        self.assertEqual(
-            self.browser.find_by_xpath("//tbody/tr")[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick"></i>123 is not of type \'string\'</span>',
-        )
+    def test_update_type_select_create_delete_choices(self):
+        """
+        Test edit existing field, deleting first choice, adding a new row and
+        saving that as a new choice.
+        """
+        # pass edit type=select create/delete row @ same time
+        choices = ["delete_me"]
+
+        # Create the field and then click the "Edit" button
+        self._create_custom_field(field_name="test-select", field_type="select", choices=choices)
+        detail_url = self.browser.url
+        self.browser.find_by_id("edit-button").click()
+
+        # Gather the rows, delete the first one, add a new one.
+        table = self.browser.find_by_id("custom-field-choices")
+        self.browser.find_by_css(".add-row").click()  # Add a new row
+        rows = table.find_by_css(".formset_row-choices")
+        rows.first.find_by_css(".delete-row").click()  # Delete first row
+
+        # Fill the new row, save it, assert correctness.
+        self.browser.fill("choices-5-value", "new_choice")  # Fill the last row
+        self.browser.find_by_text("Update").click()
+        self.assertEquals(self.browser.url, detail_url)
+        self.assertTrue(self.browser.is_text_present("Modified custom field"))
+        self.assertTrue(self.browser.is_text_present("new_choice"))

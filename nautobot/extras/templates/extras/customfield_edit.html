@@ -49,7 +49,7 @@
             {% endif %}
             {{ choices.non_field_errors }}
             <div class="form-group{% if field.errors %} has-error{% endif %}">
-            <table class="table">
+            <table class="table" id="custom-field-choices">
               {{ choices.management_form }}
               {% for choice in choices.forms %}
                     {% if forloop.first %}
