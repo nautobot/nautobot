@@ -205,9 +205,15 @@ class SplinterTestCase(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Instantiate the browser object
+        # Instantiate the browser object.
         profile = cls._create_firefox_profile()
-        cls.browser = Browser("remote", command_executor=SELENIUM_URL, browser_profile=profile)
+        cls.browser = Browser(
+            "remote",
+            command_executor=SELENIUM_URL,
+            browser_profile=profile,
+            # See: https://developer.mozilla.org/en-US/docs/Web/WebDriver/Timeouts
+            # desired_capabilities={"timeouts": {"implicit": 60 * 60 * 1000 }},  # 1 hour timeout
+        )
 
         if cls.requires_celery:
             app.loader.import_module("celery.contrib.testing.tasks")
