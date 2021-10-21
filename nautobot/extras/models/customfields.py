@@ -215,7 +215,7 @@ class CustomField(BaseModel):
     label = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Name of the field as displayed to users (if not provided, the field's name will be used.)",
+        help_text="Name of the field as displayed to users (if not provided, the field's slug will be used.)",
     )
     description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
     required = models.BooleanField(
