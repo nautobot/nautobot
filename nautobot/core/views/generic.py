@@ -71,8 +71,12 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         Return any additional context data for the template.
 
-        request: The current request
-        instance: The object being viewed
+        Args:
+            request: The current request
+            instance: The object being viewed
+
+        Returns:
+            dict
         """
         return {}
 
@@ -286,8 +290,12 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         """
         Return any additional context data for the template.
 
-        request: The current request
-        instance: The object being edited
+        Args:
+            request: The current request
+            instance: The object being edited
+
+        Returns:
+            dict
         """
         return {}
 

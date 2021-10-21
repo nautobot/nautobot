@@ -350,7 +350,7 @@ class CustomFieldEditView(generic.ObjectEditView):
         return ctx
 
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectEditView")
+        logger = logging.getLogger("nautobot.views.CustomFieldEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
