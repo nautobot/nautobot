@@ -63,9 +63,11 @@ class CustomFieldTestCase(SplinterTestCase):
         # Click that "Create" button
         self.browser.find_by_text("Create").click()
 
-        # Verify form redirect
+        # Verify form redirect and presence of choices
         self.assertTrue(self.browser.is_text_present(f"Created custom field {field_name.capitalize()}"))
         self.assertTrue(self.browser.is_text_present("Edit"))
+        for choice in choices:
+            self.assertTrue(self.browser.is_text_present(choice))
 
     def test_create_type_select_with_choices(self):
         """Test pass create type=select/multi-select with choices."""
