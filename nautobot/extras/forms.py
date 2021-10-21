@@ -421,8 +421,9 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     # TODO: Migrate custom field model from name to slug #464
-    name = forms.CharField(required=True, label="Slug")
-    content_types = MultipleContentTypeField(feature="custom_fields")
+    content_types = MultipleContentTypeField(
+        feature="custom_fields", help_text="The object(s) to which this field applies."
+    )
 
     class Meta:
         model = CustomField
