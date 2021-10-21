@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import TextField
+from django.forms import inlineformset_factory
 from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
@@ -35,6 +36,7 @@ from .models import (
     ConfigContext,
     ConfigContextSchema,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -402,10 +404,26 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 #
 
 
+# CustomFieldChoice inline formset for use with providing dynamic rows when creating/editing choices
+# for `CustomField` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+CustomFieldChoiceFormSet = inlineformset_factory(
+    parent_model=CustomField,
+    model=CustomFieldChoice,
+    exclude=(),
+    extra=5,
+    widgets={
+        "value": forms.TextInput(attrs={"class": "form-control"}),
+        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+    },
+)
+
+
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     # TODO: Migrate custom field model from name to slug #464
-    name = forms.CharField(required=True, label="Slug")
-    content_types = MultipleContentTypeField(feature="custom_fields")
+    content_types = MultipleContentTypeField(
+        feature="custom_fields", help_text="The object(s) to which this field applies."
+    )
 
     class Meta:
         model = CustomField

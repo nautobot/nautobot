@@ -208,31 +208,34 @@ class CustomField(BaseModel):
         max_length=50,
         choices=CustomFieldTypeChoices,
         default=CustomFieldTypeChoices.TYPE_TEXT,
+        help_text="The type of value(s) allowed for this field.",
     )
     # TODO: Migrate custom field model from name to slug #464
-    name = models.CharField(max_length=50, unique=True, help_text="Internal field name")
+    name = models.CharField(max_length=50, unique=True, verbose_name="Slug", help_text="Internal field name.")
     label = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Name of the field as displayed to users (if not provided, " "the field's name will be used)",
+        help_text="Name of the field as displayed to users (if not provided, the field's slug will be used.)",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
     required = models.BooleanField(
         default=False,
-        help_text="If true, this field is required when creating new objects " "or editing an existing object.",
+        help_text="If true, this field is required when creating new objects or editing an existing object.",
     )
     filter_logic = models.CharField(
         max_length=50,
         choices=CustomFieldFilterLogicChoices,
         default=CustomFieldFilterLogicChoices.FILTER_LOOSE,
-        help_text="Loose matches any instance of a given string; exact " "matches the entire field.",
+        help_text="Loose matches any instance of a given string; Exact matches the entire field.",
     )
     default = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Default value for the field (must be a JSON value). Encapsulate "
-        'strings with double quotes (e.g. "Foo").',
+        help_text=(
+            "Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "
+            '"Foo").'
+        ),
     )
     weight = models.PositiveSmallIntegerField(
         default=100, help_text="Fields with higher weights appear lower in a form."
@@ -241,21 +244,23 @@ class CustomField(BaseModel):
         blank=True,
         null=True,
         verbose_name="Minimum value",
-        help_text="Minimum allowed value (for numeric fields)",
+        help_text="Minimum allowed value (for numeric fields).",
     )
     validation_maximum = models.BigIntegerField(
         blank=True,
         null=True,
         verbose_name="Maximum value",
-        help_text="Maximum allowed value (for numeric fields)",
+        help_text="Maximum allowed value (for numeric fields).",
     )
     validation_regex = models.CharField(
         blank=True,
         validators=[validate_regex],
         max_length=500,
         verbose_name="Validation regex",
-        help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
-        "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters.",
+        help_text=(
+            "Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. For "
+            "example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters.",
+        ),
     )
 
     objects = CustomFieldManager()
