@@ -98,6 +98,10 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#986](https://github.com/nautobot/nautobot/issues/986) - Fixed `TemplateDoesNotExist` exception when running a Job containing a `FileVar` variable.
 - [#991](https://github.com/nautobot/nautobot/pull/991) - Fixed incorrect logging when importing ConfigContextSchemas from Git.
 
+### Security
+
+- [#998](https://github.com/nautobot/nautobot/pull/998) - Update `mkdocs` dependency to avoid a potential path-traversal vulnerability; note that mkdocs is only used in development and is not a production deployment dependency of Nautobot.
+
 ## v1.1.4 (2021-10-04)
 
 ### Added
