@@ -91,7 +91,7 @@ $ sudo -u nautobot pip install django-request-logging
 Add the following to `nautobot_config.py`:
 
 ```python
-MIDDLEWARE.append("request_logging.middleware.LoggingMiddleware")
+EXTRA_MIDDLEWARE = ["request_logging.middleware.LoggingMiddleware"]
 ```
 
 ## Example Logs
