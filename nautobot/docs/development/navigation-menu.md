@@ -102,7 +102,7 @@ menu_items = (
 
 !!! note
     For `NavMenuTab` `NavMenuGroup` and/or `NavMenuItem` to be hidden when the user does not have permissions `HIDE_RESTRICTED_UI` must be set to `True` in the `nautobot_config.py`.
-    Please refer to [HIDE_RESTRICTED_UI](../configuration/optional-settings/#hide_restricted_ui)
+    Please refer to [HIDE_RESTRICTED_UI](../configuration/optional-settings.md#hide_restricted_ui)
 
 A `NavMenuTab` has the following attributes:
 
