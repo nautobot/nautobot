@@ -421,6 +421,14 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     # TODO: Migrate custom field model from name to slug #464
+    # Once that's done we can set "name" as a proper (Auto)SlugField,
+    # but for the moment, that field only works with fields specifically named "slug"
+    description = forms.CharField(
+        required=False,
+        help_text="Also used as the help text when editing models using this custom field.<br>"
+        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
+        "Markdown</a> syntax is supported.",
+    )
     content_types = MultipleContentTypeField(
         feature="custom_fields", help_text="The object(s) to which this field applies."
     )

@@ -28,6 +28,7 @@ from nautobot.utilities.forms import (
     add_blank_choice,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.utilities.templatetags.helpers import render_markdown
 from nautobot.utilities.utils import render_jinja2
 from nautobot.utilities.validators import validate_regex
 
@@ -211,7 +212,7 @@ class CustomField(BaseModel):
         help_text="The type of value(s) allowed for this field.",
     )
     # TODO: Migrate custom field model from name to slug #464
-    name = models.CharField(max_length=50, unique=True, verbose_name="Slug", help_text="Internal field name.")
+    name = models.CharField(max_length=50, unique=True, verbose_name="Slug", help_text="URL-friendly unique shorthand.")
     label = models.CharField(
         max_length=50,
         blank=True,
@@ -259,7 +260,7 @@ class CustomField(BaseModel):
         verbose_name="Validation regex",
         help_text=(
             "Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. For "
-            "example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters.",
+            "example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters."
         ),
     )
 
@@ -407,8 +408,10 @@ class CustomField(BaseModel):
 
         field.model = self
         field.label = str(self)
+
         if self.description:
-            field.help_text = self.description
+            # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input
+            field.help_text = render_markdown(self.description)
 
         return field
 

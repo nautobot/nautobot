@@ -39,7 +39,7 @@
                     </tr>
                     <tr>
                         <td>Description</td>
-                        <td><span>{{ object.description | placeholder }}</span></td>
+                        <td><span>{{ object.description | render_markdown | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Required</td>

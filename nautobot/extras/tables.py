@@ -39,6 +39,8 @@ from .models import (
     TaggedItem,
     Webhook,
 )
+from nautobot.utilities.templatetags.helpers import render_markdown
+
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -220,6 +222,11 @@ class CustomFieldTable(BaseTable):
             "required",
             "weight",
         )
+
+    def render_description(self, record):
+        if record.description:
+            return mark_safe(render_markdown(record.description))
+        return self.default
 
 
 class CustomLinkTable(BaseTable):
