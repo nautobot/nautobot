@@ -125,7 +125,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         name (str): name of the custom field to resolve
         resolver_name (str): name of the resolver as declare in DjangoObjectType
         relationship (Relationship): Relationship object to generate a resolver for
-        site (site): side of the relationship to use for the resolver
+        side (str): side of the relationship to use for the resolver
         peer_model (Model): Django Model of the peer of this relationship
     """
 
