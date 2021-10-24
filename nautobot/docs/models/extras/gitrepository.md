@@ -172,7 +172,7 @@ syslog-servers:
   - 172.16.9.101
 ```
 
-This will create a config context with two keys: **ntp-servers** and **syslog-servers**.
+This will create a config context with two keys: `ntp-servers` and `syslog-servers`.
 
 #### Local Configuration Contexts
 
