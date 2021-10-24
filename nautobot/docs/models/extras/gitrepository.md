@@ -45,7 +45,7 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 
 The metadata used to create the config context has the following options and is specified by the `_metadata` key.
 
-| Metadata Key | Required | Default | Description |
+| Key | Required | Default | Description |
 | ------------ | -------- | ------- | ----------- |
 | name         | True     | N/A     | The name that will be assigned to the Config Context |
 | weight       | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
