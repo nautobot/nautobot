@@ -36,7 +36,7 @@ Jobs defined in Python files located in a `/jobs/` directory at the root of a Gi
 
 ### Configuration Contexts
 
-Config contexts may be provided as JSON or YAML files located in `/config_contexts/`. There are three different types of config context definitions; **derived**, **implied**, **local configuration context**.
+Config contexts may be provided as JSON or YAML files located in `/config_contexts/`. There are three different types of config context definitions; **derived**, **implied**, and **local**.
 
 * **Derived**: Defined as JSON or YAML files at the root of the `/config_contexts/` folder. Multiple config contexts can be specified within the each file. The metadata regarding the naming and scoping of the config context is determined by the `_metadata` key for each list element.
 * **Implied**: They're defined using a specific folder and file structure to apply the config context to specific scope
