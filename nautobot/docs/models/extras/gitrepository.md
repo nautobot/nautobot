@@ -75,7 +75,7 @@ Here is an example `_metadata` key defined:
 
 #### Derived Config Contexts
 
-As stated above, these **derived** files live at the root of `/config_contexts`. These files will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context will be taken from the `_metadata` key within the file, not the filename). To provide a visual, the **context_1.json** and **context_2.yml** are **derived** config context definitions.
+As stated above, these **derived** files live at the root of `/config_contexts`. These files will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context will be taken from the `_metadata` key within the file, not the filename). To provide a visual, the `context_1.json` and `context_2.yml` are **derived** config context definitions.
 
 ```shell
 config_contexts/
