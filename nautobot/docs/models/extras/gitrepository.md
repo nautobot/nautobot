@@ -55,7 +55,7 @@ The metadata used to create the config context has the following options and is 
 
 There are several other keys that can be defined that match the scope of what the Config Context will be assigned to.
 
-Here is an example `_metadata` key defined.
+Here is an example `_metadata` key defined:
 
 ```json
 {
