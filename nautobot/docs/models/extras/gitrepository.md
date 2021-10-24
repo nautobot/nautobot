@@ -111,7 +111,7 @@ The **derived** files must be defined as a list that can contain a single config
 ...
 ```
 
-The `_metadata` key will map to the attributes required when creating a config context via the UI or API such as name and the scope of the config context. If we take a look at the first element, the name assigned to the config context will be **Router hostname pattern** and be scoped to **roles** with a slug of **router**.
+The `_metadata` key will map to the attributes required when creating a config context via the UI or API such as name and the scope of the config context. If we take a look at the first element, the name assigned to the config context will be `"Router hostname pattern"` and be scoped to `roles` with a slug of `router`.
 
 Any key/value pair defined at the same level as `_metadata` will be converted to the config context data. Keeping with the first element, it will have a key set as **hostname_pattern_string** with a value of **rtr-.+**.
 
