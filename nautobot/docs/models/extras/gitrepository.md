@@ -36,22 +36,23 @@ Jobs defined in Python files located in a `/jobs/` directory at the root of a Gi
 
 ### Configuration Contexts
 
-Config contexts may be provided as JSON or YAML files located in `/config_contexts/`. There are three different types of config context definitions; **derived**, **implied**, and **local**.
+Config contexts may be provided as JSON or YAML files located in `/config_contexts/`. There are three different types of config context scopes; **explicit**, **implicit**, and **local**.
 
-* **Derived**: Defined as JSON or YAML files at the root of the `/config_contexts/` folder. Multiple config contexts can be specified within the each file. The metadata regarding the naming and scoping of the config context is determined by the `_metadata` key for each list element.
-* **Implied**: They're defined using a specific folder and file structure to apply the config context to specific scope
+* **Explicit**: Defined as JSON or YAML files at the root of the `/config_contexts/` folder. Multiple config contexts can be specified within the each file. The metadata regarding the naming and scoping of the config context is determined by the `_metadata` key for each list element.
+* **Implicit**: They're defined using a specific folder and file structure to apply the config context to a specific scope.
+* **Local**: Defined at the device/virtual machine level and only being applied to the specific device/virtual machine.
 
 #### Metadata
 
 The metadata used to create the config context has the following options and is specified by the `_metadata` key.
 
-| Key | Required | Default | Description |
-| ------------ | -------- | ------- | ----------- |
-| name         | True     | N/A     | The name that will be assigned to the Config Context |
-| weight       | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
-| description  | False    | N/A     | The description applied to the Config Context |
-| is_active    | False    | True    | Whether or not the Config Context is active |
-| schema       | False    | N/A     | Config Context Schema that it should be validated against |
+| Key         | Required | Default | Description                                                                       |
+| ----------- | -------- | ------- | --------------------------------------------------------------------------------- |
+| name        | True     | N/A     | The name that will be assigned to the Config Context                              |
+| weight      | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
+| description | False    | N/A     | The description applied to the Config Context                                     |
+| is_active   | False    | True    | Whether or not the Config Context is active                                       |
+| schema      | False    | N/A     | Config Context Schema that it should be validated against                         |
 
 There are several other keys that can be defined that match the scope of what the Config Context will be assigned to.
 
@@ -66,24 +67,42 @@ Here is an example `_metadata` key defined:
         "is_active": true,
         "regions": [{"slug": "nyc"}],
         "schema": "Config Context Schema 1"
+    },
+    "acl": {
+        "definitions": {
+            "named ": {
+                "PERMIT_ROUTES": [
+                  "10 permit ip any any"
+                ]
+            }
+        }
+    },
+    "route-maps": {
+        "PERMIT_CONN_ROUTES": {
+            "seq": 10,
+            "statements": [
+                "match ip address PERMIT_ROUTES"
+            ],
+            "type": "permit"
+        }
     }
 }
 ```
 
 !!! important
-    The only config context definition that does not require any metadata defined is the local configuration context
+    The only config context scope that does not require any metadata defined is the local configuration context
 
-#### Derived Config Contexts
+#### Explicit Config Contexts
 
-As stated above, these **derived** files live at the root of `/config_contexts`. These files will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context will be taken from the `_metadata` key within the file, not the filename). To provide a visual, the `context_1.json` and `context_2.yml` are **derived** config context definitions.
+As stated above, these **explicit** files live at the root of `/config_contexts`. These files will be imported as described below, with no special meaning attributed to their filenames (the name of the constructed config context will be taken from the `_metadata` key within the file, not the filename). To provide a visual, the `context_1.json` and `context_2.yml` are **explicit** config context scopes.
 
 ```shell
 config_contexts/
-  context_1.json   # JSON data will be imported as-is, with scoping derived from its contents
-  context_2.yaml   # YAML data will be imported as-is, with scoping derived from its contents
+  context_1.json   # JSON data will be imported as-is, with scoping explicit from its contents
+  context_2.yaml   # YAML data will be imported as-is, with scoping explicit from its contents
 ```
 
-The **derived** files must be defined as a list that can contain a single config context element or have multiple config contexts defined.
+For files in the root of the `/config_contexts/` directory, a single file may define a single config context as above, or alternatively it may contain a list of config context data definitions, as in the following example:
 
 ```yaml
 ---
@@ -115,19 +134,19 @@ The `_metadata` key will map to the attributes required when creating a config c
 
 Any key/value pair defined at the same level as `_metadata` will be converted to the config context data. Keeping with the first element, it will have a key set as `hostname_pattern_string` with a value of `rtr-.+`.
 
-#### Implied Config Contexts
+#### Implicit Config Contexts
 
-Implied config context files will have the following folder/file structure `/config_contexts/<filter>/<slug>.[json|yaml]`, in which case their path and filename will be taken as an implied scope for the context. For example:
+Implicit config context files will have the following folder/file structure `/config_contexts/<filter>/<slug>.[json|yaml]`, in which case their path and filename will be taken as an implicit scope for the context. For example:
 
 ```shell
 config_contexts/
   regions/
-    nyc.yaml       # YAML data, with implied scoping to the Region with slug "nyc"
+    nyc.yaml       # YAML data, with implicit scoping to the Region with slug "nyc"
   sites/
-    nyc-01.json    # JSON data, with implied scoping to the Site with slug "nyc-01"
+    nyc-01.json    # JSON data, with implicit scoping to the Site with slug "nyc-01"
 ```
 
-The implied config contexts will be defined using dictionaries for both `_metadata` and any context data for the config context.
+The implicit config contexts will be defined using dictionaries for both `_metadata` and any context data for the config context.
 
 **JSON**
 
@@ -138,7 +157,6 @@ The implied config contexts will be defined using dictionaries for both `_metada
         "weight": 1000,
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
-        "regions": [{"slug": "nyc"}],
         "schema": "Config Context Schema 1"
     },
     "ntp-servers": [
@@ -160,8 +178,6 @@ _metadata":
   weight: 1000
   description: "NTP and Syslog servers for region NYC"
   is_active: true
-  regions:
-    - slug: "nyc"
   schema: "Config Context Schema 1"
 
 ntp-servers:
@@ -205,7 +221,7 @@ When loading the schema, the key `_metadata` will be extracted from the loaded d
 
 JSON single example:
 
-``` json
+```json
 {
   "_metadata": {
     "name": "Config Context Schema 1",
@@ -225,7 +241,7 @@ JSON single example:
 
 JSON list example:
 
-``` json
+```json
 [
   {
     "_metadata": {
@@ -277,7 +293,7 @@ data_schema:
 
 YAML list example:
 
-``` yaml
+```yaml
 ---
 - _metadata:
     name: "Config Context Schema 1"
@@ -298,7 +314,6 @@ YAML list example:
         type: "string"
         description: "The person's last name"
 ```
-
 
 ### Export Templates
 
