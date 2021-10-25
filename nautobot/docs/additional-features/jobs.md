@@ -293,7 +293,7 @@ If your job class implements a `post_run()` method (which must take no arguments
 
 ### Logging
 
-The following instance methods are available to log results from an executing job to be stored into the associated [`JobLogEntry`](../models/extras/joblogentry.md) record:
+The following instance methods are available to log results from an executing job to be stored into [`JobLogEntry`](../models/extras/joblogentry.md) records associated with the current [`JobResult`](../models/extras/jobresult.md):
 
 * `self.log(message)`
 * `self.log_debug(message)`
