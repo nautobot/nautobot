@@ -6,13 +6,46 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretProviderError
 from nautobot.extras.utils import extras_features
 
 
 logger = logging.getLogger(__name__)
+
+
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class SecretType(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+    """Model for database-backed enum choice objects."""
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100)
+    color = ColorField(default=ColorChoices.COLOR_GREY)
+    description = models.CharField(max_length=200, blank=True)
+
+    csv_headers = ["name", "slug", "color", "description"]
+    clone_fields = ["color"]
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:secrettype", args=[self.slug])
+
+    def to_csv(self):
+        return (self.name, self.slug, self.color, self.description)
 
 
 @extras_features(
@@ -33,6 +66,7 @@ class Secret(PrimaryModel):
 
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
+    type = models.ForeignKey(to=SecretType, on_delete=models.PROTECT)
     description = models.CharField(max_length=200, blank=True)
     provider = models.CharField(max_length=100)
     parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
@@ -92,3 +126,32 @@ class Secret(PrimaryModel):
         form = provider.ParametersForm(self.parameters)
         form.is_valid()
         form.clean()
+
+
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class SecretsGroup(OrganizationalModel):
+    """A group of related Secrets."""
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    secrets = models.ManyToManyField(to=Secret, related_name="groups", blank=True)
+
+    csv_headers = ["name", "slug", "description"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:secretsgroup", args=[self.slug])
+
+    def to_csv(self):
+        return (self.name, self.slug, self.description)
+
