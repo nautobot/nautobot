@@ -472,6 +472,7 @@ class ExportTemplateTestCase(
         }
 
 
+@mock.patch("nautobot.extras.models.models.job_db", None)
 class GitRepositoryTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,

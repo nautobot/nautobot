@@ -132,6 +132,10 @@ def _configure_settings(config):
     if settings.METRICS_ENABLED and "postgres" in settings.DATABASES["default"]["ENGINE"]:
         settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
 
+    # Create fake db for job logs. This uses the default db, but allows us to save logs within
+    # transaction.atomic()
+    settings.DATABASES["job_logs"] = settings.DATABASES["default"]
+
     #
     # Pagination
     #

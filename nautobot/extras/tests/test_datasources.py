@@ -31,6 +31,7 @@ User = get_user_model()
 
 
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
+@mock.patch("nautobot.extras.models.models.job_db", None)
 class GitTest(TestCase):
 
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os.path
 import uuid
-from unittest import skipIf
+from unittest import mock, skipIf
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -554,6 +554,7 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+@mock.patch("nautobot.extras.models.models.job_db", None)
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
     brief_fields = ["display", "id", "name", "url"]

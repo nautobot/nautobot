@@ -1,6 +1,7 @@
 import json
 from io import StringIO
 import os
+from unittest import mock
 import uuid
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -10,14 +11,21 @@ from django.core.management.base import CommandError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.test.client import RequestFactory
 
 from nautobot.dcim.models import DeviceRole, Site
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import FileProxy, JobResult, Status
+from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import CeleryTestCase, TestCase
 
 
+# Use the proper swappable User model
+User = get_user_model()
+
+
+@mock.patch("nautobot.extras.models.models.job_db", None)
 class JobTest(TestCase):
     """
     Test basic jobs to ensure importing works.
@@ -28,6 +36,15 @@ class JobTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.job_content_type = ContentType.objects.get(app_label="extras", model="job")
+
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
+
+        # Initialize fake request that will be required to execute Webhooks (in jobs.)
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
 
     def test_job_pass(self):
         """
@@ -160,10 +177,6 @@ class JobTest(TestCase):
             job_result.refresh_from_db()
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
             self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
-            # Also ensure the standard log message about aborting the transaction is *not* present
-            self.assertNotEqual(
-                job_result.data["run"]["log"][-1][-1], "Database changes have been reverted due to error."
-            )
 
     def test_read_only_no_commit_field(self):
         """
@@ -222,10 +235,14 @@ class JobTest(TestCase):
             data = job_class.serialize_data(form.cleaned_data)
 
             # Run the job and extract the job payload data
-            run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
+            run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
-            job_payload = job_result.data["run"]["log"][0][2]  # Indexing makes me sad.
-            job_result_data = json.loads(job_payload)
+
+            log_info = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
+            ).first()
+
+            job_result_data = json.loads(log_info.log_object)
 
             # Assert stuff
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
@@ -256,16 +273,23 @@ class JobTest(TestCase):
             }
 
             # Run the job and extract the job payload data
-            run_job(data=data, request=None, commit=False, job_result_pk=job_result.pk)
+            run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
-            job_payload = job_result.data["run"]["log"][0][2]  # Indexing makes me sad.
-            job_result_data = json.loads(job_payload)
+            # Test storing additional data in job
+            job_result_data = job_result.data["object_vars"]
+
+            info_log = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
+            ).first()
 
             # Assert stuff
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
             self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
+            self.assertEqual(info_log.log_object, "Role: role")
+            self.assertEqual(job_result.data["output"], "\nNice Roles, bro.")
 
 
+@mock.patch("nautobot.extras.models.models.job_db", None)
 class JobFileUploadTest(TestCase):
     """Test a job that uploads/deletes files."""
 
@@ -277,6 +301,12 @@ class JobFileUploadTest(TestCase):
 
     def setUp(self):
         self.dummy_file.seek(0)  # Reset cursor so we can read it again.
+        self.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
+
+        # Initialize fake request that will be required to execute Webhooks (in jobs.)
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
 
     def test_run_job_pass(self):
         """Test that file upload succeeds; job SUCCEEDS; and files are deleted."""
@@ -303,13 +333,15 @@ class JobFileUploadTest(TestCase):
             self.assertEqual(FileProxy.objects.count(), 1)
 
             # Run the job
-            run_job(data=serialized_data, request=None, commit=False, job_result_pk=job_result.pk)
+            run_job(data=serialized_data, request=self.request, commit=True, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
 
+            warning_log = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run"
+            ).first()
+
             # Assert that file contents were correctly read
-            self.assertEqual(
-                job_result.data["run"]["log"][0][2], f"File contents: {self.file_contents}"  # "File contents: ..."
-            )
+            self.assertEqual(warning_log.message, f"File contents: {self.file_contents}")  # "File contents: ..."
 
             # Assert that FileProxy was cleaned up
             self.assertEqual(FileProxy.objects.count(), 0)
@@ -342,17 +374,14 @@ class JobFileUploadTest(TestCase):
             run_job(data=serialized_data, request=None, commit=False, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
 
-            # Assert that file contents were correctly read
-            self.assertEqual(
-                job_result.data["run"]["log"][0][2], f"File contents: {self.file_contents}"  # "File contents: ..."
-            )
-            # Also ensure the standard log message about aborting the transaction is present
-            self.assertEqual(job_result.data["run"]["log"][-1][-1], "Database changes have been reverted due to error.")
+            # Can't check log objects when jobs are reverted (within tests anyways.)
+            # This is due to the fake job_logs db not being available for tests.
 
             # Assert that FileProxy was cleaned up
             self.assertEqual(FileProxy.objects.count(), 0)
 
 
+@mock.patch("nautobot.extras.models.models.job_db", None)
 class RunJobManagementCommandTest(CeleryTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
 
@@ -370,10 +399,12 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
+        # I had to change this test, unfortunately with no commit, the logs revert since we can't
+        # use the fake job_logs db here.
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
             out, err = self.run_command("local/test_pass/TestPass")
             self.assertIn("Running local/test_pass/TestPass...", out)
-            self.assertIn("test_pass: 1 success, 1 info, 0 warning, 0 failure", out)
+            self.assertIn("test_pass: 0 success, 1 info, 0 warning, 0 failure", out)
             self.assertIn("info: Database changes have been reverted automatically.", out)
             self.assertIn("local/test_pass/TestPass: SUCCESS", out)
             self.assertEqual("", err)
@@ -383,6 +414,8 @@ class RunJobManagementCommandTest(CeleryTestCase):
         with self.assertRaises(ObjectDoesNotExist):
             Status.objects.get(slug="test-status")
 
+        # I had to change this test, unfortunately with no commit, the logs revert since we can't
+        # use the fake job_logs db here.
         with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
             out, err = self.run_command("local/test_modify_db/TestModifyDB")
             self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
@@ -413,9 +446,13 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
             out, err = self.run_command("--commit", "--username", "dummy_user", "local/test_modify_db/TestModifyDB")
             self.assertIn("Running local/test_modify_db/TestModifyDB...", out)
-            self.assertIn("test_modify_db: 0 success, 0 info, 0 warning, 0 failure", out)
+            # Changed job to actually log data. Can't display empty results if no logs were created.
+            self.assertIn("test_modify_db: 1 success, 0 info, 0 warning, 0 failure", out)
             self.assertIn("local/test_modify_db/TestModifyDB: SUCCESS", out)
             self.assertEqual("", err)
+
+        success_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).first()
+        self.assertEqual(success_log.message, "Status created successfully.")
 
         status = Status.objects.get(slug="test-status")
         self.assertEqual(status.name, "Test Status")

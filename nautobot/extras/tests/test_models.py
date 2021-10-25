@@ -18,6 +18,7 @@ from nautobot.dcim.models import (
     Site,
     Region,
 )
+from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.jobs import get_job, Job
 from nautobot.extras.models import (
     ComputedField,
@@ -27,6 +28,7 @@ from nautobot.extras.models import (
     FileAttachment,
     FileProxy,
     GitRepository,
+    JobLogEntry,
     JobResult,
     Status,
     Tag,
@@ -791,3 +793,37 @@ class TagTest(TestCase):
         tag.save()
 
         self.assertEqual(tag.slug, "testing-unicode-台灣")
+
+
+class JobLogEntryTest(TestCase):
+    """
+    Tests for the JobLogEntry Model.
+    """
+
+    def test_log_entry_creation(self):
+        with self.settings(JOBS_ROOT=os.path.join(settings.BASE_DIR, "extras/tests/dummy_jobs")):
+
+            module = "test_pass"
+            name = "TestPass"
+            job_class = get_job(f"local/{module}/{name}")
+
+            job_result = JobResult.objects.create(
+                name=job_class.class_path,
+                obj_type=ContentType.objects.get(app_label="extras", model="job"),
+                user=None,
+                job_id=uuid.uuid4(),
+            )
+
+            log = JobLogEntry(
+                log_level=LogLevelChoices.LOG_SUCCESS,
+                job_result=job_result,
+                grouping="run",
+                message="This is a test",
+            )
+            log.save()
+
+            self.assertEqual(JobLogEntry.objects.all().count(), 1)
+            log_object = JobLogEntry.objects.all()[0]
+            self.assertEqual(log_object.message, log.message)
+            self.assertEqual(log_object.log_level, log.log_level)
+            self.assertEqual(log_object.grouping, log.grouping)

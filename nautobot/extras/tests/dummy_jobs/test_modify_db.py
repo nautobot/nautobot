@@ -11,7 +11,9 @@ class TestModifyDB(Job):
         """
         Job function.
         """
-        Status.objects.create(
+        obj = Status(
             name="Test Status",
             slug="test-status",
         )
+        obj.save()
+        self.log_success(obj=obj, message="Status created successfully.")
