@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_detail.html' %}
 {% load helpers %}
 {% load custom_links %}
 {% load form_helpers %}
@@ -6,12 +6,7 @@
 {% load plugins %}
 {% load static %}
 
-{% block title %}
-    {% if associated_record %}{{ associated_record }}{% elif job %}{{ job }}{% endif %}
-    - {{ result.get_status_display }}
-{% endblock %}
-
-{% block content %}
+{% block header %}
     <div class="row noprint">
         <div class="col-md-12">
             <ol class="breadcrumb">
@@ -42,25 +37,68 @@
         {% endif %}
     </div>
     <h1>
-        {% if associated_record %}
-            {{ associated_record }}
-        {% elif job %}
-            {{ job }}
-        {% else %}
-            {{ result.name }}
-        {% endif %}
-        - Job Result
+        {% block title %}
+        {% if associated_record %}{{ associated_record }}{% elif job %}{{ job }}{% else %}{{ result.name }}{% endif %} - Job Result
+        - {{ result.get_status_display }}
+        {% endblock %}
     </h1>
+
     <div class="pull-right noprint">
         {% custom_links result %}
     </div>
     {% if job %}
         <p>{{ job.description }}</p>
     {% endif %}
-    <div class="row">
-        <div class="col-md-12">
-            {% include 'extras/inc/jobresult.html' with result=result %}
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active">
+            <a href="#log" role="tab" data-toggle="tab" class="active">Log</a>
+        </li>
+        <li role="presentation">
+            <a href="#json" role="tab" data-toggle="tab">Additional Data</a>
+        </li>
+        {% if result.data.output %}
+            <li role="presentation">
+                <a href="#output" role="tab" data-toggle="tab">Output</a>
+            </li>
+        {% endif %}
+        {% if job %}
+            <li role="presentation">
+                <a href="#source" role="tab" data-toggle="tab">Source</a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content %}
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="log">
+            <div class="row noprint">
+                <div class="col-md-6">
+                    {% include 'extras/inc/jobresult.html' with result=result log_table=log_table%}
         </div>
+        <dif role="tabpanel" class="tab-pane" id="json">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Additional Data</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
+                    </div>
+                </div>
+            </div>
+        </dif>
+        {% if result.data.output %}
+            <div role="tabpanel" class="tab-pane" id="output">
+                <pre>{{ result.data.output }}</pre>
+            </div>
+        {% endif %}
+        {% if job %}
+            <div role="tabpanel" class="tab-pane" id="source">
+                <p><code>{{ job.filename }}</code></p>
+                <pre>{{ job.source }}</pre>
+            </div>
+        {% endif %}
     </div>
     <div class="row">
         <div class="col-md-12">
@@ -70,5 +108,8 @@
 {% endblock %}
 
 {% block javascript %}
+    {{ block.super }}
     {% include 'extras/inc/jobresult_js.html' with result=result %}
+    <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% static 'js/log_level_filtering.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock %}

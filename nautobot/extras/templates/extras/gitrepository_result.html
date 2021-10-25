@@ -1,6 +1,7 @@
 {% extends base_template %}
 {% load helpers %}
 {% load log_levels %}
+{% load form_helpers %}
 {% load static %}
 
 {% block title %}{{ block.super }} - Synchronization Status{% endblock %}
@@ -8,11 +9,13 @@
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-            {% include 'extras/inc/jobresult.html' with result=result %}
+            {% include 'extras/inc/jobresult.html' with result=result log_table=log_table%}
         </div>
     </div>
 {% endblock content %}
 
 {% block javascript %}
     {% include 'extras/inc/jobresult_js.html' with result=result %}
+    <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% static 'js/log_level_filtering.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock %}

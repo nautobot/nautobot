@@ -11,6 +11,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
+from django.db.models import Count
 from django.utils.text import slugify
 import yaml
 
@@ -22,6 +23,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    JobLogEntry,
     JobResult,
     Tag,
 )
@@ -103,7 +105,12 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
 
     finally:
         if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-            if job_result.data["total"][LogLevelChoices.LOG_FAILURE] > 0:
+            if (
+                JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE)
+                .annotate(Count("pk"))
+                .count()
+                > 0
+            ):
                 job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
             else:
                 job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)

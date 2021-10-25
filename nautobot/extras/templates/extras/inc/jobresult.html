@@ -1,111 +1,61 @@
 {% load helpers %}
+{% load custom_links %}
+{% load form_helpers %}
+{% load render_table from django_tables2 %}
 {% load log_levels %}
 {% load plugins %}
 {% load static %}
 
-<div class="row noprint">
-    <div class="col-md-6">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Summary of Results</strong>
-            </div>
-            <table class="table table-hover panel-body">
-                <tr>
-                    <td>Status</td>
-                    <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
-                </tr>
-                <tr>
-                    <td>Started at</td>
-                    <td>{{ result.created }}</td>
-                </tr>
-                <tr>
-                    <td>User</td>
-                    <td>{{ result.user }}</td>
-                </tr>
-                <tr>
-                    <td>Duration</td>
-                    {% if result.completed %}
-                        <td>{{ result.duration }}</td>
-                    {% else %}
-                        <td><img id="pending-result-loader" src="{% static 'img/ajax-loader.gif' %}"></td>
-                    {% endif %}
-                </tr>
-
-                {% if result.completed %}
-                    {% for grouping, data in result.data.items %}
-                        {% if grouping != "total" and grouping != "output" %}
-                            <tr>
-                                <td><code><a href="#{{ grouping }}">{{ grouping }}</a></code></td>
-                                <td class="text-right report-stats">
-                                    <label class="label label-success">{{ data.success }}</label>
-                                    <label class="label label-info">{{ data.info }}</label>
-                                    <label class="label label-warning">{{ data.warning }}</label>
-                                    <label class="label label-danger">{{ data.failure }}</label>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-            </table>
-        </div>
-        {% plugin_left_page result %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Summary of Results</strong>
     </div>
-    <div class="col-md-6">
-        {% include 'inc/custom_fields_panel.html' %}
-        {% plugin_right_page result %}
-    </div>
+    <table class="table table-hover panel-body">
+        <tr>
+            <td>Status</td>
+            <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
+        </tr>
+        <tr>
+            <td>Started at</td>
+            <td>{{ result.created }}</td>
+        </tr>
+        <tr>
+            <td>User</td>
+            <td>{{ result.user }}</td>
+        </tr>
+        <tr>
+            <td>Duration</td>
+            {% if result.completed %}
+                <td>{{ result.duration }}</td>
+            {% else %}
+                <td><img id="pending-result-loader" src="{% static 'img/ajax-loader.gif' %}"></td>
+            {% endif %}
+        </tr>
+    </table>
+</div>
+{% plugin_left_page result %}
+</div>
+<div class="col-md-6">
+{% include 'inc/custom_fields_panel.html' %}
+{% plugin_right_page result %}
+</div>
 </div>
 
-{% if result.completed %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Logs</strong>
-        </div>
-        <table class="table table-hover panel-body report">
-            <thead>
-                <tr class="table-headings">
-                    <th>Time</th>
-                    <th>Level</th>
-                    <th>Object</th>
-                    <th>Message</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for grouping, data in result.data.items %}
-                    {% if grouping != "total" and grouping != "output" %}
-                        <tr>
-                            <th colspan="3" style="font-family: monospace">
-                                <a name="{{ grouping }}"></a>{{ grouping }}
-                            </th>
-                            <td class="text-right report-stats">
-                                <label class="label label-success">{{ data.success }}</label>
-                                <label class="label label-info">{{ data.info }}</label>
-                                <label class="label label-warning">{{ data.warning }}</label>
-                                <label class="label label-danger">{{ data.failure }}</label>
-                            </td>
-                        </tr>
-                        {% for time, level, obj, url, message in data.log %}
-                            <tr class="{% if level == 'failure' %}danger{% elif level %}{{ level }}{% endif %}">
-                                <!-- TODO: it would be nice to format this timestamp more nicely -->
-                                <td>{{ time }}</td>
-                                <td>
-                                    {% log_level level %}
-                                </td>
-                                <td>
-                                    {% if obj and url %}
-                                        <a href="{{ url }}">{{ obj }}</a>
-                                    {% elif obj %}
-                                        {{ obj }}
-                                    {% endif %}
-                                </td>
-                                <td class="rendered-markdown">{{ message | render_markdown }}</td>
-                            </tr>
-                        {% endfor %}
-                    {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
+<form method="post">
+{% csrf_token %}
+<div class="panel panel-default">
+<div class="panel-heading">
+    <strong>Logs</strong>
+    <div class="pull-right noprint">
+        {% if request.user.is_authenticated %}
+            <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#JobLogEntryTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+        {% endif %}
     </div>
-{% else %}
-    <div class="well">Pending results</div>
-{% endif %}
+    <div class="pull-right col-md-2 noprint">
+        <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
+    </div>
+</div>
+{% render_table log_table 'inc/table.html' %}
+</div>
+</form>
+{% table_config_form log_table %}

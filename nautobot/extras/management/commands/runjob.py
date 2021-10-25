@@ -4,11 +4,12 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Count
 from django.test.client import RequestFactory
 from django.utils import timezone
 
-from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import JobResult
+from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
+from nautobot.extras.models import JobLogEntry, JobResult
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.utilities.utils import copy_safe_request
 
@@ -74,23 +75,26 @@ class Command(BaseCommand):
             job_result = JobResult.objects.get(pk=job_result.pk)
 
         # Report on success/failure
-        for test_name, attrs in job_result.data.items():
-
-            if test_name in ["total", "output"]:
-                continue
+        groups = set(JobLogEntry.objects.filter(job_result=job_result).values_list("grouping", flat=True))
+        for group in groups:
+            logs = JobLogEntry.objects.filter(job_result__pk=job_result.pk, grouping=group)
+            success_count = logs.filter(log_level=LogLevelChoices.LOG_SUCCESS).annotate(Count("pk")).count()
+            info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).annotate(Count("pk")).count()
+            warning_count = logs.filter(log_level=LogLevelChoices.LOG_WARNING).annotate(Count("pk")).count()
+            failure_count = logs.filter(log_level=LogLevelChoices.LOG_FAILURE).annotate(Count("pk")).count()
 
             self.stdout.write(
                 "\t{}: {} success, {} info, {} warning, {} failure".format(
-                    test_name,
-                    attrs["success"],
-                    attrs["info"],
-                    attrs["warning"],
-                    attrs["failure"],
+                    group,
+                    success_count,
+                    info_count,
+                    warning_count,
+                    failure_count,
                 )
             )
 
-            for log_entry in attrs["log"]:
-                status = log_entry[1]
+            for log_entry in logs:
+                status = log_entry.log_level
                 if status == "success":
                     status = self.style.SUCCESS(status)
                 elif status == "info":
@@ -100,10 +104,10 @@ class Command(BaseCommand):
                 elif status == "failure":
                     status = self.style.NOTICE(status)
 
-                if log_entry[2]:  # object associated with log entry
-                    self.stdout.write(f"\t\t{status}: {log_entry[2]}: {log_entry[-1]}")
+                if log_entry.log_object:
+                    self.stdout.write(f"\t\t{status}: {log_entry.log_object}: {log_entry.message}")
                 else:
-                    self.stdout.write(f"\t\t{status}: {log_entry[-1]}")
+                    self.stdout.write(f"\t\t{status}: {log_entry.message}")
 
         if job_result.data["output"]:
             self.stdout.write(job_result.data["output"])

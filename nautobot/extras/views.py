@@ -41,6 +41,7 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     ObjectChange,
+    JobLogEntry,
     JobResult,
     Relationship,
     RelationshipAssociation,
@@ -509,28 +510,34 @@ class GitRepositorySyncView(View):
         return redirect("extras:gitrepository_result", slug=slug)
 
 
-class GitRepositoryResultView(ContentTypePermissionRequiredMixin, View):
+class GitRepositoryResultView(generic.ObjectView):
+    """
+    Display a JobResult and its Job data.
+    """
+
+    queryset = GitRepository.objects.all()
+    template_name = "extras/gitrepository_result.html"
+
     def get_required_permission(self):
         return "extras.view_gitrepository"
 
-    def get(self, request, slug):
+    def get_extra_context(self, request, instance):
         git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
-        git_repository = get_object_or_404(GitRepository.objects.all(), slug=slug)
         job_result = (
-            JobResult.objects.filter(obj_type=git_repository_content_type, name=git_repository.name)
+            JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
             .order_by("-created")
             .first()
         )
-        return render(
-            request,
-            "extras/gitrepository_result.html",
-            {
-                "base_template": "extras/gitrepository.html",
-                "object": git_repository,
-                "result": job_result,
-                "active_tab": "result",
-            },
-        )
+
+        logs = JobLogEntry.objects.restrict(request.user, "view").filter(job_result=job_result)
+        log_table = tables.JobLogEntryTable(data=logs, user=request.user)
+
+        return {
+            "result": job_result,
+            "log_table": log_table,
+            "base_template": "extras/gitrepository.html",
+            "object": instance,
+        }
 
 
 #
@@ -894,31 +901,6 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
         )
 
 
-class JobJobResultView(ContentTypePermissionRequiredMixin, View):
-    """
-    Display a JobResult and its Job data.
-    """
-
-    def get_required_permission(self):
-        return "extras.view_jobresult"
-
-    def get(self, request, pk):
-        job_content_type = ContentType.objects.get(app_label="extras", model="job")
-        job_result = get_object_or_404(JobResult.objects.all(), pk=pk, obj_type=job_content_type)
-
-        job_class = get_job(job_result.name)
-        job = job_class() if job_class else None
-
-        return render(
-            request,
-            "extras/job_jobresult.html",
-            {
-                "job": job,
-                "result": job_result,
-            },
-        )
-
-
 class ScheduledJobListView(generic.ObjectListView):
     queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
     table = tables.ScheduledJobTable
@@ -995,35 +977,30 @@ class JobResultBulkDeleteView(generic.BulkDeleteView):
 
 class JobResultView(generic.ObjectView):
     """
-    Display a JobResult and its data.
+    Display a JobResult and its Job data.
     """
 
     queryset = JobResult.objects.all()
+    template_name = "extras/jobresult.html"
 
-    def get_required_permission(self):
-        return "extras.view_jobresult"
-
-    def get(self, request, pk):
-        job_result = get_object_or_404(self.queryset, pk=pk)
-
+    def get_extra_context(self, request, instance):
         associated_record = None
         job = None
-        related_object = job_result.related_object
+        related_object = instance.related_object
         if inspect.isclass(related_object) and issubclass(related_object, Job):
             job = related_object()
         elif related_object:
             associated_record = related_object
 
-        return render(
-            request,
-            "extras/jobresult.html",
-            {
-                "associated_record": associated_record,
-                "job": job,
-                "object": job_result,
-                "result": job_result,
-            },
-        )
+        logs = JobLogEntry.objects.restrict(request.user, "view").filter(job_result=instance)
+        log_table = tables.JobLogEntryTable(data=logs, user=request.user)
+
+        return {
+            "job": job,
+            "associated_record": associated_record,
+            "result": instance,
+            "log_table": log_table,
+        }
 
 
 #

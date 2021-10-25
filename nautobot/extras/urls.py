@@ -313,7 +313,7 @@ urlpatterns = [
     path("jobs/", views.JobListView.as_view(), name="job_list"),
     path(
         "jobs/results/<uuid:pk>/",
-        views.JobJobResultView.as_view(),
+        views.JobResultView.as_view(),
         name="job_jobresult",
     ),
     path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
