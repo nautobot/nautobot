@@ -39,7 +39,12 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     WebhookHttpMethodChoices,
 )
-from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
+from nautobot.extras.constants import (
+    HTTP_CONTENT_TYPE_JSON,
+    MAX_ABSOLUTE_URL_LENGTH,
+    MAX_GROUPING_LENGTH,
+    MAX_LOG_OBJECT_LENGTH,
+)
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
@@ -662,11 +667,13 @@ class JobLogEntry(BaseModel):
 
     job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE)
     log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT)
-    grouping = models.CharField(max_length=32, default="main")
+    grouping = models.CharField(max_length=100, default="main")
     message = models.TextField(blank=True)
     created = models.DateTimeField(default=timezone.now)
     # Storing both of the below as strings instead of using GenericForeignKey to support
-    # compatibility with existing JobResult logs.
+    # compatibility with existing JobResult logs. GFK would pose a problem with dangling foreign-key
+    # references, whereas this allows us to retain all records for as long as the entry exists.
+    # This also simplifies migration from the JobResult Data field as these were stored as strings.
     log_object = models.CharField(max_length=200, null=True, blank=True)
     absolute_url = models.CharField(max_length=255, null=True, blank=True)
 
@@ -850,13 +857,17 @@ class JobResult(BaseModel, CustomFieldModel):
         log = JobLogEntry(
             job_result=self,
             log_level=level_choice,
-            grouping=grouping,
+            grouping=grouping[:MAX_GROUPING_LENGTH],
             message=str(message),
             created=timezone.now().isoformat(),
-            log_object=str(obj) if obj else None,
-            absolute_url=obj.get_absolute_url() if hasattr(obj, "get_absolute_url") else None,
+            log_object=str(obj)[:MAX_LOG_OBJECT_LENGTH] if obj else None,
+            absolute_url=obj.get_absolute_url()[:MAX_ABSOLUTE_URL_LENGTH] if hasattr(obj, "get_absolute_url") else None,
         )
 
+        # If the override is provided, we want to use the default database(pass no using argument)
+        # Otherwise we want to use a separate database here so that the logs are created immediately
+        # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
+        # are running, and allow us to rollback the database without loosing the log entries.
         if use_default or not job_db:
             log.save()
         else:
