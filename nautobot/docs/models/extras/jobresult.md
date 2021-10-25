@@ -8,4 +8,4 @@ Records of this type store the following data:
 - A reference to the user who initiated the task
 - Timestamps indicating when the task was created and when it completed
 - An overall status such as "pending", "running", "errored", or "completed".
-- A block of structured data (often rendered as JSON); by convention this block is used to store the output of the task execution, but it may in theory be used (such as by a plugin) to store other forms of structured data as well.
+- A block of structured data (often rendered as JSON); nothing is stored in this field by default, but any Job or plugin using the JobResult model can store arbitrary structured data here if needed. (Note that prior to Nautobot 1.2, job log records were stored in this field; they are now stored as distinct [`JobLogEntry`](joblogentry.md) records instead.)
