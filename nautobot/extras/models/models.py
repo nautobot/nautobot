@@ -48,6 +48,8 @@ from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 
+# defining at the Global level as this is easy to change in Mocking, but open to suggestions.
+job_db = "job_logs"
 #
 # Config contexts
 #
@@ -655,6 +657,23 @@ class Job(models.Model):
         managed = False
 
 
+class JobLogEntry(BaseModel):
+    """Stores each log entry for the JobResult."""
+
+    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE)
+    log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT)
+    grouping = models.CharField(max_length=32, default="main")
+    message = models.TextField(blank=True)
+    created = models.DateTimeField(default=timezone.now)
+    # Storing both of the below as strings instead of using GenericForeignKey to support
+    # compatibility with existing JobResult logs.
+    log_object = models.CharField(max_length=200, null=True, blank=True)
+    absolute_url = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return self.message
+
+
 #
 # Job results
 #
@@ -692,37 +711,11 @@ class JobResult(BaseModel, CustomFieldModel):
     """
     Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
 
-    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10,
-    and is mostly populated by the JobResult.log() function.
+    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
+
+    Log Messages now go to their one object, the JobLogEntry.
 
     data = {
-        "main": {
-            "log": [
-                [timestamp, log_level, object_name, object_url, message],
-                [timestamp, log_level, object_name, object_url, message],
-                [timestamp, log_level, object_name, object_url, message],
-                ...
-            ],
-            "success": <count of log messages with log_level "success">,
-            "info": <count of log messages with log_level "info">,
-            "warning": <count of log messages with log_level "warning">,
-            "failure": <count of log messages with log_level "failure">,
-        },
-        "grouping1": {
-            "log": [...],
-            "success": <count>,
-            "info": <count>,
-            "warning": <count>,
-            "failure": <count>,
-        },
-        "grouping2": {...},
-        ...
-        "total": {
-            "success": <total across main and all other groupings>,
-            "info": <total across main and all other groupings>,
-            "warning": <total across main and all other groupings>,
-            "failure": <total across main and all other groupings>,
-        },
         "output": <optional string, such as captured stdout/stderr>,
     }
     """
@@ -832,18 +825,6 @@ class JobResult(BaseModel, CustomFieldModel):
 
         return job_result
 
-    @staticmethod
-    def _data_grouping_struct():
-        return OrderedDict(
-            [
-                ("success", 0),
-                ("info", 0),
-                ("warning", 0),
-                ("failure", 0),
-                ("log", []),
-            ]
-        )
-
     def log(
         self,
         message,
@@ -851,6 +832,7 @@ class JobResult(BaseModel, CustomFieldModel):
         level_choice=LogLevelChoices.LOG_DEFAULT,
         grouping="main",
         logger=None,
+        use_default=False,
     ):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
@@ -860,41 +842,25 @@ class JobResult(BaseModel, CustomFieldModel):
         level_choice (LogLevelChoices): Message severity level
         grouping (str): Grouping to store the log message under
         logger (logging.logger): Optional logger to also output the message to
+        use_default (bool): Use default database or job_db
         """
         if level_choice not in LogLevelChoices.as_dict():
             raise Exception(f"Unknown logging level: {level_choice}")
 
-        if not self.data:
-            self.data = {}
-
-        data = self.data
-        data.setdefault(grouping, self._data_grouping_struct())
-        # Just in case it got initialized by something else:
-        if "log" not in data[grouping]:
-            data[grouping]["log"] = []
-        log = data[grouping]["log"]
-
-        # Record the log message
-        log.append(
-            [
-                timezone.now().isoformat(),
-                level_choice,
-                str(obj) if obj else None,
-                obj.get_absolute_url() if hasattr(obj, "get_absolute_url") else None,
-                str(message),
-            ]
+        log = JobLogEntry(
+            job_result=self,
+            log_level=level_choice,
+            grouping=grouping,
+            message=str(message),
+            created=timezone.now().isoformat(),
+            log_object=str(obj) if obj else None,
+            absolute_url=obj.get_absolute_url() if hasattr(obj, "get_absolute_url") else None,
         )
 
-        # Default log messages have no status and do not get counted
-        if level_choice != LogLevelChoices.LOG_DEFAULT:
-            # Update per-grouping and total results counters
-            data[grouping].setdefault(level_choice, 0)
-            data[grouping][level_choice] += 1
-            if "total" not in data:
-                data["total"] = self._data_grouping_struct()
-                del data["total"]["log"]
-            data["total"].setdefault(level_choice, 0)
-            data["total"][level_choice] += 1
+        if use_default or not job_db:
+            log.save()
+        else:
+            log.save(using=job_db)
 
         if logger:
             if level_choice == LogLevelChoices.LOG_FAILURE:
