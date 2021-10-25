@@ -99,6 +99,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#981](https://github.com/nautobot/nautobot/pull/981) - Fixed incorrect handling of missing custom fields in the `fix_custom_fields` management command.
 - [#986](https://github.com/nautobot/nautobot/issues/986) - Fixed `TemplateDoesNotExist` exception when running a Job containing a `FileVar` variable.
 - [#991](https://github.com/nautobot/nautobot/pull/991) - Fixed incorrect logging when importing ConfigContextSchemas from Git.
+- [#993](https://github.com/nautobot/nautobot/pull/993) - Fixed incorrect `git` command when refreshing a previously checked out repository.
 - [#1023](https://github.com/nautobot/nautobot/issues/1023) - Removed invalid link in "Deploying Nautobot" documentation.
 
 ### Security
