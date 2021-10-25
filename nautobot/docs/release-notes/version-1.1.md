@@ -88,15 +88,18 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#953](https://github.com/nautobot/nautobot/pull/953) - Added option to use MySQL in the docker-compose development environment
 - [#954](https://github.com/nautobot/nautobot/pull/954) - Added documentation for migrating from PostgreSQL to MySQL, improved documentation as to recommended MySQL database configuration.
 - [#989](https://github.com/nautobot/nautobot/issues/989) - Added `id` and `name` fields to `NestedJobResultSerializer` for the REST API.
+- [#1019](https://github.com/nautobot/nautobot/pull/1019) - Added GitHub action to redeploy the Nautobot sandbox on pushes to `main`, `develop`, and `next`.
 
 ### Fixed
 
 - [#555](https://github.com/nautobot/nautobot/issues/555) - Fixed `Status.DoesNotExist` during `nautobot-server loaddata`.
 - [#733](https://github.com/nautobot/nautobot/issues/733) - A Job erroring out early in initialization could result in its associated JobResult staying in Pending state indefinitely.
 - [#816](https://github.com/nautobot/nautobot/issues/816) - Fixed `AttributeError` reported when viewing a Rack with certain associated power configurations.
+- [#948](https://github.com/nautobot/nautobot/issues/948) - Fixed advanced logging example to use `EXTRA_MIDDLEWARE` instead of `MIDDLEWARE.append()`.
 - [#981](https://github.com/nautobot/nautobot/pull/981) - Fixed incorrect handling of missing custom fields in the `fix_custom_fields` management command.
 - [#986](https://github.com/nautobot/nautobot/issues/986) - Fixed `TemplateDoesNotExist` exception when running a Job containing a `FileVar` variable.
 - [#991](https://github.com/nautobot/nautobot/pull/991) - Fixed incorrect logging when importing ConfigContextSchemas from Git.
+- [#1023](https://github.com/nautobot/nautobot/issues/1023) - Removed invalid link in "Deploying Nautobot" documentation.
 
 ### Security
 
