@@ -4,7 +4,6 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Count
 from django.test.client import RequestFactory
 from django.utils import timezone
 

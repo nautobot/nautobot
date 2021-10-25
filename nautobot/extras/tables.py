@@ -2,7 +2,6 @@ import inspect
 
 import django_tables2 as tables
 
-from django.db.models import Count
 from django.conf import settings
 from django.urls import reverse
 from django.utils.html import format_html
