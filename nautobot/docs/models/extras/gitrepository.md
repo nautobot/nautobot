@@ -232,7 +232,6 @@ YAML list example:
         description: "The person's last name"
 ```
 
-
 ### Export Templates
 
 Export templates may be provided as files located in `/export_templates/<grouping>/<model>/<template_file>`; for example, a JSON export template for Device records might be `/export_templates/dcim/device/mytemplate.json`.
