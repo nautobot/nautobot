@@ -25,6 +25,9 @@ from nautobot.utilities.testing import CeleryTestCase, TestCase
 User = get_user_model()
 
 
+# Override the job_db to None so that the Log Objects are created in the default database.
+# This change is required as job_db is a `fake` database pointed at the default. The django
+# database cleanup will fail and cause tests to fail as this is not a real database.
 @mock.patch("nautobot.extras.models.models.job_db", None)
 class JobTest(TestCase):
     """
@@ -235,6 +238,10 @@ class JobTest(TestCase):
             data = job_class.serialize_data(form.cleaned_data)
 
             # Run the job and extract the job payload data
+            # Changing commit=True as commit=False will rollback database changes including the
+            # logs that we are trying to read. See above note on why we are using the default database.
+            # Also need to pass a mock request object as execute_webhooks will be called with the creation
+            # of the objects.
             run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
 
@@ -273,6 +280,7 @@ class JobTest(TestCase):
             }
 
             # Run the job and extract the job payload data
+            # See test_ip_address_vars as to why we are changing commit=True and request=self.request.
             run_job(data=data, request=self.request, commit=True, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
             # Test storing additional data in job
@@ -333,6 +341,7 @@ class JobFileUploadTest(TestCase):
             self.assertEqual(FileProxy.objects.count(), 1)
 
             # Run the job
+            # See test_ip_address_vars as to why we are changing commit=True and request=self.request.
             run_job(data=serialized_data, request=self.request, commit=True, job_result_pk=job_result.pk)
             job_result.refresh_from_db()
 

@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("log_level", models.CharField(default="default", max_length=32)),
-                ("grouping", models.CharField(default="main", max_length=32)),
+                ("grouping", models.CharField(default="main", max_length=100)),
                 ("message", models.TextField(blank=True)),
                 ("created", models.DateTimeField(default=django.utils.timezone.now)),
                 ("log_object", models.CharField(blank=True, max_length=200, null=True)),

@@ -78,10 +78,10 @@ class Command(BaseCommand):
         groups = set(JobLogEntry.objects.filter(job_result=job_result).values_list("grouping", flat=True))
         for group in groups:
             logs = JobLogEntry.objects.filter(job_result__pk=job_result.pk, grouping=group)
-            success_count = logs.filter(log_level=LogLevelChoices.LOG_SUCCESS).annotate(Count("pk")).count()
-            info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).annotate(Count("pk")).count()
-            warning_count = logs.filter(log_level=LogLevelChoices.LOG_WARNING).annotate(Count("pk")).count()
-            failure_count = logs.filter(log_level=LogLevelChoices.LOG_FAILURE).annotate(Count("pk")).count()
+            success_count = logs.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+            info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).count()
+            warning_count = logs.filter(log_level=LogLevelChoices.LOG_WARNING).count()
+            failure_count = logs.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
 
             self.stdout.write(
                 "\t{}: {} success, {} info, {} warning, {} failure".format(

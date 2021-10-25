@@ -32,6 +32,7 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
         request (HttpRequest): Initiating request for this refresh, optional, used for change logging if provided
         job_result (JobResult): Passed through to the callback functions to use with logging their actions.
         delete (bool): True if the record is being deleted; False if it is being created/updated.
+        use_default(bool): Logs created should use the default database instead of the "job_logs" database.
     """
     job_result.log(
         f"Refreshing data provided by {record}...",

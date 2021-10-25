@@ -389,12 +389,12 @@ class JobLogEntryTable(BaseTable):
     message = tables.Column()
 
     def render_log_level(self, value):
-        label = value.lower()
+        log_level = value.lower()
         # The css is label-danger for failure items.
-        if label == "failure":
-            label = "danger"
+        if log_level == "failure":
+            log_level = "danger"
 
-        return format_html('<label class="label label-{}">{}</label>', label, value)
+        return format_html('<label class="label label-{}">{}</label>', log_level, value)
 
     class Meta(BaseTable.Meta):
         model = JobLogEntry
@@ -431,19 +431,22 @@ class JobResultTable(BaseTable):
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
-    logs = tables.Column(
+    summary = tables.Column(
         empty_values=(),
         verbose_name="Results",
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
 
-    def render_logs(self, record):
+    def render_summary(self, record):
+        """
+        Define custom rendering for the summary column.
+        """
         log_objects = JobLogEntry.objects.filter(job_result__pk=record.pk)
-        success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).annotate(Count("pk")).count()
-        info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).annotate(Count("pk")).count()
-        warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).annotate(Count("pk")).count()
-        failure = log_objects.filter(log_level=LogLevelChoices.LOG_FAILURE).annotate(Count("pk")).count()
+        success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+        info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
+        warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
+        failure = log_objects.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
         return format_html(
             """<label class="label label-success">{}</label>
             <label class="label label-info">{}</label>

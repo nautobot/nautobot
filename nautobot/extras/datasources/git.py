@@ -105,10 +105,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
 
     finally:
         if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-            if (
-                JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE)
-                .exists()
-            ):
+            if JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE).exists():
                 job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
             else:
                 job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
