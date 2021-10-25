@@ -19,7 +19,7 @@ def get_datasource_content_choices(model_name):
     )
 
 
-def refresh_datasource_content(model_name, record, request, job_result, delete=False):
+def refresh_datasource_content(model_name, record, request, job_result, delete=False, use_default=False):
     """Invoke the refresh callbacks for every content type registered for this model.
 
     Note that these callback functions are invoked regardless of whether a given model instance actually is flagged
@@ -36,40 +36,49 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
     job_result.log(
         f"Refreshing data provided by {record}...",
         level_choice=LogLevelChoices.LOG_INFO,
+        use_default=use_default,
     )
     job_result.save()
     if request:
         with change_logging(request):
             for entry in get_datasource_contents(model_name):
-                job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
+                job_result.log(
+                    f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO, use_default=use_default
+                )
                 try:
                     entry.callback(record, job_result, delete=delete)
                 except Exception as exc:
                     job_result.log(
                         f"Error while refreshing {entry.name}: {exc}",
                         level_choice=LogLevelChoices.LOG_FAILURE,
+                        use_default=use_default,
                     )
                     job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
                 job_result.save()
             job_result.log(
                 f"Data refresh from {record} complete!",
                 level_choice=LogLevelChoices.LOG_INFO,
+                use_default=use_default,
             )
             job_result.save()
     else:
         for entry in get_datasource_contents(model_name):
-            job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
+            job_result.log(
+                f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO, use_default=use_default
+            )
             try:
                 entry.callback(record, job_result, delete=delete)
             except Exception as exc:
                 job_result.log(
                     f"Error while refreshing {entry.name}: {exc}",
                     level_choice=LogLevelChoices.LOG_FAILURE,
+                    use_default=use_default,
                 )
                 job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
             job_result.save()
         job_result.log(
             f"Data refresh from {record} complete!",
             level_choice=LogLevelChoices.LOG_INFO,
+            use_default=use_default,
         )
         job_result.save()
