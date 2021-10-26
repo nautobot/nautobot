@@ -107,6 +107,7 @@ nav:
         - Style Guide: 'development/style-guide.md'
         - Extending Models: 'development/extending-models.md'
         - Application Registry: 'development/application-registry.md'
+        - Page Templates: 'development/templates.md'
         - Navigation Menu: 'development/navigation-menu.md'
         - Home Page Panels: 'development/homepage.md'
         - User Preferences: 'development/user-preferences.md'

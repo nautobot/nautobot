@@ -14,7 +14,7 @@ from unittest import mock
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, ObjectChangeActionChoices
-from nautobot.extras.constants import *
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.jobs import Job
 from nautobot.extras.models import (
     ConfigContext,
@@ -387,6 +387,11 @@ class CustomFieldTestCase(
             "default": None,
             "filter_logic": "loose",
             "weight": 100,
+            # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
+            "choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
+            "choices-INITIAL_FORMS": "1",
+            "choices-MIN_NUM_FORMS": "0",
+            "choices-MAX_NUM_FORMS": "1000",
         }
 
     def test_create_object_without_permission(self):

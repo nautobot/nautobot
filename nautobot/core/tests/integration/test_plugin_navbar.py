@@ -1,7 +1,6 @@
 from unittest import skipIf
 
 from django.conf import settings
-from django.test.utils import override_settings
 
 from nautobot.utilities.testing.integration import SeleniumTestCase
 from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices

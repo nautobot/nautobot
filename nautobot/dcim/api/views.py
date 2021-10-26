@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db.models import F
 from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_yasg import openapi
 from drf_yasg.openapi import Parameter
 from drf_yasg.utils import swagger_auto_schema
@@ -18,7 +19,6 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.api.exceptions import ServiceUnavailable
-from nautobot.core.api.metadata import ContentTypeMetadata
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
@@ -198,6 +198,7 @@ class RackViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
         query_serializer=serializers.RackElevationDetailFilterSerializer,
     )
     @action(detail=True)
+    @xframe_options_sameorigin
     def elevation(self, request, pk=None):
         """
         Rack elevation representing the list of rack units. Also supports rendering the elevation as an SVG.

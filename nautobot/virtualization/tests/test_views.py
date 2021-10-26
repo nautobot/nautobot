@@ -6,7 +6,6 @@ from nautobot.dcim.models import DeviceRole, Platform, Site
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, post_data
-from nautobot.virtualization.choices import *
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,

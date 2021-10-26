@@ -9,7 +9,7 @@ from rest_framework import status
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.choices import *
+from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,

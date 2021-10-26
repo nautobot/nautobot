@@ -12,13 +12,12 @@ from django.db import models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.choices import *
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
-from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
@@ -29,6 +28,7 @@ from nautobot.utilities.forms import (
     add_blank_choice,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.utilities.templatetags.helpers import render_markdown
 from nautobot.utilities.utils import render_jinja2
 from nautobot.utilities.validators import validate_regex
 
@@ -209,31 +209,34 @@ class CustomField(BaseModel):
         max_length=50,
         choices=CustomFieldTypeChoices,
         default=CustomFieldTypeChoices.TYPE_TEXT,
+        help_text="The type of value(s) allowed for this field.",
     )
     # TODO: Migrate custom field model from name to slug #464
-    name = models.CharField(max_length=50, unique=True, help_text="Internal field name")
+    name = models.CharField(max_length=50, unique=True, verbose_name="Slug", help_text="URL-friendly unique shorthand.")
     label = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Name of the field as displayed to users (if not provided, " "the field's name will be used)",
+        help_text="Name of the field as displayed to users (if not provided, the field's slug will be used.)",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
     required = models.BooleanField(
         default=False,
-        help_text="If true, this field is required when creating new objects " "or editing an existing object.",
+        help_text="If true, this field is required when creating new objects or editing an existing object.",
     )
     filter_logic = models.CharField(
         max_length=50,
         choices=CustomFieldFilterLogicChoices,
         default=CustomFieldFilterLogicChoices.FILTER_LOOSE,
-        help_text="Loose matches any instance of a given string; exact " "matches the entire field.",
+        help_text="Loose matches any instance of a given string; Exact matches the entire field.",
     )
     default = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Default value for the field (must be a JSON value). Encapsulate "
-        'strings with double quotes (e.g. "Foo").',
+        help_text=(
+            "Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "
+            '"Foo").'
+        ),
     )
     weight = models.PositiveSmallIntegerField(
         default=100, help_text="Fields with higher weights appear lower in a form."
@@ -242,21 +245,23 @@ class CustomField(BaseModel):
         blank=True,
         null=True,
         verbose_name="Minimum value",
-        help_text="Minimum allowed value (for numeric fields)",
+        help_text="Minimum allowed value (for numeric fields).",
     )
     validation_maximum = models.BigIntegerField(
         blank=True,
         null=True,
         verbose_name="Maximum value",
-        help_text="Maximum allowed value (for numeric fields)",
+        help_text="Maximum allowed value (for numeric fields).",
     )
     validation_regex = models.CharField(
         blank=True,
         validators=[validate_regex],
         max_length=500,
         verbose_name="Validation regex",
-        help_text="Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. "
-        "For example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters.",
+        help_text=(
+            "Regular expression to enforce on text field values. Use ^ and $ to force matching of entire string. For "
+            "example, <code>^[A-Z]{3}$</code> will limit values to exactly three uppercase letters."
+        ),
     )
 
     objects = CustomFieldManager()
@@ -403,8 +408,10 @@ class CustomField(BaseModel):
 
         field.model = self
         field.label = str(self)
+
         if self.description:
-            field.help_text = self.description
+            # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input
+            field.help_text = render_markdown(self.description)
 
         return field
 

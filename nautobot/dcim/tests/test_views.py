@@ -11,9 +11,60 @@ from netaddr import EUI
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.dcim.choices import *
-from nautobot.dcim.constants import *
-from nautobot.dcim.models import *
+from nautobot.dcim.choices import (
+    CableLengthUnitChoices,
+    CableTypeChoices,
+    ConsolePortTypeChoices,
+    DeviceFaceChoices,
+    InterfaceModeChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    RackDimensionUnitChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+    SubdeviceRoleChoices,
+)
+
+from nautobot.dcim.models import (
+    Cable,
+    ConsolePort,
+    ConsolePortTemplate,
+    ConsoleServerPort,
+    ConsoleServerPortTemplate,
+    Device,
+    DeviceBay,
+    DeviceBayTemplate,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    FrontPortTemplate,
+    Interface,
+    InterfaceTemplate,
+    Manufacturer,
+    InventoryItem,
+    Platform,
+    PowerFeed,
+    PowerPort,
+    PowerPortTemplate,
+    PowerOutlet,
+    PowerOutletTemplate,
+    PowerPanel,
+    Rack,
+    RackGroup,
+    RackReservation,
+    RackRole,
+    RearPort,
+    RearPortTemplate,
+    Region,
+    Site,
+    VirtualChassis,
+)
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ConfigContextSchema,
@@ -1161,6 +1212,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "serial": "123456",
             "status": statuses.get(slug="decommissioning").pk,
+            "site": sites[1].pk,
+            "rack": racks[1].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

@@ -5,7 +5,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>{% block title %}Home{% endblock %} - Nautobot</title>
+    <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
     <link rel="stylesheet"
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
@@ -27,12 +27,12 @@
     <link rel="stylesheet"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
-    <link rel="icon" type="image/png" href="{% static 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
-    <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
-    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}">
+    <link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.png' %}">
+    <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
     <meta name="msapplication-TileColor" content="#2d89ef">
     <meta name="theme-color" content="#ffffff">
     <meta charset="UTF-8">
@@ -66,7 +66,7 @@
         <div class="push"></div>
         {% if settings.BANNER_BOTTOM %}
             <div class="alert alert-info text-center banner-bottom" role="alert">
-                 {{ settings.BANNER_BOTTOM|safe }}
+                {{ settings.BANNER_BOTTOM|safe }}
             </div>
         {% endif %}
     </div>
@@ -74,18 +74,21 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-4">
-                    <p class="text-muted">{{ settings.HOSTNAME }} (v{{ settings.VERSION }})</p>
+                    <p class="text-muted">
+                        {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}<a href="{{ settings.BRANDING_POWERED_BY_URL }}"><img src="{% static 'img/nautobot_logo.svg' %}" height="20" /> Powered</a> &middot;{% endif %}
+                        {{ settings.HOSTNAME }} (v{{ settings.VERSION }})
+                    </p>
                 </div>
                 <div class="col-xs-4 text-center">
                     <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i> <a href="https://nautobot.readthedocs.io/">Docs</a> &middot;
+                        <i class="mdi mdi-book-open-page-variant text-primary"></i> <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a> &middot;
                         <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
-                        <i class="mdi mdi-xml text-primary"></i> <a href="https://github.com/nautobot/nautobot">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="https://github.com/nautobot/nautobot/wiki">Help</a>
+                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
+                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
                     </p>
                 </div>
             </div>

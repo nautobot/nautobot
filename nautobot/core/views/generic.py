@@ -71,8 +71,12 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         Return any additional context data for the template.
 
-        request: The current request
-        instance: The object being viewed
+        Args:
+            request: The current request
+            instance: The object being viewed
+
+        Returns:
+            dict
         """
         return {}
 
@@ -282,6 +286,19 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             return get_object_or_404(self.queryset, **kwargs)
         return self.queryset.model()
 
+    def get_extra_context(self, request, instance):
+        """
+        Return any additional context data for the template.
+
+        Args:
+            request: The current request
+            instance: The object being edited
+
+        Returns:
+            dict
+        """
+        return {}
+
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
         # given some parameter from the request URL.
@@ -309,6 +326,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
             },
         )
 
@@ -372,6 +390,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
             },
         )
 

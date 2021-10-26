@@ -8,4 +8,4 @@ from nautobot.core.celery import app as celery_app
 default_app_config = "nautobot.core.apps.CoreConfig"
 
 
-__all__ = ("celery_app",)
+__all__ = ("celery_app", "checks")

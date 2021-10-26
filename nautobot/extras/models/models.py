@@ -14,12 +14,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import signals
-from django.http import HttpResponse, request
+from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
-from django_celery_beat.utils import make_aware, now
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
@@ -33,8 +32,14 @@ from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
-from nautobot.extras.choices import *
-from nautobot.extras.constants import *
+from nautobot.extras.choices import (
+    CustomLinkButtonClassChoices,
+    LogLevelChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    WebhookHttpMethodChoices,
+)
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
@@ -857,7 +862,7 @@ class JobResult(BaseModel, CustomFieldModel):
         logger (logging.logger): Optional logger to also output the message to
         """
         if level_choice not in LogLevelChoices.as_dict():
-            raise Exception(f"Unknown logging level: {level}")
+            raise Exception(f"Unknown logging level: {level_choice}")
 
         if not self.data:
             self.data = {}

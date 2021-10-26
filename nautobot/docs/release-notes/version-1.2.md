@@ -76,7 +76,15 @@ Please refer to the [plugin development documentation](../plugins/development.md
 
 Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/homepage.md).
 
+#### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
+
+Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
+
 ### Changed
+
+#### Admin Site Changes ([#900](https://github.com/nautobot/nautobot/pull/900))
+
+The Admin sub-site within Nautobot (`/admin/` and its child pages) has been revamped in appearance and functionality. It has been re-skinned to resemble the rest of the Nautobot UI, and has been slimmed down to only include those models and features that are still exclusive to admin users, such as user/group/permission management.
 
 #### Slug fields are now Optional in CSV import, REST API and ORM ([#493](https://github.com/nautobot/nautobot/issues/493))
 
@@ -102,6 +110,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#642](https://github.com/nautobot/nautobot/issues/642) - Added documentation of the `GIT_SSL_NO_VERIFY` environment variable for using self-signed Git repositories
 - [#674](https://github.com/nautobot/nautobot/pull/674) - Plugins can now add items to the Nautobot home page
 - [#716](https://github.com/nautobot/nautobot/pull/716) - Nautobot home page content is now dynamically populated based on installed apps and plugins.
+- [#866](https://github.com/nautobot/nautobot/pull/859) - Added support for organizational custom branding for the logo and icons
 - [#866](https://github.com/nautobot/nautobot/pull/866) - Added documentation for job scheduling and approvals
 - [#879](https://github.com/nautobot/nautobot/pull/879) - Added API testing for job scheduling and approvals
 - [#908](https://github.com/nautobot/nautobot/pull/908) - Added UI testing for job scheduling and approvals
@@ -112,11 +121,19 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Changed
 
+- [#222](https://github.com/nautobot/nautobot/issues/222) - Changed wildcard imports to explicitly enumerated imports and enabled associated Flake8 linter rules.
 - [#472](https://github.com/nautobot/nautobot/issues/472) - `JobResult` lists now show the associated Job's name (if available) instead of the Job's `class_path`.
 - [#493](https://github.com/nautobot/nautobot/issues/493) - All `slug` fields are now optional when creating records via the REST API, ORM, or CSV import. Slugs will be automatically assigned if unspecified.
 - [#877](https://github.com/nautobot/nautobot/pull/877) - Hid unused "Social Auth" section from Django admin page.
+- [#900](https://github.com/nautobot/nautobot/pull/900) - Admin site has been revised and re-skinned to more closely match the core Nautobot UI.
 
 ### Fixed
 
 - [#852](https://github.com/nautobot/nautobot/issues/852) - Fixed missing "Change Log" tab on certain object detail views
 - [#853](https://github.com/nautobot/nautobot/issues/853) - Fixed `AttributeError` on certain object detail views
+- [#891](https://github.com/nautobot/nautobot/issues/891) - Fixed custom field select/multiselect not handled by new UI and added integration tests
+- [#966](https://github.com/nautobot/nautobot/issues/966) - Fixed missing "Advanced" tab on Device detail views
+
+### Security
+
+- [#1017](https://github.com/nautobot/nautobot/issues/1017) - Custom field descriptions no longer potentially render as arbitrary HTML in object edit forms; Markdown format is now supported as a less dangerous option.
