@@ -678,7 +678,7 @@ In some cases, such as when a model is using Generic Foreign Keys, or when a mod
 
 By default, Nautobot looks for custom GraphQL types in an iterable named `graphql_types` within a `graphql/types.py` file. (This can be overridden by setting `graphql_types` to a custom value on the plugin's `PluginConfig`.) Each type defined in this way must be a class inheriting from `graphene_django.DjangoObjectType` or `graphene_django_optimizer.OptimizedDjangoObjectType` and must follow the [standards defined by graphene-django](https://docs.graphene-python.org/projects/django/en/latest/queries/).
 
-Nautobot uses a model called [`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) to decrease the time queries take to process. By inheriting from `graphene_django_optimizer` type classes are automatically optimized.
+Nautobot uses a library called [`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) to decrease the time queries take to process. By inheriting from `graphene_django_optimizer` type classes are automatically optimized.
 
 !!! warning
     When defining types this way, do **not** use the `@extras_features("graphql")` decorator on the corresponding Model class, as no auto-generated GraphQL type is desired for this model.
