@@ -44,7 +44,6 @@ from nautobot.extras.models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
-    SecretType,
     Status,
     Tag,
     Webhook,
@@ -83,7 +82,6 @@ from .nested_serializers import (  # noqa: F401
     NestedScheduledJobSerializer,
     NestedSecretSerializer,
     NestedSecretsGroupSerializer,
-    NestedSecretTypeSerializer,
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
@@ -774,8 +772,6 @@ class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
 
-    type = NestedSecretTypeSerializer()
-
     class Meta:
         model = Secret
         fields = [
@@ -783,7 +779,6 @@ class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "url",
             "name",
             "slug",
-            "type",
             "description",
             "provider",
             "parameters",
@@ -812,28 +807,6 @@ class SecretsGroupSerializer(CustomFieldModelSerializer):
             "slug",
             "description",
             "secrets",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
-        ]
-        opt_in_fields = ["computed_fields"]
-
-
-class SecretTypeSerializer(CustomFieldModelSerializer):
-    """Serializer for `SecretType` objects."""
-
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secrettype-detail")
-
-    class Meta:
-        model = SecretType
-        fields = [
-            "id",
-            "url",
-            "name",
-            "slug",
-            "description",
-            "color",
             "custom_fields",
             "created",
             "last_updated",

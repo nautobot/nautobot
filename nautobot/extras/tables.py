@@ -38,7 +38,6 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
-    SecretType,
     Status,
     Tag,
     TaggedItem,
@@ -567,25 +566,6 @@ class SecretsGroupTable(BaseTable):
         default_columns = (
             "pk",
             "name",
-            "description",
-        )
-
-
-class SecretTypeTable(BaseTable):
-    """Table for list view of `SecretType` objects."""
-
-    pk = ToggleColumn()
-    name = tables.LinkColumn()
-    color = ColorColumn()
-    actions = ButtonsColumn(SecretType, pk_field="slug")
-
-    class Meta(BaseTable.Meta):
-        model = SecretType
-        fields = (
-            "pk",
-            "name",
-            "slug",
-            "color",
             "description",
         )
 

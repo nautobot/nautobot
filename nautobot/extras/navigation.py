@@ -267,16 +267,6 @@ menu_items = (
                 weight=600,
                 items=(
                     NavMenuItem(
-                        link="extras:secrettype_list",
-                        name="Secret Types",
-                        weight=100,
-                        permissions=["extras.view_secrettype"],
-                        buttons=(
-                            NavMenuAddButton(link="extras:secrettype_add", permissions=["extras.add_secrettype"]),
-                            NavMenuImportButton(link="extras:secrettype_import", permissions=["extras.add_secrettype"]),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="extras:secret_list",
                         name="Secrets",
                         weight=200,

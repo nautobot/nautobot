@@ -55,7 +55,6 @@ router.register("relationship-associations", views.RelationshipAssociationViewSe
 # Secrets
 router.register("secrets", views.SecretsViewSet)
 router.register("secrets-groups", views.SecretsGroupViewSet)
-router.register("secret-types", views.SecretTypeViewSet)
 
 # Statuses
 router.register("statuses", views.StatusViewSet)

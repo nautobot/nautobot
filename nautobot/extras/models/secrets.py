@@ -23,39 +23,6 @@ logger = logging.getLogger(__name__)
     "custom_fields",
     "custom_links",
     "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
-)
-class SecretType(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
-    """Model for database-backed enum choice objects."""
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=100)
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    description = models.CharField(max_length=200, blank=True)
-
-    csv_headers = ["name", "slug", "color", "description"]
-    clone_fields = ["color"]
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:secrettype", args=[self.slug])
-
-    def to_csv(self):
-        return (self.name, self.slug, self.color, self.description)
-
-
-@extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
     "graphql",
     "relationships",
     "webhooks",
@@ -70,7 +37,6 @@ class Secret(PrimaryModel):
 
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
-    type = models.ForeignKey(to=SecretType, on_delete=models.PROTECT)
     description = models.CharField(max_length=200, blank=True)
     provider = models.CharField(max_length=100)
     parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
