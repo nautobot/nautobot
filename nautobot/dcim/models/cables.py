@@ -113,6 +113,18 @@ class Cable(PrimaryModel, StatusModel):
             ("termination_b_type", "termination_b_id"),
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # A copy of the PK to be used by __str__ in case the object is deleted
+        self._pk = self.pk
+
+        if self.present_in_database:
+            # Cache the original status so we can check later if it's been changed
+            self._orig_status = self.status
+        else:
+            self._orig_status = None
+
     def __str__(self):
         pk = self.pk or self._pk
         return self.label or f"#{pk}"
@@ -244,9 +256,6 @@ class Cable(PrimaryModel, StatusModel):
             self._termination_a_device = self.termination_a.device
         if hasattr(self.termination_b, "device"):
             self._termination_b_device = self.termination_b.device
-
-        # Cache the original status so we can check later if it's been changed
-        self._orig_status = self.status
 
         super().save(*args, **kwargs)
 
