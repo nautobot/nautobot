@@ -1,4 +1,3 @@
-from django.db.models.query import Prefetch
 import graphene
 import graphene_django_optimizer as gql_optimizer
 from graphene_django.converter import convert_django_field, convert_field_to_string
