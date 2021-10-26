@@ -32,6 +32,8 @@ from .models import (
     Relationship,
     RelationshipAssociation,
     Secret,
+    SecretsGroup,
+    SecretType,
     Status,
     Tag,
     Webhook,
@@ -57,6 +59,8 @@ __all__ = (
     "RelationshipAssociationFilterSet",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
+    "SecretsGroupFilterSet",
+    "SecretTypeFilterSet",
     "StatusFilter",
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
@@ -666,7 +670,45 @@ class SecretFilterSet(
 
     class Meta:
         model = Secret
-        fields = ["id", "name", "slug", "provider"]
+        fields = ("id", "name", "slug", "provider", "created", "last_updated")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+
+
+class SecretsGroupFilterSet(
+    BaseFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+):
+    """Filterset for the SecretsGroup model."""
+
+    q = django_filters.CharFilter(method="search", label="Search")
+
+    class Meta:
+        model = SecretsGroup
+        fields = ("id", "name", "slug", "created", "last_updated")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+
+
+class SecretTypeFilterSet(
+    BaseFilterSet,
+    CustomFieldModelFilterSet,
+    CreatedUpdatedFilterSet,
+):
+    """Filterset for the SecretType model."""
+
+    q = django_filters.CharFilter(method="search", label="Search")
+
+    class Meta:
+        model = SecretType
+        fields = ("id", "color", "name", "slug", "created", "last_updated")
 
     def search(self, queryset, name, value):
         if not value.strip():

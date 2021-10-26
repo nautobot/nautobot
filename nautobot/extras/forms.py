@@ -58,6 +58,8 @@ from .models import (
     RelationshipAssociation,
     ScheduledJob,
     Secret,
+    SecretsGroup,
+    SecretType,
     Status,
     Tag,
     Webhook,
@@ -712,14 +714,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         help_text="Username for token authentication.<br><em>Deprecated</em> - use a username secret instead",
     )
 
-    username_secret = DynamicModelChoiceField(
-        required=False,
-        queryset=Secret.objects.all(),
-    )
-    token_secret = DynamicModelChoiceField(
-        required=False,
-        queryset=Secret.objects.all(),
-    )
+    secrets_groups = DynamicModelMultipleChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     provided_contents = forms.MultipleChoiceField(
         required=False,
@@ -738,8 +733,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
             "branch",
             "username",
             "_token",
-            "username_secret",
-            "token_secret",
+            "secrets_groups",
             "provided_contents",
             "tags",
         ]
@@ -788,14 +782,7 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         help_text="<em>Deprecated</em> - use a secret username instead.",
     )
 
-    username_secret = DynamicModelChoiceField(
-        required=False,
-        queryset=Secret.objects.all(),
-    )
-    token_secret = DynamicModelChoiceField(
-        required=False,
-        queryset=Secret.objects.all(),
-    )
+    secrets_groups = DynamicModelMultipleChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
         model = GitRepository
@@ -1077,6 +1064,8 @@ class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
 
     slug = SlugField()
 
+    type = DynamicModelChoiceField(queryset=SecretType.objects.all())
+
     provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
@@ -1088,6 +1077,7 @@ class SecretForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
         fields = [
             "name",
             "slug",
+            "type",
             "description",
             "provider",
             "parameters",
@@ -1105,6 +1095,68 @@ class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Secret
     q = forms.CharField(required=False, label="Search")
     tag = TagFilterField(model)
+
+
+class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Create/update form for `SecretsGroup` objects."""
+
+    slug = SlugField()
+
+    secrets = DynamicModelMultipleChoiceField(queryset=Secret.objects.all(), required=False)
+
+    class Meta:
+        model = SecretsGroup
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "secrets",
+        ]
+
+
+class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    model = SecretsGroup
+    q = forms.CharField(required=False, label="Search")
+
+
+class SecretTypeForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
+    """Generic create/update form for `SecretType` objects."""
+
+    slug = SlugField()
+
+    class Meta:
+        model = SecretType
+        widgets = {"color": ColorSelect()}
+        fields = ["name", "slug", "description", "color"]
+
+
+class SecretTypeCSVForm(CustomFieldModelCSVForm):
+    """Generic CSV bulk import form for `SecretType` objects."""
+
+    class Meta:
+        model = SecretType
+        fields = SecretType.csv_headers
+        help_texts = {
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+        }
+
+
+class SecretTypeFilterForm(BootstrapMixin, CustomFieldFilterForm):
+    """Filtering/search form for `SecretType` objects."""
+
+    model = SecretType
+    q = forms.CharField(required=False, label="Search")
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+
+
+class SecretTypeBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm):
+    """Bulk edit/delete form for `SecretType` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=SecretType.objects.all(), widget=forms.MultipleHiddenInput)
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+
+    class Meta:
+        nullable_fields = []
 
 
 #

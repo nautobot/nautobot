@@ -6,10 +6,14 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
+from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretProviderError
 from nautobot.extras.utils import extras_features
+from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.fields import ColorField
 
 
 logger = logging.getLogger(__name__)

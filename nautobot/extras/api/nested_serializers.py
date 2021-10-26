@@ -19,6 +19,8 @@ __all__ = [
     "NestedRelationshipAssociationSerializer",
     "NestedScheduledJobSerializer",
     "NestedSecretSerializer",
+    "NestedSecretsGroupSerializer",
+    "NestedSecretTypeSerializer",
     "NestedStatusSerializer",
     "NestedTagSerializer",
     "NestedWebhookSerializer",
@@ -148,6 +150,22 @@ class NestedSecretSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Secret
+        fields = ["id", "url", "name", "slug"]
+
+
+class NestedSecretsGroupSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
+
+    class Meta:
+        model = models.SecretsGroup
+        fields = ["id", "url", "name", "slug"]
+
+
+class NestedSecretTypeSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secrettype-detail")
+
+    class Meta:
+        model = models.SecretType
         fields = ["id", "url", "name", "slug"]
 
 

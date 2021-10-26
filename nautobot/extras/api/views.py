@@ -37,6 +37,8 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     ScheduledJob,
     Secret,
+    SecretsGroup,
+    SecretType,
     Status,
     Tag,
     TaggedItem,
@@ -590,6 +592,26 @@ class SecretsViewSet(ModelViewSet):
     queryset = Secret.objects.all()
     serializer_class = serializers.SecretSerializer
     filterset_class = filters.SecretFilterSet
+
+
+class SecretsGroupViewSet(ModelViewSet):
+    """
+    Manage Secrets Groups through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = SecretsGroup.objects.all()
+    serializer_class = serializers.SecretsGroupSerializer
+    filterset_class = filters.SecretsGroupFilterSet
+
+
+class SecretTypeViewSet(ModelViewSet):
+    """
+    Manage Secret Types through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = SecretType.objects.all()
+    serializer_class = serializers.SecretTypeSerializer
+    filterset_class = filters.SecretTypeFilterSet
 
 
 #

@@ -57,23 +57,15 @@
                         <td>{{ object.token_rendered }}</td>
                     </tr>
                     <tr>
-                        <td>Username Secret</td>
+                        <td>Secrets Groups</td>
                         <td>
-                            {% if object.username_secret%}
-                                <a href="{{ object.username_secret.get_absolute_url }}">{{ object.username_secret }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Token Secret</td>
-                        <td>
-                            {% if object.token_secret %}
-                                <a href="{{ object.token_secret.get_absolute_url }}">{{ object.token_secret }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
+                            <ul>
+                                {% for group in object.secrets_groups.all %}
+                                    <li><a href="{{ group.get_absolute_url }}">{{ group }}</a></li>
+                                {% empty %}
+                                    <li><span class="text-muted">None</span></li>
+                                {% endfor %}
+                            </ul>
                         </td>
                     </tr>
                 </table>

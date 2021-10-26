@@ -43,6 +43,8 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     ScheduledJob,
     Secret,
+    SecretsGroup,
+    SecretType,
     Status,
     Tag,
     Webhook,
@@ -80,6 +82,8 @@ from .nested_serializers import (  # noqa: F401
     NestedRelationshipSerializer,
     NestedScheduledJobSerializer,
     NestedSecretSerializer,
+    NestedSecretsGroupSerializer,
+    NestedSecretTypeSerializer,
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
@@ -438,8 +442,7 @@ class GitRepositorySerializer(CustomFieldModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
     token = serializers.CharField(source="_token", write_only=True, required=False)
 
-    username_secret = NestedSecretSerializer(required=False, allow_null=True)
-    token_secret = NestedSecretSerializer(required=False, allow_null=True)
+    secrets_groups = NestedSecretsGroupSerializer(required=False, allow_null=True, many=True)
 
     provided_contents = MultipleChoiceJSONField(
         choices=get_datasource_content_choices("extras.gitrepository"),
@@ -771,6 +774,8 @@ class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
 
+    type = NestedSecretTypeSerializer()
+
     class Meta:
         model = Secret
         fields = [
@@ -778,10 +783,57 @@ class SecretSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
             "url",
             "name",
             "slug",
+            "type",
             "description",
             "provider",
             "parameters",
             "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+class SecretsGroupSerializer(CustomFieldModelSerializer):
+    """Serializer for `SecretsGroup` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
+
+    secrets = NestedSecretSerializer(many=True, allow_null=True)
+
+    class Meta:
+        model = SecretsGroup
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "description",
+            "secrets",
+            "custom_fields",
+            "created",
+            "last_updated",
+            "computed_fields",
+        ]
+        opt_in_fields = ["computed_fields"]
+
+
+class SecretTypeSerializer(CustomFieldModelSerializer):
+    """Serializer for `SecretType` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secrettype-detail")
+
+    class Meta:
+        model = SecretType
+        fields = [
+            "id",
+            "url",
+            "name",
+            "slug",
+            "description",
+            "color",
             "custom_fields",
             "created",
             "last_updated",

@@ -59,6 +59,8 @@ from .models import (
     RelationshipAssociation,
     ScheduledJob,
     Secret,
+    SecretsGroup,
+    SecretType,
     Status,
     Tag,
     TaggedItem,
@@ -1315,9 +1317,13 @@ class SecretView(generic.ObjectView):
 
         provider = registry["secrets_providers"].get(instance.provider)
 
+        groups = instance.groups.all()
+        groups_table = tables.SecretsGroupTable(groups, orderable=False)
+
         return {
             "format": format,
             "provider_name": provider.name if provider else instance.provider,
+            "groups_table": groups_table,
         }
 
 
@@ -1357,6 +1363,75 @@ class SecretBulkDeleteView(generic.BulkDeleteView):
     queryset = Secret.objects.all()
     filterset = filters.SecretFilterSet
     table = tables.SecretTable
+
+
+class SecretsGroupListView(generic.ObjectListView):
+    queryset = SecretsGroup.objects.all()
+    filterset = filters.SecretsGroupFilterSet
+    filterset_form = forms.SecretsGroupFilterForm
+    table = tables.SecretsGroupTable
+    action_buttons = ("add", "delete",)
+
+
+class SecretsGroupView(generic.ObjectView):
+    queryset = SecretsGroup.objects.all()
+
+
+class SecretsGroupEditView(generic.ObjectEditView):
+    queryset = SecretsGroup.objects.all()
+    model_form = forms.SecretsGroupForm
+
+
+class SecretsGroupDeleteView(generic.ObjectDeleteView):
+    queryset = SecretsGroup.objects.all()
+
+
+class SecretsGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = SecretsGroup.objects.all()
+    filterset = filters.SecretsGroupFilterSet
+    table = tables.SecretsGroupTable
+
+
+class SecretTypeListView(generic.ObjectListView):
+    queryset = SecretType.objects.all()
+    filterset = filters.SecretTypeFilterSet
+    filterset_form = forms.SecretTypeFilterForm
+    table = tables.SecretTypeTable
+
+
+class SecretTypeView(generic.ObjectView):
+    queryset = SecretType.objects.all()
+
+    def get_extra_context(self, request, instance):
+        secrets = instance.secret_set.all()
+        secrets_table = tables.SecretTable(list(secrets), orderable=False)
+        secrets_table.exclude = ("type",)
+
+        return {
+            "secrets_table": secrets_table,
+        }
+
+
+class SecretTypeEditView(generic.ObjectEditView):
+    queryset = SecretType.objects.all()
+    model_form = forms.SecretTypeForm
+
+
+class SecretTypeDeleteView(generic.ObjectDeleteView):
+    queryset = SecretType.objects.all()
+
+
+class SecretTypeBulkImportView(generic.BulkImportView):
+    queryset = SecretType.objects.all()
+    model_form = forms.SecretTypeCSVForm
+    table = tables.SecretTypeTable
+
+
+class SecretTypeBulkDeleteView(generic.BulkDeleteView):
+    queryset = SecretType.objects.all()
+    filterset = filters.SecretTypeFilterSet
+    filterset_form = forms.SecretTypeFilterForm
+    table = tables.SecretTypeTable
 
 
 #

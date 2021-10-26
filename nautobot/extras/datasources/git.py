@@ -131,19 +131,28 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
 
-    if repository_record.token_secret:
-        token = repository_record.token_secret.value
-    elif repository_record._token:
-        token = repository_record._token
-    else:
-        token = None
+    user = None
+    token = None
+    for secrets_group in repository_record.secrets_groups.all():
+        for secret in secrets_group.secrets.all():
+            if secret.type.slug == "token":
+                if token:
+                    if logger:
+                        logger.warning("Multiple 'token' secrets are assigned to %s", repository_record)
+                else:
+                    token = secret.value
+            elif secret.type.slug in ("user", "username"):
+                if user:
+                    if logger:
+                        logger.warning("Multiple 'user'/'username' secrets are assigned to %s", repository_record)
+                else:
+                    user = secret.value
 
-    if repository_record.username_secret:
-        user = repository_record.username_secret.value
-    elif repository_record.username:
+    # Fallback to deprecated values
+    if not token and repository_record._token:
+        token = repository_record._token
+    if not user and repository_record.username:
         user = repository_record.username
-    else:
-        user = None
 
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.

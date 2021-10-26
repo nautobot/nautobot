@@ -37,6 +37,8 @@ from .models import (
     RelationshipAssociation,
     ScheduledJob,
     Secret,
+    SecretsGroup,
+    SecretType,
     Status,
     Tag,
     TaggedItem,
@@ -524,6 +526,7 @@ class SecretTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    type = tables.Column(linkify=True)
     tags = TagColumn(url_name="extras:secret_list")
 
     class Meta(BaseTable.Meta):
@@ -531,20 +534,60 @@ class SecretTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "description",
+            "type",
             "provider",
+            "description",
             "tags",
         )
         default_columns = (
             "pk",
             "name",
-            "description",
+            "type",
             "provider",
             "tags",
         )
 
     def render_provider(self, value):
         return registry["secrets_providers"][value].name if value in registry["secrets_providers"] else value
+
+
+class SecretsGroupTable(BaseTable):
+    """Table for list view of `SecretsGroup` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = SecretsGroup
+        fields = (
+            "pk",
+            "name",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "description",
+        )
+
+
+class SecretTypeTable(BaseTable):
+    """Table for list view of `SecretType` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    color = ColorColumn()
+    actions = ButtonsColumn(SecretType, pk_field="slug")
+
+    class Meta(BaseTable.Meta):
+        model = SecretType
+        fields = (
+            "pk",
+            "name",
+            "slug",
+            "color",
+            "description",
+        )
 
 
 #
