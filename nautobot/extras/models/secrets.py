@@ -8,12 +8,11 @@ from django.urls import reverse
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.extras.choices import SecretCategoryChoices, SecretMeaningChoices
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretProviderError
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.fields import ColorField
 
 
 logger = logging.getLogger(__name__)
@@ -112,7 +111,7 @@ class SecretsGroup(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name", unique=True)
     description = models.CharField(max_length=200, blank=True)
-    secrets = models.ManyToManyField(to=Secret, related_name="groups", blank=True)
+    secrets = models.ManyToManyField(to=Secret, related_name="groups", through="extras.SecretsGroupAssociation")
 
     csv_headers = ["name", "slug", "description"]
 
@@ -125,3 +124,18 @@ class SecretsGroup(OrganizationalModel):
     def to_csv(self):
         return (self.name, self.slug, self.description)
 
+
+class SecretsGroupAssociation(BaseModel):
+    """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
+
+    secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
+    group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE)
+
+    category = models.CharField(max_length=32, choices=SecretCategoryChoices)
+    meaning = models.CharField(max_length=32, choices=SecretMeaningChoices)
+
+    class Meta:
+        unique_together = (
+            # Don't allow the same category/meaning to be used more than once in the same group
+            ("group", "category", "meaning"),
+        )
