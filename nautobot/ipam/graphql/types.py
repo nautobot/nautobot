@@ -50,6 +50,11 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = filters.IPAddressFilterSet
 
     def resolve_assigned_object(self, args):
+        """
+        Required by GraphQL query optimizer due to the complex nature of this relationship that
+        hinders it from being auto-discovered. The `AssignedObjectType` union will not function
+        without this.
+        """
         if self.assigned_object:
             return self.assigned_object
         return None
