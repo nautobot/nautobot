@@ -5,14 +5,14 @@ To create a relationship, from the top-level navigation menu select *Extensibili
 
 ## Relationship Types
 
-* Many to Many - where both sides of the relationship connection can be connected to multiple objects. For example, VLANs can be connected to multiple devices and devices will have multiple VLANs.
-* One to Many - where one side of the connection can only have one object. For example, where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many FEX.
-* One to One - where there can be only one object on either side of the relationship. For example, an IP address serving as a router-id for a device. Each device has at most one router-id, and each IP address can be a router-id for at most one device.
+* **Many-to-many** - where both sides of the relationship connection can be connected to multiple objects. For example, VLANs can be connected to multiple devices and devices will have multiple VLANs.
+* **One-to-many** - where one side of the connection can only have one object. For example, where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many FEX.
+* **One-to-one** - where there can be only one object on either side of the relationship. For example, an IP address serving as a router-id for a device. Each device has at most one router-id, and each IP address can be a router-id for at most one device.
 
-Additionally, there are two "symmetric" relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two "sides" of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the "source" and "destination" of a relationship as the non-symmetric relationship types above do.
+Additionally, there are two *symmetric* relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two *sides* of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the *source* and *destination* of a relationship as the non-symmetric relationship types above do.
 
-* Symmetric Many to Many - as in Many to Many, but acting more as a "set" or "group" of objects. For example, this could be used to define a set of devices particpating in a full-mesh routing topology. Each device is a peer to all other devices in the set.
-* Symmetric One to One - as in One to One, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
+* **Symmetric Many-to-many** - as in Many-to-many, but acting more as a *set* or *group* of objects. For example, this could be used to define a set of devices particpating in a full-mesh routing topology. Each device is a peer to all other devices in the set.
+* **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
 
 ## Relationship Filters
 
