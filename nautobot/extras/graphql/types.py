@@ -1,5 +1,5 @@
 import graphene
-from graphene_django import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
 from graphene_django.converter import convert_django_field
 
 from taggit.managers import TaggableManager
@@ -8,7 +8,7 @@ from nautobot.extras.models import Status, Tag
 from nautobot.extras.filters import StatusFilterSet, TagFilterSet
 
 
-class TagType(DjangoObjectType):
+class TagType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Tag model."""
 
     class Meta:
@@ -22,7 +22,7 @@ def convert_field_to_list_tags(field, registry=None):
     return graphene.List(TagType)
 
 
-class StatusType(DjangoObjectType):
+class StatusType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type object for `Status` model."""
 
     class Meta:

@@ -20,6 +20,7 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.utilities.templatetags.helpers import render_markdown
 from .jobs import Job
 from .models import (
     ComputedField,
@@ -224,6 +225,11 @@ class CustomFieldTable(BaseTable):
             "required",
             "weight",
         )
+
+    def render_description(self, record):
+        if record.description:
+            return mark_safe(render_markdown(record.description))
+        return self.default
 
 
 class CustomLinkTable(BaseTable):

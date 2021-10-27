@@ -1,5 +1,5 @@
 import graphene
-from graphene_django import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
 from graphene_django.converter import convert_django_field, convert_field_to_string
 
 from nautobot.dcim.graphql.types import InterfaceType
@@ -12,7 +12,7 @@ from nautobot.virtualization.graphql.types import VMInterfaceType
 convert_django_field.register(fields.VarbinaryIPField)(convert_field_to_string)
 
 
-class AggregateType(DjangoObjectType):
+class AggregateType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Aggregate model."""
 
     prefix = graphene.String()
@@ -37,7 +37,7 @@ class AssignedObjectType(graphene.Union):
         return None
 
 
-class IPAddressType(DjangoObjectType):
+class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for IPAddress model."""
 
     address = graphene.String()
@@ -48,6 +48,16 @@ class IPAddressType(DjangoObjectType):
     class Meta:
         model = models.IPAddress
         filterset_class = filters.IPAddressFilterSet
+
+    def resolve_assigned_object(self, args):
+        """
+        Required by GraphQL query optimizer due to the complex nature of this relationship that
+        hinders it from being auto-discovered. The `AssignedObjectType` union will not function
+        without this.
+        """
+        if self.assigned_object:
+            return self.assigned_object
+        return None
 
     def resolve_interface(self, args):
         if self.assigned_object and type(self.assigned_object).__name__ == "Interface":
@@ -60,7 +70,7 @@ class IPAddressType(DjangoObjectType):
         return None
 
 
-class PrefixType(DjangoObjectType):
+class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Prefix model."""
 
     prefix = graphene.String()
