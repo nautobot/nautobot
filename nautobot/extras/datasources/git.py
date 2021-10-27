@@ -16,13 +16,14 @@ import yaml
 
 from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
+from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices, SecretCategoryChoices, SecretMeaningChoices
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
     JobResult,
+    Secret,
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
@@ -133,20 +134,19 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
 
     user = None
     token = None
-    for secrets_group in repository_record.secrets_groups.all():
-        for secret in secrets_group.secrets.all():
-            if secret.type.slug == "token":
-                if token:
-                    if logger:
-                        logger.warning("Multiple 'token' secrets are assigned to %s", repository_record)
-                else:
-                    token = secret.value
-            elif secret.type.slug in ("user", "username"):
-                if user:
-                    if logger:
-                        logger.warning("Multiple 'user'/'username' secrets are assigned to %s", repository_record)
-                else:
-                    user = secret.value
+    if repository_record.secrets_group:
+        try:
+            token = repository_record.secrets_group.secrets.get(
+                category=SecretCategoryChoices.TYPE_HTTP, meaning=SecretMeaningChoices.TYPE_TOKEN
+            ).value
+        except Secret.DoesNotExist:
+            pass
+        try:
+            user = repository_record.secrets_group.secrets.get(
+                category=SecretCategoryChoices.TYPE_HTTP, meaning=SecretMeaningChoices.TYPE_USERNAME
+            ).value
+        except Secret.DoesNotExist:
+            pass
 
     # Fallback to deprecated values
     if not token and repository_record._token:

@@ -1,6 +1,6 @@
 import logging
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
@@ -125,6 +125,14 @@ class SecretsGroup(OrganizationalModel):
 
     def to_csv(self):
         return (self.name, self.slug, self.description)
+
+    def get_secret_value(self, category, meaning):
+        """Helper method to retrieve a specific secret from this group."""
+        try:
+            secret = self.secrets.through.get(category=category, meaning=meaning).secret
+            return secret.value
+        except ObjectDoesNotExist:
+            return None
 
 
 class SecretsGroupAssociation(BaseModel):
