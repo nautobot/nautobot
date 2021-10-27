@@ -60,6 +60,8 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, PathEndpointMixin):
 
     ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
+    # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
+    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
     @gql_optimizer.resolver_hints(
         model_field="ip_addresses",
     )
