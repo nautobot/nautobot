@@ -11,8 +11,11 @@ To create a relationship, from the top-level navigation menu select *Extensibili
 
 Additionally, there are two *symmetric* relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two *sides* of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the *source* and *destination* of a relationship as the non-symmetric relationship types above do.
 
-* **Symmetric Many-to-many** - as in Many-to-many, but acting more as a *set* or *group* of objects. For example, this could be used to define a set of devices particpating in a full-mesh routing topology. Each device is a peer to all other devices in the set.
+* **Symmetric Many-to-many** - as in Many-to-many, but acting more as an *undirected graph* of similar objects. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between *source* and *destination* peers.
 * **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
+
+!!! note
+    A symmetric many-to-many relationship can be, but is not necessarily, a *complete graph* or *full mesh*. For example, in the routing topology example above, if Device *A* and Device *B* are peers, and Device *B* and Device *C* are peers, this does not automatically imply a relationship between Devices *A* and *C* -- they **might or might not** also be peers, depending on how you define and populate the specific associations for this relationship.
 
 ## Relationship Filters
 
