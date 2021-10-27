@@ -43,6 +43,15 @@ query {
 }
 ```
 
+#### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
+
+Complex GraphQL queries have been greatly optimized thanks to integration of 
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+
+In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
+
+For in depth details on our benchmarks, please see the [comment thread on the issue](https://github.com/nautobot/nautobot/issues/171#issuecomment-907483759).
+
 #### Installed Plugins List and Detail Views, Plugin Config and Home Views ([#935](https://github.com/nautobot/nautobot/pull/935))
 
 The `Plugins` menu now includes an "Installed Plugins" menu item which provides a list view of information about all installed and enabled plugins, similar to a formerly administrator-only view.
@@ -98,6 +107,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#13](https://github.com/nautobot/nautobot/issues/13) - Added `nautobot_database_ready` signal
 - [#125](https://github.com/nautobot/nautobot/issues/125) - Added support for `approval_required = True` on Jobs
+- [#171](https://github.com/nautobot/nautobot/issues/171) - GraphQL queries have been greatly optimized by integration with `graphene-django-optimizer`
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
 - [#248](https://github.com/nautobot/nautobot/issues/248) - Added support for filtering GraphQL queries at all levels
 - [#374](https://github.com/nautobot/nautobot/issues/374) - Added ability to schedule Jobs for future and/or recurring execution
