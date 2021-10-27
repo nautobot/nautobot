@@ -12,6 +12,7 @@ from nautobot.dcim.models import DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import (
     add_blank_choice,
+    APISelect,
     APISelectMultiple,
     BootstrapMixin,
     BulkEditForm,
@@ -59,6 +60,7 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -743,6 +745,7 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
         """
         super().clean()
 
+        # TODO fix this
         if self.cleaned_data["_token"] and self.cleaned_data["token_secret"]:
             raise ValidationError("Token and Token Secret fields are mutually exclusive - please pick just one.")
         if self.cleaned_data["username"] and self.cleaned_data["username_secret"]:
@@ -1093,12 +1096,24 @@ class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
     tag = TagFilterField(model)
 
 
+# Inline formset for use with providing dynamic rows when creating/editing assignments of Secrets to SecretsGroups.
+SecretsGroupAssociationFormSet = inlineformset_factory(
+    parent_model=SecretsGroup,
+    model=SecretsGroupAssociation,
+    fields=("category", "meaning", "secret"),
+    extra=5,
+    widgets={
+        "category": StaticSelect2,
+        "meaning": StaticSelect2,
+        "secret": APISelect(api_url="/api/extras/secrets/"),
+    },
+)
+
+
 class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelForm):
     """Create/update form for `SecretsGroup` objects."""
 
     slug = SlugField()
-
-    secrets = DynamicModelMultipleChoiceField(queryset=Secret.objects.all(), required=False)
 
     class Meta:
         model = SecretsGroup
@@ -1106,7 +1121,6 @@ class SecretsGroupForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFo
             "name",
             "slug",
             "description",
-            "secrets",
         ]
 
 

@@ -66,9 +66,9 @@ class GitRepository(PrimaryModel):
         default="",
     )
 
-    secrets_groups = models.ManyToManyField(
+    secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
-        related_name="+",
+        on_delete=models.PROTECT,
         default=None,
         blank=True,
         null=True,

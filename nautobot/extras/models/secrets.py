@@ -111,7 +111,9 @@ class SecretsGroup(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name", unique=True)
     description = models.CharField(max_length=200, blank=True)
-    secrets = models.ManyToManyField(to=Secret, related_name="groups", through="extras.SecretsGroupAssociation")
+    secrets = models.ManyToManyField(
+        to=Secret, related_name="groups", through="extras.SecretsGroupAssociation", blank=True
+    )
 
     csv_headers = ["name", "slug", "description"]
 
@@ -128,8 +130,8 @@ class SecretsGroup(OrganizationalModel):
 class SecretsGroupAssociation(BaseModel):
     """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
 
-    secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
     group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE)
+    secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
 
     category = models.CharField(max_length=32, choices=SecretCategoryChoices)
     meaning = models.CharField(max_length=32, choices=SecretMeaningChoices)
@@ -139,3 +141,6 @@ class SecretsGroupAssociation(BaseModel):
             # Don't allow the same category/meaning to be used more than once in the same group
             ("group", "category", "meaning"),
         )
+
+    def __str__(self):
+        return f"{self.group}: {self.category} {self.meaning} {self.secret}"

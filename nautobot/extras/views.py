@@ -60,6 +60,7 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     TaggedItem,
@@ -1375,10 +1376,106 @@ class SecretsGroupListView(generic.ObjectListView):
 class SecretsGroupView(generic.ObjectView):
     queryset = SecretsGroup.objects.all()
 
+    def get_extra_context(self, request, instance):
+        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(group=instance)}
+
 
 class SecretsGroupEditView(generic.ObjectEditView):
     queryset = SecretsGroup.objects.all()
     model_form = forms.SecretsGroupForm
+    template_name = "extras/secretsgroup_edit.html"
+
+    def get_extra_context(self, request, instance):
+        ctx = super().get_extra_context(request, instance)
+
+        if request.POST:
+            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
+        else:
+            ctx["secrets"] = forms.SecretsGroupAssociationFormSet(instance=instance)
+
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        logger = logging.getLogger("nautobot.views.SecretsGroupEditView")
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                    # Process the formsets for secrets
+                    ctx = self.get_extra_context(request, obj)
+                    secrets = ctx["secrets"]
+                    if secrets.is_valid():
+                        secrets.save()
+                    else:
+                        raise RuntimeError(secrets.errors)
+
+                msg = "{} {}".format(
+                    "Created" if object_created else "Modified",
+                    self.queryset.model._meta.verbose_name,
+                )
+                logger.info(f"{msg} {obj} (PK: {obj.pk})")
+                if hasattr(obj, "get_absolute_url"):
+                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                else:
+                    msg = "{} {}".format(msg, escape(obj))
+                messages.success(request, mark_safe(msg))
+
+                if "_addanother" in request.POST:
+
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(return_url)
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except RuntimeError:
+                msg = "Errors encountered when saving secrets group associations. See below."
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except ProtectedError as err:
+                # e.g. Trying to delete a choice that is in use.
+                protected_obj, err_msg = err.args
+                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
 
 
 class SecretsGroupDeleteView(generic.ObjectDeleteView):

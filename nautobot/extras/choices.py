@@ -257,16 +257,16 @@ class RelationshipTypeChoices(ChoiceSet):
 
 class SecretCategoryChoices(ChoiceSet):
 
-    TYPE_GENERIC = "generic"
+    TYPE_GENERIC = "Generic"
 
-    TYPE_CONSOLE = "console"
-    TYPE_GNMI = "gnmi"
-    TYPE_HTTP = "http"
-    TYPE_NETCONF = "netconf"
-    TYPE_REST = "rest"
-    TYPE_RESTCONF = "restconf"
-    TYPE_SNMP = "snmp"
-    TYPE_SSH = "ssh"
+    TYPE_CONSOLE = "Console"
+    TYPE_GNMI = "gNMI"
+    TYPE_HTTP = "HTTP(S)"
+    TYPE_NETCONF = "NETCONF"
+    TYPE_REST = "REST"
+    TYPE_RESTCONF = "RESTCONF"
+    TYPE_SNMP = "SNMP"
+    TYPE_SSH = "SSH"
 
     CHOICES = (
         (TYPE_GENERIC, "Generic"),
