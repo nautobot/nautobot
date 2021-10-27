@@ -178,7 +178,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 
 ```python
 [
-    <DjangoObjectType>, <DjangoObjectType>
+    <DjangoObjectType>, <DjangoObjectType>, <OptimizedDjangoObjectType>
 ]
 ```
 

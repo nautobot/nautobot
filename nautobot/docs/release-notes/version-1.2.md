@@ -43,6 +43,15 @@ query {
 }
 ```
 
+#### GraphQL Query Optimizations ([#171](https://github.com/nautobot/nautobot/issues/171))
+
+Complex GraphQL queries have been greatly optimized thanks to integration of 
+[`graphene-django-optimizer`](https://github.com/tfoxy/graphene-django-optimizer) into Nautobot! 
+
+In our internal testing and benchmarking the number of SQL queries generated per GraphQL query have been drastically reduced, resulting in much quicker response times and less strain on the database.
+
+For in depth details on our benchmarks, please see the [comment thread on the issue](https://github.com/nautobot/nautobot/issues/171#issuecomment-907483759).
+
 #### Installed Plugins List and Detail Views, Plugin Config and Home Views ([#935](https://github.com/nautobot/nautobot/pull/935))
 
 The `Plugins` menu now includes an "Installed Plugins" menu item which provides a list view of information about all installed and enabled plugins, similar to a formerly administrator-only view.
@@ -82,6 +91,10 @@ Organizations may provide custom branding assets to change the logo, icons, and 
 
 ### Changed
 
+#### Admin Site Changes ([#900](https://github.com/nautobot/nautobot/pull/900))
+
+The Admin sub-site within Nautobot (`/admin/` and its child pages) has been revamped in appearance and functionality. It has been re-skinned to resemble the rest of the Nautobot UI, and has been slimmed down to only include those models and features that are still exclusive to admin users, such as user/group/permission management.
+
 #### Slug fields are now Optional in CSV import, REST API and ORM ([#493](https://github.com/nautobot/nautobot/issues/493))
 
 All models that have `slug` fields now use `AutoSlugField` from the `django-extensions` package. This means that when creating a record via the REST API, CSV import, or direct ORM Python calls, the `slug` field is now fully optional; if unspecified, it will be automatically assigned a unique value, just as how a `slug` is auto-populated in the UI when creating a new record.
@@ -94,6 +107,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#13](https://github.com/nautobot/nautobot/issues/13) - Added `nautobot_database_ready` signal
 - [#125](https://github.com/nautobot/nautobot/issues/125) - Added support for `approval_required = True` on Jobs
+- [#171](https://github.com/nautobot/nautobot/issues/171) - GraphQL queries have been greatly optimized by integration with `graphene-django-optimizer`
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
 - [#248](https://github.com/nautobot/nautobot/issues/248) - Added support for filtering GraphQL queries at all levels
 - [#374](https://github.com/nautobot/nautobot/issues/374) - Added ability to schedule Jobs for future and/or recurring execution
@@ -117,11 +131,19 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Changed
 
+- [#222](https://github.com/nautobot/nautobot/issues/222) - Changed wildcard imports to explicitly enumerated imports and enabled associated Flake8 linter rules.
 - [#472](https://github.com/nautobot/nautobot/issues/472) - `JobResult` lists now show the associated Job's name (if available) instead of the Job's `class_path`.
 - [#493](https://github.com/nautobot/nautobot/issues/493) - All `slug` fields are now optional when creating records via the REST API, ORM, or CSV import. Slugs will be automatically assigned if unspecified.
 - [#877](https://github.com/nautobot/nautobot/pull/877) - Hid unused "Social Auth" section from Django admin page.
+- [#900](https://github.com/nautobot/nautobot/pull/900) - Admin site has been revised and re-skinned to more closely match the core Nautobot UI.
 
 ### Fixed
 
 - [#852](https://github.com/nautobot/nautobot/issues/852) - Fixed missing "Change Log" tab on certain object detail views
 - [#853](https://github.com/nautobot/nautobot/issues/853) - Fixed `AttributeError` on certain object detail views
+- [#891](https://github.com/nautobot/nautobot/issues/891) - Fixed custom field select/multiselect not handled by new UI and added integration tests
+- [#966](https://github.com/nautobot/nautobot/issues/966) - Fixed missing "Advanced" tab on Device detail views
+
+### Security
+
+- [#1017](https://github.com/nautobot/nautobot/issues/1017) - Custom field descriptions no longer potentially render as arbitrary HTML in object edit forms; Markdown format is now supported as a less dangerous option.

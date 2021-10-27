@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.db.models.fields import TextField
+from django.forms import inlineformset_factory
 from django.urls.base import reverse
 from django.core.validators import ValidationError
 from django.utils.safestring import mark_safe
@@ -27,16 +28,16 @@ from nautobot.utilities.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
-    BOOLEAN_WITH_BLANK_CHOICES,
 )
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import *
 from .datasources import get_datasource_content_choices
 from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -52,7 +53,14 @@ from .models import (
     Webhook,
 )
 from .utils import FeatureQuery
-from nautobot.extras import choices
+from .choices import (
+    CustomFieldFilterLogicChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
 
 
 #
@@ -437,10 +445,34 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 #
 
 
+# CustomFieldChoice inline formset for use with providing dynamic rows when creating/editing choices
+# for `CustomField` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+CustomFieldChoiceFormSet = inlineformset_factory(
+    parent_model=CustomField,
+    model=CustomFieldChoice,
+    exclude=(),
+    extra=5,
+    widgets={
+        "value": forms.TextInput(attrs={"class": "form-control"}),
+        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+    },
+)
+
+
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     # TODO: Migrate custom field model from name to slug #464
-    name = forms.CharField(required=True, label="Slug")
-    content_types = MultipleContentTypeField(feature="custom_fields")
+    # Once that's done we can set "name" as a proper (Auto)SlugField,
+    # but for the moment, that field only works with fields specifically named "slug"
+    description = forms.CharField(
+        required=False,
+        help_text="Also used as the help text when editing models using this custom field.<br>"
+        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
+        "Markdown</a> syntax is supported.",
+    )
+    content_types = MultipleContentTypeField(
+        feature="custom_fields", help_text="The object(s) to which this field applies."
+    )
 
     class Meta:
         model = CustomField
@@ -808,7 +840,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
     """
 
     _schedule_type = forms.ChoiceField(
-        choices=choices.JobExecutionType,
+        choices=JobExecutionType,
         help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
         label="Type",
     )
@@ -829,7 +861,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         """
         cleaned_data = super().clean()
 
-        if cleaned_data["_schedule_type"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+        if cleaned_data["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
             if not cleaned_data["_schedule_name"]:
                 raise ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 

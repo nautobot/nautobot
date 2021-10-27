@@ -19,7 +19,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
-from nautobot.ipam.choices import *
+from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
@@ -38,8 +38,22 @@ from nautobot.utilities.api import get_serializer_for_model
 from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
 )
-from .nested_serializers import *
 
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import (  # noqa: F401
+    IPFieldSerializer,
+    NestedAggregateSerializer,
+    NestedIPAddressSerializer,
+    NestedPrefixSerializer,
+    NestedRIRSerializer,
+    NestedRoleSerializer,
+    NestedRouteTargetSerializer,
+    NestedServiceSerializer,
+    NestedVLANGroupSerializer,
+    NestedVLANSerializer,
+    NestedVRFSerializer,
+)
 
 #
 # VRFs

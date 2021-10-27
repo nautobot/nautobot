@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from nautobot.utilities.utils import serialize_object
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import *
+from nautobot.extras.choices import ObjectChangeActionChoices
 
 
 #

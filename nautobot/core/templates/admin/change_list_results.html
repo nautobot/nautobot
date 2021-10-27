@@ -1,0 +1,45 @@
+{% load i18n static %}
+{% if result_hidden_fields %}
+<div class="hiddenfields">{# DIV for HTML validation #}
+{% for item in result_hidden_fields %}{{ item }}{% endfor %}
+</div>
+{% endif %}
+<div class="table-responsive">
+  <table id="result_list" class="table table-hover table-headings">
+    <thead>
+      <tr>
+        {% for header in result_headers %}
+        <th scope="col" {{ header.class_attrib }}>
+          {% if header.sortable %}
+            {% if header.sort_priority > 0 %}
+              <div class="sortoptions pull-right">
+                <a class="sortremove" href="{{ header.url_remove }}" title="{% trans "Remove from sorting" %}"><span class="glyphicon glyphicon-remove"></span></a>
+                {% if num_sorted_fields > 1 %}<span class="sortpriority" title="{% blocktrans with priority_number=header.sort_priority %}Sorting priority: {{ priority_number }}{% endblocktrans %}">{{ header.sort_priority }}</span>{% endif %}
+                <a href="{{ header.url_toggle }}" class="toggle {% if header.ascending %}ascending{% else %}descending{% endif %}" title="{% trans "Toggle sorting" %}"><span class="glyphicon glyphicon-arrow-{% if header.ascending %}up{% else %}down{% endif %}"></span></a>
+              </div>
+            {% endif %}
+          {% endif %}
+          {% if header.sortable %}<a href="{{ header.url_primary }}">{{ header.text|capfirst }}</a>{% else %}<span>{{ header.text|capfirst }}</span>{% endif %}
+        </th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% if results %}
+        {% for result in results %}
+          {% if result.form.non_field_errors %}
+              <tr><td colspan="{{ result|length }}">{{ result.form.non_field_errors }}</td></tr>
+          {% endif %}
+          <tr class="{% cycle 'row1' 'row2' %}">
+              {% for item in result %}
+                  {{ item }}
+              {% endfor %}
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+            <td colspan="9" class="text-center text-muted">— No {{ cl.opts.verbose_name_plural }} found —</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>

@@ -45,5 +45,6 @@
 {% endblock content %}
 
 {% block javascript %}
+    {{ block.super }}
     <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock javascript %}

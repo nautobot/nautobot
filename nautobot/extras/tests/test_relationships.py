@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 from nautobot.dcim.models import Site, Rack
 from nautobot.ipam.models import VLAN
-from nautobot.extras.choices import *
+from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation
 from nautobot.utilities.testing import TestCase
 from nautobot.utilities.forms import (

@@ -78,6 +78,8 @@ drf-yasg = {extras = ["validation"], version = "~1.20.0"}
 GitPython = "3.1.18"
 # GraphQL support
 graphene-django = "~2.15.0"
+# Graphene Optimizer
+graphene-django-optimizer = "~0.8.0"
 # Package version detection in older versions of Python
 importlib-metadata = {version = "~3.4.0", python = "<3.8"}
 # Template rendering engine

@@ -1,6 +1,6 @@
 from django.urls import reverse
 
-from nautobot.circuits.choices import *
+from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status

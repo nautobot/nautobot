@@ -2,8 +2,26 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.circuits.models import *
-from nautobot.dcim.models import *
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.dcim.models import (
+    Cable,
+    CablePath,
+    ConsolePort,
+    ConsoleServerPort,
+    Device,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    Interface,
+    Manufacturer,
+    PowerFeed,
+    PowerOutlet,
+    PowerPanel,
+    PowerPort,
+    RearPort,
+    Site,
+)
+
 from nautobot.dcim.utils import object_to_path_node
 from nautobot.extras.models import Status
 

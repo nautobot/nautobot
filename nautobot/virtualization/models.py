@@ -21,7 +21,6 @@ from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
 from nautobot.utilities.utils import serialize_object
-from .choices import *
 
 
 __all__ = (
