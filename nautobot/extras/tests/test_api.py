@@ -1352,27 +1352,27 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         site_type = ContentType.objects.get_for_model(Site)
         device_type = ContentType.objects.get_for_model(Device)
 
-        Relationship.objects.create(
+        Relationship(
             name="Related Sites",
             slug="related-sites",
             type="many-to-many",
             source_type=site_type,
             destination_type=site_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Unrelated Sites",
             slug="unrelated-sites",
             type="many-to-many",
             source_type=site_type,
             destination_type=site_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Devices found elsewhere",
             slug="devices-elsewhere",
             type="many-to-many",
             source_type=site_type,
             destination_type=device_type,
-        )
+        ).validated_save()
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
@@ -1385,13 +1385,14 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         site_type = ContentType.objects.get_for_model(Site)
         device_type = ContentType.objects.get_for_model(Device)
 
-        cls.relationship = Relationship.objects.create(
+        cls.relationship = Relationship(
             name="Devices found elsewhere",
             slug="elsewhere-devices",
             type="many-to-many",
             source_type=site_type,
             destination_type=device_type,
         )
+        cls.relationship.validated_save()
         cls.sites = (
             Site.objects.create(name="Empty Site", slug="empty"),
             Site.objects.create(name="Occupied Site", slug="occupied"),
@@ -1406,27 +1407,27 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
         )
 
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=cls.relationship,
             source_type=site_type,
             source_id=cls.sites[0].pk,
             destination_type=device_type,
             destination_id=cls.devices[0].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationship,
             source_type=site_type,
             source_id=cls.sites[0].pk,
             destination_type=device_type,
             destination_id=cls.devices[1].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=cls.relationship,
             source_type=site_type,
             source_id=cls.sites[0].pk,
             destination_type=device_type,
             destination_id=cls.devices[2].pk,
-        )
+        ).validated_save()
 
         cls.create_data = [
             {

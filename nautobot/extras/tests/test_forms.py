@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import TestCase
 
 from nautobot.dcim.forms import DeviceForm
@@ -31,7 +32,15 @@ class RelationshipModelFormTestCase(TestCase):
             status=cls.status_active,
         )
         cls.device_2 = dcim_models.Device.objects.create(
-            name="Device 1",
+            name="Device 2",
+            site=cls.site,
+            device_type=cls.device_type,
+            device_role=cls.device_role,
+            platform=cls.platform,
+            status=cls.status_active,
+        )
+        cls.device_3 = dcim_models.Device.objects.create(
+            name="Device 3",
             site=cls.site,
             device_type=cls.device_type,
             device_role=cls.device_role,
@@ -45,20 +54,30 @@ class RelationshipModelFormTestCase(TestCase):
         cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.site)
         cls.vlangroup_2 = ipam_models.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.site)
 
-        cls.relationship_1 = Relationship.objects.create(
+        cls.relationship_1 = Relationship(
             name="BGP Router-ID",
             slug="bgp-router-id",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
         )
-        cls.relationship_2 = Relationship.objects.create(
+        cls.relationship_1.validated_save()
+        cls.relationship_2 = Relationship(
             name="Device VLAN Groups",
             slug="device-vlan-groups",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.VLANGroup),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
         )
+        cls.relationship_2.validated_save()
+        cls.relationship_3 = Relationship(
+            name="HA Device Peer",
+            slug="ha-device-peer",
+            source_type=ContentType.objects.get_for_model(dcim_models.Device),
+            destination_type=ContentType.objects.get_for_model(dcim_models.Device),
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+        cls.relationship_3.validated_save()
 
         cls.device_form_base_data = {
             "name": "New Device",
@@ -86,6 +105,8 @@ class RelationshipModelFormTestCase(TestCase):
     def test_create_relationship_associations_valid_1(self):
         """
         A new record can create ONE_TO_ONE and ONE_TO_MANY associations where it is the "source" object.
+
+        It can also create ONE_TO_ONE_SYMMETRIC associations where it is a "peer" object.
         """
         form = DeviceForm(
             data=dict(
@@ -93,6 +114,7 @@ class RelationshipModelFormTestCase(TestCase):
                 **{
                     f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk,
                     f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk],
+                    f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
                 },
             )
         )
@@ -109,6 +131,12 @@ class RelationshipModelFormTestCase(TestCase):
         )
         RelationshipAssociation.objects.get(
             relationship=self.relationship_2, source_id=new_device.pk, destination_id=self.vlangroup_2.pk
+        )
+        # relationship_3 is symmetric, we don't care which side is "source" or "destination" as long as it exists
+        RelationshipAssociation.objects.get(
+            Q(source_id=new_device.pk, destination_id=self.device_1.pk)
+            | Q(source_id=self.device_1.pk, destination_id=new_device.pk),
+            relationship=self.relationship_3,
         )
 
     def test_create_relationship_associations_valid_2(self):
@@ -154,13 +182,13 @@ class RelationshipModelFormTestCase(TestCase):
         A new record CANNOT create ONE_TO_ONE relations where its "destination" is already associated.
         """
         # Existing ONE_TO_ONE relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_1,
             source_type=self.relationship_1.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_1.destination_type,
             destination_id=self.ipaddress_1.pk,
-        )
+        ).validated_save()
 
         # Can't associate New Device with IP Address 1 (already associated to Device 1)
         form = DeviceForm(
@@ -189,13 +217,13 @@ class RelationshipModelFormTestCase(TestCase):
         A new record CANNOT create ONE_TO_MANY relations where any of its "destinations" are already associated.
         """
         # Existing ONE_TO_MANY relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_2,
             source_type=self.relationship_2.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_2.destination_type,
             destination_id=self.vlangroup_1.pk,
-        )
+        ).validated_save()
 
         # Can't associate New Device with VLAN Group 1 (already associated to Device 1)
         form = DeviceForm(
@@ -210,26 +238,67 @@ class RelationshipModelFormTestCase(TestCase):
             form.errors[f"cr_{self.relationship_2.slug}__destination"][0],
         )
 
+    def test_create_relationship_associations_invalid_3(self):
+        """
+        A new record CANNOT create ONE_TO_ONE_SYMMETRIC relations where its peer is already associated.
+        """
+        # Existing ONE_TO_ONE_SYMMETRIC relation
+        RelationshipAssociation(
+            relationship=self.relationship_3,
+            source_type=self.relationship_3.source_type,
+            source_id=self.device_1.pk,
+            destination_type=self.relationship_3.destination_type,
+            destination_id=self.device_2.pk,
+        ).validated_save()
+
+        # Peer is already a source for this relationship
+        form = DeviceForm(
+            data=dict(**self.device_form_base_data, **{f"cr_{self.relationship_3.slug}__peer": self.device_1.pk})
+        )
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            "Device 1 is already involved in a HA Device Peer relationship",
+            form.errors[f"cr_{self.relationship_3.slug}__peer"][0],
+        )
+
+        # Peer is already a destination for this relationship
+        form = DeviceForm(
+            data=dict(**self.device_form_base_data, **{f"cr_{self.relationship_3.slug}__peer": self.device_2.pk})
+        )
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            "Device 2 is already involved in a HA Device Peer relationship",
+            form.errors[f"cr_{self.relationship_3.slug}__peer"][0],
+        )
+
     def test_update_relationship_associations_valid_1(self):
         """
         An existing record with an existing ONE_TO_ONE or ONE_TO_MANY association can change its destination(s).
         """
         # Existing ONE_TO_ONE relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_1,
             source_type=self.relationship_1.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_1.destination_type,
             destination_id=self.ipaddress_1.pk,
-        )
+        ).validated_save()
         # Existing ONE_TO_MANY relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_2,
             source_type=self.relationship_2.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_2.destination_type,
             destination_id=self.vlangroup_1.pk,
-        )
+        ).validated_save()
+        # Existing ONE_TO_ONE_SYMMETRIC relation
+        RelationshipAssociation(
+            relationship=self.relationship_3,
+            source_type=self.relationship_3.source_type,
+            source_id=self.device_1.pk,
+            destination_type=self.relationship_3.destination_type,
+            destination_id=self.device_3.pk,
+        ).validated_save()
 
         form = DeviceForm(
             instance=self.device_1,
@@ -240,6 +309,7 @@ class RelationshipModelFormTestCase(TestCase):
                 "status": self.status_active,
                 f"cr_{self.relationship_1.slug}__destination": self.ipaddress_2.pk,
                 f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_2.pk],
+                f"cr_{self.relationship_3.slug}__peer": self.device_2.pk,
             },
         )
         self.assertTrue(form.is_valid(), form.errors)
@@ -259,18 +329,27 @@ class RelationshipModelFormTestCase(TestCase):
             relationship=self.relationship_2, source_id=self.device_1.pk, destination_id=self.vlangroup_2.pk
         )
 
+        # Existing ONE_TO_ONE_SYMMETRIC relation should have been deleted and replaced
+        with self.assertRaises(RelationshipAssociation.DoesNotExist):
+            RelationshipAssociation.objects.get(relationship=self.relationship_3, destination_id=self.device_3.pk)
+        RelationshipAssociation.objects.get(
+            Q(source_id=self.device_1.pk, destination_id=self.device_2.pk)
+            | Q(source_id=self.device_2.pk, destination_id=self.device_1.pk),
+            relationship=self.relationship_3,
+        )
+
     def test_update_relationship_associations_valid_2(self):
         """
         An existing record with an existing ONE_TO_ONE association can change its source.
         """
         # Existing ONE_TO_ONE relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_1,
             source_type=self.relationship_1.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_1.destination_type,
             destination_id=self.ipaddress_1.pk,
-        )
+        ).validated_save()
 
         form = IPAddressForm(
             instance=self.ipaddress_1,
@@ -295,13 +374,13 @@ class RelationshipModelFormTestCase(TestCase):
         An existing record with an existing ONE_TO_MANY association can change its source.
         """
         # Existing ONE_TO_MANY relation
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=self.relationship_2,
             source_type=self.relationship_2.source_type,
             source_id=self.device_1.pk,
             destination_type=self.relationship_2.destination_type,
             destination_id=self.vlangroup_1.pk,
-        )
+        ).validated_save()
 
         form = VLANGroupForm(
             instance=self.vlangroup_1,
@@ -320,4 +399,62 @@ class RelationshipModelFormTestCase(TestCase):
             RelationshipAssociation.objects.get(relationship=self.relationship_2, source_id=self.device_1.pk)
         RelationshipAssociation.objects.get(
             relationship=self.relationship_2, source_id=self.device_2.pk, destination_id=self.vlangroup_1.pk
+        )
+
+    def test_update_relationship_associations_valid_4(self):
+        """
+        An existing record with an existing ONE_TO_ONE_SYMMETRIC association can change its peer.
+
+        This differs from test_update_relationship_associations_valid_1 in that the existing association has this
+        record as the destination rather than the source, which *should* work either way.
+        """
+        # Existing ONE_TO_ONE_SYMMETRIC relation
+        RelationshipAssociation(
+            relationship=self.relationship_3,
+            source_type=self.relationship_3.source_type,
+            source_id=self.device_3.pk,
+            destination_type=self.relationship_3.destination_type,
+            destination_id=self.device_1.pk,
+        ).validated_save()
+
+        form = DeviceForm(
+            instance=self.device_1,
+            data={
+                "site": self.site,
+                "device_role": self.device_role,
+                "device_type": self.device_type,
+                "status": self.status_active,
+                f"cr_{self.relationship_3.slug}__peer": self.device_2.pk,
+            },
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertTrue(form.save())
+
+        # Existing ONE_TO_ONE_SYMMETRIC relation should have been deleted and replaced
+        with self.assertRaises(RelationshipAssociation.DoesNotExist):
+            RelationshipAssociation.objects.get(relationship=self.relationship_3, source_id=self.device_3.pk)
+        RelationshipAssociation.objects.get(
+            Q(source_id=self.device_1.pk, destination_id=self.device_2.pk)
+            | Q(source_id=self.device_2.pk, destination_id=self.device_1.pk),
+            relationship=self.relationship_3,
+        )
+
+    def test_update_relationship_associatioins_invalid_1(self):
+        """
+        A record CANNOT form a relationship to itself.
+        """
+        form = DeviceForm(
+            instance=self.device_1,
+            data={
+                "site": self.site,
+                "device_role": self.device_role,
+                "device_type": self.device_type,
+                "status": self.status_active,
+                f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
+            },
+        )
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            "Object Device 1 cannot form a relationship to itself!",
+            form.errors[f"cr_{self.relationship_3.slug}__peer"][0],
         )

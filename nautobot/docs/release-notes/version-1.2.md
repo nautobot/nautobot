@@ -75,19 +75,28 @@ Jobs can now be scheduled for execution at a future date and time (such as durin
 
 TODO: add link to relevant documentation on enabling `nautobot-server celery beat` service!
 
+#### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
+
+Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
+
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
 Each plugin is now able to optionally inject a custom banner into any of the Nautobot core views.
 
 Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
 
+#### Same-Type and Symmetric Relationships ([#157](https://github.com/nautobot/nautobot/issues/157))
+
+The [Relationships](../models/extras/relationship.md) feature has been extended in two ways:
+
+1. Relationships between the same object type (e.g. device-to-device) are now permitted and supported.
+2. For same-object-type relationships specifically, *symmetric* (peer-to-peer rather than source-to-destination) relationships are now an option.
+
+For more details, refer to the [Relationships](../models/extras/relationship.md) documentation.
+
 #### Software-Defined Home Page ([#674](https://github.com/nautobot/nautobot/pull/674), [#716](https://github.com/nautobot/nautobot/pull/716))
 
 Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/homepage.md).
-
-#### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
-
-Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
 
 ### Changed
 
@@ -107,6 +116,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 - [#13](https://github.com/nautobot/nautobot/issues/13) - Added `nautobot_database_ready` signal
 - [#125](https://github.com/nautobot/nautobot/issues/125) - Added support for `approval_required = True` on Jobs
+- [#157](https://github.com/nautobot/nautobot/issues/157) - Added support for same-object-type and symmetric Relationships
 - [#171](https://github.com/nautobot/nautobot/issues/171) - GraphQL queries have been greatly optimized by integration with `graphene-django-optimizer`
 - [#229](https://github.com/nautobot/nautobot/issues/229) - Added user-facing views for Custom Field management
 - [#248](https://github.com/nautobot/nautobot/issues/248) - Added support for filtering GraphQL queries at all levels

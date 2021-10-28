@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory
 from django.urls.base import reverse
@@ -86,20 +87,21 @@ class RelationshipModelForm(forms.ModelForm):
             for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # If this model is on the "source" side of the relationship, then the field will be named
-                # cr_relationship-slug__destination since it's used to pick the destination object(s).
-                # Conversely if we're on the "destination" side, the field will be cr_relationship-slug__source.
+                # cr_<relationship-slug>__destination since it's used to pick the destination object(s).
+                # If we're on the "destination" side, the field will be cr_<relationship-slug>__source.
+                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship-slug>__peer
                 field_name = f"cr_{relationship.slug}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
                     if relationship.has_many(peer_side):
-                        initial = [getattr(association, peer_side) for association in queryset.all()]
+                        initial = [association.get_peer(self.instance) for association in queryset.all()]
                         self.fields[field_name].initial = initial
                     else:
                         association = queryset.first()
                         if association:
-                            self.fields[field_name].initial = getattr(association, peer_side)
+                            self.fields[field_name].initial = association.get_peer(self.instance)
 
                 # Annotate the field in the list of Relationship form fields
                 self.relationships.append(field_name)
@@ -117,11 +119,6 @@ class RelationshipModelForm(forms.ModelForm):
         """
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
-                # If this side of the relationship is a "MANY" relation,
-                # we can coexist with other existing RelationshipAssociations and there's nothing to check now.
-                if relationship.has_many(side):
-                    continue
-
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 field_name = f"cr_{relationship.slug}__{peer_side}"
@@ -136,13 +133,33 @@ class RelationshipModelForm(forms.ModelForm):
                     target_peers = [item for item in self.cleaned_data[field_name]]
                 else:
                     target_peers = [self.cleaned_data[field_name]]
+
                 for target_peer in target_peers:
-                    existing_peer_associations = RelationshipAssociation.objects.filter(
-                        relationship=relationship,
-                        **{
-                            f"{peer_side}_id": target_peer.pk,
-                        },
-                    ).exclude(**{f"{side}_id": self.instance.pk})
+                    if target_peer.pk == self.instance.pk:
+                        raise ValidationError(
+                            {field_name: f"Object {self.instance} cannot form a relationship to itself!"}
+                        )
+
+                    if relationship.has_many(side):
+                        # No need to check for existing RelationshipAssociations since this is a "many" relationship
+                        continue
+
+                    if not relationship.symmetric:
+                        existing_peer_associations = RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            **{
+                                f"{peer_side}_id": target_peer.pk,
+                            },
+                        ).exclude(**{f"{side}_id": self.instance.pk})
+                    else:
+                        existing_peer_associations = RelationshipAssociation.objects.filter(
+                            (
+                                (Q(source_id=target_peer.pk) & ~Q(destination_id=self.instance.pk))
+                                | (Q(destination_id=target_peer.pk) & ~Q(source_id=self.instance.pk))
+                            ),
+                            relationship=relationship,
+                        )
+
                     if existing_peer_associations.exists():
                         raise ValidationError(
                             {field_name: f"{target_peer} is already involved in a {relationship} relationship"}
@@ -161,10 +178,18 @@ class RelationshipModelForm(forms.ModelForm):
             side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
                 "relationship": self.fields[field_name].model,
-                f"{side}_type": self.obj_type,
-                f"{side}_id": self.instance.pk,
             }
-            existing_associations = RelationshipAssociation.objects.filter(**filters)
+            if side != RelationshipSideChoices.SIDE_PEER:
+                filters.update({f"{side}_type": self.obj_type, f"{side}_id": self.instance.pk})
+                existing_associations = RelationshipAssociation.objects.filter(**filters)
+            else:
+                existing_associations = RelationshipAssociation.objects.filter(
+                    (
+                        Q(source_type=self.obj_type, source_id=self.instance.pk)
+                        | Q(destination_type=self.obj_type, destination_id=self.instance.pk)
+                    ),
+                    **filters,
+                )
 
             # Get the list of target peer ids (PKs) that are specified in the form
             target_peer_ids = []
@@ -185,10 +210,16 @@ class RelationshipModelForm(forms.ModelForm):
             # Conversely, if it's *not* in target_peer_ids, we should delete it.
             for association in existing_associations:
                 for peer_id in target_peer_ids:
-                    if peer_id == getattr(association, f"{peer_side}_id"):
-                        # This association already exists, so we can ignore it
-                        target_peer_ids.remove(peer_id)
-                        break
+                    if peer_side != RelationshipSideChoices.SIDE_PEER:
+                        if peer_id == getattr(association, f"{peer_side}_id"):
+                            # This association already exists, so we can ignore it
+                            target_peer_ids.remove(peer_id)
+                            break
+                    else:
+                        if peer_id == association.source_id or peer_id == association.destination_id:
+                            # This association already exists, so we can ignore it
+                            target_peer_ids.remove(peer_id)
+                            break
                 else:
                     # This association is not in target_peer_ids, so delete it
                     association.delete()
@@ -196,15 +227,25 @@ class RelationshipModelForm(forms.ModelForm):
             # Anything remaining in target_peer_ids now does not exist yet and needs to be created.
             for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
-                association = RelationshipAssociation(
-                    relationship=relationship,
-                    **{
-                        f"{side}_type": self.obj_type,
-                        f"{side}_id": self.instance.pk,
-                        f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
-                        f"{peer_side}_id": peer_id,
-                    },
-                )
+                if not relationship.symmetric:
+                    association = RelationshipAssociation(
+                        relationship=relationship,
+                        **{
+                            f"{side}_type": self.obj_type,
+                            f"{side}_id": self.instance.pk,
+                            f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
+                            f"{peer_side}_id": peer_id,
+                        },
+                    )
+                else:
+                    # Symmetric association - source/destination are interchangeable
+                    association = RelationshipAssociation(
+                        relationship=relationship,
+                        source_type=self.obj_type,
+                        source_id=self.instance.pk,
+                        destination_type=self.obj_type,  # since this is a symmetric relationship this is OK
+                        destination_id=peer_id,
+                    )
 
                 association.clean()
                 association.save()
@@ -904,18 +945,22 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
 
     slug = SlugField()
     source_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The source object type to which this relationship applies.",
     )
     source_filter = JSONField(
         required=False,
-        help_text='Enter any filters for the source object in <a href="https://json.org/">JSON</a> format.',
+        help_text="Queryset filter matching the applicable source objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
     destination_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model")
+        queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
+        help_text="The destination object type to which this relationship applies.",
     )
     destination_filter = JSONField(
         required=False,
-        help_text='Enter any filters for the destination object in <a href="https://json.org/">JSON</a> format.',
+        help_text="Queryset filter matching the applicable destination objects of the selected type.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 
     class Meta:

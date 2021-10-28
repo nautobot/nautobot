@@ -125,7 +125,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         name (str): name of the custom field to resolve
         resolver_name (str): name of the resolver as declare in DjangoObjectType
         relationship (Relationship): Relationship object to generate a resolver for
-        site (site): side of the relationship to use for the resolver
+        side (str): side of the relationship to use for the resolver
         peer_model (Model): Django Model of the peer of this relationship
     """
 
@@ -133,10 +133,30 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
         """Return a queryset or an object depending on the type of the relationship."""
         peer_side = RelationshipSideChoices.OPPOSITE[side]
         query_params = {"relationship": relationship}
-        query_params[f"{side}_id"] = self.pk
-        queryset_ids = gql_optimizer.query(
-            RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True), info
-        )
+        if not relationship.symmetric:
+            # Get the objects on the other side of this relationship
+            query_params[f"{side}_id"] = self.pk
+            queryset_ids = gql_optimizer.query(
+                RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True), info
+            )
+        else:
+            # Get objects that are peers for this relationship, regardless of side
+            queryset_ids = list(
+                gql_optimizer.query(
+                    RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
+                        "destination_id", flat=True
+                    ),
+                    info,
+                )
+            )
+            queryset_ids += list(
+                gql_optimizer.query(
+                    RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
+                        "source_id", flat=True
+                    ),
+                    info,
+                )
+            )
 
         if relationship.has_many(peer_side):
             return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids), info)
