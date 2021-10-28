@@ -795,6 +795,7 @@ class SecretsGroupSerializer(CustomFieldModelSerializer):
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
 
+    # TODO change to NestedSecretsGroupAssociationSerializer
     secrets = NestedSecretSerializer(many=True, allow_null=True)
 
     class Meta:

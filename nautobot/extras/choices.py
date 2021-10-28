@@ -255,7 +255,7 @@ class RelationshipTypeChoices(ChoiceSet):
 # Secrets
 #
 
-class SecretCategoryChoices(ChoiceSet):
+class SecretsGroupAccessTypeChoices(ChoiceSet):
 
     TYPE_GENERIC = "Generic"
 
@@ -281,7 +281,7 @@ class SecretCategoryChoices(ChoiceSet):
     )
 
 
-class SecretMeaningChoices(ChoiceSet):
+class SecretsGroupSecretTypeChoices(ChoiceSet):
 
     TYPE_KEY = "key"
     TYPE_PASSWORD = "password"

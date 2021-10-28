@@ -8,7 +8,7 @@ from django.urls import reverse
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.extras.choices import SecretCategoryChoices, SecretMeaningChoices
+from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel, RelationshipModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretProviderError
@@ -126,13 +126,13 @@ class SecretsGroup(OrganizationalModel):
     def to_csv(self):
         return (self.name, self.slug, self.description)
 
-    def get_secret_value(self, category, meaning):
-        """Helper method to retrieve a specific secret from this group."""
-        try:
-            secret = self.secrets.through.get(category=category, meaning=meaning).secret
-            return secret.value
-        except ObjectDoesNotExist:
-            return None
+    def get_secret_value(self, access_type, secret_type):
+        """Helper method to retrieve a specific secret from this group.
+
+        May raise SecretError and/or Django ObjectDoesNotExist exceptions; it's up to the caller to handle those.
+        """
+        secret = self.secrets.through.objects.get(access_type=access_type, secret_type=secret_type).secret
+        return secret.value
 
 
 class SecretsGroupAssociation(BaseModel):
@@ -141,14 +141,14 @@ class SecretsGroupAssociation(BaseModel):
     group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE)
     secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
 
-    category = models.CharField(max_length=32, choices=SecretCategoryChoices)
-    meaning = models.CharField(max_length=32, choices=SecretMeaningChoices)
+    access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
+    secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
 
     class Meta:
         unique_together = (
-            # Don't allow the same category/meaning to be used more than once in the same group
-            ("group", "category", "meaning"),
+            # Don't allow the same access-type/secret-type combination to be used more than once in the same group
+            ("group", "access_type", "secret_type"),
         )
 
     def __str__(self):
-        return f"{self.group}: {self.category} {self.meaning} {self.secret}"
+        return f"{self.group}: {self.access_type} {self.secret_type}: {self.secret}"

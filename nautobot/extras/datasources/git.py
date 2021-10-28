@@ -16,7 +16,12 @@ import yaml
 
 from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices, SecretCategoryChoices, SecretMeaningChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    LogLevelChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -27,6 +32,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
+from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.git import GitRepo
 from nautobot.utilities.utils import copy_safe_request
@@ -135,24 +141,24 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     user = None
     token = None
     if repository_record.secrets_group:
+        # In addition to ObjectDoesNotExist, get_secret_value() may also raise a SecretError if a secret is mis-defined;
+        # we don't catch that here but leave it up to the caller to handle as part of general exception handling.
         try:
-            token = repository_record.secrets_group.secrets.get(
-                category=SecretCategoryChoices.TYPE_HTTP, meaning=SecretMeaningChoices.TYPE_TOKEN
-            ).value
-        except Secret.DoesNotExist:
-            pass
+            token = repository_record.secrets_group.get_secret_value(
+                SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_TOKEN
+            )
+        except ObjectDoesNotExist:
+            # No defined secret, fall through to legacy behavior
+            if repository_record._token:
+                token = repository_record._token
         try:
-            user = repository_record.secrets_group.secrets.get(
-                category=SecretCategoryChoices.TYPE_HTTP, meaning=SecretMeaningChoices.TYPE_USERNAME
-            ).value
-        except Secret.DoesNotExist:
-            pass
-
-    # Fallback to deprecated values
-    if not token and repository_record._token:
-        token = repository_record._token
-    if not user and repository_record.username:
-        user = repository_record.username
+            user = repository_record.secrets_group.get_secret_value(
+                SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_USERNAME
+            )
+        except ObjectDoesNotExist:
+            # No defined secret, fall through to legacy behavior
+            if repository_record.username:
+                user = repository_record.username
 
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
