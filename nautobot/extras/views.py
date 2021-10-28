@@ -1253,12 +1253,17 @@ class RelationshipListView(generic.ObjectListView):
     filterset = filters.RelationshipFilterSet
     filterset_form = forms.RelationshipFilterForm
     table = tables.RelationshipTable
-    action_buttons = "add"
+    action_buttons = ("add",)
 
 
 class RelationshipEditView(generic.ObjectEditView):
     queryset = Relationship.objects.all()
     model_form = forms.RelationshipForm
+
+
+class RelationshipBulkDeleteView(generic.BulkDeleteView):
+    queryset = Relationship.objects.all()
+    table = tables.RelationshipTable
 
 
 class RelationshipDeleteView(generic.ObjectDeleteView):
@@ -1271,6 +1276,11 @@ class RelationshipAssociationListView(generic.ObjectListView):
     filterset_form = forms.RelationshipAssociationFilterForm
     table = tables.RelationshipAssociationTable
     action_buttons = ()
+
+
+class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
+    queryset = RelationshipAssociation.objects.all()
+    table = tables.RelationshipAssociationTable
 
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):

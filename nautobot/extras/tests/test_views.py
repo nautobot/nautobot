@@ -1125,6 +1125,7 @@ class RelationshipTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
     # TODO? ViewTestCases.GetObjectViewTestCase,
     # TODO? ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
@@ -1137,26 +1138,26 @@ class RelationshipTestCase(
         interface_type = ContentType.objects.get_for_model(Interface)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
-        Relationship.objects.create(
+        Relationship(
             name="Device VLANs",
             slug="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Primary VLAN",
             slug="primary-vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
-        )
-        Relationship.objects.create(
+        ).validated_save()
+        Relationship(
             name="Primary Interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
-        )
+        ).validated_save()
 
         cls.form_data = {
             "name": "VLAN-to-Interface",
@@ -1180,6 +1181,7 @@ class RelationshipAssociationTestCase(
     # TODO? ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     # TODO? ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
     # TODO? ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
@@ -1190,13 +1192,14 @@ class RelationshipAssociationTestCase(
         device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
-        relationship = Relationship.objects.create(
+        relationship = Relationship(
             name="Device VLANs",
             slug="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         )
+        relationship.validated_save()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
@@ -1212,27 +1215,27 @@ class RelationshipAssociationTestCase(
             VLAN.objects.create(vid=3, name="VLAN 3"),
         )
 
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=relationship,
             source_type=device_type,
             source_id=devices[0].pk,
             destination_type=vlan_type,
             destination_id=vlans[0].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=relationship,
             source_type=device_type,
             source_id=devices[1].pk,
             destination_type=vlan_type,
             destination_id=vlans[1].pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=relationship,
             source_type=device_type,
             source_id=devices[2].pk,
             destination_type=vlan_type,
             destination_id=vlans[2].pk,
-        )
+        ).validated_save()
 
 
 class StatusTestCase(

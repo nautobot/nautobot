@@ -488,6 +488,7 @@ class RelationshipTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = Relationship
         fields = (
+            "pk",
             "name",
             "description",
             "type",
@@ -501,13 +502,16 @@ class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
     actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
 
-    source = tables.Column(linkify=True)
+    source_type = tables.Column()
+    source = tables.Column(linkify=True, orderable=False)
 
-    destination = tables.Column(linkify=True)
+    destination_type = tables.Column()
+    destination = tables.Column(linkify=True, orderable=False)
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
-        fields = ("relationship", "source", "destination", "actions")
+        fields = ("pk", "relationship", "source_type", "source", "destination_type", "destination", "actions")
+        default_columns = ("pk", "relationship", "source", "destination", "actions")
 
 
 #
