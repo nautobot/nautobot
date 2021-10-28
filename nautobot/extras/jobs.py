@@ -18,7 +18,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.db.models import Model
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils import timezone
@@ -346,6 +346,9 @@ class BaseJob:
         """
         vars = cls._get_vars()
         return_data = {}
+
+        if not isinstance(data, dict):
+            raise TypeError("Data should be a dictionary.")
 
         for field_name, value in data.items():
             # If a field isn't a var, skip it (e.g. `_commit`).
@@ -965,7 +968,14 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
     from nautobot.extras.models import JobResult  # avoid circular import
 
-    job_result = JobResult.objects.get(pk=job_result_pk)
+    # Getting the correct job result can fail if the stored data cannot be serialized.
+    # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
+    try:
+        job_result = JobResult.objects.get(pk=job_result_pk)
+    except TypeError as e:
+        logger.error(f"Unable to serialize data for job {job_result_pk}")
+        logger.error(e)
+        return False
 
     job_class = get_job(job_result.name)
     if not job_class:
@@ -979,26 +989,46 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         return False
-    job = job_class()
-    job.job_result = job_result
-
-    # Capture the file IDs for any FileProxy objects created so we can cleanup later.
-    file_fields = list(job._get_file_vars())
-    file_ids = [data[f] for f in file_fields]
-
-    # Attempt to resolve serialized data back into original form by creating querysets or model instances
-    # If we fail to find any objects, we consider this a job execution error, and fail.
-    # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
-    # or it might be bad input from an API request, or manual execution.
 
     try:
-        data = job_class.deserialize_data(data)
-    except ObjectDoesNotExist as e:
+        job = job_class()
+        job.active_test = "initialization"
+        job.job_result = job_result
+    except Exception as error:
+        logger.error("Error initializing job object.")
+        logger.error(error)
+        stacktrace = traceback.format_exc()
+        job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
-        job.log_failure(message=e)
         job_result.completed = timezone.now()
         job_result.save()
-        job.delete_files(*file_ids)  # Cleanup FileProxy objects
+        return False
+
+    try:
+        # Capture the file IDs for any FileProxy objects created so we can cleanup later.
+        file_ids = None
+        file_fields = list(job._get_file_vars())
+        file_ids = [data[f] for f in file_fields]
+
+        # Attempt to resolve serialized data back into original form by creating querysets or model instances
+        # If we fail to find any objects, we consider this a job execution error, and fail.
+        # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
+        # or it might be bad input from an API request, or manual execution.
+
+        data = job_class.deserialize_data(data)
+    except Exception:
+        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        stacktrace = traceback.format_exc()
+        job_result.log(
+            f"Error initializing job:\n```\n{stacktrace}\n```",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="initialization",
+            logger=logger,
+        )
+        job_result.completed = timezone.now()
+        job_result.save()
+        if file_ids:
+            job.delete_files(*file_ids)  # Cleanup FileProxy objects
         return False
 
     if job.read_only:
