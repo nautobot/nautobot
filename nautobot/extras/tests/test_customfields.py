@@ -678,7 +678,7 @@ class CustomFieldAPITest(APITestCase):
 
         data = {"field": self.cf_select.id, "value": "ABC", "weight": 100}
         response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
 
 class CustomFieldImportTest(TestCase):
