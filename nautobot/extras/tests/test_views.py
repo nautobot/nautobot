@@ -13,7 +13,13 @@ from django.utils import timezone
 from unittest import mock
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
-from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, ObjectChangeActionChoices
+from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
+    JobExecutionType,
+    ObjectChangeActionChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.jobs import Job
 from nautobot.extras.models import (
@@ -31,6 +37,7 @@ from nautobot.extras.models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -588,6 +595,66 @@ class SecretTestCase(
 
         cls.slug_source = "name"
         cls.slug_test_object = "View Test 3"
+
+
+# Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
+class SecretsGroupTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = SecretsGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Group 1", slug="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
+            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+        )
+
+        secrets = (
+            Secret.objects.create(name="secret 1", slug="secret-1", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 2", slug="secret-2", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 3", slug="secret-3", provider="text-file", parameters={"path": "/tmp"}),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            group=secrets_groups[0],
+            secret=secrets[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=secrets_groups[0],
+            secret=secrets[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=secrets_groups[1],
+            secret=secrets[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+
+        cls.form_data = {
+            "name": "Group 4",
+            "slug": "group-4",
+            "description": "Some description",
+            # Management form fields required for the dynamic Secret formset
+            "secretsgroupassociation_set-TOTAL_FORMS": "0",
+            "secretsgroupassociation_set-INITIAL_FORMS": "1",
+            "secretsgroupassociation_set-MIN_NUM_FORMS": "0",
+            "secretsgroupassociation_set-MAX_NUM_FORMS": "1000",
+        }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Group 3"
 
 
 class GraphQLQueriesTestCase(
