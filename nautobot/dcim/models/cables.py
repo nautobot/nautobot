@@ -118,8 +118,11 @@ class Cable(PrimaryModel, StatusModel):
         # A copy of the PK to be used by __str__ in case the object is deleted
         self._pk = self.pk
 
-        # Cache the original status so we can check later if it's been changed
-        self._orig_status = self.status
+        if self.present_in_database:
+            # Cache the original status so we can check later if it's been changed
+            self._orig_status = self.status
+        else:
+            self._orig_status = None
 
     @classmethod
     def from_db(cls, db, field_names, values):
