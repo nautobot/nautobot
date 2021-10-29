@@ -25,6 +25,9 @@ Nautobot v1.1.0 and later can optionally support the following:
 |------------|-----------------|
 | MySQL      | 8.0             |
 
+!!! tip
+    If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](./migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.
+
 ## Install the Latest Release
 
 As with the initial installation, you can upgrade Nautobot by installing the Python package directly from the Python Package Index (PyPI).

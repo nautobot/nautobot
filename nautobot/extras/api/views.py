@@ -13,7 +13,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
-from rq import Worker
 
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import ModelViewSet
@@ -41,7 +40,8 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import get_job, get_jobs, run_job
-from nautobot.utilities.exceptions import RQWorkerNotRunningException
+from nautobot.extras.utils import get_worker_count
+from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.utils import copy_safe_request, count_related
 from . import serializers
 
@@ -162,8 +162,8 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
         if not request.user.has_perm("extras.change_gitrepository"):
             raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
 
-        if not Worker.count(get_connection("default")):
-            raise RQWorkerNotRunningException()
+        if not get_worker_count():
+            raise CeleryWorkerNotRunningException()
 
         repository = get_object_or_404(GitRepository, id=pk)
         enqueue_pull_git_repository_and_refresh_data(repository, request)
@@ -296,6 +296,9 @@ class JobViewSet(ViewSet):
             # in the constructor (saved as error_dict). Otherwise we get a list
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
+
+        if not get_worker_count():
+            raise CeleryWorkerNotRunningException()
 
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
 

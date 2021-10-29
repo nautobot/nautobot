@@ -86,6 +86,12 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
             logger=logger,
         )
 
+        job_result.log(
+            f'The current Git repository hash is "{repository_record.current_head}"',
+            level_choice=LogLevelChoices.LOG_INFO,
+            logger=logger,
+        )
+
         refresh_datasource_content("extras.gitrepository", repository_record, request, job_result, delete=False)
 
     except Exception as exc:
@@ -602,7 +608,7 @@ def update_git_config_context_schemas(repository_record, job_result):
             continue
         job_result.log(
             f"Loading config context schema from `{file_name}`",
-            grouping="config contexts",
+            grouping="config context schemas",
             logger=logger,
         )
         try:

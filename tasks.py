@@ -49,6 +49,7 @@ namespace.configure(
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_files": [
                 "docker-compose.yml",
+                "docker-compose.postgres.yml",
                 "docker-compose.dev.yml",
             ],
             # Image names to use when building from "main" branch
@@ -272,11 +273,14 @@ def restart(context, service=None):
     docker_compose(context, "restart", service=service)
 
 
-@task
-def stop(context):
+@task(help={"service": "If specified, only affect this service."})
+def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
-    docker_compose(context, "down")
+    if not service:
+        docker_compose(context, "down")
+    else:
+        docker_compose(context, "stop", service=service)
 
 
 @task
