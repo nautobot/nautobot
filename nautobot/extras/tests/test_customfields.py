@@ -225,7 +225,6 @@ class CustomFieldAPITest(APITestCase):
         CustomFieldChoice.objects.create(field=cls.cf_select, value="Foo")
         CustomFieldChoice.objects.create(field=cls.cf_select, value="Bar")
         CustomFieldChoice.objects.create(field=cls.cf_select, value="Baz")
-        CustomFieldChoice.objects.create(field=cls.cf_select, value="1234")
         cls.cf_select.default = "Foo"
         cls.cf_select.save()
 
