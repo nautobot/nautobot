@@ -1,6 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_serializer_method
+from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.extras.models.secrets import SecretsGroupAssociation
 from rest_framework import serializers
 
 from nautobot.core.api import (
@@ -796,7 +798,12 @@ class SecretsGroupSerializer(CustomFieldModelSerializer):
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
 
-    secrets = NestedSecretsGroupAssociationSerializer(many=True, allow_null=True, required=False)
+    # TODO: it would be **awesome** if we could create/update SecretsGroupAssociations
+    # alongside creating/updating the base SecretsGroup, but since this is a ManyToManyField with
+    # a `through` table, that appears very non-trivial to implement. For now we have this as a
+    # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
+    # api/extras/secrets-group-associations/ REST endpoint as appropriate.
+    secrets = NestedSecretsGroupAssociationSerializer(source="secretsgroupassociation_set", many=True, read_only=True)
 
     class Meta:
         model = SecretsGroup
@@ -813,6 +820,25 @@ class SecretsGroupSerializer(CustomFieldModelSerializer):
             "computed_fields",
         ]
         opt_in_fields = ["computed_fields"]
+
+
+class SecretsGroupAssociationSerializer(BaseModelSerializer):
+    """Serializer for `SecretsGroupAssociation` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
+    group = NestedSecretsGroupSerializer()
+    secret = NestedSecretSerializer()
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = [
+            "id",
+            "url",
+            "group",
+            "access_type",
+            "secret_type",
+            "secret",
+        ]
 
 
 #

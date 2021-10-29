@@ -14,7 +14,13 @@ from nautobot.utilities.filters import (
     TagFilter,
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from .choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices, JobResultStatusChoices
+from .choices import (
+    CustomFieldFilterLogicChoices,
+    CustomFieldTypeChoices,
+    JobResultStatusChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from .models import (
     ComputedField,
     ConfigContext,
@@ -33,6 +39,7 @@ from .models import (
     RelationshipAssociation,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -59,6 +66,7 @@ __all__ = (
     "ScheduledJobFilterSet",
     "SecretFilterSet",
     "SecretsGroupFilterSet",
+    "SecretsGroupAssociationFilterSet",
     "StatusFilter",
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
@@ -704,6 +712,37 @@ class SecretsGroupFilterSet(
         if not value.strip():
             return queryset
         return queryset.filter(Q(name__icontains=value) | Q(slug__icontains=value))
+
+
+class SecretsGroupAssociationFilterSet(BaseFilterSet):
+    """Filterset for the SecretsGroupAssociation through model."""
+
+    group_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Group (ID)",
+    )
+    group = django_filters.ModelMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        field_name="group__slug",
+        to_field_name="slug",
+        label="Group (slug)",
+    )
+    secret_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        label="Secret (ID)",
+    )
+    secret = django_filters.ModelMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        field_name="secret__slug",
+        to_field_name="slug",
+        label="Secret (slug)",
+    )
+    access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
+    secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = ("id",)
 
 
 #

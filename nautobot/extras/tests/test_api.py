@@ -23,7 +23,7 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.api.views import JobViewSet
-from nautobot.extras.choices import JobExecutionType
+from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -40,6 +40,7 @@ from nautobot.extras.models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -1537,28 +1538,120 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
     brief_fields = ["display", "id", "name", "slug", "url"]
     bulk_update_data = {}
 
-    create_data = [
-        {
-            "name": "Secrets Group 1",
-            "slug": "secrets-group-1",
-            "description": "First Secrets Group",
-        },
-        {
-            "name": "Secrets Group 2",
-            "description": "Second Secrets Group",
-        },
-        {
-            "name": "Secrets Group 3",
-            "description": "Third Secrets Group",
-        },
-    ]
     slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-        SecretsGroup.objects.create(name="Group A", slug="group-a")
-        SecretsGroup.objects.create(name="Group B", slug="group-b")
-        SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group")
+        secrets = (
+            Secret.objects.create(
+                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
+            ),
+        )
+
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Group A", slug="group-a"),
+            SecretsGroup.objects.create(name="Group B", slug="group-b"),
+            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[0],
+            group=secrets_groups[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[1],
+            group=secrets_groups[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+
+        cls.create_data = [
+            {
+                "name": "Secrets Group 1",
+                "slug": "secrets-group-1",
+                "description": "First Secrets Group",
+            },
+            {
+                "name": "Secrets Group 2",
+                "description": "Second Secrets Group",
+            },
+            {
+                "name": "Secrets Group 3",
+                "description": "Third Secrets Group",
+            },
+        ]
+
+
+class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = SecretsGroupAssociation
+    brief_fields = ["access_type", "display", "id", "secret", "secret_type", "url"]
+    bulk_update_data = {}
+    choices_fields = ["access_type", "secret_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets = (
+            Secret.objects.create(
+                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
+            ),
+            Secret.objects.create(
+                name="secret-3", provider="environment-variable", parameters={"variable": "YET_ANOTHER"}
+            ),
+        )
+
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Group A", slug="group-a"),
+            SecretsGroup.objects.create(name="Group B", slug="group-b"),
+            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+        )
+
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[0],
+            group=secrets_groups[0],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[1],
+            group=secrets_groups[1],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+        SecretsGroupAssociation.objects.create(
+            secret=secrets[2],
+            group=secrets_groups[2],
+            access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
+        )
+
+        cls.create_data = [
+            {
+                "group": secrets_groups[0].pk,
+                "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
+                "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                "secret": secrets[0].pk,
+            },
+            {
+                "group": secrets_groups[1].pk,
+                "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
+                "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                "secret": secrets[1].pk,
+            },
+            {
+                "group": secrets_groups[2].pk,
+                "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
+                "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                "secret": secrets[2].pk,
+            },
+        ]
 
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
