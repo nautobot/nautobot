@@ -288,7 +288,7 @@ class GitRepositoryTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     last_sync_time = tables.DateTimeColumn(
         empty_values=(), format=settings.SHORT_DATETIME_FORMAT, verbose_name="Sync Time"
     )
@@ -315,7 +315,7 @@ class GitRepositoryTable(BaseTable):
             "slug",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
             "last_sync_time",
             "last_sync_user",
@@ -348,7 +348,7 @@ class GitRepositoryBulkTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
 
     class Meta(BaseTable.Meta):
@@ -358,7 +358,7 @@ class GitRepositoryBulkTable(BaseTable):
             "name",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
         )
 

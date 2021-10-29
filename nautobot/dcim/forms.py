@@ -27,7 +27,7 @@ from nautobot.extras.forms import (
     StatusModelCSVFormMixin,
     StatusFilterFormMixin,
 )
-from nautobot.extras.models import Tag
+from nautobot.extras.models import SecretsGroup, Tag
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -1687,6 +1687,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
         required=False,
         query_params={"manufacturer_id": ["$manufacturer", "null"]},
     )
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -1717,6 +1718,7 @@ class DeviceForm(BootstrapMixin, TenancyForm, CustomFieldModelForm, Relationship
             "platform",
             "primary_ip4",
             "primary_ip6",
+            "secrets_group",
             "cluster_group",
             "cluster",
             "tenant_group",
@@ -1840,6 +1842,12 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         to_field_name="name",
         required=False,
         help_text="Virtualization cluster",
+    )
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Secrets group",
     )
 
     class Meta:
@@ -1975,6 +1983,7 @@ class DeviceBulkEditForm(
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=50, required=False, label="Serial Number")
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
@@ -1983,6 +1992,7 @@ class DeviceBulkEditForm(
             "serial",
             "rack",
             "rack_group",
+            "secrets_group",
         ]
 
 

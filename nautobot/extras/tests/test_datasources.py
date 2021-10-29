@@ -13,7 +13,11 @@ from django.test import RequestFactory, TestCase
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.ipam.models import VLAN
 
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
@@ -23,6 +27,8 @@ from nautobot.extras.models import (
     GitRepository,
     JobResult,
     Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
     Status,
 )
 
@@ -228,17 +234,31 @@ class GitTest(TestCase):
 
                 username_secret = Secret.objects.create(
                     name="Git Username",
+                    slug="git-username",
                     provider="text-file",
                     parameters={"path": os.path.join(tempdir, "username.txt")},
                 )
                 token_secret = Secret.objects.create(
                     name="Git Token",
+                    slug="git-token",
                     provider="text-file",
                     parameters={"path": os.path.join(tempdir, "token.txt")},
                 )
+                secrets_group = SecretsGroup.objects.create(name="Git Credentials", slug="git-credentials")
+                SecretsGroupAssociation.objects.create(
+                    secret=username_secret,
+                    group=secrets_group,
+                    access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                    secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                )
+                SecretsGroupAssociation.objects.create(
+                    secret=token_secret,
+                    group=secrets_group,
+                    access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                    secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+                )
 
-                self.repo.username_secret = username_secret
-                self.repo.token_secret = token_secret
+                self.repo.secrets_group = secrets_group
                 self.repo.validated_save()
 
                 self.dummy_request.id = uuid.uuid4()

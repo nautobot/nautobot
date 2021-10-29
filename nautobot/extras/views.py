@@ -570,9 +570,17 @@ class GitRepositoryBulkImportView(generic.BulkImportView):
     model_form = forms.GitRepositoryCSVForm
     table = tables.GitRepositoryBulkTable
 
+    def _save_obj(self, obj_form, request):
+        """Each GitRepository needs to know the originating request when it's saved so that it can enqueue using it."""
+        instance = obj_form.save(commit=False)
+        instance.request = request
+        instance.save()
+
+        return instance
+
 
 class GitRepositoryBulkEditView(generic.BulkEditView):
-    queryset = GitRepository.objects.all()
+    queryset = GitRepository.objects.prefetch_related("secrets_group")
     filterset = filters.GitRepositoryFilterSet
     table = tables.GitRepositoryBulkTable
     form = forms.GitRepositoryBulkEditForm
@@ -1370,7 +1378,10 @@ class SecretsGroupListView(generic.ObjectListView):
     filterset = filters.SecretsGroupFilterSet
     filterset_form = forms.SecretsGroupFilterForm
     table = tables.SecretsGroupTable
-    action_buttons = ("add", "delete",)
+    action_buttons = (
+        "add",
+        "delete",
+    )
 
 
 class SecretsGroupView(generic.ObjectView):

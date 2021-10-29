@@ -160,6 +160,12 @@ class NestedSecretsGroupSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name", "slug"]
 
 
+class NestedSecretsGroupAssociationSerializer(WritableNestedSerializer):
+    class Meta:
+        model = models.SecretsGroupAssociation
+        fields = ["id", "secret", "group", "access_type", "secret_type"]
+
+
 class NestedStatusSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:status-detail")
 

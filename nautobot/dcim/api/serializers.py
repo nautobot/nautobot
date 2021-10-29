@@ -73,7 +73,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
-from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
+from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
@@ -750,6 +750,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
     primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
     primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)
     parent_device = serializers.SerializerMethodField()
+    secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
     local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
@@ -775,6 +776,7 @@ class DeviceSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
+            "secrets_group",
             "cluster",
             "virtual_chassis",
             "vc_position",
@@ -838,6 +840,7 @@ class DeviceWithConfigContextSerializer(DeviceSerializer):
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
+            "secrets_group",
             "cluster",
             "virtual_chassis",
             "vc_position",

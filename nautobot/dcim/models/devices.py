@@ -535,6 +535,14 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.PROTECT,
+        default=None,
+        blank=True,
+        null=True,
+    )
+
     objects = ConfigContextModelQuerySet.as_manager()
 
     csv_headers = [
@@ -552,6 +560,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "rack_name",
         "position",
         "face",
+        "secrets_group",
         "comments",
     ]
     clone_fields = [
@@ -563,6 +572,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         "rack",
         "status",
         "cluster",
+        "secrets_group",
     ]
 
     class Meta:

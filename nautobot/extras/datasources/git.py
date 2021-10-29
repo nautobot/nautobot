@@ -32,7 +32,6 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
-from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.git import GitRepo
 from nautobot.utilities.utils import copy_safe_request
@@ -149,16 +148,19 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
             )
         except ObjectDoesNotExist:
             # No defined secret, fall through to legacy behavior
-            if repository_record._token:
-                token = repository_record._token
+            pass
         try:
             user = repository_record.secrets_group.get_secret_value(
                 SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_USERNAME
             )
         except ObjectDoesNotExist:
             # No defined secret, fall through to legacy behavior
-            if repository_record.username:
-                user = repository_record.username
+            pass
+
+    if not token and repository_record._token:
+        token = repository_record._token
+    if not user and repository_record.username:
+        user = repository_record.username
 
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.

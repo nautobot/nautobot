@@ -30,6 +30,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     ScheduledJob,
     Secret,
+    SecretsGroup,
     Status,
     Tag,
     Webhook,
@@ -479,6 +480,8 @@ class ExportTemplateTestCase(
 
 
 class GitRepositoryTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -490,13 +493,17 @@ class GitRepositoryTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        )
 
         # Create four GitRepository records
         repos = (
             GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
             GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
             GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
-            GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git"),
+            GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
         for repo in repos:
             repo.save(trigger_resync=False)
@@ -507,12 +514,20 @@ class GitRepositoryTestCase(
             "remote_url": "http://example.com/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
+            "secrets_group": secrets_groups[1].pk,
             "provided_contents": [
                 "extras.configcontext",
                 "extras.job",
                 "extras.exporttemplate",
             ],
         }
+
+        cls.csv_data = (
+            "name,slug,remote_url,branch,secrets_group,provided_contents",
+            "Git Repository 5,git-repo-5,https://example.com,main,,extras.configcontext",
+            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,",
+            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
+        )
 
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"

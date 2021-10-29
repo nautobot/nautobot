@@ -454,6 +454,17 @@ class GitRepositoryFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, CustomField
         method="search",
         label="Search",
     )
+    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets group (ID)",
+    )
+    secrets_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="secrets_group__slug",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group (slug)",
+    )
     tag = TagFilter()
 
     class Meta:

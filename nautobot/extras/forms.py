@@ -20,6 +20,7 @@ from nautobot.utilities.forms import (
     ColorSelect,
     CSVModelChoiceField,
     CSVModelForm,
+    CSVMultipleChoiceField,
     CSVMultipleContentTypeField,
     DateTimePicker,
     DynamicModelChoiceField,
@@ -741,9 +742,27 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelForm):
 
 
 class GitRepositoryCSVForm(CSVModelForm):
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        help_text="Secrets group for repository access (if any)",
+    )
+
     class Meta:
         model = GitRepository
         fields = GitRepository.csv_headers
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["provided_contents"] = CSVMultipleChoiceField(
+            choices=get_git_datasource_content_choices(),
+            required=False,
+            help_text=mark_safe(
+                "The data types this repository provides. Multiple values must be comma-separated and wrapped in "
+                'double quotes (e.g. <code>"extras.job,extras.configcontext"</code>).'
+            ),
+        )
 
 
 class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
@@ -762,18 +781,19 @@ class GitRepositoryBulkEditForm(BootstrapMixin, BulkEditForm):
         required=False,
         label="Token",
         widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
-        help_text="<em>Deprecated</em> - use a secret token instead.",
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
     username = forms.CharField(
         required=False,
         label="Username",
-        help_text="<em>Deprecated</em> - use a secret username instead.",
+        help_text="<em>Deprecated</em> - use a secrets group instead.",
     )
 
-    secrets_groups = DynamicModelMultipleChoiceField(required=False, queryset=SecretsGroup.objects.all())
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
         model = GitRepository
+        nullable_fields = ["secrets_group"]
 
 
 #

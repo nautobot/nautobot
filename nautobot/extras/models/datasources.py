@@ -78,8 +78,8 @@ class GitRepository(PrimaryModel):
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
-    csv_headers = ["name", "slug", "remote_url", "branch", "provided_contents"]
-    clone_fields = ["remote_url", "provided_contents"]
+    csv_headers = ["name", "slug", "remote_url", "branch", "secrets_group", "provided_contents"]
+    clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
     class Meta:
         ordering = ["name"]
@@ -120,15 +120,6 @@ class GitRepository(PrimaryModel):
     @property
     def filesystem_path(self):
         return os.path.join(settings.GIT_ROOT, self.slug)
-
-    def clean(self):
-        super().clean()
-
-        # Secrets and locally stored username/token values are mutually exclusive
-        if self.username and self.username_secret:
-            raise ValidationError("At most one of username and/or username_secret may be specified.")
-        if self._token and self.token_secret:
-            raise ValidationError("At most one of _token and/or token_secret may be specified.")
 
     def save(self, *args, trigger_resync=True, **kwargs):
         if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:
