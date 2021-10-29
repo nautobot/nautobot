@@ -374,9 +374,9 @@ Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/option
 
 4. Once the application is configured in Azure, you'll be shown the app registration's *Overview* page. Please take note of the *Application (client) ID* for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC).  When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
 5. From the App registration page, click on *Authentication*. Under *Platform configurations*, select *Add a platform* and select *Web*.
-6. Click on the *Add a Redirect URI` link on the page and configure it as follows:
+6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
 
-  * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
+    * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
 
 7. Once the Redirect URI is set, the last thing you'll need is to generate a *client secret*. To do so, click on *Certificates & secrets* and then the *New client secret* option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
 
