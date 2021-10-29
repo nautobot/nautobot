@@ -28,7 +28,6 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     JobResult,
-    Secret,
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
