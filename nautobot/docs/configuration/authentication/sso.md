@@ -384,6 +384,8 @@ Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/option
 
 #### Azure AD - OAuth2
 
+If your app is linked to the common tenant, you'll want to edit your `nautobot_config.py` as follows:
+
 ```python
 AUTHENTICATION_BACKENDS = [
     "social_core.backends.azuread.AzureADOAuth2",
@@ -396,7 +398,7 @@ SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = "<Client Secret From Azure>"
 
 #### Azure - Tenant Support
 
-If your app is linked to a specific tenant instead of the common one, you'll want to edit your `nautobot_config.py` as follows:
+If your app is linked to a specific tenant instead of the common tenant, you'll want to edit your `nautobot_config.py` as follows:
 
 ```python
 AUTHENTICATION_BACKENDS = [
