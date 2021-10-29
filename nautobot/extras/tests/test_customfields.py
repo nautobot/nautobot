@@ -216,15 +216,14 @@ class CustomFieldAPITest(APITestCase):
         cls.cf_url.content_types.set([content_type])
 
         # Select custom field
-        cls.cf_select = CustomField(
-            type=CustomFieldTypeChoices.TYPE_SELECT,
-            name="choice_field",
-        )
+        cls.cf_select = CustomField(type=CustomFieldTypeChoices.TYPE_SELECT, name="choice_field")
+        cls.cf_select.validation_regex = r"^\S{3}$"
         cls.cf_select.save()
         cls.cf_select.content_types.set([content_type])
         CustomFieldChoice.objects.create(field=cls.cf_select, value="Foo")
         CustomFieldChoice.objects.create(field=cls.cf_select, value="Bar")
         CustomFieldChoice.objects.create(field=cls.cf_select, value="Baz")
+        CustomFieldChoice.objects.create(field=cls.cf_select, value="1234")
         cls.cf_select.default = "Foo"
         cls.cf_select.save()
 
@@ -660,6 +659,25 @@ class CustomFieldAPITest(APITestCase):
 
         data = {"custom_fields": {"text_field": "ABC"}}
         response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_select_regex_validation(self):
+        url = reverse("extras-api:customfieldchoice-list")
+        self.add_permissions("extras.add_customfieldchoice")
+
+        self.cf_select.validation_regex = r"^[A-Z]{3}$"  # Three uppercase letters
+        self.cf_select.save()
+
+        data = {"field": self.cf_select.id, "value": "1234", "weight": 100}
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        data = {"field": self.cf_select.id, "value": "abc", "weight": 100}
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        data = {"field": self.cf_select.id, "value": "ABC", "weight": 100}
+        response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
