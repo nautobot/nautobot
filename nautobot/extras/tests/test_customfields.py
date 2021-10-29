@@ -216,8 +216,10 @@ class CustomFieldAPITest(APITestCase):
         cls.cf_url.content_types.set([content_type])
 
         # Select custom field
-        cls.cf_select = CustomField(type=CustomFieldTypeChoices.TYPE_SELECT, name="choice_field")
-        cls.cf_select.validation_regex = r"^\S{3}$"
+        cls.cf_select = CustomField(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            name="choice_field",
+        )
         cls.cf_select.save()
         cls.cf_select.content_types.set([content_type])
         CustomFieldChoice.objects.create(field=cls.cf_select, value="Foo")
