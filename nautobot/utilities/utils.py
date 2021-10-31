@@ -414,5 +414,37 @@ def get_filterset_for_model(model):
     return None
 
 
+def get_dynamicgroupmap_for_model(model):
+    """Return the DynamicGroupMap class associated with a given model.
+
+    The DynamicGroupMap class is expected to be in the groups module within the application
+    associated with the model and its name is expected to be {ModelName}DynamicGroupMap
+
+    Not all models have a DynamicGroupMap defined so this function can return None as well
+
+    Returns:
+        either the DynamicGroupMap class or none
+    """
+    if not inspect.isclass(model):
+        raise TypeError(f"model class {model} was passes as an instance!")
+    if not issubclass(model, Model):
+        raise TypeError(f"{model} is not a subclass of Django Model class")
+
+    try:
+        dgm_name = f"{model.__name__}DynamicGroupMap"
+        if model._meta.app_label in settings.PLUGINS:
+            return getattr(import_module(f"{model._meta.app_label}.groups"), dgm_name)
+        else:
+            return getattr(import_module(f"nautobot.{model._meta.app_label}.groups"), dgm_name)
+    except ModuleNotFoundError:
+        # The name of the module is not correct
+        pass
+    except AttributeError:
+        # Unable to find a filterset for this model
+        pass
+
+    return None
+
+
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
