@@ -44,6 +44,7 @@ from .models import (
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -470,6 +471,30 @@ class CustomLinkDeleteView(generic.ObjectDeleteView):
 class CustomLinkBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomLink.objects.all()
     table = tables.CustomLinkTable
+
+
+#
+# Dynamic Groups
+#
+class DynamicGroupListView(generic.ObjectListView):
+    """Dynamic Group List."""
+
+    queryset = DynamicGroup.objects.all()
+    table = tables.DynamicGroupTable
+    action_buttons = "add"
+
+
+class DynamicGroupEditView(generic.ObjectEditView):
+    """Dynamic Group Edit."""
+
+    queryset = DynamicGroup.objects.all()
+    model_form = forms.DynamicGroupForm
+
+
+class DynamicGroupDeleteView(generic.ObjectDeleteView):
+    """Dynamic Group Delete."""
+
+    queryset = DynamicGroup.objects.all()
 
 
 #

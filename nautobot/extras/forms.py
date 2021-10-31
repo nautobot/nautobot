@@ -39,6 +39,7 @@ from .models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -623,6 +624,101 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Content Type",
     )
+
+
+#
+# Dynamic Groups
+#
+
+
+class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
+    """Dynamic Group Form."""
+
+    slug = SlugField()
+
+    class Meta:
+        """Nautobot Resource Manager Group Meta."""
+
+        model = DynamicGroup
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "content_type",
+            "filter",
+        ]
+
+    # def __init__(self, *args, **kwargs):
+
+    #     super().__init__(*args, **kwargs)
+    #     self.filters = []
+    #     # self._append_filters()
+
+    # def _append_filters(self):
+
+    #     if not self.instance.present_in_database:
+    #         return
+
+    #     if not self.instance.content_type:
+    #         return
+
+    #     model = self.instance.content_type.model_class()
+    #     filterform_class = get_filterform_for_model(model)
+
+    #     if not filterform_class:
+    #         return
+
+    #     filter_form = filterform_class()
+
+    #     for field_name, field in filter_form.fields.items():
+    #         if field_name == "q":
+    #             continue
+
+    #         if self.instance.present_in_database:
+    #             if field_name in self.instance.filter:
+    #                 field.initial = self.instance.filter[field_name]
+
+    #         self.fields[field_name] = field
+    #         self.filters.append(field_name)
+
+    # def _save_filters(self):
+
+    #     filter = dict()
+    #     for field_name in self.filters:
+    #         field = self.fields[field_name]
+
+    #         if isinstance(field, forms.ModelMultipleChoiceField):
+    #             qs = self.cleaned_data[field_name]
+    #             field_to_query = field.to_field_name or "pk"
+    #             # print(f"{self.cleaned_data[field_name]} - {field_to_query}")
+    #             values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
+    #             if values:
+    #                 filter[field_name] = values
+
+    #         elif isinstance(field, forms.ModelChoiceField) and self.cleaned_data[field_name] is not None:
+    #             field_to_query = field.to_field_name or "pk"
+    #             value = getattr(self.cleaned_data[field_name], field_to_query)
+    #             if value:
+    #                 filter[field_name] = value
+
+    #         elif isinstance(field, forms.NullBooleanField) and self.cleaned_data[field_name] is not None:
+    #             filter[field_name] = self.cleaned_data[field_name]
+
+    #         elif self.cleaned_data[field_name] is not None:
+    #             filter[field_name] = self.cleaned_data[field_name]
+    #             print(f"{field_name}: {self.cleaned_data[field_name]}")
+
+    #     # print(filter)
+    #     self.instance.filter = filter
+    #     self.instance.save()
+
+    # def save(self, commit=True):
+
+    #     obj = super().save(commit)
+    #     if commit:
+    #         self._save_filters()
+
+    #     return obj
 
 
 #

@@ -26,6 +26,7 @@ from .models import (
     ConfigContextSchema,
     CustomField,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -254,6 +255,28 @@ class CustomLinkTable(BaseTable):
             "group_name",
             "weight",
         )
+
+
+class DynamicGroupTable(BaseTable):
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn(viewname="extras:dynamicgroup_edit", args=[Accessor("id")])
+    members = tables.Column(accessor="count", verbose_name="Group members")
+    # actions = ButtonsColumn(Group, buttons=("edit", "delete"))
+    class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
+        """Resource Manager Meta."""
+
+        model = DynamicGroup
+        fields = (
+            "name",
+            "description",
+            "content_type",
+            "members",
+            # "actions",
+        )
+
+    def render_members(self, value, record):
+        return format_html(f'<a href="{record.get_url_to_group_members()}">{value}</a>')
 
 
 class ExportTemplateTable(BaseTable):

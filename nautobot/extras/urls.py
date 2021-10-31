@@ -179,6 +179,11 @@ urlpatterns = [
         name="customlink_changelog",
         kwargs={"model": CustomLink},
     ),
+    # Dynamic Groups
+    path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
+    path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
+    path("dynamic-groups/<uuid:pk>/edit/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_edit"),
+    path("dynamic-groups/<uuid:pk>/delete/", views.DynamicGroupDeleteView.as_view(), name="dynamicgroup_delete"),
     # Export Templates
     path(
         "export-templates/",
