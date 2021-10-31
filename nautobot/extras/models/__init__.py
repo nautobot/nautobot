@@ -9,6 +9,7 @@ from .jobs import (
     ScheduledJob,
     ScheduledJobs,
 )
+from .groups import DynamicGroup
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -36,6 +37,7 @@ __all__ = (
     "CustomFieldChoice",
     "CustomFieldModel",
     "CustomLink",
+    "DynamicGroup",
     "ExportTemplate",
     "FileAttachment",
     "FileProxy",
