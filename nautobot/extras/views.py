@@ -936,7 +936,7 @@ class JobApprovalRequestView(ContentTypePermissionRequiredMixin, View):
                 job_content_type,
                 scheduled_job.user,
                 request.user,
-                celery_kwargs,
+                celery_kwargs=celery_kwargs,
                 data=job_class.serialize_data(form.cleaned_data),
                 request=copy_safe_request(request),
                 commit=False,  # force a dry-run
