@@ -39,7 +39,7 @@ This table defines repository parameters that are required to establish a reposi
 |Branch|The branch in the Git repo to use. Defaults to `main`.|
 |Token|(Optional) A personal access token for the `username` provided.  For more information on generating a personal access token see the corresponding links below.|
 |Username|(Optional) The Git username that corresponds with the personal access token above. Note not required for GitHub, but is for GitLab.|
-|Secrets Group|(Optional)|Grouping containing a *HTTP token* and/or *HTTP username* as needed to access the repository.|
+|Secrets Group|(Optional) Grouping containing a *HTTP token* and/or *HTTP username* as needed to access the repository.|
 |Provides|Resource type(s) provided by this Git repo.|
 
 - [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
