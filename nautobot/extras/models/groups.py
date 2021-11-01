@@ -16,9 +16,9 @@ from nautobot.utilities.querysets import RestrictedQuerySet
 class DynamicGroupQuerySet(RestrictedQuerySet):
     """Queryset for `DynamicGroup` objects."""
 
-    def get_for_instance(self, obj):
+    def get_for_object(self, obj):
         """
-        Return all `DynamicGroup` assigned to the given object/instance.
+        Return all `DynamicGroup` assigned to the given object.
         """
         if not isinstance(obj, Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")

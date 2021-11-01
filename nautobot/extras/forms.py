@@ -30,6 +30,7 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.utils import get_dynamicgroupmap_for_model
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .datasources import get_datasource_content_choices
 from .models import (
@@ -645,80 +646,75 @@ class DynamicGroupForm(BootstrapMixin, forms.ModelForm):
             "slug",
             "description",
             "content_type",
-            "filter",
+            # "filter",
         ]
 
-    # def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
 
-    #     super().__init__(*args, **kwargs)
-    #     self.filters = []
-    #     # self._append_filters()
+        super().__init__(*args, **kwargs)
+        self.filter_field_names = []
+        self._append_filters()
 
-    # def _append_filters(self):
+    def _append_filters(self):
+        """Dynamically add the fields from the associated DynamicGroupMap to the form."""
+        # Do not present the list of filter options until the object has been created and has a content type
+        if not self.instance.present_in_database or not self.instance.content_type:
+            return
 
-    #     if not self.instance.present_in_database:
-    #         return
+        # Get the model from the instance and the DynamicGroupMap from the model
+        model = self.instance.content_type.model_class()
+        dynamicgroupmap_class = get_dynamicgroupmap_for_model(model)
 
-    #     if not self.instance.content_type:
-    #         return
+        if not dynamicgroupmap_class:
+            return
 
-    #     model = self.instance.content_type.model_class()
-    #     filterform_class = get_filterform_for_model(model)
+        # Add all fields defined in the DynamicGroupMap to the form and populate the default value
+        for field_name, field in dynamicgroupmap_class.fields().items():
+            if self.instance.present_in_database:
+                if field_name in self.instance.filter:
+                    field.initial = self.instance.filter[field_name]
 
-    #     if not filterform_class:
-    #         return
+            self.fields[field_name] = field
+            self.filter_field_names.append(field_name)
 
-    #     filter_form = filterform_class()
+    def _save_filters(self):
+        """Extract all data from the fields associated with the filter."""
+        filter = dict()
+        for field_name in self.filter_field_names:
+            field = self.fields[field_name]
 
-    #     for field_name, field in filter_form.fields.items():
-    #         if field_name == "q":
-    #             continue
+            if isinstance(field, forms.ModelMultipleChoiceField):
+                qs = self.cleaned_data[field_name]
+                field_to_query = field.to_field_name or "pk"
+                print(f"{self.cleaned_data[field_name]} - {field_to_query}")
+                values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
+                if values:
+                    filter[field_name] = values
 
-    #         if self.instance.present_in_database:
-    #             if field_name in self.instance.filter:
-    #                 field.initial = self.instance.filter[field_name]
+            elif isinstance(field, forms.ModelChoiceField) and self.cleaned_data[field_name] is not None:
+                field_to_query = field.to_field_name or "pk"
+                value = getattr(self.cleaned_data[field_name], field_to_query)
+                if value:
+                    filter[field_name] = value
 
-    #         self.fields[field_name] = field
-    #         self.filters.append(field_name)
+            elif isinstance(field, forms.NullBooleanField) and self.cleaned_data[field_name] is not None:
+                filter[field_name] = self.cleaned_data[field_name]
 
-    # def _save_filters(self):
+            elif self.cleaned_data[field_name] is not None:
+                filter[field_name] = self.cleaned_data[field_name]
+                print(f"{field_name}: {self.cleaned_data[field_name]}")
 
-    #     filter = dict()
-    #     for field_name in self.filters:
-    #         field = self.fields[field_name]
+        # print(filter)
+        self.instance.filter = filter
+        self.instance.save()
 
-    #         if isinstance(field, forms.ModelMultipleChoiceField):
-    #             qs = self.cleaned_data[field_name]
-    #             field_to_query = field.to_field_name or "pk"
-    #             # print(f"{self.cleaned_data[field_name]} - {field_to_query}")
-    #             values = [str(item) for item in qs.values_list(field_to_query, flat=True)]
-    #             if values:
-    #                 filter[field_name] = values
+    def save(self, commit=True):
 
-    #         elif isinstance(field, forms.ModelChoiceField) and self.cleaned_data[field_name] is not None:
-    #             field_to_query = field.to_field_name or "pk"
-    #             value = getattr(self.cleaned_data[field_name], field_to_query)
-    #             if value:
-    #                 filter[field_name] = value
+        obj = super().save(commit)
+        if commit:
+            self._save_filters()
 
-    #         elif isinstance(field, forms.NullBooleanField) and self.cleaned_data[field_name] is not None:
-    #             filter[field_name] = self.cleaned_data[field_name]
-
-    #         elif self.cleaned_data[field_name] is not None:
-    #             filter[field_name] = self.cleaned_data[field_name]
-    #             print(f"{field_name}: {self.cleaned_data[field_name]}")
-
-    #     # print(filter)
-    #     self.instance.filter = filter
-    #     self.instance.save()
-
-    # def save(self, commit=True):
-
-    #     obj = super().save(commit)
-    #     if commit:
-    #         self._save_filters()
-
-    #     return obj
+        return obj
 
 
 #
