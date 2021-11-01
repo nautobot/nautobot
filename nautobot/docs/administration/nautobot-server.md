@@ -127,6 +127,11 @@ nautobot=> \q
 !!! note
     This is a built-in Django command. Please see the [official documentation on `dbshell`](https://docs.djangoproject.com/en/stable/ref/django-admin/#dbshell) for more information.
 
+### `dumpdata`
+
+Use this command to generate a JSON dump of the database contents.
+
+Details see: [`Export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql)
 
 ### `fix_custom_fields`
 
@@ -200,6 +205,14 @@ There are a number of other options not covered here.
 
 !!! note
     This is a built-in management command provided by the [Cacheops plugin](https://github.com/Suor/django-cacheops) Nautobot for caching. Please see the official [Cacheops documentation on `invalidate`](https://github.com/Suor/django-cacheops#invalidation) for more information.
+
+
+### `loaddata`
+
+To import the data exported that was exported with `dumpdata` see the following descriptions:
+
+- [`Remove the auto-populated Status records from the MySQL database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump into MySQL`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
 
 ### `migrate`
 
