@@ -23,16 +23,18 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from .models import Device, Site, DeviceRole
-from .filters import DeviceFilterSet
+from nautobot.extras.groups import BaseDynamicGroupMap
+from nautobot.extras.models import Tag
+from .models import Device, Region, Site, DeviceRole
+from .filters import DeviceFilterSet, SiteFilterSet
 
 
-class DeviceDynamicGroupMap:
+class DeviceDynamicGroupMap(BaseDynamicGroupMap):
 
     model = Device
     filterset = DeviceFilterSet
 
-    field_order = ["role", "site", "tag"]
+    field_order = ["role", "site"]
 
     site = DynamicModelMultipleChoiceField(
         queryset=Site.objects.all(),
@@ -46,45 +48,48 @@ class DeviceDynamicGroupMap:
         required=False,
     )
 
-    tag: TagFilterField(model)
-
-    @classmethod
-    def get_queryset(cls, filter):
-        """Return a queryset matching the dynamic group filter.
-
-        By default the queryset is generated based of the filterset but this is not mandatory
-        """
-        filterset = cls.filterset(cls.get_filterset_params(filter), cls.model.objects.all())
-        return filterset.qs
-
-    @classmethod
-    def get_filterset_params(cls, filter):
-        return filter
-
-    @classmethod
-    def get_filterset_as_string(cls, filter):
-        """Get filterset as string."""
-        if not filter:
-            return None
-
-        result = ""
-        # separator = ""
-
-        for key, value in cls.get_filterset_params(filter).items():
-            if isinstance(value, list):
-                for item in value:
-                    if result != "":
-                        result += "&"
-                    result += f"{key}={item}"
-            else:
-                result += "&"
-                result += f"{key}={value}"
-
-        return result
+    tag = DynamicModelMultipleChoiceField(
+        queryset=Tag.objects.all(),
+        to_field_name="slug",
+        required=False,
+    )
 
     @classmethod
     def get_group_queryset_filter(cls, obj):
+        """Return a queryset filter matching this DynamicGroup parameters."""
+        queryset_filter = Q(filter__role__contains=obj.device_role.slug)
+        queryset_filter |= Q(filter__site__contains=obj.site.slug)
 
-        dynamicgroup_filter = Q(filter__role__contains=obj.device_role.slug) | Q(filter__site__contains=obj.site.slug)
+        for tag in obj.tags.slugs():
+            queryset_filter |= Q(filter__tags__contains=tag)
 
-        return dynamicgroup_filter
+
+        return queryset_filter
+
+class SiteDynamicGroupMap(BaseDynamicGroupMap):
+
+    model = Site
+    filterset = SiteFilterSet
+
+    field_order = ["region", "tag"]
+
+    region = DynamicModelMultipleChoiceField(
+        queryset=Region.objects.all(),
+        to_field_name="slug",
+        required=False,
+    )
+
+    tag = DynamicModelMultipleChoiceField(
+        queryset=Tag.objects.all(),
+        to_field_name="slug",
+        required=False,
+    )
+
+    @classmethod
+    def get_group_queryset_filter(cls, obj):
+        """Return a queryset filter matching this DynamicGroup parameters."""
+        queryset_filter = Q(filter__region__contains=obj.region.slug)
+        for tag in obj.tags.slugs():
+            queryset_filter |= Q(filter__tags__contains=tag)
+
+        return queryset_filter
