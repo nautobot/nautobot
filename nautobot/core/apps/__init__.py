@@ -2,8 +2,11 @@ import logging
 
 from abc import ABC, abstractproperty
 from django.apps import AppConfig
+from django.db.models import JSONField, BigIntegerField, BinaryField
 from operator import getitem
 from collections import OrderedDict
+
+from graphene.types import generic, String
 
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
@@ -316,3 +319,32 @@ class NavMenuImportButton(NavMenuButton):
         if "weight" not in kwargs:
             kwargs["weight"] = 200
         super().__init__(*args, **kwargs)
+
+
+class CoreConfig(NautobotConfig):
+    """
+    AppConfig for the core of Nautobot.
+    """
+
+    name = "nautobot.core"
+
+    def ready(self):
+        from graphene_django.converter import convert_django_field
+        from nautobot.core.graphql import BigInteger
+
+        @convert_django_field.register(JSONField)
+        def convert_json(field, registry=None):
+            """Convert JSONField to GenericScalar."""
+            return generic.GenericScalar()
+
+        @convert_django_field.register(BinaryField)
+        def convert_binary(field, registry=None):
+            """Convert BinaryField to String."""
+            return String()
+
+        @convert_django_field.register(BigIntegerField)
+        def convert_biginteger(field, registry=None):
+            """Convert BigIntegerField to BigInteger scalar."""
+            return BigInteger()
+
+        super().ready()
