@@ -8,7 +8,7 @@ additional work, certain releases may introduce breaking or backward-incompatibl
 release notes under the release in which the change went into effect.
 
 !!! note
-    As of Nautobot v1.2.0, Nautobot supports deferring (“scheduling”) Jobs. To facilitate this, a new service called `celery-beat-worker` is now required. Please review the [service installation documentation](./services.md) to find out how to set it up.
+    As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facilitate this, a new service called `celery-scheduler` is now required. Please review the [service installation documentation](./services.md) to find out how to set it up.
 
 ## Update Prerequisites to Required Versions
 
@@ -73,8 +73,8 @@ This command performs the following actions:
 
 ## Restart the Nautobot Services
 
-Finally, with root permissions, restart the WSGI and RQ services:
+Finally, with root permissions, restart the web and background services:
 
 ```no-highlight
-$ sudo systemctl restart nautobot nautobot-worker
+$ sudo systemctl restart nautobot nautobot-worker nautobot-scheduler
 ```
