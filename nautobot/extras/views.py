@@ -1325,7 +1325,7 @@ class SecretView(generic.ObjectView):
 
         provider = registry["secrets_providers"].get(instance.provider)
 
-        groups = instance.groups.all()
+        groups = instance.groups.distinct()
         groups_table = tables.SecretsGroupTable(groups, orderable=False)
 
         return {

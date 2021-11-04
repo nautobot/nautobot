@@ -525,7 +525,6 @@ class SecretTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    type = tables.Column(linkify=True)
     tags = TagColumn(url_name="extras:secret_list")
 
     class Meta(BaseTable.Meta):
@@ -533,7 +532,6 @@ class SecretTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "type",
             "provider",
             "description",
             "tags",
@@ -541,8 +539,8 @@ class SecretTable(BaseTable):
         default_columns = (
             "pk",
             "name",
-            "type",
             "provider",
+            "description",
             "tags",
         )
 
