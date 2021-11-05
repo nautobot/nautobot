@@ -15,13 +15,19 @@ docker image pull networktocode/nautobot
 The following tags are available:
 
 * `X.Y.Z` these images are built with the same baseline as the released Python packages based on the default python version (3.6) docker container
-* `latest` these images are built from the latest code in the main branch (should be the latest released version) based on the default python version (3.6) docker container
 * `X.Y.Z-py${PYTHON_VER}` these images are built with the same baseline as the released Python packages based on the python version ($PYTHON_VER) docker container
-* `latest-py${PYTHON_VER}` these images are built from the latest code in the main branch (should be the latest released version) based on the python version ($PYTHON_VER) docker container
+* `stable` these images are built from the latest code in the main branch (should be the latest released version) based on the default python version (3.6) docker container
+* `stable-py${PYTHON_VER}` these images are built from the latest code in the main branch (should be the latest released version) based on the python version ($PYTHON_VER) docker container
+* `latest` these images are built from the latest code in the develop branch based on the default python version (3.6) docker container
+* `latest-py${PYTHON_VER}` these images are built from the latest code in the develop branch based on the python version ($PYTHON_VER) docker container
 * `develop` these images are built from the latest code in the develop branch on each commit based on the default python version (3.6) docker container
 * `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch based on the default python version (3.6) docker container
 * `develop-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
 * `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the develop branch based on the python version ($PYTHON_VER) docker container
+* `next` these images are built from the latest code in the next branch on each commit based on the default python version (3.6) docker container
+* `next-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the next branch based on the default python version (3.6) docker container
+* `next-py${PYTHON_VER}` these images are built from the latest code in the next branch on each commit based on the python version ($PYTHON_VER) docker container
+* `next-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the next branch based on the python version ($PYTHON_VER) docker container
 
 To pull a specific tag you can append the image name with `:tag` for example, to pull the 1.0.0 image:
 
@@ -34,7 +40,7 @@ Currently images are pushed for the following python versions:
 * 3.6
 * 3.7
 * 3.8
-* 3.9 _For Testing Only_
+* 3.9
 
 !!! info
     A dev image `networktocode/nautobot-dev` is also provided with the same tags, this image provides the development dependencies needed to build Nautobot.  This container can be used as a base for development to develop additional Nautobot plugins but should **NOT** be used in production.
