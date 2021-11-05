@@ -73,7 +73,7 @@ Jobs can now be scheduled for execution at a future date and time (such as durin
 !!! note
     Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryproject.org/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
-TODO: add link to relevant documentation on enabling `nautobot-server celery beat` service!
+Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
 
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 
