@@ -1,6 +1,5 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django.converter import convert_django_field
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.dcim.fields import MACAddressField
@@ -15,12 +14,6 @@ from nautobot.dcim.filters import (
     SiteFilterSet,
 )
 from nautobot.extras.graphql.types import TagType  # noqa: F401
-
-
-@convert_django_field.register(MACAddressField)
-def convert_field_to_string(field, registry=None):
-    """Convert MACAddressField to String."""
-    return graphene.String()
 
 
 class SiteType(DjangoObjectType):
