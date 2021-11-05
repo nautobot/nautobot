@@ -24,6 +24,10 @@ The following tags are available:
 * `develop-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the develop branch based on the default python version (3.6) docker container
 * `develop-py${PYTHON_VER}` these images are built from the latest code in the develop branch on each commit based on the python version ($PYTHON_VER) docker container
 * `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the develop branch based on the python version ($PYTHON_VER) docker container
+* `next` these images are built from the latest code in the next branch on each commit based on the default python version (3.6) docker container
+* `next-${GIT_SHA:0:7}-$(date +%s)` tags for each commit to the next branch based on the default python version (3.6) docker container
+* `next-py${PYTHON_VER}` these images are built from the latest code in the next branch on each commit based on the python version ($PYTHON_VER) docker container
+* `next-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` tags for each commit to the next branch based on the python version ($PYTHON_VER) docker container
 
 To pull a specific tag you can append the image name with `:tag` for example, to pull the 1.0.0 image:
 
