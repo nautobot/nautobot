@@ -143,14 +143,18 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
         # we don't catch that here but leave it up to the caller to handle as part of general exception handling.
         try:
             token = repository_record.secrets_group.get_secret_value(
-                SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_TOKEN
+                SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                SecretsGroupSecretTypeChoices.TYPE_TOKEN,
+                obj=repository_record,
             )
         except ObjectDoesNotExist:
             # No defined secret, fall through to legacy behavior
             pass
         try:
             user = repository_record.secrets_group.get_secret_value(
-                SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_USERNAME
+                SecretsGroupAccessTypeChoices.TYPE_HTTP,
+                SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                obj=repository_record,
             )
         except ObjectDoesNotExist:
             # No defined secret, fall through to legacy behavior

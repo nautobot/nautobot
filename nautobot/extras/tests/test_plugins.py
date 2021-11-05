@@ -303,7 +303,8 @@ class PluginTest(TestCase):
             provider="constant-value",
             parameters={"constant": "It's a secret to everybody"},
         )
-        self.assertEqual(secret.value, secret.parameters["constant"])
+        self.assertEqual(secret.get_value(), secret.parameters["constant"])
+        self.assertEqual(secret.get_value(obj=secret), secret.parameters["constant"])
 
 
 @skipIf(

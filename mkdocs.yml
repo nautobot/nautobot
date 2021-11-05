@@ -66,6 +66,7 @@ nav:
         - Circuits: 'core-functionality/circuits.md'
         - Power Tracking: 'core-functionality/power.md'
         - Tenancy: 'core-functionality/tenancy.md'
+        - Secrets: 'core-functionality/secrets.md'
     - Additional Features:
         - Caching: 'additional-features/caching.md'
         - Change Logging: 'additional-features/change-logging.md'
@@ -81,8 +82,6 @@ nav:
         - NAPALM: 'additional-features/napalm.md'
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
         - Relationships: 'models/extras/relationship.md'
-        - Secrets: 'models/extras/secret.md'
-        - Secrets Groups: 'models/extras/secretsgroup.md'
         - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
         - Webhooks: 'models/extras/webhook.md'

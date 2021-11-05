@@ -22,14 +22,15 @@ class EnvironmentVariableSecretsProvider(SecretsProvider):
         variable = forms.CharField(required=True, help_text="Environment variable name")
 
     @classmethod
-    def get_value_for_secret(cls, secret):
+    def get_value_for_secret(cls, secret, obj=None, **kwargs):
         """Retrieve the appropriate environment variable's value."""
-        if "variable" not in secret.parameters:
+        rendered_parameters = secret.rendered_parameters(obj=obj)
+        if "variable" not in rendered_parameters:
             raise SecretParametersError(secret, cls, 'The "variable" parameter is mandatory!')
-        value = os.getenv(secret.parameters["variable"], default=None)
+        value = os.getenv(rendered_parameters["variable"], default=None)
         if value is None:
             raise SecretValueNotFoundError(
-                secret, cls, f'Undefined environment variable "{secret.parameters["variable"]}"!'
+                secret, cls, f'Undefined environment variable "{rendered_parameters["variable"]}"!'
             )
         return value
 
@@ -56,11 +57,12 @@ class TextFileSecretsProvider(SecretsProvider):
             return self.cleaned_data
 
     @classmethod
-    def get_value_for_secret(cls, secret):
+    def get_value_for_secret(cls, secret, obj=None, **kwargs):
         """Retrieve the appropriate text file's contents."""
-        if "path" not in secret.parameters:
+        rendered_parameters = secret.rendered_parameters(obj=obj)
+        if "path" not in rendered_parameters:
             raise SecretParametersError(secret, cls, 'The "path" parameter is mandatory!')
-        if not os.path.isfile(secret.parameters["path"]):
-            raise SecretValueNotFoundError(secret, cls, f'File "{secret.parameters["path"]}" not found!')
-        with open(secret.parameters["path"], "rt", encoding="utf8") as file_handle:
+        if not os.path.isfile(rendered_parameters["path"]):
+            raise SecretValueNotFoundError(secret, cls, f'File "{rendered_parameters["path"]}" not found!')
+        with open(rendered_parameters["path"], "rt", encoding="utf8") as file_handle:
             return file_handle.read()
