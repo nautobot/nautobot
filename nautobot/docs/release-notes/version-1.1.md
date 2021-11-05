@@ -93,6 +93,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 ### Fixed
 
 - [#555](https://github.com/nautobot/nautobot/issues/555) - Fixed `Status.DoesNotExist` during `nautobot-server loaddata`.
+- [#567](https://github.com/nautobot/nautobot/issues/567) - Fixed incorrect GraphQL schema generation for `_custom_field_data` when certain plugins are installed.
 - [#733](https://github.com/nautobot/nautobot/issues/733) - A Job erroring out early in initialization could result in its associated JobResult staying in Pending state indefinitely.
 - [#816](https://github.com/nautobot/nautobot/issues/816) - Fixed `AttributeError` reported when viewing a Rack with certain associated power configurations.
 - [#948](https://github.com/nautobot/nautobot/issues/948) - Fixed advanced logging example to use `EXTRA_MIDDLEWARE` instead of `MIDDLEWARE.append()`.
