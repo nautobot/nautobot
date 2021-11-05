@@ -81,7 +81,7 @@ Default:
     "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
     "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
-    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon 
+    "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
 }
 ```
@@ -611,6 +611,9 @@ Nautobot will use these credentials when authenticating to remote devices via th
 !!! note
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
 
+!!! note
+    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, the [secrets](../../models/extras/secret/) defined in that group will take precedence over these default values.
+
 ---
 
 ## NAPALM_ARGS
@@ -636,6 +639,9 @@ NAPALM_ARGS = {
     # Include any additional args here
 }
 ```
+
+!!! note
+    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, a [secret](../../models/extras/secret/) defined in that group can override the `NAPALM_ARGS["secret"]` default value defined here.
 
 ---
 

@@ -6,7 +6,9 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretProviderError
 from nautobot.extras.utils import extras_features
@@ -92,3 +94,60 @@ class Secret(PrimaryModel):
         form = provider.ParametersForm(self.parameters)
         form.is_valid()
         form.clean()
+
+
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class SecretsGroup(OrganizationalModel):
+    """A group of related Secrets."""
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    secrets = models.ManyToManyField(
+        to=Secret, related_name="groups", through="extras.SecretsGroupAssociation", blank=True
+    )
+
+    csv_headers = ["name", "slug", "description"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:secretsgroup", args=[self.slug])
+
+    def to_csv(self):
+        return (self.name, self.slug, self.description)
+
+    def get_secret_value(self, access_type, secret_type):
+        """Helper method to retrieve a specific secret from this group.
+
+        May raise SecretError and/or Django ObjectDoesNotExist exceptions; it's up to the caller to handle those.
+        """
+        secret = self.secrets.through.objects.get(access_type=access_type, secret_type=secret_type).secret
+        return secret.value
+
+
+class SecretsGroupAssociation(BaseModel):
+    """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
+
+    group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE)
+    secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
+
+    access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
+    secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
+
+    class Meta:
+        unique_together = (
+            # Don't allow the same access-type/secret-type combination to be used more than once in the same group
+            ("group", "access_type", "secret_type"),
+        )
+
+    def __str__(self):
+        return f"{self.group}: {self.access_type} {self.secret_type}: {self.secret}"

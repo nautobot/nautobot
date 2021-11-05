@@ -37,6 +37,7 @@ from .models import (
     RelationshipAssociation,
     ScheduledJob,
     Secret,
+    SecretsGroup,
     Status,
     Tag,
     TaggedItem,
@@ -287,7 +288,7 @@ class GitRepositoryTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     last_sync_time = tables.DateTimeColumn(
         empty_values=(), format=settings.SHORT_DATETIME_FORMAT, verbose_name="Sync Time"
     )
@@ -314,7 +315,7 @@ class GitRepositoryTable(BaseTable):
             "slug",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
             "last_sync_time",
             "last_sync_user",
@@ -347,7 +348,7 @@ class GitRepositoryBulkTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
-    token_rendered = tables.Column(verbose_name="Token")
+    secrets_group = tables.Column(linkify=True)
     provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
 
     class Meta(BaseTable.Meta):
@@ -357,7 +358,7 @@ class GitRepositoryBulkTable(BaseTable):
             "name",
             "remote_url",
             "branch",
-            "token_rendered",
+            "secrets_group",
             "provides",
         )
 
@@ -531,20 +532,40 @@ class SecretTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "description",
             "provider",
+            "description",
             "tags",
         )
         default_columns = (
             "pk",
             "name",
-            "description",
             "provider",
+            "description",
             "tags",
         )
 
     def render_provider(self, value):
         return registry["secrets_providers"][value].name if value in registry["secrets_providers"] else value
+
+
+class SecretsGroupTable(BaseTable):
+    """Table for list view of `SecretsGroup` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = SecretsGroup
+        fields = (
+            "pk",
+            "name",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "description",
+        )
 
 
 #

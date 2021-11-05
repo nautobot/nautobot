@@ -16,7 +16,12 @@ import yaml
 
 from nautobot.core.celery import nautobot_task
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
-from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    LogLevelChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -131,19 +136,30 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
 
-    if repository_record.token_secret:
-        token = repository_record.token_secret.value
-    elif repository_record._token:
-        token = repository_record._token
-    else:
-        token = None
+    user = None
+    token = None
+    if repository_record.secrets_group:
+        # In addition to ObjectDoesNotExist, get_secret_value() may also raise a SecretError if a secret is mis-defined;
+        # we don't catch that here but leave it up to the caller to handle as part of general exception handling.
+        try:
+            token = repository_record.secrets_group.get_secret_value(
+                SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_TOKEN
+            )
+        except ObjectDoesNotExist:
+            # No defined secret, fall through to legacy behavior
+            pass
+        try:
+            user = repository_record.secrets_group.get_secret_value(
+                SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_USERNAME
+            )
+        except ObjectDoesNotExist:
+            # No defined secret, fall through to legacy behavior
+            pass
 
-    if repository_record.username_secret:
-        user = repository_record.username_secret.value
-    elif repository_record.username:
+    if not token and repository_record._token:
+        token = repository_record._token
+    if not user and repository_record.username:
         user = repository_record.username
-    else:
-        user = None
 
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.

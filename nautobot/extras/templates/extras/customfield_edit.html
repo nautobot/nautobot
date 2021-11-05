@@ -97,7 +97,9 @@
 <script type="text/javascript">
     $('.formset_row-{{ choices.prefix }}').formset({
         addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Custom Field Choice',
+        addCssClass: 'btn btn-primary add-row',
         deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+        deleteCssClass: 'btn btn-danger delete-row',
         prefix: '{{ choices.prefix }}',
         formCssClass: 'dynamic-formset-{{ choices.prefix }}',
         keepFieldValues: 'input[type="number"]'

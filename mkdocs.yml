@@ -82,6 +82,7 @@ nav:
         - Prometheus Metrics: 'additional-features/prometheus-metrics.md'
         - Relationships: 'models/extras/relationship.md'
         - Secrets: 'models/extras/secret.md'
+        - Secrets Groups: 'models/extras/secretsgroup.md'
         - Statuses: 'models/extras/status.md'
         - Tags: 'models/extras/tag.md'
         - Webhooks: 'models/extras/webhook.md'
