@@ -8,7 +8,7 @@ Within the database, custom fields are stored as JSON data directly alongside ea
 
 ## Creating Custom Fields
 
-Custom fields can be created through the admin UI under Extras > Custom Fields or through the REST API.
+Custom fields can be created through the UI under Extensibility > Miscellaneous > Custom Fields or through the REST API.
 
 Nautobot supports these custom field types:
 
