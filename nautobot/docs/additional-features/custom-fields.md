@@ -8,20 +8,22 @@ Within the database, custom fields are stored as JSON data directly alongside ea
 
 ## Creating Custom Fields
 
-Custom fields must be created through the admin UI under Extras > Custom Fields. Nautobot supports these custom field types:
+Custom fields can be created through the admin UI under Extras > Custom Fields or through the REST API.
 
-* Text: Free-form text (up to 255 characters)
-* Integer: A whole number (positive or negative)
-* Boolean: True or false
-* Date: A date in ISO 8601 format (YYYY-MM-DD)
-* URL: This will be presented as a link in the web UI
-* Selection: A selection of one of several pre-defined custom choices
-* Multiple selection: A selection field which supports the assignment of multiple values
+Nautobot supports these custom field types:
+
+- Text: Free-form text (up to 255 characters)
+- Integer: A whole number (positive or negative)
+- Boolean: True or false
+- Date: A date in ISO 8601 format (YYYY-MM-DD)
+- URL: This will be presented as a link in the web UI
+- Selection: A selection of one of several pre-defined custom choices
+- Multiple selection: A selection field which supports the assignment of multiple values
 
 Each custom field must have a name; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
 
 !!! note
-    The name and type of a custom field cannot be modified once created, so take care in defining the name and type. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
+The name and type of a custom field cannot be modified once created, so take care in defining the name and type. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the network data model when defining a new custom field.
 
 Marking a field as required will force the user to provide a value for the field when creating a new object or when saving an existing object. A default value for the field may also be provided. Use "true" or "false" for boolean fields, or the exact value of a choice for selection fields.
 
@@ -33,9 +35,9 @@ A custom field must be assigned to one or object types, or models, in Nautobot. 
 
 Nautobot supports limited custom validation for custom field values. Following are the types of validation enforced for each field type:
 
-* Text: Regular expression (optional)
-* Integer: Minimum and/or maximum value (optional)
-* Selection: Must exactly match one of the prescribed choices
+- Text: Regular expression (optional)
+- Integer: Minimum and/or maximum value (optional)
+- Selection: Must exactly match one of the prescribed choices
 
 ### Custom Selection Fields
 
@@ -66,10 +68,10 @@ To set or change these values, simply include nested JSON data. For example:
 
 ```json
 {
-    "name": "New Site",
-    "slug": "new-site",
-    "custom_fields": {
-        "deployed": "2019-03-24"
-    }
+  "name": "New Site",
+  "slug": "new-site",
+  "custom_fields": {
+    "deployed": "2019-03-24"
+  }
 }
 ```
