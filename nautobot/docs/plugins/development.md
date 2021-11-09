@@ -588,14 +588,19 @@ class ConstantValueSecretsProvider(SecretsProvider):
         )
 
     @classmethod
-    def get_value_for_secret(cls, secret):
+    def get_value_for_secret(cls, secret, obj=None, **kwargs):
         """
         Return the value defined in the Secret.parameters "constant" key.
 
         A more realistic SecretsProvider would make calls to external APIs, etc.,
         to retrieve a secret from another system as desired.
+
+        Args:
+            secret (nautobot.extras.models.Secret): The secret whose value should be retrieved.
+            obj (object): The object (Django model or similar) providing context for the secret's
+                parameters.
         """
-        return secret.parameters.get("constant")
+        return secret.rendered_parameters(obj=obj).get("constant")
 
 
 secrets_providers = [ConstantValueSecretsProvider]

@@ -169,6 +169,7 @@ class PluginConfig(NautobotConfig):
         if secrets_providers is not None:
             for secrets_provider in secrets_providers:
                 register_secrets_provider(secrets_provider)
+            self.features["secrets_providers"] = sorted(secrets_providers)
 
     @classmethod
     def validate(cls, user_config, nautobot_version):

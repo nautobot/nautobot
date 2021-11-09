@@ -5,12 +5,15 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 
+from jinja2 import Environment, StrictUndefined
+from jinja2.exceptions import UndefinedError, TemplateSyntaxError
+
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.registry import registry
-from nautobot.extras.secrets.exceptions import SecretError, SecretProviderError
+from nautobot.extras.secrets.exceptions import SecretError, SecretParametersError, SecretProviderError
 from nautobot.extras.utils import extras_features
 
 
@@ -68,18 +71,28 @@ class Secret(PrimaryModel):
             self.parameters,
         )
 
-    @property
-    def value(self):
+    def rendered_parameters(self, obj=None):
+        """Render self.parameters as a Jinja2 template with the given object as context."""
+        environment = Environment(undefined=StrictUndefined)
+        try:
+            return {key: environment.from_string(value).render(obj=obj) for key, value in self.parameters.items()}
+        except (TemplateSyntaxError, UndefinedError) as exc:
+            raise SecretParametersError(self, registry["secrets_providers"].get(self.provider), str(exc)) from exc
+
+    def get_value(self, obj=None):
         """Retrieve the secret value that this Secret is a representation of.
 
         May raise a SecretError on failure.
+
+        Args:
+            obj (object): Object (Django model or similar) that may provide additional context for this secret.
         """
         provider = registry["secrets_providers"].get(self.provider)
         if not provider:
             raise SecretProviderError(self, None, f'No registered provider "{self.provider}" is available')
 
         try:
-            return provider.get_value_for_secret(self)
+            return provider.get_value_for_secret(self, obj=obj)
         except SecretError:
             raise
         except Exception as exc:
@@ -125,13 +138,13 @@ class SecretsGroup(OrganizationalModel):
     def to_csv(self):
         return (self.name, self.slug, self.description)
 
-    def get_secret_value(self, access_type, secret_type):
+    def get_secret_value(self, access_type, secret_type, obj=None, **kwargs):
         """Helper method to retrieve a specific secret from this group.
 
         May raise SecretError and/or Django ObjectDoesNotExist exceptions; it's up to the caller to handle those.
         """
-        secret = self.secrets.through.objects.get(access_type=access_type, secret_type=secret_type).secret
-        return secret.value
+        secret = self.secrets.through.objects.get(group=self, access_type=access_type, secret_type=secret_type).secret
+        return secret.get_value(obj=obj, **kwargs)
 
 
 class SecretsGroupAssociation(BaseModel):
@@ -148,6 +161,7 @@ class SecretsGroupAssociation(BaseModel):
             # Don't allow the same access-type/secret-type combination to be used more than once in the same group
             ("group", "access_type", "secret_type"),
         )
+        ordering = ("group", "access_type", "secret_type")
 
     def __str__(self):
         return f"{self.group}: {self.access_type} {self.secret_type}: {self.secret}"

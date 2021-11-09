@@ -476,14 +476,18 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
             try:
                 try:
                     username = device.secrets_group.get_secret_value(
-                        SecretsGroupAccessTypeChoices.TYPE_GENERIC, SecretsGroupSecretTypeChoices.TYPE_USERNAME
+                        SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                        SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+                        obj=device,
                     )
                 except ObjectDoesNotExist:
                     # No defined secret, fall through to legacy behavior
                     username = settings.NAPALM_USERNAME
                 try:
                     password = device.secrets_group.get_secret_value(
-                        SecretsGroupAccessTypeChoices.TYPE_GENERIC, SecretsGroupSecretTypeChoices.TYPE_PASSWORD
+                        SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                        SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+                        obj=device,
                     )
                 except ObjectDoesNotExist:
                     # No defined secret, fall through to legacy behavior
@@ -499,7 +503,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldM
         if device.secrets_group:
             try:
                 optional_args["secret"] = device.secrets_group.get_secret_value(
-                    SecretsGroupAccessTypeChoices.TYPE_GENERIC, SecretsGroupSecretTypeChoices.TYPE_SECRET
+                    SecretsGroupAccessTypeChoices.TYPE_GENERIC,
+                    SecretsGroupSecretTypeChoices.TYPE_SECRET,
+                    obj=device,
                 )
             except ObjectDoesNotExist:
                 # No defined secret, this is OK

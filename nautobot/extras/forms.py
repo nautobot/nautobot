@@ -1096,9 +1096,16 @@ class SecretCSVForm(CustomFieldModelCSVForm):
         fields = Secret.csv_headers
 
 
+def provider_choices_with_blank():
+    return add_blank_choice(sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()]))
+
+
 class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
     model = Secret
     q = forms.CharField(required=False, label="Search")
+    provider = forms.MultipleChoiceField(
+        choices=provider_choices_with_blank, widget=StaticSelect2Multiple(), required=False
+    )
     tag = TagFilterField(model)
 
 

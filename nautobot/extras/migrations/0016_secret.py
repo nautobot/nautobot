@@ -86,6 +86,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "unique_together": {("group", "access_type", "secret_type")},
+                "ordering": ("group", "access_type", "secret_type"),
             },
         ),
         migrations.AddField(
