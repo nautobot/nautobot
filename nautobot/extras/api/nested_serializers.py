@@ -98,7 +98,7 @@ class NestedJobResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.JobResult
-        fields = ["url", "created", "completed", "user", "status"]
+        fields = ["id", "url", "name", "created", "completed", "user", "status"]
 
 
 class NestedRelationshipSerializer(WritableNestedSerializer):

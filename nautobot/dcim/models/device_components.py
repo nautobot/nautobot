@@ -359,15 +359,22 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
                 maximum_draw_total=Sum("maximum_draw"),
                 allocated_draw_total=Sum("allocated_draw"),
             )
+            numerator = utilization["allocated_draw_total"] or 0
+            denominator = utilization["maximum_draw_total"] or 0
             ret = {
                 "allocated": utilization["allocated_draw_total"] or 0,
                 "maximum": utilization["maximum_draw_total"] or 0,
                 "outlet_count": len(outlet_ids),
                 "legs": [],
+                "utilization_data": UtilizationData(
+                    numerator=numerator,
+                    denominator=denominator,
+                ),
             }
 
             # Calculate per-leg aggregates for three-phase feeds
             if getattr(self._cable_peer, "phase", None) == PowerFeedPhaseChoices.PHASE_3PHASE:
+                # Setup numerator and denominator for later display.
                 for leg, leg_name in PowerOutletFeedLegChoices:
                     outlet_ids = PowerOutlet.objects.filter(power_port=self, feed_leg=leg).values_list("pk", flat=True)
                     utilization = PowerPort.objects.filter(

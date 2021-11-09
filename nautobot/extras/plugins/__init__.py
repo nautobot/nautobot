@@ -92,6 +92,7 @@ class PluginConfig(NautobotConfig):
 
     def ready(self):
         """Callback after plugin app is loaded."""
+        # We don't call super().ready here because we don't need or use the on-ready behavior of a core Nautobot app
 
         # Introspect URL patterns and models to make available to the installed-plugins detail UI view.
         urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")

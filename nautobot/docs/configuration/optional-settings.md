@@ -16,7 +16,7 @@ EXTRA_INSTALLED_APPS = [
 ```
 
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
-can specify additional apps with ease.
+can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
 ## ADMINS
 
