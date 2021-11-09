@@ -31,9 +31,9 @@ What does this mean in practice?
 ### Using Object Permissions with Secrets
 
 !!! tip
-    In practice you will likely want to carefully restrict which users are allowed to define and edit Secrets, and may want to use object permissions to further restrict which specific Secrets they are allowed to make use of.
+    In practice you will likely want to carefully restrict which users are allowed to define and edit Secrets, and may want to use object permissions to further restrict which specific Secrets they are allowed to utilize.
 
-The two default Secrets providers potentially allow a user to define and make use of a Secret corresponding to any environment variable in the Nautobot execution context and/or any file readable by the `nautobot` user. For many users and use cases, you will not want to grant this much power to define and access arbitrary secrets; fortunately Nautobot's built-in permissions model is granular enough to allow for more specifically tailored access grants.
+The two default Secrets providers potentially allow a user to define and use a Secret corresponding to any environment variable in the Nautobot execution context and/or any file readable by the `nautobot` user. For many users and use cases, you will not want to grant this much power to define and access arbitrary secrets; fortunately Nautobot's built-in permissions model is granular enough to allow for more specifically tailored access grants.
 
 For example, to restrict a specific user to only be able to work with Secrets that use the `environment-variable` Secrets provider, and specifically only to access those environment variables whose names begin with `NAPALM_`, you could define a Permission with a specific constraint like:
 
