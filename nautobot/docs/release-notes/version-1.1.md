@@ -89,6 +89,8 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#954](https://github.com/nautobot/nautobot/pull/954) - Added documentation for migrating from PostgreSQL to MySQL, improved documentation as to recommended MySQL database configuration.
 - [#989](https://github.com/nautobot/nautobot/issues/989) - Added `id` and `name` fields to `NestedJobResultSerializer` for the REST API.
 - [#1019](https://github.com/nautobot/nautobot/pull/1019) - Added GitHub action to redeploy the Nautobot sandbox on pushes to `main`, `develop`, and `next`.
+- [#1031](https://github.com/nautobot/nautobot/pull/1031) - Added a troubleshooting note around the combination of RedHat/CentOS, uWSGI, and static files.
+- [#1057](https://github.com/nautobot/nautobot/pull/1057) - Added GitHub action to automatically push Docker images to `ghcr.io`.
 
 ### Fixed
 
@@ -97,6 +99,7 @@ The example `uwsgi.ini` provided in earlier versions of the Nautobot documentati
 - [#733](https://github.com/nautobot/nautobot/issues/733) - A Job erroring out early in initialization could result in its associated JobResult staying in Pending state indefinitely.
 - [#816](https://github.com/nautobot/nautobot/issues/816) - Fixed `AttributeError` reported when viewing a Rack with certain associated power configurations.
 - [#948](https://github.com/nautobot/nautobot/issues/948) - Fixed advanced logging example to use `EXTRA_MIDDLEWARE` instead of `MIDDLEWARE.append()`.
+- [#970](https://github.com/nautobot/nautobot/pull/970) - Clarified documentation around config context definition in Git repositories.
 - [#981](https://github.com/nautobot/nautobot/pull/981) - Fixed incorrect handling of missing custom fields in the `fix_custom_fields` management command.
 - [#986](https://github.com/nautobot/nautobot/issues/986) - Fixed `TemplateDoesNotExist` exception when running a Job containing a `FileVar` variable.
 - [#991](https://github.com/nautobot/nautobot/pull/991) - Fixed incorrect logging when importing ConfigContextSchemas from Git.
